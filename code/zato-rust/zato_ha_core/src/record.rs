@@ -69,6 +69,6 @@ pub struct Versioned<T> {
     /// The value.
     pub value: T,
 
-    /// The version of the value in the referee.
-    pub version: u64,
+    /// The version of the value in the referee, which is opaque and is only compared for equality.
+    pub version: String,
 }

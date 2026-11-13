@@ -5,10 +5,10 @@
 
 //! Configuration of the node, read from `Zato_HA_*` environment variables.
 //!
-//! A deployment sets the mode and the referee type, with the Consul address and the Consul token for the Consul
-//! referee, or the `Zato_PubSub_DB_*` variables of the Zato server for the `PostgreSQL` referee, and every other
-//! variable overrides a default defined in this module. A pub/sub database on `PostgreSQL` puts the node
-//! in the shared storage mode, in which both hosts use the one database and nothing is replicated between them.
+//! A deployment sets the mode, and every other variable overrides a default defined in this module. A pub/sub
+//! database on `PostgreSQL` puts the node in the shared storage mode, in which both hosts use the one database,
+//! nothing is replicated between them, and the node probes the database with the `Zato_PubSub_DB_*` variables
+//! of the Zato server.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -22,17 +22,8 @@ pub const MODE_ACTIVE_STANDBY: &str = "active-standby";
 /// The environment variable that selects the referee.
 pub const ENV_REFEREE_TYPE: &str = "Zato_HA_Referee_Type";
 
-/// The environment variable with the address of the Consul agent, e.g. `https://consul:8501`.
-pub const ENV_CONSUL_ADDRESS: &str = "Zato_HA_Consul_Address";
-
-/// The environment variable with the Consul ACL token.
-pub const ENV_CONSUL_TOKEN: &str = "Zato_HA_Consul_Token";
-
-/// The environment variable with the CA file that the certificate of Consul is verified against.
-pub const ENV_CONSUL_CA_FILE: &str = "Zato_HA_Consul_CA_File";
-
-/// The environment variable with the Consul key of the referee record.
-pub const ENV_CONSUL_KEY: &str = "Zato_HA_Consul_Key";
+/// The environment variable with the name of the `Lease` that holds the referee record.
+pub const ENV_LEASE_NAME: &str = "Zato_HA_Lease_Name";
 
 /// The environment variable with the name of this node.
 pub const ENV_NODE_NAME: &str = "Zato_HA_Node_Name";
@@ -121,11 +112,14 @@ pub const ENV_AUDIT_DB_PATH: &str = "Zato_Audit_Log_DB_Name";
 /// The environment variable with the log level filter of the node.
 pub const ENV_LOG_LEVEL: &str = "Zato_HA_Log_Level";
 
-/// The referee type backed by Consul.
-pub const REFEREE_TYPE_CONSUL: &str = "consul";
+/// The referee type backed by a `Lease` of the Kubernetes API server.
+pub const REFEREE_TYPE_KUBERNETES: &str = "kubernetes";
 
-/// The referee type backed by the pub/sub database on `PostgreSQL`.
-pub const REFEREE_TYPE_POSTGRESQL: &str = "postgresql";
+/// The referee type when the variable is not set.
+pub const DEFAULT_REFEREE_TYPE: &str = REFEREE_TYPE_KUBERNETES;
+
+/// The name of the `Lease` of the referee record when the variable is not set.
+pub const DEFAULT_LEASE_NAME: &str = "zato-ha";
 
 /// The pub/sub database type of the Zato server that is a `SQLite` file on each host.
 pub const PUBSUB_DB_TYPE_SQLITE: &str = "sqlite";
@@ -135,9 +129,6 @@ pub const PUBSUB_DB_TYPE_POSTGRESQL: &str = "postgresql";
 
 /// The default port of `PostgreSQL`.
 pub const DEFAULT_POSTGRESQL_PORT: u16 = 5432;
-
-/// The key of the referee record in the table of the `PostgreSQL` referee.
-pub const POSTGRESQL_RECORD_KEY: &str = "zato/ha/default";
 
 /// Whether TLS to `PostgreSQL` is on when the variable is not set, as in `zato.common.db_env.common`.
 pub const DEFAULT_POSTGRESQL_SSL: bool = false;
@@ -156,9 +147,6 @@ pub const DEFAULT_REPLICATION_PORT: u16 = 35_200;
 
 /// The default port of the role endpoint.
 pub const DEFAULT_ROLE_PORT: u16 = 35_201;
-
-/// The default Consul key of the referee record.
-pub const DEFAULT_CONSUL_KEY: &str = "zato/ha/default";
 
 /// The default directory of the databases, relative to the home directory, as in `zato.common.defaults`.
 pub const DEFAULT_DATA_DIR_UNDER_HOME: &str = "env/qs-1";
@@ -226,20 +214,11 @@ impl std::fmt::Display for ConfigError {
 
 impl std::error::Error for ConfigError {}
 
-/// The settings of the Consul referee.
+/// The settings of the `Lease` referee.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ConsulConfig {
-    /// The address of the Consul agent.
-    pub address: String,
-
-    /// The Consul ACL token.
-    pub token: String,
-
-    /// The CA file for the certificate of Consul, if Consul is reached over TLS with a private CA.
-    pub ca_file: Option<PathBuf>,
-
-    /// The Consul key of the referee record.
-    pub key: String,
+pub struct KubernetesConfig {
+    /// The name of the `Lease` that holds the referee record, which also prefixes the leases of the addresses.
+    pub lease_name: String,
 }
 
 /// The TLS settings of the connections to `PostgreSQL`.
@@ -255,7 +234,7 @@ pub struct PostgreSqlTls {
     pub verify: bool,
 }
 
-/// The settings of the `PostgreSQL` referee, which are those of the pub/sub database of the Zato server.
+/// The settings of the pub/sub database on `PostgreSQL`, which are those of the Zato server.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PostgreSqlConfig {
     /// The host of `PostgreSQL`.
@@ -290,11 +269,8 @@ pub enum PostgreSqlPassword {
 /// The referee selected by the configuration.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RefereeConfig {
-    /// Consul KV with check-and-set writes.
-    Consul(ConsulConfig),
-
-    /// A table in the pub/sub database on `PostgreSQL` with conditional updates.
-    PostgreSql(PostgreSqlConfig),
+    /// A `Lease` of the Kubernetes API server, written by JSON Patches that test its `resourceVersion`.
+    Kubernetes(KubernetesConfig),
 }
 
 /// Where the databases of the Zato server are kept.
@@ -303,7 +279,7 @@ pub enum StorageMode {
     /// Each host keeps `SQLite` files, which the active node replicates to the standby.
     Replicated,
 
-    /// Both hosts use one database on `PostgreSQL`, and the active node holds a lease on the referee record.
+    /// Both hosts use one database on `PostgreSQL`, and the active node renews its lease on the referee record.
     Shared,
 }
 
@@ -382,6 +358,9 @@ pub struct NodeConfig {
 
     /// The files of mutual TLS on the replication link, which the shared storage mode does not open.
     pub tls: Option<TlsFiles>,
+
+    /// The pub/sub database that the node probes, which only the shared storage mode has.
+    pub shared_database: Option<PostgreSqlConfig>,
 
     /// The timers.
     pub timers: Timers,
@@ -465,16 +444,6 @@ fn boolean(source: &dyn VariableSource, name: &'static str, default: bool) -> Re
     })
 }
 
-/// Returns the settings of the Consul referee.
-fn consul(source: &dyn VariableSource) -> Result<ConsulConfig, ConfigError> {
-    Ok(ConsulConfig {
-        address: required(source, ENV_CONSUL_ADDRESS)?,
-        token: required(source, ENV_CONSUL_TOKEN)?,
-        ca_file: source.variable(ENV_CONSUL_CA_FILE).map(PathBuf::from),
-        key: source.variable(ENV_CONSUL_KEY).unwrap_or_else(|| DEFAULT_CONSUL_KEY.to_owned()),
-    })
-}
-
 /// Returns the TLS settings of `PostgreSQL`, or `None` if TLS is off.
 fn postgresql_tls(source: &dyn VariableSource) -> Result<Option<PostgreSqlTls>, ConfigError> {
     if !boolean(source, ENV_PUBSUB_DB_SSL, DEFAULT_POSTGRESQL_SSL)? {
@@ -499,7 +468,7 @@ fn postgresql_tls(source: &dyn VariableSource) -> Result<Option<PostgreSqlTls>, 
     }))
 }
 
-/// Returns the settings of the `PostgreSQL` referee, which are those of the pub/sub database.
+/// Returns the settings of the pub/sub database on `PostgreSQL`.
 fn postgresql(source: &dyn VariableSource) -> Result<PostgreSqlConfig, ConfigError> {
     // A database that authenticates without a password is given an empty one.
     let password = source.variable(ENV_PUBSUB_DB_PASSWORD_FILE).map_or_else(
@@ -518,10 +487,13 @@ fn postgresql(source: &dyn VariableSource) -> Result<PostgreSqlConfig, ConfigErr
 
 /// Returns the referee and its settings.
 fn referee(source: &dyn VariableSource) -> Result<RefereeConfig, ConfigError> {
-    let value = required(source, ENV_REFEREE_TYPE)?;
+    let value = source
+        .variable(ENV_REFEREE_TYPE)
+        .unwrap_or_else(|| DEFAULT_REFEREE_TYPE.to_owned());
     match value.as_str() {
-        REFEREE_TYPE_CONSUL => Ok(RefereeConfig::Consul(consul(source)?)),
-        REFEREE_TYPE_POSTGRESQL => Ok(RefereeConfig::PostgreSql(postgresql(source)?)),
+        REFEREE_TYPE_KUBERNETES => Ok(RefereeConfig::Kubernetes(KubernetesConfig {
+            lease_name: source.variable(ENV_LEASE_NAME).unwrap_or_else(|| DEFAULT_LEASE_NAME.to_owned()),
+        })),
         _ => Err(ConfigError::Invalid {
             name: ENV_REFEREE_TYPE,
             reason: format!("unsupported referee type `{value}`"),
@@ -642,6 +614,10 @@ impl NodeConfig {
         let advertised_address = source.variable(ENV_ADVERTISED_ADDRESS).unwrap_or_else(|| node_name.clone());
 
         let tls = link_tls(source, storage)?;
+        let shared_database = match storage {
+            StorageMode::Shared => Some(postgresql(source)?),
+            StorageMode::Replicated => None,
+        };
 
         let barrier_socket = source
             .variable(ENV_BARRIER_SOCKET)
@@ -656,6 +632,7 @@ impl NodeConfig {
             replication_port: port(source, ENV_REPLICATION_PORT, DEFAULT_REPLICATION_PORT)?,
             role_port: port(source, ENV_ROLE_PORT, DEFAULT_ROLE_PORT)?,
             tls,
+            shared_database,
             timers: timers(source)?,
             barrier_socket,
             log_level: source.variable(ENV_LOG_LEVEL).unwrap_or_else(|| DEFAULT_LOG_LEVEL.to_owned()),

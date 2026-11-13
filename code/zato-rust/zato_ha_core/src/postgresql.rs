@@ -3,12 +3,11 @@
 // Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 // Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
-//! The referee kept in a table of the pub/sub database on `PostgreSQL`, written with conditional updates.
+//! The probe of the pub/sub database on `PostgreSQL` in the shared storage mode.
 //!
-//! The table `zato_ha_referee` holds the record and the published addresses under text keys, each as JSON
-//! with a version that every write raises. Each request runs within [`REQUEST_TIMEOUT`] on a runtime of
-//! the referee, and a request that fails or does not complete in time ends the session, so that the next
-//! request connects again.
+//! A probe reads the row of `pubsub_active` that the generation guard of the Zato server keeps, which establishes
+//! that the database is reachable from the pod. Each probe runs within [`REQUEST_TIMEOUT`] on a runtime of the probe,
+//! and a probe that fails or does not complete in time ends the session, so that the next probe connects again.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -22,54 +21,37 @@ use rustls::{ClientConfig, DigitallySignedStruct, RootCertStore, SignatureScheme
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use tokio_postgres::config::SslMode;
-use tokio_postgres::{Client, Config, NoTls, Row};
+use tokio_postgres::{Client, Config, NoTls};
 use tokio_postgres_rustls::MakeRustlsConnect;
 
 use crate::config::{PostgreSqlConfig, PostgreSqlPassword, PostgreSqlTls};
-use crate::record::{NodeAddress, RefereeRecord, Versioned};
-use crate::referee::{Referee, RefereeError, VERSION_ABSENT};
-use crate::wire;
 
-/// How long one request may take, a new connection included.
-///
-/// It is shorter than the gap between the mark-out and the takeover timers, and longer than a commit that waits
-/// for a synchronous standby under load.
+/// How long one probe may take, a new connection included.
 pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// The name under which the node appears among the sessions of `PostgreSQL`.
 const APPLICATION_NAME: &str = "zato-ha-node";
 
-/// The suffix of the keys under which the nodes publish their addresses.
-const NODES_SUFFIX: &str = "nodes";
+/// Reads the row of the generation guard, which fails if the database is not reachable.
+const PROBE_STATEMENT: &str = "SELECT 1 FROM pubsub_active WHERE id = 1";
 
-/// Creates the table under an advisory lock, so that two nodes that start at the same time create it in turn.
-///
-/// The lock is held by the implicit transaction of the statements, and it is the lock that the Zato schemas
-/// are created under in `zato.common.db_env.engine`.
-const CREATE_TABLE: &str = "SELECT pg_advisory_xact_lock(7401852117309);
-    CREATE TABLE IF NOT EXISTS zato_ha_referee (key TEXT PRIMARY KEY, record JSONB NOT NULL, version BIGINT NOT NULL)";
+/// The error of a probe that did not succeed.
+#[derive(Debug)]
+pub struct ProbeError(pub String);
 
-/// Reads one record and its version.
-const SELECT_RECORD: &str = "SELECT record::text, version FROM zato_ha_referee WHERE key = $1";
+impl std::fmt::Display for ProbeError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "Database probe error: {}", self.0)
+    }
+}
 
-/// Creates a record that does not exist yet.
-const INSERT_RECORD: &str = "INSERT INTO zato_ha_referee (key, record, version) VALUES ($1, $2::text::jsonb, 1)
-    ON CONFLICT (key) DO NOTHING";
+impl std::error::Error for ProbeError {}
 
-/// Replaces a record whose version is still the expected one.
-const UPDATE_RECORD: &str = "UPDATE zato_ha_referee SET record = $2::text::jsonb, version = version + 1
-    WHERE key = $1 AND version = $3";
-
-/// Raises the version of a record whose version and value are still the expected ones.
-const RENEW_RECORD: &str = "UPDATE zato_ha_referee SET version = version + 1
-    WHERE key = $1 AND version = $2 AND record = $3::text::jsonb RETURNING version";
-
-/// Writes the address of a node whatever was there before.
-const UPSERT_ADDRESS: &str = "INSERT INTO zato_ha_referee (key, record, version) VALUES ($1, $2::text::jsonb, 1)
-    ON CONFLICT (key) DO UPDATE SET record = EXCLUDED.record, version = zato_ha_referee.version + 1";
-
-/// Reads every record under a prefix of keys.
-const SELECT_ADDRESSES: &str = "SELECT record::text FROM zato_ha_referee WHERE starts_with(key, $1)";
+/// A check that the database of the shared storage mode is reachable from this node.
+pub trait DatabaseProbe: Send + Sync {
+    /// Returns `Ok` if the database answered the probe.
+    fn probe(&self) -> Result<(), ProbeError>;
+}
 
 /// A connection to `PostgreSQL` and the task that exchanges its messages.
 struct Session {
@@ -140,12 +122,12 @@ where
 }
 
 /// Returns an error of a TLS setting.
-fn tls_error(context: &str, error: impl std::fmt::Display) -> RefereeError {
-    RefereeError(format!("PostgreSQL TLS, {context}: {error}"))
+fn tls_error(context: &str, error: impl std::fmt::Display) -> ProbeError {
+    ProbeError(format!("PostgreSQL TLS, {context}: {error}"))
 }
 
 /// Returns the certificates that the certificate of `PostgreSQL` is verified against.
-fn root_store(settings: &PostgreSqlTls) -> Result<RootCertStore, RefereeError> {
+fn root_store(settings: &PostgreSqlTls) -> Result<RootCertStore, ProbeError> {
     let mut out = RootCertStore::empty();
     let Some(ca_file) = &settings.ca_file else {
         // Without a CA file, the store of the system is used, as in the Zato server.
@@ -163,7 +145,7 @@ fn root_store(settings: &PostgreSqlTls) -> Result<RootCertStore, RefereeError> {
 }
 
 /// Builds the TLS connector of the connections to `PostgreSQL`.
-fn tls_connector(settings: &PostgreSqlTls) -> Result<MakeRustlsConnect, RefereeError> {
+fn tls_connector(settings: &PostgreSqlTls) -> Result<MakeRustlsConnect, ProbeError> {
     let provider = Arc::new(rustls::crypto::ring::default_provider());
     let builder = ClientConfig::builder_with_provider(Arc::clone(&provider))
         .with_safe_default_protocol_versions()
@@ -193,38 +175,13 @@ fn tls_connector(settings: &PostgreSqlTls) -> Result<MakeRustlsConnect, RefereeE
     Ok(MakeRustlsConnect::new(config))
 }
 
-/// Returns a version as `PostgreSQL` stores it.
-fn stored_version(version: u64) -> Result<i64, RefereeError> {
-    i64::try_from(version).map_err(|error| RefereeError(format!("version {version}: {error}")))
-}
-
-/// Returns a version as `PostgreSQL` returned it.
-fn returned_version(version: i64) -> Result<u64, RefereeError> {
-    u64::try_from(version).map_err(|error| RefereeError(format!("version {version}: {error}")))
-}
-
-/// Encodes a value as the text of a JSON document.
-fn encode_text<T: serde::Serialize>(value: &T) -> Result<String, RefereeError> {
-    let bytes = wire::encode(value).map_err(|error| RefereeError(format!("JSON value: {error}")))?;
-    String::from_utf8(bytes).map_err(|error| RefereeError(format!("JSON value: {error}")))
-}
-
-/// Decodes the JSON document in the first column of a row.
-fn decode_column<T: serde::de::DeserializeOwned>(row: &Row) -> Result<T, RefereeError> {
-    let text: String = row.try_get(0).map_err(|error| RefereeError(format!("record column: {error}")))?;
-    wire::decode(text.as_bytes()).map_err(|error| RefereeError(format!("JSON value: {error}")))
-}
-
-/// The `PostgreSQL` referee.
-pub struct PostgreSqlReferee {
+/// The probe of the pub/sub database on `PostgreSQL`.
+pub struct PostgreSqlProbe {
     /// The connection settings, which are those of the pub/sub database.
     settings: PostgreSqlConfig,
 
     /// The TLS connector, if TLS is on.
     connector: Option<MakeRustlsConnect>,
-
-    /// The key of the record.
-    key: String,
 
     /// The runtime that the requests run on.
     runtime: Runtime,
@@ -233,29 +190,28 @@ pub struct PostgreSqlReferee {
     session: Mutex<Option<Session>>,
 }
 
-impl PostgreSqlReferee {
-    /// Builds a client of the record under `key` in the database that `settings` describe, without connecting yet.
-    pub fn new(settings: &PostgreSqlConfig, key: &str) -> Result<Self, RefereeError> {
+impl PostgreSqlProbe {
+    /// Builds the probe of the database that `settings` describe, without connecting yet.
+    pub fn new(settings: &PostgreSqlConfig) -> Result<Self, ProbeError> {
         let connector = settings.tls.as_ref().map(tls_connector).transpose()?;
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
-            .map_err(|error| RefereeError(format!("PostgreSQL runtime: {error}")))?;
+            .map_err(|error| ProbeError(format!("PostgreSQL runtime: {error}")))?;
         Ok(Self {
             settings: settings.clone(),
             connector,
-            key: key.to_owned(),
             runtime,
             session: Mutex::new(None),
         })
     }
 
     /// Returns the connection settings, with the password read again if it is kept in a file.
-    fn connection_config(&self) -> Result<Config, RefereeError> {
+    fn connection_config(&self) -> Result<Config, ProbeError> {
         let password = match &self.settings.password {
             PostgreSqlPassword::Value(value) => value.clone(),
             PostgreSqlPassword::File(path) => std::fs::read_to_string(path)
-                .map_err(|error| RefereeError(format!("{}: {error}", path.display())))?
+                .map_err(|error| ProbeError(format!("{}: {error}", path.display())))?
                 .trim()
                 .to_owned(),
         };
@@ -278,10 +234,10 @@ impl PostgreSqlReferee {
         Ok(out)
     }
 
-    /// Connects and creates the table if it does not exist.
-    async fn connect(&self) -> Result<Session, RefereeError> {
+    /// Connects to the database.
+    async fn connect(&self) -> Result<Session, ProbeError> {
         let config = self.connection_config()?;
-        let connect_error = |error: tokio_postgres::Error| RefereeError(format!("PostgreSQL connection: {error}"));
+        let connect_error = |error: tokio_postgres::Error| ProbeError(format!("PostgreSQL connection: {error}"));
 
         // The connection exchanges the messages of the client in a task of its own, and an error that ends it
         // is reported by the next request on the client.
@@ -292,13 +248,7 @@ impl PostgreSqlReferee {
             let (client, connection) = config.connect(NoTls).await.map_err(connect_error)?;
             (client, spawn_connection(connection))
         };
-        let out = Session { client, connection };
-
-        out.client
-            .batch_execute(CREATE_TABLE)
-            .await
-            .map_err(|error| RefereeError(format!("PostgreSQL table: {error}")))?;
-        Ok(out)
+        Ok(Session { client, connection })
     }
 
     /// Runs `operation` on the session within [`REQUEST_TIMEOUT`], connecting first if there is no session,
@@ -307,8 +257,8 @@ impl PostgreSqlReferee {
         &self,
         description: &str,
         operation: impl AsyncFnOnce(&Client) -> Result<T, tokio_postgres::Error>,
-    ) -> Result<T, RefereeError> {
-        // The requests of the threads of the node use the session one at a time.
+    ) -> Result<T, ProbeError> {
+        // The probes use the session one at a time.
         let mut guard = self.session.lock();
         let existing = guard.take();
 
@@ -319,8 +269,8 @@ impl PostgreSqlReferee {
             };
             let value = operation(&session.client)
                 .await
-                .map_err(|error| RefereeError(format!("PostgreSQL {description}: {error}")))?;
-            Ok::<_, RefereeError>((value, session))
+                .map_err(|error| ProbeError(format!("PostgreSQL {description}: {error}")))?;
+            Ok::<_, ProbeError>((value, session))
         };
 
         // The timer of the deadline registers with the runtime when it is created, so it is created within it.
@@ -335,92 +285,19 @@ impl PostgreSqlReferee {
                 Ok(value)
             }
             Ok(Err(error)) => Err(error),
-            Err(_) => Err(RefereeError(format!(
+            Err(_) => Err(ProbeError(format!(
                 "PostgreSQL {description}: no answer within {REQUEST_TIMEOUT:?}"
             ))),
         }
     }
-
-    /// Returns the key under which `node_name` publishes its address.
-    fn address_key(&self, node_name: &str) -> String {
-        format!("{}/{NODES_SUFFIX}/{node_name}", self.key)
-    }
 }
 
-impl Referee for PostgreSqlReferee {
-    fn read(&self) -> Result<Option<Versioned<RefereeRecord>>, RefereeError> {
-        let row = self.call("read", async |client| client.query_opt(SELECT_RECORD, &[&self.key]).await)?;
-        let Some(row) = row else {
-            return Ok(None);
-        };
-        let value = decode_column(&row)?;
-        let version: i64 = row.try_get(1).map_err(|error| RefereeError(format!("version column: {error}")))?;
-        Ok(Some(Versioned {
-            value,
-            version: returned_version(version)?,
-        }))
-    }
-
-    fn compare_and_set(&self, record: &RefereeRecord, expected_version: u64) -> Result<bool, RefereeError> {
-        let body = encode_text(record)?;
-        let changed = if expected_version == VERSION_ABSENT {
-            self.call("insert", async |client| client.execute(INSERT_RECORD, &[&self.key, &body]).await)?
-        } else {
-            let expected = stored_version(expected_version)?;
-            self.call("update", async |client| {
-                client.execute(UPDATE_RECORD, &[&self.key, &body, &expected]).await
-            })?
-        };
-        Ok(changed == 1)
-    }
-
-    fn renew(&self, record: &RefereeRecord, expected_version: u64) -> Result<Option<u64>, RefereeError> {
-        let body = encode_text(record)?;
-        let expected = stored_version(expected_version)?;
-        let row = self.call("renewal", async |client| {
-            client.query_opt(RENEW_RECORD, &[&self.key, &expected, &body]).await
-        })?;
-        let Some(row) = row else {
-            return Ok(None);
-        };
-        let version: i64 = row.try_get(0).map_err(|error| RefereeError(format!("version column: {error}")))?;
-        Ok(Some(returned_version(version)?))
-    }
-
-    fn publish_address(&self, address: &NodeAddress) -> Result<(), RefereeError> {
-        let body = encode_text(address)?;
-        let key = self.address_key(&address.node_name);
-        let _ = self.call("address", async |client| client.execute(UPSERT_ADDRESS, &[&key, &body]).await)?;
+impl DatabaseProbe for PostgreSqlProbe {
+    fn probe(&self) -> Result<(), ProbeError> {
+        let _ = self.call("probe", async |client| client.query_opt(PROBE_STATEMENT, &[]).await)?;
         Ok(())
-    }
-
-    fn read_addresses(&self) -> Result<Vec<NodeAddress>, RefereeError> {
-        let prefix = format!("{}/{NODES_SUFFIX}/", self.key);
-        let rows = self.call("addresses", async |client| client.query(SELECT_ADDRESSES, &[&prefix]).await)?;
-        rows.iter().map(decode_column).collect()
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::test_support::{LOOPBACK, NODE_A};
-
-    /// A port on the loopback that nothing listens on.
-    const CLOSED_PORT: u16 = 1;
-
-    #[test]
-    fn a_database_that_does_not_answer_is_an_error() {
-        let settings = PostgreSqlConfig {
-            host: LOOPBACK.to_owned(),
-            port: CLOSED_PORT,
-            username: "zato".to_owned(),
-            password: PostgreSqlPassword::Value("Test password".to_owned()),
-            database: "zato".to_owned(),
-            tls: None,
-        };
-        let referee = PostgreSqlReferee::new(&settings, "zato/ha/test").unwrap();
-        assert!(referee.read().is_err());
-        assert!(referee.compare_and_set(&RefereeRecord::solo(1, NODE_A), VERSION_ABSENT).is_err());
-    }
-}
+mod tests;

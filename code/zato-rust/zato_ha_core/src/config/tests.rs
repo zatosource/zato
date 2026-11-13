@@ -21,9 +21,6 @@ impl VariableSource for Variables {
 fn minimal() -> Variables {
     let pairs = [
         (ENV_MODE, MODE_ACTIVE_STANDBY),
-        (ENV_REFEREE_TYPE, REFEREE_TYPE_CONSUL),
-        (ENV_CONSUL_ADDRESS, "https://consul:8501"),
-        (ENV_CONSUL_TOKEN, "token"),
         (ENV_NODE_NAME, "zato-a"),
         (ENV_TLS_CA_FILE, "/tls/ca.pem"),
         (ENV_TLS_CERT_FILE, "/tls/zato-a.pem"),
@@ -46,6 +43,27 @@ fn defaults_apply() {
     assert_eq!(config.data_dir, PathBuf::from("/home/zato/env/qs-1"));
     assert_eq!(config.advertised_address, "zato-a");
     assert_eq!(config.databases.len(), 3);
+    assert_eq!(config.shared_database, None);
+    assert_eq!(
+        config.referee,
+        RefereeConfig::Kubernetes(KubernetesConfig {
+            lease_name: DEFAULT_LEASE_NAME.to_owned()
+        })
+    );
+}
+
+#[test]
+fn the_lease_name_is_read() {
+    let mut variables = minimal();
+    variables.0.insert(ENV_REFEREE_TYPE.to_owned(), REFEREE_TYPE_KUBERNETES.to_owned());
+    variables.0.insert(ENV_LEASE_NAME.to_owned(), "zato-ha-billing".to_owned());
+    let config = NodeConfig::from_source(&variables).unwrap();
+    assert_eq!(
+        config.referee,
+        RefereeConfig::Kubernetes(KubernetesConfig {
+            lease_name: "zato-ha-billing".to_owned()
+        })
+    );
 }
 
 #[test]
@@ -80,7 +98,6 @@ fn takeover_must_exceed_mark_out() {
 fn shared_storage() -> Variables {
     let pairs = [
         (ENV_MODE, MODE_ACTIVE_STANDBY),
-        (ENV_REFEREE_TYPE, REFEREE_TYPE_POSTGRESQL),
         (ENV_PUBSUB_DB_TYPE, PUBSUB_DB_TYPE_POSTGRESQL),
         (ENV_PUBSUB_DB_HOST, "postgresql"),
         (ENV_PUBSUB_DB_USERNAME, "zato"),
@@ -97,13 +114,9 @@ fn shared_storage() -> Variables {
     )
 }
 
-/// Returns the settings of the `PostgreSQL` referee read from `variables`.
+/// Returns the settings of the pub/sub database read from `variables`.
 fn postgresql_config(variables: &Variables) -> PostgreSqlConfig {
-    let config = NodeConfig::from_source(variables).unwrap();
-    let RefereeConfig::PostgreSql(out) = config.referee else {
-        panic!("not the PostgreSQL referee: {:?}", config.referee);
-    };
-    out
+    NodeConfig::from_source(variables).unwrap().shared_database.unwrap()
 }
 
 #[test]
@@ -112,8 +125,8 @@ fn a_postgresql_database_selects_the_shared_storage_mode() {
     assert_eq!(config.storage, StorageMode::Shared);
     assert_eq!(config.tls, None);
     assert_eq!(
-        config.referee,
-        RefereeConfig::PostgreSql(PostgreSqlConfig {
+        config.shared_database,
+        Some(PostgreSqlConfig {
             host: "postgresql".to_owned(),
             port: DEFAULT_POSTGRESQL_PORT,
             username: "zato".to_owned(),

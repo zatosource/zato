@@ -14,6 +14,7 @@ use std::time::{Duration, Instant};
 
 use crate::config::StorageMode;
 use crate::generation;
+use crate::postgresql::DatabaseProbe;
 use crate::record::{NodeAddress, RefereeRecord, Versioned};
 use crate::referee::{Transition, transition};
 use crate::state::{Role, Shared};
@@ -93,24 +94,28 @@ pub struct Control {
     last_lease_check: Instant,
 
     /// The version of the record that the active node last renewed, or `None` until it reads it, in the shared storage mode.
-    lease_version: Option<u64>,
+    lease_version: Option<String>,
 
-    /// When the last write that the referee applied for the active node was sent, in the shared storage mode.
-    last_renewal: Instant,
+    /// The probe of the database, which only the shared storage mode has.
+    probe: Option<Box<dyn DatabaseProbe>>,
+
+    /// Whether the last probe of the database succeeded, so that only a change of it is logged.
+    database_reachable: bool,
 
     /// The record that the standby last saw change, in the shared storage mode.
     observed: Option<Versioned<RefereeRecord>>,
 
     /// When the standby last saw the record change or failed to read it, in the shared storage mode.
     observed_at: Instant,
-
-    /// When the standby last sent a takeover, in the shared storage mode.
-    takeover_sent: Instant,
 }
 
 impl Control {
-    /// Returns the control loop of a node.
-    pub fn new(shared: Arc<Shared>, stop_requested: Arc<AtomicBool>) -> Result<Self, ControlError> {
+    /// Returns the control loop of a node, with the probe of the database in the shared storage mode.
+    pub fn new(
+        shared: Arc<Shared>,
+        probe: Option<Box<dyn DatabaseProbe>>,
+        stop_requested: Arc<AtomicBool>,
+    ) -> Result<Self, ControlError> {
         let persisted_generation = generation::read(&shared.config.generation_file())?;
 
         // Links of a generation below the persisted one are refused before the record is read, because the snapshot
@@ -126,10 +131,10 @@ impl Control {
             last_record_check: Instant::now(),
             last_lease_check: Instant::now(),
             lease_version: None,
-            last_renewal: Instant::now(),
+            probe,
+            database_reachable: true,
             observed: None,
             observed_at: Instant::now(),
-            takeover_sent: Instant::now(),
         })
     }
 
@@ -168,8 +173,6 @@ impl Control {
             if self.stop_requested() {
                 return Ok(());
             }
-            // A write of the record that makes this node active counts as a renewal of its lease from before it was sent.
-            self.last_renewal = Instant::now();
             match self.decide_first_role()? {
                 Some(()) => return Ok(()),
                 None => thread::sleep(STARTUP_RETRY_INTERVAL),
@@ -469,7 +472,6 @@ impl Control {
 mod tests {
     use super::*;
     use crate::config::Timers;
-    use crate::record::Versioned;
     use crate::referee::tests::MemoryReferee;
     use crate::test_support::{self, Certificates, NODE_A, NODE_B};
     use tempfile::TempDir;
@@ -498,8 +500,7 @@ mod tests {
 
     /// Returns node A with `record` in the referee and `persisted` in its generation file.
     fn node(record: Option<RefereeRecord>, persisted: u64, unreachable: bool) -> TestNode {
-        let referee = MemoryReferee::default();
-        *referee.record.lock() = record.map(|value| Versioned { value, version: 1 });
+        let referee = MemoryReferee::holding(record, 1);
         *referee.unreachable.lock() = unreachable;
         node_with_referee(referee, persisted)
     }
@@ -512,7 +513,7 @@ mod tests {
         generation::write(&config.generation_file(), persisted).unwrap();
 
         let shared = test_support::shared(config, Box::new(referee));
-        let control = Control::new(shared, Arc::new(AtomicBool::new(false))).unwrap();
+        let control = Control::new(shared, None, Arc::new(AtomicBool::new(false))).unwrap();
         TestNode {
             control,
             _dir: dir,
@@ -648,11 +649,7 @@ mod tests {
 
     #[test]
     fn a_mark_out_whose_answer_was_lost_stays_due_until_the_referee_answers() {
-        let referee = MemoryReferee::default();
-        *referee.record.lock() = Some(Versioned {
-            value: RefereeRecord::replicated(3, NODE_A, NODE_B),
-            version: 1,
-        });
+        let referee = MemoryReferee::holding(Some(RefereeRecord::replicated(3, NODE_A, NODE_B)), 1);
         *referee.lose_next_answer.lock() = true;
         let mut node = node_with_referee(referee, 3);
         set_role(&node.control, Role::ActiveReplicated, 3);

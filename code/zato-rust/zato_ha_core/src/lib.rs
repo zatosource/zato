@@ -7,7 +7,6 @@
 pub mod active;
 pub mod barrier;
 pub mod config;
-pub mod consul;
 pub mod control;
 pub mod copy;
 pub mod generation;

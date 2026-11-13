@@ -15,41 +15,43 @@ use std::sync::atomic::AtomicBool;
 use tracing_subscriber::EnvFilter;
 
 use zato_ha_core::active::Shipper;
-use zato_ha_core::config::{NodeConfig, POSTGRESQL_RECORD_KEY, ProcessEnvironment, RefereeConfig, StorageMode};
-use zato_ha_core::consul::ConsulReferee;
+use zato_ha_core::config::{NodeConfig, ProcessEnvironment, RefereeConfig, StorageMode};
 use zato_ha_core::control::Control;
+use zato_ha_core::kubernetes::client::ApiClient;
+use zato_ha_core::kubernetes::lease::LeaseReferee;
 use zato_ha_core::link::TlsContext;
-use zato_ha_core::postgresql::PostgreSqlReferee;
+use zato_ha_core::postgresql::{DatabaseProbe, PostgreSqlProbe};
 use zato_ha_core::referee::Referee;
 use zato_ha_core::state::Shared;
 use zato_ha_core::supervisor::Supervisor;
-use zato_ha_core::{barrier, kubernetes, role_endpoint, standby};
+use zato_ha_core::kubernetes::label;
+use zato_ha_core::{barrier, role_endpoint, standby};
 
 /// The argument that separates the node's own arguments from the server command.
 const COMMAND_SEPARATOR: &str = "--";
 
 /// Builds the referee selected by the configuration.
-fn build_referee(config: &NodeConfig) -> Result<Box<dyn Referee>, String> {
+fn build_referee(config: &NodeConfig, client: &ApiClient) -> Box<dyn Referee> {
     match &config.referee {
-        RefereeConfig::Consul(consul) => {
-            let ca_pem = match &consul.ca_file {
-                Some(path) => Some(std::fs::read(path).map_err(|error| format!("{}: {error}", path.display()))?),
-                None => None,
-            };
-            let referee =
-                ConsulReferee::new(&consul.address, &consul.token, &consul.key, ca_pem.as_deref()).map_err(|error| error.to_string())?;
-            Ok(Box::new(referee))
-        }
-        RefereeConfig::PostgreSql(postgresql) => {
-            let referee = PostgreSqlReferee::new(postgresql, POSTGRESQL_RECORD_KEY).map_err(|error| error.to_string())?;
-            Ok(Box::new(referee))
-        }
+        RefereeConfig::Kubernetes(kubernetes) => Box::new(LeaseReferee::new(client.clone(), &kubernetes.lease_name)),
     }
+}
+
+/// Builds the probe of the database of the shared storage mode, which the replicated storage mode does not have.
+fn build_probe(config: &NodeConfig) -> Result<Option<Box<dyn DatabaseProbe>>, String> {
+    let Some(database) = &config.shared_database else {
+        return Ok(None);
+    };
+    let probe = PostgreSqlProbe::new(database).map_err(|error| error.to_string())?;
+    Ok(Some(Box::new(probe)))
 }
 
 /// Starts every thread and runs the control loop until the node stops.
 fn run(config: NodeConfig, command: Vec<String>) -> Result<(), String> {
-    let referee = build_referee(&config)?;
+    // The label thread patches the pods of the pair, so the node runs only where the API server is reachable.
+    let client = ApiClient::from_service_account().map_err(|error| format!("Kubernetes: {error}"))?;
+    let referee = build_referee(&config, &client);
+    let probe = build_probe(&config)?;
     let tls = match &config.tls {
         Some(files) => Some(TlsContext::load(files).map_err(|error| error.to_string())?),
         None => None,
@@ -64,7 +66,7 @@ fn run(config: NodeConfig, command: Vec<String>) -> Result<(), String> {
     }
 
     // The control loop loads the persisted generation, which the replication link compares with every Hello.
-    let control = Control::new(Arc::clone(&shared), stop_requested).map_err(|error| error.to_string())?;
+    let control = Control::new(Arc::clone(&shared), probe, stop_requested).map_err(|error| error.to_string())?;
 
     // In the shared storage mode, both hosts use one database, so nothing is shipped and no commit waits for a barrier.
     if storage == StorageMode::Replicated {
@@ -72,7 +74,7 @@ fn run(config: NodeConfig, command: Vec<String>) -> Result<(), String> {
         standby::serve(&shared).map_err(|error| format!("replication link: {error}"))?;
     }
     role_endpoint::serve(&shared).map_err(|error| format!("role endpoint: {error}"))?;
-    kubernetes::start(&shared).map_err(|error| format!("Kubernetes: {error}"))?;
+    label::start(&shared, client).map_err(|error| format!("Kubernetes: {error}"))?;
 
     let shipper_thread = match storage {
         StorageMode::Replicated => {

@@ -18,7 +18,7 @@ name = "_zato_ha_node"
 path = "src/bin/ha_node.rs"
 
 [dependencies]
-base64 = "0.22"
+chrono = { version = "0.4.44", default-features = false, features = ["std", "clock"] }
 nix = { version = "0.30", default-features = false, features = ["signal", "process"] }
 parking_lot = "0.12"
 rand = "0.10.1"

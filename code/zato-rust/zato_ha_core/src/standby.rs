@@ -338,7 +338,7 @@ mod tests {
         let config = test_support::node_config(NODE_B, dir.path(), &certificates, TIMERS);
         generation::write(&config.generation_file(), 3).unwrap();
         let shared = test_support::shared(config, Box::new(MemoryReferee::default()));
-        let _control = Control::new(Arc::clone(&shared), Arc::new(AtomicBool::new(false))).unwrap();
+        let _control = Control::new(Arc::clone(&shared), None, Arc::new(AtomicBool::new(false))).unwrap();
 
         let listener = TcpListener::bind((LOOPBACK, 0)).unwrap();
         let port = listener.local_addr().unwrap().port();

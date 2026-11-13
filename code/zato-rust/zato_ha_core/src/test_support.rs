@@ -12,8 +12,8 @@ use std::sync::Arc;
 use tempfile::TempDir;
 
 use crate::config::{
-    ConsulConfig, DB_NAME_AUDIT, DB_NAME_COMMON, DB_NAME_PUBSUB, DatabaseConfig, NodeConfig, RefereeConfig, ShippingMode, StorageMode,
-    Timers, TlsFiles,
+    DB_NAME_AUDIT, DB_NAME_COMMON, DB_NAME_PUBSUB, DEFAULT_LEASE_NAME, DatabaseConfig, KubernetesConfig, NodeConfig, RefereeConfig,
+    ShippingMode, StorageMode, Timers, TlsFiles,
 };
 use crate::link::TlsContext;
 use crate::referee::Referee;
@@ -150,11 +150,8 @@ pub fn shared_storage_config(node: &str, dir: &Path, timers: Timers) -> NodeConf
 /// Returns the configuration of a node in a storage mode, with the TLS files of its replication link if it has one.
 fn config(node: &str, dir: &Path, storage: StorageMode, tls: Option<TlsFiles>, timers: Timers) -> NodeConfig {
     NodeConfig {
-        referee: RefereeConfig::Consul(ConsulConfig {
-            address: format!("http://{LOOPBACK}:8500"),
-            token: String::new(),
-            ca_file: None,
-            key: "zato/ha/test".to_owned(),
+        referee: RefereeConfig::Kubernetes(KubernetesConfig {
+            lease_name: DEFAULT_LEASE_NAME.to_owned(),
         }),
         storage,
         node_name: node.to_owned(),
@@ -163,6 +160,7 @@ fn config(node: &str, dir: &Path, storage: StorageMode, tls: Option<TlsFiles>, t
         role_port: 0,
         data_dir: dir.to_path_buf(),
         tls,
+        shared_database: None,
         timers,
         databases: vec![
             DatabaseConfig {
