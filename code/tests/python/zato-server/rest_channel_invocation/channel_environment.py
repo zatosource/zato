@@ -66,6 +66,10 @@ _isolated_file_variables = (
 _rule_engine_variable = 'Zato_Rule_Engine_Dashboard_DB_URL'
 _rule_engine_file_name = 'rule-engine.db'
 
+# The metrics channel of a new environment is secured with this user and the password of this variable
+Metrics_Username = 'metrics'
+_metrics_password_variable = 'Zato_Metrics_Password'
+
 _process_kill_timeout = 5
 _server_wait_timeout  = 120
 _redis_wait_timeout   = 10
@@ -182,6 +186,9 @@ class ChannelEnvironment:
 
         self.invoke_password = 'test.invoke.' + CryptoManager.generate_hex_string()
 
+        # The password of the metrics channel, which quickstart creates with the user named in Metrics_Username
+        self.metrics_password = 'test.metrics.' + CryptoManager.generate_hex_string()
+
 # ################################################################################################################################
 
     @property
@@ -287,6 +294,8 @@ class ChannelEnvironment:
 
         rule_engine_path = os.path.join(self.temp_directory, _rule_engine_file_name)
         out[_rule_engine_variable] = 'sqlite:///' + rule_engine_path
+
+        out[_metrics_password_variable] = self.metrics_password
 
         return out
 

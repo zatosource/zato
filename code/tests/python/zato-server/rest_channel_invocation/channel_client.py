@@ -27,6 +27,9 @@ if 0:
 Host = '127.0.0.1'
 
 _socket_timeout = 30
+
+# How long a check for a closed connection waits for the server to close it, in seconds
+_close_wait_timeout = 2
 _receive_size = 65536
 _header_end = b'\r\n\r\n'
 _line_end = b'\r\n'
@@ -244,17 +247,41 @@ class Connection:
         return out
 
     def is_closed_by_server(self) -> 'bool':
-        """ Returns whether the server has closed its side of the connection.
+        """ Returns whether the server has closed its side of the connection, waiting briefly for it to do so.
         """
         if self.reader.buffer:
             return False
+
+        self.socket.settimeout(_close_wait_timeout)
 
         try:
             data = self.socket.recv(_receive_size)
         except ConnectionResetError:
             return True
+        except TimeoutError:
+            return False
+        finally:
+            self.socket.settimeout(_socket_timeout)
 
         out = not data
+        return out
+
+    def read_until_closed(self) -> 'bytes':
+        """ Returns everything the server sends until it closes the connection.
+        """
+        out = b''
+
+        while True:
+            try:
+                data = self.socket.recv(_receive_size)
+            except ConnectionResetError:
+                break
+
+            if not data:
+                break
+
+            out += data
+
         return out
 
     def close(self) -> 'None':

@@ -98,7 +98,9 @@ class Paths:
     Items_Generic = '/test/channel/items/{item_id}'
     Items_Special = '/test/channel/items/special'
     Files = '/test/channel/files/{file_path}'
+    Files_Single = '/test/channel/single-files/{file_name}'
     Method_GET = '/test/channel/method-get'
+    Accept_JSON = '/test/channel/accept'
     Params_Path_Priority = '/test/channel/priority/path/{customer_id}'
     Params_Query_Priority = '/test/channel/priority/query/{customer_id}'
     Params_Not_Merged = '/test/channel/not-merged/{customer_id}'
@@ -171,6 +173,8 @@ class Paths:
     Audit_Active = '/test/channel/audit/active'
     Audit_Inactive = '/test/channel/audit/inactive'
     Cached = '/test/channel/cached'
+    Queue = '/test/channel/queue'
+    Queue_Static = '/test/channel/queue-static'
 
     # SOAP
     SOAP_Echo = '/test/channel/soap/echo'
@@ -207,6 +211,9 @@ class Limits:
     Security_Burst = 3
     Changing_First = 2
     Changing_Second = 6
+
+# The static response of a queue channel that names one
+Queue_Static_Response = '{"status": "accepted"}'
 
 class Deprecation:
     Sunset = '2027-06-30'
@@ -373,10 +380,13 @@ def build_channel_yaml(
     *,
     lifecycle_path:'str' = Paths.Lifecycle,
     lifecycle_service:'str' = Services.Echo,
+    is_lifecycle_active:'bool' = True,
     rate_changing:'int' = Limits.Changing_First,
     ) -> 'str':
     """ Returns the YAML of the REST and SOAP channels of the suite.
     """
+    lifecycle_is_active_value = 'true' if is_lifecycle_active else 'false'
+
     out = 'channel_rest:'
 
     # URL matching and the request context
@@ -385,15 +395,20 @@ def build_channel_yaml(
     out += _channel('test.channel.items.generic', Services.Echo, Paths.Items_Generic)
     out += _channel('test.channel.items.special', Services.Ping, Paths.Items_Special)
     out += _channel('test.channel.files', Services.Echo, Paths.Files)
+    out += _channel('test.channel.single-files', Services.Echo, Paths.Files_Single, extra="""
+    match_slash: false""")
     out += _channel('test.channel.method-get', Services.Echo, Paths.Method_GET, extra="""
     method: GET""")
+    out += _channel('test.channel.accept', Services.Echo, Paths.Accept_JSON, extra="""
+    http_accept: application/json""")
     out += _channel('test.channel.priority.path', Services.Echo, Paths.Params_Path_Priority, extra="""
     url_params_pri: path-over-qs""")
     out += _channel('test.channel.priority.query', Services.Echo, Paths.Params_Query_Priority, extra="""
     url_params_pri: qs-over-path""")
     out += _channel('test.channel.not-merged', Services.Echo, Paths.Params_Not_Merged, extra="""
     merge_url_params_req: false""")
-    out += _channel(Channels.Lifecycle, lifecycle_service, lifecycle_path)
+    out += _channel(Channels.Lifecycle, lifecycle_service, lifecycle_path, extra=f"""
+    is_active: {lifecycle_is_active_value}""")
     out += _channel('test.channel.internal-shadow', Services.Ping, Paths.Internal_Shadow)
 
     # Payloads
@@ -495,6 +510,11 @@ def build_channel_yaml(
       ttl: 60
       ttl_unit: seconds
       cache_on_second_request: false""")
+    out += _channel('test.channel.queue', Services.Echo, Paths.Queue, extra="""
+    use_queue: true""")
+    out += _channel('test.channel.queue-static', Services.Echo, Paths.Queue_Static, extra=f"""
+    use_queue: true
+    queue_response: '{Queue_Static_Response}'""")
 
     # SOAP
     out += f"""
@@ -523,6 +543,63 @@ channel_soap:
 
 # ################################################################################################################################
 
+class Server:
+    """ The objects that the server-level group imports on its own.
+    """
+    Basic_Security = 'test.channel.server.sec.basic'
+    Basic_Username = 'patricia.martin'
+    Basic_Password = 'Server.Password.1'
+    JWT_Security = 'test.channel.server.sec.jwt'
+
+    Basic_Channel = 'test.channel.server.basic'
+    JWT_Channel = 'test.channel.server.jwt'
+    SOAP_Channel = 'test.channel.server.soap'
+
+    Basic_Path = '/test/channel/server/basic/{customer_id}'
+    JWT_Path = '/test/channel/server/jwt'
+    SOAP_Path = '/test/channel/server/soap'
+
+# ################################################################################################################################
+
+def build_server_yaml(provider:'IdentityProvider') -> 'str':
+    """ Returns the YAML of a REST channel with Basic Auth, a REST channel with a JWT and a SOAP channel.
+    """
+    out = f"""
+security:
+  - name: {Server.Basic_Security}
+    type: basic_auth
+    username: {Server.Basic_Username}
+    password: "{Server.Basic_Password}"
+  - name: {Server.JWT_Security}
+    type: bearer_token
+    username: test.channel.server.jwt.client
+    password: Server.Client.Secret.1
+    issuer: {provider.issuer}
+    audience: {provider.audience}
+    jwks_url: {provider.jwks_url}
+
+channel_rest:
+  - name: {Server.Basic_Channel}
+    service: {Services.Echo}
+    url_path: {Server.Basic_Path}
+    security: {Server.Basic_Security}
+    data_format: json
+  - name: {Server.JWT_Channel}
+    service: {Services.Echo}
+    url_path: {Server.JWT_Path}
+    security: {Server.JWT_Security}
+    data_format: json
+
+channel_soap:
+  - name: {Server.SOAP_Channel}
+    service: test.channel.soap.echo
+    url_path: {Server.SOAP_Path}
+"""
+
+    return out
+
+# ################################################################################################################################
+
 def build_yaml(
     provider:'IdentityProvider',
     *,
@@ -531,6 +608,7 @@ def build_yaml(
     group_members:'tuple[str, ...]' = (Security.Group_Basic, Security.Group_API_Key),
     lifecycle_path:'str' = Paths.Lifecycle,
     lifecycle_service:'str' = Services.Echo,
+    is_lifecycle_active:'bool' = True,
     rate_changing:'int' = Limits.Changing_First,
     ) -> 'str':
     """ Returns the complete enmasse YAML of the suite.
@@ -545,6 +623,7 @@ def build_yaml(
     channel_yaml = build_channel_yaml(
         lifecycle_path=lifecycle_path,
         lifecycle_service=lifecycle_service,
+        is_lifecycle_active=is_lifecycle_active,
         rate_changing=rate_changing,
     )
 

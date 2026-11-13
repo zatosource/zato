@@ -40,7 +40,12 @@ _connection_type = 'channel_rest'
 # Keys that are compared and stored on their own, not as columns of the database row
 _non_column_keys = ('security', 'groups', 'gateway_service_list', 'rate_limiting', 'response_cache',
     'is_audit_log_active', 'is_audit_export_payload_active', Alerts_Key,
-    'should_include_in_openapi', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor') + Channel_Delivery_Fields
+    'should_include_in_openapi', 'is_deprecated', 'deprecation_sunset', 'deprecation_successor',
+    'match_slash', 'http_accept') + Channel_Delivery_Fields
+
+# The URL matching options, stored as opaque attributes only when the YAML definition names them,
+# since the runtime applies its own defaults to a channel without them
+_matching_keys = ('match_slash', 'http_accept')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,9 +67,15 @@ class ChannelImporter:
         channels = to_json(query, return_as_dict=True)
         logger.info('Processing %d REST channels', len(channels))
 
+        # The name of each service, so that a channel moved to another service can be told apart
+        service_names = {}
+        for service in session.query(Service):
+            service_names[service.id] = service.name
+
         for item in channels:
             item = item['fields']
             name = item['name']
+            item['service_name'] = service_names[item['service_id']]
             logger.info('Processing channel: %s (id=%s)', name, item['id'])
             out[name] = item
 
@@ -102,6 +113,11 @@ class ChannelImporter:
                         needs_update = True
                         break
 
+                # Check the service the channel invokes
+                if item['service'] != db_def['service_name']:
+                    logger.info('Service changed for channel %s: yaml=%s db=%s', name, item['service'], db_def['service_name'])
+                    needs_update = True
+
                 # Check security definition
                 if security_needs_update(item, db_def, self.importer):
                     needs_update = True
@@ -132,6 +148,10 @@ class ChannelImporter:
 
                 # Check the deprecation attributes
                 if self._deprecation_needs_update(item, db_def):
+                    needs_update = True
+
+                # Check the URL matching options
+                if self._matching_needs_update(item, db_def):
                     needs_update = True
 
                 # Check the alert settings
@@ -345,6 +365,37 @@ class ChannelImporter:
 
 # ################################################################################################################################
 
+    def _matching_needs_update(self, item:'anydict', db_def:'anydict') -> 'bool':
+        """ Check if the URL matching options need update - an absent option is absent from the database too.
+        """
+        opaque = {}
+        try:
+            opaque1 = db_def.get('opaque1')
+            if opaque1:
+                opaque = loads(opaque1)
+        except Exception as e:
+            logger.warning('Error parsing opaque for channel %s: %s', item['name'], e)
+
+        for key in _matching_keys:
+            yaml_value = item.get(key)
+            db_value = opaque.get(key)
+            if yaml_value != db_value:
+                logger.info('%s changed for channel %s: yaml=%s db=%s', key, item['name'], yaml_value, db_value)
+                return True
+
+        return False
+
+# ################################################################################################################################
+
+    def _set_matching_attrs(self, channel_def:'anydict', opaque_attrs:'anydict') -> 'None':
+        """ Copies the URL matching options the YAML definition names into the opaque attributes.
+        """
+        for key in _matching_keys:
+            if key in channel_def:
+                opaque_attrs[key] = channel_def[key]
+
+# ################################################################################################################################
+
     def _preprocess_security_groups(self, channel_def:'anydict') -> 'list':
         """ Convert security group names to IDs.
         """
@@ -458,6 +509,9 @@ class ChannelImporter:
         else:
             opaque_attrs['deprecation_since'] = ''
 
+        # The URL matching options the YAML definition names
+        self._set_matching_attrs(channel_def, opaque_attrs)
+
         # The alert settings, every one of them, over the defaults
         opaque_attrs.update(alert_attrs)
 
@@ -564,6 +618,9 @@ class ChannelImporter:
             opaque_attrs['deprecation_since'] = deprecation_since
         else:
             opaque_attrs['deprecation_since'] = ''
+
+        # The URL matching options the YAML definition names
+        self._set_matching_attrs(channel_def, opaque_attrs)
 
         # The alert settings, every one of them, over the defaults
         opaque_attrs.update(alert_attrs)

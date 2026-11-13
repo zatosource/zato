@@ -123,6 +123,7 @@ def describe_request(service:'Service') -> 'anydict':
         'input': describe_value(service.request.input),
         'channel_params': dict(service.request.channel_params),
         'channel': service.channel.to_dict(),
+        'chan': service.chan.to_dict(),
         'channel_type': service.channel.type,
         'data_format': service.data_format,
         'transport': service.transport,

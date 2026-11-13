@@ -172,6 +172,13 @@ class ChannelExporter:
                 if deprecation_successor := channel_row.get('deprecation_successor'):
                     exported_channel['deprecation_successor'] = deprecation_successor
 
+            # The URL matching options are exported only when the channel names them
+            if channel_row.get('match_slash') is not None:
+                exported_channel['match_slash'] = channel_row.match_slash
+
+            if http_accept := channel_row.get('http_accept'):
+                exported_channel['http_accept'] = http_accept
+
             # The queue switch, the retry and DLQ settings and the static queue response, only what differs from the defaults
             export_channel_delivery_fields(exported_channel, channel_row)
 

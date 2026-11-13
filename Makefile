@@ -8,7 +8,7 @@
 	analytics update cron-update update-on-prem-gateway stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge on-prem-gateway on-prem-gateway-hub file-listener sftp api-portal api-portal-demo api-portal-tutorial b2b-portal mcp-demo \
 	help install-deps install-fhir-converter \
-	test-server test-server-fuzz test-rest test-rest-fuzz test-rest-outgoing test-rest-perf test-rest-channel test-rest-channel-perf test-scheduler test-scheduler-failover test-consul test-consul-pair test-consul-kubernetes \
+	test-server test-server-fuzz test-rest test-rest-fuzz test-rest-outgoing test-rest-perf test-rest-channel test-rest-channel-router test-rest-channel-perf test-scheduler test-scheduler-failover test-consul test-consul-pair test-consul-kubernetes \
 	test-sql-postgresql-multi test-sql-postgresql-multi-pair test-sql-postgresql-multi-kubernetes \
 	test-consul-multi test-consul-multi-pair test-consul-multi-kubernetes test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
@@ -681,6 +681,13 @@ test-rest-channel: ## REST and SOAP channel invocation tests through a running s
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/rest_channel_invocation/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest_channel_invocation -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+test-rest-channel-router: ## The Rust REST channel router compared with the Python request dispatcher.
+	$(Zato_Log_Reset)
+	$(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/rest_channel_router/ \
+		-v -p no:logging -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest_channel_router -W ignore::DeprecationWarning -W ignore::pytest.PytestConfigWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 # The measurement environment of REST and SOAP channels - the load client and the scripts
