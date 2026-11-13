@@ -317,6 +317,25 @@ mod tests {
     }
 
     #[test]
+    fn a_restarted_active_node_waits_for_the_takeover_as_the_standby_does() {
+        let mut node = TestNode::new(Some(RefereeRecord::solo(FIRST_GENERATION, NODE_A)));
+        node.control.bootstrap().unwrap();
+
+        // The node does not resume at once, so the standby that watched the lease takes over first ..
+        assert_eq!(node.role(), (Role::StandbyInSync, FIRST_GENERATION));
+        assert_eq!(node.record().version, FIRST_VERSION);
+
+        // .. and without a standby, the node takes over its own record once the takeover time elapses.
+        node.control.watch_lease().unwrap();
+        thread::sleep(PAST_TIMERS);
+        node.control.watch_lease().unwrap();
+
+        let next = FIRST_GENERATION + 1;
+        assert_eq!(node.role(), (Role::ActiveSolo, next));
+        assert_eq!(node.record().value, RefereeRecord::solo(next, NODE_A));
+    }
+
+    #[test]
     fn the_active_node_renews_its_lease() {
         let mut node = TestNode::in_role(Role::ActiveSolo, NODE_A);
 

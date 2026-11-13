@@ -215,8 +215,10 @@ impl Control {
             });
         }
 
-        // A node that was active alone holds every acknowledged frame on its own disk and resumes.
-        if record.active_node == node_name && !record.standby_in_sync {
+        // A node that was active alone holds every acknowledged frame on its own disk and resumes. In the shared
+        // storage mode, the standby is always in sync, so the node waits for the takeover as one with a standby in sync.
+        let is_shared = self.shared.config.storage == StorageMode::Shared;
+        if record.active_node == node_name && !record.standby_in_sync && !is_shared {
             let intended = RefereeRecord::solo(record.generation + 1, &node_name);
             let expected = record.clone();
             return match transition(self.shared.referee.as_ref(), &intended, |current| current == Some(&expected)) {
@@ -231,7 +233,6 @@ impl Control {
         // A standby in sync that restarts still holds every frame it confirmed, since it confirms only synced frames.
         // An active node that had a standby in sync may lack frames it never synced, so it waits for the takeover.
         // A standby of the shared storage mode reads the one database, so it may always take over.
-        let is_shared = self.shared.config.storage == StorageMode::Shared;
         let was_in_sync = record.is_standby_in_sync(&node_name) && record.generation == local;
         let role = if is_shared || was_in_sync {
             Role::StandbyInSync
