@@ -100,6 +100,9 @@ class ModuleCtx:
     Unchanged_Netem = 'delay 0ms'
     Total_Loss = 'loss 100%'
 
+    # How many claims of each scheduler job a server killed between a claim and its run may leave without a run
+    Unrun_Claims_After_Kill = 1
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -253,7 +256,13 @@ def test_crash_during_rejoin(ha_pair:'HAEnvironment', phase:'str', side:'str') -
 
     check_workload(env, workload)
 
-    _ = check_scheduler(env, active)
+    # An active node that is killed leaves the claim it committed before the run began without a run.
+    if side == ModuleCtx.Side_Active:
+        unrun_claims = ModuleCtx.Unrun_Claims_After_Kill
+    else:
+        unrun_claims = 0
+
+    _ = check_scheduler(env, active, unrun_claims)
     check_copies(env, active)
 
 # ################################################################################################################################

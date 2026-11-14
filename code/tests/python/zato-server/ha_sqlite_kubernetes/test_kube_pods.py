@@ -16,7 +16,7 @@ import time
 import pytest
 
 # Zato
-from kube_checks import finish, get_pair, start_workload
+from kube_checks import finish, get_pair, ModuleCtx as ChecksCtx, start_workload
 from kube_faults import delete_pod, freeze_pod, kill_server, thaw_pod
 from nodes import ModuleCtx as NodesCtx
 
@@ -73,7 +73,8 @@ def test_pod_fault(kube_pair:'KubeEnvironment', fault:'str') -> 'None':
 
     workload.fault_windows.append((started, time.time()))
 
-    _ = finish(env, workload, started)
+    # The active pod or server that the fault ends leaves the claim it committed before the run began without a run.
+    _ = finish(env, workload, started, ChecksCtx.Unrun_Claims_After_Fault)
 
 # ################################################################################################################################
 # ################################################################################################################################

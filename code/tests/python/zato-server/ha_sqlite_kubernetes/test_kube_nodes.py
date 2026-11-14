@@ -17,7 +17,7 @@ import time
 import pytest
 
 # Zato
-from kube_checks import finish, get_pair, start_workload
+from kube_checks import finish, get_pair, ModuleCtx as ChecksCtx, start_workload
 from kube_faults import drain_node, heal_node, partition_node, pause_node, start_node, stop_node, uncordon_node, \
     unpause_node
 from nodes import ModuleCtx as NodesCtx
@@ -87,7 +87,8 @@ def test_node_fault(kube_pair:'KubeEnvironment', fault:'str') -> 'None':
 
     workload.fault_windows.append((started, time.time()))
 
-    _ = finish(env, workload, started)
+    # The active pod that the fault ends leaves the claim it committed before the run began without a run.
+    _ = finish(env, workload, started, ChecksCtx.Unrun_Claims_After_Fault)
 
 # ################################################################################################################################
 # ################################################################################################################################

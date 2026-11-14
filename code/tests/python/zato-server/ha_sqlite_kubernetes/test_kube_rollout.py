@@ -15,7 +15,7 @@ import json
 import time
 
 # Zato
-from kube_checks import finish, get_pair, start_workload
+from kube_checks import finish, get_pair, ModuleCtx as ChecksCtx, start_workload
 from kube_cluster import kubectl, ModuleCtx as ClusterCtx, wait_for_rollout
 from kube_env import ModuleCtx as EnvCtx
 from kube_faults import start_node, stop_node
@@ -71,7 +71,8 @@ def test_rolling_update(kube_pair:'KubeEnvironment') -> 'None':
     wait_for_rollout('statefulset', EnvCtx.StatefulSet_Name)
     workload.fault_windows.append((started, time.time()))
 
-    _ = finish(env, workload, started)
+    # The replaced active pod leaves the claim it committed before the run began without a run.
+    _ = finish(env, workload, started, ChecksCtx.Unrun_Claims_After_Fault)
 
 # ################################################################################################################################
 

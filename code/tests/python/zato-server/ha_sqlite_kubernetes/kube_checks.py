@@ -42,6 +42,9 @@ class ModuleCtx:
     # How long the pair may take to recover once a fault is removed, in seconds, which includes pods that start again
     Recovery_Timeout = 600
 
+    # How many claims of each scheduler job an active pod that a fault ends between a claim and its run may leave without a run
+    Unrun_Claims_After_Fault = 1
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -73,8 +76,9 @@ def get_pair(env:'KubeEnvironment') -> 'tuple[KubeNode, KubeNode]':
 
 # ################################################################################################################################
 
-def finish(env:'KubeEnvironment', workload:'Workload', fault_started:'float') -> 'KubeNode':
+def finish(env:'KubeEnvironment', workload:'Workload', fault_started:'float', unrun_claims:'int'=0) -> 'KubeNode':
     """ Waits for the pair, reports how long the Service listed no pod after the fault and applies the checks of every run.
+    Each job may count the given number of claims that an active pod ended by the fault did not run.
     """
     active = env.wait_for_pair(ModuleCtx.Recovery_Timeout)
 
@@ -83,7 +87,7 @@ def finish(env:'KubeEnvironment', workload:'Workload', fault_started:'float') ->
 
     check_workload(cast_('any_', env), workload)
 
-    _ = check_scheduler(cast_('any_', env), active)
+    _ = check_scheduler(cast_('any_', env), active, unrun_claims)
     check_copies(cast_('any_', env), active)
 
     return active
