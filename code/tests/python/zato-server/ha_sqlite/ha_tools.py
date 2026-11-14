@@ -273,7 +273,11 @@ def degrade_links(node:'Node', netems:'list[tuple[strlist, str]]') -> 'None':
 def change_link(node:'Node', band:'int', netem:'str') -> 'None':
     """ Replaces the parameters of netem of one band that `degrade_links` applied.
     """
-    _ = Container(node.container_name).run_tc(f'tc qdisc change dev {ModuleCtx.Interface} parent 1:{band} handle {band}0: netem {netem}')
+    # A change of netem keeps each parameter it is not given, so the qdisc of the band is created again.
+    qdisc = f'dev {ModuleCtx.Interface} parent 1:{band} handle {band}0:'
+    script = f'tc qdisc del {qdisc} && tc qdisc add {qdisc} netem {netem}'
+
+    _ = Container(node.container_name).run_tc(script)
 
     logger.info('Band %d of the link of %s -> netem %s', band, node.node_name, netem)
 
