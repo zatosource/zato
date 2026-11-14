@@ -85,7 +85,8 @@ def take_over(env:'HAEnvironment', fault:'str', workload:'Workload') -> 'tuple[N
     time.sleep(ModuleCtx.Traffic_Seconds)
 
     # .. which fails, and its standby takes over ..
-    addresses = get_isolation_addresses(new_active, env.referee.ip)
+    backend_ips = [ip for backend in env.backends for ip in backend.ips]
+    addresses = get_isolation_addresses(new_active, env.referee.ip, backend_ips)
     fault_started = apply_fault(old_active, fault, addresses)
 
     _ = new_active.wait_for_role(ModuleCtx.Active_Roles, ModuleCtx.Takeover_Timeout)

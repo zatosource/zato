@@ -71,10 +71,11 @@ def heal(node:'Node') -> 'None':
 
 # ################################################################################################################################
 
-def get_isolation_addresses(peer:'Node', referee_ip:'str') -> 'strlist':
-    """ Returns the addresses that cut a node off from its peer and from the referee together.
+def get_isolation_addresses(peer:'Node', referee_ip:'str', backend_ips:'strlist') -> 'strlist':
+    """ Returns the addresses that cut a node off from its peer, from the referee and from the services
+    of the pair together.
     """
-    out = [peer.ip, referee_ip]
+    out = [peer.ip, referee_ip, *backend_ips]
     return out
 
 # ################################################################################################################################

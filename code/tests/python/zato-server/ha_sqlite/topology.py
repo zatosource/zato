@@ -232,6 +232,9 @@ class Backend:
     """
     container_names: 'strlist'
 
+    # The addresses of the containers, which a partition of a node cuts it off from together with its peer and the referee
+    ips: 'strlist'
+
     def stop(self) -> 'None':
         raise NotImplementedError()
 

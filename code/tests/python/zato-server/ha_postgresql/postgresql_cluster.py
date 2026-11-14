@@ -109,11 +109,13 @@ class PostgreSQLCluster(Backend):
 
         self.instances:'dict[str, Instance]' = {}
         self.container_names:'strlist' = []
+        self.ips:'strlist' = []
 
         for name in ModuleCtx.Instance_IPs:
             instance = Instance(name, ModuleCtx.Host_Data_Dir)
             self.instances[name] = instance
             self.container_names.append(instance.container_name)
+            self.ips.append(instance.ip)
 
         self.primary_name = ModuleCtx.First_Primary
         self.ip = self.instances[self.primary_name].ip
