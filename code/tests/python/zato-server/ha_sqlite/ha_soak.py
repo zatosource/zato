@@ -201,7 +201,12 @@ def take_node_sample(node:'Node') -> 'NodeSample':
     out.tasks = int(container.read_cgroup('pids.current'))
     out.wal_bytes = read_wal_bytes(node)
 
-    open_files = docker('exec', node.container_name, 'sh', '-c', ModuleCtx.Count_Open_Files)
+    open_files = docker('exec', node.container_name, 'sh', '-c', ModuleCtx.Count_Open_Files, check=False)
+
+    # A fault may stop the container after the reads above, which leaves it as unsampled as a container stopped before them.
+    if open_files.returncode != 0:
+        raise CalledProcessError(open_files.returncode, open_files.args, open_files.stdout, open_files.stderr)
+
     out.open_files = int(open_files.stdout.strip())
 
     # A node that does not answer has no role and reports no lag.

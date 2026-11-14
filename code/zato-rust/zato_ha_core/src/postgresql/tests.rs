@@ -131,14 +131,14 @@ fn settings(port: u16) -> PostgreSqlConfig {
 }
 
 #[test]
-fn the_probe_succeeds_only_while_the_generation_guard_is_reachable() {
+fn the_probe_succeeds_only_while_the_database_answers() {
     let container = PostgreSqlContainer::start();
     let probe = PostgreSqlProbe::new(&container.settings()).unwrap();
 
-    // A database in which no Zato server created the generation guard yet fails the probe ..
-    assert!(probe.probe().is_err());
+    // A database in which no Zato server created the generation guard yet answers the probe ..
+    probe.probe().unwrap();
 
-    // .. a database with the generation guard passes it ..
+    // .. a database with the generation guard passes it too ..
     container.execute(CREATE_GUARD);
     probe.probe().unwrap();
     probe.probe().unwrap();

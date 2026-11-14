@@ -6,7 +6,8 @@
 //! The probe of the pub/sub database on `PostgreSQL` in the shared storage mode.
 //!
 //! A probe reads the row of `pubsub_active` that the generation guard of the Zato server keeps, which establishes
-//! that the database is reachable from the pod. Each probe runs within [`REQUEST_TIMEOUT`] on a runtime of the probe,
+//! that the database is reachable from the pod, including before the Zato server first created the table.
+//! Each probe runs within [`REQUEST_TIMEOUT`] on a runtime of the probe,
 //! and a probe that fails or does not complete in time ends the session, so that the next probe connects again.
 
 use std::sync::Arc;
@@ -21,6 +22,7 @@ use rustls::{ClientConfig, DigitallySignedStruct, RootCertStore, SignatureScheme
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use tokio_postgres::config::SslMode;
+use tokio_postgres::error::SqlState;
 use tokio_postgres::{Client, Config, NoTls};
 use tokio_postgres_rustls::MakeRustlsConnect;
 
@@ -294,7 +296,12 @@ impl PostgreSqlProbe {
 
 impl DatabaseProbe for PostgreSqlProbe {
     fn probe(&self) -> Result<(), ProbeError> {
-        let _ = self.call("probe", async |client| client.query_opt(PROBE_STATEMENT, &[]).await)?;
+        let _ = self.call("probe", async |client| match client.query_opt(PROBE_STATEMENT, &[]).await {
+            // The Zato server creates the generation guard when it first starts, after the node already probes,
+            // and a database that reports the table as missing answered the probe.
+            Err(error) if error.code() == Some(&SqlState::UNDEFINED_TABLE) => Ok(None),
+            outcome => outcome,
+        })?;
         Ok(())
     }
 }
