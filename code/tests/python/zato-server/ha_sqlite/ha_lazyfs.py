@@ -20,6 +20,7 @@ import time
 # Zato
 from nodes import NodeHook
 from topology import docker, ensure_image, remove_container
+from zato.common.ha.common import ModuleCtx as HACtx
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -158,6 +159,9 @@ class LazyFSHook(NodeHook):
             time.sleep(ModuleCtx.Poll_Interval)
 
         node.run_dir_options = ':rslave'
+
+        # LazyFS does not support Unix sockets, so the barrier socket is placed outside of its mount.
+        node.env[HACtx.Env_Barrier_Socket] = os.path.join(node.directory, HACtx.Default_Barrier_Socket_Name)
 
         logger.info('LazyFS mounted at %s', node.data_dir)
 

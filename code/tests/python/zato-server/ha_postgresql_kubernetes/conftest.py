@@ -82,4 +82,13 @@ def kube_pair(kube_session:'any_', request:'any_') -> 'any_':
         restore_cluster()
 
 # ################################################################################################################################
+
+@pytest.fixture
+def partition_replaces_active() -> 'bool':
+    """ Whether the standby takes over from an active pod whose worker node is partitioned from the other zones.
+    The node no longer reaches the database in its own zone, so the active pod stops renewing the lease.
+    """
+    return True
+
+# ################################################################################################################################
 # ################################################################################################################################
