@@ -18,8 +18,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'zato-com
 # Zato
 from live_environment.scheduler import SchedulerProcess
 from zato.common.test.conftest_base_multi_cpu import create_multi_cpu_server_fixture, get_worker_count, \
-     ModuleCtx as MultiCPUCtx, MultiCPUTestConfig
+    ModuleCtx as MultiCPUCtx, MultiCPUTestConfig, remove_interrupted_run_state
 from zato.common.test.config_multi_cpu_scheduler import SchedulerConfig
+from zato.common.test.resume import pytest_runtest_protocol as pytest_runtest_protocol
+from zato.common.test.resume import pytest_runtest_teardown as pytest_runtest_teardown
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -71,6 +73,8 @@ def _build_config(
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+remove_interrupted_run_state()
 
 zato_server = create_multi_cpu_server_fixture(
     logger_name='zato.test.multi_cpu_scheduler.conftest',

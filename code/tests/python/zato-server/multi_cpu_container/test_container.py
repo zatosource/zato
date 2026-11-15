@@ -17,6 +17,9 @@ from _processes import inspect, wait_for_workers
 from local_docker import run_command
 from zato_container import remove_container, start_container, wait_until_started
 
+# Zato
+from zato.common.test.conftest_base_multi_cpu import ModuleCtx as MultiCPUCtx
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -59,6 +62,9 @@ class TestMultiCPUContainer(unittest.TestCase):
         """ Starts a container of its own for the test and removes it when the test ends.
         """
         container_name = ModuleCtx.Container_Prefix + uuid4().hex[:8]
+
+        # The label lets the next run remove the container if this run is interrupted before its cleanup
+        run_options = ('--label', MultiCPUCtx.Docker_Label) + run_options
 
         start_container(container_name, {}, run_options)
         self.addCleanup(remove_container, container_name)

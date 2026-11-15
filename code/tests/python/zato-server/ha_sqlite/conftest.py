@@ -25,8 +25,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 # Zato
 from ha_env import create_session, ready_pair, remove_session
-from ha_resume import pytest_runtest_protocol # noqa: F401 # pyright: ignore[reportUnusedImport]
-from ha_resume import pytest_runtest_teardown # noqa: F401 # pyright: ignore[reportUnusedImport]
+from zato.common.test.resume import pytest_runtest_protocol as pytest_runtest_protocol
+from zato.common.test.resume import pytest_runtest_teardown as pytest_runtest_teardown
 from nodes import Timers
 from topology import ModuleCtx as TopologyCtx
 

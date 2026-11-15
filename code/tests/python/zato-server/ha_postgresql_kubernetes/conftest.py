@@ -34,8 +34,8 @@ sys.path.insert(0, _ha_sqlite_kubernetes_dir)
 sys.path.insert(0, _here)
 
 # Zato
-from ha_resume import pytest_runtest_protocol # noqa: F401 # pyright: ignore[reportUnusedImport]
-from ha_resume import pytest_runtest_teardown # noqa: F401 # pyright: ignore[reportUnusedImport]
+from zato.common.test.resume import pytest_runtest_protocol as pytest_runtest_protocol
+from zato.common.test.resume import pytest_runtest_teardown as pytest_runtest_teardown
 from kube_cluster import delete_cluster
 from kube_env import ready_kube_pair, remove_kube_session
 from kube_faults import restore_cluster

@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The hooks through which a run of an active-standby suite with the --sw option resumes from the test
+# The hooks through which a run of an active-standby or multi-process suite with the --sw option resumes from the test
 # that failed or was interrupted, including a test interrupted during its setup or teardown.
 
 # pytest

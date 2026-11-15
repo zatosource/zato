@@ -14,9 +14,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 import logging
 import os
+import shutil
 import signal
 import sqlite3
 import subprocess
+import tempfile
 from base64 import b64encode
 from http.client import HTTPConnection
 from threading import Thread
@@ -34,13 +36,14 @@ from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, callable_, intlist
+    from zato.common.typing_ import any_, anydict, anylist, callable_, intlist, strlist
 
     any_ = any_
     anydict = anydict
     anylist = anylist
     callable_ = callable_
     intlist = intlist
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,6 +60,14 @@ class ModuleCtx:
 
     # The worker count of a suite whose environment does not set one
     Default_Worker_Count = 4
+
+    # The prefix of every directory that a suite creates in the temporary directory,
+    # and the label of every container and network that a suite creates
+    Directory_Prefix = 'zato_multi_cpu_'
+    Docker_Label = 'zato-test-multi-cpu'
+
+    # The directory whose entries are the PIDs of the processes of the host
+    Proc_Directory = '/proc'
 
     # The service that returns the slots of the server
     Worker_List_Service = 'zato.server.worker.get-list'
@@ -339,6 +350,83 @@ def post_json(connection:'HTTPConnection', path:'str', payload:'anydict') -> 'an
     return out
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _remove_docker_objects(list_command:'strlist', remove_command:'strlist') -> 'None':
+    """ Removes the Docker objects that the list command returns the IDs of.
+    """
+    result = subprocess.run(list_command, capture_output=True, text=True, check=True)
+    object_ids = result.stdout.split()
+
+    if object_ids:
+        _ = subprocess.run(remove_command + object_ids, capture_output=True, check=True)
+        logger.info('Removed Docker objects of an interrupted run: %s', object_ids)
+
+# ################################################################################################################################
+
+def _kill_processes_naming(directories:'strlist') -> 'None':
+    """ Terminates every process other than the current one whose command line names one of the directories.
+    """
+    own_pid = os.getpid()
+
+    for name in os.listdir(ModuleCtx.Proc_Directory):
+
+        if not name.isdigit():
+            continue
+
+        pid = int(name)
+
+        if pid == own_pid:
+            continue
+
+        # A process may exit between the listing and the read of its command line
+        try:
+            with open(os.path.join(ModuleCtx.Proc_Directory, name, 'cmdline'), 'rb') as cmdline_file:
+                cmdline = cmdline_file.read().decode('utf8', 'replace')
+        except FileNotFoundError:
+            continue
+
+        for directory in directories:
+            if directory in cmdline:
+
+                # .. and between the read and the signal.
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                else:
+                    logger.info('Terminated process %s of an interrupted run, which names %s', pid, directory)
+
+                break
+
+# ################################################################################################################################
+
+def remove_interrupted_run_state() -> 'None':
+    """ Removes what a run interrupted before its teardown left behind - the containers and networks
+    of the label of the suites, the processes whose command lines name a directory of the suites, and those directories.
+    A suite calls it before it creates anything.
+    """
+    label_filter = f'label={ModuleCtx.Docker_Label}'
+
+    _remove_docker_objects(['docker', 'container', 'ls', '--all', '--quiet', '--filter', label_filter],
+        ['docker', 'container', 'rm', '--force'])
+
+    _remove_docker_objects(['docker', 'network', 'ls', '--quiet', '--filter', label_filter],
+        ['docker', 'network', 'rm'])
+
+    temp_directory = tempfile.gettempdir()
+    directories:'strlist' = []
+
+    for name in os.listdir(temp_directory):
+        if name.startswith(ModuleCtx.Directory_Prefix):
+            directories.append(os.path.join(temp_directory, name))
+
+    _kill_processes_naming(directories)
+
+    for directory in directories:
+        shutil.rmtree(directory)
+        logger.info('Removed directory of an interrupted run: %s', directory)
+
 # ################################################################################################################################
 
 def create_multi_cpu_server_fixture(

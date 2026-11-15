@@ -24,7 +24,15 @@ sys.path.insert(0, os.path.join(_tests_directory, 'zato-common', 'lib'))
 sys.path.insert(0, _this_directory)
 
 # Zato
+from zato.common.test.conftest_base_multi_cpu import remove_interrupted_run_state
+from zato.common.test.resume import pytest_runtest_protocol as pytest_runtest_protocol
+from zato.common.test.resume import pytest_runtest_teardown as pytest_runtest_teardown
 from zato_container import build_image
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+remove_interrupted_run_state()
 
 # ################################################################################################################################
 # ################################################################################################################################

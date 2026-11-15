@@ -15,8 +15,10 @@ import yaml
 
 # Zato
 from zato.common.test.conftest_base_multi_cpu import create_multi_cpu_server_fixture, get_worker_count, \
-     ModuleCtx as MultiCPUCtx, MultiCPUTestConfig
+    ModuleCtx as MultiCPUCtx, MultiCPUTestConfig, remove_interrupted_run_state
 from zato.common.test.config_multi_cpu_singletons import SingletonsConfig
+from zato.common.test.resume import pytest_runtest_protocol as pytest_runtest_protocol
+from zato.common.test.resume import pytest_runtest_teardown as pytest_runtest_teardown
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,6 +75,8 @@ def _build_config(
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+remove_interrupted_run_state()
 
 zato_server = create_multi_cpu_server_fixture(
     logger_name='zato.test.multi_cpu_singletons.conftest',

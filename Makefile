@@ -693,6 +693,7 @@ test-rest-channel: ## REST and SOAP channel invocation tests through a running s
 		$(CURDIR)/code/tests/python/zato-server/rest_channel_invocation/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest_channel_invocation -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	$(MAKE) _multi-cpu-cache _multi-cpu-rest $(Zato_Log)
 
 # The measurement environment of REST and SOAP channels - the load client and the scripts
 REST_CHANNEL_BENCH_DIR ?= $(HOME)/reports/rest-channel/bench
@@ -731,6 +732,7 @@ test-scheduler: ## All scheduler tests.
 	$(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-scheduler/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_scheduler -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	$(MAKE) _multi-cpu-scheduler $(Zato_Log)
 
 test-scheduler-failover: ## Active-passive scheduler failover tests on PostgreSQL and PostgreSQL with TLS.
 	$(Zato_Log_Reset)
@@ -1046,7 +1048,7 @@ test-enmasse: ## Enmasse tests - every importer, every exporter, the round trips
 # Secret rotation needs the live services switched on, which the discovery above leaves off
 	Zato_Test_Live_SQL=1 Zato_Test_FTP=1 Zato_Test_SFTP=1 Zato_Test_SMB=1 Zato_Test_MongoDB=1 \
 		$(ZATO_PY) -m unittest discover -s $(CURDIR)/code/zato-cli/test/zato/enmasse_ -p 'test_secret_rotation_live.py' -v $(Zato_Log)
-	$(MAKE) _multi-cpu-hot-deploy $(Zato_Log)
+	$(MAKE) _multi-cpu-hot-deploy _multi-cpu-config $(Zato_Log)
 
 test-enmasse-delete-live: ## Enmasse should_delete against a live server - every object created and deleted through the pickup directory.
 	$(Zato_Log_Reset)
