@@ -1,0 +1,13 @@
+channel_rest:
+
+  # The service that returns the slot of the worker that served the request
+  - name: test.multi-cpu.rest.worker-slot
+    service: test.multi-cpu.worker-slot
+    url_path: /test/multi-cpu/worker-slot
+    data_format: json
+
+  # The service that raises, whose error response every worker returns
+  - name: test.multi-cpu.rest.worker-error
+    service: test.multi-cpu.worker-error
+    url_path: /test/multi-cpu/worker-error
+    data_format: json

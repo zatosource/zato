@@ -1,0 +1,67 @@
+security:
+
+  # The definition whose own rule has a fixed window limit, which every channel it secures shares
+  - name: test.multi-cpu.rate.sec
+    type: basic_auth
+    username: test.multi-cpu.rate.sec
+    password: "{{sec_password}}"
+    rate_limiting:
+      - cidr_list:
+          - 0.0.0.0/0
+        time_range:
+          - is_all_day: true
+            rate: 1000
+            burst: 1000
+            limit: 15
+            limit_unit: minute
+            disabled: false
+            disallowed: false
+
+channel_rest:
+
+  # The channel whose rule has a token bucket of one request per second and a burst of ten
+  - name: test.multi-cpu.rate.bucket
+    service: test.multi-cpu.worker-slot
+    url_path: /test/multi-cpu/rate/bucket
+    data_format: json
+    rate_limiting:
+      - cidr_list:
+          - 0.0.0.0/0
+        time_range:
+          - is_all_day: true
+            rate: 1
+            burst: 10
+            limit: 1000000
+            limit_unit: day
+            disabled: false
+            disallowed: false
+
+  # The channel whose rule has a fixed window limit of fifteen requests per minute
+  - name: test.multi-cpu.rate.window
+    service: test.multi-cpu.worker-slot
+    url_path: /test/multi-cpu/rate/window
+    data_format: json
+    rate_limiting:
+      - cidr_list:
+          - 0.0.0.0/0
+        time_range:
+          - is_all_day: true
+            rate: 1000
+            burst: 1000
+            limit: 15
+            limit_unit: minute
+            disabled: false
+            disallowed: false
+
+  # The channel without a rule of its own, secured by the definition with the fixed window limit
+  - name: test.multi-cpu.rate.sec-window
+    service: test.multi-cpu.worker-slot
+    url_path: /test/multi-cpu/rate/sec-window
+    data_format: json
+    security: test.multi-cpu.rate.sec
+
+  # The service that returns the slot of the worker that served the request, without a rule
+  - name: test.multi-cpu.rate.worker-slot
+    service: test.multi-cpu.worker-slot
+    url_path: /test/multi-cpu/worker-slot
+    data_format: json

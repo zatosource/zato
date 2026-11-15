@@ -18,7 +18,7 @@ from urllib.request import Request, urlopen
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anydictnone, strlist
+    from zato.common.typing_ import any_, anydict, anydictnone, floatnone, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,8 +39,9 @@ class AdminClient:
     """ Invokes Zato admin services via the REST API.
     """
 
-    def __init__(self, base_url:'str', password:'str') -> 'None':
+    def __init__(self, base_url:'str', password:'str', timeout:'floatnone'=None) -> 'None':
         self.base_url = base_url
+        self.timeout = timeout
         credentials = f'admin.invoke:{password}'
         self._auth = b64encode(credentials.encode()).decode()
 
@@ -57,7 +58,7 @@ class AdminClient:
         request.add_header('Content-Type', 'application/json')
 
         try:
-            with urlopen(request) as response:
+            with urlopen(request, timeout=self.timeout) as response:
                 data = response.read()
                 headers = dict(response.headers)
         except HTTPError as error:

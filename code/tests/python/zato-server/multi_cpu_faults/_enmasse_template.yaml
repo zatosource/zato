@@ -1,0 +1,13 @@
+channel_rest:
+
+  # The service that returns the slot of the worker that served the request
+  - name: test.multi-cpu.faults.worker-slot
+    service: test.multi-cpu.worker-slot
+    url_path: /test/multi-cpu/worker-slot
+    data_format: json
+
+  # The service that keeps its request in progress while a test signals the worker
+  - name: test.multi-cpu.faults.worker-sleep
+    service: test.multi-cpu.worker-sleep
+    url_path: /test/multi-cpu/worker-sleep
+    data_format: json

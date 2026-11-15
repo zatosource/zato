@@ -1,0 +1,438 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# The shared fixture of the live suites of a server with several workers. The server is started through
+# create_zato_server_fixture with the worker count in Zato_Server_Workers, and WorkerControl reads the slots
+# of the server through zato.server.worker.get-list and sends signals to the worker of a chosen slot.
+
+# stdlib
+import json
+import logging
+import os
+import signal
+import sqlite3
+from base64 import b64encode
+from http.client import HTTPConnection
+from threading import Thread
+from time import monotonic, sleep
+from uuid import uuid4
+
+# Zato
+from zato.common.test.client import AdminClient
+from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, anydict, anylist, callable_, intlist
+
+    any_ = any_
+    anydict = anydict
+    anylist = anylist
+    callable_ = callable_
+    intlist = intlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = logging.getLogger('zato.common.test.conftest_base_multi_cpu')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ModuleCtx:
+
+    # The environment variable through which the server receives its worker count
+    Worker_Count_Env = 'Zato_Server_Workers'
+
+    # The worker count of a suite whose environment does not set one
+    Default_Worker_Count = 4
+
+    # The service that returns the slots of the server
+    Worker_List_Service = 'zato.server.worker.get-list'
+
+    # The service that returns the slot of the worker that served the request, and the file it is deployed from,
+    # which a suite lists in the hot_deploy_sources of its configuration
+    Worker_Slot_Service = 'test.multi-cpu.worker-slot'
+    Worker_Slot_Service_Path = os.path.join(os.path.dirname(__file__), 'multi_cpu_service.py')
+    Worker_Slot_Path = '/test/multi-cpu/worker-slot'
+
+    # The state of a slot whose worker serves requests
+    State_Ready = 'ready'
+
+    # How long a respawn or a return of every slot to the ready state may take, in seconds
+    Respawn_Deadline = 60.0
+
+    # How often the slots are read while waiting, in seconds
+    Poll_Interval = 0.25
+
+    # How long a test request waits for its response, which exceeds the duration of test.multi-cpu.worker-sleep, in seconds
+    Request_Timeout = 30.0
+
+    Status_OK = 200
+
+    # The variable whose password quickstart assigns to the user of the metrics channel, and that user
+    Metrics_Password_Env = 'Zato_Metrics_Password'
+    Metrics_Username = 'metrics'
+
+    # The user and the path of the admin channel through which a test invokes a service in a chosen worker
+    Admin_Username = 'admin.invoke'
+    Admin_Invoke_Path = '/zato/api/invoke/{}'
+
+    # How long an admin request of the helpers waits for its response, which exceeds the timeout of a fan-out query
+    # to a stopped worker, in seconds
+    Admin_Timeout = 15.0
+
+    # The position of the parent PID among the fields of /proc/<pid>/stat that follow the process name
+    Stat_Parent_Field = 1
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_worker_count() -> 'int':
+    """ Returns the worker count of the suite, which the environment of the test run may set.
+    """
+    if ModuleCtx.Worker_Count_Env in os.environ:
+        out = int(os.environ[ModuleCtx.Worker_Count_Env])
+    else:
+        out = ModuleCtx.Default_Worker_Count
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MultiCPUTestConfig:
+    """ The address of the server and the credentials that the tests of a suite with several workers use,
+    set by the populate callback of the suite once the server is ready.
+    """
+    host = ''
+    port = 0
+    server_directory = ''
+    base_url = ''
+    invoke_password = ''
+    worker_count = 0
+
+    # The password of the security definitions that a suite creates through its enmasse template
+    sec_password = uuid4().hex
+
+    @classmethod
+    def populate(
+        cls,
+        host:'str',
+        server_port:'int',
+        invoke_password:'str',
+        server_directory:'str',
+        zato_bin:'str',
+    ) -> 'None':
+        cls.host = host
+        cls.port = server_port
+        cls.server_directory = server_directory
+        cls.base_url = f'http://{host}:{server_port}'
+        cls.invoke_password = invoke_password
+        cls.worker_count = get_worker_count()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def new_connection() -> 'HTTPConnection':
+    """ Opens a connection of its own to the server, which the kernel assigns to one of the workers.
+    """
+    out = HTTPConnection(MultiCPUTestConfig.host, MultiCPUTestConfig.port, timeout=ModuleCtx.Request_Timeout)
+    return out
+
+# ################################################################################################################################
+
+def get_parent_pid(pid:'int') -> 'int':
+    """ Returns the PID of the parent of a process, which for a worker is the PID of the arbiter.
+    """
+    with open(f'/proc/{pid}/stat') as stat_file:
+        stat = stat_file.read()
+
+    # .. the name of the process is in parentheses and may contain spaces, so the fields are counted after it ..
+    fields = stat[stat.rindex(')') + 2:].split()
+
+    out = int(fields[ModuleCtx.Stat_Parent_Field])
+    return out
+
+# ################################################################################################################################
+
+def get_child_pids(parent_pid:'int') -> 'intlist':
+    """ Returns the PIDs of every process whose parent is the given one.
+    """
+    out:'intlist' = []
+
+    for name in os.listdir('/proc'):
+        if name.isdigit():
+            try:
+                parent = get_parent_pid(int(name))
+            except FileNotFoundError:
+                continue
+            if parent == parent_pid:
+                out.append(int(name))
+
+    return out
+
+# ################################################################################################################################
+
+def get_json(connection:'HTTPConnection', path:'str') -> 'anydict':
+    """ Sends one request over an open connection and returns its JSON response, which must have a status of 200.
+    """
+    connection.request('GET', path)
+    response = connection.getresponse()
+    body = response.read()
+
+    if response.status != ModuleCtx.Status_OK:
+        raise Exception(f'Status {response.status} from {path} -> {body!r}')
+
+    out = json.loads(body)
+    return out
+
+# ################################################################################################################################
+
+def connection_to_slot(slot:'int', other_than:'bool'=False) -> 'HTTPConnection':
+    """ Returns a keep-alive connection that the worker of the given slot accepted, or the worker of any other slot,
+    using the channel of test.multi-cpu.worker-slot, which every suite defines under the same path.
+    """
+    while True:
+        connection = new_connection()
+        response = get_json(connection, ModuleCtx.Worker_Slot_Path)
+
+        if (response['slot'] == slot) != other_than:
+            return connection
+
+        connection.close()
+
+# ################################################################################################################################
+
+def invoke_on_slot(slot:'int', service_name:'str', payload:'anydict') -> 'tuple[int, bytes]':
+    """ Invokes a service through the admin channel of the worker of a slot and returns the status and body of the response.
+    """
+    credentials = f'{ModuleCtx.Admin_Username}:{MultiCPUTestConfig.invoke_password}'
+    headers = {
+        'Authorization': 'Basic ' + b64encode(credentials.encode()).decode(),
+        'Content-Type': 'application/json',
+    }
+
+    connection = connection_to_slot(slot)
+    connection.request('POST', ModuleCtx.Admin_Invoke_Path.format(service_name), body=json.dumps(payload), headers=headers)
+
+    response = connection.getresponse()
+    body = response.read()
+    connection.close()
+
+    out = (response.status, body)
+    return out
+
+# ################################################################################################################################
+
+def post_json(connection:'HTTPConnection', path:'str', payload:'anydict') -> 'anydict':
+    """ Sends one JSON request over an open connection and returns its JSON response, which must have a status of 200.
+    """
+    connection.request('POST', path, body=json.dumps(payload), headers={'Content-Type': 'application/json'})
+    response = connection.getresponse()
+    body = response.read()
+
+    if response.status != ModuleCtx.Status_OK:
+        raise Exception(f'Status {response.status} from {path} -> {body!r}')
+
+    out = json.loads(body)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def create_multi_cpu_server_fixture(
+    logger_name:'str',
+    server_log_copy_name:'str',
+    template_path:'str',
+    quickstart_prefix:'str',
+    worker_count:'int',
+    build_config_callback:'callable_',
+) -> 'any_':
+    """ Returns a session-scoped fixture that starts a server with the given number of workers.
+    """
+    extra_server_env = {
+        ModuleCtx.Worker_Count_Env: str(worker_count),
+    }
+
+    out = create_zato_server_fixture(
+        logger_name=logger_name,
+        server_log_copy_name=server_log_copy_name,
+        template_path=template_path,
+        quickstart_prefix=quickstart_prefix,
+        extra_server_env=extra_server_env,
+        patch_server_conf_bind=False,
+        build_config_callback=build_config_callback,
+    )
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class WorkerControl:
+    """ Reads the slots of a server and sends signals to the worker of a chosen slot.
+    """
+
+    def __init__(self, base_url:'str', invoke_password:'str') -> 'None':
+        self.client = AdminClient(base_url, invoke_password, ModuleCtx.Admin_Timeout)
+
+# ################################################################################################################################
+
+    def _get_slots_while_waiting(self) -> 'anylist | None':
+        """ Returns the slots, or None if the request reached a worker that is stopped or was just terminated,
+        which the kernel may still assign connections to.
+        """
+        try:
+            out = self.get_slots()
+        except OSError as e:
+            logger.info('Slots not read while waiting -> %s', e)
+            out = None
+
+        return out
+
+# ################################################################################################################################
+
+    def get_slots(self) -> 'anylist':
+        """ Returns one row for each slot, with its PID, generation, state, heartbeat age, owned subscription keys
+        and singleton flag.
+        """
+        response = self.client.invoke(ModuleCtx.Worker_List_Service)
+        out = response['items']
+        return out
+
+# ################################################################################################################################
+
+    def get_slot(self, slot:'int') -> 'anydict':
+        """ Returns the row of one slot.
+        """
+        for row in self.get_slots():
+            if row['slot'] == slot:
+                return row
+
+        raise Exception(f'Slot {slot} not found in {ModuleCtx.Worker_List_Service}')
+
+# ################################################################################################################################
+
+    def get_serving_slot(self) -> 'int':
+        """ Returns the slot of the worker that served one request, sent over a connection of its own.
+        """
+        response = self.client.invoke(ModuleCtx.Worker_Slot_Service)
+        out = response['slot']
+        return out
+
+# ################################################################################################################################
+
+    def send_signal(self, slot:'int', signal_number:'int') -> 'anydict':
+        """ Sends a signal to the worker of a slot and returns the row of the slot read before the signal.
+        """
+        row = self.get_slot(slot)
+        os.kill(row['pid'], signal_number)
+        return row
+
+# ################################################################################################################################
+
+    def kill(self, slot:'int') -> 'anydict':
+        out = self.send_signal(slot, signal.SIGKILL)
+        return out
+
+# ################################################################################################################################
+
+    def stop(self, slot:'int') -> 'anydict':
+        out = self.send_signal(slot, signal.SIGSTOP)
+        return out
+
+# ################################################################################################################################
+
+    def resume(self, slot:'int') -> 'anydict':
+        out = self.send_signal(slot, signal.SIGCONT)
+        return out
+
+# ################################################################################################################################
+
+    def wait_for_respawn(self, slot:'int', previous_generation:'int') -> 'anydict':
+        """ Waits until the slot runs a worker of a generation above the given one and that worker is ready.
+        """
+        deadline = monotonic() + ModuleCtx.Respawn_Deadline
+
+        while monotonic() < deadline:
+            rows = self._get_slots_while_waiting()
+
+            if rows is not None:
+                for row in rows:
+                    if row['slot'] == slot:
+                        if row['generation'] > previous_generation and row['state'] == ModuleCtx.State_Ready:
+                            return row
+
+            sleep(ModuleCtx.Poll_Interval)
+
+        raise Exception(f'Slot {slot} was not respawned within {ModuleCtx.Respawn_Deadline}s')
+
+# ################################################################################################################################
+
+    def wait_for_all_ready(self) -> 'anylist':
+        """ Waits until the worker of every slot is ready and returns the slots.
+        """
+        deadline = monotonic() + ModuleCtx.Respawn_Deadline
+
+        while monotonic() < deadline:
+            rows = self._get_slots_while_waiting()
+
+            if rows is not None:
+                not_ready:'intlist' = []
+
+                for row in rows:
+                    if row['state'] != ModuleCtx.State_Ready:
+                        not_ready.append(row['slot'])
+
+                if not not_ready:
+                    return rows
+
+            sleep(ModuleCtx.Poll_Interval)
+
+        raise Exception(f'Not every slot was ready within {ModuleCtx.Respawn_Deadline}s')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SQLiteWriteLock:
+    """ Holds the write lock of an SQLite file from the test process for a given duration.
+    """
+
+    def __init__(self, db_path:'str', duration:'float') -> 'None':
+        self.db_path = db_path
+        self.duration = duration
+        self.thread = Thread(target=self._hold, daemon=True)
+
+# ################################################################################################################################
+
+    def _hold(self) -> 'None':
+
+        # The connection begins its transaction explicitly, so that BEGIN IMMEDIATE takes the write lock at once
+        connection = sqlite3.connect(self.db_path, isolation_level=None)
+
+        try:
+            _ = connection.execute('BEGIN IMMEDIATE')
+            sleep(self.duration)
+            _ = connection.execute('ROLLBACK')
+        finally:
+            connection.close()
+
+# ################################################################################################################################
+
+    def start(self) -> 'None':
+        self.thread.start()
+
+# ################################################################################################################################
+
+    def wait(self) -> 'None':
+        self.thread.join()
+
+# ################################################################################################################################
+# ################################################################################################################################
