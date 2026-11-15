@@ -19,8 +19,10 @@ from humanize import intcomma
 from common import get_min_delivery_rate, get_min_publish_rate, set_progress_context
 from seeding import count_rows, seed_backlog
 from zato.common.api import PubSub
+from zato.common.pubsub.fence import DeliveryFence
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.server.base.parallel.delivery import PushDelivery
+from zato.server.server_region import new_server_region
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,6 +85,22 @@ class _StubServer:
 
 # ################################################################################################################################
 
+def _on_fenced() -> 'None':
+    raise AssertionError('The only slot of the run received no replacement')
+
+# ################################################################################################################################
+
+def _new_fence() -> 'DeliveryFence':
+    """ Returns the fence of the only worker of a region with one slot, which owns every subscription key.
+    """
+    region = new_server_region(1, 0)
+    generation = region.next_slot_generation(0)
+
+    out = DeliveryFence(region, 0, generation, _on_fenced)
+    return out
+
+# ################################################################################################################################
+
 def _publish_share(backend:'SQLPubSubBackend', topic_names:'strlist', publisher_index:'int') -> 'None':
     """ What one publisher greenlet runs - its share of the measured messages,
     round-robin over all the topics. The remainder of the division goes to the
@@ -120,7 +138,7 @@ def run_push_delivery_scenario() -> 'None':
 
     backend = SQLPubSubBackend()
     server = _StubServer()
-    delivery = PushDelivery(server, backend) # type: ignore[arg-type]
+    delivery = PushDelivery(server, backend, _new_fence()) # type: ignore[arg-type]
 
     # .. every topic has its own push subscriber, subscribed already by the seeding ..
     topic_names:'strlist' = []

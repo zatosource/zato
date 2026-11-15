@@ -27,9 +27,11 @@ from toxiproxy import Stream_Upstream, Toxiproxy
 from zato.common.api import PubSub
 from zato.common.audit_log.api import AuditLog, get_audit_engine
 from zato.common.audit_log.common import AuditEvent
+from zato.common.pubsub.fence import DeliveryFence
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.test.pubsub_database import pubsub_db_env
 from zato.server.base.parallel.delivery import PushDelivery
+from zato.server.server_region import new_server_region
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -109,6 +111,22 @@ class _StubServer:
         self.config_manager = _StubConfigManager()
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _on_fenced() -> 'None':
+    raise AssertionError('The only slot of the run received no replacement')
+
+# ################################################################################################################################
+
+def _new_fence() -> 'DeliveryFence':
+    """ Returns the fence of the only worker of a region with one slot, which owns every subscription key.
+    """
+    region = new_server_region(1, 0)
+    generation = region.next_slot_generation(0)
+
+    out = DeliveryFence(region, 0, generation, _on_fenced)
+    return out
+
 # ################################################################################################################################
 
 def _get_sub_key(name:'str') -> 'str':
@@ -330,7 +348,7 @@ def _run_endpoints(toxiproxy:'Toxiproxy') -> 'None':
     run.start_endpoints()
 
     stub_server:'any_' = _StubServer()
-    push_delivery = PushDelivery(stub_server, backend)
+    push_delivery = PushDelivery(stub_server, backend, _new_fence())
 
     # Each endpoint is subscribed to a topic of its own and pushed to through its URL ..
     for name in run.message_counts:

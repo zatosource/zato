@@ -38,6 +38,7 @@ server_conf_dict = deepcopy(CONTENT_TYPE)
 
 server_conf_template = """[main]
 bind=0.0.0.0:{{port}}
+workers=auto # Either auto, which is one worker per available CPU, or a positive integer
 
 work_dir=../../work
 
@@ -126,6 +127,8 @@ ssl_cert_file=
 ssl_key_file=
 ssl_verify=True
 socket_timeout=
+pool_size=100 # Connections per worker
+pool_timeout=20 # In seconds, how long a request waits for a free connection
 charset=
 errors=
 use_redis_sentinels=False

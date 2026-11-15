@@ -312,7 +312,7 @@ class WorkerRuntime:
 # ################################################################################################################################
 
     def on_replaced(self) -> 'None':
-        self.hub.loop.run_callback_threadsafe(self.report_replaced)
+        _ = self.hub.loop.run_callback_threadsafe(self.report_replaced)
 
 # ################################################################################################################################
 
