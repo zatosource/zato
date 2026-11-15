@@ -8,6 +8,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import sys
+
+_tests_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+# The TLS material builder and the HTTPS endpoint of the TLS material test
+sys.path.insert(0, os.path.join(_tests_directory, 'zato-common', 'soap', 'lib'))
+sys.path.insert(0, os.path.join(_tests_directory, 'zato-dashboard', 'playwright_', 'lib'))
 
 # Zato
 from zato.common.test.conftest_base_multi_cpu import create_multi_cpu_server_fixture, get_worker_count, \

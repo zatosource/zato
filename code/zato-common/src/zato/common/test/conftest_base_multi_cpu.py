@@ -33,7 +33,8 @@ import yaml
 # Zato
 from zato.common.file_transfer import listener as file_listener
 from zato.common.test.client import AdminClient
-from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
+from zato.common.hl7.mllp.haproxy import Env_Port_Name as MLLP_Port_Env
+from zato.common.test.conftest_base_pubsub import create_zato_server_fixture, find_free_port
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,13 +76,15 @@ class ModuleCtx:
     # The name of the config process of a server, as the kernel reports it
     Config_Process_Name = 'zato-config'
 
-    # The pickup directories of a server that a file listener watches, the files it deploys from them, the file
-    # its output goes to, and the line it writes once it watches its directory
+    # The pickup directories of a server that a file listener watches, the files it deploys from them, the directory
+    # of the server whose TLS material a listener of its own reports, the file the output of a listener goes to,
+    # and the line it writes once it watches its directory
     Listener_Directories = (
         os.path.join('pickup', 'incoming', 'services'),
         os.path.join('pickup', 'incoming', 'user-conf'),
     )
     Listener_Patterns = ['*.py', '*.zip', '*.yaml', '*.yml', '*.ini', '*.zrules']
+    TLS_Material_Directory = 'tls-material'
     Listener_Log_Name = 'file-listener-{}.log'
     Listener_Ready_Marker = 'Watching for changes, press Ctrl+C to stop'
 
@@ -172,6 +175,9 @@ class MultiCPUTestConfig:
     invoke_password = ''
     worker_count = 0
 
+    # The port that the MLLP listener of every worker binds to, chosen before the server starts
+    mllp_port = find_free_port()
+
     # The password of the security definitions that a suite creates through its enmasse template
     sec_password = uuid4().hex
 
@@ -220,8 +226,9 @@ def _wait_for_listener(process:'subprocess.Popen[bytes]', log_path:'str') -> 'No
 # ################################################################################################################################
 
 def start_file_listeners(server_directory:'str', server_port:'int') -> 'None':
-    """ Starts a file listener for each pickup directory of the server, as a deployment of the server does, so that
-    a file placed in one of them is deployed through the listener. The listeners are stopped when the test run exits.
+    """ Starts a file listener for each pickup directory of the server and one for its TLS material, as a deployment
+    of the server does, so that a file placed in one of them reaches the server through a listener.
+    The listeners are stopped when the test run exits.
     """
     quickstart_directory = os.path.dirname(server_directory)
 
@@ -229,11 +236,20 @@ def start_file_listeners(server_directory:'str', server_port:'int') -> 'None':
     environment['Zato_Web_Admin_Repo_Dir'] = os.path.join(quickstart_directory, ModuleCtx.Web_Admin_Repo)
     environment['Zato_Config_Bind_Port'] = str(server_port)
 
-    for index, directory in enumerate(ModuleCtx.Listener_Directories):
+    tls_material_directory = os.path.join(server_directory, ModuleCtx.TLS_Material_Directory)
+    os.makedirs(tls_material_directory)
+
+    commands:'anylist' = []
+
+    for directory in ModuleCtx.Listener_Directories:
+        commands.append([os.path.join(server_directory, directory), '--patterns', *ModuleCtx.Listener_Patterns])
+
+    commands.append([tls_material_directory, '--tls-material'])
+
+    for index, arguments in enumerate(commands):
 
         log_path = os.path.join(quickstart_directory, ModuleCtx.Listener_Log_Name.format(index))
-        command = [sys.executable, file_listener.__file__, os.path.join(server_directory, directory),
-            '--observer', 'inotify', '--patterns', *ModuleCtx.Listener_Patterns]
+        command = [sys.executable, file_listener.__file__, *arguments, '--observer', 'inotify']
 
         with open(log_path, 'w') as log_file:
             process = subprocess.Popen(command, env=environment, stdout=log_file, stderr=subprocess.STDOUT)
@@ -241,7 +257,7 @@ def start_file_listeners(server_directory:'str', server_port:'int') -> 'None':
         _ = atexit.register(_stop_file_listener, process)
 
         _wait_for_listener(process, log_path)
-        logger.info('File listener %s watches %s', process.pid, directory)
+        logger.info('File listener %s watches %s', process.pid, arguments[0])
 
 # ################################################################################################################################
 
@@ -532,6 +548,7 @@ def create_multi_cpu_server_fixture(
     """
     extra_server_env = {
         ModuleCtx.Worker_Count_Env: str(worker_count),
+        MLLP_Port_Env: str(MultiCPUTestConfig.mllp_port),
     }
 
     out = create_zato_server_fixture(

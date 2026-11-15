@@ -16,6 +16,7 @@ from threading import RLock
 
 # Zato
 from zato.common.api import PubSub
+from zato.common.broker_message import Server as BrokerMessageServer
 from zato.common.pubsub.dlq import get_dlq_sub_key, get_dlq_topic_name, is_dlq_sub_key
 from zato.common.pubsub.outgoing import audit_disabled_conn_types, find_outgoing_conn, get_outgoing_sub_config, \
     get_outgoing_sub_key, get_outgoing_topic_name, locate_outgoing_conn, parse_outgoing_sub_key
@@ -27,7 +28,10 @@ from zato.server.outgoing_region import get_outgoing_binding, pause_outgoing_del
 # ################################################################################################################################
 
 if 0:
+    from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import any_, anydict, anytuple, callable_
+
+    Bunch = Bunch
 
     publish_lock = RLock | SharedPublishLock
 
@@ -193,17 +197,40 @@ class OutgoingQueues(ConfigManagerImpl):
             if sub_key not in self._outgoing_sub_key_cache:
 
                 self.server.pubsub_backend.subscribe(sub_key, topic_name)
-
-                sub_config = get_outgoing_sub_config(sub_key, topic_name)
-                self._push_subs[sub_key] = [sub_config]
-
-                self.server.pubsub_push_delivery.start_sub_key(sub_key)
-
-                self._outgoing_sub_key_cache.add(sub_key)
+                self._add_outgoing_queue(sub_key, topic_name)
 
                 logger.info('Created outgoing connection queue `%s` for topic `%s`', sub_key, topic_name)
 
+                # The worker that owns the sub key delivers the messages of the queue, which may be another worker,
+                # and each process of the server lists, renames and deletes the queue, so each of them adds it as well
+                self.server.config_dispatcher.relay_only({
+                    'action': BrokerMessageServer.Outgoing_Queue_Created.value,
+                    'sub_key': sub_key,
+                    'topic_name': topic_name,
+                })
+
         return topic_name, conn_name
+
+# ################################################################################################################################
+
+    def _add_outgoing_queue(self, sub_key:'str', topic_name:'str') -> 'None':
+        """ Adds the queue of an outgoing connection to this process, whose delivery starts if this worker owns its sub key.
+        """
+        sub_config = get_outgoing_sub_config(sub_key, topic_name)
+        self._push_subs[sub_key] = [sub_config]
+
+        self.server.pubsub_push_delivery.start_sub_key(sub_key)
+
+        self._outgoing_sub_key_cache.add(sub_key)
+
+# ################################################################################################################################
+
+    def on_config_event_Server_Outgoing_Queue_Created(self, msg:'Bunch') -> 'None':
+        """ Adds the queue that another process of the server created on the first publication to its connection.
+        """
+        with self._outgoing_sub_key_lock:
+            if msg.sub_key not in self._outgoing_sub_key_cache:
+                self._add_outgoing_queue(msg.sub_key, msg.topic_name)
 
 # ################################################################################################################################
 

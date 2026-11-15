@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import json
 import logging
 import os
 import subprocess
@@ -18,8 +19,8 @@ from uuid import uuid4
 import yaml
 
 # Zato
-from zato.common.test.conftest_base_multi_cpu import count_enmasse_imports, get_staging_path, ModuleCtx as MultiCPUCtx, MultiCPUTestConfig, request_on_slot, \
-     wait_for_every_slot
+from zato.common.test.conftest_base_multi_cpu import count_enmasse_imports, get_staging_path, invoke_on_slot, \
+     ModuleCtx as MultiCPUCtx, MultiCPUTestConfig, request_on_slot, wait_for_every_slot
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,6 +47,9 @@ class ModuleCtx:
     Services_Dir = os.path.join('pickup', 'incoming', 'services')
 
     Path_Prefix = '/test/multi-cpu/enmasse'
+
+    # The service through which Dashboard imports an enmasse file
+    Invoker_Service = 'zato.server.invoker'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -120,6 +124,27 @@ class TestEnmasseAcrossWorkers(unittest.TestCase):
         result = subprocess.run(command, capture_output=True, text=True, check=False)
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self._wait_for_path(f'{ModuleCtx.Path_Prefix}/{suffix}/0')
+
+# ################################################################################################################################
+
+    def test_dashboard_import(self) -> 'None':
+        """ A configuration imported through Dashboard, which invokes import_enmasse through zato.server.invoker,
+        is in effect in every worker.
+        """
+        suffix = uuid4().hex[:12]
+
+        status, body = invoke_on_slot(0, ModuleCtx.Invoker_Service, {
+            'func_name': 'import_enmasse',
+            'file_content': yaml.safe_dump(_build_config(suffix, 1), sort_keys=False),
+            'file_name': f'multi-cpu-dashboard-{suffix}.yaml',
+        })
+
+        self.assertEqual(status, MultiCPUCtx.Status_OK, body)
+
+        result = json.loads(body)
+        self.assertTrue(result['is_ok'], result)
+
         self._wait_for_path(f'{ModuleCtx.Path_Prefix}/{suffix}/0')
 
 # ################################################################################################################################

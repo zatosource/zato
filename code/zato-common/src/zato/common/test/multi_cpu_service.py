@@ -11,15 +11,20 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import json
+import logging
 import os
-from time import monotonic, time
+import tempfile
+from time import monotonic, monotonic_ns, time
 from uuid import uuid4
 
 # gevent
 from gevent import sleep
 
 # Zato
+from zato.common.hl7.mllp.circuit_breaker import SendingStopped
+from zato.common.hl7.mllp.dedup import extract_control_id
 from zato.common.test.config_multi_cpu_cache import CacheConfig
+from zato.common.test.config_multi_cpu_hl7 import HL7Config
 from zato.common.test.config_multi_cpu_scheduler import SchedulerConfig
 from zato.common.worker_slot import get_slot_or_single
 from zato.server.service import Service
@@ -265,6 +270,188 @@ class EnvRead(Service):
         self.response.payload = {
             'value': value,
             'slot': get_slot_or_single(),
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Constant(Service):
+    """ Returns the same response from every worker, so that the responses of the workers can be compared in full.
+    """
+    name = 'test.multi-cpu.constant'
+
+    def handle(self) -> 'None':
+        self.response.payload = {
+            'value': 'multi-cpu',
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class LogLevel(Service):
+    """ Returns the name of the level of a logger in the worker that serves the request.
+    """
+    name = 'test.multi-cpu.log-level'
+
+    def handle(self) -> 'None':
+        level = logging.getLogger(self.request.payload['name']).level
+
+        self.response.payload = {
+            'level': logging.getLevelName(level),
+            'slot': get_slot_or_single(),
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class RedisDB(Service):
+    """ Returns the database number of the Redis configuration in the worker that serves the request.
+    """
+    name = 'test.multi-cpu.redis-db'
+
+    def handle(self) -> 'None':
+        self.response.payload = {
+            'db': self.server.fs_server_config.redis.db,
+            'slot': get_slot_or_single(),
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class OutconnInvoke(Service):
+    """ Invokes an outgoing REST connection with a marker in its query string, by which the endpoint's record
+    of the request is found, and returns the slot of the worker that invoked it.
+    """
+    name = 'test.multi-cpu.outconn-invoke'
+
+    def handle(self) -> 'None':
+        request = self.request.payload
+        _ = self.rest[request['conn_name']].get(params={'marker': request['marker']})
+
+        self.response.payload = {
+            'slot': get_slot_or_single(),
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class OutconnPublish(Service):
+    """ Publishes a message to the queue of an outgoing REST connection and returns the slot of the worker that published it.
+    """
+    name = 'test.multi-cpu.outconn-publish'
+
+    def handle(self) -> 'None':
+        request = self.request.payload
+        _ = self.rest[request['conn_name']].publish(request['data'])
+
+        self.response.payload = {
+            'slot': get_slot_or_single(),
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class HL7Record(Service):
+    """ Records each message that an MLLP channel delivers as one file in the directory of its control ID,
+    named after the slot of the worker that ran the service, and returns nothing, so the channel acknowledges with AA.
+    """
+    name = HL7Config.Record_Service
+
+    def handle(self) -> 'None':
+        msh_line = self.request.raw_request.splitlines()[0]
+        control_id = extract_control_id(msh_line)
+
+        directory = os.path.join(tempfile.gettempdir(), HL7Config.Record_Directory, control_id)
+        os.makedirs(directory, exist_ok=True)
+
+        path = os.path.join(directory, f'{get_slot_or_single()}-{uuid4().hex}')
+
+        with open(path, 'w') as file_handle:
+            _ = file_handle.write(msh_line)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MLLPSend(Service):
+    """ Sends a message through an outgoing MLLP connection and returns the outcome and the slot that sent it.
+    """
+    name = HL7Config.Send_Service
+
+    def handle(self) -> 'None':
+        request = self.request.payload
+        connection = self.mllp[request['conn_name']]
+
+        try:
+            _ = connection.send(request['message'])
+        except SendingStopped:
+            outcome = HL7Config.Outcome_Stopped
+        except Exception:
+            outcome = HL7Config.Outcome_Failed
+        else:
+            outcome = HL7Config.Outcome_Sent
+
+        self.response.payload = {
+            'outcome': outcome,
+            'slot': get_slot_or_single(),
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MLLPConnectionExists(Service):
+    """ Returns the slot of the worker that ran it if that worker has the outgoing MLLP connection, sending nothing.
+    """
+    name = HL7Config.Exists_Service
+
+    def handle(self) -> 'None':
+        _ = self.mllp[self.request.payload['conn_name']]
+
+        self.response.payload = {
+            'slot': get_slot_or_single(),
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class LogStreamingHandler(Service):
+    """ Returns whether the worker that ran it streams its log records, according to its own handlers,
+    and the slot of that worker.
+    """
+    name = 'test.multi-cpu.log-streaming-handler'
+
+    def handle(self) -> 'None':
+        manager = self.server.log_streaming_manager
+        redis_handler = manager.redis_handler
+
+        self.response.payload = {
+            'is_handler_added': redis_handler is not None and redis_handler in manager.logger.handlers,
+            'slot': get_slot_or_single(),
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class LockHold(Service):
+    """ Acquires one named lock a given number of times, yielding to other greenlets while it holds the lock,
+    and returns the start and the end of each hold on the monotonic clock of the host, with the slot that held it.
+    """
+    name = 'test.multi-cpu.lock-hold'
+
+    def handle(self) -> 'None':
+        request = self.request.payload
+        slot = get_slot_or_single()
+        holds:'list[list[int]]' = []
+
+        for _ in range(request['hold_count']):
+            with self.lock(request['lock_name'], request['ttl'], request['block']):
+                start = monotonic_ns()
+                sleep(request['hold_time'])
+                end = monotonic_ns()
+
+            holds.append([start, end, slot])
+
+        self.response.payload = {
+            'holds': holds,
         }
 
 # ################################################################################################################################

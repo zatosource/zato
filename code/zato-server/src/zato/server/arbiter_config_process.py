@@ -18,7 +18,6 @@ from logging import getLogger
 from time import monotonic
 
 # gevent
-import gevent
 from gevent.monkey import get_original
 
 # Zato
@@ -106,7 +105,7 @@ class ConfigSupervisor:
                 if arbiter.writer:
                     arbiter.writer.listener.close()
 
-                gevent.reinit()
+                arbiter.reinit_hub_in_child()
 
                 # .. its log records and audit events name the slot of the config process ..
                 set_worker_slot(ctx.slot)

@@ -181,6 +181,7 @@ class Server(Constants):
     Logging_Set = ValueConstant('')
     File_Delete = ValueConstant('')
     Pubsub_Cleanup = ValueConstant('')
+    Outgoing_Queue_Created = ValueConstant('')
 
 class Groups(Constants):
 

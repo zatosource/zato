@@ -183,6 +183,19 @@ class Arbiter:
 
 # ################################################################################################################################
 
+    def reinit_hub_in_child(self) -> 'None':
+        """ Prepares the hub of a forked process. The SIGCHLD handler that the child watchers of the hub depend on
+        is replaced in reset_signals_in_child, so it is installed again, without which no subprocess
+        that the process starts is ever reported as terminated.
+        """
+        gevent.reinit()
+
+        loop = gevent.get_hub().loop
+        loop.reset_sigchld() # type: ignore
+        loop.install_sigchld()
+
+# ################################################################################################################################
+
     def _on_ready(self, slot:'int') -> 'None':
         """ Records that the worker of a slot, or the config process, reported ready, unless the slot is draining already.
         """
@@ -245,7 +258,7 @@ class Arbiter:
                 if self.writer:
                     self.writer.listener.close()
 
-                gevent.reinit()
+                self.reinit_hub_in_child()
 
                 # .. it runs on the CPU of its slot if the workers are pinned ..
                 if ctx.cpu is not None:
@@ -293,7 +306,7 @@ class Arbiter:
                 self.reset_signals_in_child()
                 _ = _signal(signal.SIGTERM, signal.SIG_IGN)
                 self.hub.close_in_worker()
-                gevent.reinit()
+                self.reinit_hub_in_child()
 
                 # .. it receives no command to reopen its log files, so its handlers follow the renames by themselves ..
                 watch_worker_handlers()

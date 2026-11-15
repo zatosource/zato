@@ -11,3 +11,18 @@ channel_rest:
     service: test.multi-cpu.worker-error
     url_path: /test/multi-cpu/worker-error
     data_format: json
+
+  # The service whose response is the same on every worker, through each channel type
+  - name: test.multi-cpu.rest.constant
+    service: test.multi-cpu.constant
+    url_path: /test/multi-cpu/constant
+    data_format: json
+
+channel_soap:
+
+  - name: test.multi-cpu.soap.constant
+    service: test.multi-cpu.constant
+    url_path: /test/multi-cpu/soap/constant
+    data_format: xml
+    soap_action: urn:test:multi-cpu:constant
+    soap_version: "1.1"
