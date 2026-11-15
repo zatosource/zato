@@ -69,16 +69,16 @@ _idle_in_transaction_timeout_ms = 60_000
 # ################################################################################################################################
 
 def set_sqlite_pragmas(dbapi_connection:'any_', connection_record:'any_') -> 'None':
-    """ WAL mode lets multiple processes share the file safely, synchronous=NORMAL
-    keeps each insert fast while remaining durable enough for aggregate and audit data,
-    and the busy timeout makes concurrent writers from separate processes take turns.
+    """ WAL mode lets multiple processes share the file safely, synchronous=FULL
+    flushes the write-ahead log at each commit so that a committed transaction survives a power loss
+    or a forced detachment of the volume, and the busy timeout makes concurrent writers from separate processes take turns.
     Secure deletion in its fast form zeroes deleted content on the pages a delete writes anyway and leaves freed
     overflow pages as they are, because SQLite builds that enable full secure deletion by default otherwise write
     each freed page of a large payload again, which doubles the cost of every commit that removes message bodies.
     """
     cursor = dbapi_connection.cursor()
     _ = cursor.execute('pragma journal_mode=wal')
-    _ = cursor.execute('pragma synchronous=normal')
+    _ = cursor.execute('pragma synchronous=full')
     _ = cursor.execute('pragma secure_delete=fast')
     _ = cursor.execute(f'pragma busy_timeout={SQLite_Busy_Timeout_Ms}')
     cursor.close()

@@ -457,11 +457,16 @@ def create_zato_server_fixture(
             os.environ['Zato_PubSub_DB_Path'] = pubsub_db_path
             logger.info('Pub/sub database: %s', pubsub_db_path)
 
-        # .. the audit log gets its own file too - otherwise the test server would
-        # .. write its audit events into the developer's own environment's database ..
-        audit_db_path = os.path.join(server_directory, 'audit.db')
-        os.environ['Zato_Audit_Log_DB_Name'] = audit_db_path
-        logger.info('Audit log database: %s', audit_db_path)
+        # .. the audit log gets a database that the suite started for this session, or else its own file,
+        # .. so the test server never writes its audit events into the developer's own environment's database ..
+        if 'audit_db_env' in setup_result:
+            os.environ.update(setup_result['audit_db_env'])
+            logger.info('Audit log database: %s', os.environ['Zato_Audit_Log_DB_Type'])
+        else:
+            audit_db_path = os.path.join(server_directory, 'audit.db')
+            os.environ['Zato_Audit_Log_DB_Type'] = 'sqlite'
+            os.environ['Zato_Audit_Log_DB_Name'] = audit_db_path
+            logger.info('Audit log database: %s', audit_db_path)
 
         # .. copy services into the pickup directory if needed ..
         hot_deploy_sources = setup_result.get('hot_deploy_sources', []) # type: ignore[union-attr]

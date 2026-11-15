@@ -1,0 +1,8 @@
+channel_rest:
+
+  # The service that returns the correlation ID of the request and the slot of the worker that served it,
+  # the requests and responses of which the audit log records
+  - name: test.multi-cpu.audit.echo
+    service: test.multi-cpu.audit-echo
+    url_path: /test/multi-cpu/audit/echo
+    data_format: json

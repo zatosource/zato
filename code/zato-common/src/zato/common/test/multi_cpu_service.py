@@ -457,6 +457,21 @@ class LockHold(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class AuditEcho(Service):
+    """ Returns the correlation ID of the request and the slot of the worker that served it, by which a test finds
+    the audit events of the request.
+    """
+    name = 'test.multi-cpu.audit-echo'
+
+    def handle(self) -> 'None':
+        self.response.payload = {
+            'cid': self.cid,
+            'slot': get_slot_or_single(),
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class InvalidateResponse(Service):
     """ Invalidates the cached responses of a channel.
     """
