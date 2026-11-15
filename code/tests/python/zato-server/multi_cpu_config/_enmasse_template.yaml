@@ -1,0 +1,48 @@
+security:
+
+  # The definition whose password the suite changes
+  - name: test.multi-cpu.config.sec
+    type: basic_auth
+    username: test.multi-cpu.config.sec
+    password: "{{sec_password}}"
+
+channel_rest:
+
+  # The service that returns the slot of the worker that served the request
+  - name: test.multi-cpu.config.worker-slot
+    service: test.multi-cpu.worker-slot
+    url_path: /test/multi-cpu/worker-slot
+    data_format: json
+
+  # The channel whose URL path the suite changes
+  - name: test.multi-cpu.config.moved
+    service: test.multi-cpu.worker-slot
+    url_path: /test/multi-cpu/config/before
+    data_format: json
+
+  # The channel secured by the definition whose password the suite changes
+  - name: test.multi-cpu.config.secured
+    service: test.multi-cpu.worker-slot
+    url_path: /test/multi-cpu/config/secured
+    data_format: json
+    security: test.multi-cpu.config.sec
+
+  # The two channels that the outgoing connection invokes before and after its change
+  - name: test.multi-cpu.config.target-first
+    service: test.multi-cpu.channel-name
+    url_path: /test/multi-cpu/config/target-first
+    data_format: json
+
+  - name: test.multi-cpu.config.target-second
+    service: test.multi-cpu.channel-name
+    url_path: /test/multi-cpu/config/target-second
+    data_format: json
+
+outgoing_rest:
+
+  # The connection whose URL path the suite changes
+  - name: test.multi-cpu.config.out
+    host: "http://127.0.0.1:{{server_port}}"
+    url_path: /test/multi-cpu/config/target-first
+    data_format: json
+    timeout: 30

@@ -8,25 +8,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import json
-import logging
 import os
 import unittest
-from time import monotonic, sleep
 from uuid import uuid4
+from zipfile import ZipFile
 
 # Zato
-from zato.common.test.conftest_base_multi_cpu import invoke_on_slot, ModuleCtx as MultiCPUCtx, MultiCPUTestConfig
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import intlist
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-logger = logging.getLogger('zato.test.multi_cpu_hot_deploy.file_kinds')
+from zato.common.test.conftest_base_multi_cpu import invoke_on_slot, ModuleCtx as MultiCPUCtx, MultiCPUTestConfig, \
+     wait_for_every_slot
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,7 +24,6 @@ class ModuleCtx:
 
     # How long every slot has to observe a deployed version, in seconds
     Deploy_Deadline = 60.0
-    Poll_Interval = 0.5
 
     Services_Dir  = os.path.join('pickup', 'incoming', 'services')
     User_Conf_Dir = os.path.join('pickup', 'incoming', 'user-conf')
@@ -89,14 +77,65 @@ class ConfigReader(Service):
 version={version}
 '''
 
+    Rule_Name = 'Versioned'
+
+    Rules_Reader_Template = '''# -*- coding: utf-8 -*-
+
+# Zato
+from zato.server.service import Service
+
+class RulesReader(Service):
+    name = {service_name!r}
+
+    def handle(self) -> 'None':
+        result = self.rules.match_first({{'kind': 'versioned'}}, {rule_full_name!r})
+        self.response.payload = {{'version': result.then['version']}}
+'''
+
+    Rules_Template = '''rule
+    {rule_name}
+docs
+    The version of the ruleset deployed through the pickup directory.
+when
+    kind is 'versioned'
+then
+    version = '{version}'
+'''
+
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _publish(directory:'str', file_name:'str', staging_path:'str') -> 'None':
+    """ Moves a complete file into the pickup directory, so the listener never reads a partially written one.
+    """
+    path = os.path.join(MultiCPUTestConfig.server_directory, directory, file_name)
+    os.replace(staging_path, path)
+
+# ################################################################################################################################
+
+def _staging_path(file_name:'str') -> 'str':
+    out = os.path.join(MultiCPUTestConfig.server_directory, f'staging-{file_name}')
+    return out
+
 # ################################################################################################################################
 
 def _write(directory:'str', file_name:'str', content:'str') -> 'None':
-    path = os.path.join(MultiCPUTestConfig.server_directory, directory, file_name)
+    staging_path = _staging_path(file_name)
 
-    with open(path, 'w') as output_file:
+    with open(staging_path, 'w') as output_file:
         _ = output_file.write(content)
+
+    _publish(directory, file_name, staging_path)
+
+# ################################################################################################################################
+
+def _write_archive(directory:'str', file_name:'str', member_name:'str', content:'str') -> 'None':
+    staging_path = _staging_path(file_name)
+
+    with ZipFile(staging_path, 'w') as archive:
+        archive.writestr(member_name, content)
+
+    _publish(directory, file_name, staging_path)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -108,30 +147,16 @@ class TestFileKindsAcrossWorkers(unittest.TestCase):
     def _wait_for_version(self, service_name:'str', version:'str') -> 'None':
         """ Waits until the service answers with the given version through every slot.
         """
-        pending:'intlist' = list(range(MultiCPUTestConfig.worker_count))
-        deadline = monotonic() + ModuleCtx.Deploy_Deadline
+        def _is_at_version(slot:'int') -> 'bool':
+            status, body = invoke_on_slot(slot, service_name, {})
 
-        while pending:
-            still_pending:'intlist' = []
+            if status != MultiCPUCtx.Status_OK:
+                return False
 
-            for slot in pending:
-                status, body = invoke_on_slot(slot, service_name, {})
+            out = json.loads(body)['version'] == version
+            return out
 
-                if status != MultiCPUCtx.Status_OK:
-                    still_pending.append(slot)
-                    continue
-
-                if json.loads(body)['version'] != version:
-                    still_pending.append(slot)
-
-            pending = still_pending
-
-            if pending:
-                if monotonic() > deadline:
-                    self.fail(f'{service_name} not at version {version} in slots {pending} after {ModuleCtx.Deploy_Deadline}s')
-                sleep(ModuleCtx.Poll_Interval)
-
-        logger.info('%s at version %s in every slot', service_name, version)
+        wait_for_every_slot(_is_at_version, f'version {version} of {service_name}', ModuleCtx.Deploy_Deadline)
 
 # ################################################################################################################################
 
@@ -144,6 +169,21 @@ class TestFileKindsAcrossWorkers(unittest.TestCase):
 
         for version in ('first', 'second'):
             _write(ModuleCtx.Services_Dir, file_name, ModuleCtx.Service_Template.format(service_name=service_name, version=version))
+            self._wait_for_version(service_name, version)
+
+# ################################################################################################################################
+
+    def test_archive_change(self) -> 'None':
+        """ An archive with a service module and its changed version.
+        """
+        suffix = uuid4().hex[:12]
+        service_name = f'test.multi-cpu.archived.{suffix}'
+        member_name = f'test_multi_cpu_archived_{suffix}.py'
+        file_name = f'test_multi_cpu_archive_{suffix}.zip'
+
+        for version in ('first', 'second'):
+            source = ModuleCtx.Service_Template.format(service_name=service_name, version=version)
+            _write_archive(ModuleCtx.Services_Dir, file_name, member_name, source)
             self._wait_for_version(service_name, version)
 
 # ################################################################################################################################
@@ -182,6 +222,29 @@ class TestFileKindsAcrossWorkers(unittest.TestCase):
         self._wait_for_version(service_name, 'first')
 
         _write(ModuleCtx.User_Conf_Dir, f'{config_name}.ini', ModuleCtx.Config_Template.format(version='second'))
+        self._wait_for_version(service_name, 'second')
+
+# ################################################################################################################################
+
+    def test_rules_change(self) -> 'None':
+        """ A .zrules file, evaluated by a service, and its changed version.
+        """
+        suffix = uuid4().hex[:12]
+        ruleset_name = f'test_multi_cpu_rules_{suffix}'
+        rule_full_name = f'{ruleset_name}_{ModuleCtx.Rule_Name}'
+        service_name = f'test.multi-cpu.rules-reader.{suffix}'
+
+        rules = ModuleCtx.Rules_Template.format(rule_name=ModuleCtx.Rule_Name, version='first')
+        _write(ModuleCtx.User_Conf_Dir, f'{ruleset_name}.zrules', rules)
+
+        reader = ModuleCtx.Rules_Reader_Template.format(service_name=service_name, rule_full_name=rule_full_name)
+        _write(ModuleCtx.Services_Dir, f'test_multi_cpu_rules_reader_{suffix}.py', reader)
+
+        self._wait_for_version(service_name, 'first')
+
+        rules = ModuleCtx.Rules_Template.format(rule_name=ModuleCtx.Rule_Name, version='second')
+        _write(ModuleCtx.User_Conf_Dir, f'{ruleset_name}.zrules', rules)
+
         self._wait_for_version(service_name, 'second')
 
 # ################################################################################################################################

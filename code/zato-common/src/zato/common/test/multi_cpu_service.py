@@ -12,11 +12,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from time import monotonic
+from uuid import uuid4
 
 # gevent
 from gevent import sleep
 
 # Zato
+from zato.common.test.config_multi_cpu_cache import CacheConfig
 from zato.common.worker_slot import get_slot_or_single
 from zato.server.service import Service
 
@@ -103,6 +105,74 @@ class WorkerError(Service):
     def handle(self) -> 'None':
         slot = get_slot_or_single()
         raise Exception(f'Raised by the worker of slot {slot}')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ChannelName(Service):
+    """ Returns the name of the channel that the request arrived through and the slot of the worker that served it.
+    """
+    name = 'test.multi-cpu.channel-name'
+
+    def handle(self) -> 'None':
+        self.response.payload = {
+            'channel': self.channel.name,
+            'slot': get_slot_or_single(),
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class OutgoingInvoke(Service):
+    """ Sends a GET request through an outgoing REST connection and returns the JSON response together with
+    the slot of the worker that sent it.
+    """
+    name = 'test.multi-cpu.outgoing-invoke'
+
+    def handle(self) -> 'None':
+        request = self.request.payload
+        connection = self.out.rest[request['outconn_name']].conn
+
+        response = connection.get(self.cid)
+
+        self.response.payload = {
+            'response': response.json(),
+            'slot': get_slot_or_single(),
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CachedSlow(Service):
+    """ Records each invocation in the file shared by every worker, then returns an ID of the invocation after a delay,
+    so that the responses that a cache served can be told apart from the ones that an invocation produced.
+    """
+    name = CacheConfig.Cached_Service
+
+    def handle(self) -> 'None':
+        key = self.request.http.GET['key']
+        invocation_id = uuid4().hex
+
+        with open(os.environ[CacheConfig.Invocation_Log_Env], 'a') as invocation_log:
+            _ = invocation_log.write(f'{key} {invocation_id}\n')
+
+        sleep(CacheConfig.Service_Duration)
+
+        self.response.payload = {
+            'invocation_id': invocation_id,
+            'slot': get_slot_or_single(),
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class InvalidateResponse(Service):
+    """ Invalidates the cached responses of a channel.
+    """
+    name = CacheConfig.Invalidate_Service
+
+    def handle(self) -> 'None':
+        self._config_manager.cache_api.invalidate_response(self.request.payload['channel_name'])
 
 # ################################################################################################################################
 # ################################################################################################################################

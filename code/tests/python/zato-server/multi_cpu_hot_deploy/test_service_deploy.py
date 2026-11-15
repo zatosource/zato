@@ -11,18 +11,12 @@ import json
 import logging
 import os
 import unittest
-from time import monotonic, sleep
 from uuid import uuid4
 
 # Zato
-from zato.common.test.conftest_base_multi_cpu import invoke_on_slot, ModuleCtx as MultiCPUCtx, MultiCPUTestConfig
+from zato.common.test.conftest_base_multi_cpu import invoke_on_slot, ModuleCtx as MultiCPUCtx, MultiCPUTestConfig, \
+     wait_for_every_slot
 from zato.server.control.envelope import ModuleCtx as EnvelopeCtx
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import intlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,7 +30,6 @@ class ModuleCtx:
 
     # How long every slot has to serve a deployed service, in seconds
     Deploy_Deadline = 60.0
-    Poll_Interval = 0.5
 
     # The module of the deployed service, whose padding makes its source as large as a test requires
     Module_Template = '''# -*- coding: utf-8 -*-
@@ -72,34 +65,28 @@ class TestServiceDeployAcrossWorkers(unittest.TestCase):
 
         file_name = f'test_multi_cpu_deployed_{suffix}.py'
         pickup_path = os.path.join(MultiCPUTestConfig.server_directory, 'pickup', 'incoming', 'services', file_name)
+        staging_path = os.path.join(MultiCPUTestConfig.server_directory, f'staging-{file_name}')
 
-        with open(pickup_path, 'w') as module_file:
+        # The module is moved into the pickup directory complete, so the listener never reads a partially written one ..
+        with open(staging_path, 'w') as module_file:
             _ = module_file.write(source)
 
-        # .. every slot serves the service with the response of this source ..
-        pending:'intlist' = list(range(MultiCPUTestConfig.worker_count))
-        deadline = monotonic() + ModuleCtx.Deploy_Deadline
+        os.replace(staging_path, pickup_path)
 
-        while pending:
-            still_pending:'intlist' = []
+        # .. and every slot serves the service with the response of this source.
+        def _is_deployed(slot:'int') -> 'bool':
+            status, body = invoke_on_slot(slot, service_name, {})
 
-            for slot in pending:
-                status, body = invoke_on_slot(slot, service_name, {})
+            if status != MultiCPUCtx.Status_OK:
+                return False
 
-                if status != MultiCPUCtx.Status_OK:
-                    still_pending.append(slot)
-                    continue
+            response = json.loads(body)
+            self.assertEqual(response['slot'], slot)
+            self.assertEqual(response['marker'], marker)
 
-                response = json.loads(body)
-                self.assertEqual(response['slot'], slot)
-                self.assertEqual(response['marker'], marker)
+            return True
 
-            pending = still_pending
-
-            if pending:
-                if monotonic() > deadline:
-                    self.fail(f'{service_name} not served by slots {pending} after {ModuleCtx.Deploy_Deadline}s')
-                sleep(ModuleCtx.Poll_Interval)
+        wait_for_every_slot(_is_deployed, f'the deployment of {service_name}', ModuleCtx.Deploy_Deadline)
 
 # ################################################################################################################################
 

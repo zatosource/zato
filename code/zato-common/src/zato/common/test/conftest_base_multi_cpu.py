@@ -16,11 +16,15 @@ import logging
 import os
 import signal
 import sqlite3
+import subprocess
 from base64 import b64encode
 from http.client import HTTPConnection
 from threading import Thread
 from time import monotonic, sleep
 from uuid import uuid4
+
+# PyYAML
+import yaml
 
 # Zato
 from zato.common.test.client import AdminClient
@@ -92,6 +96,11 @@ class ModuleCtx:
     # The position of the parent PID among the fields of /proc/<pid>/stat that follow the process name
     Stat_Parent_Field = 1
 
+    # The relative location of the server log and the markers that the server writes to it for each enmasse import it starts
+    Log_Path = os.path.join('logs', 'server.log')
+    Marker_Started = 'Invoking command'
+    Marker_Import  = '--import'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -115,6 +124,7 @@ class MultiCPUTestConfig:
     host = ''
     port = 0
     server_directory = ''
+    zato_bin = ''
     base_url = ''
     invoke_password = ''
     worker_count = 0
@@ -134,6 +144,7 @@ class MultiCPUTestConfig:
         cls.host = host
         cls.port = server_port
         cls.server_directory = server_directory
+        cls.zato_bin = zato_bin
         cls.base_url = f'http://{host}:{server_port}'
         cls.invoke_password = invoke_password
         cls.worker_count = get_worker_count()
@@ -211,24 +222,99 @@ def connection_to_slot(slot:'int', other_than:'bool'=False) -> 'HTTPConnection':
 
 # ################################################################################################################################
 
+def basic_auth_header(username:'str', password:'str') -> 'str':
+    credentials = f'{username}:{password}'
+    out = 'Basic ' + b64encode(credentials.encode()).decode()
+    return out
+
+# ################################################################################################################################
+
+def request_on_slot(slot:'int', method:'str', path:'str', body:'str', headers:'anydict') -> 'tuple[int, bytes]':
+    """ Sends one request through a connection that the worker of a slot accepted and returns the status and body of the response.
+    """
+    connection = connection_to_slot(slot)
+    connection.request(method, path, body=body, headers=headers)
+
+    response = connection.getresponse()
+    response_body = response.read()
+    connection.close()
+
+    out = (response.status, response_body)
+    return out
+
+# ################################################################################################################################
+
 def invoke_on_slot(slot:'int', service_name:'str', payload:'anydict') -> 'tuple[int, bytes]':
     """ Invokes a service through the admin channel of the worker of a slot and returns the status and body of the response.
     """
-    credentials = f'{ModuleCtx.Admin_Username}:{MultiCPUTestConfig.invoke_password}'
     headers = {
-        'Authorization': 'Basic ' + b64encode(credentials.encode()).decode(),
+        'Authorization': basic_auth_header(ModuleCtx.Admin_Username, MultiCPUTestConfig.invoke_password),
         'Content-Type': 'application/json',
     }
 
-    connection = connection_to_slot(slot)
-    connection.request('POST', ModuleCtx.Admin_Invoke_Path.format(service_name), body=json.dumps(payload), headers=headers)
+    path = ModuleCtx.Admin_Invoke_Path.format(service_name)
 
-    response = connection.getresponse()
-    body = response.read()
-    connection.close()
-
-    out = (response.status, body)
+    out = request_on_slot(slot, 'POST', path, json.dumps(payload), headers)
     return out
+
+# ################################################################################################################################
+
+def count_enmasse_imports(file_name:'str') -> 'int':
+    """ How many enmasse imports of the file the server log reports.
+    """
+    path = os.path.join(MultiCPUTestConfig.server_directory, ModuleCtx.Log_Path)
+
+    with open(path) as log_file:
+        lines = log_file.read().splitlines()
+
+    out = 0
+
+    for line in lines:
+        if ModuleCtx.Marker_Started in line and ModuleCtx.Marker_Import in line and file_name in line:
+            out += 1
+
+    return out
+
+# ################################################################################################################################
+
+def enmasse_import(config:'anydict') -> 'None':
+    """ Imports the configuration into the server through zato enmasse --import.
+    """
+    input_path = os.path.join(MultiCPUTestConfig.server_directory, f'multi-cpu-import-{uuid4().hex}.yaml')
+
+    with open(input_path, 'w') as input_file:
+        _ = input_file.write(yaml.safe_dump(config, sort_keys=False))
+
+    command = [MultiCPUTestConfig.zato_bin, 'enmasse', MultiCPUTestConfig.server_directory, '--import', '--input', input_path]
+    result = subprocess.run(command, capture_output=True, text=True, check=False)
+
+    if result.returncode != 0:
+        raise Exception(f'Enmasse import failed -> {result.stdout} {result.stderr}')
+
+# ################################################################################################################################
+
+def wait_for_every_slot(is_done:'callable_', description:'str', deadline:'float') -> 'None':
+    """ Waits until the condition holds for every slot of the server, where is_done receives a slot and returns
+    whether the worker of that slot satisfies the condition. Raises an exception after the deadline, in seconds.
+    """
+    pending:'intlist' = list(range(MultiCPUTestConfig.worker_count))
+    deadline_at = monotonic() + deadline
+
+    while pending:
+        still_pending:'intlist' = []
+
+        for slot in pending:
+            if not is_done(slot):
+                still_pending.append(slot)
+
+        pending = still_pending
+
+        if pending:
+            if monotonic() > deadline_at:
+                raise Exception(f'{description} not reached by slots {pending} after {deadline}s')
+            sleep(ModuleCtx.Poll_Interval)
+
+    logger.info('%s reached by every slot', description)
 
 # ################################################################################################################################
 

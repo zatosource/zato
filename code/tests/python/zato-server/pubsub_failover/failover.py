@@ -68,6 +68,9 @@ _stop_timeout_seconds = 10
 # the messages of lost pull responses handed out again.
 _pull_lease_seconds = '5'
 
+# The variable with the worker count of the test run, which each server receives in its container.
+_worker_count_env = 'Zato_Server_Workers'
+
 # The controller script next to this module.
 _controller_path = os.path.join(os.path.dirname(__file__), 'controller.py')
 
@@ -167,6 +170,9 @@ def build_server_env(server:'ContainerServer', database:'PubSubDatabase') -> 'No
     server.env['Zato_Audit_Log_DB_Name'] = os.path.join(server.server_directory, 'audit.db')
     server.env['Zato_PubSub_Pull_Lease_Seconds'] = _pull_lease_seconds
     server.env.update(database.env)
+
+    if _worker_count_env in os.environ:
+        server.env[_worker_count_env] = os.environ[_worker_count_env]
 
 # ################################################################################################################################
 
