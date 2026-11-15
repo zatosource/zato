@@ -16,7 +16,7 @@ import socket
 
 # Zato
 from zato.common.ha.common import get_barrier_socket_path
-from zato.common.pubsub.sql.replaced import PubSubReplaced
+from zato.common.pubsub.sql.replaced import raise_replaced
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,7 +99,7 @@ def wait_for_replication(database:'str') -> 'None':
 
     # .. this node no longer serves requests ..
     elif answer == ModuleCtx.Answer_Replaced:
-        raise PubSubReplaced(f'The active-standby node of this server is no longer active, database `{database}`')
+        raise_replaced(f'The active-standby node of this server is no longer active, database `{database}`')
 
     # .. and anything else is an error that the node describes.
     else:

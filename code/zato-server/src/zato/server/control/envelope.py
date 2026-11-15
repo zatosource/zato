@@ -68,6 +68,9 @@ class MessageType:
     Reopen_Logs   = 'reopen-logs'
     Logs_Reopened = 'logs-reopened'
 
+    # A worker learned that another server took over the pub/sub database, after which the arbiter drains every worker
+    Replaced = 'replaced'
+
 # ################################################################################################################################
 # ################################################################################################################################
 

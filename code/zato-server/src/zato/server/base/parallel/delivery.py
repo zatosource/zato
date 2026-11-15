@@ -12,7 +12,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # gevent
-from gevent import sleep, spawn
+from gevent import joinall, sleep, spawn
 from gevent.event import Event
 from gevent.lock import BoundedSemaphore, RLock
 
@@ -82,6 +82,7 @@ _header_delivery_attempt = 'X-Zato-Delivery-Attempt'
 _header_content_length = 'Content-Length'
 
 sub_key_greenlet_dict = dict[str, 'Greenlet']
+greenletlist = list['Greenlet']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -174,6 +175,23 @@ class PushDelivery:
             self._paused.discard(sub_key)
 
         self.start_sub_key(sub_key)
+
+# ################################################################################################################################
+
+    def pause_all(self, join_timeout:'float') -> 'None':
+        """ Pauses every subscriber of this worker at once, each between two of its batches, so that a message whose
+        delivery is in progress remains in its queue for the worker that delivers the key next.
+        """
+        with self._lock:
+            sub_keys = list(self._greenlets)
+
+        pauses:'greenletlist' = []
+
+        for sub_key in sub_keys:
+            pause = spawn(self.pause_sub_key, sub_key, join_timeout)
+            pauses.append(pause)
+
+        _ = joinall(pauses)
 
 # ################################################################################################################################
 

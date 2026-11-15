@@ -97,6 +97,14 @@ class ControlClient:
 
 # ################################################################################################################################
 
+    def report_replaced(self) -> 'None':
+        """ Tells the arbiter that another server took over the pub/sub database, after which the arbiter drains every worker.
+        """
+        message = new_message(MessageType.Replaced, None)
+        self._send(message)
+
+# ################################################################################################################################
+
     def publish(self, body:'any_') -> 'None':
         """ Sends an event that the arbiter relays to every other worker.
         """

@@ -25,7 +25,7 @@ from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.ha.common import get_generation, get_node_name, is_active_standby
 from zato.common.pubsub.sql.clock import get_engine_clock
 from zato.common.pubsub.sql.config import get_pubsub_db_type, get_pubsub_engine
-from zato.common.pubsub.sql.generation import take_over
+from zato.common.pubsub.sql.generation import follow_takeover, get_fork_takeover, take_over
 from zato.common.pubsub.sql.payload_cache import get_payload_cache_size, LocalPayloadEpoch, Max_Payload_Cache_Size, \
      PayloadCache, SharedPayloadEpoch
 from zato.common.pubsub.sql.schema import delivery_table
@@ -35,6 +35,7 @@ from zato.common.pubsub.writer_process.remote import new_pubsub_writer
 from zato.common.typing_ import cast_
 from zato.common.util.memory_trim import start_memory_trimmer
 from zato.common.util.time_ import datetime_to_ms
+from zato.common.worker_slot import is_first_start
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -169,16 +170,25 @@ class SQLBackendCore:
 
     def take_over(self) -> 'None':
         """ Makes this server the active one on PostgreSQL, whose database a standby server may take over,
-        and guards each subsequent transaction with the generation raised. On SQLite under an active-standby node,
-        the node made this server the active one already, and its generation is recorded in the audit log.
+        and guards each subsequent transaction with the generation raised. A worker of a multi-process server follows
+        the takeover that its arbiter ran before the fork. On SQLite under an active-standby node, the node made
+        this server the active one already. The takeover is recorded in the audit log once per server start.
         """
         if get_pubsub_db_type() == Type_PostgreSQL:
-            generation_guard = take_over(get_pubsub_engine)
+
+            # A worker guards its engine with the generation of its arbiter and never raises it itself ..
+            if fork_guard := get_fork_takeover():
+                generation_guard = follow_takeover(self.engine, fork_guard)
+
+            # .. while a server with no arbiter raises it.
+            else:
+                generation_guard = take_over(get_pubsub_engine)
+
             self.generation_guard = generation_guard
 
             # Each generation is one higher than the one it replaces, which the audit log records with the takeover,
             # and a server that a later one replaced before its start took nothing over.
-            if self.audit_log and not generation_guard.is_replaced:
+            if self.audit_log and is_first_start() and not generation_guard.is_replaced:
                 generation = generation_guard.generation
                 previous_generation = generation - 1
 
@@ -191,7 +201,7 @@ class SQLBackendCore:
                     outcome=AuditOutcome.OK, attrs=attrs)
 
         elif is_active_standby():
-            if self.audit_log:
+            if self.audit_log and is_first_start():
                 generation = get_generation()
                 node_name = get_node_name()
 

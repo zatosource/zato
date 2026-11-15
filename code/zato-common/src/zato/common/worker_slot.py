@@ -36,11 +36,17 @@ class ModuleCtx:
     # The slot that a process which is not a worker uses wherever a slot is named, as the one process of its server
     Single_Process_Slot = 0
 
+    # The generation of the first worker that a slot receives after the server starts
+    First_Generation = 1
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 # The slot of the worker that this process runs, or None in a process that is not a worker of a multi-process server
 _worker_slot:'intnone' = None
+
+# The generation of the worker that this process runs within its slot, or None in a process that is not a worker
+_worker_generation:'intnone' = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,6 +66,14 @@ def set_worker_slot(slot:'int') -> 'None':
         return out
 
     logging.setLogRecordFactory(new_record)
+
+# ################################################################################################################################
+
+def set_worker_generation(generation:'int') -> 'None':
+    """ Records the generation of the worker that this process runs within its slot, which a worker does once, after the fork.
+    """
+    global _worker_generation
+    _worker_generation = generation
 
 # ################################################################################################################################
 
@@ -88,6 +102,22 @@ def is_singleton_owner() -> 'bool':
     a worker always does and, of the workers of a multi-process server, the worker of the first slot does.
     """
     out = _worker_slot is None or _worker_slot == ModuleCtx.Singleton_Slot
+    return out
+
+# ################################################################################################################################
+
+def is_first_start() -> 'bool':
+    """ Says whether this process runs the duties that a server runs once after it starts, which a process that is not
+    a worker always does and, of the workers of a multi-process server, the first generation of the first slot does,
+    so that a respawned worker never runs them again.
+    """
+    if _worker_slot is None:
+        out = True
+    else:
+        is_singleton_slot = _worker_slot == ModuleCtx.Singleton_Slot
+        is_first_generation = _worker_generation == ModuleCtx.First_Generation
+        out = is_singleton_slot and is_first_generation
+
     return out
 
 # ################################################################################################################################

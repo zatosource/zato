@@ -33,10 +33,11 @@ if 0:
     from sqlalchemy.engine import Dialect
     from sqlalchemy.sql.compiler import SQLCompiler
     from sqlalchemy.types import TypeEngine
-    from zato.common.typing_ import any_, stranydict
+    from zato.common.typing_ import any_, stranydict, strnone
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
+    strnone = strnone
     datetime = datetime
     Dialect = Dialect
     MetaData = MetaData
@@ -238,6 +239,20 @@ class EnvDBConfig:
         return out
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def get_env_sqlite_path(config:'EnvDBConfig') -> 'strnone':
+    """ Returns the path to the SQLite file of an environment-configured database, or None if the database is a network one.
+    """
+    values = get_env_values(config)
+
+    if values['type'] == Type_SQLite:
+        out = values['name']
+    else:
+        out = None
+
+    return out
+
 # ################################################################################################################################
 
 def get_env_values(config:'EnvDBConfig') -> 'stranydict':

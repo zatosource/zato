@@ -34,6 +34,7 @@ logger = getLogger(__name__)
 
 # Type aliases
 pending_event_list = list['PendingEvent']
+event_buffer_list = list['EventBuffer']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,6 +54,9 @@ _min_check_interval_seconds = 0.05
 
 # .. and never more than this, so a shrinking max-wait is honored promptly.
 _max_check_interval_seconds = 1.0
+
+# The buffers of this process whose timed flusher started, which are the only ones that hold events between writes
+_flushed_buffers:'event_buffer_list' = []
 
 # Per-flush trace diagnostics - opt-in through the environment
 _trace_flag = os.environ.get('Zato_HL7_Trace')
@@ -217,6 +221,8 @@ class EventBuffer:
         thread = Thread(target=self._run_flusher, name='audit-log-flusher', daemon=True)
         thread.start()
 
+        _flushed_buffers.append(self)
+
 # ################################################################################################################################
 
     def _run_flusher(self) -> 'None':
@@ -271,6 +277,15 @@ class EventBuffer:
                 flush_elapsed_ms = flush_elapsed * 1000
 
                 _trace('timed flush of %d events done %.1fms', batch_size, flush_elapsed_ms)
+
+# ################################################################################################################################
+
+def flush_all_buffers() -> 'None':
+    """ Writes out the events of every buffer of this process, which a worker process does before it exits,
+    because a buffered event that is not written by then is lost.
+    """
+    for buffer in _flushed_buffers:
+        buffer.flush()
 
 # ################################################################################################################################
 # ################################################################################################################################

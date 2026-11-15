@@ -141,15 +141,18 @@ class ControlHub:
         query_timeout:'float',
         on_ready:'callable_',
         on_logs_reopened:'callable_',
+        on_replaced:'callable_',
         ) -> 'None':
 
-        # The hub calls on_ready with a slot whose worker reported ready, and on_logs_reopened with a slot
-        # whose worker reopened its log files and with the ID of the rotation that it acknowledges
+        # The hub calls on_ready with a slot whose worker reported ready, on_logs_reopened with a slot
+        # whose worker reopened its log files and with the ID of the rotation that it acknowledges,
+        # and on_replaced with a slot whose worker learned that another server took over the pub/sub database
         self.body_dir         = body_dir
         self.slot_count       = slot_count
         self.query_timeout    = query_timeout
         self.on_ready         = on_ready
         self.on_logs_reopened = on_logs_reopened
+        self.on_replaced      = on_replaced
 
         self.seq = EnvelopeCtx.No_Sequence
         self.channels:'intchanneldict' = {}
@@ -353,6 +356,9 @@ class ControlHub:
         elif message_type == MessageType.Logs_Reopened:
             message = decode(datagram)
             self.on_logs_reopened(channel.slot, message.body)
+
+        elif message_type == MessageType.Replaced:
+            self.on_replaced(channel.slot)
 
         else:
             logger.warning('Ignoring control message of type `%s` from slot %s', message_type, channel.slot)

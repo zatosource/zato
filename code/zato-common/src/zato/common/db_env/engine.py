@@ -29,6 +29,7 @@ from zato.common.db_env.connection import build_connect_args_from_values, build_
     set_postgresql_keepalive, set_postgresql_no_delay, set_postgresql_session, set_sqlite_pragmas
 from zato.common.db_env.pg8000_copy import install as install_pg8000_copy
 from zato.common.db_env.pg8000_wire import install as install_pg8000_wire
+from zato.common.db_env.process_queue import ProcessQueue
 from zato.common.db_env.sqlite_checkpoint import set_background_checkpoint_limit, WALCheckpointer
 from zato.common.defaults import default_env_base_dir
 from zato.common.ha.sqlite import holds_log_for_node, ReplicatedConnection, ReplicatedPragmas
@@ -41,8 +42,8 @@ if 0:
     from sqlalchemy import MetaData
     from sqlalchemy.engine import Engine
     from zato.common.db_env.common import EnvDBConfig
-    from zato.common.db_env.process_queue import ProcessQueue
-    from zato.common.typing_ import any_, anydict, anytuple, callable_, stranydict, strtuple
+    from zato.common.typing_ import any_, anydict, anytuple, callable_, strintdict, strlist, stranydict, strtuple
+    from zato_ipc_core.zato_ipc_core import SharedRegion
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
@@ -50,7 +51,9 @@ if 0:
     Engine = Engine
     EnvDBConfig = EnvDBConfig
     MetaData = MetaData
-    ProcessQueue = ProcessQueue
+    SharedRegion = SharedRegion
+    strintdict = strintdict
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,6 +100,23 @@ _process_queues:'anydict' = {}
 
 # The lock of the threads of the operating system, which the threads of the gevent pool require.
 _allocate_thread_lock = get_original('_thread', 'allocate_lock')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _QueueBinding:
+    """ The shared region of the server of a worker process, the place of the worker in its queues, how long a write
+    waits for its turn, and the queue of each SQLite file, by its real path, which is the same in every worker.
+    """
+    region: 'SharedRegion'
+    slot: 'int'
+    deadline_seconds: 'float'
+    queue_by_path: 'strintdict'
+
+class _QueueState:
+    binding: '_QueueBinding | None' = None
+
+_queue_state = _QueueState()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -468,6 +488,77 @@ def set_process_queue(engine:'Engine', process_queue:'ProcessQueue') -> 'None':
 
 # ################################################################################################################################
 
+def get_cached_engine_count() -> 'int':
+    """ Returns how many engines this process holds for its callers, none of which a process that forks workers may hold,
+    because a pooled connection inherited by several processes is used by all of them at once.
+    """
+    out = len(_engine_cache) + len(_sqlite_file_engine_cache)
+    return out
+
+# ################################################################################################################################
+
+def get_queue_by_path(db_paths:'strlist') -> 'strintdict':
+    """ Returns the queue of the shared region of each SQLite file of the server, by the real path of the file,
+    with one queue for each file, however many stores share it.
+    """
+    out:'strintdict' = {}
+
+    for db_path in db_paths:
+        real_path = os.path.realpath(db_path)
+
+        if real_path not in out:
+            out[real_path] = len(out)
+
+    return out
+
+# ################################################################################################################################
+
+def bind_process_queues(region:'SharedRegion', slot:'int', deadline_seconds:'float', queue_by_path:'strintdict') -> 'None':
+    """ Makes the writes of this worker process to each SQLite file of the server take turns with those of the other workers,
+    in the queue of the file that the arbiter assigned before the fork.
+    """
+    binding = _QueueBinding()
+    binding.region = region
+    binding.slot = slot
+    binding.deadline_seconds = deadline_seconds
+    binding.queue_by_path = queue_by_path
+
+    _queue_state.binding = binding
+
+# ################################################################################################################################
+
+def _get_process_queue(engine:'Engine', url:'str') -> 'ProcessQueue | None':
+    """ Returns the place of this worker process in the queue of the SQLite file of an engine, if it is bound to one.
+    """
+    if process_queue := _process_queues.get(url):
+        return process_queue
+
+    # A process that no arbiter bound writes to its files alone
+    binding = _queue_state.binding
+
+    if binding is None:
+        return None
+
+    db_path = engine.url.database
+
+    if db_path is None:
+        return None
+
+    real_path = os.path.realpath(db_path)
+
+    # A file that the arbiter did not assign a queue to is written by one process only
+    if real_path not in binding.queue_by_path:
+        return None
+
+    queue = binding.queue_by_path[real_path]
+
+    out = ProcessQueue(binding.region, queue, binding.slot, binding.deadline_seconds)
+    _process_queues[url] = out
+
+    return out
+
+# ################################################################################################################################
+
 def call_database(engine:'Engine', func:'callable_', *args:'any_') -> 'any_':
     """ Runs one blocking database call, in the thread pool of the gevent hub if the engine needs it.
     """
@@ -484,7 +575,7 @@ def call_database(engine:'Engine', func:'callable_', *args:'any_') -> 'any_':
         threadpool = hub.threadpool
 
         # The thread that waits for the turn of this worker blocks in the pool, while the greenlet of the caller is suspended
-        if process_queue := _process_queues.get(url):
+        if process_queue := _get_process_queue(engine, url):
             out = threadpool.apply(process_queue.run_under_lock, (write_lock, func, args))
         else:
             out = threadpool.apply(_call_under_lock, (write_lock, func, args))

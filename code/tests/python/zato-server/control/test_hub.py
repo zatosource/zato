@@ -65,7 +65,9 @@ class HubUnderTest:
         self.body_dir = body_dir
         self.ready_slots:'intlist' = []
         self.reopened:'anylist' = []
-        self.hub = ControlHub(body_dir, slot_count, query_timeout, self.ready_slots.append, self.on_logs_reopened)
+        self.replaced_slots:'intlist' = []
+        self.hub = ControlHub(body_dir, slot_count, query_timeout, self.ready_slots.append, self.on_logs_reopened,
+            self.replaced_slots.append)
         self.worker_ends:'socketlist' = []
 
         for slot in range(slot_count):

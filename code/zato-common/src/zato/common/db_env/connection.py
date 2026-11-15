@@ -49,7 +49,7 @@ _default_ports = {
 # in milliseconds - without this, two processes sharing one file, e.g. a server
 # and the cron-driven cleanup process, fail immediately with a locked-database
 # error instead of taking turns. Writes are bounded batches, so the wait is short.
-_sqlite_busy_timeout_ms = 5000
+SQLite_Busy_Timeout_Ms = 5000
 
 # How long a PostgreSQL connection stays idle before it sends its first keepalive probe, in seconds - below
 # the idle limits of cloud load balancers and NAT gateways, which drop idle flows silently after 240 to 350 seconds.
@@ -80,7 +80,7 @@ def set_sqlite_pragmas(dbapi_connection:'any_', connection_record:'any_') -> 'No
     _ = cursor.execute('pragma journal_mode=wal')
     _ = cursor.execute('pragma synchronous=normal')
     _ = cursor.execute('pragma secure_delete=fast')
-    _ = cursor.execute(f'pragma busy_timeout={_sqlite_busy_timeout_ms}')
+    _ = cursor.execute(f'pragma busy_timeout={SQLite_Busy_Timeout_Ms}')
     cursor.close()
 
 # ################################################################################################################################

@@ -22,11 +22,12 @@ from zato.common.pubsub.sql.config import get_pubsub_engine, ModuleCtx as PubSub
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import stranydict
+    from zato.common.typing_ import stranydict, strnone
 
     # Dummy assignments to satisfy type checkers
     Engine = Engine
     stranydict = stranydict
+    strnone = strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -146,6 +147,43 @@ def _get_sqlite_engine(db_path:'str') -> 'Engine':
 
 # ################################################################################################################################
 
+def get_common_sqlite_path() -> 'strnone':
+    """ Returns the path to the SQLite file of the common database, or None if the common database is the pub/sub database
+    or a network database.
+    """
+    source = get_common_db_source()
+
+    # The pub/sub database holds the tables of the common database ..
+    if source == ModuleCtx.Source_PubSub:
+        out = None
+
+    # .. the variables of the common database name either its SQLite file or a network database ..
+    elif source == ModuleCtx.Source_Common:
+
+        db_type = os.environ.get(common_db_config.env_type, '')
+
+        if db_type:
+            if db_type == Type_SQLite:
+                out = os.environ.get(ModuleCtx.Env_Path, '')
+
+                if not out:
+                    out = common_db_config.get_sqlite_path()
+
+            else:
+                out = None
+
+        # .. a path alone names a SQLite file ..
+        else:
+            out = os.environ[ModuleCtx.Env_Path]
+
+    # .. and without any variables, the database is a SQLite file in the environment directory.
+    else:
+        out = os.path.join(default_env_base_dir, common_db_file_name)
+
+    return out
+
+# ################################################################################################################################
+
 def get_common_engine() -> 'Engine':
     """ Returns an SQLAlchemy engine for the common database, creating its schema if needed.
     When the common database is the pub/sub database, the engine is the one of pub/sub.
@@ -157,32 +195,13 @@ def get_common_engine() -> 'Engine':
         out = get_pubsub_engine()
         create_schema(out, metadata)
 
-    # .. the variables of the common database name either its SQLite file or a network database ..
-    elif source == ModuleCtx.Source_Common:
-
-        db_type = os.environ.get(common_db_config.env_type, '')
-
-        if db_type:
-            if db_type == Type_SQLite:
-                db_path = os.environ.get(ModuleCtx.Env_Path, '')
-
-                if not db_path:
-                    db_path = common_db_config.get_sqlite_path()
-
-                out = _get_sqlite_engine(db_path)
-
-            else:
-                out = get_env_engine(common_db_config)
-
-        # .. a path alone names a SQLite file ..
-        else:
-            db_path = os.environ[ModuleCtx.Env_Path]
-            out = _get_sqlite_engine(db_path)
-
-    # .. and without any variables, the database is a SQLite file in the environment directory.
-    else:
-        db_path = os.path.join(default_env_base_dir, common_db_file_name)
+    # .. the common database has a SQLite file of its own ..
+    elif db_path := get_common_sqlite_path():
         out = _get_sqlite_engine(db_path)
+
+    # .. or it is a network database.
+    else:
+        out = get_env_engine(common_db_config)
 
     return out
 

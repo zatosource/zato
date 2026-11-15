@@ -12,7 +12,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # holds its listening socket across its restarts and restarts it when it terminates.
 
 # stdlib
-import ctypes
 import gc
 import os
 import signal
@@ -20,7 +19,7 @@ from logging import getLogger
 from select import POLLIN
 from shutil import rmtree
 from tempfile import mkdtemp
-from time import monotonic, monotonic_ns
+from time import monotonic
 
 # gevent
 import gevent
@@ -30,17 +29,17 @@ from gevent.monkey import get_original
 from zato.common.hl7.mllp.region import bind_mllp
 from zato.common.pubsub.sql.config import ModuleCtx as PubSubConfigCtx
 from zato.common.pubsub.writer_process.server import new_listening_socket
-from zato.common.util.log_rotation import get_worker_handlers, LogRotator, reopen_worker_handlers, watch_worker_handlers, \
-    WorkerFileHandler
+from zato.common.util.log_rotation import get_worker_handlers, LogRotator, watch_worker_handlers, WorkerFileHandler
 from zato.common.worker_count import get_affinity, get_cgroup_cpu_limit, get_worker_cpus
-from zato.common.worker_slot import set_worker_slot
-from zato.server.arbiter_config import ArbiterError, ModuleCtx, new_worker_slot, WorkerContext, WriterProcess
+from zato.common.worker_slot import set_worker_generation, set_worker_slot
+from zato.server.arbiter_config import ModuleCtx, new_worker_slot, WorkerContext, WriterProcess
 from zato.server.control.hub import ControlHub
 from zato.server.metrics_region import bind_metrics
 from zato.server.outgoing_region import bind_outgoing
 from zato.server.process_instance import bind_process_instance
+from zato.server.worker_liveness import now_us, set_parent_death_signal, write_heartbeat
 from zato_ipc_core.zato_ipc_core import STATE_DRAINING, STATE_READY, STATE_STARTING, STATE_STOPPED
-from zato_server_core.zato_server_core import reopen_logs, set_process_name
+from zato_server_core.zato_server_core import set_process_name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -72,47 +71,6 @@ _fork    = get_original('os', 'fork')
 _waitpid = get_original('os', 'waitpid')
 _poll    = get_original('select', 'poll')
 _signal  = get_original('signal', 'signal')
-
-_libc = ctypes.CDLL(None, use_errno=True)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def now_us() -> 'int':
-    """ Returns the monotonic time in microseconds, which the arbiter and its workers read from one system clock.
-    """
-    now_ns = monotonic_ns()
-    out = now_ns // ModuleCtx.Nanoseconds_Per_Microsecond
-    return out
-
-# ################################################################################################################################
-
-def write_heartbeat(region:'SharedRegion', slot:'int') -> 'None':
-    """ Records in the slot of a worker that the worker is alive.
-    """
-    heartbeat = now_us()
-    region.set_slot_heartbeat(slot, heartbeat)
-
-# ################################################################################################################################
-
-def reopen_worker_logs() -> 'None':
-    """ Opens the log files that the arbiter renamed under their names again, those of the Python handlers
-    and those of the REST and access log writers of zato_server_core, which a worker does on the command of the arbiter.
-    """
-    reopen_worker_handlers()
-    reopen_logs()
-
-# ################################################################################################################################
-
-def _set_parent_death_signal() -> 'None':
-    """ Makes the kernel terminate the calling process with SIGKILL when the arbiter terminates.
-    """
-    result = _libc.prctl(ModuleCtx.PR_SET_PDEATHSIG, signal.SIGKILL)
-
-    if result != 0:
-        error_number = ctypes.get_errno()
-        error_text = os.strerror(error_number)
-        raise ArbiterError(f'Could not set the parent death signal of PID {os.getpid()}: {error_text}')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -155,8 +113,8 @@ class Arbiter:
         self.wake_read, self.wake_write = os.pipe2(os.O_NONBLOCK | os.O_CLOEXEC)
 
         self.body_dir = mkdtemp(prefix=ModuleCtx.Body_Dir_Prefix, dir=config.tmp_dir)
-        self.hub = ControlHub(
-            self.body_dir, region.slot_count, config.query_timeout, self._on_ready, self._on_logs_reopened)
+        self.hub = ControlHub(self.body_dir, region.slot_count, config.query_timeout, self._on_ready, self._on_logs_reopened,
+            self._on_replaced)
 
         # The arbiter renames the log files that every process appends to, through the handlers that it configured
         # before the fork and through a handler of each file of zato_server_core that it does not write to itself,
@@ -230,6 +188,15 @@ class Arbiter:
 
 # ################################################################################################################################
 
+    def _on_replaced(self, slot:'int') -> 'None':
+        """ Drains every worker once one of them learned that another server took over the pub/sub database,
+        because the generation that the arbiter raised is no longer current for any worker of this server.
+        """
+        logger.warning('Worker of slot %s reported that another server took over the pub/sub database, stopping', slot)
+        self.request_stop()
+
+# ################################################################################################################################
+
     def _rotate_logs_due(self) -> 'None':
         """ Renames the log files that reached their limits, once each interval.
         """
@@ -249,7 +216,7 @@ class Arbiter:
         try:
 
             # The worker terminates with the arbiter, including an arbiter that terminated before this call ..
-            _set_parent_death_signal()
+            set_parent_death_signal()
 
             if os.getppid() != self.pid:
                 exit_code = ModuleCtx.Exit_Code_Parent_Gone
@@ -273,6 +240,7 @@ class Arbiter:
                 # its MLLP channels and connections use the region, the records it writes carry its process instance,
                 # and the depths and publish locks of its outgoing queues are those of the region ..
                 set_worker_slot(ctx.slot)
+                set_worker_generation(ctx.generation)
                 bind_metrics(self.region, ctx.slot)
                 bind_mllp(self.region, ctx.slot, ctx.generation)
                 bind_process_instance(self.region, ctx.slot, ctx.generation)
@@ -298,7 +266,7 @@ class Arbiter:
         try:
 
             # The writer terminates with the arbiter, including an arbiter that terminated before this call ..
-            _set_parent_death_signal()
+            set_parent_death_signal()
 
             if os.getppid() != self.pid:
                 exit_code = ModuleCtx.Exit_Code_Parent_Gone

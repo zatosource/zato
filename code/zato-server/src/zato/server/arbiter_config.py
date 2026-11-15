@@ -51,8 +51,21 @@ class ModuleCtx:
     # A worker that has not reported ready this long after its fork is terminated with SIGKILL, in seconds
     Startup_Timeout = 300.0
 
-    # How long the workers have to complete their requests after a drain command, in seconds
-    Grace_Period = 30.0
+    # How long an active-standby node waits for its server to exit before it sends SIGKILL to the process group,
+    # STOP_GRACE of supervisor.rs in zato_ha_core, and how much earlier than that every drain completes, in seconds
+    HA_Stop_Grace  = 10.0
+    HA_Stop_Margin = 2.0
+
+    # How long the workers have to drain after a drain command, in seconds
+    Grace_Period = HA_Stop_Grace - HA_Stop_Margin
+
+    # How long of the grace period a draining worker waits for the requests in progress, and how long it then waits
+    # for each subscriber to pause between two batches, which leaves the rest for its buffered audit events
+    Request_Drain_Period  = 4.0
+    Delivery_Pause_Period = 2.0
+
+    # How often a worker records its heartbeat, well below the threshold, in seconds
+    Heartbeat_Interval = 1.0
 
     # How often the arbiter checks the heartbeats and the respawns that are due, in seconds
     Loop_Interval = 0.5

@@ -7,6 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from datetime import date
+from json import dumps, loads
 from logging import getLogger
 from traceback import format_exc
 
@@ -39,6 +41,33 @@ class ConfigEventResult:
     response: 'any_' = None
     action_code: 'strnone' = None
     action_name: 'str' = ''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _to_json_value(value:'any_') -> 'any_':
+    """ Returns the JSON form of a value of a config event that JSON has no type for.
+    """
+    if isinstance(value, bytes):
+        out = value.decode('utf8')
+    elif isinstance(value, date):
+        out = value.isoformat()
+    elif isinstance(value, (set, frozenset, tuple)):
+        out = list(value)
+    else:
+        out = str(value)
+
+    return out
+
+# ################################################################################################################################
+
+def get_relay_body(msg:'anydict') -> 'anydict':
+    """ Returns a config event as the JSON body that the arbiter relays to the other workers, taken before the handler
+    of this worker runs, because a handler may add objects to the event that exist in this worker only.
+    """
+    msg_json = dumps(msg, default=_to_json_value)
+    out = loads(msg_json)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,10 +128,16 @@ class ConfigDispatcher:
         self.relay:'callable_ | None' = None
 
     def publish(self, msg:'any_', *args:'any_', **kwargs:'any_') -> 'None':
-        _ = handle_config_event(msg, self.server.config_manager)
 
+        # A worker process applies the event itself first and then sends it to the other workers ..
         if self.relay:
-            self.relay(msg)
+            relay_body = get_relay_body(msg)
+            _ = handle_config_event(msg, self.server.config_manager)
+            self.relay(relay_body)
+
+        # .. while a process with no arbiter only applies it.
+        else:
+            _ = handle_config_event(msg, self.server.config_manager)
 
     invoke_async = publish
 

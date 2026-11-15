@@ -74,8 +74,10 @@ if 0:
     from datetime import timedelta
     from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import any_, callable_, dictnone, strintnone
+    from zato.server.worker_runtime import WorkerRuntime
     callable_ = callable_
     timedelta = timedelta
+    WorkerRuntime = WorkerRuntime
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,6 +101,14 @@ class ModuleCtx:
         bind_host:   Env_Bind_Host,
         bind_port:   Env_Bind_Port,
     }
+
+    # The files of zato_server_core that every process of the server appends to
+    REST_Log_Name   = 'rest.log'
+    Access_Log_Name = 'access.log'
+
+    # The size limit of those files in a process that rotates them itself, and in a worker, whose arbiter rotates them
+    Log_Max_Bytes   = 10 * 1024 * 1024
+    Log_No_Rotation = 0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -178,7 +188,9 @@ class ZatoApplication:
 
 # ################################################################################################################################
 
-    def run(self) -> 'None':
+    def run_worker(self, worker:'WorkerRuntime') -> 'None':
+        """ Runs the server in a worker process that the arbiter forked, until the worker is drained.
+        """
 
         # stdlib
         from datetime import datetime, timezone
@@ -188,20 +200,33 @@ class ZatoApplication:
 
         server = self.zato_server
 
-        # Build the request handler for the Rust HTTP server ..
+        # Build the request handler for the Rust HTTP server, which counts the requests in progress for a drain ..
         local_tz = get_localzone()
         utc_offset = local_tz.utcoffset(datetime.now(timezone.utc))
         utc_offset = cast_('timedelta', utc_offset)
         local_tz_offset_secs = int(utc_offset.total_seconds())
 
         def request_handler(request_ctx:'dict') -> 'tuple':
-            return handle_http_request(server, request_ctx, new_cid_server, local_tz_offset_secs)
+            worker.in_flight += 1
+            try:
+                out = handle_http_request(server, request_ctx, new_cid_server, local_tz_offset_secs)
+            finally:
+                worker.in_flight -= 1
+            return out
 
         # .. which the API portal relays its requests through as well, once the server process has started ..
         server.http_request_handler = request_handler
 
-        # .. and initialize the server.
+        # .. the worker is bound to its arbiter and to the region of its server ..
+        worker.bind(server)
+
+        # .. the REST and access logs of each worker append to the files that the arbiter rotates ..
+        init_rest_log(os.path.join(server.logs_dir, ModuleCtx.REST_Log_Name), ModuleCtx.Log_No_Rotation)
+        init_access_log(os.path.join(server.logs_dir, ModuleCtx.Access_Log_Name), ModuleCtx.Log_No_Rotation)
+
+        # .. initialize the server, after which the worker reports ready ..
         ParallelServer.start_server_process(server)
+        worker.on_started()
 
         # Build server software header
         server_software = server.fs_server_config.misc.get('http_server_header', 'Apache')
@@ -218,14 +243,9 @@ class ZatoApplication:
         # .. which we convert to bytes for the HTTP server.
         max_msg_size = max_msg_size * _megabyte
 
+        # Each worker binds the port with SO_REUSEPORT and serves until it is drained.
         http_server = HTTPServer(host, port, request_handler, server_software, max_msg_size)
-
-        try:
-            http_server.serve_forever()
-        except KeyboardInterrupt:
-            pass
-        finally:
-            server.cleanup_on_stop()
+        worker.serve(http_server)
 
 # ################################################################################################################################
 
@@ -469,15 +489,17 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
         'zato_app': zato_app,
     })
 
-    # Initialize Rust-based loggers (10 MB rotation)
-    _log_max_bytes = 10 * 1024 * 1024
-    init_rest_log(os.path.join(server.logs_dir, 'rest.log'), _log_max_bytes)
-    init_access_log(os.path.join(server.logs_dir, 'access.log'), _log_max_bytes)
-
-    if start_server:
-        zato_app.run()
-    else:
+    # A server that is not started runs in this process, which rotates its own files of zato_server_core ..
+    if not start_server:
+        init_rest_log(os.path.join(server.logs_dir, ModuleCtx.REST_Log_Name), ModuleCtx.Log_Max_Bytes)
+        init_access_log(os.path.join(server.logs_dir, ModuleCtx.Access_Log_Name), ModuleCtx.Log_Max_Bytes)
         return server
+
+    # .. while a started server runs as an arbiter that forks its workers and returns its exit code once they stopped.
+    from zato.server.arbiter_start import run_arbiter
+
+    exit_code = run_arbiter(zato_app)
+    sys.exit(exit_code)
 
 # ################################################################################################################################
 

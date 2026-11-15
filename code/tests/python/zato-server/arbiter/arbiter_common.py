@@ -32,13 +32,14 @@ from zato.common.pubsub.sql.writes import new_pending_publication
 from zato.common.pubsub.writer_process.remote import new_pubsub_writer, start_writer_client
 from zato.common.worker_count import ServerWorkers
 from zato.common.worker_slot import ModuleCtx as WorkerSlotCtx
-from zato.server.arbiter import Arbiter, reopen_worker_logs, write_heartbeat
+from zato.server.arbiter import Arbiter
 from zato.server.arbiter_config import ArbiterConfig, ModuleCtx as ArbiterCtx
 from zato.server.control.client import ControlClient
 from zato.server.control.hub import EntryStatus
 from zato.server.metrics_region import get_counter
 from zato.server.outgoing_region import get_outgoing_binding, SharedPublishLock
 from zato.server.process_instance import get_process_binding
+from zato.server.worker_liveness import reopen_worker_logs, write_heartbeat
 from zato_ipc_core.zato_ipc_core import SharedRegion, STATE_READY
 
 # ################################################################################################################################

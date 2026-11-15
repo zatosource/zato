@@ -31,7 +31,7 @@ from sqlalchemy import event, text
 from zato.common.crypto.api import CryptoManager
 from zato.common.db_env.outage import call_until_available
 from zato.common.pubsub.sql.config import get_generation_file_path
-from zato.common.pubsub.sql.replaced import PubSubReplaced
+from zato.common.pubsub.sql.replaced import raise_replaced
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -106,6 +106,31 @@ class ActiveServer(NamedTuple):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class _ForkTakeover:
+    """ The guard of the takeover that the arbiter of a multi-process server ran before it forked its workers,
+    which every worker inherits and follows in place of raising the generation itself.
+    """
+    guard: 'GenerationGuard | None' = None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _EngineRecorder:
+    """ Builds the engine of a takeover and retains it, so that the caller of the takeover disposes it afterwards.
+    """
+
+    def __init__(self, new_engine:'callable_') -> 'None':
+        self.new_engine = new_engine
+        self.engine:'Engine | None' = None
+
+    def get_engine(self) -> 'Engine':
+        out = self.new_engine()
+        self.engine = out
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _is_write(statement:'str') -> 'bool':
     """ Whether a statement changes rows or locks them.
     """
@@ -159,7 +184,7 @@ class GenerationGuard:
 
     def _raise_replaced(self) -> 'None':
         message = f'This server was replaced by another one and its pub/sub generation {self.generation} is no longer current'
-        raise PubSubReplaced(message)
+        raise_replaced(message)
 
 # ################################################################################################################################
 
@@ -398,6 +423,43 @@ def take_over(get_engine:'callable_') -> 'GenerationGuard':
 
     out = GenerationGuard(generation, owner)
     out.is_replaced = is_replaced
+    out.install(engine)
+
+    return out
+
+# ################################################################################################################################
+
+def take_over_before_fork(new_engine:'callable_') -> 'GenerationGuard':
+    """ Makes this server the active one once for all the worker processes that its arbiter forks next, through an engine
+    that is disposed before the fork, and retains the guard for the workers, each of which follows it on an engine of its own.
+    """
+    recorder = _EngineRecorder(new_engine)
+    out = take_over(recorder.get_engine)
+
+    engine = cast_('Engine', recorder.engine)
+    out.uninstall(engine)
+    engine.dispose()
+
+    _ForkTakeover.guard = out
+
+    return out
+
+# ################################################################################################################################
+
+def get_fork_takeover() -> 'GenerationGuard | None':
+    """ Returns the guard of the takeover that the arbiter ran before the fork, or None in a process without an arbiter.
+    """
+    out = _ForkTakeover.guard
+    return out
+
+# ################################################################################################################################
+
+def follow_takeover(engine:'Engine', fork_guard:'GenerationGuard') -> 'GenerationGuard':
+    """ Guards every transaction of the engine of a worker process with the generation and the owner that its arbiter
+    recorded, without raising the generation, which would replace the arbiter and every other worker of the server.
+    """
+    out = GenerationGuard(fork_guard.generation, fork_guard.owner)
+    out.is_replaced = fork_guard.is_replaced
     out.install(engine)
 
     return out

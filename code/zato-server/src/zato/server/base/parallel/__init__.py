@@ -74,7 +74,7 @@ from zato.common.util.scheduler import ensure_alerting_job_exists, ensure_cert_c
     ensure_ms_health_job_exists, ensure_test_transfer_job_exists
 from zato.common.util.time_ import TimeUtil
 from zato.common.util.url_dispatcher import build_methods_allowed_re
-from zato.common.worker_slot import get_slot_or_single
+from zato.common.worker_slot import get_slot_or_single, is_first_start, is_singleton_owner
 from zato.hl7.common import add_config_location as hl7_add_config_location
 from zato.distlock import LockManager
 from zato.server.base.parallel.config import ConfigLoader
@@ -112,6 +112,7 @@ if 0:
     from zato.server.service.store import ServiceStore
     from zato.input_output import IOProcessor  # type: ignore[attr-defined]
     from zato.server.startup_callable import StartupCallableTool
+    from zato.server.worker_runtime import WorkerRuntime
 
     bunch_ = bunch_
     ClaimResult = ClaimResult
@@ -122,6 +123,7 @@ if 0:
     URLData = URLData
     IOProcessor = IOProcessor # type: ignore
     StartupCallableTool = StartupCallableTool
+    WorkerRuntime = WorkerRuntime
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -226,6 +228,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     security_groups_ctx_builder: 'SecurityGroupsCtxBuilder'
     rate_limiting_manager: 'RateLimitingManager'
     quota_tiers_manager: 'QuotaTiersManager'
+
+    # The binding of this worker process to its arbiter and to the shared region of the server
+    worker: 'WorkerRuntime'
 
     pubsub_backend: 'SQLPubSubBackend'
     shared_objects: 'SharedObjectStore'
@@ -1027,9 +1032,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         from zato.server.api_portal.cache import rebuild_spec_cache
         rebuild_spec_cache(self)
 
-        # The server is started so we can deploy what we were told to handle on startup.
+        # The server is started so we can deploy what we were told to handle on startup, once per server start,
+        # because a replacement worker that imported the file again would overwrite the changes made since then.
         if self.deploy_auto_from:
-            self.handle_enmasse_auto_from()
+            if is_first_start():
+                self.handle_enmasse_auto_from()
 
         self._start_pubsub_backend()
 
@@ -1046,11 +1053,13 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         # A fresh environment - one with no user services to deploy and no user-defined
         # objects - receives the configured demo config sets on its first start. The pass
-        # runs in the background so startup never waits for it.
-        _ = spawn_greenlet(self._import_demo_config_on_first_start)
+        # runs in the background so startup never waits for it, in one worker of the server.
+        if is_first_start():
+            _ = spawn_greenlet(self._import_demo_config_on_first_start)
 
-        # The file transfer demo, if it is on, needs its local servers back after a restart
-        _ = spawn_greenlet(self.resume_demo_file_transfer)
+        # The file transfer demo, if it is on, needs its local servers back after a restart, which one worker runs
+        if is_singleton_owner():
+            _ = spawn_greenlet(self.resume_demo_file_transfer)
 
         logger.info('Started `%s` (pid: %s)', server.name, self.pid)
 
@@ -1110,6 +1119,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         # Create the MCP gateway wrappers that were skipped during init_generic_connections ..
         self._create_mcp_gateways()
+
+        # .. the sessions are in a table that every worker shares, so one worker of the server removes the expired ones ..
+        if not is_singleton_owner():
+            return
 
         # .. now all wrappers exist with their registries populated,
         # spawn a single reaper greenlet to periodically clean up expired sessions -
@@ -1889,6 +1902,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             encrypt_at_rest=self.encrypt_at_rest,
         )
 
+        # The payload cache is a share of the one of the server, and the wake-ups of subscribers reach every worker ..
+        self.pubsub_backend.share_payload_cache(self.worker.region)
+        self.pubsub_backend.start_cross_worker_wakes(self.worker.region, self.worker.slot)
+
         # The common database confirms the generation in the row of the pub/sub database, so on PostgreSQL both are one ..
         check_common_db_config()
 
@@ -1908,8 +1925,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.config_manager._sync_pubsub_topics()
 
         # All delivery greenlets share the backend - its per-subscriber events
-        # wake their blocking fetches up, so no dedicated connections are needed.
-        self.pubsub_push_delivery = PushDelivery(self, self.pubsub_backend)
+        # wake their blocking fetches up, so no dedicated connections are needed,
+        # and each worker delivers only the subscription keys that it owns.
+        self.pubsub_push_delivery = PushDelivery(self, self.pubsub_backend, self.worker.fence)
 
         # Publishing to an outgoing connection is only possible once its type knows how to be delivered to ..
         register_delivery_handlers()
@@ -2705,40 +2723,46 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
+    def release_resources(self) -> 'bool':
+        """ Stops pub/sub delivery, closes the SQL pools, stops the file transfer demo and sends the queued audit events,
+        and returns whether this call released them, which only the first call in a started server does.
+        """
+
+        # A process that stops before the server started has no resources to release ..
+        if not self.odb.session_initialized:
+            return False
+
+        # .. and the resources are released once, however many times a shutdown asks for it.
+        if self._is_process_closing:
+            return False
+
+        self._is_process_closing = True
+
+        # .. stop the pub/sub backend ..
+        self.pubsub_push_delivery.stop()
+        self.pubsub_backend.close()
+
+        # Close SQL pools
+        self.sql_pool_store.cleanup_on_stop()
+
+        # The local servers of the file transfer demo that this process started go away with it
+        from zato.server.demo_file_transfer import stop_demo_file_transfer
+        stop_demo_file_transfer()
+
+        # Audit events still queued for the collector go out before the process ends
+        from zato.common.audit_log.export.api import stop_audit_export
+        stop_audit_export()
+
+        logger.info('Stopping server process (%s:%s) (%s)', self.name, self.pid, os.getpid())
+
+        return True
+
+# ################################################################################################################################
+
     def cleanup_on_stop(self) -> 'None':
         """ A shutdown cleanup procedure.
         """
-
-        # A process that stops before the server started has no resources to release
-        if not self.odb.session_initialized:
-            return
-
-        # Cleanup
-        else:
-
-            # Set the flag to True only the first time we are called, otherwise simply return
-            if self._is_process_closing:
-                return
-            else:
-                self._is_process_closing = True
-
-            # .. stop the pub/sub backend ..
-            self.pubsub_push_delivery.stop()
-            self.pubsub_backend.close()
-
-            # Close SQL pools
-            self.sql_pool_store.cleanup_on_stop()
-
-            # The local servers of the file transfer demo that this process started go away with it
-            from zato.server.demo_file_transfer import stop_demo_file_transfer
-            stop_demo_file_transfer()
-
-            # Audit events still queued for the collector go out before the process ends
-            from zato.common.audit_log.export.api import stop_audit_export
-            stop_audit_export()
-
-            logger.info('Stopping server process (%s:%s) (%s)', self.name, self.pid, os.getpid())
-
+        if self.release_resources():
             import sys
             sys.exit(0)
 
