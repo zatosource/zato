@@ -20,6 +20,7 @@ from sqlalchemy import func, select
 from arbiter_common import Condition_Timeout, get_pids, Grace_Metric, metric_reached, none_running, Published_Metric, \
     Region_Config, Slot_Count, start_arbiter, stop_arbiter, wait_until, Writer_Message_Count
 from writer_common import Topic_Name
+from zato.common.db_env.engine import set_process_queue
 from zato.common.db_env.process_queue import ProcessQueue
 from zato.common.pubsub.sql.config import get_pubsub_engine, ModuleCtx
 from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
@@ -87,7 +88,9 @@ def _new_writer_main(region:'SharedRegion', pid_path:'Path', address_path:'Path'
             _ = address_path.write_text(listener.getsockname())
 
         process_queue = ProcessQueue(region, _pubsub_queue, region.writer_place, Condition_Timeout)
-        run_writer(listen_fd, process_queue)
+        set_process_queue(get_pubsub_engine(), process_queue)
+
+        run_writer(listen_fd)
 
     return writer_main
 

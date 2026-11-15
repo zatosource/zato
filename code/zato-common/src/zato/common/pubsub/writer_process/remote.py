@@ -8,7 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The worker's side of the writes to the SQLite pub/sub file. A worker of a server with a writer process sends
 # its publications, acknowledgements and leases to the writer, and a worker of a server without one, which is a server
-# with one worker or with PostgreSQL, writes them itself, as a server of one process does.
+# with one worker or with PostgreSQL, writes them itself, as a server of one process does. The audit log of a worker
+# reaches the same writer through get_writer_client.
 
 # stdlib
 from types import SimpleNamespace
@@ -65,6 +66,14 @@ def start_writer_client(address:'str', deadline:'float', on_reconnect:'callable_
     _WriterConnection.client = client
 
     out = client
+    return out
+
+# ################################################################################################################################
+
+def get_writer_client() -> 'WriterClient | None':
+    """ Returns the connection of this worker to the writer process, or None in a server that runs no writer process.
+    """
+    out = _WriterConnection.client
     return out
 
 # ################################################################################################################################

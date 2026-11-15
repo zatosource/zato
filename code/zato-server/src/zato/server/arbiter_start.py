@@ -23,8 +23,9 @@ from zato.common.audit_log.sqlite_writes import env_config as audit_env_config
 from zato.common.common_db.config import get_common_sqlite_path
 from zato.common.db_env.common import get_env_sqlite_path, Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.connection import SQLite_Busy_Timeout_Ms
-from zato.common.db_env.engine import create_schema, get_cached_engine_count, get_queue_by_path, set_pool_worker_count
-from zato.common.db_env.process_queue import get_deadline_seconds, ProcessQueue
+from zato.common.db_env.engine import bind_process_queues, create_schema, get_cached_engine_count, get_queue_by_path, \
+    set_pool_worker_count
+from zato.common.db_env.process_queue import get_deadline_seconds
 from zato.common.pubsub.sql.config import get_pubsub_db_path, get_pubsub_db_type, new_unshared_pubsub_engine
 from zato.common.pubsub.sql.generation import take_over_before_fork
 from zato.common.pubsub.sql.schema import metadata as pubsub_metadata
@@ -176,16 +177,12 @@ class ServerProcesses:
         self.zato_app.run_worker(worker)
 
     def writer_main(self, listen_fd:'int') -> 'None':
-        """ Serves the workers, taking the turns of the writer process in the queue of the pub/sub file.
+        """ Serves the workers, taking the turns of the writer process in the queues of the pub/sub and audit files.
         """
-        pubsub_path = get_pubsub_db_path()
-        pubsub_path = os.path.realpath(pubsub_path)
-        queue = self.queue_by_path[pubsub_path]
-
         deadline_seconds = get_deadline_seconds(SQLite_Busy_Timeout_Ms, self.region.slot_count)
 
-        process_queue = ProcessQueue(self.region, queue, self.region.writer_place, deadline_seconds)
-        run_writer(listen_fd, process_queue)
+        bind_process_queues(self.region, self.region.writer_place, deadline_seconds, self.queue_by_path)
+        run_writer(listen_fd)
 
 # ################################################################################################################################
 # ################################################################################################################################

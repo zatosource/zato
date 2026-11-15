@@ -22,8 +22,9 @@ from zato.common.audit_log.buffer import PendingEvent
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anylist, list_, stranydict
+    from zato.common.typing_ import any_, anydict, anylist, list_, stranydict
 
+    any_ = any_
     anydict = anydict
     anylist = anylist
     stranydict = stranydict

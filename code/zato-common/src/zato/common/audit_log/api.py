@@ -32,12 +32,16 @@ from zato.common.audit_log.retention_runner import request_retention
 from zato.common.audit_log.search_index_merge import get_search_index_merger
 from zato.common.audit_log.sqlite_writes import apply_write_wait, dispose_stale_sqlite_engine, env_config, \
     mark_write_accepted, mark_write_refused
+from zato.common.audit_log.wire import batch_to_wire
 from zato.common.config_db import Default_Enabled, Env_Audit_Log_Enabled
 from zato.common.crypto.api import CryptoManager
 from zato.common.db_env import Default_SSL, Default_SSL_Verify, Default_Type, dispose_env_engine, get_env_engine, \
     Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.commit_queue import CommitQueue
+from zato.common.db_env.common import get_env_sqlite_path
 from zato.common.db_env.engine import call_database, execute_write, new_unshared_env_engine
+from zato.common.pubsub.writer_process.frames import ItemKind
+from zato.common.pubsub.writer_process.remote import get_writer_client
 from zato.common.util.api import as_bool, utcnow
 from zato.common.worker_slot import get_worker_slot, ModuleCtx as WorkerSlotCtx
 
@@ -48,6 +52,7 @@ if 0:
     from datetime import datetime
     from sqlalchemy.engine import Engine
     from zato.common.audit_log.buffer import pending_event_list
+    from zato.common.pubsub.writer_process.client import WriterClient
     from zato.common.typing_ import anylist, anylistnone, intlist, intlistnone, intnone, stranydict, strdictnone
 
     # Dummy assignments to satisfy type checkers
@@ -61,6 +66,7 @@ if 0:
     pending_event_list = pending_event_list
     stranydict = stranydict
     strdictnone = strdictnone
+    WriterClient = WriterClient
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -552,26 +558,16 @@ class AuditLog:
         # Trace point 9: every database transaction with its size and duration
         write_start = monotonic()
 
-        # A deleted or read-only database file is only visible to a fresh engine
-        dispose_stale_sqlite_engine()
+        # A worker of a server with a writer process sends the events of a SQLite database to the writer,
+        # which commits them together with those of the other workers ..
+        client = get_writer_client()
 
-        # The search indexes of the database the events go to are merged in the background
-        _ = get_search_index_merger(self.engine)
+        if client and get_env_sqlite_path(env_config):
+            out = self._commit_remotely(client, batch)
 
-        try:
-            out = call_database(self.engine, self._insert_batch, batch)
-        except OperationalError:
-
-            # A refused write shortens the wait of every write from here on, the retry below included ..
-            mark_write_refused()
-
-            # .. and a pooled connection that opened the file while it was read-only stays
-            # read-only after the permissions come back - a fresh engine self-heals that.
-            dispose_env_engine(env_config)
-            out = call_database(self.engine, self._insert_batch, batch)
-
-        # A write that went through brings the full busy timeout back
-        mark_write_accepted()
+        # .. and any other process commits them itself.
+        else:
+            out = self.commit_batch(batch)
 
         write_elapsed = monotonic() - write_start
         write_elapsed_ms = write_elapsed * 1000
@@ -595,6 +591,49 @@ class AuditLog:
             self._insert_count = 0
             request_retention(self.engine)
 
+        return out
+
+# ################################################################################################################################
+
+    def commit_batch(self, batch:'pending_event_list') -> 'int':
+        """ Commits one batch of events in this process and returns the id of the last event written.
+        """
+        # A deleted or read-only database file is only visible to a fresh engine
+        dispose_stale_sqlite_engine()
+
+        # The search indexes of the database the events go to are merged in the background
+        _ = get_search_index_merger(self.engine)
+
+        try:
+            out = call_database(self.engine, self._insert_batch, batch)
+        except OperationalError:
+
+            # A refused write shortens the wait of every write from here on, the retry below included ..
+            mark_write_refused()
+
+            # .. and a pooled connection that opened the file while it was read-only stays
+            # read-only after the permissions come back - a fresh engine self-heals that.
+            dispose_env_engine(env_config)
+            out = call_database(self.engine, self._insert_batch, batch)
+
+        # A write that went through brings the full busy timeout back
+        mark_write_accepted()
+
+        return out
+
+# ################################################################################################################################
+
+    def _commit_remotely(self, client:'WriterClient', batch:'pending_event_list') -> 'int':
+        """ Sends one batch of events to the writer process, which commits it, and returns the id of the last event written.
+        """
+        body = {'events': batch_to_wire(batch)}
+        reply = client.call(ItemKind.Audit, body)
+
+        # The export and the links of the caller need the id of each event
+        for pending, event_id in zip(batch, reply['event_ids']):
+            pending.event_id = event_id
+
+        out = batch[-1].event_id
         return out
 
 # ################################################################################################################################
