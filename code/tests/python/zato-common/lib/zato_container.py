@@ -18,7 +18,7 @@ from local_docker import run_command
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strlist, strstrdict
+    from zato.common.typing_ import strlist, strstrdict, strtuple
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -89,9 +89,10 @@ def remove_container(container_name:'str') -> 'None':
 
 # ################################################################################################################################
 
-def start_container(container_name:'str', mounts:'strstrdict') -> 'None':
+def start_container(container_name:'str', mounts:'strstrdict', run_options:'strtuple'=()) -> 'None':
     """ Starts a container that runs the repository through the Docker repository's entrypoint,
-    with each host directory of the mounts mapped to the container directory that it names.
+    with each host directory of the mounts mapped to the container directory that it names,
+    and with the options of docker run that the caller adds, such as the limits of the container.
     """
     docker_repository_directory = get_docker_repository_directory()
 
@@ -111,6 +112,8 @@ def start_container(container_name:'str', mounts:'strstrdict') -> 'None':
 
     for host_directory, container_directory in mounts.items():
         command.extend(['--mount', f'type=bind,source={host_directory},target={container_directory}'])
+
+    command.extend(run_options)
 
     command.append(Image_Name)
 

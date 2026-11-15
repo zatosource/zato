@@ -85,7 +85,10 @@ def _build_template() -> 'str':
     # .. the topics ..
     lines.append('pubsub_topic:')
 
-    for topic_name in (PubSubConfig.Push_Topic, PubSubConfig.Pull_Topic, PubSubConfig.Wake_Topic, PubSubConfig.Join_Topic):
+    topic_names = (PubSubConfig.Push_Topic, PubSubConfig.Pull_Topic, PubSubConfig.Wake_Topic, PubSubConfig.Join_Topic,
+        PubSubConfig.Lock_Topic)
+
+    for topic_name in topic_names:
         lines.append(f'  - name: {topic_name}')
 
     # .. the permissions ..

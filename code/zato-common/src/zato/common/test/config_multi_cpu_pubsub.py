@@ -30,6 +30,9 @@ class PubSubConfig:
     Wake_Topic = 'multi.cpu.wake'
     Join_Topic = 'multi.cpu.join'
 
+    # The topic without subscriptions that a test publishes to while the database is locked
+    Lock_Topic = 'multi.cpu.lock'
+
     Publisher_Name = 'test.multi-cpu.publisher'
     Puller_Name    = 'test.multi-cpu.puller'
     Waiter_Name    = 'test.multi-cpu.waiter'

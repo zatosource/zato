@@ -9,7 +9,7 @@
 	stop-dashboard restart-dashboard scheduler queue-bridge on-prem-gateway on-prem-gateway-hub file-listener sftp api-portal api-portal-demo api-portal-tutorial b2b-portal mcp-demo \
 	help install-deps install-fhir-converter \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-rest-outgoing test-rest-perf test-rest-channel test-rest-channel-perf test-scheduler test-scheduler-failover test-ha test-ha-sqlite test-ha-postgresql \
-	test-multi-cpu _multi-cpu-unit _multi-cpu-rest _multi-cpu-config _multi-cpu-rate-limiting _multi-cpu-hot-deploy _multi-cpu-singletons _multi-cpu-pubsub _multi-cpu-faults _multi-cpu-existing-suites \
+	test-multi-cpu _multi-cpu-unit _multi-cpu-rest _multi-cpu-config _multi-cpu-rate-limiting _multi-cpu-cache _multi-cpu-scheduler _multi-cpu-hot-deploy _multi-cpu-singletons _multi-cpu-pubsub _multi-cpu-faults _multi-cpu-ha _multi-cpu-container _multi-cpu-existing-suites \
 	test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
@@ -785,8 +785,8 @@ test-ha-postgresql: ## Active-standby pair on PostgreSQL - the pair and Kubernet
 	$(call Zato_Test_HA_Suites,$(Zato_Test_HA_PostgreSQL),$(Zato_Test_HA_PostgreSQL_Resume_File))
 
 # The stages of test-multi-cpu in the order they run, and the stage that the run is currently on.
-Zato_Test_Multi_CPU             := _multi-cpu-unit _multi-cpu-rest _multi-cpu-config _multi-cpu-hot-deploy _multi-cpu-rate-limiting _multi-cpu-singletons _multi-cpu-pubsub _multi-cpu-faults \
-	_multi-cpu-existing-suites
+Zato_Test_Multi_CPU             := _multi-cpu-unit _multi-cpu-rest _multi-cpu-config _multi-cpu-hot-deploy _multi-cpu-rate-limiting _multi-cpu-cache _multi-cpu-scheduler _multi-cpu-singletons _multi-cpu-pubsub _multi-cpu-faults _multi-cpu-ha \
+	_multi-cpu-container _multi-cpu-existing-suites
 Zato_Test_Multi_CPU_Resume_File := $(CURDIR)/code/tests/.test-multi-cpu-resume
 
 # The existing live suites that run again with several workers, the worker count they run with,
@@ -794,6 +794,9 @@ Zato_Test_Multi_CPU_Resume_File := $(CURDIR)/code/tests/.test-multi-cpu-resume
 Zato_Test_Multi_CPU_Existing             = $(filter-out test-multi-cpu,$(Zato_Test_Live))
 Zato_Test_Multi_CPU_Existing_Workers    := 4
 Zato_Test_Multi_CPU_Existing_Resume_File := $(CURDIR)/code/tests/.test-multi-cpu-existing-suites-resume
+
+# The active-standby targets that run again with several workers on both nodes, and the target that the run is currently on
+Zato_Test_Multi_CPU_HA_Resume_File := $(CURDIR)/code/tests/.test-multi-cpu-ha-resume
 
 # The unit tests of the arbiter, the region, the control channel and the modules that the workers share.
 Zato_Test_Multi_CPU_Unit := \
@@ -816,6 +819,14 @@ endef
 test-multi-cpu: ## Multi-process server - arbiter, workers, shared memory, live, fault and container suites, resuming from the stage that last failed or was interrupted. Zato_Server_Workers=N sets the worker count, RESTART=1 starts from scratch.
 	$(call Zato_Test_Walk,$(Zato_Test_Multi_CPU),$(Zato_Test_Multi_CPU_Resume_File))
 
+_multi-cpu-container:
+	$(Zato_Log_Reset)
+	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_container)
+
+_multi-cpu-ha: export Zato_Server_Workers = $(Zato_Test_Multi_CPU_Existing_Workers)
+_multi-cpu-ha:
+	$(call Zato_Test_Walk,$(Zato_Test_HA),$(Zato_Test_Multi_CPU_HA_Resume_File))
+
 _multi-cpu-existing-suites: export Zato_Server_Workers = $(Zato_Test_Multi_CPU_Existing_Workers)
 _multi-cpu-existing-suites:
 	$(call Zato_Test_Walk,$(Zato_Test_Multi_CPU_Existing),$(Zato_Test_Multi_CPU_Existing_Resume_File))
@@ -830,7 +841,7 @@ _multi-cpu-unit:
 
 _multi-cpu-rest:
 	$(Zato_Log_Reset)
-	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_rest multi_cpu_metrics multi_cpu_mcp)
+	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_rest multi_cpu_metrics multi_cpu_mcp multi_cpu_logging)
 
 _multi-cpu-rate-limiting:
 	$(Zato_Log_Reset)
@@ -843,6 +854,14 @@ _multi-cpu-config:
 _multi-cpu-hot-deploy:
 	$(Zato_Log_Reset)
 	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_hot_deploy)
+
+_multi-cpu-cache:
+	$(Zato_Log_Reset)
+	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_cache)
+
+_multi-cpu-scheduler:
+	$(Zato_Log_Reset)
+	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_scheduler)
 
 _multi-cpu-singletons:
 	$(Zato_Log_Reset)

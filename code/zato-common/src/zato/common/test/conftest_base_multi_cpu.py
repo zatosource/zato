@@ -101,6 +101,13 @@ class ModuleCtx:
     Marker_Started = 'Invoking command'
     Marker_Import  = '--import'
 
+    # The variables that set the size limit and the backup count of the server log in the logging configuration
+    # that quickstart writes, and the values that the logging suite uses
+    Log_Max_Size_Env     = 'Zato_Server_Log_Max_Size'
+    Log_Backup_Count_Env = 'Zato_Server_Log_Backup_Count'
+    Log_Max_Size         = 1_000_000
+    Log_Backup_Count     = 50
+
 # ################################################################################################################################
 # ################################################################################################################################
 
