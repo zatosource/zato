@@ -25,7 +25,7 @@ from zato.common.audit_log.common import AuditOutcome, event_attr_table, event_b
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import any_, anylist, callable_, intlist, strcalldict, strlist
+    from zato.common.typing_ import any_, anylist, callable_, intlist, strcalldict, strlist, strnone
 
     # Dummy assignments to satisfy type checkers
     Engine = Engine
@@ -35,6 +35,7 @@ if 0:
     intlist = intlist
     strcalldict = strcalldict
     strlist = strlist
+    strnone = strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,6 +56,12 @@ Env_Content_Retention_Days_Prefix = 'Zato_Audit_Log_Content_Retention_Days_'
 
 # The environment variable pointing at a directory to archive rows into before they are deleted
 Env_Archive_Dir = 'Zato_Audit_Log_Archive_Dir'
+
+# The sequence number of the first archive file of a second, which its name leaves out
+Archive_First_Sequence = 1
+
+# The permissions of an archive file, as a file that open creates
+Archive_File_Mode = 0o666
 
 # Content retention is off by default - content lives as long as the event rows do
 _default_content_retention_days = 0
@@ -140,8 +147,10 @@ class _Archiver:
         self.archive_dir = os.environ.get(Env_Archive_Dir, '')
 
         # The file is named after the moment this retention run started
-        timestamp = now.strftime('%Y%m%d-%H%M%S')
-        self.archive_path = os.path.join(self.archive_dir, f'audit-archive-{timestamp}.jsonl')
+        self.timestamp = now.strftime('%Y%m%d-%H%M%S')
+
+        # The file of this run, which its first write creates
+        self.archive_path:'strnone' = None
 
 # ################################################################################################################################
 
@@ -151,13 +160,43 @@ class _Archiver:
 
 # ################################################################################################################################
 
+    def _create_archive_file(self) -> 'str':
+        """ Creates the archive file of this run, which no other run writes to. A run whose file name is taken,
+        by a run that started within the same second, adds a sequence number to the name.
+        """
+        os.makedirs(self.archive_dir, exist_ok=True)
+
+        sequence = Archive_First_Sequence
+
+        while True:
+
+            # The first name carries the timestamp alone, and each name after it a sequence number too ..
+            if sequence == Archive_First_Sequence:
+                file_name = f'audit-archive-{self.timestamp}.jsonl'
+            else:
+                file_name = f'audit-archive-{self.timestamp}-{sequence}.jsonl'
+
+            archive_path = os.path.join(self.archive_dir, file_name)
+
+            # .. and the file is created only if no other run created it first.
+            try:
+                archive_fd = os.open(archive_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, Archive_File_Mode)
+            except FileExistsError:
+                sequence += 1
+            else:
+                os.close(archive_fd)
+                return archive_path
+
+# ################################################################################################################################
+
     def write_rows(self, kind:'str', rows:'anylist') -> 'None':
         """ Appends rows of one kind - event, body or content - to the archive file.
         """
         if not rows:
             return
 
-        os.makedirs(self.archive_dir, exist_ok=True)
+        if self.archive_path is None:
+            self.archive_path = self._create_archive_file()
 
         with open(self.archive_path, 'a', encoding='utf-8') as archive_file:
 

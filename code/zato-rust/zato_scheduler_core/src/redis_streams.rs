@@ -327,17 +327,26 @@ fn process_command(conn: &mut redis::Connection, keys: &StreamKeys, shared: &Sch
 /// Payload for `create_job` and `edit_job` commands.
 #[derive(Deserialize)]
 struct JobCommandPayload {
+
     /// The ODB job identifier.
     job_id: i64,
+
     /// Full job definition.
     job_data: SchedulerJob,
+
+    /// The number that the server drew after the ODB commit of the change.
+    sequence: u64,
 }
 
 /// Payload for the `delete_job` command.
 #[derive(Deserialize)]
 struct JobIdPayload {
+
     /// The ODB job identifier.
     job_id: i64,
+
+    /// The number that the server drew after the ODB commit of the deletion.
+    sequence: u64,
 }
 
 /// Payload for the `execute_job` command.
@@ -366,12 +375,16 @@ struct MarkCompletePayload {
 /// Payload for reload command.
 #[derive(Deserialize)]
 struct ReloadPayload {
+
     /// Full list of jobs from ODB, each with its run state from the common database.
     jobs: Vec<ReloadedJob>,
+
+    /// The number that the server drew before it read the ODB.
+    sequence: u64,
 }
 
-/// Adds a job the server has just created to the running set.
-fn handle_create_job(shared: &SchedulerShared, payload: &str) {
+/// Adds a job the server has just created to the running set, or applies it as an edit to a job the set already holds.
+pub fn handle_create_job(shared: &SchedulerShared, payload: &str) {
     let parsed: JobCommandPayload = match crate::wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
@@ -379,9 +392,17 @@ fn handle_create_job(shared: &SchedulerShared, payload: &str) {
             return;
         }
     };
-    let running_job = RunningJob::from_scheduler_job(&parsed.job_data);
     let mut state = shared.state.lock();
-    state.jobs.insert(parsed.job_id, running_job);
+
+    // A reload whose ODB read followed the commit of the creation may have added the job already,
+    // and its run counter and its runs in flight are kept, as an edit keeps them
+    if let Some(existing) = state.jobs.get_mut(&parsed.job_id) {
+        existing.update_from_job(&parsed.job_data);
+    } else {
+        let running_job = RunningJob::from_scheduler_job(&parsed.job_data);
+        state.jobs.insert(parsed.job_id, running_job);
+    }
+    state.record_change(parsed.job_id, parsed.sequence);
     state.dirty = true;
     drop(state);
     shared.condvar.notify_one();
@@ -389,7 +410,7 @@ fn handle_create_job(shared: &SchedulerShared, payload: &str) {
 }
 
 /// Replaces the definition of an existing job with the edited one.
-fn handle_edit_job(shared: &SchedulerShared, payload: &str) {
+pub fn handle_edit_job(shared: &SchedulerShared, payload: &str) {
     let parsed: JobCommandPayload = match crate::wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
@@ -426,6 +447,7 @@ fn handle_edit_job(shared: &SchedulerShared, payload: &str) {
             state.jobs.insert(parsed.job_id, running_job);
         }
     }
+    state.record_change(parsed.job_id, parsed.sequence);
     state.dirty = true;
     drop(state);
     shared.condvar.notify_one();
@@ -433,7 +455,7 @@ fn handle_edit_job(shared: &SchedulerShared, payload: &str) {
 }
 
 /// Removes a job from the running set so it stops being scheduled.
-fn handle_delete_job(shared: &SchedulerShared, payload: &str) {
+pub fn handle_delete_job(shared: &SchedulerShared, payload: &str) {
     let parsed: JobIdPayload = match crate::wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
@@ -443,6 +465,9 @@ fn handle_delete_job(shared: &SchedulerShared, payload: &str) {
     };
     let mut state = shared.state.lock();
     state.jobs.remove(&parsed.job_id);
+
+    // The number is kept after the job is gone, so a reload whose ODB read preceded the deletion does not add it again
+    state.record_change(parsed.job_id, parsed.sequence);
     state.dirty = true;
     drop(state);
     shared.condvar.notify_one();
@@ -503,12 +528,10 @@ pub fn handle_execute_job(shared: &SchedulerShared, payload: &str) {
         on_error_job: running_job.on_error_job.clone(),
     };
 
-    running_job.in_flight = true;
-    running_job.in_flight_since = Some(std::time::Instant::now());
-    running_job.in_flight_run = Some(running_job.current_run);
+    let current_run = running_job.current_run;
+    running_job.start_run(current_run, std::time::Instant::now());
 
     let job_name = running_job.name.clone();
-    let current_run = running_job.current_run;
     drop(state);
 
     if let Err(err) = sender.send(OutgoingEvent::Fire(batch)) {
@@ -521,12 +544,12 @@ pub fn handle_execute_job(shared: &SchedulerShared, payload: &str) {
     }
 }
 
-/// Clears the in-flight state of a run the server has finished invoking.
+/// Removes from the runs in flight of a job the run the server has finished invoking.
 ///
 /// The run's historical record lives in the server's audit log - here only the
-/// runtime scheduling state is updated: metrics, in-flight flags and catching up
+/// runtime scheduling state is updated: metrics, the runs in flight and catching up
 /// on fires the run outlasted.
-fn handle_mark_complete(shared: &SchedulerShared, payload: &str) {
+pub fn handle_mark_complete(shared: &SchedulerShared, payload: &str) {
     let parsed: MarkCompletePayload = match crate::wire::parse_payload(payload) {
         Ok(parsed) => parsed,
         Err(err) => {
@@ -553,9 +576,9 @@ fn handle_mark_complete(shared: &SchedulerShared, payload: &str) {
         crate::metrics::EXECUTION_DURATION_SECONDS
             .with_label_values(&[&running_job.name])
             .observe(duration_secs);
-        running_job.in_flight = false;
-        running_job.in_flight_since = None;
-        running_job.in_flight_run = None;
+        // Only the run this completion names leaves the set, and a scheduled run still executing keeps
+        // the next slot from firing
+        running_job.complete_run(parsed.current_run);
 
         if running_job.interval_ms > 0 && parsed.duration_ms >= running_job.interval_ms {
             let now = Utc::now();
@@ -582,7 +605,7 @@ fn handle_reload(shared: &SchedulerShared, payload: &str) {
         }
     };
     let mut state = shared.state.lock();
-    reload_jobs(&mut state, &parsed.jobs);
+    reload_jobs(&mut state, &parsed.jobs, parsed.sequence);
     state.dirty = true;
     drop(state);
     shared.condvar.notify_one();

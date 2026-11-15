@@ -41,9 +41,10 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 class ModuleCtx:
-    Object_Type   = 'scheduler.job'
-    Key_Last_Slot = 'last_slot'
-    Key_Run_Count = 'run_count'
+    Object_Type    = 'scheduler.job'
+    Key_Last_Slot  = 'last_slot'
+    Key_Run_Count  = 'run_count'
+    Key_Claimed_By = 'claimed_by'
 
 # The errors after which this server cannot confirm that it is still the active one
 _not_active_errors = (PubSubReplaced, SQLAlchemyError, OSError)
@@ -64,14 +65,27 @@ _claimed = ClaimResult(True, '', '')
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _new_data(last_slot:'strnone', run_count:'int') -> 'anydict':
+def _new_data(last_slot:'strnone', run_count:'int', claimed_by:'strnone') -> 'anydict':
     """ Builds the document of a job's run state.
     """
     out = {
         ModuleCtx.Key_Last_Slot: last_slot,
         ModuleCtx.Key_Run_Count: run_count,
+        ModuleCtx.Key_Claimed_By: claimed_by,
     }
 
+    return out
+
+# ################################################################################################################################
+
+def _get_claimed_by(data:'anydict') -> 'strnone':
+    """ Returns the ID of the fire stream entry whose run holds the latest claimed slot, or None if no run holds it.
+    """
+    # The run state written by a server before the claims recorded their entries has no such key
+    if ModuleCtx.Key_Claimed_By not in data:
+        return None
+
+    out = data[ModuleCtx.Key_Claimed_By]
     return out
 
 # ################################################################################################################################
@@ -94,7 +108,9 @@ def _is_slot_claimed(data:'anydict', nominal_slot:'datetime') -> 'bool':
 class SchedulerRunState:
     """ The run state of each scheduler job in the common database - the latest slot that any server claimed and
     the number of runs claimed so far. A server runs a firing only after it claimed it here, so each slot of
-    a schedule runs once across all the servers that schedule the job.
+    a schedule runs once across all the servers that schedule the job. The run state also records the fire stream entry
+    whose run holds the latest slot, until that run returns, so that a delivery of the same entry again,
+    after its worker terminated, runs the slot in place of the run that never returned.
     """
 
     def __init__(self, shared_objects:'SharedObjectStore') -> 'None':
@@ -102,8 +118,9 @@ class SchedulerRunState:
 
 # ################################################################################################################################
 
-    def _claim_scheduled(self, job_name:'str', nominal_slot:'datetime') -> 'ClaimResult':
-        """ Claims one slot of a job's schedule, unless any server claimed that slot or a later one already.
+    def _claim_scheduled(self, job_name:'str', nominal_slot:'datetime', entry_id:'str') -> 'ClaimResult':
+        """ Claims one slot of a job's schedule, unless any server claimed that slot or a later one already,
+        through another fire stream entry or through the same entry with a run that returned.
         """
         slot_iso = nominal_slot.isoformat()
 
@@ -116,8 +133,9 @@ class SchedulerRunState:
                 version = None
                 run_count = 0
 
-            # .. a slot that a server claimed already is not run again ..
-            elif _is_slot_claimed(current.data, nominal_slot):
+            # .. a slot that a server claimed already is not run again, unless the run of this very entry holds it,
+            # which a worker that terminated before the run returned left behind ..
+            elif _is_slot_claimed(current.data, nominal_slot) and _get_claimed_by(current.data) != entry_id:
                 last_slot = current.data[ModuleCtx.Key_Last_Slot]
                 reason = f'Slot {slot_iso} is not later than the last claimed slot {last_slot}'
                 out = ClaimResult(False, SCHEDULER.OUTCOME.SKIPPED_ALREADY_RUN, reason)
@@ -128,7 +146,7 @@ class SchedulerRunState:
                 version = current.version
                 run_count = current.data[ModuleCtx.Key_Run_Count]
 
-            data = _new_data(slot_iso, run_count + 1)
+            data = _new_data(slot_iso, run_count + 1, entry_id)
 
             # .. the claim succeeds only if no other writer changed the state since it was read ..
             if self.shared_objects.compare_and_set(ModuleCtx.Object_Type, job_name, data, version):
@@ -148,12 +166,13 @@ class SchedulerRunState:
 
             if current is None:
                 version = None
-                data = _new_data(None, 1)
+                data = _new_data(None, 1, None)
             else:
                 version = current.version
                 last_slot = current.data[ModuleCtx.Key_Last_Slot]
                 run_count = current.data[ModuleCtx.Key_Run_Count]
-                data = _new_data(last_slot, run_count + 1)
+                claimed_by = _get_claimed_by(current.data)
+                data = _new_data(last_slot, run_count + 1, claimed_by)
 
             if self.shared_objects.compare_and_set(ModuleCtx.Object_Type, job_name, data, version):
                 return _claimed
@@ -162,14 +181,14 @@ class SchedulerRunState:
 
 # ################################################################################################################################
 
-    def claim(self, job_name:'str', nominal_fire_time_iso:'str') -> 'ClaimResult':
-        """ Claims one firing of a job. A firing with a nominal slot belongs to the schedule, and one without it
-        is a forced run or a callback job.
+    def claim(self, job_name:'str', nominal_fire_time_iso:'str', entry_id:'str') -> 'ClaimResult':
+        """ Claims one firing of a job, which the fire stream entry of the given ID delivered. A firing with a nominal
+        slot belongs to the schedule, and one without it is a forced run or a callback job.
         """
         try:
             if nominal_fire_time_iso:
                 nominal_slot = datetime.fromisoformat(nominal_fire_time_iso)
-                out = self._claim_scheduled(job_name, nominal_slot)
+                out = self._claim_scheduled(job_name, nominal_slot, entry_id)
             else:
                 out = self._claim_forced(job_name)
 
@@ -183,21 +202,70 @@ class SchedulerRunState:
 
 # ################################################################################################################################
 
+    def _release(self, job_name:'str', entry_id:'str') -> 'bool':
+        """ Clears the record of the given entry from a job's run state, unless another entry holds the latest slot.
+        """
+        while True:
+
+            current = self.shared_objects.get(ModuleCtx.Object_Type, job_name)
+
+            # Nothing is released if the run state no longer exists or another entry claimed a later slot ..
+            if current is None:
+                return False
+
+            if _get_claimed_by(current.data) != entry_id:
+                return False
+
+            # .. otherwise, the slot and the run count stay as they are, and only the record of the entry is cleared ..
+            last_slot = current.data[ModuleCtx.Key_Last_Slot]
+            run_count = current.data[ModuleCtx.Key_Run_Count]
+            data = _new_data(last_slot, run_count, None)
+
+            if self.shared_objects.compare_and_set(ModuleCtx.Object_Type, job_name, data, current.version):
+                return True
+
+            # .. and after a conflict, the state is read again, which tells whether the entry still holds the slot.
+            logger.info('Run state of job `%s` changed during the release of entry %s, reading it again', job_name, entry_id)
+
+# ################################################################################################################################
+
+    def release(self, job_name:'str', entry_id:'str') -> 'bool':
+        """ Records that the run of a firing, which the fire stream entry of the given ID delivered, returned,
+        so that a delivery of the same entry again is skipped. Returns whether the run state recorded that entry.
+        """
+        try:
+            out = self._release(job_name, entry_id)
+
+        # The entry remains recorded, which runs its slot again only if the entry is delivered again,
+        # after its worker terminated before the xack.
+        except _not_active_errors as e:
+            logger.warning('Run state of job `%s` could not release entry %s: %s', job_name, entry_id, e)
+            out = False
+
+        return out
+
+# ################################################################################################################################
+
     def get_reload_state(self, job_names:'strset') -> 'stranydict':
-        """ Returns the run state of each defined job, by its name, and deletes the run state of jobs
-        that are no longer defined.
+        """ Returns the run state of each defined job, by its name. The run state of a job that the ODB read
+        of the reload did not return is kept, because that job may have been created after the read,
+        and the services that delete or rename a job remove the run state under its previous name.
         """
         out:'stranydict' = {}
 
         for item in self.shared_objects.list(ModuleCtx.Object_Type):
-
             if item.name in job_names:
                 out[item.name] = item.data
-            else:
-                _ = self.shared_objects.delete(ModuleCtx.Object_Type, item.name)
-                logger.info('Deleted the run state of job `%s`, which is no longer defined', item.name)
 
         return out
+
+# ################################################################################################################################
+
+    def delete(self, job_name:'str') -> 'None':
+        """ Deletes the run state kept under the name of a job whose deletion or rename was committed to the ODB.
+        """
+        if self.shared_objects.delete(ModuleCtx.Object_Type, job_name):
+            logger.info('Deleted the run state of job `%s`', job_name)
 
 # ################################################################################################################################
 # ################################################################################################################################

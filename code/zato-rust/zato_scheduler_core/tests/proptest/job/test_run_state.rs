@@ -122,6 +122,17 @@ proptest! {
     }
 
     #[test]
+    fn run_counter_is_never_lowered(current_run in 0u32..10_000, lower_by in 1u32..10_000, minutes in 1u32..60) {
+        let job = make_job("interval_based", past_start(), Some(minutes), None);
+        let mut running_job = RunningJob::from_scheduler_job(&job);
+        running_job.current_run = current_run.saturating_add(lower_by);
+
+        // The common database has not counted the runs that this scheduler fired and no worker claimed yet
+        running_job.restore_run_state(current_run, None, Utc::now());
+        prop_assert_eq!(running_job.current_run, current_run.saturating_add(lower_by));
+    }
+
+    #[test]
     fn used_up_repeats_do_not_fire(repeats in 1u32..100, extra_runs in 0u32..10, minutes in 1u32..60) {
         let mut job = make_job("interval_based", past_start(), Some(minutes), None);
         job.repeats = Some(repeats);

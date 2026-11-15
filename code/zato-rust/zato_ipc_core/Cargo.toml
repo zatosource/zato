@@ -1,0 +1,54 @@
+[package]
+name = "zato_ipc_core"
+version = "4.1.0"
+edition = "2024"
+license = "AGPL-3.0-only"
+description = "Shared memory region of the Zato server workers - API, ESB, SOA, iPaaS, integration platform, middleware, rule engine"
+repository = "https://github.com/zatosource/zato"
+readme = "README.md"
+keywords = ["zato", "api", "integration-platform", "ipaas", "rule-engine"]
+categories = ["development-tools"]
+
+[lib]
+name = "zato_ipc_core"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+extension-module = ["pyo3/extension-module"]
+
+[dependencies]
+pyo3 = "0.29.2"
+rustix = { version = "1.1.6", features = ["event", "fs", "mm", "std"] }
+xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
+
+[dev-dependencies]
+proptest = "1.11.0"
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+pedantic = { level = "deny", priority = -1 }
+nursery = { level = "deny", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+indexing_slicing = "deny"
+as_conversions = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+option_if_let_else = "allow"
+
+[profile.dev]
+incremental = false
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.release]
+overflow-checks = true

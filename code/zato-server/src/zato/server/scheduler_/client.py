@@ -52,6 +52,9 @@ class ModuleCtx:
     Fire_Stream = f'{_stream_prefix}:stream:fire'
     Timeout_Stream = f'{_stream_prefix}:stream:timeout'
     Request_Stream = f'{_stream_prefix}:stream:request'
+
+    # The counter that numbers every reload and every job command, so the scheduler orders them against each other
+    Sequence_Key = f'{_stream_prefix}:sequence'
     Consumer_Group = 'server'
     Consumer_Name = 'server-0'
     Http_Base = f'http://127.0.0.1:{_scheduler_http_port}'
@@ -176,20 +179,37 @@ class SchedulerClient:
 
 # ################################################################################################################################
 
+    def _draw_sequence(self) -> 'int':
+        """ Returns the next number of the counter that numbers every reload and every job command.
+        """
+        out = self.redis.incr(ModuleCtx.Sequence_Key)
+        return out
+
+# ################################################################################################################################
+
     def create_job(self, job_id:'int', job_data:'anydict') -> 'None':
+        """ Sends the creation of a job, which the caller committed to the ODB before.
+        """
         job_data['id'] = job_id
-        _ = self.invoke('create_job', {'job_id': job_id, 'job_data': job_data})
+        sequence = self._draw_sequence()
+        _ = self.invoke('create_job', {'job_id': job_id, 'job_data': job_data, 'sequence': sequence})
 
 # ################################################################################################################################
 
     def edit_job(self, job_id:'int', job_data:'anydict') -> 'None':
+        """ Sends the edit of a job, which the caller committed to the ODB before.
+        """
         job_data['id'] = job_id
-        _ = self.invoke('edit_job', {'job_id': job_id, 'job_data': job_data})
+        sequence = self._draw_sequence()
+        _ = self.invoke('edit_job', {'job_id': job_id, 'job_data': job_data, 'sequence': sequence})
 
 # ################################################################################################################################
 
     def delete_job(self, job_id:'int') -> 'None':
-        _ = self.invoke('delete_job', {'job_id': job_id})
+        """ Sends the deletion of a job, which the caller committed to the ODB before.
+        """
+        sequence = self._draw_sequence()
+        _ = self.invoke('delete_job', {'job_id': job_id, 'sequence': sequence})
 
 # ################################################################################################################################
 
@@ -216,6 +236,9 @@ class SchedulerClient:
         """ Loads all jobs from ODB via the adapter and sends them to the scheduler, each with the run state
         that the common database holds for it, so the scheduler continues the runs of any server before this one.
         """
+        # The number is drawn before the ODB read, so a job command drawn later reflects a change this read may not see
+        sequence = self._draw_sequence()
+
         raw_jobs = odb_adapter.get_scheduler_jobs()
 
         job_names:'strset' = set()
@@ -239,7 +262,7 @@ class SchedulerClient:
 
             jobs.append(job)
 
-        _ = self.invoke('reload', {'jobs': jobs}, needs_reply=True)
+        _ = self.invoke('reload', {'jobs': jobs, 'sequence': sequence}, needs_reply=True)
 
 # ################################################################################################################################
 

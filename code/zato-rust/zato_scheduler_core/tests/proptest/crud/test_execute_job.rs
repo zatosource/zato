@@ -68,7 +68,7 @@ proptest! {
 
         let state = shared.state.lock();
         let job = state.jobs.get(&1).unwrap();
-        let (next_fire_utc, in_flight, current_run) = (job.next_fire_utc, job.in_flight, job.current_run);
+        let (next_fire_utc, in_flight, current_run) = (job.next_fire_utc, job.is_in_flight(), job.current_run);
         drop(state);
 
         prop_assert_eq!(next_fire_utc, original_fire);
@@ -88,7 +88,7 @@ proptest! {
 
         let state = shared.state.lock();
         let job = state.jobs.get(&1).unwrap();
-        let (next_fire_utc, in_flight, current_run) = (job.next_fire_utc, job.in_flight, job.current_run);
+        let (next_fire_utc, in_flight, current_run) = (job.next_fire_utc, job.is_in_flight(), job.current_run);
         drop(state);
 
         prop_assert!(next_fire_utc.is_none());
@@ -131,7 +131,7 @@ proptest! {
 
         let state = shared.state.lock();
         let job = state.jobs.get(&1).unwrap();
-        let (in_flight, current_run) = (job.in_flight, job.current_run);
+        let (in_flight, current_run) = (job.is_in_flight(), job.current_run);
         drop(state);
 
         prop_assert!(in_flight);

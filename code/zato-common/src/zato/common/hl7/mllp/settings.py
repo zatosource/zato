@@ -171,6 +171,7 @@ class RouteSettings:
         tolerance_config:'ToleranceConfig | None' = None,
         dedup_ttl_value:'int' = 0,
         dedup_ttl_unit:'str' = '',
+        channel_name:'str' = '',
         security_common_name:'str' = '',
         allowed_networks:'str' = '',
         ) -> 'None':
@@ -204,7 +205,7 @@ class RouteSettings:
         if dedup_ttl_value and dedup_ttl_unit:
             ttl_seconds = dedup_ttl_value * TTL_Multipliers[dedup_ttl_unit]
             self.deduplicator:'MessageDeduplicator | None' = MessageDeduplicator(
-                ttl_seconds, Dedup_Max_Entries)
+                ttl_seconds, Dedup_Max_Entries, channel_name)
         else:
             self.deduplicator = None
 

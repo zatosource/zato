@@ -363,6 +363,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
 
             dedup_ttl_value=self.config.dedup_ttl_value,
             dedup_ttl_unit=self.config.dedup_ttl_unit,
+            channel_name=self.config.name,
 
             security_common_name=self._get_security_common_name(),
             allowed_networks=self.config.allowed_networks,

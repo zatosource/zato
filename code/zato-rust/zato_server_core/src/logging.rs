@@ -1,6 +1,8 @@
 //! Rotating file loggers for Zato REST summary and access logs.
 //!
-//! Each writer rotates on overflow: the current file becomes `.log.1`, the previous `.log.1` becomes `.log.2`.
+//! A writer with a size limit rotates on overflow: the current file becomes `.log.1`, the previous `.log.1` becomes `.log.2`.
+//! In a server with several worker processes, each worker opens its writers without a limit, the arbiter renames the files,
+//! and [`reopen_logs`] opens them under their paths again on the command of the arbiter.
 
 use std::fs::{File, OpenOptions};
 use std::io::Write;
@@ -67,6 +69,18 @@ impl LogWriter {
         }
         self.file.write_all(line)?;
         self.written += line.len() as u64;
+        Ok(())
+    }
+
+    /// Opens the file under its path again, after the arbiter renamed it, so the next line is appended to the file
+    /// under the path, and resumes from that file's current size.
+    pub fn reopen(&mut self) -> std::io::Result<()> {
+        let file = Self::open(&self.path)?;
+        let written = file.metadata()?.len();
+
+        // .. the renamed file is closed only once its replacement is open.
+        self.file = file;
+        self.written = written;
         Ok(())
     }
 }
@@ -192,6 +206,24 @@ pub fn init_rest_log(path: &str, max_bytes: u64) -> PyResult<()> {
 #[pyfunction]
 pub fn init_access_log(path: &str, max_bytes: u64) -> PyResult<()> {
     init_writer(&ACCESS_WRITER, path, max_bytes)
+}
+
+/// Python-callable reopen of the REST summary and access log writers, which a worker runs on the command of the arbiter.
+///
+/// Each writer is reopened under its lock, so no line is split across the renamed file and the new one.
+/// A writer that was not initialized in this process is skipped.
+#[pyfunction]
+pub fn reopen_logs() -> PyResult<()> {
+    for cell in [&REST_WRITER, &ACCESS_WRITER] {
+        if let Some(writer_lock) = cell.get() {
+            // The lock is held from the close of the renamed file to the open of the new one
+            let mut writer = writer_lock.lock();
+            writer
+                .reopen()
+                .map_err(|err| pyo3::exceptions::PyIOError::new_err(err.to_string()))?;
+        }
+    }
+    Ok(())
 }
 
 /// Writes a formatted REST summary line. Silently drops errors (logging must not crash the server).

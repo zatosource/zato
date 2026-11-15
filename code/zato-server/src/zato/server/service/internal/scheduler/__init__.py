@@ -31,7 +31,7 @@ from zato.common.util.file_transfer_scheduler import delete_schedule_entry, upda
 from zato.common.util.imap_scheduler import clear_imap_scheduler_fields, update_imap_scheduler_fields
 from zato.common.util.interval import unit_from_interval
 from zato.common.util.rest_invocation import clear_linked_job_fields, update_linked_job_fields
-from zato.common.typing_ import any_, anylist, anytuple
+from zato.common.typing_ import any_, anydict, anylist, anytuple
 from zato.common.util.sql import elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
 from zato.common.util.time_ import parse_utc
 from zato.server.service import Int, Bool, List
@@ -84,7 +84,7 @@ default_page_size = 50
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _item_by_id(items, id_):
+def _item_by_id(items:'anylist', id_:'int') -> 'anydict | None':
     for item in items:
         if item['id'] == id_:
             return item
@@ -219,7 +219,7 @@ class _SchedulerAdmin(AdminService):
     """ Base class for scheduler administration services.
     """
 
-    def _service_by_name(self, service_name):
+    def _service_by_name(self, service_name:'str') -> 'bool':
         """ Returns True if the service is deployed on this server.
         """
         return service_name in self.server.service_store.name_to_impl_name
@@ -240,7 +240,7 @@ class _SchedulerAdmin(AdminService):
 
         return out
 
-    def _enrich_job(self, item):
+    def _enrich_job(self, item:'anydict') -> 'anydict':
         """ Adds resolved service_name and service_id to a job dict.
         """
         out = dict(item)
@@ -255,7 +255,7 @@ class _SchedulerAdmin(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _create_edit(self, action):
+def _create_edit(self:'any_', action:'str') -> 'None':
     """Creating and updating a job using ODB."""
 
     # stdlib
@@ -288,7 +288,7 @@ def _create_edit(self, action):
         job_rows = session.query(Job.id, Job.name).all()
         jobs = [{'id': row.id, 'name': row.name} for row in job_rows]
 
-    def _other_same_name(jid):
+    def _other_same_name(jid:'int | None') -> 'anydict | None':
         for job in jobs:
             if job['name'] == name and job['id'] != jid:
                 return job
@@ -377,9 +377,10 @@ def _create_edit(self, action):
                 raise ZatoException(cid, f'Service `{service_name}` not found in ODB')
 
             if action == 'edit':
-                job_row = session.query(Job).filter_by(id=input.id).first()
+                job_row:'any_' = session.query(Job).filter_by(id=input.id).first()
                 if not job_row:
                     raise ZatoException(cid, f'Job `{input.id}` not found')
+                previous_name = job_row.name
                 job_row.name = name
                 job_row.is_active = is_active
                 job_row.job_type = job_type
@@ -387,6 +388,7 @@ def _create_edit(self, action):
                 job_row.service = service_row
                 job_row.extra = extra if extra else None
             else:
+                previous_name = name
                 job_row = Job()
                 job_row.name = name
                 job_row.is_active = is_active
@@ -446,6 +448,11 @@ def _create_edit(self, action):
             job_opaque = parse_instance_opaque_attr(job_row)
 
         logger.debug('_create_edit action=%s job_id=%s data=%s', action, job_id, data)
+
+        # The run state is kept by job name, and a renamed job leaves none under its previous name
+        # that a job created later with that name would continue
+        if previous_name != name:
+            self.server._scheduler_run_state.delete(previous_name)
 
         if action == 'create':
             self.server._scheduler.create_job(job_id, data)
@@ -635,7 +642,7 @@ class GetByID(_Get):
 
         last_outcome = None
         last_duration_ms = None
-        recent_outcomes = [] # type: list
+        recent_outcomes:'anylist' = []
 
         if records:
             last_record = records[-1]
@@ -729,9 +736,15 @@ class Delete(_SchedulerAdmin):
                 # Read the link to an IMAP connection, if any, before the row is deleted
                 job_opaque = parse_instance_opaque_attr(job_row)
 
+                job_name = job_row.name
+
                 session.query(IntervalBasedJob).filter_by(job_id=job_row.id).delete()
                 session.delete(job_row)
                 session.commit()
+
+            # The run state of the job goes after the commit, so no reload of any worker deletes the run state
+            # of a job that its ODB read did not return, which may be a job created after that read
+            self.server._scheduler_run_state.delete(job_name)
 
             self.server._scheduler.delete_job(job_id)
 

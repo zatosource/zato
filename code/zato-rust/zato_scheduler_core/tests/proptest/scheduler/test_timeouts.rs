@@ -43,7 +43,7 @@ proptest! {
         let mut deferred = DeferredLog::new();
         let timeout_events = check_in_flight_timeouts(&mut state, &mut deferred);
         let running_job = state.jobs.get(&1).unwrap();
-        prop_assert!(!running_job.in_flight);
+        prop_assert!(!running_job.is_in_flight());
         prop_assert!(timeout_events.is_empty());
     }
 
@@ -52,15 +52,13 @@ proptest! {
         let mut scheduler_job = make_active_job();
         scheduler_job.max_execution_time_ms = Some(max_exec);
         let mut running_job = RunningJob::from_scheduler_job(&scheduler_job);
-        running_job.in_flight = true;
-        running_job.in_flight_since = Some(Instant::now());
-        running_job.in_flight_run = Some(1);
+        running_job.start_run(1, Instant::now());
         let mut state = SchedulerState::new();
         state.jobs.insert(1, running_job);
         let mut deferred = DeferredLog::new();
         let timeout_events = check_in_flight_timeouts(&mut state, &mut deferred);
         let running_job = state.jobs.get(&1).unwrap();
-        prop_assert!(running_job.in_flight);
+        prop_assert!(running_job.is_in_flight());
         prop_assert!(timeout_events.is_empty());
     }
 }

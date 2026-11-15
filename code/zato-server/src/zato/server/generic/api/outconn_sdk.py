@@ -27,13 +27,14 @@ from zato.common.sdk import Connector, ConnectionLost, CredentialsExpired, Field
 from zato.common.sdk.connector import get_schema
 from zato.common.typing_ import cast_, list_
 from zato.common.util.api import as_bool
+from zato.common.worker_slot import is_singleton_owner
 from zato.server.connection.wrapper import Wrapper
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, module_, stranydict, strtuple
+    from zato.common.typing_ import any_, anydict, module_, stranydict, strtuple
     from zato.server.base.config_manager import ConfigManager
     from zato.server.base.parallel import ParallelServer
     ConfigManager = ConfigManager
@@ -250,7 +251,7 @@ class SDKConnectorWrapper(Wrapper):
         self.invoke_timeout = resolve_invoke_timeout(config)
 
         # Per-tenant connectors, keyed by their resolved config overrides (4.6).
-        self.tenants:'stranydict' = {}
+        self.tenants:'anydict' = {}
 
         # Whether the greenlet that expires idle tenant clients is already running.
         self._tenant_sweep_started = False
@@ -325,8 +326,11 @@ class SDKConnectorWrapper(Wrapper):
         connector = self._build_connector()
         client = self._build_client(connector)
 
+        # Of the workers of a server, one subscribes, so that the remote side pushes each event to one subscription.
+        is_owner = is_singleton_owner()
+
         # Subscribing connectors subscribe now, before anyone can use the connection (2.3).
-        if isinstance(connector, SubscribingConnector):
+        if is_owner and isinstance(connector, SubscribingConnector):
             connector.on_started(client)
 
         # Expose both the connector and its client for later use ..
@@ -335,7 +339,7 @@ class SDKConnectorWrapper(Wrapper):
         self.is_connected = True
 
         # .. and watch subscribing connections so a lost one reconnects and resubscribes on its own (4.3).
-        if isinstance(connector, SubscribingConnector):
+        if is_owner and isinstance(connector, SubscribingConnector):
             _ = spawn(self._monitor_subscribing, connector, client)
 
 # ################################################################################################################################

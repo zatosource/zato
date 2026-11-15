@@ -118,7 +118,7 @@ def _make_handler() -> 'MCPHandler':
     """ A handler with every response stage off, introducing its gateway under the test public name.
     """
     registry = cast_('ToolRegistry', _MockToolRegistry())
-    session_manager = MCPSessionManager()
+    session_manager = MCPSessionManager(_public_name)
     safeguard_config = build_safeguard_config({})
     token_cap_config = build_token_cap_config({})
     skill_prompts = SkillPrompts('', [])

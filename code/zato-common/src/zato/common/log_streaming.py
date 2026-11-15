@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 import logging
 from collections import deque
+from dataclasses import dataclass
 from datetime import datetime
 from threading import Event, Thread
 from traceback import format_exc
@@ -17,13 +18,23 @@ from traceback import format_exc
 # redis
 from redis import Redis
 
+# Zato
+from zato.common.typing_ import cast_
+
+# Zato - Rust
+from zato_ipc_core.zato_ipc_core import FLAG_LOG_STREAMING
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from logging import LogRecord
+    from zato.common.typing_ import callable_
+    from zato_ipc_core.zato_ipc_core import SharedRegion
 
+    callable_ = callable_
     LogRecord = LogRecord
+    SharedRegion = SharedRegion
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,6 +51,44 @@ max_log_stream_entries = 1000
 _excluded_logger_names = {'zato.common.log_streaming', 'zato.stream_manager', 'zato.sse_stream', 'zato.admin.web.util'}
 
 strdeque = deque[str]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ModuleCtx:
+
+    # The event that a worker publishes after it inverted the flag of log streaming, and the key of its action
+    Key_Action = 'action'
+    Action_Apply_Streaming = 'zato.log.streaming.apply'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class LogStreamingBinding:
+    """ The region of the server of a worker, whose header holds the flag of log streaming,
+    and the function that publishes an event to every other worker.
+    """
+    region: 'SharedRegion'
+    publish: 'callable_'
+
+# ################################################################################################################################
+
+class LogStreamingState:
+    binding: 'LogStreamingBinding | None' = None
+
+_state = LogStreamingState()
+
+# ################################################################################################################################
+
+def bind_log_streaming(region:'SharedRegion', publish:'callable_') -> 'None':
+    """ Makes log streaming in this process follow the flag in the region of its server.
+    """
+    binding = LogStreamingBinding()
+    binding.region = region
+    binding.publish = publish
+
+    _state.binding = binding
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -160,9 +209,37 @@ class LogStreamingManager:
 
         return self.redis_handler
 
-    def is_streaming_enabled(self):
+    def _is_handler_added(self) -> 'bool':
         redis_handler = self.get_redis_handler()
         return redis_handler in self.logger.handlers
+
+    def is_streaming_enabled(self) -> 'bool':
+
+        # In a worker the flag of the server states whether streaming is on, whichever worker inverted it ..
+        if binding := _state.binding:
+            out = binding.region.flag_is_set(FLAG_LOG_STREAMING)
+
+        # .. and a process that no arbiter bound states it through its own handler.
+        else:
+            out = self._is_handler_added()
+
+        return out
+
+    def apply_streaming(self) -> 'None':
+        """ Adds or removes the handler as the flag of the server states, which a worker does when it starts
+        and whenever another worker inverts the flag, so the latest state of the flag is what every worker applies.
+        """
+        binding = cast_('LogStreamingBinding', _state.binding)
+        is_enabled = binding.region.flag_is_set(FLAG_LOG_STREAMING)
+
+        # A worker whose handler already follows the flag has nothing to change
+        if is_enabled == self._is_handler_added():
+            return
+
+        if is_enabled:
+            _ = self.enable_streaming()
+        else:
+            _ = self.disable_streaming()
 
     def enable_streaming(self):
         redis_handler = self.get_redis_handler()
@@ -203,13 +280,23 @@ class LogStreamingManager:
         stream_logger.info('LogStreamingManager: streaming already disabled on logger "{}"'.format(self.logger_name))
         return False
 
-    def toggle_streaming(self):
-        if self.is_streaming_enabled():
+    def toggle_streaming(self) -> 'bool':
+
+        # In a worker the flag is inverted for every worker, which each of them applies when the event reaches it
+        if binding := _state.binding:
+            out = binding.region.flag_invert(FLAG_LOG_STREAMING)
+            self.apply_streaming()
+            binding.publish({ModuleCtx.Key_Action: ModuleCtx.Action_Apply_Streaming})
+
+        elif self.is_streaming_enabled():
             _ = self.disable_streaming()
-            return False
+            out = False
+
         else:
             _ = self.enable_streaming()
-            return True
+            out = True
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

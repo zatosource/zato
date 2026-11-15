@@ -10,7 +10,7 @@ use pyo3::types::{PyBytes, PyDict};
 use super::headers::set_header;
 use super::io::{GeventLoop, fd_read, fd_write_all, header_value_eq, parse_content_length};
 use super::response::{KEEP_ALIVE_TOKEN, ResponseParts, build_response, build_response_headers_only};
-use super::{MAX_HEADERS, PyObject};
+use super::{MAX_HEADERS, MAX_REQUESTS_PER_CONNECTION, PyObject};
 
 /// Context for handling a single HTTP connection.
 pub(super) struct ConnectionCtx<'conn> {
@@ -106,6 +106,13 @@ fn is_client_disconnect(error: &PyErr) -> bool {
     message.contains("Broken pipe") || message.contains("Connection reset")
 }
 
+/// Returns whether a connection remains open after a response.
+///
+/// It remains open while the client keeps it alive and until it has served its maximum number of requests.
+const fn keeps_connection(is_keep_alive_requested: bool, served_count: u64) -> bool {
+    is_keep_alive_requested && served_count < MAX_REQUESTS_PER_CONNECTION
+}
+
 /// Drives one HTTP keep-alive connection.
 ///
 /// Reads requests in a loop, parses them, dispatches to the Python handler,
@@ -122,6 +129,9 @@ pub(super) fn handle_connection(py: Python<'_>, ctx: &ConnectionCtx<'_>) -> PyRe
 
     let mut buf: Vec<u8> = Vec::with_capacity(4096);
     let mut resp: Vec<u8> = Vec::with_capacity(512);
+
+    // The requests served on this connection, the current one included once its headers are parsed
+    let mut served_count: u64 = 0;
 
     loop {
         if buf.is_empty() {
@@ -210,6 +220,10 @@ pub(super) fn handle_connection(py: Python<'_>, ctx: &ConnectionCtx<'_>) -> PyRe
             }
         };
 
+        // The response to the last request that the connection serves closes it
+        served_count = served_count.saturating_add(1);
+        let keep_alive = keeps_connection(keep_alive, served_count);
+
         let end = header_len + content_length;
 
         // The parse loop caps the headers alone, so this is the first point at which the size of
@@ -275,5 +289,22 @@ pub(super) fn handle_connection(py: Python<'_>, ctx: &ConnectionCtx<'_>) -> PyRe
         // Anything past this request's own body is discarded rather than carried into the next
         // parse, so bytes that were part of a body can never be read back as a request line
         buf.clear();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn connection_closes_after_its_maximum_number_of_requests() {
+        assert!(keeps_connection(true, 1));
+        assert!(keeps_connection(true, MAX_REQUESTS_PER_CONNECTION - 1));
+        assert!(!keeps_connection(true, MAX_REQUESTS_PER_CONNECTION));
+    }
+
+    #[test]
+    fn connection_closes_when_the_client_asks_for_it() {
+        assert!(!keeps_connection(false, 1));
     }
 }

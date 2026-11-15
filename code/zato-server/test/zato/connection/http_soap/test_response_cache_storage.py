@@ -48,6 +48,7 @@ class StorageRulesTestCase(TestCase):
         ctx = self.get_ctx()
         ctx.request_ctx['zato.http.response.headers']['Content-Type'] = 'application/json'
 
+        _ = lookup(ctx)
         store(ctx, '{"result":"ok"}', OK)
 
         # A fresh request context finds the stored entry
@@ -75,6 +76,7 @@ class StorageRulesTestCase(TestCase):
         ctx = self.get_ctx()
         ctx.request_ctx['zato.http.response.headers']['Content-Type'] = 'application/json'
 
+        _ = lookup(ctx)
         store(ctx, '{"error":"not found"}', NOT_FOUND)
 
         self.assertEqual(self.cache.data, {})
@@ -87,6 +89,7 @@ class StorageRulesTestCase(TestCase):
         headers['Content-Type'] = 'application/json'
         headers['Set-Cookie'] = 'session=abc'
 
+        _ = lookup(ctx)
         store(ctx, '{"result":"ok"}', OK)
 
         self.assertEqual(self.cache.data, {})
@@ -100,6 +103,7 @@ class StorageRulesTestCase(TestCase):
             headers['Content-Type'] = 'application/json'
             headers['Cache-Control'] = value
 
+            _ = lookup(ctx)
             store(ctx, '{"result":"ok"}', OK)
 
             self.assertEqual(self.cache.data, {})
@@ -112,6 +116,7 @@ class StorageRulesTestCase(TestCase):
         headers['Content-Type'] = 'application/json'
         headers['Cache-Control'] = 'max-age=60, public'
 
+        _ = lookup(ctx)
         store(ctx, '{"result":"ok"}', OK)
 
         self.assertEqual(len(self.cache.data), 1)
@@ -123,6 +128,7 @@ class StorageRulesTestCase(TestCase):
         ctx = self.get_ctx(raw_config)
         ctx.request_ctx['zato.http.response.headers']['Content-Type'] = 'application/json'
 
+        _ = lookup(ctx)
         store(ctx, 'x' * 11, OK)
 
         self.assertEqual(self.cache.data, {})
@@ -133,6 +139,7 @@ class StorageRulesTestCase(TestCase):
         ctx = self.get_ctx()
         ctx.request_ctx['zato.http.response.headers']['Content-Type'] = 'application/json'
 
+        _ = lookup(ctx)
         store(ctx, '{"result":"ok"}', OK)
 
         headers = ctx.request_ctx['zato.http.response.headers']
@@ -145,6 +152,7 @@ class StorageRulesTestCase(TestCase):
         ctx = self.get_ctx(raw_config)
         ctx.request_ctx['zato.http.response.headers']['Content-Type'] = 'application/json'
 
+        _ = lookup(ctx)
         store(ctx, '{"result":"ok"}', OK)
 
         self.assertEqual(self.cache.ttl[ctx.key], 120)
@@ -156,6 +164,7 @@ class StorageRulesTestCase(TestCase):
         # An entry goes in first
         ctx = self.get_ctx()
         ctx.request_ctx['zato.http.response.headers']['Content-Type'] = 'application/json'
+        _ = lookup(ctx)
         store(ctx, '{"result":"stale"}', OK)
 
         # A no-cache request never reads it ..
@@ -178,6 +187,7 @@ class StorageRulesTestCase(TestCase):
     def test_purge_channel_empties_the_prefix(self) -> 'None':
         ctx = self.get_ctx()
         ctx.request_ctx['zato.http.response.headers']['Content-Type'] = 'application/json'
+        _ = lookup(ctx)
         store(ctx, '{"result":"ok"}', OK)
 
         self.assertEqual(len(self.cache.data), 1)
@@ -268,6 +278,7 @@ class ETagTestCase(TestCase):
 
         # Store a response - the entry carries an ETag
         ctx1 = self.get_ctx()
+        _ = lookup(ctx1)
         store(ctx1, '{"result":"ok"}', OK)
 
         # A plain lookup returns the body along with the ETag header

@@ -1,6 +1,8 @@
 //! Python-visible `HTTPServer` class and lifecycle helpers.
 
+use pyo3::exceptions::{PyOSError, PyValueError};
 use pyo3::prelude::*;
+use std::ffi::CString;
 use std::sync::atomic::Ordering::Relaxed;
 
 use super::accept::accept_loop;
@@ -41,7 +43,6 @@ impl HTTPServer {
 
     /// Binds the socket and enters the accept loop, blocking the current greenlet until stopped.
     fn serve_forever<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        set_process_name();
         let listen_fd = create_listen_socket(&self.host, self.port)?;
         LISTEN_FD.store(listen_fd, Relaxed);
         let result = accept_loop(py, listen_fd, &self.request_handler, &self.server_software, self.max_msg_size);
@@ -69,15 +70,15 @@ impl Drop for HTTPServer {
     }
 }
 
-/// Sets the Linux process name to `zato-server` for visibility in `ps`/`top`.
-fn set_process_name() {
-    // PR_SET_NAME copies at most 15 bytes plus the terminating NUL out of the buffer
-    let name = c"zato-server";
-    // SAFETY: the pointer is a valid NUL-terminated string that outlives the call,
-    // and PR_SET_NAME only reads from it.
-    unsafe {
-        let _result = libc::prctl(libc::PR_SET_NAME, name.as_ptr());
-    }
+/// Sets the name that `ps` and `top` list for the process to its role.
+///
+/// The roles are `zato-arbiter`, `zato-worker-<slot>` and `zato-writer`. The name is set through `PR_SET_NAME`
+/// of the calling thread, which Linux truncates to 15 bytes.
+#[pyfunction]
+pub fn set_process_name(name: &str) -> PyResult<()> {
+    // A name with a NUL byte inside it has no C form
+    let c_name = CString::new(name).map_err(|err| PyValueError::new_err(err.to_string()))?;
+    rustix::thread::set_name(&c_name).map_err(|err| PyOSError::new_err(err.to_string()))
 }
 
 /// Atomically swaps `LISTEN_FD` to -1 and closes the old fd if it was valid.

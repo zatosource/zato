@@ -26,8 +26,10 @@ from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, 
 from zato.common.pubsub.dlq import move_to_dlq
 from zato.common.pubsub.outgoing import Attempts_None, build_envelope, decode_payload, encode_payload, InboundType, Key_Data, \
     Key_Headers, Key_Is_Base64, Key_Service
+from zato.common.typing_ import cast_
 from zato.common.util.api import new_cid_server
 from zato.common.util.retry import RetryPolicy
+from zato.common.worker_slot import is_singleton_owner
 from zato.server.queue_bridge.client import get_recv_stream
 
 # ################################################################################################################################
@@ -303,23 +305,26 @@ class ChannelListener:
 
         while not self._is_stopped:
             try:
-                result = self.redis.xreadgroup(
+                result = cast_('anylist', self.redis.xreadgroup(
                     groupname=Group_Name,
                     consumername=Consumer_Name,
                     streams={self.stream: read_id},
                     count=Read_Count,
                     block=Read_Block_Ms,
-                )
+                ))
 
                 if error_since:
                     logger.info('Channel listener recovered for `%s` (%s)', self.config['name'], self.channel_id)
                     error_since = 0.0
 
-                # No pending entries are left, read new ones from now on.
-                if read_id == Read_Pending:
+                # No pending entries are left, read new ones from now on ..
+                if read_id != Read_New:
                     if not self._has_entries(result):
                         read_id = Read_New
                         continue
+
+                    # .. otherwise, the next read of the pending entries starts after the last entry of this one.
+                    read_id = self._get_last_id(result)
 
                 if not result:
                     continue
@@ -389,6 +394,16 @@ class ChannelListener:
                 return True
 
         return False
+
+# ################################################################################################################################
+
+    def _get_last_id(self, result:'any_') -> 'str':
+        """ The ID of the last entry that a read of the stream brought back, the read is of this one stream only.
+        """
+        _stream_name, messages = result[0]
+        out = messages[-1][0]
+
+        return out
 
 # ################################################################################################################################
 
@@ -678,8 +693,12 @@ class ChannelListeners:
 # ################################################################################################################################
 
     def start(self, config:'anydict') -> 'None':
-        """ Starts the listener of one channel, replacing the one it may already have.
+        """ Starts the listener of one channel, replacing the one it may already have. Of the workers of a server,
+        the worker of the first slot runs the listeners, so that each entry of a recv stream is handled once.
         """
+        if not is_singleton_owner():
+            return
+
         channel_id = config['id']
 
         if listener := self._listeners.pop(channel_id, None):

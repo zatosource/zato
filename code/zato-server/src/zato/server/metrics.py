@@ -10,12 +10,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import time
 
 # prometheus_client
-from prometheus_client import Counter, Gauge, Histogram, Info, REGISTRY
+from prometheus_client import Info, REGISTRY
 
 # Zato
 from zato.common.analytics.api import Latency_Buckets_Ms
 from zato.common.audit_log.common import transport_statuses, TransportStatus
 from zato.common.typing_ import cast_
+from zato.server.metrics_region import get_counter, get_gauge, get_histogram, ModuleCtx as RegionCtx, RegionCollector
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,42 +98,6 @@ def get_error_source_from_status_class(status_class:'str', transport_status:'str
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_or_create_counter(name:'str', documentation:'str', labelnames:'tuple') -> 'Counter':
-    """ Returns an existing counter from the registry or creates a new one.
-    """
-    if name in REGISTRY._names_to_collectors:
-        out = cast_('Counter', REGISTRY._names_to_collectors[name])
-    else:
-        out = Counter(name, documentation, labelnames)
-
-    return out
-
-# ################################################################################################################################
-
-def _get_or_create_histogram(name:'str', documentation:'str', labelnames:'tuple', buckets:'tuple') -> 'Histogram':
-    """ Returns an existing histogram from the registry or creates a new one.
-    """
-    if name in REGISTRY._names_to_collectors:
-        out = cast_('Histogram', REGISTRY._names_to_collectors[name])
-    else:
-        out = Histogram(name, documentation, labelnames, buckets=buckets)
-
-    return out
-
-# ################################################################################################################################
-
-def _get_or_create_gauge(name:'str', documentation:'str', labelnames:'tuple'=()) -> 'Gauge':
-    """ Returns an existing gauge from the registry or creates a new one.
-    """
-    if name in REGISTRY._names_to_collectors:
-        out = cast_('Gauge', REGISTRY._names_to_collectors[name])
-    else:
-        out = Gauge(name, documentation, labelnames)
-
-    return out
-
-# ################################################################################################################################
-
 def _get_or_create_info(name:'str', documentation:'str') -> 'Info':
     """ Returns an existing info metric from the registry or creates a new one.
     """
@@ -148,34 +113,34 @@ def _get_or_create_info(name:'str', documentation:'str') -> 'Info':
 
 # REST channel metrics
 
-zato_rest_channel_requests_total = _get_or_create_counter(
+zato_rest_channel_requests_total = get_counter(
     'zato_rest_channel_requests_total',
     'Total REST channel requests handled by this server, by channel, HTTP status class, and error attribution',
     ('channel_name', 'status_code', 'error_source'),
 )
 
-zato_rest_channel_request_duration_seconds = _get_or_create_histogram(
+zato_rest_channel_request_duration_seconds = get_histogram(
     'zato_rest_channel_request_duration_seconds',
     'Duration of REST channel requests in seconds, from request accept to response write complete',
     ('channel_name',),
     zato_histogram_buckets,
 )
 
-zato_rest_channel_request_size_bytes = _get_or_create_histogram(
+zato_rest_channel_request_size_bytes = get_histogram(
     'zato_rest_channel_request_size_bytes',
     'Size of inbound REST request bodies in bytes, by channel name',
     ('channel_name',),
     zato_size_histogram_buckets,
 )
 
-zato_rest_channel_response_size_bytes = _get_or_create_histogram(
+zato_rest_channel_response_size_bytes = get_histogram(
     'zato_rest_channel_response_size_bytes',
     'Size of outbound REST response bodies in bytes, by channel name',
     ('channel_name',),
     zato_size_histogram_buckets,
 )
 
-zato_rest_channel_cache_operations_total = _get_or_create_counter(
+zato_rest_channel_cache_operations_total = get_counter(
     'zato_rest_channel_cache_operations_total',
     'Total response cache operations on REST and SOAP channels, by channel name and outcome',
     ('channel_name', 'outcome'),
@@ -186,27 +151,27 @@ zato_rest_channel_cache_operations_total = _get_or_create_counter(
 
 # REST outgoing metrics
 
-zato_rest_outgoing_requests_total = _get_or_create_counter(
+zato_rest_outgoing_requests_total = get_counter(
     'zato_rest_outgoing_requests_total',
     'Total outgoing REST requests sent to external systems, by connection, HTTP status class, and error attribution',
     ('connection_name', 'status_code', 'error_source'),
 )
 
-zato_rest_outgoing_request_duration_seconds = _get_or_create_histogram(
+zato_rest_outgoing_request_duration_seconds = get_histogram(
     'zato_rest_outgoing_request_duration_seconds',
     'Duration of outgoing REST requests in seconds, from send to response received',
     ('connection_name',),
     zato_histogram_buckets,
 )
 
-zato_rest_outgoing_request_size_bytes = _get_or_create_histogram(
+zato_rest_outgoing_request_size_bytes = get_histogram(
     'zato_rest_outgoing_request_size_bytes',
     'Size of outgoing REST request bodies in bytes, by connection name',
     ('connection_name',),
     zato_size_histogram_buckets,
 )
 
-zato_rest_outgoing_response_size_bytes = _get_or_create_histogram(
+zato_rest_outgoing_response_size_bytes = get_histogram(
     'zato_rest_outgoing_response_size_bytes',
     'Size of inbound REST response bodies from external systems in bytes, by connection name',
     ('connection_name',),
@@ -218,13 +183,13 @@ zato_rest_outgoing_response_size_bytes = _get_or_create_histogram(
 
 # Service invocation metrics
 
-zato_service_invocations_total = _get_or_create_counter(
+zato_service_invocations_total = get_counter(
     'zato_service_invocations_total',
     'Total invocations of Zato services, by service name and outcome',
     ('service_name', 'outcome'),
 )
 
-zato_service_duration_seconds = _get_or_create_histogram(
+zato_service_duration_seconds = get_histogram(
     'zato_service_duration_seconds',
     'Duration of service handle() execution in seconds, by service name',
     ('service_name',),
@@ -236,13 +201,13 @@ zato_service_duration_seconds = _get_or_create_histogram(
 
 # Pub/sub metrics
 
-zato_pubsub_messages_published_total = _get_or_create_counter(
+zato_pubsub_messages_published_total = get_counter(
     'zato_pubsub_messages_published_total',
     'Total messages published to pub/sub topics',
     ('topic_name',),
 )
 
-zato_pubsub_messages_delivered_total = _get_or_create_counter(
+zato_pubsub_messages_delivered_total = get_counter(
     'zato_pubsub_messages_delivered_total',
     'Total messages delivered from pub/sub topics to subscribers',
     ('topic_name',),
@@ -272,9 +237,11 @@ def get_uptime_seconds() -> 'float':
     """
     return time.time() - _server_start_time
 
-zato_server_uptime_seconds = _get_or_create_gauge(
+zato_server_uptime_seconds = get_gauge(
     'zato_server_uptime_seconds',
     'Time in seconds since the server process started',
+    (),
+    RegionCtx.Aggregate_Max,
 )
 
 def refresh_uptime() -> 'None':
@@ -284,14 +251,16 @@ def refresh_uptime() -> 'None':
 
 # ################################################################################################################################
 
-zato_server_requests_in_flight = _get_or_create_gauge(
+zato_server_requests_in_flight = get_gauge(
     'zato_server_requests_in_flight',
     'Number of HTTP requests currently being processed',
+    (),
+    RegionCtx.Aggregate_Sum,
 )
 
 # ################################################################################################################################
 
-zato_server_config_reloads_total = _get_or_create_counter(
+zato_server_config_reloads_total = get_counter(
     'zato_server_config_reloads_total',
     'Total configuration reload operations, by result',
     ('result',),
@@ -299,18 +268,26 @@ zato_server_config_reloads_total = _get_or_create_counter(
 
 # ################################################################################################################################
 
-zato_server_config_last_reload_timestamp_seconds = _get_or_create_gauge(
+zato_server_config_last_reload_timestamp_seconds = get_gauge(
     'zato_server_config_last_reload_timestamp_seconds',
     'Unix timestamp of the last successful configuration reload',
+    (),
+    RegionCtx.Aggregate_Max,
 )
 
 # ################################################################################################################################
 
-zato_tls_certificate_expiry_timestamp_seconds = _get_or_create_gauge(
+zato_tls_certificate_expiry_timestamp_seconds = get_gauge(
     'zato_tls_certificate_expiry_timestamp_seconds',
     'Unix timestamp when a TLS certificate expires',
     ('cert_name', 'listener'),
+    RegionCtx.Aggregate_Max,
 )
+
+# ################################################################################################################################
+
+# A scrape reads the metrics above from the rows of every slot of the region
+REGISTRY.register(RegionCollector())
 
 # ################################################################################################################################
 # ################################################################################################################################

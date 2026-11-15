@@ -6,7 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The queues in front of outgoing connections.
+# The queues in front of outgoing connections. A worker that the arbiter bound to the region of its server keeps
+# the depth and the publish lock of each queue in that region, which every worker of the server shares.
 
 # stdlib
 import logging
@@ -19,12 +20,16 @@ from zato.common.pubsub.dlq import get_dlq_sub_key, get_dlq_topic_name, is_dlq_s
 from zato.common.pubsub.outgoing import audit_disabled_conn_types, find_outgoing_conn, get_outgoing_sub_config, \
     get_outgoing_sub_key, get_outgoing_topic_name, locate_outgoing_conn, parse_outgoing_sub_key
 from zato.server.base.config_manager.common import ConfigManagerImpl
+from zato.server.outgoing_region import get_outgoing_binding, pause_outgoing_delivery, resume_outgoing_delivery, \
+    SharedPublishLock, SharedQueueDepth
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.typing_ import any_, anydict, anytuple, callable_
+
+    publish_lock = RLock | SharedPublishLock
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,8 +86,8 @@ class OutgoingQueues(ConfigManagerImpl):
 
     _outgoing_sub_key_cache: 'set[str]'
     _outgoing_sub_key_lock: 'RLock'
-    _outgoing_conn_locks: 'dict[str, RLock]'
-    outgoing_queue_depth: 'OutgoingQueueDepth'
+    _outgoing_conn_locks: 'dict[str, publish_lock]'
+    outgoing_queue_depth: 'OutgoingQueueDepth | SharedQueueDepth'
 
     init_outgoing_dlqs: 'callable_'
     rename_outgoing_dlq: 'callable_'
@@ -104,21 +109,29 @@ class OutgoingQueues(ConfigManagerImpl):
         # One lock per connection, under which publications take turns with renames and deletes
         self._outgoing_conn_locks = {}
 
-        self.outgoing_queue_depth = OutgoingQueueDepth()
+        # A worker of a server with several workers shares the depths with the other workers
+        if binding := get_outgoing_binding():
+            self.outgoing_queue_depth = SharedQueueDepth(binding)
+        else:
+            self.outgoing_queue_depth = OutgoingQueueDepth()
 
         self.init_outgoing_dlqs()
 
 # ################################################################################################################################
 
-    def get_outgoing_publish_lock(self, conn_type:'str', conn_id:'int') -> 'RLock':
-        """ The lock under which publications to one outgoing connection take turns with its renames and deletes.
+    def get_outgoing_publish_lock(self, conn_type:'str', conn_id:'int') -> 'publish_lock':
+        """ The lock under which publications to one outgoing connection take turns with its renames and deletes,
+        in every worker of the server.
         """
         sub_key = get_outgoing_sub_key(conn_type, conn_id)
 
         with self._outgoing_sub_key_lock:
             lock = self._outgoing_conn_locks.get(sub_key)
             if not lock:
-                lock = RLock()
+                if binding := get_outgoing_binding():
+                    lock = SharedPublishLock(binding, sub_key)
+                else:
+                    lock = RLock()
                 self._outgoing_conn_locks[sub_key] = lock
 
         return lock
@@ -138,7 +151,8 @@ class OutgoingQueues(ConfigManagerImpl):
         """ Holds one connection's queue still for as long as the block runs - nothing is published to it and its delivery
         stops between two rounds, so no message is in flight while the block changes the connection or the messages of its
         queue. A round in flight would otherwise resolve the connection's topics from a configuration the block is replacing,
-        or go on with a message the block discarded or replaced.
+        or go on with a message the block discarded or replaced. The delivery stops in the worker that owns the queue,
+        whichever worker holds it.
         """
         sub_key = get_outgoing_sub_key(conn_type, conn_id)
         delivery = self.server.pubsub_push_delivery
@@ -149,7 +163,7 @@ class OutgoingQueues(ConfigManagerImpl):
             has_queue = sub_key in self._outgoing_sub_key_cache
 
             if has_queue:
-                delivery.pause_sub_key(sub_key)
+                pause_outgoing_delivery(delivery, sub_key)
 
             try:
                 yield
@@ -159,7 +173,7 @@ class OutgoingQueues(ConfigManagerImpl):
                 is_still_there = sub_key in self._outgoing_sub_key_cache
 
                 if has_queue and is_still_there:
-                    delivery.resume_sub_key(sub_key)
+                    resume_outgoing_delivery(delivery, sub_key)
 
 # ################################################################################################################################
 

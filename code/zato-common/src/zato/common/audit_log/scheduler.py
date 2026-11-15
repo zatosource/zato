@@ -24,6 +24,7 @@ from zato.common.api import SCHEDULER
 from zato.common.audit_log.api import AuditEvent, AuditSource, get_audit_engine
 from zato.common.audit_log.common import event_attr_table, event_body_table, event_table
 from zato.common.audit_log.export.api import get_audit_export
+from zato.common.db_env.engine import call_database, execute_write
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -33,9 +34,10 @@ if 0:
     from datetime import datetime
     from sqlalchemy.engine import Engine
     from zato.common.audit_log.api import AuditLog
-    from zato.common.typing_ import intlistnone, intnone
+    from zato.common.typing_ import any_, intlistnone, intnone
 
     # Dummy assignments to satisfy type checkers
+    any_ = any_
     AuditLog = AuditLog
     datetime = datetime
     Engine = Engine
@@ -164,8 +166,7 @@ def record_job_complete(event_id:'int', *, outcome:'str', duration_ms:'int', err
     update_statement = update_statement.where(event_table.c.id == event_id)
     update_statement = update_statement.values(outcome=outcome, duration_ms=duration_ms, data=error)
 
-    with engine.begin() as connection:
-        _ = connection.execute(update_statement)
+    _ = execute_write(engine, update_statement)
 
     # The run closes with its own system entry, mirroring the one it opened with.
     duration_human = format_duration_ms(duration_ms)
@@ -198,20 +199,12 @@ def record_job_timeout(job_id:'int', current_run:'int', *, elapsed_ms:'int', err
         event_table.c.id.in_(current_run_match)).order_by(
         event_table.c.id.desc()).limit(1)
 
-    with engine.begin() as connection:
-        event_id = connection.execute(event_query).scalar()
+    # .. mark it as timed out in place ..
+    event_id = call_database(engine, _mark_run_timed_out, engine, event_query, elapsed_ms, error)
 
-        # .. a run that was never recorded means the audit log was off when it started ..
-        if event_id is None:
-            return
-
-        # .. and mark it as timed out in place.
-        update_statement = event_table.update()
-        update_statement = update_statement.where(event_table.c.id == event_id)
-        update_statement = update_statement.values(
-            outcome=SCHEDULER.OUTCOME.TIMEOUT, duration_ms=elapsed_ms, data=error)
-
-        _ = connection.execute(update_statement)
+    # .. unless it was never recorded, which means the audit log was off when it started.
+    if event_id is None:
+        return
 
     elapsed_human = format_duration_ms(elapsed_ms)
     now = utcnow()
@@ -219,6 +212,27 @@ def record_job_timeout(job_id:'int', current_run:'int', *, elapsed_ms:'int', err
 
     # The collector sees the timed out run as a second record of the same event
     _emit_updated_row(engine, event_id)
+
+# ################################################################################################################################
+
+def _mark_run_timed_out(engine:'Engine', event_query:'any_', elapsed_ms:'int', error:'str') -> 'intnone':
+    """ Marks the run that the query finds as timed out in place and returns its event id,
+    or None when the run was never recorded.
+    """
+    with engine.begin() as connection:
+        out = connection.execute(event_query).scalar()
+
+        if out is None:
+            return None
+
+        update_statement = event_table.update()
+        update_statement = update_statement.where(event_table.c.id == out)
+        update_statement = update_statement.values(
+            outcome=SCHEDULER.OUTCOME.TIMEOUT, duration_ms=elapsed_ms, data=error)
+
+        _ = connection.execute(update_statement)
+
+    return out
 
 # ################################################################################################################################
 
@@ -249,8 +263,7 @@ def append_job_log_entry(event_id:'int', timestamp:'datetime', level:'str', mess
     insert_statement = event_body_table.insert()
     insert_statement = insert_statement.values(event_id=event_id, kind=kind, event_time=timestamp, data=body_json)
 
-    with engine.begin() as connection:
-        _ = connection.execute(insert_statement)
+    _ = execute_write(engine, insert_statement)
 
 # ################################################################################################################################
 # ################################################################################################################################

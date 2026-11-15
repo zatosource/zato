@@ -1,7 +1,7 @@
 .PHONY: build install clean default \
-	server-build scheduler-build ha-node-build io-build common-core-build pg-wire-build queue-bridge-build mq-client \
-	server-clean scheduler-clean io-clean common-core-clean pg-wire-clean queue-bridge-clean rust-target-prune \
-	server-install scheduler-install ha-node-install io-install common-core-install pg-wire-install queue-bridge-install \
+	server-build ipc-build scheduler-build ha-node-build io-build common-core-build pg-wire-build queue-bridge-build mq-client \
+	server-clean ipc-clean scheduler-clean io-clean common-core-clean pg-wire-clean queue-bridge-clean rust-target-prune \
+	server-install ipc-install scheduler-install ha-node-install io-install common-core-install pg-wire-install queue-bridge-install \
 	health-install health-build health-clean \
 	ruff pyright pyright-all test-lint test-static test-static-python test-static-rust test-static-js \
 	qa-reqs-install rust-lint-tools-install unify \
@@ -110,7 +110,7 @@ PERF_ARGS     := $(if $(HEAVY),heavy,) $(if $(JSON),json,) $(PERF_TIER)
 
 default: dev
 
-build: common-core-build pg-wire-build server-build scheduler-build ha-node-build io-build queue-bridge-build
+build: common-core-build pg-wire-build server-build ipc-build scheduler-build ha-node-build io-build queue-bridge-build
 # build: ... fhir-rust-build  # FHIR commented out for now
 
 server-build: rust-target-prune
@@ -118,6 +118,12 @@ server-build: rust-target-prune
 	$(LOAD_CARGO_ENV) && \
 	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
 	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_server_core/Cargo.toml
+
+ipc-build: rust-target-prune
+	@echo ">>> Building the shared memory region of the workers"
+	$(LOAD_CARGO_ENV) && \
+	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
+	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_ipc_core/Cargo.toml
 
 scheduler-build: rust-target-prune
 	@echo ">>> Building scheduler"
@@ -371,6 +377,8 @@ health-install: ## Install health deps and build.
 
 server-install: server-build
 
+ipc-install: ipc-build
+
 scheduler-install: scheduler-build
 
 ha-node-install: ha-node-build
@@ -392,6 +400,9 @@ clean:
 
 server-clean:
 	rm -rf $(ZATO_RUST)/zato_server_core/target
+
+ipc-clean:
+	rm -rf $(ZATO_RUST)/zato_ipc_core/target
 
 scheduler-clean:
 	rm -rf $(ZATO_RUST)/zato_scheduler_core/target
@@ -1827,6 +1838,7 @@ clippy-zato: rust-target-prune ## Clippy all public Rust crates.
 	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_common_core/Cargo.toml    --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
 	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_pg_wire/Cargo.toml        --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
 	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml    --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
+	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_ipc_core/Cargo.toml       --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
 	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_scheduler_core/Cargo.toml --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
 	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_ha_core/Cargo.toml        --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
 	CLIPPY_CONF_DIR=$(ZATO_CLIPPY_CONF) cargo clippy --manifest-path $(ZATO_RUST_DIR)/zato_input_output/Cargo.toml             --all-targets --all-features -- $(ZATO_CLIPPY_FLAGS) && \
@@ -1854,6 +1866,7 @@ dylint-zato: rust-target-prune ## Dylint all public Rust crates.
 	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_common_core/Cargo.toml    -- --tests && \
 	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_pg_wire/Cargo.toml        -- --tests && \
 	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml    -- --tests && \
+	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_ipc_core/Cargo.toml       -- --tests && \
 	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_scheduler_core/Cargo.toml -- --tests && \
 	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_ha_core/Cargo.toml        -- --tests && \
 	DYLINT_RUSTFLAGS="$(ZATO_DYLINT_FLAGS)" cargo dylint $(DYLINT_LIBS) --manifest-path $(ZATO_RUST_DIR)/zato_input_output/Cargo.toml             -- --tests && \
@@ -1866,6 +1879,7 @@ rust-deny-zato: ## Dependency audit (advisories, licenses, bans) for public crat
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_common_core/Cargo.toml    --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_pg_wire/Cargo.toml        --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml    --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
+	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_ipc_core/Cargo.toml       --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_scheduler_core/Cargo.toml --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_ha_core/Cargo.toml        --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
 	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_input_output/Cargo.toml             --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \

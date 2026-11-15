@@ -96,31 +96,26 @@ pub const fn plural<'word>(count: usize, singular: &'word str, plural_form: &'wo
 
 /// Reconciles the running-job map with a freshly loaded list of scheduler jobs.
 ///
-/// A reload means the server (re)started, so any previously in-flight jobs
-/// will never receive completion callbacks - clear their `in_flight` state.
+/// Every worker process of a server sends a reload when it starts, so a reload arrives while runs fired
+/// for other workers are still in progress. The runs in flight of every job are therefore kept, and a run
+/// whose worker terminated is removed by `check_in_flight_timeouts` once its execution time is exceeded.
 /// The run state of each job is restored from what the server loaded from the common database,
 /// which holds the runs claimed by every server, not only by this one.
-pub fn reload_jobs(state: &mut scheduler::SchedulerState, new_jobs: &[crate::model::ReloadedJob]) {
+///
+/// The server draws the number of a reload before it reads the ODB and the number of a job command after
+/// its ODB commit, so a job whose latest applied command or reload has a higher number than this reload
+/// was changed after the ODB read of this reload, and it is left as it is.
+pub fn reload_jobs(state: &mut scheduler::SchedulerState, new_jobs: &[crate::model::ReloadedJob], sequence: u64) {
     let new_ids: std::collections::HashSet<i64> = new_jobs.iter().map(|reloaded| reloaded.job.id).collect();
     let old_ids: std::collections::HashSet<i64> = state.jobs.keys().copied().collect();
 
     for removed_id in old_ids.difference(&new_ids) {
-        state.jobs.remove(removed_id);
-    }
-
-    // A reload implies the server restarted; all previous in-flight
-    // invocations are lost and will never complete.
-    for running_job in state.jobs.values_mut() {
-        if running_job.in_flight {
-            tracing::info!(
-                "Clearing stale in_flight for job id={} name={} (server reloaded)",
-                running_job.id,
-                running_job.name,
-            );
-            running_job.in_flight = false;
-            running_job.in_flight_since = None;
-            running_job.in_flight_run = None;
+        // A job created after the ODB read of this reload is not in its list and is kept
+        if state.is_changed_after(*removed_id, sequence) {
+            continue;
         }
+        state.jobs.remove(removed_id);
+        state.record_change(*removed_id, sequence);
     }
 
     let now = chrono::Utc::now();
@@ -128,10 +123,19 @@ pub fn reload_jobs(state: &mut scheduler::SchedulerState, new_jobs: &[crate::mod
     for reloaded in new_jobs {
         let scheduler_job = &reloaded.job;
         let job_id = scheduler_job.id;
+
+        // A job edited or deleted after the ODB read of this reload keeps that change
+        if state.is_changed_after(job_id, sequence) {
+            continue;
+        }
+        state.record_change(job_id, sequence);
+
         let last_slot = parse_last_slot(reloaded, &scheduler_job.name);
         if let Some(existing) = state.jobs.get_mut(&job_id) {
             existing.update_from_job(scheduler_job);
-            existing.restore_run_state(reloaded.current_run, last_slot, now);
+
+            // The scheduler kept the schedule of a job it holds running, so only a job it did not hold catches up
+            existing.restore_run_count(reloaded.current_run);
             let interval = humanize_ms(existing.interval_ms);
             let next = existing.next_fire_utc.map_or_else(|| "none".to_string(), |fire| fire.to_rfc3339());
             tracing::info!(

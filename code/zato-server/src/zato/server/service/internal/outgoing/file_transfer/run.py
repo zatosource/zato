@@ -20,12 +20,18 @@ from traceback import format_exc
 from zato.common.api import FileTransfer
 from zato.common.audit_log.common import AuditEvent, AuditOutcome
 from zato.common.audit_log.file_transfer import record_schedule_event
-from zato.common.audit_log.file_transfer_run import count_delivered_since, find_running_runs, Interrupted_Note, \
-    Phase_Connecting, Phase_Done, Run_Ledger_Max_Entries, Run_Status_Clean, Run_Status_Empty, Run_Status_Failed, \
-    Run_Status_Interrupted, Run_Status_List_Failed, Run_Status_No_Directory, Run_Status_Partial, Run_Status_Running, \
-    Run_Status_Unchanged, update_run_event, write_run_error, write_run_exchanges, write_run_ledger
+from zato.common.audit_log.file_transfer_run import count_delivered_since, find_latest_listing, find_running_runs, \
+    Interrupted_Note, Key_Listing_Fingerprint, Key_Listing_Time_Iso, Phase_Connecting, Phase_Done, Run_Ledger_Max_Entries, \
+    Run_Status_Clean, Run_Status_Empty, Run_Status_Failed, Run_Status_Interrupted, Run_Status_List_Failed, \
+    Run_Status_No_Directory, Run_Status_Partial, Run_Status_Running, Run_Status_Unchanged, update_run_event, write_run_error, \
+    write_run_exchanges, write_run_ledger, write_run_listing
+from zato.common.typing_ import cast_
 from zato.common.util.api import utcnow
 from zato.common.util.logging_ import file_transfer_logger_name
+from zato.server.process_instance import get_process_binding, is_process_instance_live
+
+# Zato - Rust
+from zato_ipc_core.zato_ipc_core import SharedRegionFull
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,8 +39,12 @@ from zato.common.util.logging_ import file_transfer_logger_name
 if 0:
     from zato.common.audit_log.api import AuditLog
     from zato.common.typing_ import any_, anylist, intnone, stranydict, strintdict, strlist, strset
+    from zato.server.process_instance import ProcessBinding
     from zato.server.service import Service
+    from zato_ipc_core.zato_ipc_core import SharedRegion
     AuditLog = AuditLog
+    SharedRegion = SharedRegion
+    ProcessBinding = ProcessBinding
     any_ = any_
 
 # ################################################################################################################################
@@ -45,11 +55,16 @@ logger = getLogger(file_transfer_logger_name)
 # The suffix a claimed file is renamed with
 _claim_suffix = FileTransfer.Scheduler.Claim_Suffix
 
-# The newest listing fingerprint of each schedule, keyed by connection and schedule.
-_last_listing:'stranydict' = {}
-
-# The count of files each schedule delivered today, keyed by connection and schedule.
+# The count of files each schedule delivered today, keyed by connection and schedule, in a process that no arbiter bound.
 _delivered_today:'stranydict' = {}
+
+# The first part of the key of the keyed lock of the region whose counter holds the deliveries of a schedule today.
+_delivered_today_key_prefix = 'file_transfer.delivered_today|'
+
+# The counter holds the ordinal of the local day above these bits and the count of the deliveries of that day within them,
+# so a worker that sets the day and a worker that adds a delivery change one word.
+_day_shift = 32
+_count_mask = (1 << _day_shift) - 1
 
 # The key of the zato context in a service's request context.
 _zato_ctx_key = 'zato.zato_ctx'
@@ -57,7 +72,19 @@ _zato_ctx_key = 'zato.zato_ctx'
 # The scheduler context of a run not fired by the scheduler.
 _no_scheduler_context = {'job_id': 0, 'current_run': 0}
 
+# The key of the process instance of the worker that opened a run, in the run's data.
+_key_process_instance = 'process_instance'
+
 # ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class DeliveredTodayCell:
+    """ The counter of the region that holds the day and the count of the deliveries of a schedule.
+    """
+    region: 'SharedRegion'
+    entry: int
+
 # ################################################################################################################################
 
 @dataclass(init=False)
@@ -166,14 +193,50 @@ def local_day_start_utc(now_local:'datetime') -> 'datetime':
 
 # ################################################################################################################################
 
-def get_delivered_today(conn_name:'str', schedule_name:'str') -> 'int':
-    """ How many files a schedule delivered today, local time, counted from the audit database once a day.
+def _pack_day_count(day:'int', count:'int') -> 'int':
+    out = (day << _day_shift) | count
+    return out
+
+# ################################################################################################################################
+
+def _unpack_day_count(value:'int') -> 'tuple[int, int]':
+    day = value >> _day_shift
+    count = value & _count_mask
+
+    return day, count
+
+# ################################################################################################################################
+
+def _get_delivered_today_cell(key:'str') -> 'DeliveredTodayCell | None':
+    """ The counter of the region of the server for the deliveries of a schedule today,
+    or None in a process that no arbiter bound and in a worker whose region has no entry left for the schedule.
     """
-    now = datetime.now()
-    now_local = now.astimezone()
+    binding = get_process_binding()
+
+    if binding is None:
+        return None
+
+    try:
+        entry = binding.region.lock_entry(_delivered_today_key_prefix + key)
+
+    # With the lock table full, the schedule counts its deliveries today in this worker alone
+    except SharedRegionFull:
+        logger.error('Schedule `%s` counts its deliveries today in this worker alone, the lock table is full', key)
+        return None
+
+    out = DeliveredTodayCell()
+    out.region = binding.region
+    out.entry = entry
+
+    return out
+
+# ################################################################################################################################
+
+def _get_local_delivered_today(key:'str', conn_name:'str', schedule_name:'str', now_local:'datetime') -> 'int':
+    """ How many files a schedule delivered today, counted from the audit database once a day in this process.
+    """
     today_date = now_local.date()
     today = today_date.isoformat()
-    key = f'{conn_name}|{schedule_name}'
 
     if counter := _delivered_today.get(key):
         if counter['day'] == today:
@@ -190,16 +253,77 @@ def get_delivered_today(conn_name:'str', schedule_name:'str') -> 'int':
 
 # ################################################################################################################################
 
+def _get_shared_delivered_today(
+    cell:'DeliveredTodayCell',
+    conn_name:'str',
+    schedule_name:'str',
+    now_local:'datetime',
+    ) -> 'int':
+    """ How many files a schedule delivered today, counted from the audit database by the first run of the day in any worker.
+    """
+    today_date = now_local.date()
+    today = today_date.toordinal()
+
+    while True:
+
+        current = cell.region.lock_counter(cell.entry)
+        day, count = _unpack_day_count(current)
+
+        if day == today:
+            return count
+
+        since = local_day_start_utc(now_local)
+        count = count_delivered_since(conn_name, schedule_name, since)
+        value = _pack_day_count(today, count)
+
+        # The first worker that counted the day sets it, and a worker that another one preceded reads the counter again
+        if cell.region.lock_counter_replace(cell.entry, current, value):
+            return count
+
+# ################################################################################################################################
+
+def _get_delivered_today(cell:'DeliveredTodayCell | None', key:'str', conn_name:'str', schedule_name:'str') -> 'int':
+    now = datetime.now()
+    now_local = now.astimezone()
+
+    if cell is None:
+        out = _get_local_delivered_today(key, conn_name, schedule_name, now_local)
+    else:
+        out = _get_shared_delivered_today(cell, conn_name, schedule_name, now_local)
+
+    return out
+
+# ################################################################################################################################
+
+def get_delivered_today(conn_name:'str', schedule_name:'str') -> 'int':
+    """ How many files a schedule delivered today, local time, counted from the audit database once a day.
+    """
+    key = f'{conn_name}|{schedule_name}'
+    cell = _get_delivered_today_cell(key)
+
+    out = _get_delivered_today(cell, key, conn_name, schedule_name)
+    return out
+
+# ################################################################################################################################
+
 def add_delivered_today(conn_name:'str', schedule_name:'str') -> 'int':
     """ Adds one to today's count and returns it.
     """
-    _ = get_delivered_today(conn_name, schedule_name)
-
     key = f'{conn_name}|{schedule_name}'
-    counter = _delivered_today[key]
-    counter['count'] += 1
+    cell = _get_delivered_today_cell(key)
 
-    out = counter['count']
+    _ = _get_delivered_today(cell, key, conn_name, schedule_name)
+
+    if cell is None:
+        counter = _delivered_today[key]
+        counter['count'] += 1
+        out = counter['count']
+
+    # The addition by fetch-add includes the deliveries that every other worker added in the meantime
+    else:
+        value = cell.region.lock_counter_add(cell.entry, 1)
+        _, out = _unpack_day_count(value)
+
     return out
 
 # ################################################################################################################################
@@ -247,13 +371,39 @@ def _release_interrupted_claim(conn:'any_', data:'stranydict', current_file:'str
 
 # ################################################################################################################################
 
+def _is_run_in_progress(binding:'ProcessBinding | None', data:'stranydict') -> 'bool':
+    """ Whether a run that is marked as running is still in progress in the process that opened it.
+    """
+
+    # A process that no arbiter started has no region to check an instance against,
+    # and it concludes every running run of its server ..
+    if binding is None:
+        out = False
+
+    # .. a run without an instance was opened by such a process ..
+    elif _key_process_instance not in data:
+        out = False
+
+    # .. and any other run is in progress as long as the process of its instance runs.
+    else:
+        out = is_process_instance_live(binding, data[_key_process_instance])
+
+    return out
+
+# ################################################################################################################################
+
 def close_interrupted_runs(audit_log:'AuditLog', conn_name:'str', schedule_name:'str', conn:'any_') -> 'None':
-    """ Closes the runs this server left marked as running as interrupted,
+    """ Closes as interrupted the runs of this server that are marked as running and are no longer in progress,
     releasing the claim of the file each of them was in the middle of.
     """
     running = find_running_runs(conn_name, schedule_name, audit_log.server_name)
+    binding = get_process_binding()
 
     for event_id, data in running:
+
+        # A run of a process that still runs keeps its row and its claim.
+        if _is_run_in_progress(binding, data):
+            continue
 
         if current_file := data.get('current_file'):
             _release_interrupted_claim(conn, data, current_file)
@@ -307,6 +457,10 @@ def open_run(
         'quarantined': 0,
     }
 
+    # The run records the process instance of its worker, by which a later run tells it from an interrupted one.
+    if binding := get_process_binding():
+        out.data[_key_process_instance] = binding.instance
+
     # The scheduler's run number is a searchable attribute.
     attrs_extra = {'current_run': scheduler_context['current_run']}
 
@@ -319,14 +473,14 @@ def open_run(
 # ################################################################################################################################
 
 def note_listing(run:'RunContext', entries:'anylist', list_ms:'int') -> 'None':
-    """ Records the listing's size and whether it is the same as the previous run's.
+    """ Records the listing's size and whether it is the same as the one of the previous run through any worker.
     """
-    key = f'{run.conn_name}|{run.schedule_name}'
+    audit_log = cast_('AuditLog', run.audit_log)
     fingerprint = listing_fingerprint(entries)
 
     run.fingerprint = fingerprint
 
-    if previous := _last_listing.get(key):
+    if previous := find_latest_listing(run.conn_name, run.schedule_name, audit_log.server_name):
         if previous['fingerprint'] == fingerprint:
             run.is_unchanged = True
             run.data['unchanged_since_event_id'] = previous['event_id']
@@ -349,19 +503,15 @@ def note_exchanges(run:'RunContext', conn:'any_') -> 'None':
 # ################################################################################################################################
 
 def remember_listing(run:'RunContext') -> 'None':
-    """ Remembers the run's listing fingerprint for the next run, unless the run repeated the previous one.
+    """ Keeps the run's listing fingerprint in the data of its row for the next run, unless the run repeated the previous one.
     """
     if run.is_unchanged:
         return
 
-    key = f'{run.conn_name}|{run.schedule_name}'
     now = utcnow()
 
-    _last_listing[key] = {
-        'fingerprint': run.fingerprint,
-        'event_id': run.event_id,
-        'event_time_iso': now.isoformat(),
-    }
+    run.data[Key_Listing_Fingerprint] = run.fingerprint
+    run.data[Key_Listing_Time_Iso] = now.isoformat()
 
 # ################################################################################################################################
 
@@ -437,8 +587,12 @@ def close_run(run:'RunContext') -> 'None':
         now = utcnow()
         write_run_ledger(run.event_id, now, run.ledger)
 
-    update_run_event(run.event_id, outcome=outcome, status=status, duration_ms=duration_ms, data=data)
     remember_listing(run)
+    update_run_event(run.event_id, outcome=outcome, status=status, duration_ms=duration_ms, data=data)
+
+    # The next run finds the fingerprint through the attribute, which is written after the data that carries it
+    if not run.is_unchanged:
+        write_run_listing(run.event_id, run.schedule_name)
 
 # ################################################################################################################################
 

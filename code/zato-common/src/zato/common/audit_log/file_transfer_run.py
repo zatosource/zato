@@ -18,9 +18,10 @@ from json import dumps, loads
 from sqlalchemy import and_, func, select
 
 # Zato
-from zato.common.audit_log.api import event_attr_table, event_body_table, event_table, get_audit_engine, AuditBody, \
-    AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.api import build_attr_rows, event_attr_table, event_body_table, event_table, get_audit_engine, \
+    AuditBody, AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.export.api import get_audit_export
+from zato.common.db_env.engine import execute_write
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -122,9 +123,16 @@ Seen_Before_Window_Days = 30
 # The note of a run interrupted by a server stop.
 Interrupted_Note = 'Server stopped during run'
 
+# The keys of the listing fingerprint of a run and of the time it was remembered, in the run's data.
+Key_Listing_Fingerprint = 'listing_fingerprint'
+Key_Listing_Time_Iso    = 'listing_time_iso'
+
 # The attribute names the queries below match on.
 _attr_checksum = 'checksum'
 _attr_schedule = 'schedule'
+
+# The attribute of a run whose data carries a listing fingerprint, whose value is the name of the schedule.
+_attr_listing_schedule = 'listing_schedule'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -204,9 +212,7 @@ def update_run_event(
     statement = statement.values(**values)
 
     engine = get_audit_engine()
-
-    with engine.begin() as connection:
-        _ = connection.execute(statement)
+    _ = execute_write(engine, statement)
 
     # The collector sees the updated run as another record of the same event
     if export := get_audit_export():
@@ -261,9 +267,7 @@ def _write_body(event_id:'int', kind:'str', event_time:'datetime', data:'str') -
     statement = statement.values(event_id=event_id, kind=kind, event_time=event_time, data=data)
 
     engine = get_audit_engine()
-
-    with engine.begin() as connection:
-        _ = connection.execute(statement)
+    _ = execute_write(engine, statement)
 
 # ################################################################################################################################
 
@@ -424,6 +428,63 @@ def find_running_runs(conn_name:'str', schedule_name:'str', server_name:'str') -
 
         if details['schedule'] == schedule_name:
             out.append((event_id, details))
+
+    return out
+
+# ################################################################################################################################
+
+def write_run_listing(event_id:'intnone', schedule_name:'str') -> 'None':
+    """ Marks a run whose data carries a listing fingerprint, after that data is written,
+    so the next run of the schedule through any worker finds it.
+    """
+    attrs = {_attr_listing_schedule: schedule_name}
+    rows = build_attr_rows(event_id, attrs)
+
+    statement = event_attr_table.insert()
+    statement = statement.values(rows)
+
+    engine = get_audit_engine()
+    _ = execute_write(engine, statement)
+
+# ################################################################################################################################
+
+def find_latest_listing(conn_name:'str', schedule_name:'str', server_name:'str') -> 'stranydict | None':
+    """ The id and the data of the newest run of the schedule on this server whose data carries a listing fingerprint, or None.
+    """
+    attr_join = event_table.join(event_attr_table, event_table.c.id == event_attr_table.c.event_id)
+
+    is_source = event_table.c.source == AuditSource.File_Outgoing
+    is_conn = event_table.c.object_name == conn_name
+    is_run = event_table.c.event_type == AuditEvent.Run_Completed
+    is_server = event_table.c.server_name == server_name
+    is_listing_attr = event_attr_table.c.name == _attr_listing_schedule
+    is_same_schedule = event_attr_table.c.value == schedule_name
+
+    newest_first = event_table.c.id.desc()
+
+    statement = select(event_table.c.id, event_table.c.data)
+    statement = statement.select_from(attr_join)
+    statement = statement.where(and_(is_source, is_conn, is_run, is_server, is_listing_attr, is_same_schedule))
+    statement = statement.order_by(newest_first)
+    statement = statement.limit(1)
+
+    engine = get_audit_engine()
+
+    with engine.connect() as connection:
+        result = connection.execute(statement)
+        row = result.first()
+
+    if row is None:
+        return None
+
+    event_id, data = row
+    details = loads(data)
+
+    out = {
+        'event_id': event_id,
+        'fingerprint': details[Key_Listing_Fingerprint],
+        'event_time_iso': details[Key_Listing_Time_Iso],
+    }
 
     return out
 

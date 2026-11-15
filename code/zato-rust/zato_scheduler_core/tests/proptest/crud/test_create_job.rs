@@ -44,7 +44,7 @@ proptest! {
         state.jobs.insert(1, running_job);
         let running_job = state.jobs.get(&1).unwrap();
         prop_assert!(running_job.next_fire_utc.is_some());
-        prop_assert!(!running_job.in_flight);
+        prop_assert!(!running_job.is_in_flight());
         prop_assert_eq!(running_job.current_run, 0);
     }
 
@@ -73,8 +73,7 @@ proptest! {
     fn create_always_fresh_state(minutes in 1u32..60) {
         let scheduler_job = make_job(1, "interval_based", true, minutes, false);
         let running_job = RunningJob::from_scheduler_job(&scheduler_job);
-        prop_assert!(!running_job.in_flight);
-        prop_assert!(running_job.in_flight_since.is_none());
+        prop_assert!(!running_job.is_in_flight());
         prop_assert_eq!(running_job.current_run, 0);
     }
 }

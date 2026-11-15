@@ -155,6 +155,15 @@ class TokenBucketRegistry:
 
 # ################################################################################################################################
 
+    def check_in_group(self, key:'str', _group:'str', config:'TokenBucketConfig', now_us:'int') -> 'CheckResult':
+        """ Takes one token from the bucket of a key. The registry finds the keys of a group by their prefix,
+        so the group is not stored.
+        """
+        out = self.check_inner(key, config, now_us)
+        return out
+
+# ################################################################################################################################
+
     def remove(self, key:'str') -> 'None':
         """ Removes the bucket for the given key, if any.
         """

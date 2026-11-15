@@ -60,6 +60,16 @@ class ModuleCtx:
     # Response directives that keep a response out of the cache
     Uncacheable_Directives = ('no-store', 'no-cache', 'private')
 
+    # How often, in seconds, a request that does not hold the coalescing lock of its key reads the key again
+    Coalesce_Poll_Interval = 0.05
+
+    # The key under which the fingerprint of a channel item is memoized on the item
+    Fingerprint_Key = 'response_cache_fingerprint'
+
+    # Keys of a channel item absent from its fingerprint - the ones that a request memoizes on the item, derived from
+    # its other keys, and the response cache configuration, whose effective values join the key material of their own
+    Fingerprint_Excluded_Keys = ('response_cache', 'deprecation_headers', 'response_cache_parsed', 'response_cache_fingerprint')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -120,6 +130,9 @@ class ResponseCacheContext:
     is_admitted: 'bool'
     if_none_match: 'str'
     request_ctx: 'stranydict'
+
+    # The generation of the cached responses of the channel, read at the lookup
+    generation: 'int'
 
 # ################################################################################################################################
 # ################################################################################################################################

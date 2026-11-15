@@ -14,6 +14,7 @@ from time import time
 # Zato
 from zato.common.api import HTTP_SOAP
 from zato.common.exception import HTTP_RESPONSES
+from zato.server.connection.cache import ModuleCtx as CacheModuleCtx
 from zato.server.connection.http_soap.response_cache.common import ModuleCtx, parse_cache_control
 from zato.server.metrics import zato_rest_channel_cache_operations_total
 
@@ -83,15 +84,22 @@ def lookup(ctx:'ResponseCacheContext') -> 'strnone':
     marker in place makes the key eligible for coalescing and a full store.
     """
 
-    # A no-cache request never reads from the cache
+    generation_key = CacheModuleCtx.Response_Generation_Key.format(ctx.channel_id)
+
+    # A no-cache request never reads from the cache, but the generation its response is stored under is read all the same
     if ctx.skip_lookup:
+        ctx.generation = ctx.cache_api.get_counter(generation_key)
         zato_rest_channel_cache_operations_total.labels(ctx.channel_name, ModuleCtx.Outcome_Not_Cached).inc()
         return None
 
-    value = ctx.cache_api.get(ctx.key)
+    # The entry and the generation of the channel are read in one round trip
+    value, ctx.generation = ctx.cache_api.get_with_counter(ctx.key, generation_key)
 
-    # Nothing under the key at all - a first-ever miss
+    # Nothing under the key at all - a first-ever miss, which a channel that stores on the first miss
+    # admits to coalescing, since its first response is stored in full
     if value is None:
+        if not ctx.config.cache_on_second_request:
+            ctx.is_admitted = True
         zato_rest_channel_cache_operations_total.labels(ctx.channel_name, ModuleCtx.Outcome_Miss).inc()
         return None
 
@@ -174,8 +182,15 @@ def store(ctx:'ResponseCacheContext', body:'any_', status_code:'int') -> 'None':
         'path': ctx.path_and_query,
     }
 
-    ctx.cache_api.set(ctx.key, entry, ctx.config.ttl_seconds)
-    zato_rest_channel_cache_operations_total.labels(ctx.channel_name, ModuleCtx.Outcome_Stored).inc()
+    # The entry is stored only while the generation of the channel is the one read at the lookup,
+    # so a response whose service ran before a purge is never stored after it
+    generation_key = CacheModuleCtx.Response_Generation_Key.format(ctx.channel_id)
+    is_stored = ctx.cache_api.set_if_counter(ctx.key, entry, ctx.config.ttl_seconds, generation_key, ctx.generation)
+
+    if is_stored:
+        zato_rest_channel_cache_operations_total.labels(ctx.channel_name, ModuleCtx.Outcome_Stored).inc()
+    else:
+        zato_rest_channel_cache_operations_total.labels(ctx.channel_name, ModuleCtx.Outcome_Not_Cached).inc()
 
 # ################################################################################################################################
 
@@ -183,6 +198,12 @@ def purge_channel(cache_api:'CacheAPI', channel_id:'int') -> 'None':
     """ Deletes all the cached responses of one channel - a prefix delete over its key space.
     """
     prefix = _response_cache.Key_Prefix.format(channel_id)
+
+    # A response whose service ran before this point is no longer stored ..
+    generation_key = CacheModuleCtx.Response_Generation_Key.format(channel_id)
+    _ = cache_api.increment_counter(generation_key)
+
+    # .. and the ones stored already are deleted.
     cache_api.delete_by_prefix(prefix)
 
 # ################################################################################################################################

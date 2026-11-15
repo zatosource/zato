@@ -85,8 +85,5 @@ fuzz_target!(|data: &[u8]| {
                 "active job with interval and start_date must have next_fire"
             );
         }
-        if !running_job.in_flight {
-            assert!(running_job.in_flight_since.is_none());
-        }
     }
 });

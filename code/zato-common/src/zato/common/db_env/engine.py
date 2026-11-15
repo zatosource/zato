@@ -39,6 +39,7 @@ if 0:
     from sqlalchemy import MetaData
     from sqlalchemy.engine import Engine
     from zato.common.db_env.common import EnvDBConfig
+    from zato.common.db_env.process_queue import ProcessQueue
     from zato.common.typing_ import any_, anydict, anytuple, callable_, stranydict, strtuple
 
     # Dummy assignments to satisfy type checkers
@@ -47,6 +48,7 @@ if 0:
     Engine = Engine
     EnvDBConfig = EnvDBConfig
     MetaData = MetaData
+    ProcessQueue = ProcessQueue
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,6 +57,14 @@ if 0:
 # each time it is returned, and under a steady load each reconnection repeats the authentication handshake
 # and the preparation of statements.
 _network_max_overflow = 0
+
+# The smallest pool that one worker process receives of a configured pool, with which the push deliveries of the worker
+# still hold a connection of their share. A configured pool below it is used as it is.
+Min_Worker_Pool_Size = 4
+
+# The worker processes of the server among which the configured pool of each network database is divided,
+# one in a server with one process and in every process that is not a server
+_pool_worker_count = 1
 
 # The PostgreSQL advisory lock under which the schemas are created
 _schema_lock_key = 7_401_852_117_309
@@ -77,6 +87,11 @@ _sqlite_file_engine_cache:'anydict' = {}
 # The busy timeout of SQLite does not queue its waiters, and with a hundred threads writing at once
 # a single thread can wait past the timeout.
 _sqlite_write_locks:'anydict' = {}
+
+# The queues of the shared region in which the worker processes of one server take turns for the writes to one SQLite file,
+# by the URL of the file. The thread lock of the file admits one thread of a worker to the queue at a time,
+# and a server with one process has no queues.
+_process_queues:'anydict' = {}
 
 # The lock of the threads of the operating system, which the threads of the gevent pool require.
 _allocate_thread_lock = get_original('_thread', 'allocate_lock')
@@ -180,6 +195,27 @@ def create_schema(engine:'Engine', metadata:'MetaData') -> 'None':
 
 # ################################################################################################################################
 
+def set_pool_worker_count(worker_count:'int') -> 'None':
+    """ Divides the pool of each network database that this process and the processes it forks create
+    among the given number of worker processes.
+    """
+    global _pool_worker_count
+    _pool_worker_count = worker_count
+
+# ################################################################################################################################
+
+def get_worker_pool_size(pool_size:'int') -> 'int':
+    """ Returns the part of a configured pool size that one worker process receives, so that the workers together
+    hold no more connections than configured, unless the minimum of a worker requires more.
+    """
+    share = pool_size // _pool_worker_count
+    floor = min(pool_size, Min_Worker_Pool_Size)
+
+    out = max(share, floor)
+    return out
+
+# ################################################################################################################################
+
 def _get_cache_key(config:'EnvDBConfig') -> 'strtuple':
     """ Returns a cache key covering all the environment variables that influence the engine.
     """
@@ -263,7 +299,7 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
         # .. stores with many concurrent small transactions also need enough
         # .. connections for the database to group their commits into shared flushes ..
         if config.needs_pool:
-            engine_kwargs['pool_size'] = values['pool_size']
+            engine_kwargs['pool_size'] = get_worker_pool_size(values['pool_size'])
             engine_kwargs['max_overflow'] = _network_max_overflow
 
     out = create_engine(engine_url, connect_args=connect_args, **engine_kwargs)
@@ -349,6 +385,14 @@ def _call_under_lock(lock:'any_', func:'callable_', args:'anytuple') -> 'any_':
 
 # ################################################################################################################################
 
+def set_process_queue(engine:'Engine', process_queue:'ProcessQueue') -> 'None':
+    """ Makes the writes of this worker process to the SQLite file of an engine take turns with those of the other workers.
+    """
+    url = str(engine.url)
+    _process_queues[url] = process_queue
+
+# ################################################################################################################################
+
 def call_database(engine:'Engine', func:'callable_', *args:'any_') -> 'any_':
     """ Runs one blocking database call, in the thread pool of the gevent hub if the engine needs it.
     """
@@ -363,10 +407,30 @@ def call_database(engine:'Engine', func:'callable_', *args:'any_') -> 'any_':
 
         hub = get_hub()
         threadpool = hub.threadpool
-        out = threadpool.apply(_call_under_lock, (write_lock, func, args))
+
+        # The thread that waits for the turn of this worker blocks in the pool, while the greenlet of the caller is suspended
+        if process_queue := _process_queues.get(url):
+            out = threadpool.apply(process_queue.run_under_lock, (write_lock, func, args))
+        else:
+            out = threadpool.apply(_call_under_lock, (write_lock, func, args))
     else:
         out = func(*args)
 
+    return out
+
+# ################################################################################################################################
+
+def _execute_in_transaction(engine:'Engine', statement:'any_', *params:'any_') -> 'any_':
+    with engine.begin() as connection:
+        out = connection.execute(statement, *params)
+    return out
+
+# ################################################################################################################################
+
+def execute_write(engine:'Engine', statement:'any_', *params:'any_') -> 'any_':
+    """ Runs one write statement in a transaction of its own, in turn with the other writes of the server to the same SQLite file.
+    """
+    out = call_database(engine, _execute_in_transaction, engine, statement, *params)
     return out
 
 # ################################################################################################################################

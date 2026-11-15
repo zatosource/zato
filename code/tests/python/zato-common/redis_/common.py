@@ -8,8 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.crypto.api import CryptoManager
-from zato.common.redis_env import get_redis_conn_from_values, Default_DB, Default_Host, Default_Port, Default_SSL, \
-    Default_SSL_Verify
+from zato.common.redis_env import get_redis_conn_from_values, Default_DB, Default_Host, Default_Pool_Size, \
+    Default_Pool_Timeout, Default_Port, Default_SSL, Default_SSL_Verify
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,6 +37,8 @@ def build_values(details:'stranydict') -> 'stranydict':
         'ssl_cert_file': '',
         'ssl_key_file':  '',
         'ssl_verify':    Default_SSL_Verify,
+        'pool_size':     Default_Pool_Size,
+        'pool_timeout':  Default_Pool_Timeout,
     }
 
     # .. overlaid with the details of the server under test.

@@ -931,6 +931,7 @@ dependencies = [
  "proptest",
  "pyo3",
  "rand 0.10.1",
+ "rustix",
  "rustls",
  "rustls-pki-types",
  "socket2",

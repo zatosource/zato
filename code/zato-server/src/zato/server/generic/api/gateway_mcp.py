@@ -95,9 +95,9 @@ class GatewayMCPWrapper:
         session_ttl = self.config.get('session_ttl')
 
         if session_ttl:
-            session_manager = MCPSessionManager(ttl=session_ttl)
+            session_manager = MCPSessionManager(self.config.name, ttl=session_ttl)
         else:
-            session_manager = MCPSessionManager()
+            session_manager = MCPSessionManager(self.config.name)
 
         # .. response shaping configs come from the same flat gateway config -
         # editing the gateway rebuilds this wrapper, so changes apply without a restart ..

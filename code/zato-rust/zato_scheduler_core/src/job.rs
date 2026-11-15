@@ -1,5 +1,6 @@
 //! Runtime job representation and schedule computation.
 
+use std::collections::BTreeMap;
 use std::time::Instant;
 
 use chrono::{DateTime, LocalResult, TimeZone, Utc};
@@ -94,12 +95,9 @@ pub struct RunningJob {
     pub next_nominal_utc: Option<DateTime<Utc>>,
     /// Monotonic instant corresponding to `next_fire_utc`.
     pub next_fire_instant: Option<Instant>,
-    /// Whether the job is currently executing.
-    pub in_flight: bool,
-    /// Monotonic instant when in-flight execution started.
-    pub in_flight_since: Option<Instant>,
-    /// Run number of the in-flight execution.
-    pub in_flight_run: Option<u32>,
+    /// Runs of the job that were fired and whose completion was not reported yet, each by its run number,
+    /// with the monotonic instant at which it was fired.
+    pub in_flight_runs: BTreeMap<u32, Instant>,
     /// Number of times this job has fired.
     pub current_run: u32,
 
@@ -179,9 +177,7 @@ impl RunningJob {
             next_fire_utc: None,
             next_nominal_utc: None,
             next_fire_instant: None,
-            in_flight: false,
-            in_flight_since: None,
-            in_flight_run: None,
+            in_flight_runs: BTreeMap::new(),
             current_run: 0,
             jitter_rng,
         };
@@ -240,11 +236,13 @@ impl RunningJob {
 
     /// Restores the run state that the server loaded from the common database for this job.
     ///
+    /// The run counter takes the count of the common database only when that count is higher,
+    /// because a run fired and not yet claimed is counted here and not there.
     /// A job whose repeats are used up, or a one-time job that already ran, does not fire again.
     /// An interval-based job whose latest due slot lies after the last claimed slot fires
     /// once for that slot at `now`, and every older missed slot is skipped.
     pub fn restore_run_state(&mut self, current_run: u32, last_slot: Option<DateTime<Utc>>, now: DateTime<Utc>) {
-        self.current_run = current_run;
+        self.raise_run_count(current_run);
 
         // An inactive job has no schedule to restore - activating it later computes one.
         if !self.is_active {
@@ -271,6 +269,28 @@ impl RunningJob {
             self.next_fire_utc = Some(now);
             self.next_nominal_utc = Some(latest_due);
             self.sync_instant_from_utc(now);
+        }
+    }
+
+    /// Restores the run count that the server loaded from the common database for a job whose schedule this
+    /// scheduler kept running, which therefore missed no slot.
+    ///
+    /// The next fire time is kept, because a slot that fired and that no worker claimed yet lies after
+    /// the last claimed slot and would otherwise be fired once more, and skipped by the worker as claimed.
+    pub const fn restore_run_count(&mut self, current_run: u32) {
+        self.raise_run_count(current_run);
+
+        // Runs claimed through other servers may have used up the repeats of the job
+        if self.is_repeats_exhausted() {
+            self.clear_next_fire();
+        }
+    }
+
+    /// Takes the run count of the common database only when it is higher than the counter of this job.
+    const fn raise_run_count(&mut self, current_run: u32) {
+        // Runs claimed through other servers raise the counter, and a run fired and not yet claimed keeps it
+        if current_run > self.current_run {
+            self.current_run = current_run;
         }
     }
 
@@ -332,6 +352,31 @@ impl RunningJob {
         self.compute_next_fire(reference);
     }
 
+    /// Whether any run of the job was fired and its completion was not reported yet.
+    #[must_use]
+    pub fn is_in_flight(&self) -> bool {
+        !self.in_flight_runs.is_empty()
+    }
+
+    /// Records the run of the given number as fired at the given instant.
+    pub fn start_run(&mut self, run: u32, since: Instant) {
+        self.in_flight_runs.insert(run, since);
+    }
+
+    /// Records the completion of the run of the given number.
+    ///
+    /// The other runs of the job remain in flight, so the completion of a forced run, or of a run
+    /// the server skipped, never lets the next slot fire while a scheduled run is still executing.
+    pub fn complete_run(&mut self, run: u32) {
+        self.in_flight_runs.remove(&run);
+    }
+
+    /// Returns the instant at which the earliest run still in flight was fired.
+    #[must_use]
+    pub fn earliest_in_flight_since(&self) -> Option<Instant> {
+        self.in_flight_runs.values().min().copied()
+    }
+
     /// Computes a `JobSummary` snapshot from the current job's scheduling state.
     ///
     /// Intended to be called under the state mutex. The returned value is fully
@@ -344,7 +389,7 @@ impl RunningJob {
             is_active: self.is_active,
             service: self.service.0.clone(),
             job_type: self.job_type.as_str().to_owned(),
-            in_flight: self.in_flight,
+            in_flight: self.is_in_flight(),
             current_run: self.current_run,
             interval_ms: self.interval_ms,
             next_fire_utc: self.next_fire_utc.map(|fire_dt| fire_dt.to_rfc3339()),

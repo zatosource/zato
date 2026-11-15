@@ -23,6 +23,7 @@ from sqlalchemy.exc import DBAPIError
 
 # Zato
 from zato.common.audit_log.common import event_dedup_table
+from zato.common.db_env.engine import execute_write
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -77,8 +78,7 @@ def acquire_dedup_key(engine:'Engine', dedup_key:'str', cid:'str', action:'str',
     insert_statement = insert_statement.values(**values)
 
     try:
-        with engine.begin() as connection:
-            _ = connection.execute(insert_statement)
+        _ = execute_write(engine, insert_statement)
 
     except DBAPIError:
 
@@ -118,8 +118,7 @@ def complete_dedup_key(engine:'Engine', dedup_key:'str', outcome:'str') -> 'None
 
     statement = statement.values(outcome=outcome, completed_at=now)
 
-    with engine.begin() as connection:
-        _ = connection.execute(statement)
+    _ = execute_write(engine, statement)
 
 # ################################################################################################################################
 
@@ -130,8 +129,7 @@ def release_dedup_key(engine:'Engine', dedup_key:'str') -> 'None':
     statement = delete(event_dedup_table)
     statement = statement.where(event_dedup_table.c.dedup_key == dedup_key)
 
-    with engine.begin() as connection:
-        _ = connection.execute(statement)
+    _ = execute_write(engine, statement)
 
 # ################################################################################################################################
 

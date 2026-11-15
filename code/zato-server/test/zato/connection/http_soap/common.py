@@ -11,7 +11,7 @@ from json import dumps, loads
 
 # Zato
 from zato.common.api import URL_TYPE
-from zato.common.typing_ import any_, anydict
+from zato.common.typing_ import any_, anydict, anytuple
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -22,6 +22,7 @@ class FakeCacheAPI:
     def __init__(self) -> 'None':
         self.data:'anydict' = {}
         self.ttl:'anydict' = {}
+        self.counters:'anydict' = {}
 
     def get(self, key:'str') -> 'any_':
         if key in self.data:
@@ -31,6 +32,43 @@ class FakeCacheAPI:
     def set(self, key:'str', value:'any_', expiry:'int'=0) -> 'None':
         self.data[key] = dumps(value)
         self.ttl[key] = expiry
+
+    def exists(self, key:'str') -> 'bool':
+        return key in self.data
+
+    def set_if_absent(self, key:'str', value:'any_', expiry:'int'=0) -> 'bool':
+        if key in self.data:
+            return False
+        self.set(key, value, expiry)
+        return True
+
+    def delete_if_value(self, key:'str', value:'any_') -> 'bool':
+        if key not in self.data:
+            return False
+        if self.data[key] != dumps(value):
+            return False
+        del self.data[key]
+        del self.ttl[key]
+        return True
+
+    def get_counter(self, counter_key:'str') -> 'int':
+        if counter_key in self.counters:
+            return self.counters[counter_key]
+        return 0
+
+    def get_with_counter(self, key:'str', counter_key:'str') -> 'anytuple':
+        out = (self.get(key), self.get_counter(counter_key))
+        return out
+
+    def increment_counter(self, counter_key:'str') -> 'int':
+        self.counters[counter_key] = self.get_counter(counter_key) + 1
+        return self.counters[counter_key]
+
+    def set_if_counter(self, key:'str', value:'any_', expiry:'int', counter_key:'str', counter:'int') -> 'bool':
+        if self.get_counter(counter_key) != counter:
+            return False
+        self.set(key, value, expiry)
+        return True
 
     def delete_by_prefix(self, prefix:'str') -> 'None':
         for key in list(self.data):

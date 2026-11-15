@@ -35,12 +35,14 @@ logger = getLogger(__name__)
 _round_wait = PubSub.Delivery.Retry_Round_Wait
 
 # Why a round was stopped between two of its attempts, or before an attempt was sent - the message left the queue
-# in the meantime, the attempt could not be recorded in the database, or another server took over the database.
+# in the meantime, the attempt could not be recorded in the database, another server took over the database,
+# or a replacement worker started in the slot of the delivering worker.
 Interrupt_Paused    = 'paused'
 Interrupt_Expired   = 'expired'
 Interrupt_Withdrawn = 'withdrawn'
 Interrupt_Database  = 'database'
 Interrupt_Replaced  = 'replaced'
+Interrupt_Fenced    = 'fenced'
 
 _percent = 100
 
@@ -72,6 +74,14 @@ class SendRejected(Exception):
         self.error = error
         self.response = response
         self.is_permanent = is_permanent
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DeliveryFenced(Exception):
+    """ Raised when the generation of the slot of a delivering worker changed, because a replacement worker started
+    in the slot, so the worker records no further outcome.
+    """
 
 # ################################################################################################################################
 # ################################################################################################################################

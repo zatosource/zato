@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from dataclasses import dataclass
 from logging import getLogger
-from threading import Lock, Thread
+from threading import Condition, Lock, Thread
 from time import monotonic, sleep
 
 # ################################################################################################################################
@@ -131,8 +131,14 @@ class EventBuffer:
         self.max_wait_ms = max_wait_ms
         self.write_batch = write_batch
 
-        # Guards the pending list and the first-added timestamp
+        # Guards the pending list, the first-added timestamp and the state of the timed flusher
         self._lock = Lock()
+
+        # Signaled when the timed flusher has written the batch that it took out of the buffer
+        self._flusher_done = Condition(self._lock)
+
+        # Whether the timed flusher is writing a batch that it took out of the buffer
+        self._is_flusher_writing = False
 
         # What is waiting to be written
         self._pending:'pending_event_list' = []
@@ -189,9 +195,14 @@ class EventBuffer:
 # ################################################################################################################################
 
     def flush(self) -> 'None':
-        """ Writes out everything currently buffered.
+        """ Writes out everything currently buffered, after the batch that the timed flusher is writing, if any,
+        so that every event added before the call is in the database when it returns.
         """
         with self._lock:
+
+            while self._is_flusher_writing:
+                _ = self._flusher_done.wait()
+
             batch = self._pending
             self._pending = []
 
@@ -231,12 +242,13 @@ class EventBuffer:
                     if waited >= max_wait_seconds:
                         batch = self._pending
                         self._pending = []
+                        self._is_flusher_writing = True
                     else:
                         batch = None
                 else:
                     batch = None
 
-            # .. and write outside the lock.
+            # .. write it outside the lock ..
             if batch:
 
                 batch_size = len(batch)
@@ -249,6 +261,11 @@ class EventBuffer:
                     _ = self.write_batch(batch)
                 except Exception:
                     logger.warning('Audit log flush failed', exc_info=True)
+
+                # .. after which a flush that waits for this batch may continue.
+                with self._lock:
+                    self._is_flusher_writing = False
+                    self._flusher_done.notify_all()
 
                 flush_elapsed = monotonic() - flush_start
                 flush_elapsed_ms = flush_elapsed * 1000

@@ -23,7 +23,15 @@ from zato.common.util.time_of_day import hh_mm_to_minutes, now_us_to_minutes, ti
 logger = logging.getLogger('zato_rate_limiting')
 
 if 0:
+    from zato.common.rate_limiting.region import RegionFixedWindowRegistry, RegionTokenBucketRegistry
     from zato.common.typing_ import stranydict, strdictlist, strlist
+
+    RegionFixedWindowRegistry = RegionFixedWindowRegistry
+    RegionTokenBucketRegistry = RegionTokenBucketRegistry
+
+    # The registries of one process, or those of the shared region of a server with several workers
+    anytokenbucketregistry = TokenBucketRegistry | RegionTokenBucketRegistry
+    anyfixedwindowregistry = FixedWindowRegistry | RegionFixedWindowRegistry
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -527,8 +535,8 @@ class SlottedCIDRMatcher:
     def check(
         self,
         client_ip:'str',
-        token_bucket_registry:'TokenBucketRegistry',
-        fixed_window_registry:'FixedWindowRegistry',
+        token_bucket_registry:'anytokenbucketregistry',
+        fixed_window_registry:'anyfixedwindowregistry',
         now_us:'int',
         key_prefix:'str' = '',
         key_suffix:'str' = '',
@@ -560,9 +568,11 @@ class SlottedCIDRMatcher:
 
         cidr_key     = match.key
 
-        # .. build a composite key so each time range has its own counters ..
+        # .. build a composite key so each time range has its own counters, in the group
+        # that a clear of the counters of the rule resets ..
         time_range_index = match.rule.time_range.index(time_range)
-        composite_key    = f'{key_prefix}{cidr_key}:{key_suffix}{time_range_index}'
+        group            = f'{key_prefix}{cidr_key}:'
+        composite_key    = f'{group}{key_suffix}{time_range_index}'
 
         # Our response to produce
         out = SlottedCheckResult()
@@ -584,8 +594,8 @@ class SlottedCIDRMatcher:
         token_bucket_config = TokenBucketConfig.from_parts(time_range.rate, time_range.burst)
         fixed_window_config = FixedWindowConfig.from_parts(time_range.limit, time_range.limit_unit)
 
-        token_bucket_result = token_bucket_registry.check_inner(composite_key, token_bucket_config, now_us)
-        fixed_window_result = fixed_window_registry.check_inner(composite_key, fixed_window_config, now_us)
+        token_bucket_result = token_bucket_registry.check_in_group(composite_key, group, token_bucket_config, now_us)
+        fixed_window_result = fixed_window_registry.check_in_group(composite_key, group, fixed_window_config, now_us)
 
         out.is_allowed = token_bucket_result.is_allowed and fixed_window_result.is_allowed
 

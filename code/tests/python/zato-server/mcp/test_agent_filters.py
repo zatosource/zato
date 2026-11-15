@@ -87,7 +87,7 @@ def _make_handler(
 
     # The mock stands in for the real registry, which the handler only ever duck-types against
     registry = cast_('any_', _MockToolRegistry())
-    session_manager = MCPSessionManager()
+    session_manager = MCPSessionManager(_test_public_name)
 
     safeguard_config = build_safeguard_config(gateway_config)
     token_cap_config = build_token_cap_config(gateway_config)

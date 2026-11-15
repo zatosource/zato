@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from hashlib import sha256
+from json import dumps
 from urllib.parse import parse_qsl
 
 # Zato
@@ -20,7 +21,7 @@ from zato.server.metrics import zato_rest_channel_cache_operations_total
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anytuple, stranydict, strlist
+    from zato.common.typing_ import any_, anydict, anytuple, stranydict, strlist
     from zato.server.connection.cache import CacheAPI
     from zato.server.connection.http_soap.response_cache.common import ResponseCacheConfig
     anydict = anydict
@@ -35,9 +36,69 @@ _response_cache = HTTP_SOAP.ResponseCache
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _is_plain_value(value:'any_') -> 'bool':
+    """ Returns True when a value consists only of strings, numbers, booleans, None, lists and dicts with string keys,
+    which serialize to the same text in every process.
+    """
+    if value is None:
+        return True
+
+    if isinstance(value, (str, int, float, bool)):
+        return True
+
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            if not _is_plain_value(item):
+                return False
+        return True
+
+    if isinstance(value, dict):
+        for item_key, item_value in value.items():
+            if not isinstance(item_key, str):
+                return False
+            if not _is_plain_value(item_value):
+                return False
+        return True
+
+    return False
+
+# ################################################################################################################################
+
+def get_channel_fingerprint(channel_item:'anydict') -> 'str':
+    """ Returns the fingerprint of the configuration of a channel item, the hash of its plain values, which is the same
+    in every process that built the item from the same configuration. The fingerprint is memoized on the channel item -
+    a configuration change rebuilds the item, which drops the memoized value along with it.
+    """
+
+    # The memoized value may exist from a previous request ..
+    if ModuleCtx.Fingerprint_Key in channel_item:
+        out = channel_item[ModuleCtx.Fingerprint_Key]
+        return out
+
+    # .. otherwise, the plain values are collected, without the ones that requests memoize on the item,
+    # and without objects whose representation differs between processes ..
+    plain:'stranydict' = {}
+
+    for name, value in channel_item.items():
+        if name in ModuleCtx.Fingerprint_Excluded_Keys:
+            continue
+        if _is_plain_value(value):
+            plain[name] = value
+
+    # .. and their canonical serialization is hashed and memoized.
+    serialized = dumps(plain, sort_keys=True)
+    out = sha256(serialized.encode('utf8')).hexdigest()
+
+    channel_item[ModuleCtx.Fingerprint_Key] = out
+
+    return out
+
+# ################################################################################################################################
+
 def _build_key_material(
     config:'ResponseCacheConfig',
     channel_id:'int',
+    fingerprint:'str',
     request_ctx:'stranydict',
     payload:'bytes',
     ) -> 'anytuple':
@@ -96,7 +157,7 @@ def _build_key_material(
     else:
         body_hash = ''
 
-    material = '\n'.join((str(channel_id), method, path, sorted_query, caller, vary_part, body_hash))
+    material = '\n'.join((str(channel_id), fingerprint, method, path, sorted_query, caller, vary_part, body_hash))
 
     if sorted_query:
         path_and_query = f'{path}?{sorted_query}'
@@ -150,7 +211,12 @@ def get_context(
             return None
 
     channel_id = channel_item['id']
-    material, path_and_query = _build_key_material(config, channel_id, request_ctx, payload)
+
+    # A response computed under one configuration of the channel is stored under a key that no request
+    # dispatched under another configuration reads
+    fingerprint = get_channel_fingerprint(channel_item)
+
+    material, path_and_query = _build_key_material(config, channel_id, fingerprint, request_ctx, payload)
 
     material_hash = sha256(material.encode('utf8')).hexdigest()
     key_prefix = _response_cache.Key_Prefix.format(channel_id)

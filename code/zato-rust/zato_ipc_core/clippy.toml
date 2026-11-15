@@ -1,0 +1,3 @@
+too-many-arguments-threshold = 5
+min-ident-chars-threshold = 3
+allowed-idents-below-min-chars = ["dt", "f", "ok"]

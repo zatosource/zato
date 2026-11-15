@@ -37,8 +37,9 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.db_env import Default_SSL, Default_SSL_Verify, Default_Type, dispose_env_engine, get_env_engine, \
     Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.commit_queue import CommitQueue
-from zato.common.db_env.engine import call_database
+from zato.common.db_env.engine import call_database, execute_write
 from zato.common.util.api import as_bool, utcnow
+from zato.common.worker_slot import get_worker_slot, ModuleCtx as WorkerSlotCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -429,6 +430,13 @@ class AuditLog:
         if parents is None:
             parents = []
 
+        # .. the event of a worker of a multi-process server names the slot of the worker,
+        # .. in a dict of its own, because the caller may reuse its attributes for other events ..
+        worker_slot = get_worker_slot()
+
+        if worker_slot is not None:
+            attrs = {**attrs, WorkerSlotCtx.Attr_Name: worker_slot}
+
         # .. and package the event up with everything that is written alongside it.
         pending = PendingEvent()
 
@@ -495,9 +503,7 @@ class AuditLog:
             })
 
         insert_statement = event_link_table.insert()
-
-        with self.engine.begin() as connection:
-            _ = connection.execute(insert_statement, rows)
+        _ = execute_write(self.engine, insert_statement, rows)
 
 # ################################################################################################################################
 

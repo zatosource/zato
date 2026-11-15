@@ -366,7 +366,7 @@ def make_mcp_handler(wrapper:'GatewayMCPWrapper', invoke_timeout:'int'=MCP.Defau
     with response shaping and input validation off.
     """
 
-    session_manager = MCPSessionManager()
+    session_manager = MCPSessionManager(_test_public_name)
 
     safeguard_config = build_safeguard_config({})
     token_cap_config = build_token_cap_config({})

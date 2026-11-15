@@ -24,6 +24,7 @@ from sqlalchemy import select, update
 
 # Zato
 from zato.common.audit_log.common import alert_table
+from zato.common.db_env.engine import execute_write
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -114,8 +115,7 @@ def raise_alert(engine:'Engine', rule:'AlertRule', finding:'Finding', now:'datet
             statement = statement.where(alert_table.c.id == existing['id'])
             statement = statement.values(count=new_count, last_raised_at=now, message=finding.message)
 
-            with engine.begin() as connection:
-                _ = connection.execute(statement)
+            _ = execute_write(engine, statement)
 
             out.alert_id = existing['id']
             out.is_new = False
@@ -137,8 +137,8 @@ def raise_alert(engine:'Engine', rule:'AlertRule', finding:'Finding', now:'datet
         'last_raised_at': now,
     }
 
-    with engine.begin() as connection:
-        result = connection.execute(alert_table.insert().values(**values))
+    insert_statement = alert_table.insert().values(**values)
+    result = execute_write(engine, insert_statement)
 
     out.alert_id = result.inserted_primary_key[0]
     out.is_new = True

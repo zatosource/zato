@@ -29,26 +29,28 @@ fn make_job() -> SchedulerJob {
     }
 }
 
-/// Mirrors what `handle_mark_complete` does to a job's runtime state -
-/// the run's historical record lives in the server's audit log now.
-const fn mark_complete(running_job: &mut RunningJob) {
-    running_job.in_flight = false;
-    running_job.in_flight_since = None;
-    running_job.in_flight_run = None;
-}
-
 proptest! {
 
     #[test]
-    fn clears_in_flight(current_run in 1u32..100_000) {
+    fn completion_removes_only_its_run(
+        runs in proptest::collection::btree_set(1u32..1_000, 1..8),
+        completed in 1u32..1_000,
+    ) {
         let scheduler_job = make_job();
         let mut running_job = RunningJob::from_scheduler_job(&scheduler_job);
-        running_job.in_flight = true;
-        running_job.in_flight_since = Some(std::time::Instant::now());
-        running_job.in_flight_run = Some(current_run);
-        mark_complete(&mut running_job);
-        prop_assert!(!running_job.in_flight);
-        prop_assert!(running_job.in_flight_since.is_none());
-        prop_assert!(running_job.in_flight_run.is_none());
+        let since = std::time::Instant::now();
+
+        for &run in &runs {
+            running_job.start_run(run, since);
+        }
+
+        running_job.complete_run(completed);
+
+        let mut expected = runs;
+        expected.remove(&completed);
+        let remaining: std::collections::BTreeSet<u32> = running_job.in_flight_runs.keys().copied().collect();
+
+        prop_assert_eq!(&remaining, &expected);
+        prop_assert_eq!(running_job.is_in_flight(), !expected.is_empty());
     }
 }

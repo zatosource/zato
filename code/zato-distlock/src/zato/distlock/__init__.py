@@ -12,7 +12,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import os
 from datetime import timedelta
-from errno import ENOENT
 from hashlib import sha256
 from tempfile import gettempdir
 from threading import current_thread
@@ -267,23 +266,13 @@ user={}
 
             logger.debug('About to unlock file %s', self.tmp_file_name)
 
+            # The file remains in place, because a process that opened it before a removal would lock the removed file
+            # while another process creates and locks a new file under the same path, and both would hold the lock
             unlock(self.tmp_file)
             self.tmp_file.close()
 
             if _has_debug:
                 logger.debug('Unlocked file %s', self.tmp_file_name)
-
-            try:
-                os.remove(self.tmp_file.name)
-            except OSError as exc:
-
-                # ENOENT = No such file, this is fine, apparently another process beat us to that lock's deletion.
-                # But any other exception needs to be re-raised.
-                if exc.errno != ENOENT:
-                    raise
-            else:
-                if _has_debug:
-                    logger.debug('Deleted lock file %s', self.tmp_file_name)
 
             if _has_debug:
                 logger.debug('Unlocked `%s`', self.tmp_file)

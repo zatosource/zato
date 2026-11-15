@@ -41,6 +41,11 @@ class ModuleCtx:
     Env_Delivered_Max_Messages = 'Zato_PubSub_Delivered_Max_Messages'
     Env_Delivered_Max_Days     = 'Zato_PubSub_Delivered_Max_Days'
 
+    # The environment variable with how long a fully delivered message is kept at least after it was received,
+    # in seconds, which the arbiter sets above the deadline of the writer process so that a publication sent again
+    # to a writer that replaced a terminated one still finds the message that the terminated one committed.
+    Env_Trace_Grace_Seconds = 'Zato_PubSub_Trace_Grace_Seconds'
+
     # The environment variable overriding how many rows one bulk statement may touch.
     Env_Batch_Size = 'Zato_PubSub_DB_Batch_Size'
 
@@ -68,6 +73,9 @@ _default_delivered_max_messages = 1_000_000
 
 # How many days a fully delivered message is retained for browsing and statistics.
 _default_delivered_max_days = 7
+
+# How long a fully delivered message is kept at least after it was received, in seconds, without a writer process.
+_default_trace_grace_seconds = 0
 
 # How many rows one bulk delete or update statement may touch.
 _default_batch_size = 5_000
@@ -169,6 +177,18 @@ def get_delivered_max_days() -> 'int':
         out = int(value)
     else:
         out = _default_delivered_max_days
+
+    return out
+
+# ################################################################################################################################
+
+def get_trace_grace_seconds() -> 'int':
+    """ Returns how long a fully delivered message is kept at least after it was received.
+    """
+    if value := os.environ.get(ModuleCtx.Env_Trace_Grace_Seconds, ''):
+        out = int(value)
+    else:
+        out = _default_trace_grace_seconds
 
     return out
 

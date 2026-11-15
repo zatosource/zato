@@ -7,8 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Boolean, Column, DDL, event, Identity, Index, Integer, MetaData, PrimaryKeyConstraint, \
-    String, Table, Text
+from sqlalchemy import BigInteger, Boolean, Column, DDL, event, Float, Identity, Index, Integer, MetaData, \
+    PrimaryKeyConstraint, String, Table, Text
 
 # Zato
 from zato.common.api import HTTP_SOAP, PubSub
@@ -229,6 +229,22 @@ publish_count_table = Table('pubsub_publish_count', metadata,
     _key_index('idx_pubsub_publish_count_key', 'topic_name', 'minute_ms', 'publisher'),
     sqlite_with_rowid=False,
 )
+
+# One row per session of an MCP gateway, so that a session opened through one worker process is found through any other.
+# Both times are readings of the monotonic clock, which every process of the host shares.
+mcp_session_table = Table('mcp_session', metadata,
+    Column('session_id', String(_short_column_len), primary_key=True),
+    Column('gateway_name', String(_short_column_len), nullable=False),
+    Column('identity', Text, nullable=False),
+    Column('protocol_version', String(_short_column_len), nullable=False),
+    Column('created_at', Float, nullable=False),
+    Column('last_seen_at', Float, nullable=False),
+
+    # The cap on the sessions of one identity counts the sessions of the identity in its gateway.
+    Index('idx_mcp_session_gateway_identity', 'gateway_name', 'identity'),
+)
+
+# ################################################################################################################################
 
 # The triggers that keep the counts and the traces in step with the rows are created along with the tables.
 register_counts(metadata)

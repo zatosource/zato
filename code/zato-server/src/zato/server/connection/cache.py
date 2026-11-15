@@ -21,7 +21,7 @@ from zato.common.typing_ import cast_
 
 if 0:
     from redis import Redis
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anytuple
     from zato.server.base.config_manager import ConfigManager
 
 # ################################################################################################################################
@@ -38,6 +38,44 @@ _response_cache = HTTP_SOAP.ResponseCache
 # ################################################################################################################################
 # ################################################################################################################################
 
+class ModuleCtx:
+
+    # The generation counter of the cached responses of a channel, outside the key space that a purge deletes
+    Response_Generation_Key = 'cache:generation:{}'
+
+    # The prefix of the coalescing lock of a cached response, outside the key space that a purge deletes
+    Response_Lock_Prefix = 'cache:lock:'
+
+    # Stores a value only while a counter holds the value read earlier, an absent counter reading as 0,
+    # with ARGV[3] as the expiry in seconds and 0 meaning no expiry.
+    Set_If_Counter_Script = """
+local current = redis.call('get', KEYS[2])
+if current == false then
+    current = '0'
+end
+if current ~= ARGV[1] then
+    return 0
+end
+if ARGV[3] == '0' then
+    redis.call('set', KEYS[1], ARGV[2])
+else
+    redis.call('set', KEYS[1], ARGV[2], 'EX', ARGV[3])
+end
+return 1
+"""
+
+    # Deletes a key only while it holds the value given, so a holder never deletes a key that expired
+    # and was stored again by another holder.
+    Delete_If_Value_Script = """
+if redis.call('get', KEYS[1]) == ARGV[1] then
+    return redis.call('del', KEYS[1])
+end
+return 0
+"""
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class CacheAPI:
     """ Redis-backed cache with get, set, delete, and exists operations.
     """
@@ -46,6 +84,9 @@ class CacheAPI:
 
         # Used to resolve channel names to their IDs when responses are invalidated by name
         self.config_manager = config_manager
+
+        self._set_if_counter = self.redis.register_script(ModuleCtx.Set_If_Counter_Script)
+        self._delete_if_value = self.redis.register_script(ModuleCtx.Delete_If_Value_Script)
 
 # ################################################################################################################################
 
@@ -87,10 +128,10 @@ class CacheAPI:
 
         if expiry:
             expiry_int = int(expiry)
-            self.redis.set(redis_key, serialized, ex=expiry_int)
+            _ = self.redis.set(redis_key, serialized, ex=expiry_int)
 
         else:
-            self.redis.set(redis_key, serialized)
+            _ = self.redis.set(redis_key, serialized)
 
 # ################################################################################################################################
 
@@ -112,11 +153,87 @@ class CacheAPI:
 
 # ################################################################################################################################
 
+    def get_with_counter(self, key:'str', counter_key:'str') -> 'anytuple':
+        """ Returns the value stored under the key, or None, and the value of a counter, 0 when the counter
+        does not exist, both read in one round trip.
+        """
+        redis_key = self._make_key(key)
+        redis_counter_key = self._make_key(counter_key)
+
+        raw, raw_counter = self.redis.mget([redis_key, redis_counter_key])
+
+        if raw is None:
+            value = None
+        else:
+            value = loads(raw)
+
+        if raw_counter is None:
+            counter = 0
+        else:
+            counter = int(raw_counter)
+
+        out = (value, counter)
+        return out
+
+# ################################################################################################################################
+
+    def get_counter(self, counter_key:'str') -> 'int':
+        """ Returns the value of a counter, 0 when the counter does not exist.
+        """
+        redis_counter_key = self._make_key(counter_key)
+        raw_counter = self.redis.get(redis_counter_key)
+
+        if raw_counter is None:
+            return 0
+
+        out = int(raw_counter)
+        return out
+
+# ################################################################################################################################
+
+    def increment_counter(self, counter_key:'str') -> 'int':
+        """ Increments a counter, which starts from 0, and returns its new value.
+        """
+        redis_counter_key = self._make_key(counter_key)
+
+        out = self.redis.incr(redis_counter_key)
+        return out
+
+# ################################################################################################################################
+
+    def set_if_counter(self, key:'str', value:'any_', expiry:'int', counter_key:'str', counter:'int') -> 'bool':
+        """ Stores a value under the key only while the counter holds the value given, in one atomic step.
+        Returns True when the value was stored. Expiry is in seconds, 0 means no expiry.
+        """
+        redis_key = self._make_key(key)
+        redis_counter_key = self._make_key(counter_key)
+        serialized = dumps(value)
+
+        stored = self._set_if_counter(keys=[redis_key, redis_counter_key], args=[counter, serialized, expiry])
+
+        out = bool(stored)
+        return out
+
+# ################################################################################################################################
+
+    def delete_if_value(self, key:'str', value:'any_') -> 'bool':
+        """ Deletes a key only while it holds the value given, in one atomic step. Returns True when the key was deleted.
+        """
+        redis_key = self._make_key(key)
+        serialized = dumps(value)
+
+        deleted = self._delete_if_value(keys=[redis_key], args=[serialized])
+
+        out = bool(deleted)
+        return out
+
+# ################################################################################################################################
+
     def delete(self, key:'str') -> 'None':
         """ Deletes a key from the cache. No-op if the key does not exist.
         """
         redis_key = self._make_key(key)
-        self.redis.delete(redis_key)
+        _ = self.redis.delete(redis_key)
 
 # ################################################################################################################################
 
@@ -145,6 +262,10 @@ class CacheAPI:
 
         channel_id = channel['id']
         prefix = _response_cache.Key_Prefix.format(channel_id)
+
+        # .. a response whose service read the data before this point is no longer stored ..
+        generation_key = ModuleCtx.Response_Generation_Key.format(channel_id)
+        _ = self.increment_counter(generation_key)
 
         # .. without a pattern, the whole prefix goes away ..
         if not pattern:

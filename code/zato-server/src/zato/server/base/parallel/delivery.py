@@ -23,9 +23,10 @@ from sqlalchemy.exc import DBAPIError
 from zato.common.api import DATA_FORMAT, MISC, PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.db_env.common import get_env_values
+from zato.common.db_env.engine import get_worker_pool_size
 from zato.common.db_env.outage import OutageTracker
-from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryInterrupted, Interrupt_Database, \
-    Interrupt_Expired, Interrupt_Paused, Interrupt_Replaced, Interrupt_Withdrawn
+from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryFenced, DeliveryInterrupted, \
+    Interrupt_Database, Interrupt_Expired, Interrupt_Fenced, Interrupt_Paused, Interrupt_Replaced, Interrupt_Withdrawn
 from zato.common.pubsub.sql.config import pubsub_db_config
 from zato.common.pubsub.sql.replaced import PubSubReplaced
 from zato.common.util.retry import RetryPolicy
@@ -36,6 +37,7 @@ from zato.common.util.time_ import parse_utc
 
 if 0:
     from gevent import Greenlet
+    from zato.common.pubsub.fence import DeliveryFence
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
     from zato.common.typing_ import anydict, anylist, callable_, intlist, strlist, strset
     from zato.server.base.parallel import ParallelServer
@@ -91,9 +93,12 @@ class PushDelivery:
     publications set, so no greenlet needs a dedicated database connection.
     """
 
-    def __init__(self, server:'ParallelServer', backend:'SQLPubSubBackend') -> 'None':
+    def __init__(self, server:'ParallelServer', backend:'SQLPubSubBackend', fence:'DeliveryFence') -> 'None':
         self.server = server
         self.backend = backend
+
+        # Each subscription key is delivered by the worker of the slot that owns it, under the generation of its slot
+        self.fence = fence
         self._stop_event = Event()
         self._greenlets:'sub_key_greenlet_dict' = {}
         self._paused:'strset' = set()
@@ -101,15 +106,19 @@ class PushDelivery:
 
         # Each read of a queue and each recorded attempt holds one of these slots while it uses a connection,
         # and no delivery holds one while it waits for a publication or sends a message to its endpoint.
-        pool_size = get_env_values(pubsub_db_config)['pool_size']
+        configured_pool_size = get_env_values(pubsub_db_config)['pool_size']
+        pool_size = get_worker_pool_size(configured_pool_size)
         slot_count = pool_size * _delivery_pool_share_numerator // _delivery_pool_share_denominator
         self._database_slots = BoundedSemaphore(slot_count)
 
 # ################################################################################################################################
 
     def start_sub_key(self, sub_key:'str') -> 'None':
-        """ Spawn a delivery greenlet for the given subscriber key.
+        """ Spawn a delivery greenlet for the given subscriber key, if the worker owns the key.
         """
+        if not self.fence.owns(sub_key):
+            return
+
         with self._lock:
             if sub_key not in self._greenlets:
                 self._greenlets[sub_key] = spawn(self._delivery_loop, sub_key)
@@ -129,10 +138,11 @@ class PushDelivery:
 
 # ################################################################################################################################
 
-    def pause_sub_key(self, sub_key:'str') -> 'None':
+    def pause_sub_key(self, sub_key:'str', join_timeout:'float'=_pause_join_timeout) -> 'None':
         """ Stops the delivery greenlet of one subscriber between two of its batches, rather than
         wherever it happens to be, which is what a queue being moved needs - a message whose delivery
         is cut in half is never acknowledged and goes out a second time when the queue starts again.
+        A pause that another worker asked for waits for a shorter time, within the deadline of its query.
         """
         with self._lock:
             self._paused.add(sub_key)
@@ -147,7 +157,7 @@ class PushDelivery:
         self.backend.notify_sub_keys([sub_key])
 
         # .. and this is where whatever is being delivered right now is waited for ..
-        _ = greenlet.join(timeout=_pause_join_timeout)
+        _ = greenlet.join(timeout=join_timeout)
 
         # .. while a greenlet still busy after all that time is stopped where it stands,
         # .. which is the same at-least-once trade-off that a server shutdown makes.
@@ -189,9 +199,15 @@ class PushDelivery:
         try:
             self._run_delivery_loop(sub_key)
 
-        # Another server took over the pub/sub database, so this one delivers nothing anymore.
+        # Another server took over the pub/sub database, so this one delivers nothing anymore ..
         except PubSubReplaced as e:
             logger.warning('PubSub delivery greenlet ended for sub_key `%s`: %s', sub_key, e)
+            return
+
+        # .. and a replacement worker started in the slot of this one, which records nothing further and terminates.
+        except DeliveryFenced as e:
+            logger.warning('PubSub delivery greenlet fenced for sub_key `%s`: %s', sub_key, e)
+            self.fence.on_fenced()
             return
 
         logger.info('PubSub delivery greenlet stopped for sub_key `%s`', sub_key)
@@ -217,7 +233,7 @@ class PushDelivery:
                     break
                 self._deliver_batch(pending, sub_key)
 
-            except PubSubReplaced:
+            except (PubSubReplaced, DeliveryFenced):
                 raise
 
             except Exception:
@@ -238,7 +254,7 @@ class PushDelivery:
                 if messages:
                     self._deliver_batch(messages, sub_key)
 
-            except PubSubReplaced:
+            except (PubSubReplaced, DeliveryFenced):
                 raise
 
             except Exception:
@@ -308,6 +324,7 @@ class PushDelivery:
             # An outgoing connection's queue acks each message as soon as it is concluded and counts out only
             # what the ack removed, so a delivery stopped in the middle of a batch leaves no concluded message behind ..
             if is_outgoing:
+                self.fence.check()
                 fully_delivered_count = self.backend.ack_messages(sub_key, [msg_id], [sequence_id])
                 self.server.config_manager.outgoing_queue_depth.lower(sub_key, fully_delivered_count)
 
@@ -318,6 +335,7 @@ class PushDelivery:
 
         # Delivered, expired and given-up messages all leave the queue - retrying
         # ran its course above, so nothing here is awaiting another attempt.
+        self.fence.check()
         _ = self.backend.ack_messages(sub_key, msg_ids, sequence_ids)
 
 # ################################################################################################################################
@@ -379,9 +397,13 @@ class PushDelivery:
                 logger.info('Message left the queue before delivery, sub_key `%s`, msg_id `%s`', sub_key, msg_id)
                 return True
 
-            # .. and once another server took over the database, this one sends nothing anymore.
+            # .. once another server took over the database, this one sends nothing anymore ..
             if e.reason == Interrupt_Replaced:
                 raise PubSubReplaced(str(e.__cause__)) from e
+
+            # .. and once a replacement worker started in this slot, this worker sends nothing anymore.
+            if e.reason == Interrupt_Fenced:
+                raise DeliveryFenced(str(e.__cause__)) from e
 
             self._conclude_expired(message, sub_config, sub_key)
             return True
@@ -463,6 +485,8 @@ class PushDelivery:
     ) -> 'None':
         """ Writes the one audit event describing how a push delivery concluded.
         """
+        # A worker whose slot received a replacement records no outcome
+        self.fence.check()
 
         # The backend has no audit log in unit tests only.
         if not self.backend.audit_log:
@@ -576,6 +600,12 @@ class PushDelivery:
         is still the active one. Each outcome other than a recorded attempt stops the round without counting
         as a failed attempt.
         """
+        # A worker whose slot received a replacement sends no further attempt
+        try:
+            self.fence.check()
+        except DeliveryFenced as e:
+            raise DeliveryInterrupted(Interrupt_Fenced, 0) from e
+
         try:
             with self._database_slots:
                 is_pending = self.backend.record_attempt(message)

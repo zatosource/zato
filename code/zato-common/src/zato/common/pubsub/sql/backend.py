@@ -20,13 +20,13 @@ from sqlalchemy import and_, select
 # Zato
 from zato.common.api import HTTP_SOAP, PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
-from zato.common.db_env.engine import call_database
 from zato.common.marshal_.api import Model
 from zato.common.pubsub.sql.admin import SQLAdminAPI
 from zato.common.pubsub.sql.config import get_batch_size, get_pull_lease_seconds
-from zato.common.pubsub.sql.pull import fetch_query, lease_messages, outgoing_fetch_query, payload_query
+from zato.common.pubsub.sql.pull import fetch_query, outgoing_fetch_query, payload_query
 from zato.common.pubsub.sql.schema import delivery_table, topic_sub_table
 from zato.common.pubsub.sql.writes import new_pending_publication
+from zato.common.pubsub.writer_process.remote import lease
 from zato.common.util.api import new_msg_id
 from zato.common.util.time_ import datetime_to_ms, parse_utc
 from zato.server.metrics import zato_pubsub_messages_delivered_total, zato_pubsub_messages_published_total
@@ -354,6 +354,9 @@ class SQLPubSubBackend(SQLAdminAPI):
 
         payload_cache = self.payload_cache
 
+        # A payload is kept only if no edit took place from this point to the moment it is kept
+        read_epoch = payload_cache.get_epoch()
+
         payloads:'strdict' = {}
         missing:'anydict' = {}
 
@@ -382,7 +385,7 @@ class SQLPubSubBackend(SQLAdminAPI):
 
             # A payload that was dropped already is not kept.
             if payload_row.payload is not None:
-                payload_cache.put(row.msg_id, payload, row.data_size)
+                payload_cache.put(row.msg_id, payload, row.data_size, read_epoch)
 
         # A message that left the database between the two queries has no payload, the same as a dropped one.
         for row in missing.values():
@@ -464,7 +467,7 @@ class SQLPubSubBackend(SQLAdminAPI):
         now_ms = self._database_now_ms()
         leased_until_ms = now_ms + get_pull_lease_seconds() * 1000
 
-        rows, attempts = call_database(engine, lease_messages, engine, sub_key, max_messages, max_len, now_ms, leased_until_ms)
+        rows, attempts = lease(engine, sub_key, max_messages, max_len, now_ms, leased_until_ms)
 
         out:'anylist' = []
 

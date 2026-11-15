@@ -17,24 +17,25 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 
 # SQLAlchemy
-from sqlalchemy import and_, select, update
+from sqlalchemy import and_, func, select, text, update
 
 # Zato
 from zato.common.analytics.api import get_analytics_engine, get_error_source, get_latency_bucket_index, get_status_class, \
     ErrorSource, Latency_Bucket_Count, usage_table, watermark_table
 from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditSource
-from zato.common.db_env.common import hour_period
+from zato.common.db_env.common import hour_period, Type_PostgreSQL
 from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.engine import Connection
+    from sqlalchemy.engine import Connection, Engine
     from zato.common.typing_ import anytuple, intlist
 
     # Dummy assignments to satisfy type checkers
     Connection = Connection
+    Engine = Engine
     anytuple = anytuple
     intlist = intlist
 
@@ -96,11 +97,36 @@ class _UsageState:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _get_newest_settled_event_id(engine:'Engine') -> 'int':
+    """ Returns the highest event id of a PostgreSQL audit database, at or below which no insert is still in progress.
+    """
+    table_name = engine.dialect.identifier_preparer.format_table(event_table)
+    lock_statement = text(f'LOCK TABLE {table_name} IN SHARE MODE')
+    max_statement = select(func.max(event_table.c.id))
+
+    # Each insert holds the ROW EXCLUSIVE lock of the table from before it draws its id until its transaction ends,
+    # so the SHARE lock is granted only after every id drawn so far is committed or rolled back,
+    # and every id drawn after the release of the lock is higher than the one read here.
+    with engine.begin() as connection:
+        _ = connection.execute(lock_statement)
+        result = connection.execute(max_statement)
+        out = result.scalar()
+
+    # An empty table has no events to read
+    if out is None:
+        out = 0
+
+    return out
+
+# ################################################################################################################################
+
 def _load_new_events(last_event_id:'int') -> 'list':
     """ Reads the channel responses the analytics store has not aggregated yet, oldest first.
     Responses are what the rollup runs on - they carry the caller, the HTTP status
     and the request duration, while request events know none of these yet.
     """
+    engine = get_audit_engine()
+
     source_matches = event_table.c.source.in_(_channel_sources)
     event_type_matches = event_table.c.event_type == AuditEvent.Response_Sent
     newer_than_watermark = event_table.c.id > last_event_id
@@ -110,6 +136,14 @@ def _load_new_events(last_event_id:'int') -> 'list':
         event_type_matches,
         newer_than_watermark,
     )
+
+    # The transactions of the workers commit in any order on PostgreSQL, so the read stops at the highest id
+    # below which every event is committed, and an event above it is read by a later run.
+    # On SQLite, each insert holds the write lock until its commit, so the events commit in the order of their ids.
+    if engine.dialect.name == Type_PostgreSQL:
+        newest_settled_id = _get_newest_settled_event_id(engine)
+        settled = event_table.c.id <= newest_settled_id
+        conditions = and_(conditions, settled)
 
     statement = select(
         event_table.c.id,
@@ -124,8 +158,6 @@ def _load_new_events(last_event_id:'int') -> 'list':
     statement = statement.where(conditions)
     statement = statement.order_by(event_table.c.id)
     statement = statement.limit(Batch_Size)
-
-    engine = get_audit_engine()
 
     with engine.connect() as connection:
         result = connection.execute(statement)
@@ -264,13 +296,13 @@ def _get_watermark(connection:'Connection') -> 'int':
     """ Returns the id of the last audit event already aggregated, creating and locking
     the watermark row on the way so overlapping runs serialize on it.
     """
-    select_statement = select(watermark_table.c.id, watermark_table.c.last_event_id)
+    select_statement = select(watermark_table.c.id)
 
     result = connection.execute(select_statement)
-    row = result.fetchone()
+    row_id = result.scalar()
 
     # The very first run creates the watermark row ..
-    if not row:
+    if row_id is None:
         insert_statement = watermark_table.insert()
         insert_statement = insert_statement.values(last_event_id=0)
         _ = connection.execute(insert_statement)
@@ -278,17 +310,23 @@ def _get_watermark(connection:'Connection') -> 'int':
         out = 0
         return out
 
-    row_id, last_event_id = row
-
     # .. later runs write it back unchanged first - the no-op update acquires the SQLite
     # write lock, so a second rollup started by an overlapping cron run waits here
-    # within the busy timeout until this one commits, then reads the advanced watermark.
+    # within the busy timeout until this one commits. The update assigns the column to itself,
+    # because a value read before the lock can be older than the one the other run commits ..
     update_statement = update(watermark_table)
     update_statement = update_statement.where(watermark_table.c.id == row_id)
-    update_statement = update_statement.values(last_event_id=last_event_id)
+    update_statement = update_statement.values(last_event_id=watermark_table.c.last_event_id)
     _ = connection.execute(update_statement)
 
-    out = last_event_id
+    # .. and reads the watermark only under that lock, because a read before the transaction began
+    # returns the watermark as it was before the commit of the other run.
+    locked_statement = select(watermark_table.c.last_event_id)
+    locked_statement = locked_statement.where(watermark_table.c.id == row_id)
+
+    result = connection.execute(locked_statement)
+    out = result.scalar_one()
+
     return out
 
 # ################################################################################################################################

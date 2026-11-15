@@ -25,11 +25,15 @@ from redis import Redis
 # requests
 import requests
 
+# Zato
+from zato.common.typing_ import cast_
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anydictnone, anylist, floatnone, intnone, strdict, strdictnone, strnone
+    from zato.common.typing_ import any_, anydict, anydictnone, anylist, floatnone, intnone, stranydict, strdict, \
+        strdictnone, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,8 +51,8 @@ class ModuleCtx:
     # The prefix of a channel's recv stream, the channel's id follows
     Recv_Stream_Prefix = 'zato:queue_bridge:stream:recv:'
 
-    Consumer_Group = 'server'
-    Consumer_Name = 'server-0'
+    # The prefix of the reply group of one worker, which is also the name of its one consumer, the slot follows
+    Reply_Group_Prefix = 'server-'
     Http_Base = 'http://127.0.0.1:35111'
 
     # How long a command's reply is waited for by default, in seconds
@@ -80,16 +84,25 @@ def get_recv_stream(channel_id:'int') -> 'str':
     return out
 
 # ################################################################################################################################
+
+def get_reply_group(slot:'int') -> 'str':
+    """ The reply group of the worker of one slot.
+    """
+    out = f'{ModuleCtx.Reply_Group_Prefix}{slot}'
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class QueueBridgeClient:
     """ The server's side of the queue bridge binary.
 
     Write commands go via Redis Streams (XADD to the command stream) and their replies come back through the reply
-    stream. Read queries go via HTTP GET to the queue bridge's actix-web API.
+    stream, which each worker reads through a group of its own slot. Read queries go via HTTP GET to the queue bridge's
+    actix-web API.
     """
 
-    def __init__(self, redis_conn:'Redis | None'=None) -> 'None':
+    def __init__(self, redis_conn:'Redis | None'=None, *, slot:'int') -> 'None':
         if redis_conn:
             self.redis = redis_conn
         else:
@@ -102,6 +115,9 @@ class QueueBridgeClient:
                 password=redis_password,
                 decode_responses=True,
             )
+
+        # Every reply reaches the group of every worker, and the worker that waits for it takes it.
+        self.reply_group = get_reply_group(slot)
 
         # The callers waiting for a reply, by correlation id
         self._pending:'anydict' = {}
@@ -146,7 +162,7 @@ class QueueBridgeClient:
 # ################################################################################################################################
 
     def _ensure_reply_group(self) -> 'None':
-        self.ensure_stream_group(self.redis, ModuleCtx.Reply_Stream, ModuleCtx.Consumer_Group)
+        self.ensure_stream_group(self.redis, ModuleCtx.Reply_Stream, self.reply_group)
 
 # ################################################################################################################################
 
@@ -157,13 +173,13 @@ class QueueBridgeClient:
 
         while True:
             try:
-                result = self._reply_redis.xreadgroup(
-                    groupname=ModuleCtx.Consumer_Group,
-                    consumername=ModuleCtx.Consumer_Name,
+                result = cast_('anylist', self._reply_redis.xreadgroup(
+                    groupname=self.reply_group,
+                    consumername=self.reply_group,
                     streams={ModuleCtx.Reply_Stream: '>'},
                     count=100,
                     block=ModuleCtx.Reply_Block_Ms,
-                )
+                ))
 
                 if not result:
                     continue
@@ -171,7 +187,7 @@ class QueueBridgeClient:
                 for _stream_name, messages in result:
                     for msg_id, fields in messages:
                         self._dispatch_reply(fields)
-                        _ = self._reply_redis.xack(ModuleCtx.Reply_Stream, ModuleCtx.Consumer_Group, msg_id)
+                        _ = self._reply_redis.xack(ModuleCtx.Reply_Stream, self.reply_group, msg_id)
 
             except Exception as exc:
 
@@ -353,7 +369,7 @@ class QueueBridgeClient:
         if headers is None:
             headers = {}
 
-        payload = {
+        payload:'stranydict' = {
             'conn_name': conn_name,
             'data': b64encode(data).decode('ascii'),
             'headers': headers,

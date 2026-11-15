@@ -54,8 +54,7 @@ proptest! {
         let mut running_job = RunningJob::from_scheduler_job(&scheduler_job);
         running_job.next_fire_utc = Some(Utc::now() - Duration::seconds(1));
         running_job.sync_instant_from_utc_pub(Utc::now());
-        running_job.in_flight = true;
-        running_job.in_flight_since = Some(std::time::Instant::now());
+        running_job.start_run(1, std::time::Instant::now());
         let mut state = SchedulerState::new();
         state.jobs.insert(1, running_job);
         let now = Utc::now();

@@ -17,9 +17,10 @@ from http.client import OK
 from unittest import TestCase, main
 
 # Zato
-from zato.common.typing_ import any_, anydict, cast_
+from zato.common.typing_ import any_, anydict, anylist, cast_
+from zato.server.connection import cache as cache_module
 from zato.server.connection.cache import CacheAPI
-from zato.server.connection.http_soap.response_cache import get_context, store, ResponseCacheContext
+from zato.server.connection.http_soap.response_cache import get_context, lookup, store, ResponseCacheContext
 
 # Zato - test helpers
 from test.zato.connection.http_soap.common import make_channel_item, make_environ, make_raw_config
@@ -52,6 +53,35 @@ class FakeRedis:
             if key.startswith(prefix):
                 yield key
 
+    def mget(self, keys:'anylist') -> 'anylist':
+        out = [self.data.get(key) for key in keys]
+        return out
+
+    def incr(self, key:'str') -> 'int':
+        out = int(self.data.get(key, 0)) + 1
+        self.data[key] = str(out)
+        return out
+
+    def register_script(self, script:'str') -> 'any_':
+        if script == cache_module.ModuleCtx.Set_If_Counter_Script:
+            return self._set_if_counter
+        return self._delete_if_value
+
+    def _set_if_counter(self, keys:'anylist', args:'anylist') -> 'int':
+        key, counter_key = keys
+        counter, serialized, _expiry = args
+        if int(self.data.get(counter_key, 0)) != counter:
+            return 0
+        self.data[key] = serialized
+        return 1
+
+    def _delete_if_value(self, keys:'anylist', args:'anylist') -> 'int':
+        key = keys[0]
+        if self.data.get(key) != args[0]:
+            return 0
+        del self.data[key]
+        return 1
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -78,6 +108,7 @@ class InvalidationTestCase(TestCase):
         environ = make_environ(path=path, query=query)
         ctx = get_context(self.cache_api, channel_item, environ, b'')
         assert ctx is not None
+        _ = lookup(ctx)
         ctx.request_ctx['zato.http.response.headers']['Content-Type'] = 'application/json'
         store(ctx, '{"result":"ok"}', OK)
 
@@ -91,7 +122,10 @@ class InvalidationTestCase(TestCase):
 
         self.cache_api.invalidate_response('test.channel')
 
-        self.assertEqual(self.fake_redis.data, {})
+        # Only the generation of the channel remains, outside the key space of its responses
+        generation_key = 'zato:cache:' + cache_module.ModuleCtx.Response_Generation_Key.format(123)
+        self.assertEqual(list(self.fake_redis.data), [generation_key])
+        self.assertEqual(self.fake_redis.data[generation_key], '1')
 
 # ################################################################################################################################
 

@@ -14,7 +14,6 @@ if not monkey.is_module_patched('threading'):
 
 # stdlib
 import random
-from json import dumps, loads
 from time import time
 from unittest import TestCase, main
 
@@ -25,27 +24,14 @@ from gevent.event import Event
 
 # Zato
 from zato.common.typing_ import any_, anydict, strlist
-from zato.server.connection.http_soap.response_cache import coalesce
+from zato.server.connection.cache import ModuleCtx as CacheModuleCtx
 from zato.server.connection.http_soap.response_cache import counters, invoke_coalesced, ResponseCacheConfig, \
     ResponseCacheContext
 
+# Zato - test helpers
+from test.zato.connection.http_soap.common import FakeCacheAPI
+
 # ################################################################################################################################
-# ################################################################################################################################
-
-class FakeCacheAPI:
-    """ An in-memory stand-in for the Redis-backed CacheAPI, JSON round-tripping values the same way.
-    """
-    def __init__(self) -> 'None':
-        self.data:'anydict' = {}
-
-    def get(self, key:'str') -> 'any_':
-        if key in self.data:
-            return loads(self.data[key])
-        return None
-
-    def set(self, key:'str', value:'any_', expiry:'int'=0) -> 'None':
-        self.data[key] = dumps(value)
-
 # ################################################################################################################################
 
 def make_ctx(cache_api:'any_', key:'str', is_admitted:'bool', coalesce_timeout:'float'=5) -> 'ResponseCacheContext':
@@ -96,11 +82,11 @@ class CoalescingBaseTestCase(TestCase):
 
     def setUp(self) -> 'None':
         counters.reset()
-        coalesce._key_locks.clear()
         self.cache = FakeCacheAPI()
 
-    def assert_lock_dict_empty(self) -> 'None':
-        self.assertEqual(coalesce._key_locks, {})
+    def assert_no_lock_key_remains(self) -> 'None':
+        for key in self.cache.data:
+            self.assertFalse(key.startswith(CacheModuleCtx.Response_Lock_Prefix))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -133,7 +119,7 @@ class InterleavingTestCase(CoalescingBaseTestCase):
         holder = spawn(invoke_coalesced, holder_ctx, holder_invoke, ())
         _ = holder_started.wait()
 
-        # The holder now owns the key's lock - the waiter blocks on it
+        # The holder now owns the key's lock - the waiter polls for the entry
         waiter = spawn(invoke_coalesced, waiter_ctx, waiter_invoke, ())
         sleep(0.05)
 
@@ -149,7 +135,7 @@ class InterleavingTestCase(CoalescingBaseTestCase):
         self.assertEqual(counters.coalesced_count, 1)
         self.assertEqual(counters.coalesce_timeout_count, 0)
 
-        self.assert_lock_dict_empty()
+        self.assert_no_lock_key_remains()
 
 # ################################################################################################################################
 
@@ -165,7 +151,7 @@ class InterleavingTestCase(CoalescingBaseTestCase):
             self.cache.set(key, make_entry('holder-body'))
             return 'holder-body'
 
-        # This time the waiter does invoke - its acquire times out below
+        # This time the waiter does invoke - its wait times out below
         def waiter_invoke() -> 'str':
             return 'waiter-body'
 
@@ -191,7 +177,7 @@ class InterleavingTestCase(CoalescingBaseTestCase):
         self.assertEqual(counters.invoke_count, 2)
         self.assertEqual(counters.coalesced_count, 0)
 
-        self.assert_lock_dict_empty()
+        self.assert_no_lock_key_remains()
 
 # ################################################################################################################################
 
@@ -230,7 +216,7 @@ class InterleavingTestCase(CoalescingBaseTestCase):
         self.assertEqual(counters.invoke_count, 2)
         self.assertEqual(counters.coalesce_timeout_count, 0)
 
-        self.assert_lock_dict_empty()
+        self.assert_no_lock_key_remains()
 
 # ################################################################################################################################
 
@@ -238,7 +224,7 @@ class InterleavingTestCase(CoalescingBaseTestCase):
 
         key = 'test.key.4'
 
-        # The entry lands in the cache between the fast-path read and the acquire -
+        # The entry lands in the cache between the fast-path read and the lock -
         # simulated here by pre-filling the cache before the call.
         self.cache.set(key, make_entry('cached-body'))
 
@@ -252,7 +238,7 @@ class InterleavingTestCase(CoalescingBaseTestCase):
         self.assertEqual(counters.invoke_count, 0)
         self.assertEqual(counters.coalesced_count, 1)
 
-        self.assert_lock_dict_empty()
+        self.assert_no_lock_key_remains()
 
 # ################################################################################################################################
 
@@ -291,8 +277,8 @@ class InterleavingTestCase(CoalescingBaseTestCase):
         self.assertEqual(counters.invoke_count, 2)
         self.assertEqual(counters.coalesced_count, 0)
 
-        # Non-admitted requests never touch the lock dict
-        self.assert_lock_dict_empty()
+        # Non-admitted requests never store a lock key
+        self.assert_no_lock_key_remains()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -345,8 +331,8 @@ class StressTestCase(CoalescingBaseTestCase):
         self.assertEqual(counters.coalesce_timeout_count, 0)
         self.assertEqual(counters.coalesced_count, greenlet_count - key_count)
 
-        # The cleanup invariant - the per-key lock dict never outlives its requests
-        self.assert_lock_dict_empty()
+        # The cleanup invariant - no lock key outlives its requests
+        self.assert_no_lock_key_remains()
 
 # ################################################################################################################################
 # ################################################################################################################################

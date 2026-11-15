@@ -10,11 +10,21 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from threading import Lock
 from time import monotonic
 
+# gevent
+from gevent import sleep
+
+# Zato
+from zato.common.hl7.mllp.region import get_mllp_binding, get_now_us, ModuleCtx as RegionCtx, seconds_to_us
+from zato_ipc_core.zato_ipc_core import ControlIdKey
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from zato.common.hl7.mllp.region import MLLPBinding
     from zato.common.typing_ import strfloatdict
+
+    MLLPBinding = MLLPBinding
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,14 +57,19 @@ def extract_control_id(msh_line:'str') -> 'str':
 
 class MessageDeduplicator:
     """ Thread-safe in-memory cache that tracks recently seen HL7 message control IDs
-    (MSH-10) and suppresses duplicates within a configurable time window.
+    (MSH-10) and suppresses duplicates within a configurable time window. In a worker that the arbiter bound
+    to the shared region, the control IDs of the channel are kept in the region, so a retransmission received
+    by any worker of the server is a duplicate.
     """
 
-    def __init__(self, ttl_seconds:'float', max_entries:'int'=Default_Max_Entries) -> 'None':
+    def __init__(self, ttl_seconds:'float', max_entries:'int'=Default_Max_Entries, scope:'str'='') -> 'None':
         """ Creates a dedup cache that remembers up to `max_entries` control IDs for `ttl_seconds`.
+        The scope is the channel whose control IDs the cache holds, which keeps them apart from those
+        of other channels in the shared region.
         """
         self.ttl_seconds = ttl_seconds
         self.max_entries = max_entries
+        self.scope = scope
 
         # A dict preserves insertion order, and an entry's timestamp is only ever set when it is
         # first inserted, so the cache is ordered oldest first and eviction can stop at the first
@@ -66,6 +81,12 @@ class MessageDeduplicator:
         """ Returns True if `control_id` was already seen within the TTL window.
         If not seen, records it and returns False.
         """
+        binding = get_mllp_binding()
+
+        if binding:
+            out = self._is_duplicate_in_region(binding, control_id)
+            return out
+
         now = monotonic()
 
         with self._lock:
@@ -81,6 +102,21 @@ class MessageDeduplicator:
 
             self._seen[control_id] = now
             return False
+
+    def _is_duplicate_in_region(self, binding:'MLLPBinding', control_id:'str') -> 'bool':
+        """ Checks and records a control ID in the table of the shared region, which every worker of the server checks.
+        """
+        key = ControlIdKey(self.scope, control_id)
+        ttl_us = seconds_to_us(self.ttl_seconds)
+
+        # Another worker holds the table for the duration of one check, and this one yields to its hub meanwhile
+        while True:
+            out = binding.region.dedup_check(key, binding.owner, ttl_us, get_now_us())
+
+            if out is not None:
+                return out
+
+            sleep(RegionCtx.Busy_Interval)
 
     def _evict_expired(self, now:'float') -> 'None':
         """ Removes the entries at the front of the cache that are older than the TTL window.

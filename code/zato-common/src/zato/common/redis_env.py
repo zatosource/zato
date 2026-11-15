@@ -15,7 +15,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import ssl
 
 # Redis
-from redis import Redis
+from redis import BlockingConnectionPool, Redis
 
 # Zato
 from zato.common.util.api import as_bool
@@ -39,6 +39,13 @@ Default_SSL = False
 
 # When SSL is on, the server certificate is verified unless turned off explicitly
 Default_SSL_Verify = True
+
+# How many connections the Redis client of one process opens at most,
+# each greenlet that issues a command holds one of them until the reply arrives
+Default_Pool_Size = 100
+
+# How long a greenlet waits for a connection while every connection of the pool is in use, in seconds
+Default_Pool_Timeout = 20
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -84,6 +91,13 @@ def get_redis_values_from_section(section:'any_') -> 'stranydict':
     out['ssl_ca_file']   = _get_section_value(section, 'ssl_ca_file', '')
     out['ssl_cert_file'] = _get_section_value(section, 'ssl_cert_file', '')
     out['ssl_key_file']  = _get_section_value(section, 'ssl_key_file', '')
+
+    # The size of the connection pool and the wait for a connection may arrive as strings as well
+    pool_size    = _get_section_value(section, 'pool_size', Default_Pool_Size)
+    pool_timeout = _get_section_value(section, 'pool_timeout', Default_Pool_Timeout)
+
+    out['pool_size']    = int(pool_size)
+    out['pool_timeout'] = float(pool_timeout)
 
     return out
 
@@ -138,7 +152,20 @@ def get_redis_conn_from_values(values:'stranydict', *, decode_responses:'bool'=F
     """
     connect_args = build_redis_connect_args(values, decode_responses=decode_responses)
 
-    out = Redis(**connect_args)
+    # The pool that the client builds from the arguments resolves the connection class and its arguments, SSL included ..
+    resolved = Redis(**connect_args).connection_pool
+
+    # .. and the pool of the process takes them over, so a greenlet that finds every connection in use
+    # waits for a released one instead of failing with MaxConnectionsError. After a fork, the pool
+    # of the new process opens its own connections, so every worker keeps a pool of its own.
+    pool = BlockingConnectionPool(
+        connection_class=resolved.connection_class,
+        max_connections=values['pool_size'],
+        timeout=values['pool_timeout'],
+        **resolved.connection_kwargs,
+    )
+
+    out = Redis(connection_pool=pool)
     return out
 
 # ################################################################################################################################

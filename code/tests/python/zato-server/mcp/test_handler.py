@@ -107,7 +107,7 @@ def _make_handler(
     if invoke_func is None:
         invoke_func = _invoke_success
 
-    session_manager = MCPSessionManager()
+    session_manager = MCPSessionManager(_test_public_name)
 
     # Response shaping and input validation stay off in these tests - empty configs keep every stage disabled.
     safeguard_config = build_safeguard_config({})

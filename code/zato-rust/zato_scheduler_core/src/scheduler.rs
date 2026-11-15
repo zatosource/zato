@@ -22,8 +22,14 @@ const DEFAULT_COALESCE_WINDOW_MS: i64 = 50;
 
 /// Mutable state guarded by the scheduler mutex.
 pub struct SchedulerState {
+
     /// Map of job id to its runtime representation.
     pub jobs: HashMap<i64, RunningJob>,
+
+    /// The number of the latest command or reload applied to each job, deleted jobs included,
+    /// from the counter that numbers every reload and every job command of the server.
+    pub job_sequences: HashMap<i64, u64>,
+
     /// Flag set whenever the state is mutated from outside the loop.
     pub dirty: bool,
 }
@@ -40,8 +46,20 @@ impl SchedulerState {
     pub fn new() -> Self {
         Self {
             jobs: HashMap::new(),
+            job_sequences: HashMap::new(),
             dirty: false,
         }
+    }
+
+    /// Whether a command or a reload numbered after the given number was applied to the job already.
+    #[must_use]
+    pub fn is_changed_after(&self, job_id: i64, sequence: u64) -> bool {
+        self.job_sequences.get(&job_id).is_some_and(|applied| *applied > sequence)
+    }
+
+    /// Records the number of the command or reload that was applied to the job last.
+    pub fn record_change(&mut self, job_id: i64, sequence: u64) {
+        self.job_sequences.insert(job_id, sequence);
     }
 }
 
@@ -179,7 +197,7 @@ pub fn scheduler_loop(
                     if running_job.is_active {
                         active += 1;
                     }
-                    if running_job.in_flight {
+                    if running_job.is_in_flight() {
                         in_flight += 1;
                     }
                 }
@@ -231,9 +249,8 @@ pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
             continue;
         }
 
-        if running_job.in_flight
-            && let Some(since) = running_job.in_flight_since
-        {
+        // The earliest run in flight is the first one to reach its execution time limit
+        if let Some(since) = running_job.earliest_in_flight_since() {
             let elapsed_ms = i64::try_from(now_instant.saturating_duration_since(since).as_millis()).unwrap_or(i64::MAX);
             let limit_ms = i64::try_from(running_job.max_execution_time_ms).unwrap_or(i64::MAX);
             let until_timeout_ms = (limit_ms - elapsed_ms).max(1);
@@ -284,7 +301,7 @@ pub fn collect_due_jobs(
             continue;
         }
 
-        if running_job.in_flight {
+        if running_job.is_in_flight() {
             continue;
         }
 
@@ -303,9 +320,8 @@ pub fn collect_due_jobs(
             running_job.service,
         );
 
-        running_job.in_flight = true;
-        running_job.in_flight_since = Some(Instant::now());
-        running_job.in_flight_run = Some(running_job.current_run);
+        let current_run = running_job.current_run;
+        running_job.start_run(current_run, Instant::now());
 
         batch.push(FireBatch {
             job_id: running_job.id,
@@ -328,20 +344,24 @@ pub fn collect_due_jobs(
     batch
 }
 
-/// Checks all in-flight jobs for execution-time timeouts, clears their in-flight
-/// state and returns the timeout events the server records in the audit log.
+/// Checks every run in flight of every job for execution-time timeouts, removes each run
+/// that exceeded the limit and returns the timeout events the server records in the audit log.
 pub fn check_in_flight_timeouts(state: &mut SchedulerState, deferred: &mut DeferredLog) -> Vec<TimeoutEvent> {
     let now_instant = Instant::now();
     let mut timeout_events = Vec::new();
 
     for (&job_id, running_job) in &mut state.jobs {
-        if !running_job.in_flight {
-            continue;
-        }
-        let Some(since) = running_job.in_flight_since else { continue };
-        let elapsed_ms = u64::try_from(now_instant.duration_since(since).as_millis()).unwrap_or(u64::MAX);
-        if elapsed_ms > running_job.max_execution_time_ms {
-            let timed_out_run = running_job.in_flight_run.unwrap_or(0);
+        // Each run is timed out on its own, so a run fired later keeps its own limit
+        let timed_out_runs: Vec<(u32, u64)> = running_job
+            .in_flight_runs
+            .iter()
+            .filter_map(|(&run, &since)| {
+                let elapsed_ms = u64::try_from(now_instant.duration_since(since).as_millis()).unwrap_or(u64::MAX);
+                (elapsed_ms > running_job.max_execution_time_ms).then_some((run, elapsed_ms))
+            })
+            .collect();
+
+        for (timed_out_run, elapsed_ms) in timed_out_runs {
             deferred_log!(
                 deferred,
                 tracing::Level::WARN,
@@ -361,9 +381,7 @@ pub fn check_in_flight_timeouts(state: &mut SchedulerState, deferred: &mut Defer
                 .with_label_values(&[&running_job.name])
                 .observe(duration_secs);
 
-            running_job.in_flight = false;
-            running_job.in_flight_since = None;
-            running_job.in_flight_run = None;
+            running_job.complete_run(timed_out_run);
 
             timeout_events.push(TimeoutEvent {
                 job_id,
@@ -399,7 +417,7 @@ fn log_scheduler_status(state: &SchedulerState, now: chrono::DateTime<Utc>) {
         if running_job.is_active {
             active += 1;
         }
-        if running_job.in_flight {
+        if running_job.is_in_flight() {
             in_flight += 1;
         }
         if let Some(fire_utc) = running_job.next_fire_utc {

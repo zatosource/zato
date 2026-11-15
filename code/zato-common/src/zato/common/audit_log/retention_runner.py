@@ -17,6 +17,7 @@ from zato.common.audit_log.event_count import compact_event_counts
 from zato.common.audit_log.retention import run_retention
 from zato.common.db_env.engine import call_database
 from zato.common.util.api import utcnow
+from zato.common.worker_slot import is_singleton_owner
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -144,9 +145,11 @@ _runner = RetentionRunner()
 # ################################################################################################################################
 
 def request_retention(engine:'Engine') -> 'None':
-    """ Requests a retention run on the database of an engine, without waiting for it.
+    """ Requests a retention run on the database of an engine, without waiting for it. Of the workers of a server,
+    only the worker of the first slot runs retention, so that no two runs archive the same expired events.
     """
-    _runner.request(engine)
+    if is_singleton_owner():
+        _runner.request(engine)
 
 # ################################################################################################################################
 # ################################################################################################################################
