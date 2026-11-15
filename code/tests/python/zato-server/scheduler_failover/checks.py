@@ -247,7 +247,8 @@ def get_starts_after(entries:'dictlist', server_label:'str', boundary:'float') -
 
 def get_state_mismatches(entries:'dictlist', states:'anydict', unrun_claims:'int'=0) -> 'strlist':
     """ Returns each job whose number of runs or latest slot in the run logs differs from its run state.
-    The run count of each job may exceed its runs by the given number of claims that a stopped server did not run.
+    The run count of each job may exceed its runs by the given number of claims that a stopped server did not run,
+    and the latest slot of its run state may then be one of these claims.
     """
     out:'strlist' = []
     jobs:'set[str]' = set()
@@ -272,8 +273,19 @@ def get_state_mismatches(entries:'dictlist', states:'anydict', unrun_claims:'int
             out.append(f'{job} has {len(starts)} runs and a run count of {run_count}')
 
         latest_slot = _get_latest_slot(starts)
+        state_slot = _parse_slot(state['last_slot'])
 
-        if _parse_slot(state['last_slot']) != latest_slot:
+        # A claim that a stopped server did not run may hold a slot later than every run in the run logs.
+        has_unrun_claim = run_count > len(starts)
+
+        if state_slot == latest_slot:
+            slot_matches = True
+        elif has_unrun_claim and state_slot and latest_slot:
+            slot_matches = state_slot > latest_slot
+        else:
+            slot_matches = False
+
+        if not slot_matches:
             out.append(f'{job} has the latest slot {latest_slot} and {state["last_slot"]} in its run state')
 
     return out
