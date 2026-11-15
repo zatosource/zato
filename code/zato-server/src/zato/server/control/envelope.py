@@ -8,8 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The messages of the control channel between the arbiter and its workers. Each message is one SEQPACKET datagram
 # that holds a JSON header, a newline and a JSON body. The header holds a type, a sequence number assigned by the arbiter,
-# the originating slot and a correlation ID, so the arbiter routes a message without reading its body. A body above
-# a named size is written to a file, the header holds the path of the file instead, and the reader of the body removes it.
+# the originating slot, the target slot and a correlation ID, so the arbiter routes a message without reading its body.
+# A body above a named size is written to a file, the header holds the path of the file instead, and the reader
+# of the body removes it.
 
 # stdlib
 import os
@@ -71,6 +72,21 @@ class MessageType:
     # A worker learned that another server took over the pub/sub database, after which the arbiter drains every worker
     Replaced = 'replaced'
 
+    # A worker forwards an invocation of a service that changes configuration to the config process,
+    # which returns its result to the worker after the events of the change
+    Forward        = 'forward'
+    Forward_Result = 'forward-result'
+
+    # A worker asks the config process for a load of its configuration, the config process sends a mark to that worker
+    # once no change is in progress, and the worker reports that it loaded its configuration
+    Load_Request = 'load-request'
+    Mark         = 'mark'
+    Load_Done    = 'load-done'
+
+    # The arbiter tells the config process which workers it waits for and that the worker of a slot terminated
+    Loading_State = 'loading-state'
+    Worker_Gone   = 'worker-gone'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -78,11 +94,12 @@ class MessageType:
 class Message:
     """ One message of the control channel.
     """
-    type: 'str'
-    seq:  'int'
-    slot: 'int'
-    cid:  'str'
-    body: 'any_'
+    type:   'str'
+    seq:    'int'
+    slot:   'int'
+    target: 'int'
+    cid:    'str'
+    body:   'any_'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -93,15 +110,17 @@ def new_cid() -> 'str':
 
 # ################################################################################################################################
 
-def new_message(type:'str', body:'any_', cid:'str'='') -> 'Message':
-    """ Returns a message that the arbiter has not assigned a sequence number or a slot to yet.
+def new_message(type:'str', body:'any_', cid:'str'='', target:'int'=ModuleCtx.No_Slot) -> 'Message':
+    """ Returns a message that the arbiter has not assigned a sequence number or a slot to yet,
+    addressed to the slot of a target if the message is sent to one slot only.
     """
     out = Message()
-    out.type = type
-    out.seq  = ModuleCtx.No_Sequence
-    out.slot = ModuleCtx.No_Slot
-    out.cid  = cid
-    out.body = body
+    out.type   = type
+    out.seq    = ModuleCtx.No_Sequence
+    out.slot   = ModuleCtx.No_Slot
+    out.target = target
+    out.cid    = cid
+    out.body   = body
 
     return out
 
@@ -146,6 +165,7 @@ def encode(message:'Message', body_dir:'str') -> 'bytes':
         'type': message.type,
         'seq': message.seq,
         'slot': message.slot,
+        'target': message.target,
         'cid': message.cid,
     }
 
@@ -177,9 +197,10 @@ def decode(datagram:'bytes') -> 'Message':
     out = Message()
     out.type = header['type']
     out.seq  = header['seq']
-    out.slot = header['slot']
-    out.cid  = header['cid']
-    out.body = loads(body)
+    out.slot   = header['slot']
+    out.target = header['target']
+    out.cid    = header['cid']
+    out.body   = loads(body)
 
     return out
 

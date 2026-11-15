@@ -241,6 +241,7 @@ class GetList(Service):
 class Create(Service):
     """ Creates a new group.
     """
+    changes_config = True
     input:'any_' = 'group_type', 'name', AsIs('-member_id_list')
     output:'any_' = 'id', 'name'
 
@@ -271,6 +272,7 @@ class Create(Service):
 class Edit(Service):
     """ Updates an existing group.
     """
+    changes_config = True
     input:'any_' = 'id', 'group_type', 'name', AsIs('-member_id_list'), '-skip_gateway_name'
     output:'any_' = 'id', 'name'
 
@@ -349,6 +351,7 @@ class Edit(Service):
 class Delete(Service):
     """ Deletes an existing group.
     """
+    changes_config = True
     input:'any_' = 'id', '-skip_gateway_name'
 
     def handle(self):
@@ -478,6 +481,7 @@ class GetMemberCount(Service):
 class EditMemberList(Service):
     """ Adds members to or removes them from a group.
     """
+    changes_config = True
     input:'any_' = 'group_action', 'group_id', AsIs('-member_id_list'), AsIs('-members'), '-skip_gateway_name'
 
     def _get_member_id_list_from_name_list(self, member_name_list:'any_') -> 'strlist':

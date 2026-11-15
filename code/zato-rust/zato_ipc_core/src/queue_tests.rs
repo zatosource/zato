@@ -186,9 +186,29 @@ fn terminated_writer_process_passes_its_turn() -> Result<(), RegionError> {
     assert_eq!(view.queue_abandon(QUEUE, writer)?, Some(2));
     assert!(has_turn(&view, 2)?);
 
-    // The place after that of the writer process does not exist.
-    let beyond = writer + 1;
+    // The place after that of the config process does not exist.
+    let beyond = view.layout().config_place() + 1;
     assert_eq!(view.queue_enter(QUEUE, beyond), Err(RegionError::NoSuchSlot(beyond)));
+
+    Ok(())
+}
+
+#[test]
+fn config_process_takes_turns_after_the_writer_process() -> Result<(), RegionError> {
+    let view = new_view()?;
+    let writer = view.layout().writer_place();
+    let config = view.layout().config_place();
+
+    // The config process holds the place that follows that of the writer process ..
+    assert_eq!(config, writer + 1);
+
+    view.queue_enter(QUEUE, writer)?;
+    view.queue_enter(QUEUE, config)?;
+
+    // .. and waits for its turn behind it as a slot does.
+    assert!(!has_turn(&view, config)?);
+    assert_eq!(view.queue_release(QUEUE, writer)?, Some(config));
+    assert!(has_turn(&view, config)?);
 
     Ok(())
 }

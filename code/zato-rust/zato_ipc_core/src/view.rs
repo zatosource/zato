@@ -68,7 +68,8 @@ impl<'region> RegionView<'region> {
         Ok(out)
     }
 
-    /// Confirms that a place exists in the writer queues, which is a worker slot or the place of the writer process.
+    /// Confirms that a place exists in the writer queues, which is a worker slot, the place of the writer process
+    /// or the place of the config process.
     pub const fn check_queue_place(&self, place: usize) -> Result<(), RegionError> {
         if place < self.layout.queue_place_count {
             Ok(())

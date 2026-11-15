@@ -37,12 +37,19 @@ if 0:
     Greenlet = Greenlet
     Message = Message
 
-    resultdict = dict_[str, AsyncResult]
+    resultdict  = dict_[str, AsyncResult]
+    handlerdict = dict_[str, 'callable_']
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The messages that complete a call of this process that waits for them
+_call_results = {MessageType.Query_Result, MessageType.Forward_Result, MessageType.Mark}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,6 +80,10 @@ class ControlClient:
 
         self.results:'resultdict' = {}
 
+        # The handlers of the messages that only some processes receive, by the type of a message,
+        # each called with the message in the greenlet that reads the channel
+        self.handlers:'handlerdict' = {}
+
 # ################################################################################################################################
 
     def start(self) -> 'Greenlet':
@@ -83,7 +94,7 @@ class ControlClient:
 
 # ################################################################################################################################
 
-    def _send(self, message:'Message') -> 'None':
+    def send(self, message:'Message') -> 'None':
         datagram = encode(message, self.body_dir)
         _ = self.sock.send(datagram)
 
@@ -93,7 +104,7 @@ class ControlClient:
         """ Tells the arbiter that the worker loaded its configuration, after which the arbiter relays events to it.
         """
         message = new_message(MessageType.Ready, None)
-        self._send(message)
+        self.send(message)
 
 # ################################################################################################################################
 
@@ -101,7 +112,7 @@ class ControlClient:
         """ Tells the arbiter that another server took over the pub/sub database, after which the arbiter drains every worker.
         """
         message = new_message(MessageType.Replaced, None)
-        self._send(message)
+        self.send(message)
 
 # ################################################################################################################################
 
@@ -109,7 +120,7 @@ class ControlClient:
         """ Sends an event that the arbiter relays to every other worker.
         """
         message = new_message(MessageType.Event, body)
-        self._send(message)
+        self.send(message)
 
 # ################################################################################################################################
 
@@ -123,7 +134,7 @@ class ControlClient:
         self.results[cid] = result
 
         message = new_message(MessageType.Query, body, cid)
-        self._send(message)
+        self.send(message)
 
         out = result.get()
         out = cast_('anylist', out)
@@ -131,11 +142,55 @@ class ControlClient:
 
 # ################################################################################################################################
 
+    def forward(self, body:'any_') -> 'any_':
+        """ Sends an invocation of a service that changes configuration to the config process and returns its result,
+        which the arbiter delivers after the events of the change, so the worker has applied them when this returns.
+        """
+        cid = new_cid()
+
+        result = AsyncResult()
+        self.results[cid] = result
+
+        message = new_message(MessageType.Forward, body, cid)
+        self.send(message)
+
+        out = result.get()
+        return out
+
+# ################################################################################################################################
+
+    def request_load(self) -> 'str':
+        """ Asks the config process for a load of the configuration and returns the correlation ID of the request
+        once its mark arrived, after which no change is in progress until the worker reports the load done.
+        """
+        cid = new_cid()
+
+        result = AsyncResult()
+        self.results[cid] = result
+
+        message = new_message(MessageType.Load_Request, None, cid)
+        self.send(message)
+
+        _ = result.get()
+
+        out = cid
+        return out
+
+# ################################################################################################################################
+
+    def report_load_done(self, cid:'str') -> 'None':
+        """ Tells the config process that the worker loaded its configuration after the mark of a request.
+        """
+        message = new_message(MessageType.Load_Done, None, cid)
+        self.send(message)
+
+# ################################################################################################################################
+
     def _respond(self, query:'Message') -> 'None':
         body = self.on_query(query.body)
 
         message = new_message(MessageType.Response, body, query.cid)
-        self._send(message)
+        self.send(message)
 
 # ################################################################################################################################
 
@@ -145,7 +200,7 @@ class ControlClient:
         self.on_reopen_logs()
 
         message = new_message(MessageType.Logs_Reopened, command.body)
-        self._send(message)
+        self.send(message)
 
 # ################################################################################################################################
 
@@ -161,7 +216,8 @@ class ControlClient:
             elif message.type == MessageType.Query:
                 _ = gevent.spawn(self._respond, message)
 
-            elif message.type == MessageType.Query_Result:
+            # The result of a query, of a forwarded invocation and the mark of a load each complete a call in progress
+            elif message.type in _call_results:
                 result = self.results.pop(message.cid)
                 result.set(message.body)
 
@@ -173,6 +229,10 @@ class ControlClient:
 
             elif message.type == MessageType.Reopen_Logs:
                 self._reopen_logs(message)
+
+            elif message.type in self.handlers:
+                handler = self.handlers[message.type]
+                handler(message)
 
             else:
                 logger.warning('Ignoring control message of type `%s`', message.type)

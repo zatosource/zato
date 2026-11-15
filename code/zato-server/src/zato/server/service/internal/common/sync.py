@@ -45,6 +45,7 @@ class SyncObjectsImpl(Service):
 class SyncObjects(Service):
     """ Syncs in-RAM objects with what is in the ODB.
     """
+    changes_config = True
     name = 'pub.zato.common.sync-objects'
     input = SyncObjectsRequest
 

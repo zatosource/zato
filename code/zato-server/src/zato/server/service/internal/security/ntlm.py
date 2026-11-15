@@ -49,6 +49,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new NTLM definition.
     """
+    changes_config = True
     input = 'name', 'is_active', 'username'
     output = 'id', 'name'
 
@@ -96,6 +97,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an NTLM definition.
     """
+    changes_config = True
     input = 'id', 'name', 'is_active', 'username'
     output = 'id', 'name'
 
@@ -156,6 +158,7 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes an NTLM definition.
     """
+    changes_config = True
     input = 'id',
 
     def handle(self):

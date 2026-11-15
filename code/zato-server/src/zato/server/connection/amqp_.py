@@ -36,6 +36,7 @@ from zato.common.json_ import dumps
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_component_name, new_cid_queue_consumer, utcnow, wait_for_predicate
 from zato.common.version import get_version
+from zato.common.worker_slot import is_config_process
 from zato.server.connection.connector import Connector, Inactive
 
 # Zato
@@ -889,8 +890,10 @@ class ConnectorAMQP(Connector):
         consumer = consumer_class(config, self.on_amqp_message)
         self._consumers.setdefault(config.name, []).append(consumer)
 
+        # The config process of a server receives no messages, so its consumers stay as those of an inactive channel
         if config.is_active:
-            consumer.start()
+            if not is_config_process():
+                consumer.start()
 
 # ################################################################################################################################
 

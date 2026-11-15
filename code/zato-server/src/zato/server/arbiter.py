@@ -8,7 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The arbiter of a server with several worker processes. It forks one worker into each slot of the shared region,
 # respawns a worker that terminated, terminates a worker whose heartbeat stopped, relays the control channel
-# between the workers, and drains the workers on shutdown. On SQLite, it also forks the pub/sub writer process,
+# between the workers, and drains the workers on shutdown. It forks the config process, which commits every change
+# of configuration, before the workers. On SQLite, it also forks the pub/sub writer process,
 # holds its listening socket across its restarts and restarts it when it terminates.
 
 # stdlib
@@ -29,10 +30,12 @@ from gevent.monkey import get_original
 from zato.common.hl7.mllp.region import bind_mllp
 from zato.common.pubsub.sql.config import ModuleCtx as PubSubConfigCtx
 from zato.common.pubsub.writer_process.server import new_listening_socket
+from zato.common.typing_ import cast_
 from zato.common.util.log_rotation import get_worker_handlers, LogRotator, watch_worker_handlers, WorkerFileHandler
 from zato.common.worker_count import get_affinity, get_cgroup_cpu_limit, get_worker_cpus
-from zato.common.worker_slot import set_worker_generation, set_worker_slot
+from zato.common.worker_slot import ModuleCtx as WorkerSlotCtx, set_worker_generation, set_worker_slot
 from zato.server.arbiter_config import ModuleCtx, new_worker_slot, WorkerContext, WriterProcess
+from zato.server.arbiter_config_process import ConfigSupervisor
 from zato.server.control.hub import ControlHub
 from zato.server.metrics_region import bind_metrics
 from zato.server.outgoing_region import bind_outgoing
@@ -85,10 +88,11 @@ class Arbiter:
         worker_main:'callable_',
         config:'ArbiterConfig',
         writer_main:'callable_ | None' = None,
+        config_main:'callable_ | None' = None,
         ) -> 'None':
 
-        # The worker is called with its WorkerContext, and the writer, which a server with one worker
-        # or with PostgreSQL does not run, with the descriptor of its listening socket
+        # The worker and the config process are called with their WorkerContext, and the writer, which a server
+        # with one worker or with PostgreSQL does not run, with the descriptor of its listening socket
         self.region      = region
         self.worker_main = worker_main
         self.config      = config
@@ -140,6 +144,12 @@ class Arbiter:
             self.writer.listener = new_listening_socket(self.writer.address)
             self.writer.process = new_worker_slot(ModuleCtx.Writer_Slot, 'pub/sub writer processes')
 
+        # The config process, which a server always runs and which an arbiter under test may run without
+        self.config_process:'ConfigSupervisor | None' = None
+
+        if config_main:
+            self.config_process = ConfigSupervisor(self, config_main)
+
 # ################################################################################################################################
 
     def request_stop(self) -> 'None':
@@ -163,7 +173,7 @@ class Arbiter:
 
 # ################################################################################################################################
 
-    def _reset_signals_in_worker(self) -> 'None':
+    def reset_signals_in_child(self) -> 'None':
         _ = signal.set_wakeup_fd(-1)
         _ = _signal(signal.SIGCHLD, signal.SIG_DFL)
         _ = _signal(signal.SIGTERM, signal.SIG_DFL)
@@ -174,8 +184,13 @@ class Arbiter:
 # ################################################################################################################################
 
     def _on_ready(self, slot:'int') -> 'None':
-        """ Records that the worker of a slot reported ready, unless the slot is draining already.
+        """ Records that the worker of a slot, or the config process, reported ready, unless the slot is draining already.
         """
+        if slot == WorkerSlotCtx.Config_Slot:
+            config_process = cast_('ConfigSupervisor', self.config_process)
+            config_process.on_ready()
+            return
+
         state = self.region.slot_state(slot)
 
         if state == STATE_STARTING:
@@ -224,7 +239,7 @@ class Arbiter:
             # .. its signals, its hub and its control socket are its own ..
             else:
                 set_process_name(ModuleCtx.Process_Name_Worker.format(ctx.slot))
-                self._reset_signals_in_worker()
+                self.reset_signals_in_child()
                 self.hub.close_in_worker()
 
                 if self.writer:
@@ -275,7 +290,7 @@ class Arbiter:
             # because the draining workers continue to send it items until the arbiter stops it after them ..
             else:
                 set_process_name(ModuleCtx.Process_Name_Writer)
-                self._reset_signals_in_worker()
+                self.reset_signals_in_child()
                 _ = _signal(signal.SIGTERM, signal.SIG_IGN)
                 self.hub.close_in_worker()
                 gevent.reinit()
@@ -359,7 +374,7 @@ class Arbiter:
 
 # ################################################################################################################################
 
-    def _get_respawn_delay(self, worker:'WorkerSlot', now:'float') -> 'float':
+    def get_respawn_delay(self, worker:'WorkerSlot', now:'float') -> 'float':
         """ Records a termination of the worker of a slot and returns how long the slot waits for its next worker.
         """
         window_start = now - self.config.failure_window
@@ -417,7 +432,7 @@ class Arbiter:
             return
 
         now = monotonic()
-        delay = self._get_respawn_delay(worker, now)
+        delay = self.get_respawn_delay(worker, now)
         worker.respawn_at = now + delay
 
         # .. and a worker that terminated abnormally may have committed a change without sending its event,
@@ -439,7 +454,10 @@ class Arbiter:
             if pid:
                 self._on_worker_exit(worker, status)
 
-        # The writer is never waited for here, because on stop it runs until the workers are reaped
+        # The config process and the writer are never waited for here, because on stop they run until the workers are reaped
+        if self.config_process:
+            self.config_process.reap(os.WNOHANG)
+
         if self.writer:
             self._reap_writer(self.writer, os.WNOHANG)
 
@@ -470,7 +488,7 @@ class Arbiter:
         # The workers resend their unanswered items once the replacement accepts their connections
         if not self.is_stopping:
             now = monotonic()
-            delay = self._get_respawn_delay(writer.process, now)
+            delay = self.get_respawn_delay(writer.process, now)
             writer.process.respawn_at = now + delay
 
 # ################################################################################################################################
@@ -511,19 +529,35 @@ class Arbiter:
 
 # ################################################################################################################################
 
+    def _can_spawn(self, worker:'WorkerSlot') -> 'bool':
+        """ Says whether a worker may start, which it does once the process that commits the startup writes is ready -
+        the config process or, of an arbiter without one, the worker of the first slot.
+        """
+        if self.config_process:
+            out = self.config_process.is_ready
+
+        elif worker.slot == ModuleCtx.First_Slot:
+            out = True
+
+        else:
+            first_slot_state = self.region.slot_state(ModuleCtx.First_Slot)
+            out = first_slot_state == STATE_READY
+
+        return out
+
+# ################################################################################################################################
+
     def _respawn_due(self) -> 'None':
         now = monotonic()
 
-        # The worker of the first slot commits the startup writes, which every other worker reads,
-        # so the other slots start only while it is ready
-        first_slot_state = self.region.slot_state(ModuleCtx.First_Slot)
-        is_first_slot_ready = first_slot_state == STATE_READY
+        if self.config_process:
+            self.config_process.respawn_due(now)
 
         for worker in self.workers:
             if worker.respawn_at is None:
                 continue
 
-            if worker.slot != ModuleCtx.First_Slot and not is_first_slot_ready:
+            if not self._can_spawn(worker):
                 continue
 
             if worker.respawn_at <= now:
@@ -536,7 +570,7 @@ class Arbiter:
 
 # ################################################################################################################################
 
-    def _wait(self, timeout:'float') -> 'None':
+    def wait(self, timeout:'float') -> 'None':
         """ Serves the control channel until a signal, a stop request, the deadline of a query or the timeout.
         """
         poller = _poll()
@@ -601,7 +635,7 @@ class Arbiter:
                 break
 
             timeout = min(remaining, self.config.loop_interval)
-            self._wait(timeout)
+            self.wait(timeout)
             self._reap(os.WNOHANG)
 
         # .. any that did not is terminated ..
@@ -612,7 +646,11 @@ class Arbiter:
 
         self._reap(0)
 
-        # .. and the writer stops once no worker can send it an item.
+        # .. the config process stops once no worker can forward an invocation to it ..
+        if self.config_process:
+            self.config_process.stop()
+
+        # .. and the writer stops once no process can send it an item.
         if self.writer:
             self._stop_writer(self.writer)
 
@@ -648,18 +686,23 @@ class Arbiter:
             os.environ[PubSubConfigCtx.Env_Trace_Grace_Seconds] = str(self.config.trace_grace_seconds)
             self._spawn_writer(self.writer)
 
-        # .. the first slot receives its first worker at once, and every other slot once the first one is ready ..
+        # .. the config process starts first, and the workers once it is ready ..
+        if self.config_process:
+            self.config_process.spawn()
+
+        # .. or, without a config process, the first slot receives its first worker at once,
+        # and every other slot once the first one is ready ..
         now = monotonic()
 
         for worker in self.workers:
-            if worker.slot == ModuleCtx.First_Slot:
+            if self._can_spawn(worker):
                 self._spawn(worker)
             else:
                 worker.respawn_at = now
 
         # .. the workers are supervised ..
         while not self.is_stopping:
-            self._wait(self.config.loop_interval)
+            self.wait(self.config.loop_interval)
             self._reap(os.WNOHANG)
             self._check_heartbeats()
             self._rotate_logs_due()

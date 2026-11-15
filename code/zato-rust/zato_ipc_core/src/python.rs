@@ -194,13 +194,10 @@ impl SharedRegion {
         Ok(())
     }
 
-    /// Returns the queue of the lock of an entry, for a slot of a worker, which the place of the writer process is not.
+    /// Returns the queue of the lock of an entry, for a slot of a worker or for the place of the config process.
     fn lock_slot_queue(&self, entry: usize, slot: usize) -> PyResult<usize> {
         let view = self.view()?;
-
-        if slot >= view.layout().params.slot_count {
-            return Err(RegionError::NoSuchSlot(slot).into());
-        }
+        view.check_queue_place(slot)?;
 
         let out = view.lock_queue(entry)?;
         Ok(out)
@@ -273,6 +270,14 @@ impl SharedRegion {
     #[getter]
     fn writer_place(&self) -> PyResult<usize> {
         let out = self.view()?.layout().writer_place();
+        Ok(out)
+    }
+
+    /// The place of the config process in every writer queue and in the queue of every keyed lock,
+    /// which follows the place of the writer process.
+    #[getter]
+    fn config_place(&self) -> PyResult<usize> {
+        let out = self.view()?.layout().config_place();
         Ok(out)
     }
 

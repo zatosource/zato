@@ -200,6 +200,7 @@ class GetByID(_Get):
 class Edit(AdminService):
     """ Updates a service.
     """
+    changes_config = True
     input = 'id', 'is_active', Integer('slow_threshold')
     output = '-id', '-name', '-impl_name', '-is_internal', Boolean('-may_be_deleted')
 
@@ -238,6 +239,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a service.
     """
+    changes_config = True
     input = 'id',
 
     def handle(self):

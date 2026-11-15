@@ -176,6 +176,7 @@ class Delete(_WrapperBase):
 # ################################################################################################################################
 
 class ChangePassword(_WrapperBase):
+    changes_config = True
     name = 'zato.generic.rest-wrapper.change-password'
     _wrapper_impl_suffix = 'edit'
     _uses_name = False

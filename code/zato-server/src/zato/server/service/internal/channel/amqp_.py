@@ -48,6 +48,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new AMQP channel.
     """
+    changes_config = True
     name = 'zato.channel.amqp.create'
 
     input = 'name', 'is_active', 'address', 'username', 'password', 'queue', 'consumer_tag_prefix', \
@@ -126,6 +127,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an AMQP channel.
     """
+    changes_config = True
     name = 'zato.channel.amqp.edit'
 
     input = 'id', 'name', 'is_active', 'address', 'username', '-password', 'queue', \
@@ -208,6 +210,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an AMQP channel.
     """
+    changes_config = True
     name = 'zato.channel.amqp.delete'
 
     input = 'id',

@@ -135,6 +135,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new WS-Security definition.
     """
+    changes_config = True
     input = 'name', 'is_active', 'username', 'mode', *_mode_fields
     output = 'id', 'name'
 
@@ -193,6 +194,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a WS-Security definition.
     """
+    changes_config = True
     input = 'name', 'is_active', 'username', 'mode', '-id', *_mode_fields
     output = 'id', 'name'
 
@@ -277,6 +279,7 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes a WS-Security definition.
     """
+    changes_config = True
     input = 'id',
 
     def handle(self):

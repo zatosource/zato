@@ -88,6 +88,7 @@ class LogCSV(Service):
 # ################################################################################################################################
 
 class _Updater(Service):
+    changes_config = True
     pickup_action: 'ValueConstant'
 
     def handle(self) -> 'None':

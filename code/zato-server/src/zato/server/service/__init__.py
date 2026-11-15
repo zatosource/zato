@@ -49,6 +49,7 @@ from zato.common.util.message import Message
 from zato.common.util.time_ import utcnow
 from zato.common.util.xml_.message import XMLMessage
 from zato.server.commands import CommandsFacade
+from zato.server.config_runner import get_config_runner
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.facade import ESFacade, FHIRFacade, FTPFacade, IBMMQFacade, KafkaFacade, GraphQLFacade, \
     KeysightContainer, MLLPFacade, MongoDBFacade, ODataFacade, RESTFacade, SalesforceFacade, SchedulerFacade, SFTPFacade, \
@@ -384,6 +385,10 @@ class Service:
 
     call_hooks:'bool' = True
     _filter_by = None
+
+    # A service with this flag on changes the configuration of the server and publishes its change as an event,
+    # so a worker of a multi-process server forwards each invocation of it to the config process.
+    changes_config:'bool' = False
     enforce_service_invokes: 'bool'
     invokes = []
     http_method_handlers = {}
@@ -996,7 +1001,15 @@ class Service:
                     service.get_queue_response()
 
                 else:
-                    self._run_handle(service, channel, request_ctx)
+                    config_runner = get_config_runner()
+
+                    # A service that changes configuration runs through the runner of the process, if there is one ..
+                    if service.changes_config and config_runner:
+                        config_runner(self, service, channel, request_ctx)
+
+                    # .. and any other service runs here.
+                    else:
+                        self._run_handle(service, channel, request_ctx)
 
             except Exception as ex:
                 e = ex

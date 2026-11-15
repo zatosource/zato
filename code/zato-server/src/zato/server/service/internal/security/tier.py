@@ -80,6 +80,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an existing quota tier and re-resolves all references to it.
     """
+    changes_config = True
     name = 'zato.security.tier.edit'
     input = 'id', 'name', '-description', 'rules_json'
     output = 'id', 'name'
@@ -171,6 +172,7 @@ class Delete(AdminService):
 class SetForGroup(AdminService):
     """ Sets or removes the quota tier reference of a security group.
     """
+    changes_config = True
     name = 'zato.security.tier.set-for-group'
     input = 'group_id', '-quota_tier'
 

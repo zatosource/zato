@@ -74,7 +74,7 @@ from zato.common.util.scheduler import ensure_alerting_job_exists, ensure_cert_c
     ensure_ms_health_job_exists, ensure_test_transfer_job_exists
 from zato.common.util.time_ import TimeUtil
 from zato.common.util.url_dispatcher import build_methods_allowed_re
-from zato.common.worker_slot import get_slot_or_single, is_first_start, is_singleton_owner
+from zato.common.worker_slot import get_slot_or_single, is_config_owner, is_config_process, is_first_start
 from zato.hl7.common import add_config_location as hl7_add_config_location
 from zato.distlock import LockManager
 from zato.server.base.parallel.config import ConfigLoader
@@ -113,9 +113,11 @@ if 0:
     from zato.input_output import IOProcessor  # type: ignore[attr-defined]
     from zato.server.startup_callable import StartupCallableTool
     from zato.server.worker_runtime import WorkerRuntime
+    from zato.server.config_runtime import ConfigRuntime
 
     bunch_ = bunch_
     ClaimResult = ClaimResult
+    ConfigRuntime = ConfigRuntime
     KombuMessage = KombuMessage
     ODBManager = ODBManager
     ServerCryptoManager = ServerCryptoManager
@@ -229,8 +231,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     rate_limiting_manager: 'RateLimitingManager'
     quota_tiers_manager: 'QuotaTiersManager'
 
-    # The binding of this worker process to its arbiter and to the shared region of the server
-    worker: 'WorkerRuntime'
+    # The binding of this process to its arbiter and to the shared region of the server
+    worker: 'WorkerRuntime | ConfigRuntime'
 
     pubsub_backend: 'SQLPubSubBackend'
     shared_objects: 'SharedObjectStore'
@@ -1043,11 +1045,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # Connect to the scheduler.
         self._start_scheduler()
 
-        self._start_queue_bridge()
-
-        self._start_api_portal_listener()
-
-        self._start_rule_engine_change_listener()
+        # The config process processes no messages, so it starts no listener of the queue bridge,
+        # of the API portal or of the rule engine.
+        if not is_config_process():
+            self._start_queue_bridge()
+            self._start_api_portal_listener()
+            self._start_rule_engine_change_listener()
 
         self.log_environment_details()
 
@@ -1057,8 +1060,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         if is_first_start():
             _ = spawn_greenlet(self._import_demo_config_on_first_start)
 
-        # The file transfer demo, if it is on, needs its local servers back after a restart, which one worker runs
-        if is_singleton_owner():
+        # The file transfer demo, if it is on, needs its local servers back after a restart, which one process runs
+        if is_config_owner():
             _ = spawn_greenlet(self.resume_demo_file_transfer)
 
         logger.info('Started `%s` (pid: %s)', server.name, self.pid)
@@ -1120,8 +1123,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # Create the MCP gateway wrappers that were skipped during init_generic_connections ..
         self._create_mcp_gateways()
 
-        # .. the sessions are in a table that every worker shares, so one worker of the server removes the expired ones ..
-        if not is_singleton_owner():
+        # .. the sessions are in a table that every process shares, so one process of the server removes the expired ones ..
+        if not is_config_owner():
             return
 
         # .. now all wrappers exist with their registries populated,
@@ -1156,7 +1159,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             # The consumer group of the fire stream exists before the reload, because the scheduler fires
             # the jobs that are due at once, and a group created afterwards would not receive these events.
-            self._start_scheduler_fire_listener()
+            # The config process runs no jobs, so it consumes no fire events.
+            if not is_config_process():
+                self._start_scheduler_fire_listener()
 
             self._scheduler.reload(scheduler_adapter, self._scheduler_run_state)
             self._scheduler_started = True
@@ -1904,7 +1909,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         # The payload cache is a share of the one of the server, and the wake-ups of subscribers reach every worker ..
         self.pubsub_backend.share_payload_cache(self.worker.region)
-        self.pubsub_backend.start_cross_worker_wakes(self.worker.region, self.worker.slot)
+
+        # .. the config process delivers nothing, so it neither wakes subscribers nor is woken for them ..
+        if not is_config_process():
+            self.pubsub_backend.start_cross_worker_wakes(self.worker.region, self.worker.slot)
 
         # The common database confirms the generation in the row of the pub/sub database, so on PostgreSQL both are one ..
         check_common_db_config()

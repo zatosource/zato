@@ -87,7 +87,7 @@ def _get_delays(arbiter:'Arbiter', start:'float', count:'int') -> 'floatlist':
 
     for index in range(count):
         now = start + index * _termination_interval
-        delay = arbiter._get_respawn_delay(worker, now)
+        delay = arbiter.get_respawn_delay(worker, now)
         out.append(delay)
 
     return out

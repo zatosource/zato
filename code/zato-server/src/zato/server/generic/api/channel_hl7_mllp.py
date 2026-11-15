@@ -201,6 +201,7 @@ class ChannelHL7MLLPWrapper(Wrapper):
     needs_self_client = False
     wrapper_type = 'HL7 MLLP channel'
     build_if_not_active = True
+    is_channel = True
 
     # The listener is shared, so the delete half of an edit must not stop it - the create half
     # that follows registers this channel on it again

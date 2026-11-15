@@ -63,6 +63,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new mTLS definition.
     """
+    changes_config = True
     input = 'name', 'is_active', *_mtls_fields
     output = 'id', 'name'
 
@@ -114,6 +115,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an mTLS definition.
     """
+    changes_config = True
     input = 'name', 'is_active', '-id', *_mtls_fields
     output = 'id', 'name'
 
@@ -178,6 +180,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an mTLS definition.
     """
+    changes_config = True
     input = 'id',
 
     def handle(self):

@@ -81,6 +81,7 @@ class GetList(AdminService):
 class Create(AdminService, _SQLService):
     """ Creates a new outgoing SQL connection.
     """
+    changes_config = True
     input = 'name', 'is_active', 'engine', 'host', Integer('port'), 'db_name', 'username', \
         Integer('pool_size'), '-extra', '-audit_log'
     output = 'id', 'name', 'display_name'
@@ -141,6 +142,7 @@ class Create(AdminService, _SQLService):
 class Edit(AdminService, _SQLService):
     """ Updates an outgoing SQL connection.
     """
+    changes_config = True
     input = 'id', 'name', 'is_active', 'engine', 'host', Integer('port'), 'db_name', 'username', \
         Integer('pool_size'), '-extra', '-audit_log'
     output = 'id', 'name', 'display_name'
@@ -204,6 +206,7 @@ class Edit(AdminService, _SQLService):
 class Delete(AdminService, _SQLService):
     """ Deletes an outgoing SQL connection.
     """
+    changes_config = True
     input = 'id',
 
     def handle(self):

@@ -65,6 +65,7 @@ class _RateLimitingGetBase(AdminService):
 # ################################################################################################################################
 
 class _RateLimitingSaveBase(AdminService):
+    changes_config = True
 
     input = 'id', '-rules_json', '-quota_tier'
     _broker_message_type:'any_' = None

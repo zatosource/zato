@@ -326,6 +326,7 @@ def ensure_ints(data:'strdict') -> 'None':
 class _CreateEdit(_BaseService):
     """ Creates a new or updates an existing generic connection in ODB.
     """
+    changes_config = True
     is_create: 'bool'
     is_edit:   'bool'
 

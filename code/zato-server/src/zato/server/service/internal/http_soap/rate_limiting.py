@@ -29,6 +29,7 @@ if 0:
 # ################################################################################################################################
 
 class RateLimitingSave(AdminService):
+    changes_config = True
 
     name = 'zato.http-soap.rate-limiting.save'
     input = 'id', '-rules_json', '-quota_tier'
@@ -196,6 +197,7 @@ class ResponseCacheGet(AdminService):
 class ResponseCacheSave(AdminService):
     """ Saves the response caching configuration of a REST or SOAP channel and broadcasts the change.
     """
+    changes_config = True
     name = 'zato.http-soap.response-cache.save'
     input = 'id', 'config_json'
 

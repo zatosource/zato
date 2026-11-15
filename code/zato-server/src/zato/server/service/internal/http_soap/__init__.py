@@ -28,6 +28,7 @@ from zato.server.service.internal.health_check import get_linked_job
 class Delete(AdminService, _HTTPSOAPService):
     """ Deletes an HTTP/SOAP connection.
     """
+    changes_config = True
     input = '-id', '-name', '-connection', '-should_raise_if_missing'
     output = '-details'
 

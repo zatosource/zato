@@ -277,6 +277,7 @@ class ServerFunctionInvoker(AdminService):
 class ChangePasswordBase(AdminService):
     """ A base class for handling the changing of any of the ODB passwords.
     """
+    changes_config = True
     password_required = True
 
     input = 'password', Int('-id'), '-name', '-type_'

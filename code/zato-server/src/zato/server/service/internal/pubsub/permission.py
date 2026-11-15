@@ -66,6 +66,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new pub/sub permission.
     """
+    changes_config = True
     input = 'sec_base_id', 'pattern', 'access_type'
     output = 'id', 'security'
 
@@ -129,6 +130,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an existing pub/sub permission.
     """
+    changes_config = True
     input = 'id', 'sec_base_id', 'pattern', 'access_type'
     output = 'id', 'security'
 
@@ -271,6 +273,7 @@ class Delete(AdminService):
     """ Deletes a pub/sub permission and cascade-deletes any subscriptions
     that no longer have a matching permission remaining.
     """
+    changes_config = True
     input = 'id',
 
     def handle(self) -> 'None':

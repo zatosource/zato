@@ -56,6 +56,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new HTTP Basic Auth definition.
     """
+    changes_config = True
     input = 'name', 'is_active', 'username', 'realm'
     output = 'id', 'name'
 
@@ -133,6 +134,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an HTTP Basic Auth definition.
     """
+    changes_config = True
     input = 'name', 'is_active', 'username', 'realm', Int('-id')
     output = 'id', 'name'
 
@@ -246,6 +248,7 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes an HTTP Basic Auth definition.
     """
+    changes_config = True
     input = Int('id'),
 
     def handle(self):

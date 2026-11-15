@@ -3,8 +3,8 @@
 //!
 //! A slot takes a ticket and writes when the queue serves its ticket. A slot never holds
 //! more than one ticket of one queue, so a worker orders its own greenlets before it enters.
-//! The `SQLite` writer process holds the place that follows the worker slots, and the queue
-//! treats that place as one more slot.
+//! The `SQLite` writer process holds the place that follows the worker slots, the config process
+//! holds the place after it, and the queue treats each of these places as one more slot.
 //!
 //! Each slot records its ticket in a block of its own. Before it takes a ticket, the slot marks
 //! the block as entering, so that a ticket which no block records, while no live slot is entering,

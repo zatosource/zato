@@ -22,6 +22,8 @@ from select import POLLIN, POLLOUT
 from time import monotonic
 
 # Zato
+from zato.common.worker_slot import ModuleCtx as WorkerSlotCtx
+from zato.server.control.config_route import ConfigRoute
 from zato.server.control.envelope import decode, encode, join, MessageType, ModuleCtx as EnvelopeCtx, new_body_path, \
     new_message, split
 
@@ -159,6 +161,9 @@ class ControlHub:
         self.fd_to_channel:'intchanneldict' = {}
         self.queries:'querydict' = {}
 
+        # The messages between the workers and the config process follow routes of their own
+        self.config_route = ConfigRoute(self)
+
 # ################################################################################################################################
 
     def open_slot(self, slot:'int') -> 'socket.socket':
@@ -179,6 +184,10 @@ class ControlHub:
         self.channels[slot] = channel
         self.fd_to_channel[arbiter_end.fileno()] = channel
 
+        # A new config process continues from the loads that its predecessor left
+        if slot == WorkerSlotCtx.Config_Slot:
+            self.config_route.on_config_opened(channel)
+
         out = worker_end
         return out
 
@@ -192,7 +201,7 @@ class ControlHub:
 
 # ################################################################################################################################
 
-    def _remove_body_file(self, datagram:'bytes') -> 'None':
+    def remove_body_file(self, datagram:'bytes') -> 'None':
         header, _ = split(datagram)
 
         if path := header.get('path'):
@@ -212,15 +221,18 @@ class ControlHub:
 
         # The bodies of the datagrams that the worker never received have no other reader ..
         for datagram in channel.out_queue:
-            self._remove_body_file(datagram)
+            self.remove_body_file(datagram)
 
         for datagram in channel.startup_buffer:
-            self._remove_body_file(datagram)
+            self.remove_body_file(datagram)
 
-        # .. and the queries that wait for it are answered without it.
+        # .. the queries that wait for it are answered without it ..
         for query in list(self.queries.values()):
             if slot in query.expected:
                 self._record_entry(query, slot, EntryStatus.Unavailable, None)
+
+        # .. and the forwarded invocations and the loads that involve it are resolved.
+        self.config_route.on_slot_closed(slot)
 
 # ################################################################################################################################
 
@@ -294,17 +306,26 @@ class ControlHub:
 
 # ################################################################################################################################
 
-    def _send(self, channel:'SlotChannel', datagram:'bytes') -> 'None':
+    def send(self, channel:'SlotChannel', datagram:'bytes') -> 'None':
         channel.out_queue.append(datagram)
         self._flush(channel)
 
 # ################################################################################################################################
 
-    def _deliver(self, channel:'SlotChannel', datagram:'bytes') -> 'None':
+    def discard_startup_buffer(self, channel:'SlotChannel') -> 'None':
+        """ Discards the datagrams held for a starting worker, whose load of its configuration contains them.
+        """
+        while channel.startup_buffer:
+            datagram = channel.startup_buffer.popleft()
+            self.remove_body_file(datagram)
+
+# ################################################################################################################################
+
+    def deliver(self, channel:'SlotChannel', datagram:'bytes') -> 'None':
         """ Sends a relayed datagram to a ready worker, or holds it until the worker reports ready.
         """
         if channel.is_ready:
-            self._send(channel, datagram)
+            self.send(channel, datagram)
         else:
             channel.startup_buffer.append(datagram)
 
@@ -360,6 +381,21 @@ class ControlHub:
         elif message_type == MessageType.Replaced:
             self.on_replaced(channel.slot)
 
+        elif message_type == MessageType.Forward:
+            self.config_route.on_forward(channel, header, body)
+
+        elif message_type == MessageType.Forward_Result:
+            self.config_route.on_forward_result(header, datagram)
+
+        elif message_type == MessageType.Load_Request:
+            self.config_route.on_load_request(channel, header, body)
+
+        elif message_type == MessageType.Mark:
+            self.config_route.on_mark(header, datagram)
+
+        elif message_type == MessageType.Load_Done:
+            self.config_route.on_load_done(channel, header, body)
+
         else:
             logger.warning('Ignoring control message of type `%s` from slot %s', message_type, channel.slot)
 
@@ -372,7 +408,7 @@ class ControlHub:
 
         while channel.startup_buffer:
             datagram = channel.startup_buffer.popleft()
-            self._send(channel, datagram)
+            self.send(channel, datagram)
 
         self.on_ready(channel.slot)
 
@@ -407,7 +443,7 @@ class ControlHub:
                 header['path'] = link_path
 
             datagram = join(header, body)
-            self._deliver(channel, datagram)
+            self.deliver(channel, datagram)
 
         # .. and the file that the origin wrote has no reader.
         if source_path:
@@ -417,12 +453,13 @@ class ControlHub:
 
     def broadcast_reload(self) -> 'None':
         """ Requests every worker to read its configuration again, which a starting worker does after it reports ready.
+        The config process commits every change itself, so it receives no such request.
         """
         message = new_message(MessageType.Reload, None)
         datagram = encode(message, self.body_dir)
         header, body = split(datagram)
 
-        self._relay(EnvelopeCtx.No_Slot, header, body, MessageType.Reload)
+        self._relay(WorkerSlotCtx.Config_Slot, header, body, MessageType.Reload)
 
 # ################################################################################################################################
 
@@ -435,7 +472,7 @@ class ControlHub:
         datagram = encode(message, self.body_dir)
         channel = self.channels[slot]
 
-        self._send(channel, datagram)
+        self.send(channel, datagram)
 
 # ################################################################################################################################
 
@@ -450,7 +487,7 @@ class ControlHub:
             message.seq = self._next_seq()
 
             datagram = encode(message, self.body_dir)
-            self._send(channel, datagram)
+            self.send(channel, datagram)
 
             out.add(channel.slot)
 
@@ -482,6 +519,10 @@ class ControlHub:
 
         for channel in list(self.channels.values()):
 
+            # The config process holds no runtime state of its own to answer a query with
+            if channel.slot == WorkerSlotCtx.Config_Slot:
+                continue
+
             if not channel.is_ready:
                 query.entries[channel.slot] = new_entry(channel.slot, EntryStatus.Unavailable, None)
                 continue
@@ -493,7 +534,7 @@ class ControlHub:
 
             query.expected.add(channel.slot)
             datagram = join(header, body)
-            self._send(channel, datagram)
+            self.send(channel, datagram)
 
         if source_path:
             os.remove(source_path)
@@ -540,7 +581,7 @@ class ControlHub:
             message.seq = self._next_seq()
 
             datagram = encode(message, self.body_dir)
-            self._send(channel, datagram)
+            self.send(channel, datagram)
 
 # ################################################################################################################################
 

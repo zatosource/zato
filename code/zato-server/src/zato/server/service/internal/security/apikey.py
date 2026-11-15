@@ -53,6 +53,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new API key.
     """
+    changes_config = True
     input = 'name', 'is_active', '-header'
     output = 'id', 'name', 'header'
 
@@ -105,6 +106,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an API key.
     """
+    changes_config = True
     input = Int('id'), 'name', 'is_active', '-header'
     output = 'id', 'name', 'header'
 
@@ -173,6 +175,7 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes an API key.
     """
+    changes_config = True
     input = Int('id'),
 
     def handle(self) -> 'None':

@@ -139,6 +139,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new Bearer token definition.
     """
+    changes_config = True
     input = 'name', 'is_active', *_common_optional_input
     output = 'id', 'name', 'has_private_key'
 
@@ -202,6 +203,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an Bearer token definition.
     """
+    changes_config = True
     input = Int('id'), 'name', 'is_active', *_common_optional_input
     output = 'id', 'name', 'has_private_key'
 
@@ -293,6 +295,7 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes an Bearer token definition.
     """
+    changes_config = True
     input = Int('id'),
 
     def handle(self):

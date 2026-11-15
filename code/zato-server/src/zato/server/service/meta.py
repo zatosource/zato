@@ -373,6 +373,7 @@ class CreateEditMeta(AdminServiceMeta):
         cls.output = io['output']
         cls._io_output_required = io['output_required']
         cls.handle = CreateEditMeta.handle(attrs)
+        cls.changes_config = True
         super(CreateEditMeta, cls).__init__(cls)
 
     @staticmethod
@@ -511,6 +512,7 @@ class DeleteMeta(AdminServiceMeta):
         cls.input = io['input']
         cls.output = io['output']
         cls.handle = DeleteMeta.handle(attrs)
+        cls.changes_config = True
         super(DeleteMeta, cls).__init__(cls)
 
     @staticmethod

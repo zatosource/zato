@@ -75,8 +75,12 @@ pub const SERIES_KEY_CURSOR_WORD: usize = WAKE_OVERFLOW_WORD + 1;
 /// Offset of the word that holds the flags of the server, each of which is one bit that any worker inverts for all of them.
 pub const SERVER_FLAGS_WORD: usize = SERIES_KEY_CURSOR_WORD + 1;
 
-/// Number of places of a writer queue beyond those of the worker slots, which is the place of the `SQLite` writer process.
-const WRITER_PLACES: usize = 1;
+/// Number of places of a writer queue beyond those of the worker slots, which are the place of the `SQLite` writer process
+/// followed by the place of the config process.
+const EXTRA_PLACES: usize = 2;
+
+/// Position of the place of the config process after the places of the worker slots.
+const CONFIG_PLACE_OFFSET: usize = 1;
 
 /// Number of blocks of the head of the table of message control IDs, which holds its lock and its two counters.
 const DEDUP_HEAD_BLOCKS: usize = 1;
@@ -180,7 +184,8 @@ pub struct Layout {
     /// Offset of the first word of the table of keyed locks.
     pub locks_start: usize,
 
-    /// Number of places of one writer queue - one per worker slot, followed by the place of the writer process.
+    /// Number of places of one writer queue - one per worker slot, followed by the places of the writer process
+    /// and of the config process.
     pub queue_place_count: usize,
 
     /// Number of blocks of one writer queue - its head block and one block per place.
@@ -221,8 +226,8 @@ impl Layout {
         let metric_blocks_per_slot = params.metric_count.div_ceil(BLOCK_WORDS);
 
         // .. and a writer queue has its head block followed by one ticket block per place,
-        // the writer process holding the place after those of the slots.
-        let queue_place_count = params.slot_count.checked_add(WRITER_PLACES).ok_or(RegionError::LayoutTooLarge)?;
+        // the writer process and the config process holding the places after those of the slots.
+        let queue_place_count = params.slot_count.checked_add(EXTRA_PLACES).ok_or(RegionError::LayoutTooLarge)?;
         let blocks_per_queue = queue_place_count.checked_add(1).ok_or(RegionError::LayoutTooLarge)?;
 
         // The queue of each keyed lock has the same blocks as a writer queue and follows the writer queues.
@@ -298,6 +303,12 @@ impl Layout {
     #[must_use]
     pub const fn writer_place(&self) -> usize {
         self.params.slot_count
+    }
+
+    /// Returns the place of the config process in every writer queue, which follows the place of the writer process.
+    #[must_use]
+    pub const fn config_place(&self) -> usize {
+        self.params.slot_count.saturating_add(CONFIG_PLACE_OFFSET)
     }
 
     /// Writes the header of a region that is created with this layout.

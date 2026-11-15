@@ -123,6 +123,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new pub/sub topic.
     """
+    changes_config = True
     input = 'name', 'is_active', '-description', '-backend_type', '-amqp_outconn_name', \
         '-amqp_exchange', '-amqp_routing_key', '-amqp_channel_name', Boolean('-is_audit_log_active')
     output = 'id', 'name'
@@ -192,6 +193,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a pub/sub topic.
     """
+    changes_config = True
     input = 'name', 'is_active', '-id', '-description', '-backend_type', '-amqp_outconn_name', \
         '-amqp_exchange', '-amqp_routing_key', '-amqp_channel_name', Boolean('-is_audit_log_active')
     output = 'id', 'name'
@@ -302,6 +304,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a pub/sub topic.
     """
+    changes_config = True
     input = 'id',
 
     def handle(self) -> 'None':

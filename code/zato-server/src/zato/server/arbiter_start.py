@@ -15,6 +15,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from tempfile import gettempdir
+from time import monotonic
+
+# gevent
+from gevent import get_hub, sleep
 
 # Zato
 from zato.common.analytics.api import get_analytics_db_path
@@ -69,6 +73,10 @@ class ModuleCtx:
     # The files of zato_server_core that every worker appends to
     REST_Log_Name   = 'rest.log'
     Access_Log_Name = 'access.log'
+
+    # How long the arbiter waits for the threads of the gevent thread pool to exit, and how often it checks, in seconds
+    Thread_Stop_Timeout  = 5.0
+    Thread_Stop_Interval = 0.01
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -148,6 +156,27 @@ def _get_thread_names() -> 'strlist':
 
 # ################################################################################################################################
 
+def stop_threadpool() -> 'None':
+    """ Stops the threads of the gevent thread pool, in which the patched resolver looked up host names
+    during the imports of the arbiter, and waits until they exit, because a fork copies none of them.
+    The hub of each worker creates a pool of its own when it needs one.
+    """
+    hub = get_hub()
+
+    # The pool ends its threads ..
+    hub.threadpool.kill()
+    del hub.threadpool
+
+    # .. which leave the process shortly after their greenlets did.
+    deadline = monotonic() + ModuleCtx.Thread_Stop_Timeout
+
+    while len(_get_thread_names()) > 1:
+        if monotonic() >= deadline:
+            break
+        sleep(ModuleCtx.Thread_Stop_Interval)
+
+# ################################################################################################################################
+
 def check_fork_ready() -> 'None':
     """ Raises ArbiterError if the arbiter runs a thread other than its main one, which a fork does not copy,
     or holds a database engine, whose pooled connections every worker would use at once.
@@ -221,6 +250,7 @@ def run_arbiter(zato_app:'ZatoApplication') -> 'int':
         writer_main = None
 
     # .. and nothing that a fork would duplicate is open when the workers are forked.
+    stop_threadpool()
     check_fork_ready()
 
     arbiter = Arbiter(region, processes.worker_main, config, writer_main)

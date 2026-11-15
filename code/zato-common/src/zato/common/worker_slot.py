@@ -36,6 +36,9 @@ class ModuleCtx:
     # The slot that a process which is not a worker uses wherever a slot is named, as the one process of its server
     Single_Process_Slot = 0
 
+    # The slot of the config process of a multi-process server, which is no slot of the shared region
+    Config_Slot = -2
+
     # The generation of the first worker that a slot receives after the server starts
     First_Generation = 1
 
@@ -97,26 +100,44 @@ def get_slot_or_single() -> 'int':
 
 # ################################################################################################################################
 
+def is_config_process() -> 'bool':
+    """ Says whether this process is the config process of a multi-process server, which commits the changes
+    of configuration and processes no messages.
+    """
+    out = _worker_slot == ModuleCtx.Config_Slot
+    return out
+
+# ################################################################################################################################
+
 def is_singleton_owner() -> 'bool':
-    """ Says whether this process runs the duties of which a server runs one instance, which a process that is not
-    a worker always does and, of the workers of a multi-process server, the worker of the first slot does.
+    """ Says whether this process runs the message processing of which a server runs one instance, which a process
+    that is not a worker always does and, of the workers of a multi-process server, the worker of the first slot does.
     """
     out = _worker_slot is None or _worker_slot == ModuleCtx.Singleton_Slot
     return out
 
 # ################################################################################################################################
 
+def is_config_owner() -> 'bool':
+    """ Says whether this process runs the maintenance duties of which a server runs one instance, which a process
+    that is not a worker always does and, of the processes of a multi-process server, the config process does.
+    """
+    out = _worker_slot is None or _worker_slot == ModuleCtx.Config_Slot
+    return out
+
+# ################################################################################################################################
+
 def is_first_start() -> 'bool':
     """ Says whether this process runs the duties that a server runs once after it starts, which a process that is not
-    a worker always does and, of the workers of a multi-process server, the first generation of the first slot does,
-    so that a respawned worker never runs them again.
+    a worker always does and, of the processes of a multi-process server, the first generation of the config process does,
+    so that a respawned config process never runs them again.
     """
     if _worker_slot is None:
         out = True
     else:
-        is_singleton_slot = _worker_slot == ModuleCtx.Singleton_Slot
+        is_config_slot = _worker_slot == ModuleCtx.Config_Slot
         is_first_generation = _worker_generation == ModuleCtx.First_Generation
-        out = is_singleton_slot and is_first_generation
+        out = is_config_slot and is_first_generation
 
     return out
 

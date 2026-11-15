@@ -18,6 +18,7 @@ from gevent.lock import RLock
 
 # Zato
 from zato.common.util.api import spawn_greenlet
+from zato.common.worker_slot import is_config_process
 
 # ################################################################################################################################
 
@@ -52,6 +53,9 @@ class Wrapper:
     required_secret_label = None
     build_if_not_active = False
 
+    # A channel receives messages, which the config process of a server never builds a channel for
+    is_channel = False
+
     def __init__(self, config, server=None):
         # type: (Bunch, ParallelServer)
         self.config = config
@@ -71,6 +75,10 @@ class Wrapper:
 # ################################################################################################################################
 
     def build_wrapper(self, should_spawn=True):
+
+        if self.is_channel and is_config_process():
+            logger.info('Skipped building a %s in the config process (%s)', self.wrapper_type, self.config.name)
+            return
 
         if not self.config.is_active:
             if not self.build_if_not_active:

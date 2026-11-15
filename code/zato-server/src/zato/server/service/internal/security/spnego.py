@@ -64,6 +64,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new Kerberos (SPNEGO) definition.
     """
+    changes_config = True
     input = 'name', 'is_active', *_spnego_fields
     output = 'id', 'name'
 
@@ -115,6 +116,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a Kerberos (SPNEGO) definition.
     """
+    changes_config = True
     input = 'name', 'is_active', '-id', *_spnego_fields
     output = 'id', 'name'
 
@@ -179,6 +181,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a Kerberos (SPNEGO) definition.
     """
+    changes_config = True
     input = 'id',
 
     def handle(self):

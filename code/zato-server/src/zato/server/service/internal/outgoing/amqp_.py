@@ -60,6 +60,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new outgoing AMQP connection.
     """
+    changes_config = True
     name = 'zato.outgoing.amqp.create'
 
     input = 'name', 'is_active', 'delivery_mode', 'priority', 'pool_size', \
@@ -139,6 +140,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an outgoing AMQP connection.
     """
+    changes_config = True
     name = 'zato.outgoing.amqp.edit'
 
     input = 'id', 'name', 'is_active', 'delivery_mode', 'priority', 'pool_size', \
@@ -219,6 +221,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an outgoing AMQP connection.
     """
+    changes_config = True
     name = 'zato.outgoing.amqp.delete'
 
     input = 'id',
