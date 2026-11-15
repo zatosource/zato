@@ -388,8 +388,14 @@ class Delete(Service):
         for item in to_update: # type: ignore
             _= self.invoke('zato.http-soap.edit', item)
 
-        # .. and so is the configuration of MCP gateways using it.
+        # .. and so is the configuration of MCP gateways using it ..
         self._remove_from_gateways(group_id, group.name, skip_gateway_name)
+
+        # .. and every process resolves its quota tiers again, because the group may have carried a tier assignment.
+        self.config_dispatcher.publish({
+            'action': SECURITY.QUOTA_TIER_EDIT.value,
+            'id': group_id,
+        })
 
 # ################################################################################################################################
 

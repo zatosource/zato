@@ -20,9 +20,10 @@ from zato.common.ext.bunch import Bunch
 
 # Zato
 from zato.common.typing_ import cast_
-from zato.common.util.api import import_module_from_path, is_python_file, is_archive_file, publish_file
+from zato.common.broker_message import HOT_DEPLOY
+from zato.common.util.api import import_module_from_path, is_python_file, is_archive_file
 from zato.common.util.file_system import fs_safe_now
-from zato.common.util.open_ import open_w
+from zato.common.util.open_ import open_r, open_w
 from zato.common.util.python_ import import_module_by_path
 from zato.server.generic.api.outconn_sdk import extract_connector_classes, register_connector_type
 from zato.server.service import AsIs
@@ -73,7 +74,7 @@ class Create(AdminService):
     """ Creates all the filesystem directories and files out of a deployment package stored in the ODB.
     """
     changes_config = True
-    input = '-payload', '-payload_name', '-is_startup'
+    input = '-payload', '-payload_name', '-is_startup', '-is_relayed'
     output = AsIs('-services_deployed'), '-zato_ide_deploy_create_response'
 
 # ################################################################################################################################
@@ -183,12 +184,10 @@ class Create(AdminService):
             # .. which may mean both files with services or models ..
             file_name_list = self.server.service_store.get_module_importers(mod_info.name)
 
-            # .. and redeploy all such files.
-
+            # .. and redeploy all such files in this process, because every other process deploys the module
+            # from the event of its own deployment and then redeploys the files that import it in turn.
             for item in file_name_list:
-
-                # Publish the file to the broker
-                _ = publish_file(self.server.config_dispatcher, self.cid, item)
+                _ = self.invoke('zato.hot-deploy.create', {'payload_name': item, 'payload': '', 'is_relayed': True})
 
 # ################################################################################################################################
 
@@ -203,12 +202,6 @@ class Create(AdminService):
 
         # .. extract unique names only ..
         model_name_list = {item.name for item in model_info_list}
-
-        # .. if we have deployed any models ..
-        if model_name_list:
-
-            # .. redeploy all the modules that depend on the one we have just deployed ..
-            self._redeploy_module_dependencies(model_file_name)
 
         # .. and return to the caller the list of models deployed.
         return model_name_list
@@ -260,11 +253,8 @@ class Create(AdminService):
             # .. extract the ID of the deployed service ..
             service_id = self.server.service_store.impl_name_to_id[service.impl_name]
 
-            # .. append it for later use ..
+            # .. append it for later use.
             service_id_list.append(service_id)
-
-            # .. redeploy all the modules that depend on the one we have just deployed ..
-            self._redeploy_module_dependencies(service.source_code_info.path)
 
         # .. and return to the caller the list of IDs of all the services deployed.
         return service_id_list
@@ -286,6 +276,11 @@ class Create(AdminService):
         connector_type_list = self._deploy_sdk_connectors(current_work_dir, file_name)
         model_name_list = self._deploy_models(current_work_dir, file_name)
         service_id_list = self._deploy_services(current_work_dir, file_name)
+
+        # A Python file is imported by other modules whether or not it defines services or models,
+        # and each of them is redeployed after it, so that they use its current version.
+        if is_python_file(file_name):
+            self._redeploy_module_dependencies(file_name)
 
         ctx = DeploymentCtx()
         ctx.connector_type_list = connector_type_list
@@ -356,7 +351,13 @@ class Create(AdminService):
 
     def _deploy_user_conf(self, payload:'str', payload_name:'str') -> 'None':
 
-        data = b64decode(payload).decode('utf8')
+        # A relayed deployment carries the path of the file only
+        if payload:
+            data = b64decode(payload).decode('utf8')
+        else:
+            with open_r(payload_name) as f:
+                data = f.read()
+
         file_name = os.path.basename(payload_name)
 
         self.invoke('zato.pickup.on-update-user-conf', {
@@ -462,6 +463,14 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
+    def _relay_deployment(self, payload_name:'str') -> 'None':
+        """ Sends the path of a deployed file to the other processes of the server, each of which deploys it from that path.
+        """
+        msg = {'action': HOT_DEPLOY.CREATE_SERVICE.value, 'payload_name': payload_name, 'payload': ''}
+        self.config_dispatcher.relay_only(msg)
+
+# ################################################################################################################################
+
     def _is_enmasse_file(self, payload_name:'str') -> 'bool':
         return 'enmasse' in payload_name and (payload_name.endswith('.yml') or payload_name.endswith('.yaml'))
 
@@ -488,6 +497,9 @@ class Create(AdminService):
         payload = self.request.input.payload
         payload_name = self.request.input.payload_name
 
+        # A deployment that another process relayed is deployed in this process only
+        is_relayed = self.request.input.is_relayed
+
         # A request with nothing to deploy is a connection test from an IDE plugin,
         # so we confirm that we are reachable and return early.
         if not payload_name:
@@ -507,6 +519,10 @@ class Create(AdminService):
         # TLS material is never deployed - the outgoing connections that read it are refreshed instead.
         if payload_name.endswith(_tls_material_suffix):
             self._reload_tls_material(payload_name)
+
+            if not is_relayed:
+                self._relay_deployment(payload_name)
+
             return
 
         is_external = internal_path not in payload_name
@@ -563,6 +579,11 @@ class Create(AdminService):
                 self._rebuild_mcp_tool_registries(services_deployed)
 
                 self.response.payload.services_deployed = services_deployed
+
+                # One enmasse import writes the ODB for every process and the reload that follows it brings the result
+                # to each of them, while every other file is deployed by each process from its path.
+                if not is_relayed and not self._is_enmasse_file(payload_name):
+                    self._relay_deployment(payload_name)
 
                 # An IDE plugin reads a confirmation rather than the list of what was deployed
                 if is_ide_upload:

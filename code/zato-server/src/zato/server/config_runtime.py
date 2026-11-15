@@ -139,9 +139,6 @@ class ConfigRuntime:
         reader = self.client.start()
         reader.link(self.on_control_closed)
 
-        # .. each service that changes configuration runs through the gate ..
-        bind_config_runner(self.run_change)
-
         # .. a process that learns that this server is no longer the active one tells the arbiter ..
         set_on_replaced(self.on_replaced)
 
@@ -155,6 +152,12 @@ class ConfigRuntime:
         and the events of each change reach them.
         """
         self.server.config_dispatcher.relay = self.client.publish
+
+        # Each service that changes configuration runs through the gate from now on, while those that the startup
+        # of the process invoked ran before any worker could load, because no worker starts before this process is ready
+        # and the loads that its predecessor left reach it only once it is ready.
+        bind_config_runner(self.run_change)
+
         self.client.report_ready()
 
         logger.info('Config process, generation %s, PID %s is ready', self.generation, os.getpid())
@@ -200,6 +203,14 @@ class ConfigRuntime:
 
     def send_mark(self, slot:'int', cid:'str') -> 'None':
         message = new_message(MessageType.Mark, None, cid, slot)
+        self.client.send(message)
+
+# ################################################################################################################################
+
+    def request_worker_reload(self) -> 'None':
+        """ Asks the arbiter for a reload of every worker, after a change that reached the ODB without its events.
+        """
+        message = new_message(MessageType.Reload, None)
         self.client.send(message)
 
 # ################################################################################################################################

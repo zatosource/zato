@@ -19,6 +19,7 @@ from zato.common.ext.bunch import bunchify
 from zato.common.broker_message import code_to_name
 from zato.common.typing_ import any_, anydict, callable_, dataclass, strnone
 from zato.common.util.config import resolve_env_variables
+from zato.input_output import ServiceInput
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,6 +55,11 @@ def _to_json_value(value:'any_') -> 'any_':
         out = value.isoformat()
     elif isinstance(value, (set, frozenset, tuple)):
         out = list(value)
+
+    # The input of a service is published as the event of its change by many admin services
+    elif isinstance(value, ServiceInput):
+        out = value.to_dict()
+
     else:
         out = str(value)
 
@@ -140,6 +146,14 @@ class ConfigDispatcher:
             _ = handle_config_event(msg, self.server.config_manager)
 
     invoke_async = publish
+
+    def relay_only(self, msg:'anydict') -> 'None':
+        """ Sends an event to the other processes of the server without applying it in this one, which made the change
+        that the event describes already. A process with no arbiter has no other process to send it to.
+        """
+        if self.relay:
+            relay_body = get_relay_body(msg)
+            self.relay(relay_body)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -36,7 +36,7 @@ from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, GENERIC,
 from zato.common.audit_log.api import AuditLog
 from zato.common.audit_log.scheduler import record_job_complete, record_job_start, record_job_timeout
 from zato.common.bearer_token import BearerTokenManager, normalize_scopes
-from zato.common.broker_message import HOT_DEPLOY, PUBSUB, SCHEDULER as SCHEDULER_MSG
+from zato.common.broker_message import HOT_DEPLOY, PUBSUB, SCHEDULER as SCHEDULER_MSG, Server as BrokerMessageServer
 from zato.common.common_db.config import check_common_db_config
 from zato.common.common_db.store import SharedObjectStore
 from zato.common.const import SECRETS
@@ -2166,6 +2166,13 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
     def set_logging(self, text:'str') -> 'strdict':
         out = set_logging_levels(text)
+
+        # Every other process of the server sets the same levels
+        self.config_dispatcher.relay_only({
+            'action': BrokerMessageServer.Logging_Set.value,
+            'text': text,
+        })
+
         return out
 
 # ################################################################################################################################

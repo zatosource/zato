@@ -11,6 +11,7 @@ import os
 from logging import getLogger
 
 # Zato
+from zato.common.broker_message import Server as BrokerMessageServer
 from zato.common.haproxy.config import apply_env, Env_MLLP_Expect_Proxy, Env_Trust_Forwarded_Headers, find_haproxy_config
 from zato.server.service.internal import AdminService
 
@@ -119,6 +120,7 @@ class Test(AdminService):
 # ################################################################################################################################
 
 class Save(AdminService):
+    changes_config = True
 
     name = _service_name_prefix + 'save'
 
@@ -138,6 +140,8 @@ class Save(AdminService):
         delete_count = 0
 
         submitted_keys = set()
+        set_variables:'dict[str, str]' = {}
+        deleted_variables:'list[str]' = []
 
         # Some variables are read outside this process, so what they were before the save
         # is what decides whether anything else has to be told about the change
@@ -148,6 +152,7 @@ class Save(AdminService):
                 continue
             submitted_keys.add(key)
             os.environ[key] = value
+            set_variables[key] = value
             set_count += 1
 
         if allow_delete:
@@ -155,7 +160,15 @@ class Save(AdminService):
             deleted_keys = current_keys - submitted_keys
             for key in deleted_keys:
                 del os.environ[key]
+                deleted_variables.append(key)
                 delete_count += 1
+
+        # Every other process of the server receives the same variables
+        self.config_dispatcher.relay_only({
+            'action': BrokerMessageServer.Env_Variables_Apply.value,
+            'set_variables': set_variables,
+            'deleted_variables': deleted_variables,
+        })
 
         logger.info('save: set %d, deleted %d environment variables', set_count, delete_count)
 

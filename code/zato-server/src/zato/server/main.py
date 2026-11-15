@@ -74,9 +74,11 @@ if 0:
     from datetime import timedelta
     from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import any_, callable_, dictnone, strintnone
+    from zato.server.config_runtime import ConfigRuntime
     from zato.server.worker_runtime import WorkerRuntime
     callable_ = callable_
     timedelta = timedelta
+    ConfigRuntime = ConfigRuntime
     WorkerRuntime = WorkerRuntime
 
 # ################################################################################################################################
@@ -188,6 +190,26 @@ class ZatoApplication:
 
 # ################################################################################################################################
 
+    def run_config_process(self, runtime:'ConfigRuntime') -> 'None':
+        """ Runs the server in the config process that the arbiter forked, until the process is drained.
+        """
+        server = self.zato_server
+
+        # The process is bound to its arbiter and to the region of its server ..
+        runtime.bind(server)
+
+        # .. the outgoing REST calls of the services that it runs append to the files that the arbiter rotates ..
+        init_rest_log(os.path.join(server.logs_dir, ModuleCtx.REST_Log_Name), ModuleCtx.Log_No_Rotation)
+
+        # .. it loads the configuration and reports ready, after which the arbiter starts the workers ..
+        ParallelServer.start_server_process(server)
+        runtime.on_started()
+
+        # .. and it runs the changes of configuration until it is drained.
+        runtime.serve()
+
+# ################################################################################################################################
+
     def run_worker(self, worker:'WorkerRuntime') -> 'None':
         """ Runs the server in a worker process that the arbiter forked, until the worker is drained.
         """
@@ -224,9 +246,10 @@ class ZatoApplication:
         init_rest_log(os.path.join(server.logs_dir, ModuleCtx.REST_Log_Name), ModuleCtx.Log_No_Rotation)
         init_access_log(os.path.join(server.logs_dir, ModuleCtx.Access_Log_Name), ModuleCtx.Log_No_Rotation)
 
-        # .. initialize the server, after which the worker reports ready ..
+        # .. the worker loads its configuration between two changes of the config process, after which it reports ready ..
+        load_cid = worker.request_load()
         ParallelServer.start_server_process(server)
-        worker.on_started()
+        worker.on_started(load_cid)
 
         # Build server software header
         server_software = server.fs_server_config.misc.get('http_server_header', 'Apache')

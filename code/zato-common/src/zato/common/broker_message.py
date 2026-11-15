@@ -174,6 +174,14 @@ class GENERIC(Constants):
 class Common(Constants):
     Sync_Objects = ValueConstant('')
 
+class Server(Constants):
+
+    Env_Variables_Apply = ValueConstant('')
+    Redis_Reload = ValueConstant('')
+    Logging_Set = ValueConstant('')
+    File_Delete = ValueConstant('')
+    Pubsub_Cleanup = ValueConstant('')
+
 class Groups(Constants):
 
     Edit = ValueConstant('')

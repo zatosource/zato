@@ -38,7 +38,6 @@ if 0:
     Message = Message
 
     resultdict  = dict_[str, AsyncResult]
-    handlerdict = dict_[str, 'callable_']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -82,7 +81,7 @@ class ControlClient:
 
         # The handlers of the messages that only some processes receive, by the type of a message,
         # each called with the message in the greenlet that reads the channel
-        self.handlers:'handlerdict' = {}
+        self.handlers:'dict[str, callable_]' = {}
 
 # ################################################################################################################################
 

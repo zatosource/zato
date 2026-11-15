@@ -16,6 +16,7 @@ from time import sleep
 
 # Zato
 from zato.common.api import Default_Service_File_Data
+from zato.common.broker_message import Server as BrokerMessageServer
 from zato.common.exception import BadRequest
 from zato.common.typing_ import anylist, intnone, list_field, strnone
 from zato.common.util.api import get_demo_py_fs_locations, wait_for_file, utcnow
@@ -756,6 +757,7 @@ class CreateFile(_GetBase):
 # ################################################################################################################################
 
 class DeleteFile(_GetBase):
+    changes_config = True
 
     # Our I/O
     input = 'fs_location'
@@ -797,8 +799,15 @@ class DeleteFile(_GetBase):
             os.remove(work_dir_fs_location)
             self.logger.info('Deleted path %s', work_dir_fs_location)
 
-        # .. now, delete it from our in-RAM service store ..
-        self.server.service_store.delete_objects_by_file_path(work_dir_fs_location, delete_from_odb=True)
+        # .. now, delete it from our in-RAM service store and from the ODB, the services of a file are deployed
+        # .. from the pickup location itself ..
+        self.server.service_store.delete_objects_by_file_path(fs_location, delete_from_odb=True)
+
+        # .. and from the service store of every other process of the server ..
+        self.config_dispatcher.relay_only({
+            'action': BrokerMessageServer.File_Delete.value,
+            'path': fs_location,
+        })
 
         # .. find the location with the demo service ..
         demo_py_fs = get_demo_py_fs_locations(self.server.base_dir)

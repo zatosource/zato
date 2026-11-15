@@ -286,6 +286,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new pub/sub subscription.
     """
+    changes_config = True
     input = AsIs('topic_name_list'), '-sec_base_id', 'delivery_type', \
         '-is_delivery_active', '-is_pub_active', '-push_type', '-rest_push_endpoint_id', '-push_service_name', '-sub_key'
     output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', '-sec_name', 'security', 'delivery_type', \
@@ -442,8 +443,8 @@ class Create(AdminService):
                 pubsub_msg.push_service_name = sub.push_service_name
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_CREATE.value
 
-                # .. our own process we invoke directly ..
-                self.server.config_manager.on_config_event_PUBSUB_SUBSCRIPTION_CREATE(pubsub_msg)
+                # .. which every process applies, this one first.
+                self.config_dispatcher.publish(pubsub_msg)
 
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
@@ -467,6 +468,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a pub/sub subscription.
     """
+    changes_config = True
     input = 'sub_key', AsIs('topic_name_list'), '-sec_base_id', 'delivery_type', \
         '-is_delivery_active', '-is_pub_active', '-push_type', '-rest_push_endpoint_id', '-push_service_name'
     output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', '-sec_name', 'security', 'delivery_type', \
@@ -623,8 +625,8 @@ class Edit(AdminService):
                 pubsub_msg.push_service_name = sub.push_service_name
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_EDIT.value
 
-                # .. our own process we invoke directly ..
-                self.server.config_manager.on_config_event_PUBSUB_SUBSCRIPTION_EDIT(pubsub_msg)
+                # .. which every process applies, this one first.
+                self.config_dispatcher.publish(pubsub_msg)
 
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
@@ -643,6 +645,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a pub/sub subscription.
     """
+    changes_config = True
     skip_before_handle = True
 
     input = '-id', '-sub_key', '-should_call_pubsub_consumer_backend', AsIs('-session')
@@ -698,11 +701,8 @@ class Delete(AdminService):
         pubsub_msg.sec_name = sec_def_name
         pubsub_msg.action = PUBSUB.SUBSCRIPTION_DELETE.value
 
-        # .. our own consumer task (from the same process) we want to stop synchronously so we call the handler directly ..
-        #if should_call_pubsub_consumer_backend:
-        self.server.config_manager.on_config_event_PUBSUB_SUBSCRIPTION_DELETE(pubsub_msg)
-
-        # .. and now we can notify the pub/sub server, knowing that the consumer is already stopped.
+        # .. which every process applies, this one first, so the consumer of this process stops before this returns.
+        self.config_dispatcher.publish(pubsub_msg)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -19,12 +19,16 @@ from zato.common.const import SECRETS
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_response_value, make_cid_public
 from zato.common.util.sql import search as sql_search
+from zato.common.worker_slot import is_config_process
 from zato.server.service import AsIs, Int, Service
 
 # ################################################################################################################################
 
 if 0:
     from zato.common.typing_ import anylist
+    from zato.server.config_runtime import ConfigRuntime
+
+    ConfigRuntime = ConfigRuntime
 
 # ################################################################################################################################
 
@@ -40,6 +44,9 @@ Listing_Secret_Keys = ('password', 'secret', 'static_token', 'private_key', GENE
 
 # A value starting with either of these is encrypted already and is stored as it is.
 Secret_Prefixes = (SECRETS.PREFIX, SECRETS.Encrypted_Indicator)
+
+# The functions of zato.server.invoker that change the configuration of the server
+_config_change_funcs = {'reload_config'}
 
 # ################################################################################################################################
 
@@ -218,6 +225,10 @@ class ServerFunctionInvoker(AdminService):
 
     name = 'zato.server.invoker'
 
+    def is_config_change(self) -> 'bool':
+        out = self.request.raw['func_name'] in _config_change_funcs
+        return out
+
     def handle(self):
         func_name = self.request.raw['func_name']
         func = getattr(self.server, func_name)
@@ -267,6 +278,13 @@ class ServerFunctionInvoker(AdminService):
             files = self.request.raw.get('files') or []
             is_full = bool(self.request.raw.get('is_full'))
             response = func(path, files, is_full)
+        elif func_name == 'reload_config':
+            response = func()
+
+            # Each worker loads the configuration that the config process reloaded, between two changes
+            if is_config_process():
+                config_runtime = cast_('ConfigRuntime', self.server.worker)
+                config_runtime.request_worker_reload()
         else:
             response = func()
 

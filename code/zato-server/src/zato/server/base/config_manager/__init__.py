@@ -34,7 +34,7 @@ from zato.common import broker_message
 from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
      HTTP_SOAP, PARAMS_PRIORITY, PubSub, SEC_DEF_TYPE, simple_types, URL_TYPE, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
-from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
+from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, Server as BrokerMessageServer, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
 from zato.common.facade import _service_name_to_topic, _service_sub_key_prefix
@@ -100,7 +100,7 @@ if 0:
     from zato.common.ext.bunch import Bunch as bunch_
     from kombu.transport.pyamqp import Message as KombuMessage
     from zato.common.config_dispatcher import ConfigDispatcher
-    from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, strdict, strnone, tupnone
+    from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, strdict, strlist, strnone, tupnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.http_soap.outgoing import BaseHTTPSOAPWrapper
@@ -2726,7 +2726,8 @@ class ConfigManager(_ConfigManagerBase):
 
         # Uploads the service
         _ = self.on_config_event_hot_deploy(
-            msg, 'zato.hot-deploy.create', {'payload_name': msg.payload_name, 'payload':msg.payload}, 'CREATE_SERVICE', *args,
+            msg, 'zato.hot-deploy.create', {'payload_name': msg.payload_name, 'payload':msg.payload, 'is_relayed': True},
+            'CREATE_SERVICE', *args,
             serialize=False, needs_response=True)
 
 
@@ -3039,12 +3040,17 @@ class ConfigManager(_ConfigManagerBase):
         subscriptions = pubsub_subscriptions_by_sec_base(session, sec_base_id)
 
         # .. clean up each subscription's in-memory and Redis state ..
+        sub_keys:'strlist' = []
         for sub in subscriptions:
             sub_key = cast_('str', sub.sub_key)
             self.cleanup_subscription(sub_key, username)
+            sub_keys.append(sub_key)
 
         # .. remove the client from the pattern matcher ..
         self.server.pubsub_pattern_matcher.remove_client(username)
+
+        # .. and have every other process of the server do the same.
+        self._relay_pubsub_cleanup([[sub_key, username] for sub_key in sub_keys], username)
 
 # ################################################################################################################################
 
@@ -3059,6 +3065,7 @@ class ConfigManager(_ConfigManagerBase):
         subscriptions = pubsub_subscriptions_by_rest_endpoint(session, rest_endpoint_id)
 
         # .. clean up each subscription's in-memory and Redis state ..
+        cleaned:'anylist' = []
         for sub in subscriptions:
 
             # .. look up the username from the subscription's security definition ..
@@ -3068,6 +3075,21 @@ class ConfigManager(_ConfigManagerBase):
 
             sub_key = cast_('str', sub.sub_key)
             self.cleanup_subscription(sub_key, sec_def.username)
+            cleaned.append([sub_key, sec_def.username])
+
+        # .. and have every other process of the server do the same.
+        self._relay_pubsub_cleanup(cleaned, None)
+
+# ################################################################################################################################
+
+    def _relay_pubsub_cleanup(self, subscriptions:'anylist', client_username:'strnone') -> 'None':
+        """ Sends the subscriptions removed in this process to every other process of the server.
+        """
+        self.server.config_dispatcher.relay_only({
+            'action': BrokerMessageServer.Pubsub_Cleanup.value,
+            'subscriptions': subscriptions,
+            'client_username': client_username,
+        })
 
 # ################################################################################################################################
 

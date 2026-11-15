@@ -23,6 +23,7 @@ from sqlalchemy import text as sa_text
 
 # Zato
 from zato.common.audit_log.common import Audit_DB_File_Name, metadata as audit_metadata
+from zato.common.broker_message import Server as BrokerMessageServer
 from zato.common.config_db import apply_env_variables, build_enabled_env_variables, build_env_variables, \
     get_default_env_file_path, get_enabled_from_env, persist_env_variables, sql_env_prefix_by_database, \
     sql_field_suffixes
@@ -153,6 +154,7 @@ class SQLSave(AdminService):
     The audit log's Enabled switch is read per write too, so turning it off stops
     the writing from the very next event on.
     """
+    changes_config = True
     name = _sql_service_prefix + 'save'
 
     def handle(self):
@@ -169,8 +171,9 @@ class SQLSave(AdminService):
         # .. the Enabled switch has a variable of its own, outside the connection's variable prefix ..
         env_variables.update(build_enabled_env_variables(database, values))
 
-        # .. apply them to the running server ..
+        # .. apply them to this process and to every other process of the server ..
         set_count = apply_env_variables(env_variables)
+        self._relay_env_variables(env_variables)
 
         # .. persist them so a restart re-applies them - into the file the server
         # .. was started with or, without one, into a well-known file under the config
@@ -195,6 +198,26 @@ class SQLSave(AdminService):
             'message': message,
             'env_variables': env_variables,
         }
+
+# ################################################################################################################################
+
+    def _relay_env_variables(self, env_variables:'stranydict') -> 'None':
+        """ Sends the variables to every other process of the server, which applies them as this one did.
+        """
+        set_variables:'stranydict' = {}
+        deleted_variables:'list[str]' = []
+
+        for env_name, value in env_variables.items():
+            if value:
+                set_variables[env_name] = value
+            else:
+                deleted_variables.append(env_name)
+
+        self.config_dispatcher.relay_only({
+            'action': BrokerMessageServer.Env_Variables_Apply.value,
+            'set_variables': set_variables,
+            'deleted_variables': deleted_variables,
+        })
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -268,6 +291,7 @@ class RedisSave(AdminService):
     keeps its startup connection - repointing delivery greenlets is a restart-level
     operation.
     """
+    changes_config = True
     name = _redis_service_prefix + 'save'
 
     def handle(self):
@@ -299,8 +323,18 @@ class RedisSave(AdminService):
         if password:
             ram_section['password'] = password
 
-        # .. and finally, rebuild the live Redis client behind self.redis.
+        # .. rebuild the live Redis client behind self.redis ..
         self.server.config_manager.reconfigure_redis_cache()
+
+        # .. and have every other process of the server read the same configuration, the password from secrets.conf.
+        ram_values:'stranydict' = {}
+        self._apply_values(ram_values, values)
+
+        self.config_dispatcher.relay_only({
+            'action': BrokerMessageServer.Redis_Reload.value,
+            'section': ram_values,
+            'has_password': bool(password),
+        })
 
         logger.info('Redis save: `%s:%s` db `%s`', values['host'], values['port'], values['db'])
 

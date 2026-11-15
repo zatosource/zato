@@ -7,9 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The runtime of one worker process of a server. It binds the worker to the shared region and to the control channel
-# of its arbiter before the server starts, reports ready once the server loaded its configuration, records
-# the heartbeat of its slot, applies the events and answers the queries that the arbiter relays, and drains the worker
-# on the drain command of the arbiter or on its own SIGTERM.
+# of its arbiter before the server starts, loads its configuration after the mark of the config process, reports ready,
+# records the heartbeat of its slot, applies the events and answers the queries that the arbiter relays, forwards
+# the services that change configuration to the config process, and drains the worker on the drain command
+# of the arbiter or on its own SIGTERM.
 
 # stdlib
 import os
@@ -18,7 +19,7 @@ from logging import getLogger
 from time import monotonic
 
 # gevent
-from gevent import get_hub, signal_handler, sleep, spawn
+from gevent import get_hub, getcurrent, signal_handler, sleep, spawn
 from gevent.event import Event
 
 # Zato
@@ -33,6 +34,8 @@ from zato.common.pubsub.sql.replaced import set_on_replaced
 from zato.common.pubsub.writer_process.remote import start_writer_client
 from zato.common.typing_ import cast_
 from zato.server.arbiter_config import ModuleCtx as ArbiterCtx
+from zato.server.config_forward import apply_forward_result, new_forward_body
+from zato.server.config_runner import bind_config_runner
 from zato.server.control.client import ControlClient
 from zato.server.control.queries import QueryKey, QueryName, QueryRouter
 from zato.server.outgoing_region import bind_outgoing_control, handle_outgoing_query
@@ -49,6 +52,7 @@ if 0:
     from zato.server.arbiter_config import WorkerContext
     from zato.server.base.parallel import ParallelServer
     from zato.server.control.envelope import Message
+    from zato.server.service import Service
     from zato_ipc_core.zato_ipc_core import SharedRegion
     from zato_server_core.zato_server_core import HTTPServer
 
@@ -58,6 +62,7 @@ if 0:
     HTTPServer = HTTPServer
     Message = Message
     ParallelServer = ParallelServer
+    Service = Service
     SharedRegion = SharedRegion
     strintdict = strintdict
     strlist = strlist
@@ -97,6 +102,9 @@ class WorkerRuntime:
         self._server:'ParallelServer | None' = None
         self.http_server:'HTTPServer | None' = None
 
+        # The greenlet that reads the control channel and applies the events, assigned when the worker binds its server
+        self.reader:'Greenlet | None' = None
+
         # How many requests the worker is processing, which a drain waits for
         self.in_flight = 0
 
@@ -106,6 +114,10 @@ class WorkerRuntime:
 
         # The arbiter is told only once that another server took over the pub/sub database
         self.is_replaced_reported = False
+
+        # One reload runs at a time, and the reloads requested while it runs are served by one more reload after it
+        self.is_reloading = False
+        self.is_reload_requested = False
 
         # The queries of other workers that the control client receives are answered by name
         self.router = QueryRouter()
@@ -149,6 +161,7 @@ class WorkerRuntime:
         # .. the control channel is read from now on, and the worker exits once the arbiter closes it ..
         reader = self.client.start()
         reader.link(self.on_control_closed)
+        self.reader = reader
 
         # .. the heartbeat of the slot is recorded whenever the hub of the worker runs ..
         _ = spawn(self.write_heartbeats)
@@ -166,16 +179,31 @@ class WorkerRuntime:
 
 # ################################################################################################################################
 
-    def on_started(self) -> 'None':
+    def request_load(self) -> 'str':
+        """ Waits for the mark of the config process, after which no change is committed until the worker loaded
+        its configuration, and returns the correlation ID of the load.
+        """
+        out = self.client.request_load()
+        return out
+
+# ################################################################################################################################
+
+    def on_started(self, load_cid:'str') -> 'None':
         """ Reports ready once the server loaded its configuration, after which the arbiter relays to the worker the events
-        that it held for it and the configuration events of the worker reach the other workers.
+        that it held for it and the configuration events of the worker reach the other workers, and lets the config process
+        resume its changes.
         """
         server = self.server
 
         server.config_dispatcher.relay = self.client.publish
         server.log_streaming_manager.apply_streaming()
 
+        # The services that change configuration run in the config process from now on, while those that the startup
+        # of the worker invoked deployed what each process deploys for itself, such as the files of the pickup directory.
+        bind_config_runner(self.forward_change)
+
         self.client.report_ready()
+        self.client.report_load_done(load_cid)
 
         logger.info('Worker of slot %s, generation %s, PID %s is ready', self.slot, self.generation, os.getpid())
 
@@ -239,13 +267,54 @@ class WorkerRuntime:
 
 # ################################################################################################################################
 
-    def on_reload(self) -> 'None':
-        """ Reads the configuration again, because another worker may have committed a change whose event it never sent.
+    def forward_change(self, invoker:'Service', service:'Service', channel:'str', request_ctx:'anydict') -> 'None':
+        """ Runs a service that changes configuration in the config process, and returns once the worker applied the events
+        of the change, because the arbiter delivers its result after them.
         """
-        try:
-            self.server.reload_config()
-        except Exception:
-            logger.exception('Could not reload the configuration of the worker of slot %s', self.slot)
+        # A service that an event invokes applies in this worker a change that the config process committed already,
+        # and the greenlet that applies the events would wait for a result that only it reads.
+        if getcurrent() is self.reader:
+            invoker._run_handle(service, channel, request_ctx)
+            return
+
+        body = new_forward_body(service, channel, request_ctx)
+        result = self.client.forward(body)
+
+        apply_forward_result(service, result)
+
+# ################################################################################################################################
+
+    def on_reload(self) -> 'None':
+        """ Reads the configuration again, because the config process may have committed a change whose event it never sent.
+        """
+        self.is_reload_requested = True
+
+        # The reload in progress is followed by one more, which reads the configuration of this request
+        if self.is_reloading:
+            return
+
+        _ = spawn(self.reload)
+
+# ################################################################################################################################
+
+    def reload(self) -> 'None':
+        """ Reads the configuration again after the mark of the config process, as many times as it was requested.
+        """
+        self.is_reloading = True
+
+        while self.is_reload_requested:
+            self.is_reload_requested = False
+
+            load_cid = self.request_load()
+
+            try:
+                self.server.reload_config()
+            except Exception:
+                logger.exception('Could not reload the configuration of the worker of slot %s', self.slot)
+
+            self.client.report_load_done(load_cid)
+
+        self.is_reloading = False
 
 # ################################################################################################################################
 

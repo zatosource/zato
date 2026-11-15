@@ -39,6 +39,7 @@ from zato.server.arbiter import Arbiter
 from zato.server.arbiter_config import ArbiterConfig, ArbiterError
 from zato.server.connection.mcp.session import remove_all_sessions
 from zato.server.server_region import new_server_region
+from zato.server.config_runtime import ConfigRuntime
 from zato.server.worker_runtime import WorkerRuntime
 
 # ################################################################################################################################
@@ -170,7 +171,9 @@ def stop_threadpool() -> 'None':
     # .. which leave the process shortly after their greenlets did.
     deadline = monotonic() + ModuleCtx.Thread_Stop_Timeout
 
-    while len(_get_thread_names()) > 1:
+    # Only the count is read here, because a thread that exits between the listing of the tasks and the reading
+    # of their names leaves no name to read.
+    while len(os.listdir(ModuleCtx.Task_Dir)) > 1:
         if monotonic() >= deadline:
             break
         sleep(ModuleCtx.Thread_Stop_Interval)
@@ -193,7 +196,7 @@ def check_fork_ready() -> 'None':
 # ################################################################################################################################
 
 class ServerProcesses:
-    """ The main functions of the worker processes and of the pub/sub writer process of one server.
+    """ The main functions of the worker processes, of the config process and of the pub/sub writer process of one server.
     """
 
     def __init__(self, zato_app:'ZatoApplication', region:'SharedRegion', queue_by_path:'strintdict') -> 'None':
@@ -204,6 +207,10 @@ class ServerProcesses:
     def worker_main(self, ctx:'WorkerContext') -> 'None':
         worker = WorkerRuntime(self.region, ctx, self.queue_by_path)
         self.zato_app.run_worker(worker)
+
+    def config_main(self, ctx:'WorkerContext') -> 'None':
+        runtime = ConfigRuntime(self.region, ctx, self.queue_by_path)
+        self.zato_app.run_config_process(runtime)
 
     def writer_main(self, listen_fd:'int') -> 'None':
         """ Serves the workers, taking the turns of the writer process in the queues of the pub/sub and audit files.
@@ -253,7 +260,7 @@ def run_arbiter(zato_app:'ZatoApplication') -> 'int':
     stop_threadpool()
     check_fork_ready()
 
-    arbiter = Arbiter(region, processes.worker_main, config, writer_main)
+    arbiter = Arbiter(region, processes.worker_main, config, writer_main, processes.config_main)
 
     out = arbiter.run()
     return out

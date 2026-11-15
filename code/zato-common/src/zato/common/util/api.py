@@ -85,7 +85,7 @@ import yaml
 # Zato
 from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, \
      engine_display_name, MISC, Secret_Shadow, TRACE1, zato_no_op_marker
-from zato.common.broker_message import HOT_DEPLOY, SERVICE
+from zato.common.broker_message import SERVICE
 from zato.common.const import SECRETS, ServiceConst
 from zato.common.crypto.api import CryptoManager
 from zato.common.ext.configobj_ import ConfigObj
@@ -1778,27 +1778,6 @@ def find_internal_modules(root:'ModuleType') -> 'strlist':
                 found_module_paths.add(full_module_path)
 
     return sorted(found_module_paths)
-
-# ################################################################################################################################
-
-def publish_file(config_dispatcher:'any_', cid:'str', file_path:'str') -> 'stranydict':
-    """ Publish a file's content to the broker for hot-deployment.
-    """
-
-    with open_r(file_path) as f:
-        event_data = f.read()
-
-    msg = {
-        'cid': cid,
-        'event_type': 'file_ready',
-        'action': HOT_DEPLOY.CREATE_SERVICE.value,
-        'payload_name': file_path,
-        'payload': event_data,
-        'timestamp': utcnow().isoformat(),
-    }
-
-    config_dispatcher.publish(msg)
-    return msg
 
 # ################################################################################################################################
 

@@ -396,6 +396,10 @@ class ControlHub:
         elif message_type == MessageType.Load_Done:
             self.config_route.on_load_done(channel, header, body)
 
+        # The config process asks for a reload of every worker after a change that reached the ODB without its events
+        elif message_type == MessageType.Reload:
+            self.broadcast_reload()
+
         else:
             logger.warning('Ignoring control message of type `%s` from slot %s', message_type, channel.slot)
 

@@ -831,6 +831,14 @@ class Service:
 
 # ################################################################################################################################
 
+    def is_config_change(self) -> 'bool':
+        """ Returns whether this invocation changes the configuration of the server, which a service whose request
+        decides it determines from its request.
+        """
+        return self.changes_config
+
+# ################################################################################################################################
+
     def _run_handle(self, service:'Service', channel:'str', request_ctx:'stranydict') -> 'None':
         """ Runs the service proper - the hook before it, handle itself and the hook after it.
         """
@@ -1004,7 +1012,7 @@ class Service:
                     config_runner = get_config_runner()
 
                     # A service that changes configuration runs through the runner of the process, if there is one ..
-                    if service.changes_config and config_runner:
+                    if config_runner and service.is_config_change():
                         config_runner(self, service, channel, request_ctx)
 
                     # .. and any other service runs here.
