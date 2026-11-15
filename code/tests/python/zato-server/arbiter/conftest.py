@@ -17,6 +17,9 @@ import pytest
 _writer_tests_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'zato-common', 'pubsub_writer_process')
 sys.path.insert(0, os.path.abspath(_writer_tests_dir))
 
+# The helpers that the tests of this directory share
+sys.path.insert(0, os.path.dirname(__file__))
+
 # Zato
 from arbiter_common import terminate_started_arbiters # noqa: E402
 
