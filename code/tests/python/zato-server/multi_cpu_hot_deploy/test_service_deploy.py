@@ -14,7 +14,7 @@ import unittest
 from uuid import uuid4
 
 # Zato
-from zato.common.test.conftest_base_multi_cpu import invoke_on_slot, ModuleCtx as MultiCPUCtx, MultiCPUTestConfig, \
+from zato.common.test.conftest_base_multi_cpu import get_staging_path, invoke_on_slot, ModuleCtx as MultiCPUCtx, MultiCPUTestConfig, \
      wait_for_every_slot
 from zato.server.control.envelope import ModuleCtx as EnvelopeCtx
 
@@ -65,7 +65,7 @@ class TestServiceDeployAcrossWorkers(unittest.TestCase):
 
         file_name = f'test_multi_cpu_deployed_{suffix}.py'
         pickup_path = os.path.join(MultiCPUTestConfig.server_directory, 'pickup', 'incoming', 'services', file_name)
-        staging_path = os.path.join(MultiCPUTestConfig.server_directory, f'staging-{file_name}')
+        staging_path = get_staging_path(os.path.dirname(pickup_path))
 
         # The module is moved into the pickup directory complete, so the listener never reads a partially written one ..
         with open(staging_path, 'w') as module_file:

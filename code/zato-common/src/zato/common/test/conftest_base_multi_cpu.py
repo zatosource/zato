@@ -11,6 +11,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # of the server through zato.server.worker.get-list and sends signals to the worker of a chosen slot.
 
 # stdlib
+import atexit
 import json
 import logging
 import os
@@ -18,6 +19,7 @@ import shutil
 import signal
 import sqlite3
 import subprocess
+import sys
 import tempfile
 from base64 import b64encode
 from http.client import HTTPConnection
@@ -29,6 +31,7 @@ from uuid import uuid4
 import yaml
 
 # Zato
+from zato.common.file_transfer import listener as file_listener
 from zato.common.test.client import AdminClient
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
 
@@ -68,6 +71,28 @@ class ModuleCtx:
 
     # The directory whose entries are the PIDs of the processes of the host
     Proc_Directory = '/proc'
+
+    # The name of the config process of a server, as the kernel reports it
+    Config_Process_Name = 'zato-config'
+
+    # The pickup directories of a server that a file listener watches, the files it deploys from them, the file
+    # its output goes to, and the line it writes once it watches its directory
+    Listener_Directories = (
+        os.path.join('pickup', 'incoming', 'services'),
+        os.path.join('pickup', 'incoming', 'user-conf'),
+    )
+    Listener_Patterns = ['*.py', '*.zip', '*.yaml', '*.yml', '*.ini', '*.zrules']
+    Listener_Log_Name = 'file-listener-{}.log'
+    Listener_Ready_Marker = 'Watching for changes, press Ctrl+C to stop'
+
+    # How long a file listener may take to watch its directory, in seconds
+    Listener_Ready_Deadline = 30.0
+
+    # The name of a file in a pickup directory that matches no pattern of its file listener
+    Staging_Name = 'staging-{}.part'
+
+    # The repository of the web-admin of a quickstart environment, which holds the credentials that a file listener uses
+    Web_Admin_Repo = os.path.join('web-admin', 'config', 'repo')
 
     # The service that returns the slots of the server
     Worker_List_Service = 'zato.server.worker.get-list'
@@ -166,6 +191,72 @@ class MultiCPUTestConfig:
         cls.base_url = f'http://{host}:{server_port}'
         cls.invoke_password = invoke_password
         cls.worker_count = get_worker_count()
+
+        start_file_listeners(server_directory, server_port)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _wait_for_listener(process:'subprocess.Popen[bytes]', log_path:'str') -> 'None':
+    """ Waits until a file listener reports that it watches its directory.
+    """
+    deadline = monotonic() + ModuleCtx.Listener_Ready_Deadline
+
+    while monotonic() < deadline:
+
+        if process.poll() is not None:
+            with open(log_path) as log_file:
+                output = log_file.read()
+            raise Exception(f'The file listener exited with {process.returncode} -> {output}')
+
+        with open(log_path) as log_file:
+            if ModuleCtx.Listener_Ready_Marker in log_file.read():
+                return
+
+        sleep(ModuleCtx.Poll_Interval)
+
+    raise Exception(f'The file listener did not watch its directory within {ModuleCtx.Listener_Ready_Deadline}s, see {log_path}')
+
+# ################################################################################################################################
+
+def start_file_listeners(server_directory:'str', server_port:'int') -> 'None':
+    """ Starts a file listener for each pickup directory of the server, as a deployment of the server does, so that
+    a file placed in one of them is deployed through the listener. The listeners are stopped when the test run exits.
+    """
+    quickstart_directory = os.path.dirname(server_directory)
+
+    environment = dict(os.environ)
+    environment['Zato_Web_Admin_Repo_Dir'] = os.path.join(quickstart_directory, ModuleCtx.Web_Admin_Repo)
+    environment['Zato_Config_Bind_Port'] = str(server_port)
+
+    for index, directory in enumerate(ModuleCtx.Listener_Directories):
+
+        log_path = os.path.join(quickstart_directory, ModuleCtx.Listener_Log_Name.format(index))
+        command = [sys.executable, file_listener.__file__, os.path.join(server_directory, directory),
+            '--observer', 'inotify', '--patterns', *ModuleCtx.Listener_Patterns]
+
+        with open(log_path, 'w') as log_file:
+            process = subprocess.Popen(command, env=environment, stdout=log_file, stderr=subprocess.STDOUT)
+
+        _ = atexit.register(_stop_file_listener, process)
+
+        _wait_for_listener(process, log_path)
+        logger.info('File listener %s watches %s', process.pid, directory)
+
+# ################################################################################################################################
+
+def _stop_file_listener(process:'subprocess.Popen[bytes]') -> 'None':
+    process.terminate()
+    _ = process.wait()
+
+# ################################################################################################################################
+
+def get_staging_path(directory:'str') -> 'str':
+    """ Returns a path in a pickup directory from which a complete file is renamed into place, so that its file listener
+    never reads a partially written one.
+    """
+    out = os.path.join(MultiCPUTestConfig.server_directory, directory, ModuleCtx.Staging_Name.format(uuid4().hex))
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -554,6 +645,43 @@ class WorkerControl:
             sleep(ModuleCtx.Poll_Interval)
 
         raise Exception(f'Slot {slot} was not respawned within {ModuleCtx.Respawn_Deadline}s')
+
+# ################################################################################################################################
+
+    def get_config_process_pid(self) -> 'int':
+        """ Returns the PID of the config process, which is the child of the arbiter of that name.
+        """
+        worker_pid = self.get_slots()[0]['pid']
+        arbiter_pid = get_parent_pid(worker_pid)
+
+        for pid in get_child_pids(arbiter_pid):
+            with open(f'{ModuleCtx.Proc_Directory}/{pid}/comm') as comm_file:
+                name = comm_file.read().strip()
+
+            if name == ModuleCtx.Config_Process_Name:
+                return pid
+
+        raise Exception(f'No config process among the children of the arbiter {arbiter_pid}')
+
+# ################################################################################################################################
+
+    def wait_for_config_process(self, previous_pid:'int') -> 'int':
+        """ Waits until the arbiter runs a config process other than the given one and returns its PID.
+        """
+        deadline = monotonic() + ModuleCtx.Respawn_Deadline
+
+        while monotonic() < deadline:
+            try:
+                pid = self.get_config_process_pid()
+            except Exception as e:
+                logger.info('Config process not found while waiting -> %s', e)
+            else:
+                if pid != previous_pid:
+                    return pid
+
+            sleep(ModuleCtx.Poll_Interval)
+
+        raise Exception(f'The config process was not respawned within {ModuleCtx.Respawn_Deadline}s')
 
 # ################################################################################################################################
 

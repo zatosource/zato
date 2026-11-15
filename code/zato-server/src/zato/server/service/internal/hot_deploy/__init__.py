@@ -79,6 +79,21 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
+    def is_config_change(self) -> 'bool':
+
+        # A relayed deployment puts in effect in this process a file that the config process deployed already
+        raw = self.request.raw
+
+        if 'is_relayed' in raw:
+            is_relayed = raw['is_relayed']
+        else:
+            is_relayed = False
+
+        out = not is_relayed
+        return out
+
+# ################################################################################################################################
+
     def _delete(self, items:'commoniter') -> 'None':
         for item in items:
             if os.path.isfile(item):

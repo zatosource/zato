@@ -314,6 +314,9 @@ class WorkerRuntime:
 
             self.client.report_load_done(load_cid)
 
+            # A file deployed in a process that terminated before it relayed the deployment is in effect here as well
+            self.server.deploy_pickup_dir(is_relayed=True)
+
         self.is_reloading = False
 
 # ################################################################################################################################

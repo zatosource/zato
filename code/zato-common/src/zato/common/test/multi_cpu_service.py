@@ -229,6 +229,47 @@ class LogRecords(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class EnvChange(Service):
+    """ Sets an environment variable through zato.env-variables.save and returns the value that the worker
+    reads once the invocation returned, together with the slot of the worker.
+    """
+    name = 'test.multi-cpu.env-change'
+
+    def handle(self) -> 'None':
+        request = self.request.payload
+        variable = request['name']
+
+        _ = self.invoke('zato.env-variables.save', {'variables': f'{variable}={request["value"]}'})
+
+        self.response.payload = {
+            'value': os.environ[variable],
+            'slot': get_slot_or_single(),
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class EnvRead(Service):
+    """ Returns the value of an environment variable in the worker that serves the request, or None if it is not set.
+    """
+    name = 'test.multi-cpu.env-read'
+
+    def handle(self) -> 'None':
+        variable = self.request.payload['name']
+
+        if variable in os.environ:
+            value = os.environ[variable]
+        else:
+            value = None
+
+        self.response.payload = {
+            'value': value,
+            'slot': get_slot_or_single(),
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class InvalidateResponse(Service):
     """ Invalidates the cached responses of a channel.
     """

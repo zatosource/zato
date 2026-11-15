@@ -18,7 +18,7 @@ from uuid import uuid4
 import yaml
 
 # Zato
-from zato.common.test.conftest_base_multi_cpu import count_enmasse_imports, ModuleCtx as MultiCPUCtx, MultiCPUTestConfig, request_on_slot, \
+from zato.common.test.conftest_base_multi_cpu import count_enmasse_imports, get_staging_path, ModuleCtx as MultiCPUCtx, MultiCPUTestConfig, request_on_slot, \
      wait_for_every_slot
 
 # ################################################################################################################################
@@ -91,7 +91,7 @@ class TestEnmasseAcrossWorkers(unittest.TestCase):
         suffix = uuid4().hex[:12]
         file_name = f'enmasse-multi-cpu-{suffix}.yaml'
         path = os.path.join(MultiCPUTestConfig.server_directory, ModuleCtx.Services_Dir, file_name)
-        staging_path = os.path.join(MultiCPUTestConfig.server_directory, f'staging-{file_name}')
+        staging_path = get_staging_path(ModuleCtx.Services_Dir)
 
         for path_count in (1, 2):
 

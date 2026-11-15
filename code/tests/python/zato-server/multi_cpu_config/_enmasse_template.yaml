@@ -27,6 +27,12 @@ channel_rest:
     data_format: json
     security: test.multi-cpu.config.sec
 
+  # The channel whose URL path concurrent imports change
+  - name: test.multi-cpu.config.contended
+    service: test.multi-cpu.worker-slot
+    url_path: /test/multi-cpu/config/contended/initial
+    data_format: json
+
   # The two channels that the outgoing connection invokes before and after its change
   - name: test.multi-cpu.config.target-first
     service: test.multi-cpu.channel-name

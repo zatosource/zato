@@ -1020,12 +1020,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         })
 
         # Touch all the hot-directory files to trigger their deployment
-        py_files = get_python_files(self.hot_deploy_config.pickup_dir)
-        for item in py_files:
-            _ = self.invoke('zato.hot-deploy.create', {
-                'payload': item['data'],
-                'payload_name': item['full_path']
-            })
+        self.deploy_pickup_dir(is_relayed=False)
 
         # All services are deployed, build MCP tool registries now ..
         self._build_mcp_tool_registries()
@@ -2097,6 +2092,19 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
             for sub_key, username, sec_name in subscriptions:
                 _ = self.pubsub_subscriptions.register_user(username, sec_name, sub_key)
+
+# ################################################################################################################################
+
+    def deploy_pickup_dir(self, *, is_relayed:'bool') -> 'None':
+        """ Deploys each Python file of the pickup directory. A relayed deployment sends no event to the other processes.
+        """
+        py_files = get_python_files(self.hot_deploy_config.pickup_dir)
+        for item in py_files:
+            _ = self.invoke('zato.hot-deploy.create', {
+                'payload': item['data'],
+                'payload_name': item['full_path'],
+                'is_relayed': is_relayed,
+            })
 
 # ################################################################################################################################
 

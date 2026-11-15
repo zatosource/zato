@@ -562,6 +562,16 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
                 del self.file_checks[event_path]
 
 # ################################################################################################################################
+
+    def on_moved(self, event:'FileSystemEvent') -> 'None':
+        """ Handle a file renamed into place, which is how a complete file replaces the previous one in a single step.
+        """
+        event_path:'str' = event.dest_path.rstrip(os.path.sep) # type: ignore
+
+        if self._is_event_relevant(event_path, 'created'):
+            self.publish_file_ready_event(event_path)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TLSMaterialEventHandler(ZatoFileSystemEventHandler):
@@ -577,16 +587,6 @@ class TLSMaterialEventHandler(ZatoFileSystemEventHandler):
     def get_request_body(self, event_path:'str') -> 'str':
         out = dumps({'payload_name': event_path})
         return out
-
-# ################################################################################################################################
-
-    def on_moved(self, event:'FileSystemEvent') -> 'None':
-        """ Handle a file renamed into place, which is how a certificate is usually replaced in full.
-        """
-        event_path:'str' = event.dest_path.rstrip(os.path.sep) # type: ignore
-
-        if self._is_event_relevant(event_path, 'created'):
-            self.publish_file_ready_event(event_path)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -715,10 +715,11 @@ if __name__ == '__main__':
 
     try:
         matching_items = []
-        is_incoming_services = base_dir.rstrip(os.path.sep).endswith(os.path.join('incoming', 'services'))
+        pickup_suffixes = (os.path.join('incoming', 'services'), os.path.join('incoming', 'user-conf'))
+        is_pickup_directory = base_dir.rstrip(os.path.sep).endswith(pickup_suffixes)
 
-        # TLS material is watched in the whole directory, without looking for any source layout in it
-        if args.is_tls_material or is_incoming_services:
+        # TLS material and the pickup directories of a server are watched as a whole, without looking for any source layout in them
+        if args.is_tls_material or is_pickup_directory:
             matching_items = [base_dir]
             logger.info('Watching for changes in %s', base_dir)
         else:

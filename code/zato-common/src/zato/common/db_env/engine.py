@@ -33,7 +33,7 @@ from zato.common.db_env.process_queue import ProcessQueue
 from zato.common.db_env.sqlite_checkpoint import set_background_checkpoint_limit, WALCheckpointer
 from zato.common.defaults import default_env_base_dir
 from zato.common.ha.sqlite import holds_log_for_node, ReplicatedConnection, ReplicatedPragmas
-from zato.common.worker_slot import is_singleton_owner
+from zato.common.worker_slot import is_config_owner
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -225,7 +225,7 @@ def get_sqlite_file_engine(
 
     # .. start the checkpoints of the WAL that the commits no longer run, in one process of the server ..
     if file_engine.needs_background_checkpoint:
-        if is_singleton_owner():
+        if is_config_owner():
             checkpointer = WALCheckpointer(out, db_path=db_path)
             checkpointer.start()
 
@@ -420,7 +420,7 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
 
     # .. start the checkpoints of the WAL that the commits no longer run, in one process of the server ..
     if env_engine.needs_background_checkpoint:
-        if is_singleton_owner():
+        if is_config_owner():
             checkpointer = WALCheckpointer(out)
             checkpointer.start()
             _checkpointer_cache[cache_key] = checkpointer

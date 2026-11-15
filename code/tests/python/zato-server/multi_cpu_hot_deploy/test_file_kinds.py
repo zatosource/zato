@@ -14,7 +14,7 @@ from uuid import uuid4
 from zipfile import ZipFile
 
 # Zato
-from zato.common.test.conftest_base_multi_cpu import invoke_on_slot, ModuleCtx as MultiCPUCtx, MultiCPUTestConfig, \
+from zato.common.test.conftest_base_multi_cpu import get_staging_path, invoke_on_slot, ModuleCtx as MultiCPUCtx, MultiCPUTestConfig, \
      wait_for_every_slot
 
 # ################################################################################################################################
@@ -113,14 +113,8 @@ def _publish(directory:'str', file_name:'str', staging_path:'str') -> 'None':
 
 # ################################################################################################################################
 
-def _staging_path(file_name:'str') -> 'str':
-    out = os.path.join(MultiCPUTestConfig.server_directory, f'staging-{file_name}')
-    return out
-
-# ################################################################################################################################
-
 def _write(directory:'str', file_name:'str', content:'str') -> 'None':
-    staging_path = _staging_path(file_name)
+    staging_path = get_staging_path(directory)
 
     with open(staging_path, 'w') as output_file:
         _ = output_file.write(content)
@@ -130,7 +124,7 @@ def _write(directory:'str', file_name:'str', content:'str') -> 'None':
 # ################################################################################################################################
 
 def _write_archive(directory:'str', file_name:'str', member_name:'str', content:'str') -> 'None':
-    staging_path = _staging_path(file_name)
+    staging_path = get_staging_path(directory)
 
     with ZipFile(staging_path, 'w') as archive:
         archive.writestr(member_name, content)
