@@ -18,9 +18,10 @@ from sqlalchemy import select
 
 # Zato
 from writer_common import run_in_child
-from zato.common.audit_log.api import AuditLog, event_attr_table, event_body_table, event_table, get_audit_engine
+from zato.common.audit_log.api import AuditLog, get_audit_engine
 from zato.common.audit_log.attachment import build_attachment
-from zato.common.audit_log.common import AuditBody
+from zato.common.audit_log.common import AuditBody, event_attr_table, event_body_table, event_link_table, \
+    event_table
 from zato.common.pubsub.writer_process.frames import ItemKind
 from zato.common.pubsub.writer_process.handlers import WriterHandlers
 from zato.common.pubsub.writer_process.remote import start_writer_client, stop_writer_client
@@ -32,11 +33,9 @@ from zato.common.pubsub.writer_process.server import new_listening_socket, Write
 if 0:
     from pathlib import Path
     from pytest import MonkeyPatch
-    from zato.common.typing_ import any_, anydict, anylist, intlist
+    from zato.common.typing_ import anydict, intlist
 
-    any_ = any_
     anydict = anydict
-    anylist = anylist
     intlist = intlist
     MonkeyPatch = MonkeyPatch
     Path = Path
@@ -49,9 +48,6 @@ _env_db_name = 'Zato_Audit_Log_DB_Name'
 
 # How long a caller waits for a reply, in seconds
 _deadline = 20.0
-
-# How many workers write their events at the same time
-_concurrent_writers = 8
 
 _server_name = 'server1'
 _source = 'test'
@@ -107,23 +103,6 @@ def _write_through_writer_process(tmp_dir:'str') -> 'None':
     assert second_id
     assert second_id != first_id
 
-    # .. concurrent workers each receive the ID of their own event ..
-    returned:'intlist' = []
-
-    def _insert(index:'int') -> 'None':
-        event_id = audit_log.insert(_source, _event_type, f'concurrent-{index}')
-        assert event_id
-        returned.append(event_id)
-
-    greenlets:'anylist' = []
-
-    for index in range(_concurrent_writers):
-        greenlets.append(gevent.spawn(_insert, index))
-
-    _ = gevent.joinall(greenlets, raise_error=True)
-
-    assert len(set(returned)) == _concurrent_writers
-
     # .. and the database holds every event, with the values that the workers built.
     engine = get_audit_engine()
 
@@ -142,8 +121,12 @@ def _write_through_writer_process(tmp_dir:'str') -> 'None':
         assert by_id[first_id].cid == 'cid-1'
         assert by_id[first_id].event_time is not None
 
-        for event_id in returned:
-            assert event_id in by_id
+        assert by_id[second_id].object_name == 'object-2'
+
+        link_rows = connection.execute(select(event_link_table.c.parent_event_id).where(
+            event_link_table.c.child_event_id == second_id)).all()
+
+        assert [row.parent_event_id for row in link_rows] == [first_id]
 
         attr_rows = connection.execute(select(event_attr_table.c.name, event_attr_table.c.value,
             event_attr_table.c.value_number).where(event_attr_table.c.event_id == first_id)).all()

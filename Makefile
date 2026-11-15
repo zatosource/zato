@@ -804,7 +804,7 @@ Zato_Test_Multi_CPU_HA_Resume_File := $(CURDIR)/code/tests/.test-multi-cpu-ha-re
 Zato_Test_Multi_CPU_Unit := \
 	zato-common/ipc_region zato-common/log_rotation zato-common/process_queue zato-common/worker_count \
 	zato-common/worker_slot zato-common/rate_limiting_region zato-common/mllp_region zato-common/log_streaming_region \
-	zato-common/audit_retention_workers zato-common/analytics_rollup_workers \
+	zato-common/audit_retention_workers zato-common/analytics_rollup_workers zato-common/pubsub_writer_process \
 	zato-server/arbiter zato-server/control zato-server/worker_list zato-server/metrics_region \
 	zato-server/outgoing_region zato-server/queue_bridge_workers zato-server/response_cache_workers
 
