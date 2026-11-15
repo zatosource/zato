@@ -12,7 +12,7 @@ import os
 # Zato
 from zato.common.db_env import get_sqlite_file_engine
 from zato.common.db_env.common import Default_Type, EnvDBConfig
-from zato.common.db_env.engine import get_env_engine
+from zato.common.db_env.engine import get_env_engine, new_unshared_env_engine, new_unshared_sqlite_file_engine
 from zato.common.defaults import default_env_base_dir
 from zato.common.ha.common import Database_PubSub
 from zato.common.pubsub.sql.schema import metadata, pubsub_db_file_name
@@ -141,6 +141,21 @@ def get_pubsub_engine() -> 'Engine':
             replicated_database=Database_PubSub)
     else:
         out = get_env_engine(pubsub_db_config)
+
+    return out
+
+# ################################################################################################################################
+
+def new_unshared_pubsub_engine() -> 'Engine':
+    """ Returns an engine of the pub/sub database that no other caller receives, which its caller disposes.
+    """
+    db_type = get_pubsub_db_type()
+
+    if db_type == Default_Type:
+        db_path = get_pubsub_db_path()
+        out = new_unshared_sqlite_file_engine(db_path, replicated_database=Database_PubSub)
+    else:
+        out = new_unshared_env_engine(pubsub_db_config)
 
     return out
 

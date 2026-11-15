@@ -15,7 +15,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from gevent import spawn
 
 # Zato
-from zato.common.worker_slot import get_worker_slot
+from zato.common.worker_slot import get_slot_or_single
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,9 +36,6 @@ if 0:
 
 class ModuleCtx:
 
-    # The slot of a server with one process, which runs no worker slot of its own
-    Single_Process_Slot = 0
-
     # How many pending entries one XPENDING call returns at most
     Pending_Batch_Size = 100
 
@@ -51,10 +48,7 @@ class ModuleCtx:
 def get_consumer_name(group_name:'str') -> 'str':
     """ Returns the consumer name under which the worker of this process reads the streams of a consumer group.
     """
-    slot = get_worker_slot()
-
-    if slot is None:
-        slot = ModuleCtx.Single_Process_Slot
+    slot = get_slot_or_single()
 
     out = f'{group_name}-{slot}'
     return out

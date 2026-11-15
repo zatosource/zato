@@ -15,7 +15,7 @@ from zato.common.ext.bunch import bunchify
 
 # Zato
 from zato.common.broker_message import code_to_name
-from zato.common.typing_ import any_, anydict, dataclass, strnone
+from zato.common.typing_ import any_, anydict, callable_, dataclass, strnone
 from zato.common.util.config import resolve_env_variables
 
 # ################################################################################################################################
@@ -56,8 +56,8 @@ def handle_config_event(msg:'anydict', context:'any_') -> 'ConfigEventResult':
         func = getattr(context, handler_name, None)
 
         if func:
-            msg = bunchify(msg)
-            response = func(msg)
+            bunch_msg = bunchify(msg)
+            response = func(bunch_msg)
             result.response = response
             result.was_handled = True
         else:
@@ -82,7 +82,7 @@ class ConfigDispatchReceiver:
         msg = resolve_env_variables(msg)
         if not self.filter(msg):
             return
-        handle_config_event(msg, self.config_manager)
+        _ = handle_config_event(msg, self.config_manager)
 
     def filter(self, msg:'anydict') -> 'bool':
         return True
@@ -92,11 +92,17 @@ class ConfigDispatchReceiver:
 
 class ConfigDispatcher:
 
-    def __init__(self, *, server:'ParallelServer | None'=None, **kwargs:'any_') -> 'None':
+    def __init__(self, *, server:'ParallelServer', **kwargs:'any_') -> 'None':
         self.server = server
 
+        # In a worker process, the function that sends an event to the arbiter, which relays it to every other worker
+        self.relay:'callable_ | None' = None
+
     def publish(self, msg:'any_', *args:'any_', **kwargs:'any_') -> 'None':
-        handle_config_event(msg, self.server.config_manager)
+        _ = handle_config_event(msg, self.server.config_manager)
+
+        if self.relay:
+            self.relay(msg)
 
     invoke_async = publish
 

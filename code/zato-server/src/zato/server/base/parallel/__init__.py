@@ -12,6 +12,7 @@ import os
 from contextlib import closing
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
+from functools import partial
 from json import dumps as json_dumps, loads as json_loads
 from logging import INFO, WARN
 from pathlib import Path
@@ -73,10 +74,12 @@ from zato.common.util.scheduler import ensure_alerting_job_exists, ensure_cert_c
     ensure_ms_health_job_exists, ensure_test_transfer_job_exists
 from zato.common.util.time_ import TimeUtil
 from zato.common.util.url_dispatcher import build_methods_allowed_re
+from zato.common.worker_slot import get_slot_or_single
 from zato.hl7.common import add_config_location as hl7_add_config_location
 from zato.distlock import LockManager
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.delivery import PushDelivery
+from zato.server.base.parallel.stream_consumer import claim_own_pending, get_consumer_name, spawn_then_ack
 from zato.server.base.config_manager import ConfigManager
 from zato.server.config import ConfigStore
 from zato.server.connection.ccda import log_converter_status
@@ -1162,10 +1165,26 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         fire_stream = SchedulerStreamCtx.Fire_Stream
         timeout_stream = SchedulerStreamCtx.Timeout_Stream
         group_name = 'server-fire'
-        consumer_name = 'server-fire-0'
+        consumer_name = get_consumer_name(group_name)
 
         for stream in (fire_stream, timeout_stream):
             self._ensure_stream_group(fire_redis, stream, group_name)
+
+        def _dispatch(stream_name:'str', msg_id:'str', fields:'anydict') -> 'None':
+            """ Runs the handler of one entry in a greenlet that acknowledges the entry when the handler returns.
+            """
+            if stream_name == fire_stream:
+                handler = partial(self._handle_fire_event, msg_id)
+            elif stream_name == timeout_stream:
+                handler = self._handle_timeout_event
+            else:
+                logger.warning('Fire event: UNMATCHED stream_name=%r (type=%s) fire_stream=%r (type=%s)',
+                    stream_name, type(stream_name).__name__,
+                    fire_stream, type(fire_stream).__name__)
+                _ = fire_redis.xack(stream_name, group_name, msg_id)
+                return
+
+            _ = spawn_then_ack(fire_redis, stream_name, group_name, msg_id, handler, fields)
 
         def _fire_listener_loop() -> 'None':
             logger.debug('Scheduler fire listener loop entering')
@@ -1173,8 +1192,20 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             error_since = 0.0
             last_logged = 0.0
 
+            # The entries that a terminated worker of this slot read and never acknowledged are handled first
+            needs_pending = True
+
             while True:
                 try:
+                    if needs_pending:
+                        for stream in (fire_stream, timeout_stream):
+                            pending = claim_own_pending(fire_redis, stream, group_name, consumer_name)
+
+                            for msg_id, fields in pending:
+                                _dispatch(stream, msg_id, fields)
+
+                        needs_pending = False
+
                     result = cast_('anylist', fire_redis.xreadgroup(
                         groupname=group_name,
                         consumername=consumer_name,
@@ -1209,16 +1240,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                                 stream_name == timeout_stream,
                                 list(fields.keys()))
 
-                            if stream_name == fire_stream:
-                                _ = spawn(self._handle_fire_event, fields)
-                            elif stream_name == timeout_stream:
-                                _ = spawn(self._handle_timeout_event, fields)
-                            else:
-                                logger.warning('Fire event: UNMATCHED stream_name=%r (type=%s) fire_stream=%r (type=%s)',
-                                    stream_name, type(stream_name).__name__,
-                                    fire_stream, type(fire_stream).__name__)
-
-                            _ = fire_redis.xack(stream_name, group_name, msg_id)
+                            _dispatch(stream_name, msg_id, fields)
 
                 except Exception as exc:
                     error_since, last_logged = self._handle_stream_listener_error(
@@ -1237,9 +1259,16 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         request_stream = SchedulerStreamCtx.Request_Stream
         group_name = 'server-request'
-        consumer_name = 'server-request-0'
+        consumer_name = get_consumer_name(group_name)
 
         self._ensure_stream_group(req_redis, request_stream, group_name)
+
+        def _handle_request(msg_id:'str', fields:'anydict') -> 'None':
+            command = fields['command']
+            if command == 'request_jobs':
+                logger.info('Scheduler requested jobs, sending reload')
+                self._scheduler.reload(scheduler_adapter, self._scheduler_run_state)
+            _ = req_redis.xack(request_stream, group_name, msg_id)
 
         def _request_listener_loop() -> 'None':
             logger.debug('Scheduler request listener loop entering')
@@ -1247,8 +1276,19 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             error_since = 0.0
             last_logged = 0.0
 
+            # The requests that a terminated worker of this slot read and never acknowledged are handled first
+            needs_pending = True
+
             while True:
                 try:
+                    if needs_pending:
+                        pending = claim_own_pending(req_redis, request_stream, group_name, consumer_name)
+
+                        for msg_id, fields in pending:
+                            _handle_request(msg_id, fields)
+
+                        needs_pending = False
+
                     result = cast_('anylist', req_redis.xreadgroup(
                         groupname=group_name,
                         consumername=consumer_name,
@@ -1265,13 +1305,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                     if not result:
                         continue
 
-                    for stream_name, messages in result:
+                    for _stream_name, messages in result:
                         for msg_id, fields in messages:
-                            command = fields['command']
-                            if command == 'request_jobs':
-                                logger.info('Scheduler requested jobs, sending reload')
-                                self._scheduler.reload(scheduler_adapter, self._scheduler_run_state)
-                            _ = req_redis.xack(stream_name, group_name, msg_id)
+                            _handle_request(msg_id, fields)
 
                 except Exception as exc:
                     error_since, last_logged = self._handle_stream_listener_error(
@@ -1283,8 +1319,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
 # ################################################################################################################################
 
-    def _handle_fire_event(self, fields:'dict') -> 'None':
-        """ Processes a fire event from the scheduler - invokes the target service.
+    def _handle_fire_event(self, entry_id:'str', fields:'dict') -> 'None':
+        """ Processes a fire event from the scheduler, delivered by the fire stream entry of the given ID,
+        and invokes the target service.
         """
         logger.debug('Fire event: handler entered, fields_keys=%s', list(fields.keys()))
 
@@ -1319,7 +1356,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         # .. the run is claimed in the common database first, so a slot that another server ran already,
         # or a firing on a server that is no longer the active one, does not run here.
-        claim = self._scheduler_run_state.claim(job_name, ctx['nominal_fire_time_iso'])
+        claim = self._scheduler_run_state.claim(job_name, ctx['nominal_fire_time_iso'], entry_id)
 
         if not claim.is_claimed:
             self._skip_fire_event(ctx, claim, cid, planned_fire_dt, delay_ms)
@@ -1382,6 +1419,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             except Exception:
                 logger.warning('Fire event: run completion not recorded job_id=%s name=%s traceback=%s',
                     job_id, job_name, format_exc())
+
+        # .. the run state records that the run of this entry returned, so that a delivery of the entry again is skipped ..
+        _ = self._scheduler_run_state.release(job_name, entry_id)
 
         # .. report the completion to the Rust scheduler so its in-flight state clears ..
         try:
@@ -1595,7 +1635,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                         else:
                             outgoing.append(config)
 
-            self._queue_bridge = QueueBridgeClient()
+            slot = get_slot_or_single()
+
+            self._queue_bridge = QueueBridgeClient(slot=slot)
             self._channel_listeners = ChannelListeners(self)
             self._start_channel_listeners(channel_types)
 
@@ -1718,9 +1760,16 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         request_stream = 'zato:queue_bridge:stream:request'
         group_name = 'server-request'
-        consumer_name = 'server-request-0'
+        consumer_name = get_consumer_name(group_name)
 
         self._ensure_stream_group(request_redis, request_stream, group_name)
+
+        def _handle_request(msg_id:'str', fields:'anydict') -> 'None':
+            command = fields['command']
+            if command == 'request_config':
+                logger.info('Queue bridge requested config, sending reload')
+                self._reload_queue_bridge()
+            _ = request_redis.xack(request_stream, group_name, msg_id)
 
         def _request_listener_loop() -> 'None':
             logger.info('Queue bridge request listener loop entering')
@@ -1728,8 +1777,19 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             error_since = 0.0
             last_logged = 0.0
 
+            # The requests that a terminated worker of this slot read and never acknowledged are handled first
+            needs_pending = True
+
             while True:
                 try:
+                    if needs_pending:
+                        pending = claim_own_pending(request_redis, request_stream, group_name, consumer_name)
+
+                        for msg_id, fields in pending:
+                            _handle_request(msg_id, fields)
+
+                        needs_pending = False
+
                     result = cast_('anylist', request_redis.xreadgroup(
                         groupname=group_name,
                         consumername=consumer_name,
@@ -1746,13 +1806,9 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                     if not result:
                         continue
 
-                    for stream_name, messages in result:
+                    for _stream_name, messages in result:
                         for msg_id, fields in messages:
-                            command = fields['command']
-                            if command == 'request_config':
-                                logger.info('Queue bridge requested config, sending reload')
-                                self._reload_queue_bridge()
-                            _ = request_redis.xack(stream_name, group_name, msg_id)
+                            _handle_request(msg_id, fields)
 
                 except Exception as exc:
                     error_since, last_logged = self._handle_stream_listener_error(

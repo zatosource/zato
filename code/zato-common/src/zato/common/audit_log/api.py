@@ -37,7 +37,7 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.db_env import Default_SSL, Default_SSL_Verify, Default_Type, dispose_env_engine, get_env_engine, \
     Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.commit_queue import CommitQueue
-from zato.common.db_env.engine import call_database, execute_write
+from zato.common.db_env.engine import call_database, execute_write, new_unshared_env_engine
 from zato.common.util.api import as_bool, utcnow
 from zato.common.worker_slot import get_worker_slot, ModuleCtx as WorkerSlotCtx
 
@@ -69,8 +69,8 @@ if 0:
 __all__ = [
     'Audit_DB_File_Name', 'build_attr_rows', 'derive_classification', 'event_attr_table', 'event_body_table', 'event_link_table',
     'event_table', 'get_audit_db_path', 'get_audit_engine', 'get_content_retention_days', 'get_retention_days',
-    'get_source_env_suffix', 'is_audit_log_enabled', 'metadata', 'register_prunability', 'AuditBody',
-    'AuditClassification', 'AuditEvent', 'AuditLink', 'AuditLog', 'AuditOutcome', 'AuditSource', 'ModuleCtx',
+    'get_source_env_suffix', 'is_audit_log_enabled', 'metadata', 'new_unshared_audit_engine', 'register_prunability',
+    'AuditBody', 'AuditClassification', 'AuditEvent', 'AuditLink', 'AuditLog', 'AuditOutcome', 'AuditSource', 'ModuleCtx',
     'Retention_Days', 'Status_Outstanding',
 ]
 
@@ -192,6 +192,14 @@ def get_audit_engine() -> 'Engine':
     defaulting to a shared SQLite file.
     """
     out = get_env_engine(env_config)
+    return out
+
+# ################################################################################################################################
+
+def new_unshared_audit_engine() -> 'Engine':
+    """ Returns an engine of the audit log database that no other caller receives, which its caller disposes.
+    """
+    out = new_unshared_env_engine(env_config)
     return out
 
 # ################################################################################################################################

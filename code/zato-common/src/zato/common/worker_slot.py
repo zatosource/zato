@@ -33,6 +33,9 @@ class ModuleCtx:
     # The slot whose worker runs the duties of which a server runs one instance
     Singleton_Slot = 0
 
+    # The slot that a process which is not a worker uses wherever a slot is named, as the one process of its server
+    Single_Process_Slot = 0
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -64,6 +67,19 @@ def get_worker_slot() -> 'intnone':
     """ Returns the slot of the worker that this process runs, or None if the process is not a worker.
     """
     return _worker_slot
+
+# ################################################################################################################################
+
+def get_slot_or_single() -> 'int':
+    """ Returns the slot of the worker that this process runs, or the slot of a server with one process
+    if the process is not a worker.
+    """
+    if _worker_slot is None:
+        out = ModuleCtx.Single_Process_Slot
+    else:
+        out = _worker_slot
+
+    return out
 
 # ################################################################################################################################
 

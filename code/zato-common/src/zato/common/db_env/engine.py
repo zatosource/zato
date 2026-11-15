@@ -12,6 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from typing import NamedTuple
 
 # gevent
 from gevent import get_hub
@@ -31,6 +32,7 @@ from zato.common.db_env.pg8000_wire import install as install_pg8000_wire
 from zato.common.db_env.sqlite_checkpoint import set_background_checkpoint_limit, WALCheckpointer
 from zato.common.defaults import default_env_base_dir
 from zato.common.ha.sqlite import holds_log_for_node, ReplicatedConnection, ReplicatedPragmas
+from zato.common.worker_slot import is_singleton_owner
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,6 +101,15 @@ _allocate_thread_lock = get_original('_thread', 'allocate_lock')
 # ################################################################################################################################
 # ################################################################################################################################
 
+class _EnvEngine(NamedTuple):
+    """ An engine of an environment-configured database and whether its WAL is to be checkpointed in the background.
+    """
+    engine: 'Engine'
+    needs_background_checkpoint: 'bool'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _PasswordFileReader:
     """ Supplies each new connection with the password currently stored in a file.
     """
@@ -113,6 +124,55 @@ class _PasswordFileReader:
         cparams['password'] = password.strip()
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _new_sqlite_file_engine(
+    db_path:'str',
+    *,
+    needs_pool:'bool',
+    needs_background_checkpoint:'bool',
+    replicated_database:'str',
+    ) -> '_EnvEngine':
+    """ Builds an SQLAlchemy engine for a SQLite file, with the settings of its connections, and says whether its WAL
+    is to be checkpointed in the background, which a file that the active-standby node replicates under the given name is not.
+    """
+
+    # Create the file's directory ..
+    db_dir = os.path.dirname(db_path)
+    os.makedirs(db_dir, exist_ok=True)
+
+    # .. configure pooling for stores with many short transactions ..
+    connect_args:'stranydict' = {}
+    engine_kwargs:'stranydict' = {}
+
+    if needs_pool:
+        connect_args['check_same_thread'] = False
+        engine_kwargs['poolclass'] = QueuePool
+
+    # .. a file whose log the active-standby node holds is checkpointed by the node only ..
+    is_log_held = holds_log_for_node(replicated_database)
+
+    if is_log_held:
+        needs_background_checkpoint = False
+        connect_args['factory'] = ReplicatedConnection
+
+    # .. build the engine and apply the SQLite connection settings, the ones of replication first ..
+    engine_url = f'sqlite:///{db_path}'
+    engine = create_engine(engine_url, connect_args=connect_args, **engine_kwargs)
+
+    if is_log_held:
+        replicated_pragmas = ReplicatedPragmas(replicated_database)
+        sa_event.listen(engine, 'connect', replicated_pragmas.on_connect)
+
+    sa_event.listen(engine, 'connect', set_sqlite_pragmas)
+
+    # .. and a file whose WAL is checkpointed in the background lets its commits append to a longer log.
+    if needs_background_checkpoint:
+        sa_event.listen(engine, 'connect', set_background_checkpoint_limit)
+
+    out = _EnvEngine(engine, needs_background_checkpoint)
+    return out
+
 # ################################################################################################################################
 
 def get_sqlite_file_engine(
@@ -134,50 +194,36 @@ def get_sqlite_file_engine(
         out = engine
         return out
 
-    # .. create the file's directory ..
-    db_dir = os.path.dirname(db_path)
-    os.makedirs(db_dir, exist_ok=True)
+    # .. build the engine ..
+    file_engine = _new_sqlite_file_engine(db_path, needs_pool=needs_pool,
+        needs_background_checkpoint=needs_background_checkpoint, replicated_database=replicated_database)
 
-    # .. configure pooling for stores with many short transactions ..
-    connect_args:'stranydict' = {}
-    engine_kwargs:'stranydict' = {}
-
-    if needs_pool:
-        connect_args['check_same_thread'] = False
-        engine_kwargs['poolclass'] = QueuePool
-
-    # .. a file whose log the active-standby node holds is checkpointed by the node only ..
-    is_log_held = holds_log_for_node(replicated_database)
-
-    if is_log_held:
-        needs_background_checkpoint = False
-        connect_args['factory'] = ReplicatedConnection
-
-    # .. build the engine and apply the SQLite connection settings, the ones of replication first ..
-    engine_url = f'sqlite:///{db_path}'
-    out = create_engine(engine_url, connect_args=connect_args, **engine_kwargs)
-
-    if is_log_held:
-        replicated_pragmas = ReplicatedPragmas(replicated_database)
-        sa_event.listen(out, 'connect', replicated_pragmas.on_connect)
-
-    sa_event.listen(out, 'connect', set_sqlite_pragmas)
-
-    # .. a file whose WAL is checkpointed in the background lets its commits append to a longer log ..
-    if needs_background_checkpoint:
-        sa_event.listen(out, 'connect', set_background_checkpoint_limit)
+    out = file_engine.engine
 
     # .. create the schema ..
     metadata.create_all(out)
 
-    # .. start the checkpoints of the WAL that the commits no longer run ..
-    if needs_background_checkpoint:
-        checkpointer = WALCheckpointer(out, db_path=db_path)
-        checkpointer.start()
+    # .. start the checkpoints of the WAL that the commits no longer run, in one process of the server ..
+    if file_engine.needs_background_checkpoint:
+        if is_singleton_owner():
+            checkpointer = WALCheckpointer(out, db_path=db_path)
+            checkpointer.start()
 
     # .. and retain the engine for subsequent callers.
     _sqlite_file_engine_cache[cache_key] = out
 
+    return out
+
+# ################################################################################################################################
+
+def new_unshared_sqlite_file_engine(db_path:'str', *, replicated_database:'str') -> 'Engine':
+    """ Returns an engine of a SQLite file that no other caller receives and that runs no background checkpoints,
+    which its caller disposes, e.g. the arbiter before it forks the workers.
+    """
+    file_engine = _new_sqlite_file_engine(db_path, needs_pool=False, needs_background_checkpoint=False,
+        replicated_database=replicated_database)
+
+    out = file_engine.engine
     return out
 
 # ################################################################################################################################
@@ -244,21 +290,12 @@ def _get_cache_key(config:'EnvDBConfig') -> 'strtuple':
 
 # ################################################################################################################################
 
-def get_env_engine(config:'EnvDBConfig') -> 'Engine':
-    """ Returns an SQLAlchemy engine for an environment-configured database,
-    creating the schema if needed. Which database is used comes from the
-    environment variables named after this store's prefix, defaulting
-    to a shared SQLite file.
+def _new_env_engine(config:'EnvDBConfig') -> '_EnvEngine':
+    """ Builds an SQLAlchemy engine for an environment-configured database, with the settings of its connections,
+    and says whether its WAL is to be checkpointed in the background.
     """
 
-    # Reuse a previously built engine if the configuration has not changed ..
-    cache_key = _get_cache_key(config)
-
-    if engine := _engine_cache.get(cache_key):
-        out = engine
-        return out
-
-    # .. read the connection values out of the environment ..
+    # Read the connection values out of the environment ..
     values  = get_env_values(config)
     db_type = values['type']
 
@@ -279,12 +316,15 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
         engine_kwargs['poolclass'] = QueuePool
         connect_args['check_same_thread'] = False
 
-    # .. a SQLite file whose log the active-standby node holds is checkpointed by the node only ..
+    # .. a SQLite file whose log the active-standby node holds is checkpointed by the node only,
+    # .. and a network database checkpoints its own log ..
     needs_background_checkpoint = config.needs_background_checkpoint
     is_log_held = False
 
     if db_type == Type_SQLite:
         is_log_held = holds_log_for_node(config.replicated_database)
+    else:
+        needs_background_checkpoint = False
 
     if is_log_held:
         needs_background_checkpoint = False
@@ -302,7 +342,7 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
             engine_kwargs['pool_size'] = get_worker_pool_size(values['pool_size'])
             engine_kwargs['max_overflow'] = _network_max_overflow
 
-    out = create_engine(engine_url, connect_args=connect_args, **engine_kwargs)
+    engine = create_engine(engine_url, connect_args=connect_args, **engine_kwargs)
 
     # .. SQLite needs its pragmas applied to every new connection in the pool,
     # .. and PostgreSQL needs each socket to send its segments without delay ..
@@ -310,40 +350,75 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
 
         if is_log_held:
             replicated_pragmas = ReplicatedPragmas(config.replicated_database)
-            sa_event.listen(out, 'connect', replicated_pragmas.on_connect)
+            sa_event.listen(engine, 'connect', replicated_pragmas.on_connect)
 
-        sa_event.listen(out, 'connect', set_sqlite_pragmas)
+        sa_event.listen(engine, 'connect', set_sqlite_pragmas)
 
         # .. a store whose WAL is checkpointed in the background lets its commits append to a longer log ..
         if needs_background_checkpoint:
-            sa_event.listen(out, 'connect', set_background_checkpoint_limit)
+            sa_event.listen(engine, 'connect', set_background_checkpoint_limit)
 
     elif db_type == Type_PostgreSQL:
-        sa_event.listen(out, 'connect', set_postgresql_no_delay)
-        sa_event.listen(out, 'connect', set_postgresql_keepalive)
-        sa_event.listen(out, 'connect', set_postgresql_session)
+        sa_event.listen(engine, 'connect', set_postgresql_no_delay)
+        sa_event.listen(engine, 'connect', set_postgresql_keepalive)
+        sa_event.listen(engine, 'connect', set_postgresql_session)
 
         # .. a password kept in a file is read again for each new connection, which lets it be rotated ..
         if password_file := values['password_file']:
             password_reader = _PasswordFileReader(password_file)
-            sa_event.listen(out, 'do_connect', password_reader.on_connect)
+            sa_event.listen(engine, 'do_connect', password_reader.on_connect)
 
         # .. pg8000 sends each row of a multi-row insert as a statement of its own, one round trip per row,
-        # .. which SQLAlchemy replaces with multi-row statements only for the dialects that ask for it ..
-        out.dialect.use_insertmanyvalues_wo_returning = True
+        # .. which SQLAlchemy replaces with multi-row statements only for the dialects that ask for it.
+        engine.dialect.use_insertmanyvalues_wo_returning = True
+
+    out = _EnvEngine(engine, needs_background_checkpoint)
+    return out
+
+# ################################################################################################################################
+
+def get_env_engine(config:'EnvDBConfig') -> 'Engine':
+    """ Returns an SQLAlchemy engine for an environment-configured database,
+    creating the schema if needed. Which database is used comes from the
+    environment variables named after this store's prefix, defaulting
+    to a shared SQLite file.
+    """
+
+    # Reuse a previously built engine if the configuration has not changed ..
+    cache_key = _get_cache_key(config)
+
+    if engine := _engine_cache.get(cache_key):
+        out = engine
+        return out
+
+    # .. build the engine ..
+    env_engine = _new_env_engine(config)
+    out = env_engine.engine
 
     # .. make sure the schema exists ..
     create_schema(out, config.metadata)
 
-    # .. start the checkpoints of the WAL that the commits no longer run ..
-    if db_type == Type_SQLite and needs_background_checkpoint:
-        checkpointer = WALCheckpointer(out)
-        checkpointer.start()
-        _checkpointer_cache[cache_key] = checkpointer
+    # .. start the checkpoints of the WAL that the commits no longer run, in one process of the server ..
+    if env_engine.needs_background_checkpoint:
+        if is_singleton_owner():
+            checkpointer = WALCheckpointer(out)
+            checkpointer.start()
+            _checkpointer_cache[cache_key] = checkpointer
 
     # .. and cache the engine for all future callers.
     _engine_cache[cache_key] = out
 
+    return out
+
+# ################################################################################################################################
+
+def new_unshared_env_engine(config:'EnvDBConfig') -> 'Engine':
+    """ Returns an engine of an environment-configured database that no other caller receives and that runs
+    no background checkpoints, which its caller disposes, e.g. the arbiter before it forks the workers.
+    """
+    env_engine = _new_env_engine(config)
+
+    out = env_engine.engine
     return out
 
 # ################################################################################################################################
