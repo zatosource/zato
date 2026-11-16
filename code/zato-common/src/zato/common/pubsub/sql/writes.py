@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from logging import getLogger
 
 # SQLAlchemy
-from sqlalchemy import and_, bindparam, exists, select, true
+from sqlalchemy import and_, bindparam, select
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import DBAPIError
@@ -24,8 +24,10 @@ from zato.common.db_env.errors import is_conflict, is_value_error
 from zato.common.db_env.outage import OutageTracker
 from zato.common.db_env.pg8000_copy import copy_rows
 from zato.common.db_env.plain_sql import PlainStatement
-from zato.common.pubsub.sql.config import get_batch_size, get_commit_max_messages, get_commits_in_flight, \
+from zato.common.pubsub.sql.config import get_commit_max_messages, get_commits_in_flight, \
     get_pubsub_engine, get_urgent_commits_in_flight
+from zato.common.pubsub.sql.fenced_ack import delete_fenced
+from zato.common.pubsub.sql.payloads import drop_payloads, get_chunks
 from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
 
 # ################################################################################################################################
@@ -73,51 +75,6 @@ class PubSubDuplicateMsgID(Exception):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def drop_payloads(connection:'Connection', message_ids:'intlist') -> 'intlist':
-    """ Sets the payload to NULL for each of the given messages that no subscriber needs anymore, in the caller's
-    transaction, which has removed delivery rows of these messages before. Returns the messages it dropped
-    the payloads of. The message rows that are locked are locked in the order of their keys, which every caller
-    follows after its delivery rows, so concurrent transactions cannot deadlock on them.
-    """
-    message_ids = sorted(message_ids)
-    is_postgresql = connection.dialect.name == Type_PostgreSQL
-
-    out:'intlist' = []
-
-    for chunk in _get_chunks(message_ids):
-
-        # On PostgreSQL, only the messages without a delivery row that remains are locked and looked at ..
-        if is_postgresql:
-
-            needed:'set[int]' = set()
-
-            for row in _needed_messages_query_plain.execute(connection, {'drop_message_ids': chunk}):
-                needed.add(row.id)
-
-            candidates:'intlist' = []
-
-            for message_id in chunk:
-                if message_id not in needed:
-                    candidates.append(message_id)
-
-            if not candidates:
-                continue
-
-            parameters = {'drop_message_ids': candidates}
-            _ = _lock_messages_query_plain.execute(connection, parameters).fetchall()
-
-        # .. while SQLite, with its single writer, looks at all of them.
-        else:
-            parameters = {'drop_message_ids': chunk}
-
-        for row in _drop_payloads_statement_plain.execute(connection, parameters):
-            out.append(row.id)
-
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 # The statements of a group commit are built once here, the bind parameters take their values at execution time.
 _subscribers_query = select(topic_sub_table.c.topic_name, topic_sub_table.c.sub_key)
 _subscribers_query = _subscribers_query.where(
@@ -160,44 +117,6 @@ _ack_deliveries_query_plain = PlainStatement(_ack_deliveries_query.where(and_(
 _delivery_delete = delivery_table.delete().where(delivery_table.c.id.in_(bindparam('ack_delivery_ids', expanding=True)))
 _delivery_delete_plain = PlainStatement(_delivery_delete.returning(delivery_table.c.id))
 
-# A message is still in flight while any delivery row references it -
-# the update drops the payloads of the given messages that have none left.
-_still_needed = exists()
-_still_needed = _still_needed.where(delivery_table.c.message_id == message_table.c.id)
-
-_drop_payloads_statement = message_table.update()
-_drop_payloads_statement = _drop_payloads_statement.where(and_(
-    message_table.c.id.in_(bindparam('drop_message_ids', expanding=True)),
-    message_table.c.payload.isnot(None),
-    ~_still_needed,
-))
-_drop_payloads_statement = _drop_payloads_statement.values(payload=None, payload_encrypted=False)
-_drop_payloads_statement_plain = PlainStatement(_drop_payloads_statement.returning(message_table.c.id))
-
-# Two transactions of PostgreSQL that remove the last two delivery rows of a message would each see the row
-# of the other one and both keep the payload, so the message rows are locked first, and the update that follows
-# sees every removal committed by the time the lock is granted.
-_lock_messages_query = select(message_table.c.id)
-_lock_messages_query = _lock_messages_query.where(
-    message_table.c.id.in_(bindparam('drop_message_ids', expanding=True)))
-_lock_messages_query = _lock_messages_query.order_by(message_table.c.id)
-_lock_messages_query_plain = PlainStatement(_lock_messages_query.with_for_update(key_share=True))
-
-# A message with a delivery row that no transaction is removing still has a subscriber, and the row is held for key share
-# until the commit, so that the transaction which removes it later waits for this one and then sees its removals.
-# Only the other messages are locked as above, which keeps the subscribers of a fanned-out message
-# from acknowledging it one transaction after another.
-_live_delivery = select(delivery_table.c.id)
-_live_delivery = _live_delivery.where(delivery_table.c.message_id == message_table.c.id)
-_live_delivery = _live_delivery.limit(1)
-_live_delivery = _live_delivery.with_for_update(read=True, key_share=True, skip_locked=True)
-_live_delivery = _live_delivery.lateral()
-
-_needed_messages_query = select(message_table.c.id)
-_needed_messages_query = _needed_messages_query.select_from(message_table.join(_live_delivery, true()))
-_needed_messages_query_plain = PlainStatement(_needed_messages_query.where(
-    message_table.c.id.in_(bindparam('drop_message_ids', expanding=True))))
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -214,6 +133,9 @@ class PendingPublication:
 
     # Why the message could not be written, while the other items of its commit could
     exception: 'BaseException | None'
+
+    # Whether the message ID existed already with the same topic and payload, so that nothing was written
+    is_repeat: 'bool'
 
 # ################################################################################################################################
 
@@ -234,6 +156,11 @@ class PendingAck:
     # Why the acknowledgement could not be written, while the other items of its commit could
     exception: 'BaseException | None'
 
+    # Whether the delivery rows are removed under the fence of fenced_ack.py, and with what delivery attempt
+    # of each message, in the order of the messages, or with any attempt, which is the case of a push batch
+    is_fenced: 'bool'
+    expected_attempts: 'intlistnone'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -244,6 +171,7 @@ def new_pending_publication(message_values:'anydict') -> 'PendingPublication':
     out.message_values = message_values
     out.subscriber_keys = []
     out.exception = None
+    out.is_repeat = False
 
     return out
 
@@ -259,6 +187,20 @@ def new_pending_ack(sub_key:'str', msg_ids:'strlist', sequence_ids:'intlistnone'
     out.removed_count = 0
     out.fully_delivered_count = 0
     out.exception = None
+    out.is_fenced = False
+    out.expected_attempts = None
+
+    return out
+
+# ################################################################################################################################
+
+def new_fenced_ack(sub_key:'str', msg_ids:'strlist', expected_attempts:'intlistnone') -> 'PendingAck':
+    """ Returns an acknowledgement that is yet to be written under the fence, with the delivery attempt of each message
+    that it expects, or None to accept any attempt.
+    """
+    out = new_pending_ack(sub_key, msg_ids, None)
+    out.is_fenced = True
+    out.expected_attempts = expected_attempts
 
     return out
 
@@ -270,27 +212,11 @@ def _reset_item(item:'PendingPublication | PendingAck') -> 'None':
     if isinstance(item, PendingPublication):
         item.subscriber_keys = []
         item.exception = None
+        item.is_repeat = False
     else:
         item.removed_count = 0
         item.fully_delivered_count = 0
         item.exception = None
-
-# ################################################################################################################################
-
-def _get_chunks(items:'anylist') -> 'anylist':
-    """ Splits a list into parts no longer than one bulk statement may touch.
-    """
-    batch_size = get_batch_size()
-    item_count = len(items)
-
-    out:'anylist' = []
-
-    for start in range(0, item_count, batch_size):
-        end = start + batch_size
-        chunk = items[start:end]
-        out.append(chunk)
-
-    return out
 
 # ################################################################################################################################
 
@@ -299,7 +225,7 @@ def _get_message_ids(connection:'Connection', msg_ids:'strlist') -> 'anydict':
     """
     out:'anydict' = {}
 
-    for chunk in _get_chunks(msg_ids):
+    for chunk in get_chunks(msg_ids):
         for row in _message_ids_query_plain.execute(connection, {'write_msg_ids': chunk}):
             out[row.msg_id] = row.id
 
@@ -354,11 +280,13 @@ class PubSubWriter:
 
 # ################################################################################################################################
 
-    def write_atomic(self, items:'anylist') -> 'None':
+    def write_atomic(self, items:'anylist', is_strict:'bool'=False) -> 'None':
         """ Writes the items in one transaction that no other caller shares, which commits all of them or none.
+        With is_strict, a publication whose message ID stands for a different message rolls the transaction back
+        and its exception is raised, rather than the publication alone not being written.
         """
         engine = get_pubsub_engine()
-        call_database(engine, self._write_items, engine, items, True)
+        call_database(engine, self._write_items, engine, items, True, is_strict)
 
 # ################################################################################################################################
 
@@ -377,15 +305,16 @@ class PubSubWriter:
 
 # ################################################################################################################################
 
-    def _write_items(self, engine:'Engine', batch:'anylist', is_atomic:'bool'=False) -> 'None':
+    def _write_items(self, engine:'Engine', batch:'anylist', is_atomic:'bool'=False, is_strict:'bool'=False) -> 'None':
         """ Writes the items of a batch in one transaction, which PostgreSQL may roll back as a whole on a conflict
-        with concurrent transactions, in which case nothing of it was committed and it runs again.
+        with concurrent transactions, in which case nothing of it was committed and it runs again. A fenced acknowledgement
+        that conflicts with another delivery raises an exception that is no DBAPIError, which is not run again.
         """
         attempt = 0
 
         while True:
             try:
-                self._write_transaction(engine, batch)
+                self._write_transaction(engine, batch, is_strict)
                 break
 
             except DBAPIError as e:
@@ -425,15 +354,18 @@ class PubSubWriter:
 
 # ################################################################################################################################
 
-    def _write_transaction(self, engine:'Engine', batch:'anylist') -> 'None':
+    def _write_transaction(self, engine:'Engine', batch:'anylist', is_strict:'bool'=False) -> 'None':
         """ Writes the publications of a batch first and its acknowledgements next, in one transaction.
         """
         publications:'pending_publication_list' = []
         acks:'pending_ack_list' = []
+        fenced_acks:'pending_ack_list' = []
 
         for item in batch:
             if isinstance(item, PendingPublication):
                 publications.append(item)
+            elif item.is_fenced:
+                fenced_acks.append(item)
             else:
                 acks.append(item)
 
@@ -442,8 +374,18 @@ class PubSubWriter:
             if publications:
                 self._insert_publications(connection, publications)
 
+            # A publication that cannot be written fails the whole transaction of a strict caller ..
+            if is_strict:
+                for pending in publications:
+                    if pending.exception:
+                        raise pending.exception
+
             if acks:
                 self._delete_acks(connection, acks)
+
+            # .. and a fenced acknowledgement fails it when another delivery has its messages.
+            for ack in fenced_acks:
+                delete_fenced(connection, ack, publications)
 
 # ################################################################################################################################
 
@@ -483,7 +425,7 @@ class PubSubWriter:
 
         existing:'anydict' = {}
 
-        for chunk in _get_chunks(msg_ids):
+        for chunk in get_chunks(msg_ids):
             for row in connection.execute(_existing_messages_query, {'write_msg_ids': chunk}):
                 existing[row.msg_id] = row
 
@@ -497,6 +439,7 @@ class PubSubWriter:
             # that was published and fully processed, so this one is its repetition.
             if row is None:
                 logger.info('Repeated publication of a removed message -> msg_id:%s', msg_id)
+                pending.is_repeat = True
                 continue
 
             is_same_topic = row.topic_name == message_values['topic_name']
@@ -504,6 +447,7 @@ class PubSubWriter:
 
             if is_same_topic and is_same_payload:
                 logger.info('Repeated publication of an existing message -> msg_id:%s', msg_id)
+                pending.is_repeat = True
             else:
                 message = f'Message ID `{msg_id}` belongs to a different message that exists already'
                 pending.exception = PubSubDuplicateMsgID(message)
@@ -653,7 +597,7 @@ class PubSubWriter:
         # of a subscriber that did not acknowledge that particular message is still pending and stays in place ..
         delivery_ids_by_pair:'anydict' = {}
 
-        for chunk in _get_chunks(all_message_ids):
+        for chunk in get_chunks(all_message_ids):
 
             parameters = {
                 'ack_message_ids': chunk,
@@ -671,7 +615,7 @@ class PubSubWriter:
         delivery_ids = sorted(delivery_ids_by_pair.values())
         removed_ids:'set[int]' = set()
 
-        for chunk in _get_chunks(delivery_ids):
+        for chunk in get_chunks(delivery_ids):
             for row in _delivery_delete_plain.execute(connection, {'ack_delivery_ids': chunk}):
                 removed_ids.add(row.id)
 

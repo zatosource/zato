@@ -9,33 +9,31 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 from dataclasses import dataclass
-from datetime import timedelta
 from logging import getLogger
 from time import monotonic
-from zlib import crc32
 
 # SQLAlchemy
 from sqlalchemy import and_, select
 
 # Zato
-from zato.common.api import HTTP_SOAP, PubSub
+from zato.common.api import PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.db_env.engine import call_database
-from zato.common.marshal_.api import Model
 from zato.common.pubsub.delivery_scope import get_delivery_scope
 from zato.common.pubsub.sql.admin import SQLAdminAPI
 from zato.common.pubsub.sql.config import get_batch_size, get_pull_lease_seconds
+from zato.common.pubsub.sql.publication import build_publication, complete_publication
 from zato.common.pubsub.sql.pull import fetch_query, lease_messages, outgoing_fetch_query, payload_query
 from zato.common.pubsub.sql.schema import delivery_table, topic_sub_table
-from zato.common.pubsub.sql.writes import new_pending_ack, new_pending_publication
-from zato.common.util.api import new_msg_id
-from zato.common.util.time_ import datetime_to_ms, parse_utc
-from zato.server.metrics import zato_pubsub_messages_delivered_total, zato_pubsub_messages_published_total
+from zato.common.pubsub.sql.writes import new_fenced_ack, new_pending_ack
+from zato.common.util.time_ import parse_utc
+from zato.server.metrics import zato_pubsub_messages_delivered_total
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from zato.common.pubsub.sql.publication import BuiltPublication
     from zato.common.typing_ import any_, anydict, anylist, intlist, intnone, strdict, strlist, strnone
 
 # ################################################################################################################################
@@ -46,13 +44,10 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-_retry = HTTP_SOAP.Retry
-
 _default_priority     = PubSub.Message.Priority_Default
 _default_expiration   = PubSub.Message.Default_Expiration
 _default_max_messages = PubSub.Message.Default_Max_Messages
 _default_max_len      = PubSub.Message.Default_Max_Len
-_data_preview_len     = PubSub.Message.Data_Preview_Len
 
 # One second expressed in milliseconds.
 _milliseconds_per_second = 1000
@@ -102,151 +97,41 @@ class SQLPubSubBackend(SQLAdminAPI):
         stored, e.g. because the id travels inside the message itself, gives its own, otherwise one is generated.
         The retry settings, when given, travel with the message and the push delivery retries it as they say.
         """
+        built = build_publication(
+            self,
+            topic_name,
+            data,
+            priority=priority,
+            expiration=expiration,
+            correl_id=correl_id,
+            in_reply_to=in_reply_to,
+            ext_client_id=ext_client_id,
+            publisher=publisher,
+            pub_time=pub_time,
+            cid=cid,
+            msg_id=msg_id,
+            max_retries=max_retries,
+            retry_sleep_time=retry_sleep_time,
+            retry_backoff_threshold=retry_backoff_threshold,
+            retry_backoff_multiplier=retry_backoff_multiplier,
+        )
 
-        # Normalize topic name to lowercase for case-insensitivity ..
-        topic_name = topic_name.lower()
+        pending = built.pending
 
-        # .. the message ID is the caller's own or a new one ..
-        if msg_id:
-            message_id = msg_id
-        else:
-            message_id = new_msg_id()
-
-        # .. build timestamps on the time of the database ..
-        clock = self.clock
-        now = clock.now()
-        now_iso = now.isoformat()
-
-        if pub_time:
-            pub_time_iso = pub_time
-            pub_time_ms = self._iso_to_ms(pub_time)
-        else:
-            pub_time_iso = now_iso
-            now_ms_float = datetime_to_ms(now)
-            pub_time_ms = int(now_ms_float)
-
-        expiration_delta = timedelta(seconds=expiration)
-        expiration_time = now + expiration_delta
-        expiration_time_iso = expiration_time.isoformat()
-        expiration_ms_float = datetime_to_ms(expiration_time)
-        expiration_ms = int(expiration_ms_float)
-
-        # .. serialize data ..
-        data_class = ''
-
-        if isinstance(data, str):
-            serialized_data = data
-
-        elif isinstance(data, Model):
-            data_module = data.__class__.__module__
-            data_class_name = data.__class__.__qualname__
-            data_class = f'{data_module}.{data_class_name}'
-            serialized_data = data.to_json().decode()
-
-        else:
-            serialized_data = json.dumps(data)
-
-        data_size = len(serialized_data)
-        data_preview = serialized_data[:_data_preview_len]
-
-        # .. a publication repeated under the same identifier is recognized by its checksum ..
-        serialized_bytes = serialized_data.encode('utf8')
-        payload_crc32 = crc32(serialized_bytes)
-
-        # .. encrypt the payload at rest when configured to ..
-        if self.encrypt_at_rest:
-            payload = self._encrypt_payload(serialized_data)
-            payload_encrypted = True
-        else:
-            payload = serialized_data
-            payload_encrypted = False
-
-        # .. build the message row, with optional values stored as NULLs ..
-        message_values:'anydict' = {
-            'msg_id': message_id,
-            'topic_name': topic_name,
-            'payload': payload,
-            'payload_encrypted': payload_encrypted,
-            'payload_crc32': payload_crc32,
-            'data_class': data_class if data_class else None,
-            'data_size': data_size,
-            'data_preview': data_preview if data_preview else None,
-            'priority': priority,
-            'expiration': expiration,
-            'pub_time_iso': pub_time_iso,
-            'recv_time_iso': now_iso,
-            'expiration_time_iso': expiration_time_iso,
-            'pub_time_ms': pub_time_ms,
-            'expiration_ms': expiration_ms,
-            'publisher': publisher,
-            'cid': cid,
-            'correl_id': correl_id,
-            'in_reply_to': in_reply_to,
-            'ext_client_id': ext_client_id,
-            _retry.Field_Max_Retries: max_retries,
-            _retry.Field_Sleep_Time: retry_sleep_time,
-            _retry.Field_Backoff_Threshold: retry_backoff_threshold,
-            _retry.Field_Backoff_Multiplier: retry_backoff_multiplier,
-        }
-
-        # .. one transaction, possibly shared with other callers, inserts the message and one delivery row
-        # .. per subscriber, and a topic without subscribers has its message stored without its payload ..
-        pending = new_pending_publication(message_values)
-
-        # .. though the publications of a subscriber service that processes a push delivery batch
-        # .. commit in the transaction that acknowledges the batch, which wakes up their subscribers ..
+        # One transaction, possibly shared with other callers, inserts the message and one delivery row
+        # per subscriber, and a topic without subscribers has its message stored without its payload,
+        # though the publications of a subscriber service that processes a push delivery batch
+        # commit in the transaction that acknowledges the batch, which wakes up their subscribers ..
         if scope := get_delivery_scope():
             scope.publications.append(pending)
         else:
             self._writer.publish(pending)
 
-        subscriber_keys = pending.subscriber_keys
-
-        # .. wake up the subscribers now that the transaction is committed ..
-        if subscriber_keys:
-            self.notify_sub_keys(subscriber_keys)
-
-        subscriber_count = len(subscriber_keys)
-
-        logger.info('Published message -> msg_id:%s, topic_name:%s, subscriber_count:%d',
-            message_id, topic_name, subscriber_count)
-
-        # .. record the publish in the audit log, unless the topic's audit log is off ..
-        if self.audit_log:
-            if topic_name not in self.audit_disabled_topics:
-
-                # These are all optional on input so they are normalized to strings here.
-                if cid is None:
-                    cid = ''
-                if correl_id is None:
-                    correl_id = ''
-                if ext_client_id is None:
-                    ext_client_id = ''
-                if publisher is None:
-                    publisher = ''
-
-                audit_pub_time = parse_utc(pub_time_iso)
-
-                self.audit_log.insert(AuditSource.PubSub, AuditEvent.Published, topic_name,
-                    cid=cid,
-                    msg_id=message_id,
-                    correl_id=correl_id,
-                    ext_client_id=ext_client_id,
-                    pub_time=audit_pub_time,
-                    endpoint=publisher,
-                    size=data_size,
-                    priority=priority,
-                    outcome=AuditOutcome.OK,
-                    data=serialized_data,
-                    is_export_payload_active=self.is_topic_payload_exported(topic_name),
-                )
-
-        # .. update the publish counter and return the result.
-        counter = zato_pubsub_messages_published_total.labels(topic_name=topic_name)
-        _ = counter.inc()
+        # .. and what follows the commit runs once it is committed.
+        complete_publication(self, built)
 
         out = PublishResult()
-        out.msg_id = message_id
+        out.msg_id = pending.message_values['msg_id']
 
         return out
 
@@ -274,6 +159,55 @@ class SQLPubSubBackend(SQLAdminAPI):
 
         logger.info('ack_with_publications -> sub_key:%s, acked:%d, fully_delivered:%d, publications:%d',
             sub_key, len(msg_ids), ack.fully_delivered_count, len(publications))
+
+# ################################################################################################################################
+
+    def ack_pulled_with_publications(
+        self,
+        sub_key:'str',
+        consumed:'list[tuple[str, int]]',
+        publications:'list[BuiltPublication]',
+    ) -> 'tuple[int, strlist]':
+        """ Acknowledges the messages that a pull client consumed, each with the delivery attempt that it was handed out with,
+        in one transaction with the publications that the client produced from them. A message that another pull has
+        handed out again or concluded since, and a publication whose message ID stands for a different message,
+        roll the transaction back and raise. Returns how many delivery rows were removed and the message ID
+        of each publication.
+        """
+        msg_ids:'strlist' = []
+        expected_attempts:'intlist' = []
+
+        for msg_id, delivery_attempt in consumed:
+            msg_ids.append(msg_id)
+            expected_attempts.append(delivery_attempt)
+
+        ack = new_fenced_ack(sub_key, msg_ids, expected_attempts)
+
+        items:'anylist' = []
+
+        for built in publications:
+            items.append(built.pending)
+
+        items.append(ack)
+
+        self._writer.write_atomic(items, is_strict=True)
+
+        # A publication that only repeated an existing message was completed when that message was committed.
+        published:'strlist' = []
+
+        for built in publications:
+
+            if not built.pending.is_repeat:
+                complete_publication(self, built)
+
+            msg_id = built.pending.message_values['msg_id']
+            published.append(msg_id)
+
+        logger.info('ack_pulled_with_publications -> sub_key:%s, consumed:%d, removed:%d, publications:%d',
+            sub_key, len(consumed), ack.removed_count, len(publications))
+
+        out = (ack.removed_count, published)
+        return out
 
 # ################################################################################################################################
 

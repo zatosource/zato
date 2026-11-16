@@ -19,7 +19,7 @@ from zato.common.pubsub.util import validate_topic_name
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anytuple
+    from zato.common.typing_ import any_, anydict
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -36,6 +36,16 @@ _default_expiration = PubSub.Message.Default_Expiration
 _status_bad_request = PubSub.Status.Bad_Request
 _status_unauthorized = PubSub.Status.Unauthorized
 _status_forbidden = PubSub.Status.Forbidden
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class PublicationError(Exception):
+    """ Raised for a publication that a REST client may not make, with the details, status and status code of the error.
+    """
+    def __init__(self, details:'str', status:'str', status_code:'int') -> 'None':
+        super().__init__(details)
+        self.error = (details, status, status_code)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -121,38 +131,38 @@ def parse_publication(
     username:'str',
     cid:'str',
     fields:'anydict',
-) -> 'tuple[RESTPublication | None, anytuple | None]':
+) -> 'RESTPublication':
     """ Validates one publication of a REST client and checks that the client may publish to its topic,
-    which is active. Returns the publication, or the details, status and status code of the error.
+    which is active, raising PublicationError otherwise.
     """
 
     # The topic is what everything else is checked against ..
     topic_name = _get_optional(fields, 'topic_name')
 
     if topic_name is None:
-        return None, ("Invalid input: 'topic_name' element missing", _status_bad_request, BAD_REQUEST)
+        raise PublicationError("Invalid input: 'topic_name' element missing", _status_bad_request, BAD_REQUEST)
 
     try:
         validate_topic_name(topic_name)
     except Exception as e:
-        return None, (str(e), _status_bad_request, BAD_REQUEST)
+        raise PublicationError(str(e), _status_bad_request, BAD_REQUEST)
 
     # .. the client needs the permission to publish to it ..
     matcher = server.pubsub_pattern_matcher
     permission_result = matcher.evaluate(username, topic_name, 'publish')
 
     if not permission_result.is_ok:
-        return None, ('Permission denied', _status_unauthorized, UNAUTHORIZED)
+        raise PublicationError('Permission denied', _status_unauthorized, UNAUTHORIZED)
 
     # .. and the topic needs to be active ..
     if not server.config_manager.is_pubsub_topic_active(topic_name):
-        return None, (f'Topic {topic_name} is inactive', _status_forbidden, FORBIDDEN)
+        raise PublicationError(f'Topic {topic_name} is inactive', _status_forbidden, FORBIDDEN)
 
     # .. a message without data is not one ..
     data = _get_optional(fields, 'data')
 
     if data is None:
-        return None, ("Invalid input: 'data' element missing", _status_bad_request, BAD_REQUEST)
+        raise PublicationError("Invalid input: 'data' element missing", _status_bad_request, BAD_REQUEST)
 
     # .. a message ID of the client's own follows the rules of every message ID ..
     msg_id = _get_optional(fields, 'msg_id')
@@ -161,7 +171,7 @@ def parse_publication(
         msg_id = ''
 
     elif not is_valid_msg_id(msg_id):
-        return None, (f'Invalid msg_id, it must match {Msg_ID_Pattern.pattern}', _status_bad_request, BAD_REQUEST)
+        raise PublicationError(f'Invalid msg_id, it must match {Msg_ID_Pattern.pattern}', _status_bad_request, BAD_REQUEST)
 
     # .. a priority out of range and an expiration below one second are replaced ..
     priority = _parse_int(_get_optional(fields, 'priority'), _default_priority)
@@ -185,7 +195,7 @@ def parse_publication(
     out.pub_time = _get_text(fields, 'pub_time', '')
     out.msg_id = msg_id
 
-    return out, None
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -366,7 +366,7 @@ class OutputCheck:
         return out
 
     def __repr__(self) -> 'str':
-        out = f'<OutputCheck missing:{self.missing_keys} duplicated:{self.duplicated_keys} ' \
+        out = f'<OutputCheck missing:{self.missing_keys} duplicated:{self.duplicated_keys} ' + \
             f'unexpected:{self.unexpected_keys} pending:{self.pending_count} outputs:{len(self.output_keys)}>'
         return out
 

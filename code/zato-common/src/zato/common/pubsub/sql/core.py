@@ -29,7 +29,8 @@ from zato.common.pubsub.sql.config import get_pubsub_db_type, get_pubsub_engine
 from zato.common.pubsub.sql.generation import follow_takeover, get_fork_takeover, take_over
 from zato.common.pubsub.sql.payload_cache import Max_Payload_Cache_Size, PayloadCache, PayloadEpoch
 from zato.common.pubsub.sql.schema import delivery_table
-from zato.common.pubsub.sql.writes import drop_payloads, new_pending_ack, PubSubWriter
+from zato.common.pubsub.sql.payloads import drop_payloads
+from zato.common.pubsub.sql.writes import new_pending_ack, PubSubWriter
 from zato.common.typing_ import cast_
 from zato.common.util.memory_trim import start_memory_trimmer
 from zato.common.util.time_ import datetime_to_ms

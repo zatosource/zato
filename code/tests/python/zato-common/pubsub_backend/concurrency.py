@@ -64,9 +64,9 @@ class _RecordingWriter(PubSubWriter):
         super().__init__()
         self.transaction_sizes:'intlist' = []
 
-    def _write_transaction(self, engine:'Engine', batch:'anylist') -> 'None':
+    def _write_transaction(self, engine:'Engine', batch:'anylist', is_strict:'bool'=False) -> 'None':
         self.transaction_sizes.append(len(batch))
-        super()._write_transaction(engine, batch)
+        super()._write_transaction(engine, batch, is_strict)
 
 # ################################################################################################################################
 # ################################################################################################################################

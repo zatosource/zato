@@ -357,7 +357,7 @@ class Create(ZatoCommand):
         get_messages_service = Service(None, 'pubsub.rest.get-messages', True, get_messages_impl, True)
         session.add(get_messages_service)
 
-        ack_messages_impl = 'zato.server.service.internal.pubsub.rest.AckMessages'
+        ack_messages_impl = 'zato.server.service.internal.pubsub.rest_ack.AckMessages'
         ack_messages_service = Service(None, 'pubsub.rest.ack-messages', True, ack_messages_impl, True)
         session.add(ack_messages_service)
 

@@ -8,20 +8,22 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from base64 import b64decode
-from http.client import BAD_REQUEST, FORBIDDEN, UNAUTHORIZED
+from http.client import BAD_REQUEST, CONFLICT, UNAUTHORIZED
 from logging import getLogger
 
 # Zato
 from zato.common.api import PubSub
+from zato.common.pubsub.sql.writes import PubSubDuplicateMsgID
 from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.auth import check_basic_auth
 from zato.server.service import AsIs, Int, Service
+from zato.server.service.internal.pubsub.rest_publication import parse_publication, PublicationError
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict
+    from zato.common.typing_ import anydict, anytuple
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,10 +33,6 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-_min_priority = PubSub.Message.Priority_Min
-_max_priority = PubSub.Message.Priority_Max
-_default_priority = PubSub.Message.Priority_Default
-_default_expiration = PubSub.Message.Default_Expiration
 _max_messages_default = 50
 _max_messages_limit = 1000
 _max_len_default = PubSub.Message.Default_Max_Len
@@ -43,7 +41,7 @@ _max_len_limit = PubSub.Message.Default_Max_Len
 _status_ok = PubSub.Status.OK
 _status_bad_request = PubSub.Status.Bad_Request
 _status_unauthorized = PubSub.Status.Unauthorized
-_status_forbidden = PubSub.Status.Forbidden
+_status_conflict = PubSub.Status.Conflict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -90,6 +88,13 @@ class PubSubRESTService(Service):
             return None, ('Invalid credentials', _status_unauthorized, UNAUTHORIZED)
 
         return username, None
+
+    def set_error(self, error:'anytuple') -> 'None':
+        """ Returns to the client the details, status and status code of an error.
+        """
+        self.response.payload.is_ok = False
+        self.response.payload.cid = self.cid
+        self.response.payload.details, self.response.payload.status, self.response.status_code = error
 
     def _get_sec_def(self, username:'str') -> 'anydict | None':
         """ Returns the security definition the given username belongs to, out of the pub/sub clients
@@ -152,7 +157,8 @@ class Publish(PubSubRESTService):
     """
     name = 'pubsub.rest.publish'
 
-    input = 'topic_name', AsIs('data'), '-priority', '-expiration', AsIs('-correl_id'), AsIs('-in_reply_to'), AsIs('-ext_client_id'), '-pub_time'
+    input = 'topic_name', AsIs('data'), '-priority', '-expiration', AsIs('-correl_id'), AsIs('-in_reply_to'), \
+        AsIs('-ext_client_id'), '-pub_time', AsIs('-msg_id')
     output = AsIs('-msg_id'), '-is_ok', '-cid', AsIs('-status'), '-details'
 
 # ################################################################################################################################
@@ -166,99 +172,55 @@ class Publish(PubSubRESTService):
         # Authenticate
         username, error = self.authenticate()
         if error:
-            self.response.payload.is_ok = False
-            self.response.payload.cid = cid
-            self.response.payload.details, self.response.payload.status, self.response.status_code = error
+            self.set_error(error)
             return
 
-        # Get topic name
-        topic_name = input.topic_name
-
-        # Validate topic name
-        try:
-            validate_topic_name(topic_name)
-        except Exception as e:
-            self.response.payload.is_ok = False
-            self.response.payload.cid = cid
-            self.response.payload.status = _status_bad_request
-            self.response.payload.details = str(e)
-            self.response.status_code = BAD_REQUEST
-            return
-
-        # Check permissions
-        matcher = self.server.pubsub_pattern_matcher
-        permission_result = matcher.evaluate(username, topic_name, 'publish')
-
-        if not permission_result.is_ok:
-            self.response.payload.is_ok = False
-            self.response.payload.cid = cid
-            self.response.payload.status = _status_unauthorized
-            self.response.payload.details = 'Permission denied'
-            self.response.status_code = UNAUTHORIZED
-            return
-
-        # Check if the topic is active ..
-        if not self.server.config_manager.is_pubsub_topic_active(topic_name):
-            self.response.payload.is_ok = False
-            self.response.payload.cid = cid
-            self.response.payload.status = _status_forbidden
-            self.response.payload.details = f'Topic {topic_name} is inactive'
-            self.response.status_code = FORBIDDEN
-            return
-
-        # Get message data
-        data = input.data
-
-        if data is None:
-            self.response.payload.is_ok = False
-            self.response.payload.cid = cid
-            self.response.payload.status = _status_bad_request
-            self.response.payload.details = "Invalid input: 'data' element missing"
-            self.response.status_code = BAD_REQUEST
-            return
-
-        # Get optional parameters with safe parsing
-        try:
-            priority = int(input.priority) if input.priority not in (None, '') else _default_priority
-        except (ValueError, TypeError):
-            priority = _default_priority
+        # The publication is validated and checked against the permissions and the state of its topic ..
+        fields:'anydict' = {
+            'topic_name': input.topic_name,
+            'data': input.data,
+            'priority': input.priority,
+            'expiration': input.expiration,
+            'correl_id': input.correl_id,
+            'in_reply_to': input.in_reply_to,
+            'ext_client_id': input.ext_client_id,
+            'pub_time': input.pub_time,
+            'msg_id': input.msg_id,
+        }
 
         try:
-            expiration = int(input.expiration) if input.expiration not in (None, '') else _default_expiration
-        except (ValueError, TypeError):
-            expiration = _default_expiration
+            publication = parse_publication(self.server, username, cid, fields)
+        except PublicationError as e:
+            self.set_error(e.error)
+            return
 
-        correl_id = input.correl_id or cid
-        in_reply_to = input.in_reply_to or ''
-        ext_client_id = input.ext_client_id or ''
-        pub_time = input.pub_time or ''
-
-        # Validate priority
-        if priority < _min_priority or priority > _max_priority:
-            priority = _default_priority
-
-        # Validate expiration
-        if expiration < 1:
-            expiration = 1
+        topic_name = publication.topic_name
 
         # .. publish either to the AMQP broker or to the pub/sub database, depending on the topic's backend ..
         backend_config = self.server.config_manager.get_pubsub_topic_backend(topic_name)
 
         if backend_config:
-            result = self.server.config_manager.pubsub_publish_to_amqp(backend_config, data, topic_name, cid)
+            result = self.server.config_manager.pubsub_publish_to_amqp(backend_config, publication.data, topic_name, cid)
         else:
-            result = self.server.pubsub_backend.publish(
-                topic_name,
-                data,
-                priority=priority,
-                expiration=expiration,
-                correl_id=correl_id,
-                in_reply_to=in_reply_to,
-                ext_client_id=ext_client_id,
-                publisher=username,
-                pub_time=pub_time,
-                cid=cid,
-            )
+
+            # .. where a message ID of the client's own that stands for another message is a conflict ..
+            try:
+                result = self.server.pubsub_backend.publish(
+                    topic_name,
+                    publication.data,
+                    priority=publication.priority,
+                    expiration=publication.expiration,
+                    correl_id=publication.correl_id,
+                    in_reply_to=publication.in_reply_to,
+                    ext_client_id=publication.ext_client_id,
+                    publisher=username,
+                    pub_time=publication.pub_time,
+                    cid=cid,
+                    msg_id=publication.msg_id,
+                )
+            except PubSubDuplicateMsgID as e:
+                self.set_error((str(e), _status_conflict, CONFLICT))
+                return
 
         # Build response
         self.response.payload.is_ok = True
@@ -332,79 +294,6 @@ class GetMessages(PubSubRESTService):
         """
         # Look up in the subscriptions store
         return self.server.pubsub_subscriptions.get_sub_key_by_username(username)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class AckMessages(PubSubRESTService):
-    """ Acknowledges messages that the authenticated user pulled, removing them from its queue.
-    """
-    name = 'pubsub.rest.ack-messages'
-
-    input = AsIs('msg_ids'),
-    output = Int('-ack_count'), '-is_ok', '-cid', AsIs('-status'), '-details'
-
-# ################################################################################################################################
-
-    def handle(self) -> 'None':
-
-        # Local aliases
-        cid = self.cid
-        msg_ids = self.request.input.msg_ids
-
-        # Authenticate
-        username, error = self.authenticate()
-        if error:
-            self.response.payload.is_ok = False
-            self.response.payload.cid = cid
-            self.response.payload.details, self.response.payload.status, self.response.status_code = error
-            return
-
-        # Get sub_key for this user
-        sub_key = self.server.pubsub_subscriptions.get_sub_key_by_username(username)
-
-        if not sub_key:
-            self.response.payload.is_ok = False
-            self.response.payload.cid = cid
-            self.response.payload.details = 'No subscription found for user'
-            self.response.payload.status = _status_unauthorized
-            self.response.status_code = UNAUTHORIZED
-            return
-
-        # The identifiers come from the caller, so their shape is checked before they reach the database ..
-        if not isinstance(msg_ids, list):
-            self.response.payload.is_ok = False
-            self.response.payload.cid = cid
-            self.response.payload.status = _status_bad_request
-            self.response.payload.details = 'msg_ids must be a list'
-            self.response.status_code = BAD_REQUEST
-            return
-
-        if len(msg_ids) > _max_messages_limit:
-            self.response.payload.is_ok = False
-            self.response.payload.cid = cid
-            self.response.payload.status = _status_bad_request
-            self.response.payload.details = f'msg_ids may have at most {_max_messages_limit} elements'
-            self.response.status_code = BAD_REQUEST
-            return
-
-        for msg_id in msg_ids:
-            if not isinstance(msg_id, str):
-                self.response.payload.is_ok = False
-                self.response.payload.cid = cid
-                self.response.payload.status = _status_bad_request
-                self.response.payload.details = 'Each element of msg_ids must be a string'
-                self.response.status_code = BAD_REQUEST
-                return
-
-        # .. and the messages that are still in the queue are removed from it.
-        ack_count = self.server.pubsub_backend.ack_pulled(sub_key, msg_ids)
-
-        # Build response
-        self.response.payload.is_ok = True
-        self.response.payload.cid = cid
-        self.response.payload.ack_count = ack_count
-        self.response.payload.status = _status_ok
 
 # ################################################################################################################################
 # ################################################################################################################################
