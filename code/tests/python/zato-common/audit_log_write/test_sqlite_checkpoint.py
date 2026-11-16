@@ -12,6 +12,9 @@ import os
 # gevent
 from gevent import sleep
 
+# pytest
+import pytest
+
 # Zato
 from conftest import ModuleCtx
 from live_sql.env import database_env
@@ -26,11 +29,14 @@ from zato.common.db_env.sqlite_checkpoint import Autocheckpoint_Pages, Checkpoin
 # ################################################################################################################################
 
 if 0:
+    from collections.abc import Iterator
     from sqlalchemy.engine import Engine
     from zato.common.db_env.sqlite_checkpoint import WALCheckpointer
 
     Engine = Engine
     WALCheckpointer = WALCheckpointer
+
+    strgen = Iterator[str]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,9 +64,10 @@ def _get_checkpointer(engine:'Engine') -> 'WALCheckpointer':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_wal_is_checkpointed_in_background(tmp_path:'os.PathLike') -> 'None':
-    """ The commits of the SQLite audit database leave the WAL to a thread of its own, which copies it into
-    the database file, and the thread stops along with its engine.
+@pytest.fixture
+def sqlite_db_path(tmp_path:'os.PathLike') -> 'strgen':
+    """ Opens the SQLite audit database before the test, as a server opens it at startup. The schema is created
+    outside the monitored test because each of its statements waits for the log to be flushed to disk.
     """
     db_path = os.path.join(str(tmp_path), ModuleCtx.SQLite_File_Name)
 
@@ -70,39 +77,47 @@ def test_wal_is_checkpointed_in_background(tmp_path:'os.PathLike') -> 'None':
     }
 
     with database_env(ModuleCtx.Env_Prefix, details):
+        _ = get_audit_engine()
+        yield db_path
 
-        engine = get_audit_engine()
-        checkpointer = _get_checkpointer(engine)
+# ################################################################################################################################
 
-        # The connections checkpoint by themselves only once the log is much longer ..
-        with engine.connect() as connection:
-            result = connection.exec_driver_sql('pragma wal_autocheckpoint')
-            limit = result.scalar()
+def test_wal_is_checkpointed_in_background(sqlite_db_path:'str') -> 'None':
+    """ The commits of the SQLite audit database leave the WAL to a thread of its own, which copies it into
+    the database file, and the thread stops along with its engine.
+    """
+    engine = get_audit_engine()
+    checkpointer = _get_checkpointer(engine)
 
-        assert limit == Autocheckpoint_Pages
+    # The connections checkpoint by themselves only once the log is much longer ..
+    with engine.connect() as connection:
+        result = connection.exec_driver_sql('pragma wal_autocheckpoint')
+        limit = result.scalar()
 
-        # .. the events are written to the log ..
-        audit_log = AuditLog(Server_Name)
+    assert limit == Autocheckpoint_Pages
 
-        for index in range(_event_count):
-            _ = audit_log.insert(AuditSource.REST_Channel, AuditEvent.Message_Received, Object_Name,
-                cid=f'cid-{index}', msg_id=f'msg-{index}', outcome=AuditOutcome.OK, data=f'Order {index} from John Smith')
+    # .. the events are written to the log ..
+    audit_log = AuditLog(Server_Name)
 
-        size_after_writes = os.path.getsize(db_path)
+    for index in range(_event_count):
+        _ = audit_log.insert(AuditSource.REST_Channel, AuditEvent.Message_Received, Object_Name,
+            cid=f'cid-{index}', msg_id=f'msg-{index}', outcome=AuditOutcome.OK, data=f'Order {index} from John Smith')
 
-        # .. and the background checkpoint copies them into the database file.
-        for _ in range(_max_intervals):
-            sleep(Checkpoint_Interval_Seconds)
-            if os.path.getsize(db_path) > size_after_writes:
-                break
+    size_after_writes = os.path.getsize(sqlite_db_path)
 
-        assert os.path.getsize(db_path) > size_after_writes
+    # .. and the background checkpoint copies them into the database file.
+    for _ in range(_max_intervals):
+        sleep(Checkpoint_Interval_Seconds)
+        if os.path.getsize(sqlite_db_path) > size_after_writes:
+            break
 
-        # The checkpoints end with the engine.
-        dispose_env_engine(env_config)
+    assert os.path.getsize(sqlite_db_path) > size_after_writes
 
-        checkpointer._thread.join(Checkpoint_Interval_Seconds * 4)
-        assert not checkpointer._thread.is_alive()
+    # The checkpoints end with the engine.
+    dispose_env_engine(env_config)
+
+    checkpointer._thread.join(Checkpoint_Interval_Seconds * 4)
+    assert not checkpointer._thread.is_alive()
 
 # ################################################################################################################################
 # ################################################################################################################################

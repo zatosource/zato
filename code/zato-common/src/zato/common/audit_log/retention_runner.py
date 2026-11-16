@@ -61,8 +61,12 @@ class RetentionRunner:
         # Set when a request arrives
         self._wake_event = Event()
 
-        # The thread starts with the first request
+        # The thread starts with the first request ..
         self._is_started = False
+
+        # .. and runs until it is stopped, after which the next request starts it again
+        self._thread:'Thread | None' = None
+        self._is_stopping = False
 
         # The highest id of the count table of each engine that its previous compaction left behind
         self._compacted_up_to:'anydict' = {}
@@ -79,10 +83,30 @@ class RetentionRunner:
 
             if not self._is_started:
                 self._is_started = True
-                thread = Thread(target=self._run, name='audit-log-retention', daemon=True)
-                thread.start()
+                self._is_stopping = False
+                self._thread = Thread(target=self._run, name='audit-log-retention', daemon=True)
+                self._thread.start()
 
         self._wake_event.set()
+
+# ################################################################################################################################
+
+    def stop(self) -> 'None':
+        """ Stops the thread after the run in progress, if any, and waits for it to end. The requests not yet served
+        are discarded.
+        """
+        with self._lock:
+            thread = self._thread
+            self._is_stopping = True
+            self._requested = []
+
+        if thread:
+            self._wake_event.set()
+            thread.join()
+
+        with self._lock:
+            self._thread = None
+            self._is_started = False
 
 # ################################################################################################################################
 
@@ -95,8 +119,10 @@ class RetentionRunner:
             _ = self._wake_event.wait()
             self._wake_event.clear()
 
-            # .. take all the engines requested so far ..
+            # .. take all the engines requested so far, unless the runner is stopping ..
             with self._lock:
+                if self._is_stopping:
+                    return
                 engines = self._requested
                 self._requested = []
 
@@ -150,6 +176,13 @@ def request_retention(engine:'Engine') -> 'None':
     """
     if is_singleton_owner():
         _runner.request(engine)
+
+# ################################################################################################################################
+
+def stop_retention_runner() -> 'None':
+    """ Stops the thread of the runner of this process and waits for it to end, if one is running.
+    """
+    _runner.stop()
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -147,4 +147,19 @@ def get_search_index_merger(engine:'Engine') -> 'SearchIndexMerger | None':
     return out
 
 # ################################################################################################################################
+
+def stop_search_index_merger() -> 'None':
+    """ Stops the merger of this process and waits for its thread to end, if one is running, so that the next write
+    chooses a merger again.
+    """
+    with _MergerCtx.lock:
+
+        if merger := _MergerCtx.merger:
+            merger.stop()
+            merger._thread.join()
+
+        _MergerCtx.merger = None
+        _MergerCtx.engine = None
+
+# ################################################################################################################################
 # ################################################################################################################################

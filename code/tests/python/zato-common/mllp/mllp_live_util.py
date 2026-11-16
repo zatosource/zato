@@ -35,6 +35,12 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Type aliases
+thread_list = list[threading.Thread]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 colorama_init(autoreset=True)
 
 # ################################################################################################################################
@@ -58,6 +64,10 @@ default_sender_ip          = '203.0.113.10'
 default_sender_common_name = ''
 
 _relay_buffer_size = 65536
+
+# How long the end of a test waits for the relay to finish carrying the connections that the test closed,
+# which ends once the listener closed its side as well
+_relay_connection_join_timeout_seconds = 10.0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -168,10 +178,46 @@ class _Relay(socketserver.ThreadingTCPServer):
         self.sender_common_name = sender_common_name
         self.ssl_context = ssl_context
 
+        # The thread of each connection carried, which the end of a test waits for
+        self._connection_lock = threading.Lock()
+        self._connection_threads:'thread_list' = []
+
+# ################################################################################################################################
+
+    def process_request(self, request:'any_', client_address:'any_') -> 'None':
+        """ Carries one connection in a thread of its own, recording the thread.
+        """
+        thread = threading.Thread(target=self.process_request_thread, args=(request, client_address), daemon=True)
+
+        with self._connection_lock:
+            self._connection_threads.append(thread)
+
+        thread.start()
+
+# ################################################################################################################################
+
+    def join_connections(self) -> 'None':
+        """ Waits for the threads of the connections carried so far to end.
+        """
+        with self._connection_lock:
+            threads = self._connection_threads
+            self._connection_threads = []
+
+        for thread in threads:
+            thread.join(_relay_connection_join_timeout_seconds)
+
 # ################################################################################################################################
 
 # Which relay fronts which server process, so that stopping the one stops the other
 _relays:'dict[int, _Relay]' = {}
+
+# ################################################################################################################################
+
+def join_relay_connections() -> 'None':
+    """ Waits for every relay to finish carrying the connections that were opened through it.
+    """
+    for relay in _relays.values():
+        relay.join_connections()
 
 # ################################################################################################################################
 

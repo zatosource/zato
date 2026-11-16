@@ -22,6 +22,7 @@ from zato.common.pubsub.dlq import get_dlq_sub_key, get_dlq_topic_name
 from zato.common.pubsub.outgoing import deliver_envelope, get_outgoing_sub_key, get_outgoing_topic_name, Key_Data, \
     OutgoingPublisher, register_outgoing_conn_type
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.pubsub_in_process import new_single_slot_fence
 from zato.common.typing_ import cast_
 from zato.server.base.config_manager import ConfigManager
 from zato.server.base.config_manager.outgoing_queues import OutgoingQueueDepth
@@ -136,6 +137,7 @@ class _StubConfigManager:
     hold_outgoing_queue = ConfigManager.hold_outgoing_queue
     _set_outgoing_topic_audit_flag = ConfigManager._set_outgoing_topic_audit_flag
     ensure_outgoing_subscription = ConfigManager.ensure_outgoing_subscription
+    _add_outgoing_queue = ConfigManager._add_outgoing_queue
     rename_outgoing_subscription = ConfigManager.rename_outgoing_subscription
     delete_outgoing_subscription = ConfigManager.delete_outgoing_subscription
     restore_outgoing_subscriptions = ConfigManager.restore_outgoing_subscriptions
@@ -176,6 +178,19 @@ class _StubServiceStore:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class _StubConfigDispatcher:
+    """ Stands in for the dispatcher of a server with one process, which has no other process to relay an event to.
+    """
+
+    def __init__(self) -> 'None':
+        self.relayed:'anylist' = []
+
+    def relay_only(self, msg:'anydict') -> 'None':
+        self.relayed.append(msg)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _StubServer:
     """ Stands in for the server, its invoke does what the delivery service does.
     """
@@ -184,6 +199,7 @@ class _StubServer:
 
     def __init__(self, backend:'SQLPubSubBackend') -> 'None':
         self.config_manager = _StubConfigManager(self)
+        self.config_dispatcher = _StubConfigDispatcher()
         self.service_store = _StubServiceStore()
         self.pubsub_backend = backend
         self.invoked:'anylist' = []
@@ -299,7 +315,7 @@ def _new_server() -> 'anytuple':
     """
     backend = SQLPubSubBackend()
     server = _StubServer(backend)
-    delivery = PushDelivery(_as_server(server), backend)
+    delivery = PushDelivery(_as_server(server), backend, new_single_slot_fence())
 
     server.pubsub_push_delivery = delivery
 

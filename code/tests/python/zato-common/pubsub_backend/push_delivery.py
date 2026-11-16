@@ -16,6 +16,7 @@ from gevent import sleep
 from common import delete_all_rows, get_delivery_rows, get_message_rows
 from zato.common.api import DATA_FORMAT, PubSub
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.pubsub_in_process import new_single_slot_fence
 from zato.server.base.parallel.delivery import PushDelivery
 
 # ################################################################################################################################
@@ -140,7 +141,7 @@ def run_push_delivery_scenario() -> 'None':
 
     backend = SQLPubSubBackend()
     server = _StubServer()
-    delivery = PushDelivery(server, backend) # type: ignore[arg-type]
+    delivery = PushDelivery(server, backend, new_single_slot_fence()) # type: ignore[arg-type]
 
     # The delivery is stopped however the scenario ends - a failure before its own stop would otherwise leave
     # a greenlet behind that keeps fetching from a database the process has since moved away from.

@@ -25,6 +25,7 @@ from zato.common.audit_log.api import AuditLog, get_audit_engine
 from zato.common.audit_log.common import AuditEvent
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.test.pubsub_database import pubsub_db_env
+from zato.common.test.pubsub_in_process import new_single_slot_fence
 from zato.server.base.parallel.delivery import PushDelivery
 
 # ################################################################################################################################
@@ -332,7 +333,7 @@ def _run_partners() -> 'None':
     backend.take_over()
 
     stub_server:'any_' = _StubServer()
-    push_delivery = PushDelivery(stub_server, backend)
+    push_delivery = PushDelivery(stub_server, backend, new_single_slot_fence())
 
     # Each partner is subscribed to a topic of its own and pushed to through its endpoint ..
     for name in _partner_names:

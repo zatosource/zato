@@ -39,7 +39,7 @@ if 0:
     from gevent import Greenlet
     from zato.common.pubsub.fence import DeliveryFence
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
-    from zato.common.typing_ import anydict, anylist, callable_, intlist, strlist, strset
+    from zato.common.typing_ import anydict, anylist, callable_, floatnone, intlist, strlist, strset
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -139,12 +139,16 @@ class PushDelivery:
 
 # ################################################################################################################################
 
-    def pause_sub_key(self, sub_key:'str', join_timeout:'float'=_pause_join_timeout) -> 'None':
+    def pause_sub_key(self, sub_key:'str', join_timeout:'floatnone'=None) -> 'None':
         """ Stops the delivery greenlet of one subscriber between two of its batches, rather than
         wherever it happens to be, which is what a queue being moved needs - a message whose delivery
         is cut in half is never acknowledged and goes out a second time when the queue starts again.
         A pause that another worker asked for waits for a shorter time, within the deadline of its query.
         """
+        # The module's timeout is read at the time of the call, not at the time of the definition
+        if join_timeout is None:
+            join_timeout = _pause_join_timeout
+
         with self._lock:
             self._paused.add(sub_key)
             greenlet = self._greenlets.pop(sub_key, None)

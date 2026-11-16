@@ -1105,6 +1105,9 @@ class TestTimeoutsAndErrors:
         finally:
             raw_socket.close()
 
+            # The relay in front of the killed server stops along with it
+            stop_server(process)
+
 # ################################################################################################################################
 # ################################################################################################################################
 # Group 7 - Circuit breaker in-process

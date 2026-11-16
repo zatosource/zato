@@ -221,12 +221,9 @@ def _compaction() -> 'None':
 
 # ################################################################################################################################
 
-def _rebuild(backend:'str') -> 'None':
-    """ Writes events into a database created before the event counts and the open exchanges, opens it again
-    and writes more events after that.
+def _write_before_reopen(rng:'Random', backend:'str') -> 'None':
+    """ Writes events into a database created before the event counts and the open exchanges.
     """
-    rng = Random(20261104)
-
     rows = new_event_rows(rng, 1000, 0)
     insert_rows(rows)
 
@@ -240,8 +237,11 @@ def _rebuild(backend:'str') -> 'None':
     deleted_ids = rng.sample(ids, 300)
     _delete(deleted_ids)
 
-    reopen_database()
+# ################################################################################################################################
 
+def _check_after_reopen(rng:'Random') -> 'None':
+    """ Checks the counts and the open exchanges of a database opened again, and writes more events after that.
+    """
     _assert_counts_exact()
 
     events = read_events()
@@ -353,7 +353,13 @@ def test_counts_after_rebuild(audit_backend:'str') -> 'None':
     """ A database created before the event counts and the open exchanges existed has them created and filled
     from its events when it is opened, and kept from then on.
     """
-    _ = run_blocking(_rebuild, audit_backend)
+    rng = Random(20261104)
+
+    _ = run_blocking(_write_before_reopen, rng, audit_backend)
+
+    _ = run_blocking(reopen_database)
+
+    _ = run_blocking(_check_after_reopen, rng)
 
 # ################################################################################################################################
 

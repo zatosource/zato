@@ -15,13 +15,13 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
-    get_audit_engine, AuditEvent, AuditOutcome, AuditSource
+    get_audit_engine, new_unshared_audit_engine, AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.common import event_count_table, event_dedup_table, event_open_table, Status_Outstanding
 from zato.common.audit_log.event_count import compact_event_counts, count_key_columns
 from zato.common.audit_log.listing import new_search_filters
 from zato.common.audit_log.sqlite_writes import env_config
 from zato.common.db_env import dispose_env_engine
-from zato.common.db_env.engine import call_database
+from zato.common.db_env.engine import call_database, create_schema
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -405,9 +405,15 @@ def drop_read_schema(backend:'str') -> 'None':
 
 def reopen_database() -> 'None':
     """ Opens the database anew, the way a server starting up does, which creates what the schema lacks.
+    The schema is created through an engine that runs no background checkpoints, because this runs in the thread pool
+    and a checkpointer runs on the hub of the thread that starts it, and the caller of the next blocking call
+    opens the shared engine again in the main thread.
     """
     dispose_env_engine(env_config)
-    _ = get_audit_engine()
+
+    engine = new_unshared_audit_engine()
+    create_schema(engine, env_config.metadata)
+    engine.dispose()
 
 # ################################################################################################################################
 

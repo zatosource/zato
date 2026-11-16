@@ -34,7 +34,7 @@ import pytest
 from zato.common.hl7.mllp.client import HL7MLLPClient
 
 # Zato
-from mllp_live_util import end_sequence, start_sequence, start_server, stop_server
+from mllp_live_util import end_sequence, join_relay_connections, start_sequence, start_server, stop_server
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,6 +50,14 @@ strstrdict     = dict[str, str]
 intgen         = Generator[int, None, None]
 strstrdict_gen = Generator[strstrdict, None, None]
 socketgen      = Generator[socket.socket, None, None]
+nonegen        = Generator[None, None, None]
+
+@pytest.fixture(autouse=True)
+def relay_connections_closed() -> 'nonegen':
+    """ Each test ends once the relays in front of the listeners have finished carrying the connections it opened.
+    """
+    yield
+    join_relay_connections()
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -23,6 +23,7 @@ from zato.common.api import PubSub
 from zato.common.crypto.api import CryptoManager
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
+from zato.common.test.pubsub_in_process import new_single_slot_fence
 from zato.common.typing_ import cast_
 from zato.server.base.parallel.delivery import PushDelivery
 
@@ -150,7 +151,7 @@ class Workload:
         self.cleanup = PubSubCleanup()
 
         self.server = _StubServer(self)
-        self.push_delivery = PushDelivery(cast_('any_', self.server), self.backend)
+        self.push_delivery = PushDelivery(cast_('any_', self.server), self.backend, new_single_slot_fence())
 
         self._greenlets:'anylist' = []
         self._publisher_greenlets:'anylist' = []

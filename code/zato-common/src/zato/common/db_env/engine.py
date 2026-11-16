@@ -266,6 +266,25 @@ def dispose_sqlite_file_engine(db_path:'str', *, needs_pool:'bool') -> 'None':
 
 # ################################################################################################################################
 
+def dispose_cached_engines() -> 'None':
+    """ Disposes every cached engine of this process, the SQLite file engines and the environment-configured ones,
+    stopping each background checkpointer, so that no checkpoint thread is left running.
+    """
+    for cache in (_engine_cache, _sqlite_file_engine_cache):
+        cache_keys = list(cache)
+
+        for cache_key in cache_keys:
+
+            # The checkpoints of the engine end with it ..
+            if checkpointer := _checkpointer_cache.pop(cache_key, None):
+                checkpointer.stop()
+
+            # .. and its pooled connections are closed.
+            engine = cache.pop(cache_key)
+            engine.dispose()
+
+# ################################################################################################################################
+
 def create_schema(engine:'Engine', metadata:'MetaData') -> 'None':
     """ Creates the tables of a schema that do not exist yet. On PostgreSQL, the processes that start at the same time,
     e.g. a server and its cleanup process, create it one after another.

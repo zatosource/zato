@@ -10,8 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from dataclasses import dataclass
 from logging import getLogger
-from threading import Condition, Lock, Thread
-from time import monotonic, sleep
+from threading import Condition, Event, Lock, Thread
+from time import monotonic
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -150,8 +150,12 @@ class EventBuffer:
         # When the oldest pending event was added, per the monotonic clock
         self._first_added_at = 0.0
 
-        # The background flusher starts lazily, with the first buffered event
+        # The background flusher starts lazily, with the first buffered event ..
         self._flusher_started = False
+
+        # .. and runs until it is stopped, after which the next buffered event starts it again
+        self._flusher_thread:'Thread | None' = None
+        self._stop_event = Event()
 
 # ################################################################################################################################
 
@@ -218,10 +222,28 @@ class EventBuffer:
     def _start_flusher(self) -> 'None':
         """ Starts the background thread enforcing the maximum wait time.
         """
-        thread = Thread(target=self._run_flusher, name='audit-log-flusher', daemon=True)
-        thread.start()
+        self._stop_event.clear()
+
+        self._flusher_thread = Thread(target=self._run_flusher, name='audit-log-flusher', daemon=True)
+        self._flusher_thread.start()
 
         _flushed_buffers.append(self)
+
+# ################################################################################################################################
+
+    def stop_flusher(self) -> 'None':
+        """ Stops the background flusher and waits for its thread to end, writing out everything buffered first.
+        """
+        self.flush()
+
+        self._stop_event.set()
+
+        if thread := self._flusher_thread:
+            thread.join()
+
+        with self._lock:
+            self._flusher_thread = None
+            self._flusher_started = False
 
 # ################################################################################################################################
 
@@ -236,9 +258,7 @@ class EventBuffer:
 
         max_wait_seconds = self.max_wait_ms / 1000.0
 
-        while True:
-
-            sleep(interval)
+        while not self._stop_event.wait(interval):
 
             # Take the batch out under the lock if the oldest event has waited long enough ..
             with self._lock:
@@ -286,6 +306,15 @@ def flush_all_buffers() -> 'None':
     """
     for buffer in _flushed_buffers:
         buffer.flush()
+
+# ################################################################################################################################
+
+def stop_all_flushers() -> 'None':
+    """ Writes out the events of every buffer of this process and stops its background flusher.
+    """
+    while _flushed_buffers:
+        buffer = _flushed_buffers.pop()
+        buffer.stop_flusher()
 
 # ################################################################################################################################
 # ################################################################################################################################

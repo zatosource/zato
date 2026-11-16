@@ -32,7 +32,7 @@ from zato.common.worker_slot import ModuleCtx as WorkerSlotCtx
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist
+    from zato.common.typing_ import anylist, strlistdict, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -98,7 +98,7 @@ class TestAuditEventsAcrossWorkers(unittest.TestCase):
 
     def test_events_of_every_worker(self) -> 'None':
 
-        slot_by_cid:'dict[str, str]' = {}
+        slot_by_cid:'strstrdict' = {}
 
         for _ in range(ModuleCtx.Request_Count):
             connection = new_connection()
@@ -134,7 +134,7 @@ class TestAuditEventsAcrossWorkers(unittest.TestCase):
         self.assertEqual(len({event_id for event_id, _, _, _ in events}), expected_count)
 
         # .. which share the correlation ID of their request and name the slot of the worker that served it.
-        event_types_by_cid:'dict[str, list[str]]' = {}
+        event_types_by_cid:'strlistdict' = {}
 
         for _, cid, event_type, worker_slot in events:
             self.assertEqual(worker_slot, slot_by_cid[cid], f'Event {event_type} of {cid}')
