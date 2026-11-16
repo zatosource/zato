@@ -1,56 +1,56 @@
 security:
 
-  - name: test.eo.publisher
+  - name: test.exactly-once.publisher
     type: basic_auth
-    username: test.eo.publisher
+    username: test.exactly-once.publisher
     password: "{{publisher_password}}"
 
-  - name: test.eo.reader
+  - name: test.exactly-once.reader
     type: basic_auth
-    username: test.eo.reader
+    username: test.exactly-once.reader
     password: "{{reader_password}}"
 
-  - name: test.eo.orders
+  - name: test.exactly-once.orders
     type: basic_auth
-    username: test.eo.orders
+    username: test.exactly-once.orders
     password: "{{orders_password}}"
 
-  - name: test.eo.verifier
+  - name: test.exactly-once.verifier
     type: basic_auth
-    username: test.eo.verifier
+    username: test.exactly-once.verifier
     password: "{{verifier_password}}"
 
 pubsub_topic:
 
-  - name: eo.input
-  - name: eo.output
+  - name: exactly-once.input
+  - name: exactly-once.output
   - name: orders
   - name: invoices
   - name: audit
 
-  - name: eo.inactive
+  - name: exactly-once.inactive
     is_active: false
 
 pubsub_permission:
 
-  - security: test.eo.publisher
+  - security: test.exactly-once.publisher
     pub:
-      - eo.input
+      - exactly-once.input
       - orders
 
-  - security: test.eo.reader
+  - security: test.exactly-once.reader
     sub:
-      - eo.output
+      - exactly-once.output
 
-  - security: test.eo.orders
+  - security: test.exactly-once.orders
     pub:
       - invoices
       - audit
-      - eo.inactive
+      - exactly-once.inactive
     sub:
       - orders
 
-  - security: test.eo.verifier
+  - security: test.exactly-once.verifier
     sub:
       - invoices
       - audit
@@ -58,22 +58,22 @@ pubsub_permission:
 pubsub_subscription:
 
   - delivery_type: push
-    push_service: test.eo.relay
+    push_service: test.exactly-once.relay
     is_delivery_active: {{relay_delivery_active}}
     topic_list:
-      - eo.input
+      - exactly-once.input
 
-  - security: test.eo.reader
+  - security: test.exactly-once.reader
     delivery_type: pull
     topic_list:
-      - eo.output
+      - exactly-once.output
 
-  - security: test.eo.orders
+  - security: test.exactly-once.orders
     delivery_type: pull
     topic_list:
       - orders
 
-  - security: test.eo.verifier
+  - security: test.exactly-once.verifier
     delivery_type: pull
     topic_list:
       - invoices
@@ -81,7 +81,7 @@ pubsub_subscription:
 
 channel_rest:
 
-  - name: test.eo.publish
-    service: test.eo.publish
-    url_path: /test/eo/publish
+  - name: test.exactly-once.publish
+    service: test.exactly-once.publish
+    url_path: /test/exactly-once/publish
     data_format: json

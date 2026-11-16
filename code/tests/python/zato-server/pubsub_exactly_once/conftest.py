@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import sys
 import tempfile
 
 # Zato
@@ -16,8 +15,6 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.test.config_pubsub_exactly_once import TestConfig
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
 from zato.common.test.exactly_once import create_control_dir, Env_Dir
-
-sys.path.insert(0, os.path.dirname(__file__))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,10 +30,10 @@ if 0:
 _template_path = os.path.join(os.path.dirname(__file__), '_enmasse_template.yaml')
 _services_source = os.path.join(os.path.dirname(__file__), '_services.py')
 
-_publisher_username = 'test.eo.publisher'
-_reader_username    = 'test.eo.reader'
-_orders_username    = 'test.eo.orders'
-_verifier_username  = 'test.eo.verifier'
+_publisher_username = 'test.exactly-once.publisher'
+_reader_username    = 'test.exactly-once.reader'
+_orders_username    = 'test.exactly-once.orders'
+_verifier_username  = 'test.exactly-once.verifier'
 
 # The lease of a pulled message, short enough for the tests of copies that compete for a message
 _extra_server_env:'strstrdict' = {

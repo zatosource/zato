@@ -66,7 +66,7 @@ def new_keys(count:'int') -> 'tuple[str, strlist]':
     """ Returns a prefix unique to one test and that many keys under it, in the order of their publication.
     """
     suffix = CryptoManager.generate_hex_string(8)
-    prefix = f'eo.{suffix}.'
+    prefix = f'exactly-once.{suffix}.'
 
     keys:'strlist' = []
 

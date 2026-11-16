@@ -28,7 +28,7 @@ class Relay(Service):
     in the correlation ID, under the control files of the test.
     """
 
-    name = 'test.eo.relay'
+    name = 'test.exactly-once.relay'
 
     def handle(self) -> 'None':
 
@@ -60,7 +60,7 @@ class Publish(Service):
     """ Publishes a message with the key of the request, under a message ID derived from the request.
     """
 
-    name = 'test.eo.publish'
+    name = 'test.exactly-once.publish'
 
     def handle(self) -> 'None':
 

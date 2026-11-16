@@ -6,43 +6,33 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The control files through which the exactly-once tests steer the relay service of a test server, and the verification
-# of what the relay committed. The relay runs in the server and the tests run in the test process, and both reach
-# the same directory, which the Zato_Test_Exactly_Once_Dir variable names.
+# The control files through which the exactly-once tests steer the relay service of a test server. The relay runs
+# in the server and the tests run in the test process, and both reach the same directory, which the
+# Zato_Test_Exactly_Once_Dir variable names.
 
 # stdlib
 import glob
 import os
 import time
-from dataclasses import dataclass
 
 # gevent
 from gevent.monkey import get_original
-
-# SQLAlchemy
-from sqlalchemy import func, select
-
-# Zato
-from zato.common.pubsub.sql.schema import delivery_table, message_table
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.engine import Engine
-    from zato.common.typing_ import strlist
-
-    Engine = Engine
+    from zato.common.typing_ import strintdict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The variable that names the control directory
+# The environment variable with the path of the control directory
 Env_Dir = 'Zato_Test_Exactly_Once_Dir'
 
 # The topics of the relay
-Input_Topic  = 'eo.input'
-Output_Topic = 'eo.output'
+Input_Topic  = 'exactly-once.input'
+Output_Topic = 'exactly-once.output'
 
 # The subdirectories of the control directory
 _hold_dir_name       = 'hold'
@@ -61,9 +51,6 @@ _write_hold_acquired_name  = 'acquired'
 
 # How often a held invocation and a waiting test look at the control files, in seconds
 _poll_seconds = 0.1
-
-# How long the outputs remain unchanged before the delivery is considered settled, in seconds
-_quiet_seconds = 2.0
 
 # The sleep of the operating system, which a thread of the pool of the gevent hub blocks in
 _native_sleep = get_original('time', 'sleep')
@@ -109,8 +96,11 @@ def claim_hold(key:'str') -> 'str':
     """ Claims the hold of a key for the invocation that calls it, which is the only invocation that the hold applies to,
     and returns the path that the invocation waits on, or an empty string if no hold was requested.
     """
+    process_id = os.getpid()
+    held_name = f'{key}.{process_id}'
+
     hold_path = _get_path(_hold_dir_name, key)
-    held_path = _get_path(_held_dir_name, f'{key}.{os.getpid()}')
+    held_path = _get_path(_held_dir_name, held_name)
 
     try:
         os.rename(hold_path, held_path)
@@ -150,7 +140,8 @@ def claim_failure(key:'str') -> 'bool':
 def claim_write_hold(key:'str') -> 'bool':
     """ Claims the write lock request of a key, which only the first invocation that claims it receives.
     """
-    path = _get_path(_write_hold_dir_name, key + _write_hold_trigger_suffix)
+    trigger_name = key + _write_hold_trigger_suffix
+    path = _get_path(_write_hold_dir_name, trigger_name)
 
     try:
         os.remove(path)
@@ -233,8 +224,10 @@ def arm_write_hold(key:'str') -> 'None':
     """ Makes the next invocation of the relay for the key take the write lock of the pub/sub database of its process,
     which every commit of that process waits for until the lock is released.
     """
+    trigger_name = key + _write_hold_trigger_suffix
+
     active_path = _get_path(_write_hold_dir_name, _write_hold_active_name)
-    trigger_path = _get_path(_write_hold_dir_name, key + _write_hold_trigger_suffix)
+    trigger_path = _get_path(_write_hold_dir_name, trigger_name)
 
     for path in (active_path, trigger_path):
         with open(path, 'w'):
@@ -303,7 +296,7 @@ def wait_for_invocations(keys:'strlist', min_count:'int', timeout:'float') -> 'N
     deadline = time.monotonic() + timeout
 
     while True:
-        counts:'dict[str, int]' = {}
+        counts:'strintdict' = {}
 
         for item in read_invocations():
             if item in counts:
@@ -326,146 +319,6 @@ def wait_for_invocations(keys:'strlist', min_count:'int', timeout:'float') -> 'N
             raise Exception(f'Keys not invoked {min_count} times within {timeout}s: {missing}')
 
         time.sleep(_poll_seconds)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass(init=False)
-class OutputCheck:
-    """ What the relay committed for the keys of one test.
-    """
-
-    # The keys with no output row and the keys with more than one
-    missing_keys: 'strlist'
-    duplicated_keys: 'strlist'
-
-    # The output rows of the test whose key was never published
-    unexpected_keys: 'strlist'
-
-    # The key of each output row of the test, in the order of the message IDs
-    output_keys: 'strlist'
-
-    # The delivery rows of the input topic that remain
-    pending_count: 'int'
-
-    @property
-    def is_ok(self) -> 'bool':
-        if self.missing_keys:
-            return False
-
-        if self.duplicated_keys:
-            return False
-
-        if self.unexpected_keys:
-            return False
-
-        if self.pending_count:
-            return False
-
-        out = True
-        return out
-
-    def __repr__(self) -> 'str':
-        out = f'<OutputCheck missing:{self.missing_keys} duplicated:{self.duplicated_keys} ' + \
-            f'unexpected:{self.unexpected_keys} pending:{self.pending_count} outputs:{len(self.output_keys)}>'
-        return out
-
-# ################################################################################################################################
-
-def check_outputs(engine:'Engine', keys:'strlist', prefix:'str') -> 'OutputCheck':
-    """ Reads the output rows of the keys with the given prefix and the delivery rows of the input topic.
-    """
-    query = select(message_table.c.correl_id)
-    query = query.where(message_table.c.topic_name == Output_Topic)
-    query = query.where(message_table.c.correl_id.like(prefix + '%'))
-    query = query.order_by(message_table.c.id)
-
-    pending_query = select(func.count())
-    pending_query = pending_query.select_from(delivery_table)
-    pending_query = pending_query.where(delivery_table.c.topic_name == Input_Topic)
-
-    with engine.connect() as connection:
-        rows = connection.execute(query).fetchall()
-        pending_count = connection.execute(pending_query).scalar_one()
-
-    output_keys:'strlist' = []
-    counts:'dict[str, int]' = {}
-
-    for row in rows:
-        output_keys.append(row.correl_id)
-
-        if row.correl_id in counts:
-            counts[row.correl_id] += 1
-        else:
-            counts[row.correl_id] = 1
-
-    expected = set(keys)
-
-    missing_keys:'strlist' = []
-    duplicated_keys:'strlist' = []
-    unexpected_keys:'strlist' = []
-
-    for key in keys:
-        if key not in counts:
-            missing_keys.append(key)
-        elif counts[key] > 1:
-            duplicated_keys.append(key)
-
-    for key in counts:
-        if key not in expected:
-            unexpected_keys.append(key)
-
-    out = OutputCheck()
-    out.missing_keys = missing_keys
-    out.duplicated_keys = duplicated_keys
-    out.unexpected_keys = unexpected_keys
-    out.output_keys = output_keys
-    out.pending_count = pending_count
-
-    return out
-
-# ################################################################################################################################
-
-def wait_for_outputs(engine:'Engine', keys:'strlist', prefix:'str', timeout:'float') -> 'OutputCheck':
-    """ Waits until no input delivery remains and every key has an output row, and then until the outputs
-    remain unchanged for a while, which a commit still in flight would change, and returns the final check.
-    """
-    deadline = time.monotonic() + timeout
-
-    while True:
-        out = check_outputs(engine, keys, prefix)
-
-        if not out.missing_keys:
-            if not out.pending_count:
-                break
-
-        if time.monotonic() > deadline:
-            return out
-
-        time.sleep(_poll_seconds)
-
-    while True:
-        time.sleep(_quiet_seconds)
-
-        latest = check_outputs(engine, keys, prefix)
-
-        if latest.output_keys == out.output_keys:
-            if latest.pending_count == out.pending_count:
-                return latest
-
-        if time.monotonic() > deadline:
-            return latest
-
-        out = latest
-
-# ################################################################################################################################
-
-def assert_exactly_once(check:'OutputCheck', keys:'strlist') -> 'None':
-    """ Fails unless each key has exactly one output row, no other row exists, no input delivery remains
-    and the output rows follow the order of publication.
-    """
-    assert check.is_ok, check
-    assert check.output_keys == keys, check
 
 # ################################################################################################################################
 # ################################################################################################################################
