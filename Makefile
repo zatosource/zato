@@ -11,7 +11,7 @@
 	test-server test-server-fuzz test-rest test-rest-fuzz test-rest-outgoing test-rest-perf test-rest-channel test-rest-channel-perf test-scheduler test-scheduler-failover test-ha test-ha-sqlite test-ha-postgresql \
 	test-arbiter \
 	test-rate-limiting test-enmasse test-cli \
-	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
+	test-pubsub test-pubsub-perf test-pubsub-exactly-once test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
 	test-mcp test-bearer test-graphql test-grpc \
 	test-edifact test-soap test-openapi test-api-portal-live \
@@ -952,6 +952,37 @@ test-pubsub-perf: ## Every pub/sub performance test - SQL, AMQP, system-level lo
 		-W "ignore:This process:DeprecationWarning" \
 		--basetemp="$$basetemp" \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+# The live suites of exactly-once delivery and the pub/sub databases that each of their sections runs on, in this order.
+Zato_Test_Exactly_Once_Dir      := $(CURDIR)/code/tests/python/zato-server/pubsub_exactly_once
+Zato_Test_Exactly_Once_Takeover := $(CURDIR)/code/tests/python/zato-server/pubsub_exactly_once_takeover
+Zato_Test_Exactly_Once_Modes    := sqlite postgresql
+
+# Runs the tests in $(1) on each pub/sub database in turn, stopping at the first failure.
+define Zato_Test_Exactly_Once_Section
+	for mode in $(Zato_Test_Exactly_Once_Modes); do \
+		echo ">>> $(1) on $$mode" $(Zato_Log); \
+		Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(1) \
+			-v -s -x --tb=short -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_exactly_once \
+			-W ignore::DeprecationWarning \
+			$(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
+	done
+endef
+
+test-pubsub-exactly-once: ## Exactly-once delivery of pub/sub - the backend, a single server without and with faults, pull clients, takeovers and load, on SQLite and PostgreSQL, stopping at the first failure.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/exactly_once/ \
+		-v -s -x --tb=short -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_exactly_once_backend \
+		-W "ignore:This process:DeprecationWarning" \
+		$(PYTEST_ARGS) $(Zato_Log)
+	$(call Zato_Test_Exactly_Once_Section,$(Zato_Test_Exactly_Once_Dir)/test_relay.py $(Zato_Test_Exactly_Once_Dir)/test_idempotency.py)
+	$(call Zato_Test_Exactly_Once_Section,$(Zato_Test_Exactly_Once_Dir)/test_pull.py)
+	$(call Zato_Test_Exactly_Once_Section,$(Zato_Test_Exactly_Once_Dir)/test_crash.py)
+	$(MAKE) ha-node-build $(Zato_Log)
+	$(MAKE) scheduler-build $(Zato_Log)
+	$(call Zato_Test_Exactly_Once_Section,$(Zato_Test_Exactly_Once_Takeover)/)
+	$(call Zato_Test_Exactly_Once_Section,$(Zato_Test_Exactly_Once_Dir)/test_load.py)
 
 # discord_disabled - these enmasse suites run in test-discord only
 Zato_Test_Enmasse_Disabled := \

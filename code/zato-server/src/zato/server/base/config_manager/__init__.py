@@ -103,7 +103,6 @@ if 0:
     from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, strdict, strlist, strnone, tupnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
-    from zato.server.connection.http_soap.outgoing import BaseHTTPSOAPWrapper
     from zato.server.service import Service
     from zato.server.store import BaseAPI
     ConfigStore    = ConfigStore
@@ -515,7 +514,7 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
-    def _http_soap_wrapper_from_config(self, config:'bunch_', *, has_sec_config:'bool'=True) -> 'BaseHTTPSOAPWrapper':
+    def _http_soap_wrapper_from_config(self, config:'bunch_', *, has_sec_config:'bool'=True) -> 'HTTPSOAPWrapper':
         """ Creates a new HTTP/SOAP connection wrapper out of a configuration dictionary.
         """
 

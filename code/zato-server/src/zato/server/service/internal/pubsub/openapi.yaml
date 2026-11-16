@@ -80,7 +80,8 @@ paths:
                   pattern: '^[A-Za-z0-9._:-]{1,200}$'
                   description: |
                     Message ID supplied by the client. A new ID is generated if this element is absent.
-                    A message with this ID remains deduplicated until it is removed by the retention of the topic.
+                    The msg_id is deduplicated for as long as its message is retained, which ends when the message
+                    expires or when the retention of fully delivered messages removes it.
                   example: order-12345.notification
             examples:
               simple_message:

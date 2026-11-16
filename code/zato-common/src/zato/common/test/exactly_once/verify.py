@@ -11,6 +11,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import time
 from dataclasses import dataclass
+from functools import partial
 
 # SQLAlchemy
 from sqlalchemy import func, select
@@ -24,7 +25,7 @@ from zato.common.test.exactly_once.control import Input_Topic, Output_Topic
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import strintdict, strlist
+    from zato.common.typing_ import callable_, strintdict, strlist
 
     Engine = Engine
 
@@ -86,34 +87,56 @@ class OutputCheck:
 
 # ################################################################################################################################
 
-def check_outputs(engine:'Engine', keys:'strlist', prefix:'str') -> 'OutputCheck':
-    """ Reads the output rows of the keys with the given prefix and the delivery rows of the input topic.
+def read_correl_ids(engine:'Engine', topic_name:'str', prefix:'str') -> 'strlist':
+    """ Returns the correlation ID of each message of a topic whose correlation ID starts with the prefix,
+    in the order in which the messages were stored.
     """
     correl_id_pattern = prefix + '%'
 
     query = select(message_table.c.correl_id)
-    query = query.where(message_table.c.topic_name == Output_Topic)
+    query = query.where(message_table.c.topic_name == topic_name)
     query = query.where(message_table.c.correl_id.like(correl_id_pattern))
     query = query.order_by(message_table.c.id)
 
-    pending_query = select(func.count())
-    pending_query = pending_query.select_from(delivery_table)
-    pending_query = pending_query.where(delivery_table.c.topic_name == Input_Topic)
-
     with engine.connect() as connection:
         rows = connection.execute(query).fetchall()
-        pending_count = connection.execute(pending_query).scalar_one()
 
-    output_keys:'strlist' = []
-    counts:'strintdict' = {}
+    out:'strlist' = []
 
     for row in rows:
-        output_keys.append(row.correl_id)
+        out.append(row.correl_id)
 
-        if row.correl_id in counts:
-            counts[row.correl_id] += 1
+    return out
+
+# ################################################################################################################################
+
+def count_topic_deliveries(engine:'Engine', topic_name:'str') -> 'int':
+    """ Returns how many delivery rows the messages of a topic have, across all of its subscribers.
+    """
+    query = select(func.count())
+    query = query.select_from(delivery_table)
+    query = query.where(delivery_table.c.topic_name == topic_name)
+
+    with engine.connect() as connection:
+        out = connection.execute(query).scalar_one()
+
+    return out
+
+# ################################################################################################################################
+
+def check_outputs(engine:'Engine', keys:'strlist', prefix:'str') -> 'OutputCheck':
+    """ Reads the output rows of the keys with the given prefix and the delivery rows of the input topic.
+    """
+    output_keys = read_correl_ids(engine, Output_Topic, prefix)
+    pending_count = count_topic_deliveries(engine, Input_Topic)
+
+    counts:'strintdict' = {}
+
+    for key in output_keys:
+        if key in counts:
+            counts[key] += 1
         else:
-            counts[row.correl_id] = 1
+            counts[key] = 1
 
     expected = set(keys)
 
@@ -146,10 +169,21 @@ def wait_for_outputs(engine:'Engine', keys:'strlist', prefix:'str', timeout:'flo
     """ Waits until no input delivery remains and every key has an output row, and then until the outputs
     remain unchanged for a while, which a commit still in flight would change, and returns the final check.
     """
+    read_check = partial(check_outputs, engine, keys, prefix)
+
+    out = wait_for_checks(read_check, timeout)
+    return out
+
+# ################################################################################################################################
+
+def wait_for_checks(read_check:'callable_', timeout:'float') -> 'OutputCheck':
+    """ Waits until a check that the callable reads shows no input delivery and an output row for every key,
+    and then until the outputs remain unchanged for a while, and returns the final check.
+    """
     deadline = time.monotonic() + timeout
 
     while True:
-        out = check_outputs(engine, keys, prefix)
+        out:'OutputCheck' = read_check()
 
         if not out.missing_keys:
             if not out.pending_count:
@@ -163,7 +197,7 @@ def wait_for_outputs(engine:'Engine', keys:'strlist', prefix:'str', timeout:'flo
     while True:
         time.sleep(_quiet_seconds)
 
-        latest = check_outputs(engine, keys, prefix)
+        latest:'OutputCheck' = read_check()
 
         if latest.output_keys == out.output_keys:
             if latest.pending_count == out.pending_count:
