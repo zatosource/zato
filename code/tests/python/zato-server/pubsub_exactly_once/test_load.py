@@ -430,7 +430,7 @@ def _report_competing_consumers(keys:'strlist', timing:'anydict', consumers:'lis
 
     report.add_value('Consumers', str(_consumer_count))
     report.add_value('Batches acknowledged after their lease', str(late_batch_count))
-    report.add_value('Orders acknowledged', str(consumed_count))
+    report.add_value('Orders in acknowledgements answered with 200, repeated acknowledgements included', str(consumed_count))
 
     report.log()
 
