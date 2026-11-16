@@ -22,6 +22,9 @@ paths:
       description: |
         Publish a message to the specified topic. The user must have publish permissions for the topic.
         Topic names are validated and must meet specific requirements.
+        A request with a msg_id that is already stored with the same content returns the stored message
+        without storing it again, which makes a repeated request idempotent. A msg_id that is stored with
+        different content is rejected with 409.
       parameters:
         - name: topic_name
           in: path
@@ -72,6 +75,13 @@ paths:
                   type: string
                   format: date-time
                   description: Custom publication time (ISO format with timezone)
+                msg_id:
+                  type: string
+                  pattern: '^[A-Za-z0-9._:-]{1,200}$'
+                  description: |
+                    Message ID supplied by the client. A new ID is generated if this element is absent.
+                    A message with this ID remains deduplicated until it is removed by the retention of the topic.
+                  example: order-12345.notification
             examples:
               simple_message:
                 summary: Simple text message
@@ -87,6 +97,11 @@ paths:
                   priority: 8
                   expiration: 7200
                   correl_id: order-12345-notification
+              idempotent_message:
+                summary: Message with a message ID supplied by the client
+                value:
+                  data: "Order #12345 has been processed"
+                  msg_id: order-12345.notification
       responses:
         '200':
           description: Message published successfully
@@ -95,7 +110,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PublishResponse'
         '400':
-          description: Bad request (invalid topic name, missing data, malformed JSON)
+          description: Bad request (invalid topic name, missing data, invalid msg_id, malformed JSON)
           content:
             application/json:
               schema:
@@ -114,6 +129,18 @@ paths:
               schema:
                 type: string
                 description: HTML error page for malformed requests
+        '403':
+          description: The topic is inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: The msg_id is already stored with different content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
           content:
@@ -266,23 +293,46 @@ paths:
       summary: Acknowledge retrieved messages
       description: |
         Removes messages retrieved through /pubsub/messages/get from the queue of the user.
-        Messages that were already acknowledged, or that are no longer in the queue, are not counted.
+
+        A request with msg_ids removes the messages that are still in the queue. Messages that were already
+        acknowledged, or that are no longer in the queue, are not counted.
+
+        A request with consumed names the delivery_attempt with which each message was retrieved, and it may
+        publish messages in the same transaction through publish. The acknowledgement and the publications are
+        committed together or not at all. A message retrieved again after its reservation expired has a higher
+        delivery_attempt, and an acknowledgement of the earlier attempt is rejected with 409, with nothing published.
+        A repeated request that was already committed returns 200 with the same msg_id values in published.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - msg_ids
+              oneOf:
+                - required:
+                    - msg_ids
+                - required:
+                    - consumed
               properties:
                 msg_ids:
                   type: array
                   maxItems: 1000
                   items:
                     type: string
-                    pattern: '^zpsm\.[a-z0-9-]+$'
+                    pattern: '^[A-Za-z0-9._:-]{1,200}$'
                   description: The msg_id values of the messages to acknowledge
+                consumed:
+                  type: array
+                  maxItems: 1000
+                  items:
+                    $ref: '#/components/schemas/ConsumedMessage'
+                  description: The messages to acknowledge, each with the delivery_attempt with which it was retrieved
+                publish:
+                  type: array
+                  maxItems: 1000
+                  items:
+                    $ref: '#/components/schemas/AckPublication'
+                  description: Messages published in the same transaction as the acknowledgement, permitted only with consumed
             examples:
               two_messages:
                 summary: Two messages
@@ -290,6 +340,21 @@ paths:
                   msg_ids:
                     - zpsm.20250829-074432-7264-d47439a9f-abc
                     - zpsm.20250829-074433-1182-a03b5c71e-abc
+              with_publications:
+                summary: One message acknowledged together with two publications
+                value:
+                  consumed:
+                    - msg_id: zpsm.20250829-074432-7264-d47439a9f-abc
+                      delivery_attempt: 1
+                  publish:
+                    - topic_name: invoices
+                      data:
+                        order_id: 12345
+                      msg_id: zpsm.20250829-074432-7264-d47439a9f-abc.invoice
+                    - topic_name: audit
+                      data:
+                        order_id: 12345
+                      msg_id: zpsm.20250829-074432-7264-d47439a9f-abc.audit
       responses:
         '200':
           description: Messages acknowledged
@@ -298,13 +363,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/AckResponse'
         '400':
-          description: Bad request (msg_ids is not a list of strings or has more than 1000 elements)
+          description: |
+            Bad request (neither or both of msg_ids and consumed, publish without consumed, a list that is not a list
+            or has more than 1000 elements, an invalid msg_id or delivery_attempt, or a publication that is invalid
+            or names a topic not stored in the pub/sub database)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
-          description: Authentication failed or no subscription found for user
+          description: Authentication failed, no subscription found for user, or no permission to publish to a topic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: A topic of a publication is inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: |
+            The acknowledgement names an attempt that is no longer current, the message was concluded with other
+            publications, or the msg_id of a publication is already stored with different content
           content:
             application/json:
               schema:
@@ -353,8 +435,8 @@ components:
           properties:
             msg_id:
               type: string
-              description: Unique message identifier
-              pattern: '^zpsm\.[a-z0-9-]+$'
+              description: Unique message identifier, generated or supplied by the publisher
+              pattern: '^[A-Za-z0-9._:-]{1,200}$'
               example: zpsm.20250829-074432-7264-d47439a9f-abc
 
     AckResponse:
@@ -376,10 +458,83 @@ components:
           type: integer
           description: How many of the messages were still in the queue and were removed from it
           example: 2
+        published:
+          type: array
+          items:
+            type: string
+          description: The msg_id of each publication of a request with consumed, in the order of publish
+          example:
+            - zpsm.20250829-074432-7264-d47439a9f-abc.invoice
+            - zpsm.20250829-074432-7264-d47439a9f-abc.audit
         status:
           type: string
           description: HTTP status description
           example: "200 OK"
+
+    ConsumedMessage:
+      type: object
+      required:
+        - msg_id
+        - delivery_attempt
+      properties:
+        msg_id:
+          type: string
+          pattern: '^[A-Za-z0-9._:-]{1,200}$'
+          description: The msg_id of a retrieved message
+          example: zpsm.20250829-074432-7264-d47439a9f-abc
+        delivery_attempt:
+          type: integer
+          minimum: 1
+          description: The delivery_attempt with which the message was retrieved
+          example: 1
+
+    AckPublication:
+      type: object
+      required:
+        - topic_name
+        - data
+      properties:
+        topic_name:
+          type: string
+          maxLength: 200
+          description: Name of the topic to publish to
+          example: invoices
+        data:
+          description: The message content
+          oneOf:
+            - type: string
+            - type: object
+        priority:
+          type: integer
+          minimum: 0
+          maximum: 9
+          default: 5
+          description: Message priority (0=lowest, 9=highest)
+        expiration:
+          type: integer
+          minimum: 1
+          default: 31536000
+          description: Message expiration time in seconds
+        correl_id:
+          type: string
+          description: Correlation ID for message tracking
+        in_reply_to:
+          type: string
+          description: ID of message this is replying to
+        ext_client_id:
+          type: string
+          description: External client identifier
+        pub_time:
+          type: string
+          format: date-time
+          description: Custom publication time (ISO format with timezone)
+        msg_id:
+          type: string
+          pattern: '^[A-Za-z0-9._:-]{1,200}$'
+          description: |
+            Message ID supplied by the client. A msg_id derived from the msg_id of the consumed message makes
+            a repeated request publish the same messages.
+          example: zpsm.20250829-074432-7264-d47439a9f-abc.invoice
 
     ErrorResponse:
       type: object
@@ -439,8 +594,8 @@ components:
           example: 3600
         msg_id:
           type: string
-          description: Unique message identifier
-          pattern: '^zpsm\.[a-z0-9-]+$'
+          description: Unique message identifier, generated or supplied by the publisher
+          pattern: '^[A-Za-z0-9._:-]{1,200}$'
           example: zpsm.20250829-074432-7264-d47439a9f-abc
         delivery_attempt:
           type: integer

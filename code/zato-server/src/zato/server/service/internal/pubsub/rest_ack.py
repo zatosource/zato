@@ -23,7 +23,8 @@ from zato.server.service.internal.pubsub.rest_publication import is_valid_msg_id
 # ################################################################################################################################
 
 if 0:
-    from zato.common.pubsub.sql.publication import BuiltPublication
+    from zato.common.pubsub.sql.backend import consumed_list
+    from zato.common.pubsub.sql.publication import built_publication_list
     from zato.common.typing_ import any_, anylist, strlist
 
 # ################################################################################################################################
@@ -32,10 +33,13 @@ if 0:
 # How many elements each list of a request may have
 _max_elements = 1000
 
-_status_ok = PubSub.Status.OK
-_status_bad_request = PubSub.Status.Bad_Request
+_status_ok           = PubSub.Status.OK
+_status_bad_request  = PubSub.Status.Bad_Request
 _status_unauthorized = PubSub.Status.Unauthorized
-_status_conflict = PubSub.Status.Conflict
+_status_conflict     = PubSub.Status.Conflict
+
+# The lowest delivery attempt, which the first pull of a message hands it out with
+_min_delivery_attempt = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,7 +54,11 @@ class AckInputError(Exception):
 def _is_absent(value:'any_') -> 'bool':
     """ Whether an optional element was not sent, which the input of a service represents as None or an empty string.
     """
-    out = value is None or value == ''
+    if value is None:
+        out = True
+    else:
+        out = value == ''
+
     return out
 
 # ################################################################################################################################
@@ -61,7 +69,9 @@ def _check_list(value:'any_', name:'str') -> 'None':
     if not isinstance(value, list):
         raise AckInputError(f'{name} must be a list')
 
-    if len(value) > _max_elements:
+    element_count = len(value)
+
+    if element_count > _max_elements:
         raise AckInputError(f'{name} may have at most {_max_elements} elements')
 
 # ################################################################################################################################
@@ -77,12 +87,12 @@ def _check_msg_ids(msg_ids:'any_') -> 'None':
 
 # ################################################################################################################################
 
-def _parse_consumed(consumed:'any_') -> 'list[tuple[str, int]]':
+def _parse_consumed(consumed:'any_') -> 'consumed_list':
     """ Returns the message ID and the delivery attempt of each consumed message.
     """
     _check_list(consumed, 'consumed')
 
-    out:'list[tuple[str, int]]' = []
+    out:'consumed_list' = []
 
     for item in consumed:
 
@@ -102,14 +112,18 @@ def _parse_consumed(consumed:'any_') -> 'list[tuple[str, int]]':
             raise AckInputError(f'Each msg_id of consumed must match {Msg_ID_Pattern.pattern}')
 
         # A boolean is an integer to Python, though not to a client ..
-        if isinstance(delivery_attempt, bool) or not isinstance(delivery_attempt, int):
+        if isinstance(delivery_attempt, bool):
             raise AckInputError('Each delivery_attempt of consumed must be an integer')
 
-        # .. and the first pull of a message hands it out with attempt one.
-        if delivery_attempt < 1:
-            raise AckInputError('Each delivery_attempt of consumed must be at least 1')
+        if not isinstance(delivery_attempt, int):
+            raise AckInputError('Each delivery_attempt of consumed must be an integer')
 
-        out.append((msg_id, delivery_attempt))
+        # .. and the first pull of a message hands it out with the lowest attempt.
+        if delivery_attempt < _min_delivery_attempt:
+            raise AckInputError(f'Each delivery_attempt of consumed must be at least {_min_delivery_attempt}')
+
+        consumed_message = (msg_id, delivery_attempt)
+        out.append(consumed_message)
 
     return out
 
@@ -143,7 +157,8 @@ class AckMessages(PubSubRESTService):
         sub_key = self.server.pubsub_subscriptions.get_sub_key_by_username(username)
 
         if not sub_key:
-            self.set_error(('No subscription found for user', _status_unauthorized, UNAUTHORIZED))
+            error = ('No subscription found for user', _status_unauthorized, UNAUTHORIZED)
+            self.set_error(error)
             return
 
         has_msg_ids = not _is_absent(input.msg_ids)
@@ -156,8 +171,9 @@ class AckMessages(PubSubRESTService):
             if has_msg_ids == has_consumed:
                 raise AckInputError('Exactly one of msg_ids and consumed is required')
 
-            if has_publish and not has_consumed:
-                raise AckInputError('publish requires consumed')
+            if has_publish:
+                if not has_consumed:
+                    raise AckInputError('publish requires consumed')
 
             # .. a plain acknowledgement removes the messages that are still in the queue ..
             if has_msg_ids:
@@ -169,11 +185,13 @@ class AckMessages(PubSubRESTService):
             else:
                 consumed = _parse_consumed(input.consumed)
                 publications = self._build_publications(username, input.publish, has_publish)
-                ack_count, published = self.server.pubsub_backend.ack_pulled_with_publications(
-                    sub_key, consumed, publications)
+                result = self.server.pubsub_backend.ack_pulled_with_publications(sub_key, consumed, publications)
+                ack_count = result.removed_count
+                published = result.published
 
         except AckInputError as e:
-            self.set_error((str(e), _status_bad_request, BAD_REQUEST))
+            error = (str(e), _status_bad_request, BAD_REQUEST)
+            self.set_error(error)
             return
 
         except PublicationError as e:
@@ -181,24 +199,25 @@ class AckMessages(PubSubRESTService):
             return
 
         except (PubSubAckConflict, PubSubDuplicateMsgID) as e:
-            self.set_error((str(e), _status_conflict, CONFLICT))
+            error = (str(e), _status_conflict, CONFLICT)
+            self.set_error(error)
             return
 
         # Build response
-        self.response.payload.is_ok = True
-        self.response.payload.cid = self.cid
+        self.response.payload.is_ok     = True
+        self.response.payload.cid       = self.cid
         self.response.payload.ack_count = ack_count
-        self.response.payload.status = _status_ok
+        self.response.payload.status    = _status_ok
 
         if has_consumed:
             self.response.payload.published = published
 
 # ################################################################################################################################
 
-    def _build_publications(self, username:'str', publish:'any_', has_publish:'bool') -> 'list[BuiltPublication]':
+    def _build_publications(self, username:'str', publish:'any_', has_publish:'bool') -> 'built_publication_list':
         """ Validates each publication of a request and builds its message, before anything is written.
         """
-        out:'list[BuiltPublication]' = []
+        out:'built_publication_list' = []
 
         if not has_publish:
             return out
@@ -214,7 +233,7 @@ class AckMessages(PubSubRESTService):
 
             publication = parse_publication(self.server, username, self.cid, item)
 
-            # A topic of the AMQP backend cannot take part in a transaction of the pub/sub database
+            # A topic of the AMQP backend cannot take part in a transaction of the pub/sub database.
             if self.server.config_manager.get_pubsub_topic_backend(publication.topic_name):
                 raise AckInputError(f'Topic {publication.topic_name} is not stored in the pub/sub database')
 

@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from gevent import joinall, spawn
 
 # Zato
-from exactly_once.common import build, count_deliveries, First_Output_Sub_Key, First_Output_Topic, get_built_msg_id, \
+from exactly_once.harness import build, count_deliveries, First_Output_Sub_Key, First_Output_Topic, get_built_msg_id, \
     get_msg_ids, Input_Sub_Key, lease_repeatedly, new_backend, publish_input
 from zato.common.pubsub.sql.fenced_ack import PubSubAckConflict
 

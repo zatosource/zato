@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # Zato
-from exactly_once.common import build, count_deliveries, count_messages, First_Output_Sub_Key, First_Output_Topic, \
+from exactly_once.harness import build, count_deliveries, count_messages, First_Output_Sub_Key, First_Output_Topic, \
     get_attempt, get_built_msg_id, get_lease_ms, get_msg_ids, Input_Sub_Key, lease, lease_repeatedly, new_backend, \
     publish_input, Second_Output_Sub_Key, Second_Output_Topic
 from zato.common.pubsub.sql.fenced_ack import PubSubAckConflict

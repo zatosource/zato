@@ -21,12 +21,11 @@ from zato.common.pubsub.sql.schema import delivery_table, message_table
 
 if 0:
     from sqlalchemy.engine import Connection
-    from zato.common.pubsub.sql.writes import PendingAck, PendingPublication
+    from zato.common.pubsub.sql.writes import PendingAck, pending_publication_list
     from zato.common.typing_ import anydict, intlist, strlist
 
     Connection = Connection
     PendingAck = PendingAck
-    PendingPublication = PendingPublication
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,8 +44,9 @@ _fenced_rows_query = select(
     delivery_table.c.attempt,
     message_table.c.msg_id,
 )
-_fenced_rows_query = _fenced_rows_query.select_from(delivery_table.join(message_table,
-    message_table.c.id == delivery_table.c.message_id))
+_fenced_join = delivery_table.join(message_table, message_table.c.id == delivery_table.c.message_id)
+
+_fenced_rows_query = _fenced_rows_query.select_from(_fenced_join)
 _fenced_rows_query = _fenced_rows_query.where(and_(
     delivery_table.c.sub_key == bindparam('fenced_sub_key'),
     message_table.c.msg_id.in_(bindparam('fenced_msg_ids', expanding=True)),
@@ -69,15 +69,18 @@ class PubSubAckConflict(Exception):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _has_new_message(publications:'list[PendingPublication]') -> 'bool':
+def _has_new_message(publications:'pending_publication_list') -> 'bool':
     """ Whether the transaction inserted at least one message, as opposed to only repeating existing ones.
     """
     for pending in publications:
         if not pending.is_repeat:
             if not pending.exception:
-                return True
+                out = True
+                break
+    else:
+        out = False
 
-    return False
+    return out
 
 # ################################################################################################################################
 
@@ -100,7 +103,7 @@ def _read_rows(connection:'Connection', ack:'PendingAck') -> 'anydict':
 
 # ################################################################################################################################
 
-def delete_fenced(connection:'Connection', ack:'PendingAck', publications:'list[PendingPublication]') -> 'None':
+def delete_fenced(connection:'Connection', ack:'PendingAck', publications:'pending_publication_list') -> 'None':
     """ Removes the delivery rows of a fenced acknowledgement in the caller's transaction, which has inserted
     the publications before. A row with the expected attempt is removed, a row with another attempt was handed out
     again and fails the transaction, and an absent row was concluded already, which fails the transaction
@@ -138,7 +141,8 @@ def delete_fenced(connection:'Connection', ack:'PendingAck', publications:'list[
 
     if absent:
         if _has_new_message(publications):
-            message = f'Message `{absent[0]}` was concluded by another delivery'
+            first_absent = absent[0]
+            message = f'Message `{first_absent}` was concluded by another delivery'
             raise PubSubAckConflict(message)
 
         logger.info('Fenced acknowledgement of concluded messages -> sub_key:%s, msg_ids:%s', ack.sub_key, absent)
@@ -147,7 +151,9 @@ def delete_fenced(connection:'Connection', ack:'PendingAck', publications:'list[
     delivery_ids.sort()
 
     for chunk in get_chunks(delivery_ids):
-        for _ in connection.execute(_fenced_delete, {'fenced_delivery_ids': chunk}):
+        parameters = {'fenced_delivery_ids': chunk}
+
+        for _ in connection.execute(_fenced_delete, parameters):
             ack.removed_count += 1
 
     # .. and the payloads of the messages that no subscriber needs anymore are dropped.

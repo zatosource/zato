@@ -20,7 +20,7 @@ from zato.common.pubsub.sql.schema import delivery_table, message_table
 
 if 0:
     from sqlalchemy.engine import Connection
-    from zato.common.typing_ import anylist, intlist
+    from zato.common.typing_ import anylist, intlist, intset
 
     Connection = Connection
 
@@ -101,7 +101,7 @@ def drop_payloads(connection:'Connection', message_ids:'intlist') -> 'intlist':
         # On PostgreSQL, only the messages without a delivery row that remains are locked and looked at ..
         if is_postgresql:
 
-            needed:'set[int]' = set()
+            needed:'intset' = set()
 
             for row in _needed_messages_query_plain.execute(connection, {'drop_message_ids': chunk}):
                 needed.add(row.id)

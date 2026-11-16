@@ -11,6 +11,7 @@ import json
 from dataclasses import dataclass
 from logging import getLogger
 from time import monotonic
+from typing import NamedTuple
 
 # SQLAlchemy
 from sqlalchemy import and_, select
@@ -25,7 +26,8 @@ from zato.common.pubsub.sql.config import get_batch_size, get_pull_lease_seconds
 from zato.common.pubsub.sql.publication import build_publication, complete_publication
 from zato.common.pubsub.sql.pull import fetch_query, lease_messages, outgoing_fetch_query, payload_query
 from zato.common.pubsub.sql.schema import delivery_table, topic_sub_table
-from zato.common.pubsub.sql.writes import new_fenced_ack, new_pending_ack
+from zato.common.pubsub.sql.writes import new_fenced_ack
+from zato.common.typing_ import list_, tuple_
 from zato.common.util.time_ import parse_utc
 from zato.server.metrics import zato_pubsub_messages_delivered_total
 
@@ -33,7 +35,7 @@ from zato.server.metrics import zato_pubsub_messages_delivered_total
 # ################################################################################################################################
 
 if 0:
-    from zato.common.pubsub.sql.publication import BuiltPublication
+    from zato.common.pubsub.sql.publication import built_publication_list
     from zato.common.typing_ import any_, anydict, anylist, intlist, intnone, strdict, strlist, strnone
 
 # ################################################################################################################################
@@ -57,12 +59,23 @@ _milliseconds_per_second = 1000
 
 _outgoing_sub_key_prefix = PubSub.Outgoing.Sub_Key_Prefix
 
+# The message ID and the delivery attempt of each message that a pull client consumed
+consumed_list = list_[tuple_[str, int]]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 @dataclass(init=False)
 class PublishResult:
     msg_id: 'str'
+
+# ################################################################################################################################
+
+class AckPulledResult(NamedTuple):
+    """ How many delivery rows an acknowledgement of a pull client removed and the message ID of each of its publications.
+    """
+    removed_count: 'int'
+    published: 'strlist'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -137,11 +150,13 @@ class SQLPubSubBackend(SQLAdminAPI):
 
 # ################################################################################################################################
 
-    def ack_with_publications(self, sub_key:'str', msg_ids:'strlist', sequence_ids:'intlist', publications:'anylist') -> 'None':
+    def ack_with_publications(self, sub_key:'str', msg_ids:'strlist', publications:'anylist') -> 'None':
         """ Acknowledges the messages of a push delivery batch in one transaction with the publications that its
         subscriber services made, which commits all of them or none, and then wakes up the subscribers of the publications.
+        A batch whose delivery rows another delivery of the same messages already removed commits nothing, and if it
+        would store a new message, it raises PubSubAckConflict.
         """
-        ack = new_pending_ack(sub_key, msg_ids, sequence_ids)
+        ack = new_fenced_ack(sub_key, msg_ids, None)
 
         items:'anylist' = []
         items.extend(publications)
@@ -165,9 +180,9 @@ class SQLPubSubBackend(SQLAdminAPI):
     def ack_pulled_with_publications(
         self,
         sub_key:'str',
-        consumed:'list[tuple[str, int]]',
-        publications:'list[BuiltPublication]',
-    ) -> 'tuple[int, strlist]':
+        consumed:'consumed_list',
+        publications:'built_publication_list',
+        ) -> 'AckPulledResult':
         """ Acknowledges the messages that a pull client consumed, each with the delivery attempt that it was handed out with,
         in one transaction with the publications that the client produced from them. A message that another pull has
         handed out again or concluded since, and a publication whose message ID stands for a different message,
@@ -206,7 +221,7 @@ class SQLPubSubBackend(SQLAdminAPI):
         logger.info('ack_pulled_with_publications -> sub_key:%s, consumed:%d, removed:%d, publications:%d',
             sub_key, len(consumed), ack.removed_count, len(publications))
 
-        out = (ack.removed_count, published)
+        out = AckPulledResult(ack.removed_count, published)
         return out
 
 # ################################################################################################################################

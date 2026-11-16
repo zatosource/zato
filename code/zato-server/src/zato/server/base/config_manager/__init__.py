@@ -1373,7 +1373,12 @@ class ConfigManager(_ConfigManagerBase):
 
                 # .. pull subscriptions and push subscriptions whose delivery is paused need no delivery greenlet,
                 # .. their messages wait in their queues, and one that this server still runs is stopped ..
-                if row.delivery_type != _push or not row.is_delivery_active:
+                if row.delivery_type == _push:
+                    needs_greenlet = row.is_delivery_active
+                else:
+                    needs_greenlet = False
+
+                if not needs_greenlet:
                     if sub_key in self._push_subs:
                         self.server.pubsub_push_delivery.stop_sub_key(sub_key)
                         _ = self._push_subs.pop(sub_key)

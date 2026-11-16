@@ -28,14 +28,17 @@ if 0:
 # A message ID that a client supplies, whose length is bounded by the column that stores it
 Msg_ID_Pattern = re.compile(r'^[A-Za-z0-9._:-]{1,200}$')
 
-_min_priority = PubSub.Message.Priority_Min
-_max_priority = PubSub.Message.Priority_Max
-_default_priority = PubSub.Message.Priority_Default
+_min_priority       = PubSub.Message.Priority_Min
+_max_priority       = PubSub.Message.Priority_Max
+_default_priority   = PubSub.Message.Priority_Default
 _default_expiration = PubSub.Message.Default_Expiration
 
-_status_bad_request = PubSub.Status.Bad_Request
+# The shortest expiration of a message, in seconds
+_min_expiration = 1
+
+_status_bad_request  = PubSub.Status.Bad_Request
 _status_unauthorized = PubSub.Status.Unauthorized
-_status_forbidden = PubSub.Status.Forbidden
+_status_forbidden    = PubSub.Status.Forbidden
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -131,7 +134,7 @@ def parse_publication(
     username:'str',
     cid:'str',
     fields:'anydict',
-) -> 'RESTPublication':
+    ) -> 'RESTPublication':
     """ Validates one publication of a REST client and checks that the client may publish to its topic,
     which is active, raising PublicationError otherwise.
     """
@@ -145,7 +148,8 @@ def parse_publication(
     try:
         validate_topic_name(topic_name)
     except Exception as e:
-        raise PublicationError(str(e), _status_bad_request, BAD_REQUEST)
+        details = str(e)
+        raise PublicationError(details, _status_bad_request, BAD_REQUEST)
 
     # .. the client needs the permission to publish to it ..
     matcher = server.pubsub_pattern_matcher
@@ -173,27 +177,33 @@ def parse_publication(
     elif not is_valid_msg_id(msg_id):
         raise PublicationError(f'Invalid msg_id, it must match {Msg_ID_Pattern.pattern}', _status_bad_request, BAD_REQUEST)
 
-    # .. a priority out of range and an expiration below one second are replaced ..
-    priority = _parse_int(_get_optional(fields, 'priority'), _default_priority)
-    expiration = _parse_int(_get_optional(fields, 'expiration'), _default_expiration)
+    # .. a priority out of range and an expiration below the shortest one are replaced ..
+    priority = _get_optional(fields, 'priority')
+    priority = _parse_int(priority, _default_priority)
 
-    if priority < _min_priority or priority > _max_priority:
+    expiration = _get_optional(fields, 'expiration')
+    expiration = _parse_int(expiration, _default_expiration)
+
+    if priority < _min_priority:
         priority = _default_priority
 
-    if expiration < 1:
-        expiration = 1
+    if priority > _max_priority:
+        priority = _default_priority
+
+    if expiration < _min_expiration:
+        expiration = _min_expiration
 
     # .. and the correlation ID of a message is the CID of its request unless the client gave its own.
     out = RESTPublication()
-    out.topic_name = topic_name
-    out.data = data
-    out.priority = priority
-    out.expiration = expiration
-    out.correl_id = _get_text(fields, 'correl_id', cid)
-    out.in_reply_to = _get_text(fields, 'in_reply_to', '')
+    out.topic_name    = topic_name
+    out.data          = data
+    out.priority      = priority
+    out.expiration    = expiration
+    out.correl_id     = _get_text(fields, 'correl_id', cid)
+    out.in_reply_to   = _get_text(fields, 'in_reply_to', '')
     out.ext_client_id = _get_text(fields, 'ext_client_id', '')
-    out.pub_time = _get_text(fields, 'pub_time', '')
-    out.msg_id = msg_id
+    out.pub_time      = _get_text(fields, 'pub_time', '')
+    out.msg_id        = msg_id
 
     return out
 

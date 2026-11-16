@@ -27,6 +27,7 @@ from zato.common.db_env.outage import OutageTracker
 from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryInterrupted, Interrupt_Database, \
     Interrupt_Expired, Interrupt_Paused, Interrupt_Replaced, Interrupt_Withdrawn, wait_between_rounds
 from zato.common.pubsub.sql.config import pubsub_db_config
+from zato.common.pubsub.sql.fenced_ack import PubSubAckConflict
 from zato.common.pubsub.sql.replaced import PubSubReplaced
 from zato.common.util.retry import RetryPolicy
 from zato.common.util.time_ import parse_utc
@@ -239,6 +240,9 @@ class PushDelivery:
             except PubSubReplaced:
                 raise
 
+            except PubSubAckConflict as e:
+                logger.info('PubSub batch for sub_key `%s` concluded by another delivery: %s', sub_key, e)
+
             except Exception:
                 logger.warning('PubSub delivery error for sub_key `%s`: %s', sub_key, format_exc())
                 outage.on_failure()
@@ -259,6 +263,9 @@ class PushDelivery:
 
             except PubSubReplaced:
                 raise
+
+            except PubSubAckConflict as e:
+                logger.info('PubSub batch for sub_key `%s` concluded by another delivery: %s', sub_key, e)
 
             except Exception:
                 logger.warning('PubSub delivery error for sub_key `%s`: %s', sub_key, format_exc())

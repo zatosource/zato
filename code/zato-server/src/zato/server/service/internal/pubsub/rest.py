@@ -219,7 +219,8 @@ class Publish(PubSubRESTService):
                     msg_id=publication.msg_id,
                 )
             except PubSubDuplicateMsgID as e:
-                self.set_error((str(e), _status_conflict, CONFLICT))
+                error = (str(e), _status_conflict, CONFLICT)
+                self.set_error(error)
                 return
 
         # Build response

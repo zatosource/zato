@@ -11,7 +11,7 @@ import pytest
 
 # Zato
 from common import get_message_rows
-from exactly_once.common import build, count_deliveries, count_messages, First_Output_Topic, FutureCleanup, Input_Sub_Key, \
+from exactly_once.harness import build, count_deliveries, count_messages, First_Output_Topic, FutureCleanup, Input_Sub_Key, \
     Input_Topic, lease, Milliseconds_Per_Day, Milliseconds_Per_Second, new_backend, publish_input
 from zato.common.pubsub.sql.config import get_delivered_max_days
 from zato.common.pubsub.sql.fenced_ack import PubSubAckConflict

@@ -18,6 +18,7 @@ from zato.common.api import HTTP_SOAP, PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.marshal_.api import Model
 from zato.common.pubsub.sql.writes import new_pending_publication
+from zato.common.typing_ import list_
 from zato.common.util.api import new_msg_id
 from zato.common.util.time_ import datetime_to_ms, parse_utc
 from zato.server.metrics import zato_pubsub_messages_published_total
@@ -46,6 +47,8 @@ _retry = HTTP_SOAP.Retry
 _default_priority   = PubSub.Message.Priority_Default
 _default_expiration = PubSub.Message.Default_Expiration
 _data_preview_len   = PubSub.Message.Data_Preview_Len
+
+built_publication_list = list_['BuiltPublication']
 
 # ################################################################################################################################
 # ################################################################################################################################

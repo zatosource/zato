@@ -15,11 +15,10 @@ from dataclasses import dataclass
 import pytest
 
 # Zato
-from exactly_once.common import build, First_Output_Topic, get_lease_ms, Input_Sub_Key, lease, new_backend, publish_input
+from exactly_once.harness import build, First_Output_Topic, get_lease_ms, Input_Sub_Key, lease, new_backend, publish_input
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.replaced import PubSubReplaced
 from zato.common.test.pubsub_database import connect, pubsub_db_env
-from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,7 +26,7 @@ from zato.common.typing_ import cast_
 if 0:
     from zato.common.pubsub.sql.publication import BuiltPublication
     from zato.common.test.pubsub_database import PubSubDatabase
-    from zato.common.typing_ import any_, anydict, anylist, strcalldict, strstrdict
+    from zato.common.typing_ import anydict, anylist, strcalldict, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -84,10 +83,9 @@ def _ack(backend:'SQLPubSubBackend', context:'WriteContext') -> 'None':
 
 def _ack_with_publications(backend:'SQLPubSubBackend', context:'WriteContext') -> 'None':
     msg_ids = [context.pushed_message['msg_id']]
-    sequence_ids = [context.pushed_message['sequence_id']]
     publications:'anylist' = [context.publication.pending]
 
-    backend.ack_with_publications(Input_Sub_Key, msg_ids, sequence_ids, publications)
+    backend.ack_with_publications(Input_Sub_Key, msg_ids, publications)
 
 # ################################################################################################################################
 
@@ -178,7 +176,7 @@ def _read_rows(database:'PubSubDatabase') -> 'anylist':
 
         for query in (_message_rows_query, _delivery_rows_query, _sub_rows_query):
             cursor.execute(query)
-            rows = cast_('any_', cursor.fetchall())
+            rows = cursor.fetchall()
             out.append(rows)
 
     finally:

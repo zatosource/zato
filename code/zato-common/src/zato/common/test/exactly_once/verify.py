@@ -176,6 +176,22 @@ def wait_for_outputs(engine:'Engine', keys:'strlist', prefix:'str', timeout:'flo
 
 # ################################################################################################################################
 
+def count_deliveries(engine:'Engine', msg_id:'str') -> 'int':
+    """ Returns how many delivery rows the message with the given message ID has.
+    """
+    joined = delivery_table.join(message_table, message_table.c.id == delivery_table.c.message_id)
+
+    query = select(func.count())
+    query = query.select_from(joined)
+    query = query.where(message_table.c.msg_id == msg_id)
+
+    with engine.connect() as connection:
+        out = connection.execute(query).scalar_one()
+
+    return out
+
+# ################################################################################################################################
+
 def assert_exactly_once(check:'OutputCheck', keys:'strlist') -> 'None':
     """ Fails unless each key has exactly one output row, no other row exists, no input delivery remains
     and the output rows follow the order of publication.

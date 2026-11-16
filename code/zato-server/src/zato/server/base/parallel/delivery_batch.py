@@ -25,7 +25,7 @@ if 0:
     from gevent.lock import BoundedSemaphore
     from zato.common.pubsub.delivery_scope import DeliveryScope
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
-    from zato.common.typing_ import any_, anydict, anylist, callable_, intlist, strlist, strset
+    from zato.common.typing_ import any_, anydict, anylist, callable_, strlist, strset
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -58,7 +58,6 @@ def deliver_atomic_batch(
     while processing them. A batch that does not reach its commit leaves no publication behind and goes out again.
     """
     msg_ids:'strlist' = []
-    sequence_ids:'intlist' = []
 
     # One transaction records the first attempt of every message of the batch ..
     with database_slots:
@@ -74,7 +73,7 @@ def deliver_atomic_batch(
             if sub_key in paused:
                 break
 
-            # .. a message that left the queue in the meantime has nothing left to deliver ..
+            # .. a message that left the queue in the meantime has no delivery row left to acknowledge ..
             if message['delivery_id'] not in pending_delivery_ids:
                 logger.info('Message left the queue before delivery, sub_key `%s`, msg_id `%s`', sub_key, message['msg_id'])
 
@@ -86,13 +85,12 @@ def deliver_atomic_batch(
                 if not deliver_one(message, sub_config, sub_key, read_epoch):
                     break
 
-            msg_ids.append(message['msg_id'])
-            sequence_ids.append(message['sequence_id'])
+                msg_ids.append(message['msg_id'])
 
     finally:
         close_delivery_scope()
 
-    _commit_batch(backend, scope, sub_key, msg_ids, sequence_ids)
+    _commit_batch(backend, scope, sub_key, msg_ids)
 
 # ################################################################################################################################
 
@@ -101,7 +99,6 @@ def _commit_batch(
     scope:'DeliveryScope',
     sub_key:'str',
     msg_ids:'strlist',
-    sequence_ids:'intlist',
 ) -> 'None':
     """ Commits what a delivery batch produced. The outcome of each delivery is recorded before the acknowledgement,
     as it is for a single message, and a publication is recorded only after it was committed.
@@ -123,7 +120,7 @@ def _commit_batch(
 
     # .. the acknowledgement and the publications commit together ..
     if msg_ids:
-        backend.ack_with_publications(sub_key, msg_ids, sequence_ids, scope.publications)
+        backend.ack_with_publications(sub_key, msg_ids, scope.publications)
 
     # .. and only then are the publications recorded.
     if published_events:
