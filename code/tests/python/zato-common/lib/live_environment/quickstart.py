@@ -239,7 +239,10 @@ class ZatoEnvironment:
             start_new_session=True,
         )
 
-        output_thread = threading.Thread(target=self._stream_output, args=(process, label), daemon=True)
+        # The name stays the same across a restart, which is how the thread of a restarted process
+        # is told apart from one that a test left behind
+        output_thread = threading.Thread(
+            target=self._stream_output, args=(process, label), name=f'zato-environment-output-{label}', daemon=True)
         output_thread.start()
 
         out = process

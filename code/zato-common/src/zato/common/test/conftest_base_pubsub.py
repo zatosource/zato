@@ -83,8 +83,9 @@ class SessionState:
 
         self.server_process = None
 
-        # .. also kill any orphaned Zato server processes that may have forked ..
-        _ = subprocess.run(['pkill', '-f', 'zato.server.main'], capture_output=True)
+        # .. also kill the processes that the server of this session forked, and no other server ..
+        if self.quickstart_directory:
+            _ = subprocess.run(['pkill', '-f', f'zato.server.main {self.quickstart_directory}'], capture_output=True)
 
 # ################################################################################################################################
 
@@ -415,10 +416,6 @@ def create_zato_server_fixture(
     def zato_server() -> 'any_':
         """ Session-scoped fixture that spins up a Zato quickstart environment.
         """
-        # Kill any leftover Zato servers from interrupted previous runs ..
-        _ = subprocess.run(['pkill', '-f', 'zato.server.main'], capture_output=True)
-        time.sleep(2)
-
         start_time = time.monotonic()
 
         invoke_password = 'test.invoke.' + CryptoManager.generate_hex_string()

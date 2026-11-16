@@ -54,6 +54,9 @@ class _ConfigManagerStub:
         self._remove_topic_sub_configs = MagicMock()
         self._resync_topic_subscriptions = MagicMock()
 
+        # The cache of topic lookups that every topic event clears
+        self.pubsub_topic_manager = MagicMock()
+
         # What the dispatch hands the message to once it has decided on the service
         self.invoke = MagicMock()
 
