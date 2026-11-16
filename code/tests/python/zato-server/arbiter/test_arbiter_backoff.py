@@ -11,7 +11,7 @@ import logging
 import os
 
 # Zato
-from arbiter_common import new_config, Region_Config, Tested_Slot
+from arbiter_common import new_config, Region_Config
 from zato.server.arbiter import Arbiter
 from zato_ipc_core.zato_ipc_core import SharedRegion
 
@@ -33,7 +33,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The delays of a slot before its threshold, the first one doubled by each termination
+# The delays of the worker before its threshold, the first one doubled by each termination
 _respawn_delay_initial = 0.1
 _respawn_delay_max     = 10.0
 _failure_count_max     = 5
@@ -80,9 +80,9 @@ def _close_arbiter(arbiter:'Arbiter') -> 'None':
 # ################################################################################################################################
 
 def _get_delays(arbiter:'Arbiter', start:'float', count:'int') -> 'floatlist':
-    """ Records terminations of the tested slot, one each interval from the start, and returns the delay after each.
+    """ Records terminations of the worker, one each interval from the start, and returns the delay after each.
     """
-    worker = arbiter.workers[Tested_Slot]
+    worker = arbiter.worker
     out:'floatlist' = []
 
     for index in range(count):
@@ -98,22 +98,17 @@ def _get_delays(arbiter:'Arbiter', start:'float', count:'int') -> 'floatlist':
 def test_each_termination_within_the_window_doubles_the_delay(tmp_path:'Path') -> 'None':
     arbiter = _new_arbiter(tmp_path)
 
-    # The delay doubles up to the threshold ..
+    # The delay doubles up to the threshold.
     count = len(_expected_delays)
     delays = _get_delays(arbiter, 0.0, count)
 
     assert delays == _expected_delays
 
-    # .. and the other slots keep no terminations.
-    for worker in arbiter.workers:
-        if worker.slot != Tested_Slot:
-            assert worker.failure_times == []
-
     _close_arbiter(arbiter)
 
 # ################################################################################################################################
 
-def test_a_slot_above_the_threshold_waits_for_the_ceiling(tmp_path:'Path', caplog:'LogCaptureFixture') -> 'None':
+def test_a_worker_above_the_threshold_waits_for_the_ceiling(tmp_path:'Path', caplog:'LogCaptureFixture') -> 'None':
     arbiter = _new_arbiter(tmp_path)
     count = len(_expected_delays)
 
@@ -149,7 +144,7 @@ def test_terminations_outside_the_window_are_not_counted(tmp_path:'Path') -> 'No
     arbiter = _new_arbiter(tmp_path)
     count = len(_expected_delays)
 
-    # The slot reaches its threshold ..
+    # The worker reaches its threshold ..
     _ = _get_delays(arbiter, 0.0, count)
 
     # .. and its next termination after the window waits for the initial delay again.
@@ -159,8 +154,7 @@ def test_terminations_outside_the_window_are_not_counted(tmp_path:'Path') -> 'No
 
     assert delays == [_respawn_delay_initial]
 
-    worker = arbiter.workers[Tested_Slot]
-    assert worker.failure_times == [start]
+    assert arbiter.worker.failure_times == [start]
 
     _close_arbiter(arbiter)
 

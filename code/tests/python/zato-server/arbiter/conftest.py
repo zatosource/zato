@@ -13,10 +13,6 @@ import sys
 # pytest
 import pytest
 
-# The tests of the writer process under the arbiter build their messages with the helpers of the writer tests
-_writer_tests_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'zato-common', 'pubsub_writer_process')
-sys.path.insert(0, os.path.abspath(_writer_tests_dir))
-
 # The helpers that the tests of this directory share
 sys.path.insert(0, os.path.dirname(__file__))
 

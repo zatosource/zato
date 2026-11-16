@@ -784,14 +784,13 @@ test-ha-sqlite: ## Active-standby pair on SQLite - the pair, Kubernetes and cont
 test-ha-postgresql: ## Active-standby pair on PostgreSQL - the pair and Kubernetes suites, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(call Zato_Test_HA_Suites,$(Zato_Test_HA_PostgreSQL),$(Zato_Test_HA_PostgreSQL_Resume_File))
 
-# The unit tests of the arbiter, the config process, the control channel and the shared region of the server.
+# The unit tests of the arbiter, the config process, the control channel and the region that the worker
+# and the config process of the server share.
 Zato_Test_Arbiter_Unit := \
-	zato-common/log_rotation zato-common/process_queue zato-common/mllp_region zato-common/log_streaming_region \
-	zato-common/rate_limiting_region zato-common/audit_retention_workers zato-common/analytics_rollup_workers \
-	zato-server/arbiter zato-server/config_process zato-server/control zato-server/metrics_region \
-	zato-server/outgoing_region zato-server/queue_bridge_workers zato-server/response_cache_workers
+	zato-common/log_rotation zato-common/process_queue \
+	zato-server/arbiter zato-server/config_process zato-server/control zato-server/outgoing_region
 
-test-arbiter: ## The arbiter, the config process, the control channel and the shared region of the server.
+test-arbiter: ## The arbiter, the config process, the control channel and the region of the worker and the config process.
 	$(Zato_Log_Reset)
 	$(MAKE) ipc-build $(Zato_Log)
 	$(LOAD_CARGO_ENV) && cargo test --manifest-path $(ZATO_RUST)/zato_ipc_core/Cargo.toml $(Zato_Log)

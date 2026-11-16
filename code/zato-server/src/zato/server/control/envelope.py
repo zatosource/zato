@@ -65,7 +65,8 @@ class MessageType:
     Drain        = 'drain'
     Reload       = 'reload'
 
-    # The arbiter renamed log files and asks a worker to reopen them, which the worker acknowledges with the rotation ID
+    # The arbiter renamed log files and asks the worker and the config process to reopen them,
+    # which each of them acknowledges with the rotation ID
     Reopen_Logs   = 'reopen-logs'
     Logs_Reopened = 'logs-reopened'
 

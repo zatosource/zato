@@ -74,10 +74,11 @@ class ConfigRoute:
     def __init__(self, hub:'ControlHub') -> 'None':
         self.hub = hub
 
-        # The load request of each slot that the config process has not served, by slot, with its correlation ID
+        # The load request of the worker that the config process has not served, by the slot of the worker,
+        # with its correlation ID
         self.requested:'intstrdict' = {}
 
-        # The mark of each slot whose worker has not reported its load yet, by slot, with its correlation ID
+        # The mark of the worker that has not reported its load yet, by the slot of the worker, with its correlation ID
         self.loading:'intstrdict' = {}
 
         # The slot of the worker that forwarded each invocation in progress, by its correlation ID

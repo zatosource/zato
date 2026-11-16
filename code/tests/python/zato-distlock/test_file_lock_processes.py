@@ -29,7 +29,7 @@ if 0:
 
 class ModuleCtx:
 
-    # The processes are forked, as the workers are forked from the arbiter
+    # The processes are forked, as the worker and the config process are forked from the arbiter
     Context = get_context('fork')
 
     Process_Count = 4

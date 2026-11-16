@@ -94,9 +94,6 @@ class ModuleCtx:
     # the messages of lost pull responses handed out again
     Pull_Lease_Seconds = '5'
 
-    # The variable with the worker count of the test run, which each node receives
-    Worker_Count_Env = 'Zato_Server_Workers'
-
     # The roles in which a node serves requests
     Active_Roles = ('ActiveSolo', 'ActiveReplicated')
 
@@ -260,9 +257,6 @@ class Node:
             'Zato_Test_Scheduler_Server_Label': self.node_name,
             'Zato_Test_Zato_Binary': ModuleCtx.Zato_Binary,
         })
-
-        if ModuleCtx.Worker_Count_Env in os.environ:
-            self.env[ModuleCtx.Worker_Count_Env] = os.environ[ModuleCtx.Worker_Count_Env]
 
 # ################################################################################################################################
 

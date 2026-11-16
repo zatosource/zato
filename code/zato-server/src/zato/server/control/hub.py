@@ -419,7 +419,7 @@ class ControlHub:
 # ################################################################################################################################
 
     def _relay(self, origin_slot:'int', header:'anydict', body:'bytes', message_type:'str') -> 'None':
-        """ Sends a message with the next sequence number to every slot other than its origin.
+        """ Sends a message with the next sequence number to the process other than its origin.
         """
         header['type'] = message_type
         header['seq'] = self._next_seq()
