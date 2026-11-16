@@ -182,6 +182,7 @@ class Server(Constants):
     File_Delete = ValueConstant('')
     Pubsub_Cleanup = ValueConstant('')
     Outgoing_Queue_Created = ValueConstant('')
+    Service_Topic_Created = ValueConstant('')
 
 class Groups(Constants):
 

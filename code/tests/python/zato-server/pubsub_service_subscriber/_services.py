@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from json import dumps
 
 # Zato
+from zato.common.test.received_store import clear, read_items, record
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -19,18 +20,20 @@ from zato.server.service import Service
 # Each receiver is a subscriber on its own, without a security definition, and stores
 # every message pushed to it under its own name.
 
-_received = {}
+_receiver_names = (
+    'test.pubsub.service-subscriber.receiver-1',
+    'test.pubsub.service-subscriber.receiver-2',
+    'test.pubsub.service-subscriber.receiver-3',
+    'test.pubsub.service-subscriber.receiver-4',
+)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _store(service_name:'str', raw_request:'object') -> 'None':
-    """ Stores the data of one message pushed to the receiver of the given name.
+def _store(service:'Service') -> 'None':
+    """ Stores the data of one message pushed to the receiver that the service is.
     """
-    if service_name not in _received:
-        _received[service_name] = []
-
-    _received[service_name].append(str(raw_request))
+    record(service, service.name, str(service.request.raw_request))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,7 +42,7 @@ class ServiceSubscriberReceiverOne(Service):
     name = 'test.pubsub.service-subscriber.receiver-1'
 
     def handle(self) -> 'None':
-        _store(self.name, self.request.raw_request)
+        _store(self)
 
 # ################################################################################################################################
 
@@ -47,7 +50,7 @@ class ServiceSubscriberReceiverTwo(Service):
     name = 'test.pubsub.service-subscriber.receiver-2'
 
     def handle(self) -> 'None':
-        _store(self.name, self.request.raw_request)
+        _store(self)
 
 # ################################################################################################################################
 
@@ -55,7 +58,7 @@ class ServiceSubscriberReceiverThree(Service):
     name = 'test.pubsub.service-subscriber.receiver-3'
 
     def handle(self) -> 'None':
-        _store(self.name, self.request.raw_request)
+        _store(self)
 
 # ################################################################################################################################
 
@@ -63,7 +66,7 @@ class ServiceSubscriberReceiverFour(Service):
     name = 'test.pubsub.service-subscriber.receiver-4'
 
     def handle(self) -> 'None':
-        _store(self.name, self.request.raw_request)
+        _store(self)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,7 +78,15 @@ class ServiceSubscriberGetReceived(Service):
     name = 'test.pubsub.service-subscriber.get-received'
 
     def handle(self) -> 'None':
-        self.response.payload = dumps(_received)
+
+        out = {}
+
+        # A receiver that received nothing is not in the result
+        for receiver_name in _receiver_names:
+            if items := read_items(self, receiver_name):
+                out[receiver_name] = items
+
+        self.response.payload = dumps(out)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -87,7 +98,8 @@ class ServiceSubscriberClearReceived(Service):
     name = 'test.pubsub.service-subscriber.clear-received'
 
     def handle(self) -> 'None':
-        _received.clear()
+        for receiver_name in _receiver_names:
+            clear(self, receiver_name)
 
 # ################################################################################################################################
 # ################################################################################################################################

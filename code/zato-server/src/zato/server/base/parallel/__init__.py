@@ -1935,8 +1935,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # Publishing to an outgoing connection is only possible once its type knows how to be delivered to ..
         register_delivery_handlers()
 
-        # .. and the queues of the connections published to before this server started come back here.
+        # .. the queues of the connections published to before this server started come back here ..
         call_until_available('Outgoing queues restore', self.config_manager.restore_outgoing_subscriptions)
+
+        # .. and so do the topics of the services published to before this process started.
+        call_until_available('Service topics restore', self.config_manager.restore_service_topics)
 
         for sub_key in self.config_manager._push_subs:
             self.pubsub_push_delivery.start_sub_key(sub_key)

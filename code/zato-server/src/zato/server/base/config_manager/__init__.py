@@ -37,7 +37,7 @@ from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, Server as BrokerMessageServer, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
-from zato.common.facade import _service_name_to_topic, _service_sub_key_prefix
+from zato.common.facade import _service_name_to_topic, _service_sub_key_prefix, add_service_topic
 from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.pubsub.outgoing import http_soap_outgoing_types
@@ -2533,7 +2533,7 @@ class ConfigManager(_ConfigManagerBase):
         # and no round of its delivery is in flight in between, because both resolve their topics from
         # what the config says the connection is called.
         if is_rename:
-            hold = self.hold_outgoing_queue(outgoing_type, msg['id'])
+            hold = self.hold_outgoing_queue_for_change(outgoing_type, msg['id'])
         else:
             hold = nullcontext()
 
@@ -3379,6 +3379,29 @@ class ConfigManager(_ConfigManagerBase):
 
             # .. and remove from cache.
             self._service_topic_cache.discard(service_name)
+
+# ################################################################################################################################
+
+    def on_config_event_Server_Service_Topic_Created(self, msg:'Bunch') -> 'None':
+        """ Adds the service topic that another process of the server created on the first publication to its service.
+        """
+        with self._service_topic_lock:
+            if msg.service_name not in self._service_topic_cache:
+                add_service_topic(self.server, msg.service_name)
+
+# ################################################################################################################################
+
+    def restore_service_topics(self) -> 'None':
+        """ Brings back the topics of services published to before this process started.
+        """
+        sub_key_list = self.server.pubsub_backend.get_sub_keys_by_prefix(_service_sub_key_prefix)
+
+        with self._service_topic_lock:
+            for sub_key in sub_key_list:
+                service_name = sub_key.removeprefix(_service_sub_key_prefix)
+                add_service_topic(self.server, service_name)
+
+        logger.info('Restored service topics: %d', len(sub_key_list))
 
 # ################################################################################################################################
 # ################################################################################################################################

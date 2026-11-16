@@ -135,6 +135,7 @@ class _StubConfigManager:
 
     get_outgoing_publish_lock = ConfigManager.get_outgoing_publish_lock
     hold_outgoing_queue = ConfigManager.hold_outgoing_queue
+    hold_outgoing_queue_for_change = ConfigManager.hold_outgoing_queue_for_change
     _set_outgoing_topic_audit_flag = ConfigManager._set_outgoing_topic_audit_flag
     ensure_outgoing_subscription = ConfigManager.ensure_outgoing_subscription
     _add_outgoing_queue = ConfigManager._add_outgoing_queue

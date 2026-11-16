@@ -197,8 +197,8 @@ class Systemd_Unit:
 
 # ################################################################################################################################
 
-# The values of Zato_Install_Updates that turn the updates off, as the container's entrypoint reads them.
-_Updates_Off = ('False', 'false')
+# The values of Zato_Install_Updates that turn the updates on, as the container's entrypoint reads them.
+_Updates_On = ('True', 'true')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -317,7 +317,7 @@ def load_config(path:'str') -> 'Config':
     out.fqdn                = values['fqdn']
     out.admin_username      = values['admin_username']
     out.image               = values['image']
-    out.is_install_updates  = container_values['Zato_Install_Updates'] not in _Updates_Off
+    out.is_install_updates  = container_values['Zato_Install_Updates'] in _Updates_On
     out.certificate_domains = values['certificate_domains'].split(',')
     out.published_ports     = values['published_ports'].split(',')
     out.progress_page_port  = int(values['progress_page_port'])

@@ -89,6 +89,36 @@ class Publish(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class PublishWithID(Service):
+    """ Publishes one message under the message ID and with the priority that the caller gives, and returns the slot
+    of the worker that published it, the message ID that the publication returned and the name of the exception
+    that the publication raised, if any.
+    """
+    name = 'test.multi-cpu.publish-with-id'
+
+    def handle(self) -> 'None':
+        request = self.request.payload
+
+        msg_id = ''
+        error = ''
+
+        try:
+            result = self.pubsub.publish(request['topic_name'], request['data'], msg_id=request['msg_id'],
+                priority=request['priority'])
+        except Exception as e:
+            error = type(e).__name__
+        else:
+            msg_id = result.msg_id
+
+        self.response.payload = {
+            'slot': get_slot_or_single(),
+            'msg_id': msg_id,
+            'error': error,
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class BlockingPull(Service):
     """ Waits for the messages of a subscription key in the worker that serves the request, which a publication
     through any other worker wakes, and returns how many arrived and how long the wait took.

@@ -285,7 +285,8 @@ class WebhookReceiver:
 
         self._server = server
 
-        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        # A receiver that is stopped and started again runs under the same thread name as before
+        thread = threading.Thread(target=server.serve_forever, name=f'receiver-{self.port}', daemon=True)
         thread.start()
         self._thread = thread
 

@@ -73,8 +73,9 @@ class ModuleCtx:
     # The directory whose entries are the PIDs of the processes of the host
     Proc_Directory = '/proc'
 
-    # The name of the config process of a server, as the kernel reports it
+    # The names of the config process and of the pub/sub writer process of a server, as the kernel reports them
     Config_Process_Name = 'zato-config'
+    Writer_Process_Name = 'zato-writer'
 
     # The pickup directories of a server that a file listener watches, the files it deploys from them, the directory
     # of the server whose TLS material a listener of its own reports, the file the output of a listener goes to,
@@ -665,8 +666,8 @@ class WorkerControl:
 
 # ################################################################################################################################
 
-    def get_config_process_pid(self) -> 'int':
-        """ Returns the PID of the config process, which is the child of the arbiter of that name.
+    def _get_child_pid(self, process_name:'str') -> 'int':
+        """ Returns the PID of the child of the arbiter that has the given name.
         """
         worker_pid = self.get_slots()[0]['pid']
         arbiter_pid = get_parent_pid(worker_pid)
@@ -675,30 +676,62 @@ class WorkerControl:
             with open(f'{ModuleCtx.Proc_Directory}/{pid}/comm') as comm_file:
                 name = comm_file.read().strip()
 
-            if name == ModuleCtx.Config_Process_Name:
+            if name == process_name:
                 return pid
 
-        raise Exception(f'No config process among the children of the arbiter {arbiter_pid}')
+        raise Exception(f'No process `{process_name}` among the children of the arbiter {arbiter_pid}')
 
 # ################################################################################################################################
 
-    def wait_for_config_process(self, previous_pid:'int') -> 'int':
-        """ Waits until the arbiter runs a config process other than the given one and returns its PID.
+    def _wait_for_child(self, process_name:'str', previous_pid:'int') -> 'int':
+        """ Waits until the arbiter runs a child of the given name other than the given one and returns its PID.
         """
         deadline = monotonic() + ModuleCtx.Respawn_Deadline
 
         while monotonic() < deadline:
             try:
-                pid = self.get_config_process_pid()
+                pid = self._get_child_pid(process_name)
             except Exception as e:
-                logger.info('Config process not found while waiting -> %s', e)
+                logger.info('Process `%s` not found while waiting -> %s', process_name, e)
             else:
                 if pid != previous_pid:
                     return pid
 
             sleep(ModuleCtx.Poll_Interval)
 
-        raise Exception(f'The config process was not respawned within {ModuleCtx.Respawn_Deadline}s')
+        raise Exception(f'Process `{process_name}` was not respawned within {ModuleCtx.Respawn_Deadline}s')
+
+# ################################################################################################################################
+
+    def get_config_process_pid(self) -> 'int':
+        """ Returns the PID of the config process.
+        """
+        out = self._get_child_pid(ModuleCtx.Config_Process_Name)
+        return out
+
+# ################################################################################################################################
+
+    def wait_for_config_process(self, previous_pid:'int') -> 'int':
+        """ Waits until the arbiter runs a config process other than the given one and returns its PID.
+        """
+        out = self._wait_for_child(ModuleCtx.Config_Process_Name, previous_pid)
+        return out
+
+# ################################################################################################################################
+
+    def get_writer_pid(self) -> 'int':
+        """ Returns the PID of the pub/sub writer process.
+        """
+        out = self._get_child_pid(ModuleCtx.Writer_Process_Name)
+        return out
+
+# ################################################################################################################################
+
+    def wait_for_writer(self, previous_pid:'int') -> 'int':
+        """ Waits until the arbiter runs a pub/sub writer process other than the given one and returns its PID.
+        """
+        out = self._wait_for_child(ModuleCtx.Writer_Process_Name, previous_pid)
+        return out
 
 # ################################################################################################################################
 

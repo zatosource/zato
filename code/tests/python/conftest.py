@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import sys
 import threading
+from collections import Counter
 
 # pytest
 import pytest
@@ -64,19 +65,18 @@ def no_thread_outlives_its_test() -> 'nonegen':
     """ Fails a test that leaves a thread running in this process. Later tests fork workers from this process,
     and a forked worker inherits in their locked state the locks that such a thread holds at the time of the fork.
     The threads of the engines and of the memory trimmer that the test started are stopped first,
-    and a test that needs an engine again receives a new one.
+    and a test that needs an engine again receives a new one. Threads are compared by name, so a test that stops
+    a thread of its session and starts it again under the same name leaves nothing behind.
     """
-    threads_before = set(threading.enumerate())
+    threads_before = Counter(thread.name for thread in threading.enumerate())
 
     yield
 
     _stop_process_wide_threads()
 
-    remaining:'strlist' = []
+    threads_after = Counter(thread.name for thread in threading.enumerate())
 
-    for thread in threading.enumerate():
-        if thread not in threads_before:
-            remaining.append(thread.name)
+    remaining:'strlist' = sorted((threads_after - threads_before).elements())
 
     assert remaining == []
 

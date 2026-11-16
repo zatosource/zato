@@ -8,8 +8,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from dataclasses import dataclass
+from json import dumps as json_dumps, loads as json_loads
 
 # Zato
+from zato.common.test.received_store import clear as _clear, read_items as _read, record as _record
 from zato.input_output import ServiceInput
 from zato.server.service import Model, Service
 
@@ -19,14 +21,13 @@ from zato.server.service import Model, Service
 # This file is hot-deployed into a test Zato server by conftest.py.
 # It defines receiver and chain services used by the pubsub_service live tests.
 
-_simple_received = []
-_typed_received = []
-_input_received = []
-
-_chain_received = []
-_fanout_1_received = []
-_fanout_2_received = []
-_typed_chain_received = []
+_store_simple      = 'simple'
+_store_typed       = 'typed'
+_store_input       = 'input'
+_store_chain       = 'chain'
+_store_fanout_1    = 'fanout-1'
+_store_fanout_2    = 'fanout-2'
+_store_typed_chain = 'typed-chain'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,7 +39,7 @@ class PubSubTestSimpleReceiver(Service):
     name = 'test.pubsub.simple-receiver'
 
     def handle(self) -> 'None':
-        _simple_received.append(self.request.raw_request)
+        _record(self, _store_simple, str(self.request.raw_request))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -61,7 +62,7 @@ class PubSubTestTypedReceiver(Service):
         input = CustomerInput
 
     def handle(self) -> 'None':
-        _typed_received.append(self.request.input)
+        _record(self, _store_typed, str(self.request.input))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -91,7 +92,7 @@ class PubSubTestInputReceiver(Service):
         else:
             input_value = input
 
-        _input_received.append({
+        _record(self, _store_input, {
             'input_type': type(input).__name__,
             'input': input_value,
             'raw_type': type(self.request.raw).__name__,
@@ -108,8 +109,6 @@ class PubSubTestPublishEvent(Service):
     name = 'test.pubsub.publish-event'
 
     def handle(self) -> 'None':
-        from json import dumps
-
         kind = self.request.input.kind
         data = self.request.input.data
 
@@ -122,7 +121,7 @@ class PubSubTestPublishEvent(Service):
 
         result = self.pubsub.publish('test.pubsub.input-receiver', data)
 
-        self.response.payload = dumps({'msg_id': result.msg_id})
+        self.response.payload = json_dumps({'msg_id': result.msg_id})
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -134,14 +133,14 @@ class PubSubTestGetInputReceived(Service):
     name = 'test.pubsub.get-input-received'
 
     def handle(self) -> 'None':
-        from json import dumps
+        received = _read(self, _store_input)
 
         out = {
-            'count': len(_input_received),
-            'received': _input_received,
+            'count': len(received),
+            'received': received,
         }
 
-        self.response.payload = dumps(out)
+        self.response.payload = json_dumps(out)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -153,7 +152,7 @@ class PubSubTestClearInputReceived(Service):
     name = 'test.pubsub.clear-input-received'
 
     def handle(self) -> 'None':
-        _input_received.clear()
+        _clear(self, _store_input)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -165,16 +164,17 @@ class PubSubTestGetReceived(Service):
     name = 'test.pubsub.get-received'
 
     def handle(self) -> 'None':
-        from json import dumps
+        simple = _read(self, _store_simple)
+        typed = _read(self, _store_typed)
 
         out = {
-            'simple_count': len(_simple_received),
-            'typed_count': len(_typed_received),
-            'simple': [str(item) for item in _simple_received],
-            'typed': [str(item) for item in _typed_received],
+            'simple_count': len(simple),
+            'typed_count': len(typed),
+            'simple': simple,
+            'typed': typed,
         }
 
-        self.response.payload = dumps(out)
+        self.response.payload = json_dumps(out)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -186,8 +186,8 @@ class PubSubTestClearReceived(Service):
     name = 'test.pubsub.clear-received'
 
     def handle(self) -> 'None':
-        _simple_received.clear()
-        _typed_received.clear()
+        _clear(self, _store_simple)
+        _clear(self, _store_typed)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -200,8 +200,6 @@ class PubSubTestPublishToService(Service):
     name = 'test.pubsub.publish-to-service'
 
     def handle(self) -> 'None':
-        from json import dumps
-
         topic_name = self.request.raw_request['topic_name']
         data = self.request.raw_request['data']
 
@@ -211,7 +209,7 @@ class PubSubTestPublishToService(Service):
             'msg_id': result.msg_id,
         }
 
-        self.response.payload = dumps(out)
+        self.response.payload = json_dumps(out)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -224,8 +222,6 @@ class PubSubTestCheckTopics(Service):
     name = 'test.pubsub.check-topics'
 
     def handle(self) -> 'None':
-        from json import dumps
-
         prefix = 'zato.s.to.'
         all_topics = self.server.pubsub_backend.get_topics_with_messages()
 
@@ -235,24 +231,22 @@ class PubSubTestCheckTopics(Service):
             if topic_name.startswith(prefix):
                 topic_names.append(topic_name)
 
-        self.response.payload = dumps({'topics': topic_names})
+        self.response.payload = json_dumps({'topics': topic_names})
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class PubSubTestCheckSubscriptions(Service):
-    """ Returns the count of subscription keys in the config_manager's _push_subs dict.
+    """ Returns the subscription keys of service topics that the pub/sub database holds.
     """
 
     name = 'test.pubsub.check-subscriptions'
 
     def handle(self) -> 'None':
-        from json import dumps
 
-        push_subs = self.server.config_manager._push_subs
-        sub_keys = list(push_subs.keys())
+        sub_keys = self.server.pubsub_backend.get_sub_keys_by_prefix('zato.service.')
 
-        self.response.payload = dumps({
+        self.response.payload = json_dumps({
             'count': len(sub_keys),
             'sub_keys': sub_keys,
         })
@@ -287,7 +281,7 @@ class PubSubTestChainB(Service):
         if isinstance(data, dict):
             data = data.get('data', data)
         result = str(data) + '-via-b'
-        _chain_received.append(result)
+        _record(self, _store_chain, result)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -315,7 +309,7 @@ class PubSubTestFanoutTarget1(Service):
     name = 'test.pubsub.fanout-target-1'
 
     def handle(self) -> 'None':
-        _fanout_1_received.append(self.request.raw_request)
+        _record(self, _store_fanout_1, str(self.request.raw_request))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -327,7 +321,7 @@ class PubSubTestFanoutTarget2(Service):
     name = 'test.pubsub.fanout-target-2'
 
     def handle(self) -> 'None':
-        _fanout_2_received.append(self.request.raw_request)
+        _record(self, _store_fanout_2, str(self.request.raw_request))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -339,8 +333,6 @@ class PubSubTestTypedChainSource(Service):
     name = 'test.pubsub.typed-chain-source'
 
     def handle(self) -> 'None':
-        from json import loads as json_loads
-
         data = self.request.raw_request
         if isinstance(data, dict):
             data = data.get('data', data)
@@ -365,8 +357,6 @@ class PubSubTestTypedChainSink(Service):
     name = 'test.pubsub.typed-chain-sink'
 
     def handle(self) -> 'None':
-        from json import loads as json_loads
-
         data = self.request.raw_request
         if isinstance(data, dict):
             data = data.get('data', data)
@@ -383,9 +373,9 @@ class PubSubTestTypedChainSink(Service):
             customer = CustomerInput()
             customer.customer_name = data['customer_name']
             customer.customer_id = data['customer_id']
-            _typed_chain_received.append(customer)
+            _record(self, _store_typed_chain, str(customer))
         else:
-            _typed_chain_received.append(data)
+            _record(self, _store_typed_chain, str(data))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -397,20 +387,23 @@ class PubSubTestGetChainReceived(Service):
     name = 'test.pubsub.get-chain-received'
 
     def handle(self) -> 'None':
-        from json import dumps
+        chain = _read(self, _store_chain)
+        fanout_1 = _read(self, _store_fanout_1)
+        fanout_2 = _read(self, _store_fanout_2)
+        typed_chain = _read(self, _store_typed_chain)
 
         out = {
-            'chain_count': len(_chain_received),
-            'fanout_1_count': len(_fanout_1_received),
-            'fanout_2_count': len(_fanout_2_received),
-            'typed_chain_count': len(_typed_chain_received),
-            'chain': [str(item) for item in _chain_received],
-            'fanout_1': [str(item) for item in _fanout_1_received],
-            'fanout_2': [str(item) for item in _fanout_2_received],
-            'typed_chain': [str(item) for item in _typed_chain_received],
+            'chain_count': len(chain),
+            'fanout_1_count': len(fanout_1),
+            'fanout_2_count': len(fanout_2),
+            'typed_chain_count': len(typed_chain),
+            'chain': chain,
+            'fanout_1': fanout_1,
+            'fanout_2': fanout_2,
+            'typed_chain': typed_chain,
         }
 
-        self.response.payload = dumps(out)
+        self.response.payload = json_dumps(out)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -422,10 +415,10 @@ class PubSubTestClearChainReceived(Service):
     name = 'test.pubsub.clear-chain-received'
 
     def handle(self) -> 'None':
-        _chain_received.clear()
-        _fanout_1_received.clear()
-        _fanout_2_received.clear()
-        _typed_chain_received.clear()
+        _clear(self, _store_chain)
+        _clear(self, _store_fanout_1)
+        _clear(self, _store_fanout_2)
+        _clear(self, _store_typed_chain)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -473,13 +466,6 @@ _service_routing = {
 # .. add service-00021 through service-00320 as sinks for the 300-parallel test ..
 for _number in range(21, 321):
     _service_routing[_service_name(_number)] = []
-
-# .. per-service received lists, keyed by short name ..
-_service_received = {}
-
-for _short_name in _service_routing:
-    _service_received[_short_name] = []
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -509,14 +495,13 @@ def _make_sink_handle(short_name:'str') -> 'object':
     """
 
     suffix = '-via-' + short_name.split('-')[1]
-    received_list = _service_received[short_name]
 
     def handle(self:'Service') -> 'None':
         data = self.request.raw_request
         if isinstance(data, dict):
             data = data.get('data', data)
         result = str(data) + suffix
-        received_list.append(result)
+        _record(self, short_name, result)
 
     return handle
 
@@ -526,12 +511,8 @@ def _make_ring_handle(short_name:'str') -> 'object':
     """ Builds a handle method for the ring topology that decrements TTL and republishes to itself.
     """
 
-    from json import dumps as json_dumps
-    from json import loads as json_loads
-
     suffix = '-via-' + short_name.split('-')[1]
     full_name = 'test.pubsub.' + short_name
-    received_list = _service_received[short_name]
 
     def handle(self:'Service') -> 'None':
         data = self.request.raw_request
@@ -555,7 +536,7 @@ def _make_ring_handle(short_name:'str') -> 'object':
             envelope = json_dumps({'data': payload, 'ttl': ttl - 1})
             _ = self.pubsub.publish(full_name, envelope)
         else:
-            received_list.append(payload)
+            _record(self, short_name, payload)
 
     return handle
 
@@ -592,18 +573,14 @@ class PubSubTestGetServiceReceived(Service):
     name = 'test.pubsub.get-service-received'
 
     def handle(self) -> 'None':
-        from json import dumps
-
         out = {}
 
-        for short_name, received_list in _service_received.items():
-            out[short_name + '_count'] = len(received_list)
-            items = []
-            for item in received_list:
-                items.append(str(item))
-            out[short_name] = items
+        for short_name in _service_routing:
+            received = _read(self, short_name)
+            out[short_name + '_count'] = len(received)
+            out[short_name] = received
 
-        self.response.payload = dumps(out)
+        self.response.payload = json_dumps(out)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -615,8 +592,8 @@ class PubSubTestClearServiceReceived(Service):
     name = 'test.pubsub.clear-service-received'
 
     def handle(self) -> 'None':
-        for received_list in _service_received.values():
-            received_list.clear()
+        for short_name in _service_routing:
+            _clear(self, short_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -630,8 +607,6 @@ class PubSubTestResetServiceTopics(Service):
     name = 'test.pubsub.reset-service-topics'
 
     def handle(self) -> 'None':
-        from json import dumps
-
         backend = self.server.pubsub_backend
         prefix = 'zato.s.to.test.pubsub.service-'
 
@@ -667,13 +642,13 @@ class PubSubTestResetServiceTopics(Service):
             # .. remove from topic cache ..
             _ = self.server.config_manager._service_topic_cache.discard(service_name)
 
-        # .. clear the in-memory received lists too ..
-        for received_list in _service_received.values():
-            received_list.clear()
+        # .. clear the received stores too ..
+        for short_name in _service_routing:
+            _clear(self, short_name)
 
         deleted_count = len(topic_names)
 
-        self.response.payload = dumps({'deleted_topics': deleted_count})
+        self.response.payload = json_dumps({'deleted_topics': deleted_count})
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -213,9 +213,13 @@ def run_inbound_delivery_scenario(broker:'RabbitMQProcess') -> 'None':
         # .. the channel's own service never ran - the topic took the message ..
         assert harness.channel_invocations == [], f'Unexpected channel invocations -> {harness.channel_invocations}'
 
-        # .. and both deliveries left audit events, one per subscriber.
+        # .. and both deliveries left audit events, one per subscriber, the REST one once its response was read.
+        def _both_audited() -> 'bool':
+            return len(get_audit_events(topic_name)) == 2
+
+        wait_until(_both_audited, 'both deliveries were audited')
+
         events = get_audit_events(topic_name)
-        assert len(events) == 2, f'Expected two audit events, got {events}'
 
         sub_keys = []
         for event in events:

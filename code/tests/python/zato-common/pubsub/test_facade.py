@@ -12,6 +12,7 @@ import unittest
 from unittest.mock import MagicMock
 
 # Zato
+from zato.common.broker_message import Server as BrokerMessageServer
 from zato.common.facade import PubSubFacade, _service_name_to_topic, _service_topic_prefix, _service_sub_key_prefix
 from zato.common.pubsub.sql.backend import PublishResult
 
@@ -146,6 +147,19 @@ class TestPubSubFacadePublish(unittest.TestCase):
         _ = self.facade.publish('my.api.customer.new', 'test data')
 
         self.assertIn('my.api.customer.new', self.server.config_manager._service_topic_cache)
+
+# ################################################################################################################################
+
+    def test_service_topic_relayed_to_other_processes(self) -> 'None':
+        """ The first publish to a service relays the new service topic to the other processes of the server, once.
+        """
+        _ = self.facade.publish('my.api.customer.new', 'first message')
+        _ = self.facade.publish('my.api.customer.new', 'second message')
+
+        self.server.config_dispatcher.relay_only.assert_called_once_with({
+            'action': BrokerMessageServer.Service_Topic_Created.value,
+            'service_name': 'my.api.customer.new',
+        })
 
 # ################################################################################################################################
 

@@ -19,6 +19,7 @@ from zato.common.pubsub.dlq import DLQ_Sub_Key_Prefixes, get_dlq_sub_key, get_dl
 from zato.common.pubsub.outgoing import find_outgoing_conn, get_direction, get_outgoing_sub_key, has_queue, \
     locate_outgoing_conn, parse_outgoing_sub_key
 from zato.server.base.config_manager.common import ConfigManagerImpl
+from zato.server.base.config_manager.outgoing_queues import changes_shared_queues
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -96,6 +97,10 @@ class OutgoingDLQs(ConfigManagerImpl):
         """
         sub_key = get_dlq_sub_key(conn_type, conn_id)
 
+        # The DLQ topic moves in the pub/sub database once, and its sub key, which each process keeps, does not change
+        if not changes_shared_queues():
+            return
+
         if sub_key not in self._outgoing_dlq_cache:
             return
 
@@ -115,6 +120,11 @@ class OutgoingDLQs(ConfigManagerImpl):
         sub_key = get_dlq_sub_key(conn_type, conn_id)
 
         if sub_key not in self._outgoing_dlq_cache:
+            return
+
+        # The DLQ topic leaves the pub/sub database once, and each process then drops the DLQ
+        if not changes_shared_queues():
+            self._outgoing_dlq_cache.remove(sub_key)
             return
 
         topic_name = get_dlq_topic_name(conn_type, conn_name)

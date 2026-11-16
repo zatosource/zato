@@ -101,6 +101,9 @@ class Arbiter:
         self.pid = os.getpid()
         self.is_stopping = False
 
+        # Whether the worker of every slot has been ready at least once
+        self.has_started = False
+
         self.workers:'workerlist' = []
         self.pid_to_worker:'intworkerdict' = {}
 
@@ -208,6 +211,21 @@ class Arbiter:
 
         if state == STATE_STARTING:
             self.region.set_slot_state(slot, STATE_READY)
+
+            if not self.has_started:
+                self._check_started()
+
+# ################################################################################################################################
+
+    def _check_started(self) -> 'None':
+        """ Reports the start of the server the first time that the worker of every slot is ready.
+        """
+        for worker in self.workers:
+            if self.region.slot_state(worker.slot) != STATE_READY:
+                return
+
+        self.has_started = True
+        logger.info('Workers of all %s slots are ready', len(self.workers))
 
 # ################################################################################################################################
 

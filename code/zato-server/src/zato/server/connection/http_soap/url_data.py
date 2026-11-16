@@ -1151,7 +1151,7 @@ class URLData(PyURLData):
 
         if is_queue_rename:
             inbound_type = http_soap_inbound_types[msg['transport']]
-            hold = self.config_manager.hold_outgoing_queue(inbound_type, msg['id'])
+            hold = self.config_manager.hold_outgoing_queue_for_change(inbound_type, msg['id'])
         else:
             inbound_type = ''
             hold = nullcontext()

@@ -51,7 +51,7 @@
     },
     "installUpdates": {
       "type": "string",
-      "defaultValue": "True",
+      "defaultValue": "False",
       "allowedValues": [
         "True",
         "False"

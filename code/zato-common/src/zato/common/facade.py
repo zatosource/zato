@@ -11,6 +11,7 @@ from logging import getLogger
 
 # Zato
 from zato.common.api import PubSub
+from zato.common.broker_message import Server as BrokerMessageServer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,6 +42,33 @@ _service_sub_key_prefix = 'zato.service.'
 def _service_name_to_topic(service_name:'str') -> 'str':
     out = _service_topic_prefix + service_name
     return out
+
+# ################################################################################################################################
+
+def add_service_topic(server:'ParallelServer', service_name:'str') -> 'None':
+    """ Adds the push subscription of a service's topic to this process, whose delivery starts
+    if this worker owns its sub key. The caller holds the service topic lock.
+    """
+    # Build the subscription key and the topic name ..
+    sub_key = _service_sub_key_prefix + service_name
+    computed_topic = _service_name_to_topic(service_name)
+
+    # .. register push config so the delivery greenlet picks it up ..
+    sub_config = {
+        'sub_key': sub_key,
+        'topic_name': computed_topic,
+        'push_type': PubSub.Push_Type.Service,
+        'push_service_name': service_name,
+        'rest_push_endpoint_id': None,
+    }
+
+    server.config_manager._push_subs[sub_key] = [sub_config]
+
+    # .. start a delivery greenlet for this sub_key ..
+    server.pubsub_push_delivery.start_sub_key(sub_key)
+
+    # .. and mark as set up.
+    server.config_manager._service_topic_cache.add(service_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -142,28 +170,18 @@ class PubSubFacade:
                 # .. build the subscription key ..
                 sub_key = _service_sub_key_prefix + service_name
 
-                # .. create the topic stream and consumer group in Redis ..
+                # .. create the subscription in the pub/sub database ..
                 self.server.pubsub_backend.subscribe(sub_key, computed_topic)
 
-                # .. register push config so the delivery greenlet picks it up ..
-                sub_config = {
-                    'sub_key': sub_key,
-                    'topic_name': computed_topic,
-                    'push_type': PubSub.Push_Type.Service,
-                    'push_service_name': service_name,
-                    'rest_push_endpoint_id': None,
-                }
+                # .. add it to this process ..
+                add_service_topic(self.server, service_name)
 
-                if sub_key not in self.server.config_manager._push_subs:
-                    self.server.config_manager._push_subs[sub_key] = []
-
-                self.server.config_manager._push_subs[sub_key].append(sub_config)
-
-                # .. start a delivery greenlet for this sub_key ..
-                self.server.pubsub_push_delivery.start_sub_key(sub_key)
-
-                # .. mark as set up ..
-                self.server.config_manager._service_topic_cache.add(service_name)
+                # .. the worker that owns the sub key delivers the messages, which may be another worker,
+                # .. so each process of the server adds the subscription as well ..
+                self.server.config_dispatcher.relay_only({
+                    'action': BrokerMessageServer.Service_Topic_Created.value,
+                    'service_name': service_name,
+                })
 
                 # .. and log it.
                 logger.info('Auto-created service topic `%s` for service `%s`', computed_topic, service_name)

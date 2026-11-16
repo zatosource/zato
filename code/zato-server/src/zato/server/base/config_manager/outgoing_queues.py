@@ -11,7 +11,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from threading import RLock
 
 # Zato
@@ -20,6 +20,7 @@ from zato.common.broker_message import Server as BrokerMessageServer
 from zato.common.pubsub.dlq import get_dlq_sub_key, get_dlq_topic_name, is_dlq_sub_key
 from zato.common.pubsub.outgoing import audit_disabled_conn_types, find_outgoing_conn, get_outgoing_sub_config, \
     get_outgoing_sub_key, get_outgoing_topic_name, locate_outgoing_conn, parse_outgoing_sub_key
+from zato.common.worker_slot import get_worker_slot, is_config_process
 from zato.server.base.config_manager.common import ConfigManagerImpl
 from zato.server.outgoing_region import get_outgoing_binding, pause_outgoing_delivery, resume_outgoing_delivery, \
     SharedPublishLock, SharedQueueDepth
@@ -78,6 +79,17 @@ class OutgoingQueueDepth:
         """ Sets the counts read from the database at startup.
         """
         self._counts.update(counts)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def changes_shared_queues() -> 'bool':
+    """ Whether a change of configuration in this process changes the queues of outgoing connections in the pub/sub
+    database, which the config process of a multi-process server and a server of one process do, while each worker
+    of a multi-process server applies the change that the config process relayed to its own state alone.
+    """
+    out = is_config_process() or get_worker_slot() is None
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -181,6 +193,20 @@ class OutgoingQueues(ConfigManagerImpl):
 
 # ################################################################################################################################
 
+    def hold_outgoing_queue_for_change(self, conn_type:'str', conn_id:'int') -> 'any_':
+        """ Holds one connection's queue through hold_outgoing_queue while a change of configuration renames or deletes it
+        in the process that changes the shared queues. A worker that applies the relayed change holds nothing, because
+        it applies the change on the control channel through which the worker that owns the queue confirms a pause.
+        """
+        if changes_shared_queues():
+            out = self.hold_outgoing_queue(conn_type, conn_id)
+        else:
+            out = nullcontext()
+
+        return out
+
+# ################################################################################################################################
+
     def ensure_outgoing_subscription(self, conn_type:'str', conn_id:'int') -> 'anytuple':
         """ Makes sure that one outgoing connection has a topic and a queue, returning the topic's name and the connection's
         current name.
@@ -246,18 +272,21 @@ class OutgoingQueues(ConfigManagerImpl):
         old_topic_name = get_outgoing_topic_name(conn_type, old_name)
         new_topic_name = get_outgoing_topic_name(conn_type, new_name)
 
-        self.server.pubsub_backend.rename_topic(old_topic_name, new_topic_name)
+        # The topic and its DLQ move in the pub/sub database once, and each process then reads the queue under the new name
+        if changes_shared_queues():
 
-        self.server.pubsub_backend.delete_topic_audit_flag(old_topic_name)
-        self._set_outgoing_topic_audit_flag(conn_type, new_topic_name)
+            self.server.pubsub_backend.rename_topic(old_topic_name, new_topic_name)
+
+            self.server.pubsub_backend.delete_topic_audit_flag(old_topic_name)
+            self._set_outgoing_topic_audit_flag(conn_type, new_topic_name)
+
+            logger.info('Moved outgoing connection queue `%s` from topic `%s` to `%s`',
+                sub_key, old_topic_name, new_topic_name)
+
+            self.rename_outgoing_dlq(conn_type, conn_id, old_name, new_name)
 
         sub_config = get_outgoing_sub_config(sub_key, new_topic_name)
         self._push_subs[sub_key] = [sub_config]
-
-        logger.info('Moved outgoing connection queue `%s` from topic `%s` to `%s`',
-            sub_key, old_topic_name, new_topic_name)
-
-        self.rename_outgoing_dlq(conn_type, conn_id, old_name, new_name)
 
 # ################################################################################################################################
 
@@ -267,7 +296,7 @@ class OutgoingQueues(ConfigManagerImpl):
         sub_key = get_outgoing_sub_key(conn_type, conn_id)
 
         # The queue is held first, so no round of its delivery moves a message to the DLQ while the DLQ goes away
-        with self.hold_outgoing_queue(conn_type, conn_id):
+        with self.hold_outgoing_queue_for_change(conn_type, conn_id):
 
             # The DLQ goes first, while its queue's lock still exists
             self.delete_outgoing_dlq(conn_type, conn_id, conn_name)
@@ -275,24 +304,27 @@ class OutgoingQueues(ConfigManagerImpl):
             if sub_key not in self._outgoing_sub_key_cache:
                 return
 
-            topic_name = get_outgoing_topic_name(conn_type, conn_name)
-
             self.server.pubsub_push_delivery.stop_sub_key(sub_key)
 
-            dropped_count = self.server.pubsub_backend.get_total_count(sub_key, topic_name, 'pending')
+            # The topic and its messages leave the pub/sub database once, and each process then drops the queue
+            if changes_shared_queues():
 
-            self.server.pubsub_backend.delete_topic(topic_name)
-            self.server.pubsub_backend.delete_topic_audit_flag(topic_name)
+                topic_name = get_outgoing_topic_name(conn_type, conn_name)
+                dropped_count = self.server.pubsub_backend.get_total_count(sub_key, topic_name, 'pending')
+
+                self.server.pubsub_backend.delete_topic(topic_name)
+                self.server.pubsub_backend.delete_topic_audit_flag(topic_name)
+
+                logger.info('Deleted outgoing connection queue `%s` for topic `%s`, messages dropped:%d',
+                    sub_key, topic_name, dropped_count)
 
             del self._push_subs[sub_key]
             self._outgoing_sub_key_cache.remove(sub_key)
 
-        # The lock is dropped once it is no longer held
+        # The lock is dropped once it is no longer held, and a process that never published to the connection has none
         with self._outgoing_sub_key_lock:
-            del self._outgoing_conn_locks[sub_key]
-
-        logger.info('Deleted outgoing connection queue `%s` for topic `%s`, messages dropped:%d',
-            sub_key, topic_name, dropped_count)
+            if sub_key in self._outgoing_conn_locks:
+                del self._outgoing_conn_locks[sub_key]
 
 # ################################################################################################################################
 

@@ -99,7 +99,7 @@ class Generic(ConfigManagerImpl):
     _generic_conn_handler: 'stranydict'
     _get_generic_impl_func: 'callable_'
     get_outgoing_publish_lock: 'callable_'
-    hold_outgoing_queue: 'callable_'
+    hold_outgoing_queue_for_change: 'callable_'
     rename_outgoing_subscription: 'callable_'
     delete_outgoing_subscription: 'callable_'
     rename_outgoing_dlq: 'callable_'
@@ -314,7 +314,7 @@ class Generic(ConfigManagerImpl):
         # to it and no round of its delivery is in flight in between, because both resolve their topics
         # from what the config says the connection is called.
         if is_rename:
-            hold = self.hold_outgoing_queue(conn_type, msg['id'])
+            hold = self.hold_outgoing_queue_for_change(conn_type, msg['id'])
         else:
             hold = nullcontext()
 
