@@ -99,8 +99,8 @@ pub const fn plural<'word>(count: usize, singular: &'word str, plural_form: &'wo
 
 /// Reconciles the running-job map with a freshly loaded list of scheduler jobs.
 ///
-/// Every worker process of a server sends a reload when it starts, so a reload arrives while runs fired
-/// for other workers are still in progress. The runs in flight of every job are therefore kept, and a run
+/// The worker of a server sends a reload each time it starts, so a reload arrives while runs fired
+/// for its predecessor are still in progress. The runs in flight of every job are therefore kept, and a run
 /// whose worker terminated is removed by `check_in_flight_timeouts` once its execution time is exceeded.
 /// The run state of each job is restored from what the server loaded from the common database,
 /// which holds the runs claimed by every server, not only by this one.

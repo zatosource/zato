@@ -23,15 +23,14 @@ from sqlalchemy.exc import DBAPIError
 from zato.common.api import PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.db_env.common import get_env_values
-from zato.common.db_env.engine import get_worker_pool_size
 from zato.common.db_env.outage import OutageTracker
-from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryFenced, DeliveryInterrupted, \
-    Interrupt_Database, Interrupt_Expired, Interrupt_Fenced, Interrupt_Paused, Interrupt_Replaced, Interrupt_Withdrawn, \
-    wait_between_rounds
+from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryInterrupted, Interrupt_Database, \
+    Interrupt_Expired, Interrupt_Paused, Interrupt_Replaced, Interrupt_Withdrawn, wait_between_rounds
 from zato.common.pubsub.sql.config import pubsub_db_config
 from zato.common.pubsub.sql.replaced import PubSubReplaced
 from zato.common.util.retry import RetryPolicy
 from zato.common.util.time_ import parse_utc
+from zato.common.worker_slot import is_config_process
 from zato.server.base.parallel.delivery_batch import Attempt_Recorded_Key, deliver_atomic_batch, deliver_to_service
 from zato.server.base.parallel.delivery_rest import deliver_to_rest, get_rest_push_url
 
@@ -40,9 +39,8 @@ from zato.server.base.parallel.delivery_rest import deliver_to_rest, get_rest_pu
 
 if 0:
     from gevent import Greenlet
-    from zato.common.pubsub.fence import DeliveryFence
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
-    from zato.common.typing_ import anydict, anylist, callable_, floatnone, intlist, strlist, strset
+    from zato.common.typing_ import anydict, anylist, callable_, floatnone, strset
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -86,12 +84,9 @@ class PushDelivery:
     publications set, so no greenlet needs a dedicated database connection.
     """
 
-    def __init__(self, server:'ParallelServer', backend:'SQLPubSubBackend', fence:'DeliveryFence') -> 'None':
+    def __init__(self, server:'ParallelServer', backend:'SQLPubSubBackend') -> 'None':
         self.server = server
         self.backend = backend
-
-        # Each subscription key is delivered by the worker of the slot that owns it, under the generation of its slot
-        self.fence = fence
         self._stop_event = Event()
         self._greenlets:'sub_key_greenlet_dict' = {}
         self._paused:'strset' = set()
@@ -99,17 +94,16 @@ class PushDelivery:
 
         # Each read of a queue and each recorded attempt holds one of these slots while it uses a connection,
         # and no delivery holds one while it waits for a publication or sends a message to its endpoint.
-        configured_pool_size = get_env_values(pubsub_db_config)['pool_size']
-        pool_size = get_worker_pool_size(configured_pool_size)
+        pool_size = get_env_values(pubsub_db_config)['pool_size']
         slot_count = pool_size * _delivery_pool_share_numerator // _delivery_pool_share_denominator
         self._database_slots = BoundedSemaphore(slot_count)
 
 # ################################################################################################################################
 
     def start_sub_key(self, sub_key:'str') -> 'None':
-        """ Spawn a delivery greenlet for the given subscriber key, if the worker owns the key.
+        """ Spawn a delivery greenlet for the given subscriber key. The config process delivers nothing.
         """
-        if not self.fence.owns(sub_key):
+        if is_config_process():
             return
 
         with self._lock:
@@ -135,7 +129,7 @@ class PushDelivery:
         """ Stops the delivery greenlet of one subscriber between two of its batches, rather than
         wherever it happens to be, which is what a queue being moved needs - a message whose delivery
         is cut in half is never acknowledged and goes out a second time when the queue starts again.
-        A pause that another worker asked for waits for a shorter time, within the deadline of its query.
+        A pause that the config process asked for waits for a shorter time, within the deadline of its query.
         """
         # The module's timeout is read at the time of the call, not at the time of the definition
         if join_timeout is None:
@@ -175,8 +169,8 @@ class PushDelivery:
 # ################################################################################################################################
 
     def pause_all(self, join_timeout:'float') -> 'None':
-        """ Pauses every subscriber of this worker at once, each between two of its batches, so that a message whose
-        delivery is in progress remains in its queue for the worker that delivers the key next.
+        """ Pauses every subscriber of the worker at once, each between two of its batches, so that a message whose
+        delivery is in progress remains in its queue for the next delivery of the key.
         """
         with self._lock:
             sub_keys = list(self._greenlets)
@@ -213,15 +207,9 @@ class PushDelivery:
         try:
             self._run_delivery_loop(sub_key)
 
-        # Another server took over the pub/sub database, so this one delivers nothing anymore ..
+        # Another server took over the pub/sub database, so this one delivers nothing anymore.
         except PubSubReplaced as e:
             logger.warning('PubSub delivery greenlet ended for sub_key `%s`: %s', sub_key, e)
-            return
-
-        # .. and a replacement worker started in the slot of this one, which records nothing further and terminates.
-        except DeliveryFenced as e:
-            logger.warning('PubSub delivery greenlet fenced for sub_key `%s`: %s', sub_key, e)
-            self.fence.on_fenced()
             return
 
         logger.info('PubSub delivery greenlet stopped for sub_key `%s`', sub_key)
@@ -248,7 +236,7 @@ class PushDelivery:
                     break
                 self._deliver_batch(pending, sub_key, read_epoch)
 
-            except (PubSubReplaced, DeliveryFenced):
+            except PubSubReplaced:
                 raise
 
             except Exception:
@@ -269,7 +257,7 @@ class PushDelivery:
                 if messages:
                     self._deliver_batch(messages, sub_key, read_epoch)
 
-            except (PubSubReplaced, DeliveryFenced):
+            except PubSubReplaced:
                 raise
 
             except Exception:
@@ -307,9 +295,8 @@ class PushDelivery:
     def _deliver_batch(self, messages:'list', sub_key:'str', read_epoch:'int') -> 'None':
         """ Deliver a batch of raw messages, retrying each one individually. An outgoing connection's queue acknowledges
         each message as it is concluded, any other subscriber's batch is acknowledged in one transaction,
-        together with what its services published, unless this worker writes through a writer process.
-        An acknowledgement removes this subscriber's delivery rows only - a message expired or undeliverable
-        for this subscriber stays behind for every other subscriber that needs it.
+        together with what its services published. An acknowledgement removes this subscriber's delivery rows only -
+        a message expired or undeliverable for this subscriber stays behind for every other subscriber that needs it.
         """
         config_list = self.server.config_manager._push_subs[sub_key]
 
@@ -317,16 +304,13 @@ class PushDelivery:
         for config in config_list:
             config_by_topic[config['topic_name']] = config
 
-        is_outgoing = sub_key.startswith(_outgoing_sub_key_prefix)
-
-        if not is_outgoing and self.backend.is_atomic_delivery_supported():
-            deliver_atomic_batch(self.backend, self.fence, self._database_slots, self._paused, self._deliver_one,
+        # A subscriber other than an outgoing connection's queue commits its batch atomically ..
+        if not sub_key.startswith(_outgoing_sub_key_prefix):
+            deliver_atomic_batch(self.backend, self._database_slots, self._paused, self._deliver_one,
                 messages, config_by_topic, sub_key, read_epoch)
             return
 
-        msg_ids:'strlist' = []
-        sequence_ids:'intlist' = []
-
+        # .. while an outgoing connection's queue goes through its messages one by one.
         for message in messages:
 
             # A queue asked to pause stops between two of its messages, and what is left of the batch
@@ -336,29 +320,17 @@ class PushDelivery:
 
             sub_config = config_by_topic[message['topic_name']]
 
-            # A message that was not concluded is not acked, and nothing behind it is either
+            # A message that was not concluded is not acked, and nothing behind it is either ..
             if not self._deliver_one(message, sub_config, sub_key, read_epoch):
                 break
 
             msg_id = message['msg_id']
             sequence_id = message['sequence_id']
 
-            # An outgoing connection's queue acks each message as soon as it is concluded and counts out only
-            # what the ack removed, so a delivery stopped in the middle of a batch leaves no concluded message behind ..
-            if is_outgoing:
-                self.fence.check()
-                fully_delivered_count = self.backend.ack_messages(sub_key, [msg_id], [sequence_id])
-                self.server.config_manager.outgoing_queue_depth.lower(sub_key, fully_delivered_count)
-
-            # .. whereas the messages of any other subscriber are acked together once the batch is over.
-            else:
-                msg_ids.append(msg_id)
-                sequence_ids.append(sequence_id)
-
-        # Delivered, expired and given-up messages all leave the queue - retrying
-        # ran its course above, so nothing here is awaiting another attempt.
-        self.fence.check()
-        _ = self.backend.ack_messages(sub_key, msg_ids, sequence_ids)
+            # .. and each message is acked as soon as it is concluded, counting out only what the ack removed,
+            # .. so a delivery stopped in the middle of a batch leaves no concluded message behind.
+            fully_delivered_count = self.backend.ack_messages(sub_key, [msg_id], [sequence_id])
+            self.server.config_manager.outgoing_queue_depth.lower(sub_key, fully_delivered_count)
 
 # ################################################################################################################################
 
@@ -420,13 +392,9 @@ class PushDelivery:
                 logger.info('Message left the queue before delivery, sub_key `%s`, msg_id `%s`', sub_key, msg_id)
                 return True
 
-            # .. once another server took over the database, this one sends nothing anymore ..
+            # .. and once another server took over the database, this one sends nothing anymore.
             if e.reason == Interrupt_Replaced:
                 raise PubSubReplaced(str(e.__cause__)) from e
-
-            # .. and once a replacement worker started in this slot, this worker sends nothing anymore.
-            if e.reason == Interrupt_Fenced:
-                raise DeliveryFenced(str(e.__cause__)) from e
 
             self._conclude_expired(message, sub_config, sub_key)
             return True
@@ -514,9 +482,6 @@ class PushDelivery:
     ) -> 'None':
         """ Writes the one audit event describing how a push delivery concluded.
         """
-        # A worker whose slot received a replacement records no outcome
-        self.fence.check()
-
         # The backend has no audit log in unit tests only.
         if not self.backend.audit_log:
             return
@@ -650,12 +615,6 @@ class PushDelivery:
         # The first attempt of a message of an atomic batch was recorded with the other messages of the batch
         if message.pop(Attempt_Recorded_Key, False):
             return
-
-        # A worker whose slot received a replacement sends no further attempt
-        try:
-            self.fence.check()
-        except DeliveryFenced as e:
-            raise DeliveryInterrupted(Interrupt_Fenced, 0) from e
 
         try:
             with self._database_slots:

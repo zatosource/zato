@@ -387,7 +387,7 @@ class Service:
     _filter_by = None
 
     # A service with this flag on changes the configuration of the server and publishes its change as an event,
-    # so a worker of a multi-process server forwards each invocation of it to the config process.
+    # so the worker of a server that an arbiter started forwards each invocation of it to the config process.
     changes_config:'bool' = False
     enforce_service_invokes: 'bool'
     invokes = []

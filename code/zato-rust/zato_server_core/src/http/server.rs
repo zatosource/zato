@@ -68,7 +68,7 @@ impl Drop for HTTPServer {
 
 /// Sets the name that `ps` and `top` list for the process to its role.
 ///
-/// The roles are `zato-arbiter`, `zato-worker-<slot>` and `zato-writer`. The name is set through `PR_SET_NAME`
+/// The roles are `zato-arbiter`, `zato-config` and `zato-worker`. The name is set through `PR_SET_NAME`
 /// of the calling thread, which Linux truncates to 15 bytes.
 #[pyfunction]
 pub fn set_process_name(name: &str) -> PyResult<()> {

@@ -176,8 +176,8 @@ class PubSubFacade:
                 # .. add it to this process ..
                 add_service_topic(self.server, service_name)
 
-                # .. the worker that owns the sub key delivers the messages, which may be another worker,
-                # .. so each process of the server adds the subscription as well ..
+                # .. the worker delivers the messages, and each process of the server
+                # .. adds the subscription as well ..
                 self.server.config_dispatcher.relay_only({
                     'action': BrokerMessageServer.Service_Topic_Created.value,
                     'service_name': service_name,

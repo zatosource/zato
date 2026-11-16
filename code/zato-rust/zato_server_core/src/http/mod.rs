@@ -59,12 +59,6 @@ pub(crate) const LISTEN_BACKLOG: libc::c_int = 2048;
 /// Maximum connections accepted per event loop iteration before yielding to gevent.
 pub(crate) const MAX_BATCH_ACCEPT: usize = 256;
 
-/// Maximum requests served on one keep-alive connection, after which the response closes it.
-///
-/// `SO_REUSEPORT` assigns a connection to the listening socket of one worker for its whole life,
-/// so a client that opens the connection again lets the kernel assign it to another worker.
-pub(crate) const MAX_REQUESTS_PER_CONNECTION: u64 = 1000;
-
 /// Gevent IO event constant for read readiness.
 pub(crate) const GEVENT_IO_READ: i32 = 1;
 

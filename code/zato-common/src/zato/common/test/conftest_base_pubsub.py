@@ -48,8 +48,8 @@ _quickstart_timeout   = 600
 
 _ping_poll_interval   = 0.5
 
-# What the arbiter logs the first time that the worker of every slot is ready
-_all_workers_ready_pattern = re.compile(r'zato\.server\.arbiter:\d+ - Workers of all \d+ slots are ready')
+# What the arbiter logs the first time that the worker is ready
+_worker_ready_pattern = re.compile(r'zato\.server\.arbiter:\d+ - Worker is ready')
 
 # The logs that are copied out of an environment before it is torn down
 _server_log_file_name        = 'server.log'
@@ -236,9 +236,9 @@ def start_server_process(
 
     popen_time = time.monotonic()
 
-    # The first worker answers before the others have deployed the services of the pickup directory,
-    # so the server is ready for the tests only once the arbiter reports every worker ready.
-    all_workers_ready = threading.Event()
+    # The worker answers before it has deployed the services of the pickup directory,
+    # so the server is ready for the tests only once the arbiter reports the worker ready.
+    worker_ready = threading.Event()
 
     # .. stream server stdout in a background thread ..
     def _stream_server_output() -> 'None':
@@ -251,8 +251,8 @@ def start_server_process(
             elapsed = time.monotonic() - popen_time
             logger.debug('[SERVER %6.1fs] %s', elapsed, text)
 
-            if _all_workers_ready_pattern.search(text):
-                all_workers_ready.set()
+            if _worker_ready_pattern.search(text):
+                worker_ready.set()
 
     stdout_thread = threading.Thread(target=_stream_server_output, name='server-output', daemon=True)
     stdout_thread.start()
@@ -263,9 +263,9 @@ def start_server_process(
     try:
         wait_for_server(logger, host, server_port)
 
-        # .. and for each of its workers.
-        if not all_workers_ready.wait(_server_wait_timeout):
-            raise RuntimeError(f'Not every worker of the server was ready within {_server_wait_timeout}s')
+        # .. and for its worker.
+        if not worker_ready.wait(_server_wait_timeout):
+            raise RuntimeError(f'The worker of the server was not ready within {_server_wait_timeout}s')
 
         logger.info('Server ready: %.1fs', time.monotonic() - popen_time)
 

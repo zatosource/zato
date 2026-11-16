@@ -6,9 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The first in first out queue of the worker processes of one server for the writes to one SQLite file.
-# A write takes a place in the queue of the shared region, waits for its turn on the wake-up descriptor
-# of its slot in that queue, and releases the turn when it completes.
+# The first in first out queue of the worker and the config process of one server for the writes to one SQLite file.
+# A write takes a ticket in the queue of the shared region, waits for its turn on the wake-up descriptor
+# of the place of its process in that queue, and releases the turn when it completes.
 
 # stdlib
 from select import POLLIN
@@ -34,8 +34,8 @@ if 0:
 
 class ModuleCtx:
 
-    # How many busy timeouts of SQLite a write waits for its turn, for each worker of the server
-    Busy_Timeouts_Per_Worker = 2
+    # How many busy timeouts of SQLite a write waits for its turn
+    Busy_Timeouts_Per_Wait = 2
 
     Milliseconds_Per_Second = 1000
 
@@ -52,10 +52,10 @@ class ProcessQueueTimeout(Exception):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_deadline_seconds(busy_timeout_ms:'int', worker_count:'int') -> 'float':
-    """ Returns how long a write waits for its turn, a number of busy timeouts of SQLite for each worker.
+def get_deadline_seconds(busy_timeout_ms:'int') -> 'float':
+    """ Returns how long a write waits for its turn, a number of busy timeouts of SQLite.
     """
-    deadline_ms = busy_timeout_ms * ModuleCtx.Busy_Timeouts_Per_Worker * worker_count
+    deadline_ms = busy_timeout_ms * ModuleCtx.Busy_Timeouts_Per_Wait
     out = deadline_ms / ModuleCtx.Milliseconds_Per_Second
     return out
 
@@ -63,21 +63,21 @@ def get_deadline_seconds(busy_timeout_ms:'int', worker_count:'int') -> 'float':
 # ################################################################################################################################
 
 class ProcessQueue:
-    """ The place of one worker process in the queue of the shared region for the writes to one SQLite file.
-    The caller holds the thread lock of the file in its process, so one thread of a worker is in the queue at a time.
+    """ The place of one process in the queue of the shared region for the writes to one SQLite file.
+    The caller holds the thread lock of the file in its process, so one thread of a process is in the queue at a time.
     """
 
-    def __init__(self, region:'SharedRegion', queue:'int', slot:'int', deadline_seconds:'float') -> 'None':
+    def __init__(self, region:'SharedRegion', queue:'int', place:'int', deadline_seconds:'float') -> 'None':
         self.region           = region
         self.queue            = queue
-        self.slot             = slot
+        self.place            = place
         self.deadline_seconds = deadline_seconds
-        self.wake_fd          = region.queue_wake_fd(queue, slot)
+        self.wake_fd          = region.queue_wake_fd(queue, place)
 
 # ################################################################################################################################
 
     def _wait_for_turn(self) -> 'bool':
-        """ Returns whether the turn came before the deadline. The wake-ups of the slot are drained before each poll,
+        """ Returns whether the turn came before the deadline. The wake-ups of the place are drained before each poll,
         so one that arrives during a poll makes the next wait return at once.
         """
         now = monotonic()
@@ -87,7 +87,7 @@ class ProcessQueue:
         poller.register(self.wake_fd, POLLIN)
 
         # The first poll follows the entry, which may have found the queue empty ..
-        has_turn = self.region.queue_poll(self.queue, self.slot)
+        has_turn = self.region.queue_poll(self.queue, self.place)
 
         # .. and each later one follows a wake-up, until the turn comes or the deadline passes.
         while not has_turn:
@@ -100,40 +100,40 @@ class ProcessQueue:
 
             remaining_ms = remaining * ModuleCtx.Milliseconds_Per_Second
             _ = poller.poll(remaining_ms)
-            _ = self.region.queue_drain(self.queue, self.slot)
+            _ = self.region.queue_drain(self.queue, self.place)
 
-            has_turn = self.region.queue_poll(self.queue, self.slot)
+            has_turn = self.region.queue_poll(self.queue, self.place)
 
         return has_turn
 
 # ################################################################################################################################
 
     def run(self, func:'callable_', args:'anytuple') -> 'any_':
-        """ Runs one write when the turn of this worker comes, and releases the turn when the write completes.
+        """ Runs one write when the turn of this process comes, and releases the turn when the write completes.
         """
-        # Take a place in the queue ..
-        _ = self.region.queue_enter(self.queue, self.slot)
+        # Take a ticket in the queue ..
+        _ = self.region.queue_enter(self.queue, self.place)
 
-        # .. wait for the turn, and withdraw the place when the deadline passes ..
+        # .. wait for the turn, and withdraw the ticket when the deadline passes ..
         has_turn = self._wait_for_turn()
 
         if not has_turn:
-            self.region.queue_abandon(self.queue, self.slot)
-            message = f'No turn in writer queue {self.queue} for slot {self.slot} within {self.deadline_seconds}s'
+            self.region.queue_abandon(self.queue, self.place)
+            message = f'No turn in writer queue {self.queue} for place {self.place} within {self.deadline_seconds}s'
             raise ProcessQueueTimeout(message)
 
-        # .. and run the write, after which the next worker in the queue is woken.
+        # .. and run the write, after which the other process, if it waits in the queue, is woken.
         try:
             out = func(*args)
         finally:
-            self.region.queue_release(self.queue, self.slot)
+            self.region.queue_release(self.queue, self.place)
 
         return out
 
 # ################################################################################################################################
 
     def run_under_lock(self, lock:'any_', func:'callable_', args:'anytuple') -> 'any_':
-        """ Runs one write under the thread lock of the file in this process, then in the queue of all the workers.
+        """ Runs one write under the thread lock of the file in this process, then in the queue of the server.
         """
         with lock:
             out = self.run(func, args)

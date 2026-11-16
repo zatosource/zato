@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The gate in the config process between the changes to configuration and the workers that load configuration.
-# A change runs only while no worker loads, and a worker begins to load only between two changes, so every worker
+# The gate in the config process between the changes to configuration and the worker that loads configuration.
+# A change runs only while the worker does not load, and the worker begins to load only between two changes, so the worker
 # loads either all of a change or none of it, and the events of a change it loaded none of reach it after its load.
 
 # gevent
@@ -105,7 +105,7 @@ class ChangeGate:
 # ################################################################################################################################
 
     def set_loading(self, loading:'dict[int, str]') -> 'None':
-        """ Takes over the workers that loaded configuration when the previous config process exited.
+        """ Takes over the loads of configuration in progress when the previous config process exited.
         """
         self.loading.update(loading)
         self._update_idle()

@@ -20,7 +20,6 @@ from zato.common.hl7.mllp.circuit_breaker import CircuitBreaker, SendingStopped
 from zato.common.hl7.mllp.client import HL7MLLPClient
 from zato.common.hl7.mllp.dedup import extract_control_id
 from zato.common.hl7.mllp.fields import Outgoing_Bool_Names, Outgoing_Defaults, Outgoing_Int_Names
-from zato.common.hl7.mllp.region import get_worker_pool_size
 from zato.common.hl7.mllp.tls import build_client_ssl_context
 from zato.common.pubsub.outgoing import Attempts_None, Key_Data, OutgoingPublisher, OutgoingType, SendRejected
 from zato.common.util.api import asbool, hex_sequence_to_bytes, new_cid_server
@@ -302,10 +301,6 @@ class OutconnHL7MLLPWrapper(Wrapper):
     """
     def __init__(self, config:'Bunch', server:'ParallelServer') -> 'None':
         config.auth_url = config.address
-
-        # Each worker of the server keeps its share of the connections of the pool
-        config.pool_size = get_worker_pool_size(config.pool_size)
-
         super().__init__(config, 'HL7 MLLP', server)
 
         # A connection whose audit log is on writes a sent and an ACK event per message
@@ -317,13 +312,11 @@ class OutconnHL7MLLPWrapper(Wrapper):
         # Whether a send that did not go through waits in the connection's queue
         self.use_queue = self.config[_use_queue_field]
 
-        # The send limit of the connection, one for every pooled connection to the receiving system, kept under the id
-        # of the connection, which a rename leaves alone
+        # The send limit of the connection, one for every pooled connection to the receiving system
         self.breaker = CircuitBreaker(
             self.config.circuit_breaker_threshold_percent,
             self.config.circuit_breaker_window_seconds,
             self.config.circuit_breaker_reset_seconds,
-            str(self.config.id),
         )
 
         # What a guaranteed delivery to this connection goes through. It is built from the connection's

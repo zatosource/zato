@@ -137,7 +137,7 @@ def _load_new_events(last_event_id:'int') -> 'list':
         newer_than_watermark,
     )
 
-    # The transactions of the workers commit in any order on PostgreSQL, so the read stops at the highest id
+    # Concurrent transactions commit in any order on PostgreSQL, so the read stops at the highest id
     # below which every event is committed, and an event above it is read by a later run.
     # On SQLite, each insert holds the write lock until its commit, so the events commit in the order of their ids.
     if engine.dialect.name == Type_PostgreSQL:

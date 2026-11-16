@@ -12,20 +12,14 @@ import logging
 # Zato
 from zato.common.rate_limiting.cidr import SlottedCIDRMatcher
 from zato.common.rate_limiting.fixed_window import FixedWindowRegistry
-from zato.common.rate_limiting.region import RegionFixedWindowRegistry, RegionTokenBucketRegistry
 from zato.common.rate_limiting.token_bucket import TokenBucketRegistry
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.rate_limiting.cidr import anyfixedwindowregistry, anytokenbucketregistry, SlottedCheckResult
+    from zato.common.rate_limiting.cidr import SlottedCheckResult
     from zato.common.typing_ import strdictlist
-    from zato_ipc_core.zato_ipc_core import SharedRegion
-
-    anyfixedwindowregistry = anyfixedwindowregistry
-    anytokenbucketregistry = anytokenbucketregistry
-    SharedRegion = SharedRegion
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,17 +38,8 @@ class RateLimitingManager:
     def __init__(self) -> 'None':
         self._channel_matchers:'matcher_dict' = {}
         self._sec_def_matchers:'matcher_dict' = {}
-        self._token_buckets:'anytokenbucketregistry' = TokenBucketRegistry()
-        self._fixed_windows:'anyfixedwindowregistry' = FixedWindowRegistry()
-
-# ################################################################################################################################
-
-    def use_region(self, region:'SharedRegion', slot:'int', table_full_metric:'int') -> 'None':
-        """ Keeps the counters in the shared region, so that every worker of the server counts against the same limits
-        and a clear made through one worker is in effect in every worker. A worker calls it before its first request.
-        """
-        self._token_buckets = RegionTokenBucketRegistry(region, slot, table_full_metric)
-        self._fixed_windows = RegionFixedWindowRegistry(region, slot, table_full_metric)
+        self._token_buckets = TokenBucketRegistry()
+        self._fixed_windows = FixedWindowRegistry()
 
 # ################################################################################################################################
 

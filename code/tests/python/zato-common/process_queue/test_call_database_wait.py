@@ -30,26 +30,19 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Workers are forked, as the arbiter forks them, so that they inherit the mapping and the descriptors
+# The processes are forked, as the arbiter forks them, so that they inherit the mapping and the descriptors
 _context = get_context('fork')
 
 _region_config = {
-    'slot_count': 2,
-    'wake_capacity': 8,
-    'cell_capacity': 8,
     'queue_count': 1,
-    'metric_count': 1,
-    'series_capacity': 0,
-    'series_key_bytes': 0,
-    'dedup_capacity': 0,
-    'breaker_capacity': 0,
     'lock_capacity': 0,
-    'start_id': 1,
 }
 
 _queue = 0
-_holder_slot = 0
-_writer_slot = 1
+
+# The config process holds the turn and the worker writes
+_holder_place = 1
+_writer_place = 0
 
 # How long the holder keeps the turn before it releases it, in seconds
 _hold_time = 0.5
@@ -74,23 +67,23 @@ _report_timeout = 20.0
 def _hold_turn(region:'SharedRegion', conn:'Connection') -> 'None':
     """ Takes the turn of the queue and keeps it until the test asks for its release, then reports when it released it.
     """
-    _ = region.queue_enter(_queue, _holder_slot)
+    _ = region.queue_enter(_queue, _holder_place)
 
-    while not region.queue_poll(_queue, _holder_slot):
+    while not region.queue_poll(_queue, _holder_place):
         time.sleep(_tick_interval)
 
     conn.send('holding')
 
     _ = conn.recv()
     released_at = time.monotonic()
-    region.queue_release(_queue, _holder_slot)
+    region.queue_release(_queue, _holder_place)
 
     conn.send(released_at)
 
 # ################################################################################################################################
 
 def _write_while_counting(region:'SharedRegion', db_path:'str', deadline:'float', conn:'Connection') -> 'None':
-    """ Writes once through call_database while another greenlet of the same worker counts at a fixed interval,
+    """ Writes once through call_database while another greenlet of the worker counts at a fixed interval,
     and reports when the write ran, or the exception, with the counts made during the call.
     """
     exit_code = 1
@@ -98,7 +91,7 @@ def _write_while_counting(region:'SharedRegion', db_path:'str', deadline:'float'
     try:
 
         # The worker runs under gevent, as a server does, so call_database runs the write in the pool of the hub,
-        # whose loop and threads are its own, as the arbiter makes them for each worker that it forks ..
+        # whose loop and threads are its own, as the arbiter makes them for each process that it forks ..
         from gevent import monkey, reinit, sleep, spawn
         reinit()
         _ = monkey.patch_all()
@@ -108,7 +101,7 @@ def _write_while_counting(region:'SharedRegion', db_path:'str', deadline:'float'
         from zato.common.db_env.process_queue import ProcessQueue
 
         engine = create_engine(f'sqlite:///{db_path}')
-        process_queue = ProcessQueue(region, _queue, _writer_slot, deadline)
+        process_queue = ProcessQueue(region, _queue, _writer_place, deadline)
         set_process_queue(engine, process_queue)
 
         # .. another greenlet counts while the write waits for its turn ..
@@ -174,19 +167,19 @@ def _receive(conn:'Connection') -> 'any_':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_a_write_waits_for_the_turn_of_another_worker_without_blocking_its_greenlets(tmp_path:'Path') -> 'None':
+def test_a_write_waits_for_the_turn_of_the_config_process_without_blocking_its_greenlets(tmp_path:'Path') -> 'None':
     region = SharedRegion(_region_config)
     db_path = str(tmp_path / 'waited.db')
 
-    # Another worker holds the turn of the file ..
+    # The config process holds the turn of the file ..
     holder_conn = _start(_hold_turn, (region,))
     assert _receive(holder_conn) == 'holding'
 
-    # .. this worker begins its write ..
+    # .. the worker begins its write ..
     writer_conn = _start(_write_while_counting, (region, db_path, _long_deadline))
     assert _receive(writer_conn) == 'waiting'
 
-    # .. the other worker releases the turn after a while ..
+    # .. the config process releases the turn after a while ..
     time.sleep(_hold_time)
     holder_conn.send('release')
     released_at = _receive(holder_conn)
@@ -206,11 +199,11 @@ def test_a_write_that_receives_no_turn_raises_at_its_deadline_without_blocking_i
     region = SharedRegion(_region_config)
     db_path = str(tmp_path / 'refused.db')
 
-    # Another worker holds the turn of the file throughout ..
+    # The config process holds the turn of the file throughout ..
     holder_conn = _start(_hold_turn, (region,))
     assert _receive(holder_conn) == 'holding'
 
-    # .. so the write of this worker raises once its deadline passes, without running ..
+    # .. so the write of the worker raises once its deadline passes, without running ..
     writer_conn = _start(_write_while_counting, (region, db_path, _short_deadline))
     assert _receive(writer_conn) == 'waiting'
 
@@ -224,7 +217,7 @@ def test_a_write_that_receives_no_turn_raises_at_its_deadline_without_blocking_i
     assert ticks_during >= _ticks_min
 
     # .. and the write withdrew its place, so the holder's release wakes no one.
-    assert not region.queue_has_place(_queue, _writer_slot)
+    assert not region.queue_has_place(_queue, _writer_place)
 
     holder_conn.send('release')
     _ = _receive(holder_conn)

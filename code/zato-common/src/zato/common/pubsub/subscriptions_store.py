@@ -19,7 +19,7 @@ from zato.common.util.api import new_sub_key
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strdict, strlist, strnone
+    from zato.common.typing_ import strdict, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -183,15 +183,6 @@ class SubscriptionsStore:
             if username := self._sec_name_to_username.pop(old_sec_name, None):
                 self._sec_name_to_username[new_sec_name] = username
                 self._username_to_sec_name[username] = new_sec_name
-
-# ################################################################################################################################
-
-    def get_sub_keys(self) -> 'strlist':
-        """ Returns the subscription key of every user that has one.
-        """
-        with self._lock:
-            out = list(self._sub_key_to_username)
-            return out
 
 # ################################################################################################################################
 

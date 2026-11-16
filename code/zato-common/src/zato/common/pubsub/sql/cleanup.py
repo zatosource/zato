@@ -13,7 +13,6 @@ import os
 import signal
 import sys
 import time
-from datetime import timedelta
 
 # SQLAlchemy
 from sqlalchemy import and_, select, text
@@ -25,7 +24,7 @@ from zato.common.db_env.errors import is_transient
 from zato.common.db_env.outage import OutageTracker
 from zato.common.pubsub.sql.clock import get_database_clock
 from zato.common.pubsub.sql.config import get_batch_size, get_delivered_max_days, get_delivered_max_messages, \
-    get_generation_file_path, get_pubsub_engine, get_trace_grace_seconds
+    get_generation_file_path, get_pubsub_engine
 from zato.common.pubsub.sql.counts import compact_counts
 from zato.common.pubsub.sql.generation import GenerationGuard, read_generation_file
 from zato.common.pubsub.sql.replaced import PubSubReplaced
@@ -90,22 +89,10 @@ _ms_per_day = 24 * 60 * 60 * _ms_per_second
 # ################################################################################################################################
 
 def _get_trace_batch_query(condition:'any_', batch_size:'int') -> 'any_':
-    """ Returns the query of the next batch of the message rows of the traces that meet the condition
-    and that were received before the grace period of the traces. The message rows are locked,
-    and those that other transactions hold are skipped.
+    """ Returns the query of the next batch of the message rows of the traces that meet the condition.
+    The message rows are locked, and those that other transactions hold are skipped.
     """
     join = trace_table.join(message_table, message_table.c.id == trace_table.c.message_id)
-
-    # Without a writer process, no publication is sent again and the traces have no grace period ..
-    grace_seconds = get_trace_grace_seconds()
-
-    # .. otherwise, the time of receipt is set by the clock of the database in one format, so its texts sort
-    # .. as its instants, whereas the time of publication may be given by the publisher.
-    if grace_seconds:
-        grace_delta = timedelta(seconds=grace_seconds)
-        grace_start = get_database_clock().now() - grace_delta
-        grace_start_iso = grace_start.isoformat()
-        condition = and_(condition, message_table.c.recv_time_iso < grace_start_iso)
 
     out = select(message_table.c.id)
     out = out.select_from(join)

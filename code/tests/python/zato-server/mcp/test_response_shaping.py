@@ -55,7 +55,7 @@ def _make_handler(invoke_func:'callable_', gateway_config:'stranydict') -> 'MCPH
     """
 
     registry = _MockToolRegistry()
-    session_manager = MCPSessionManager(_test_public_name)
+    session_manager = MCPSessionManager()
 
     safeguard_config = build_safeguard_config(gateway_config)
     token_cap_config = build_token_cap_config(gateway_config)

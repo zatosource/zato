@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The routes of the control channel between the workers and the config process, which the hub of the arbiter follows.
+# The routes of the control channel between the worker and the config process, which the hub of the arbiter follows.
 # A forwarded invocation goes to the config process and its result goes back to the worker that forwarded it,
 # after the events of the change, because both reach the worker through the same queue of its slot. The arbiter
 # records the load requests that the config process has not served and the marks that no load report followed,
@@ -68,7 +68,7 @@ def new_unavailable_result() -> 'anydict':
 # ################################################################################################################################
 
 class ConfigRoute:
-    """ Routes the forwarded invocations and the loads of configuration between the workers and the config process.
+    """ Routes the forwarded invocations and the loads of configuration between the worker and the config process.
     """
 
     def __init__(self, hub:'ControlHub') -> 'None':
@@ -117,7 +117,7 @@ class ConfigRoute:
 # ################################################################################################################################
 
     def _send_result(self, slot:'int', cid:'str', body:'anydict') -> 'None':
-        """ Sends the result of a forwarded invocation to the worker of a slot, if that worker still runs.
+        """ Sends the result of a forwarded invocation to the worker, if the worker still runs.
         """
         if slot not in self.hub.channels:
             return

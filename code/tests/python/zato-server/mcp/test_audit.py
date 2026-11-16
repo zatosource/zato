@@ -299,7 +299,7 @@ def _make_handler() -> 'MCPHandler':
         return {}
 
     registry = _MockToolRegistry()
-    session_manager = MCPSessionManager('test.mcp.gateway')
+    session_manager = MCPSessionManager()
 
     safeguard_config = build_safeguard_config({})
     token_cap_config = build_token_cap_config({})

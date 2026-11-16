@@ -43,9 +43,6 @@ class ModuleCtx:
     # The generation counter of the cached responses of a channel, outside the key space that a purge deletes
     Response_Generation_Key = 'cache:generation:{}'
 
-    # The prefix of the coalescing lock of a cached response, outside the key space that a purge deletes
-    Response_Lock_Prefix = 'cache:lock:'
-
     # Stores a value only while a counter holds the value read earlier, an absent counter reading as 0,
     # with ARGV[3] as the expiry in seconds and 0 meaning no expiry.
     Set_If_Counter_Script = """
@@ -64,15 +61,6 @@ end
 return 1
 """
 
-    # Deletes a key only while it holds the value given, so a holder never deletes a key that expired
-    # and was stored again by another holder.
-    Delete_If_Value_Script = """
-if redis.call('get', KEYS[1]) == ARGV[1] then
-    return redis.call('del', KEYS[1])
-end
-return 0
-"""
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -86,7 +74,6 @@ class CacheAPI:
         self.config_manager = config_manager
 
         self._set_if_counter = self.redis.register_script(ModuleCtx.Set_If_Counter_Script)
-        self._delete_if_value = self.redis.register_script(ModuleCtx.Delete_If_Value_Script)
 
 # ################################################################################################################################
 
@@ -212,19 +199,6 @@ class CacheAPI:
         stored = self._set_if_counter(keys=[redis_key, redis_counter_key], args=[counter, serialized, expiry])
 
         out = bool(stored)
-        return out
-
-# ################################################################################################################################
-
-    def delete_if_value(self, key:'str', value:'any_') -> 'bool':
-        """ Deletes a key only while it holds the value given, in one atomic step. Returns True when the key was deleted.
-        """
-        redis_key = self._make_key(key)
-        serialized = dumps(value)
-
-        deleted = self._delete_if_value(keys=[redis_key], args=[serialized])
-
-        out = bool(deleted)
         return out
 
 # ################################################################################################################################

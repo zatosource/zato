@@ -1,3 +1,3 @@
 # zato_ipc_core
 
-Shared memory region of the Zato server workers - the worker slot table, wake counters of subscription keys, rate limiting cells, per-slot metric counters, first-in first-out queues of SQLite writers and the wake-up descriptors of the workers.
+Shared memory region of a Zato server - the heartbeat of the worker, the first-in first-out queues through which the worker and the config process take turns writing to each SQLite database file, the keyed locks of outgoing connections with their counters, and the wake-up descriptors of the places of those queues.

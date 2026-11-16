@@ -33,24 +33,6 @@ class FakeCacheAPI:
         self.data[key] = dumps(value)
         self.ttl[key] = expiry
 
-    def exists(self, key:'str') -> 'bool':
-        return key in self.data
-
-    def set_if_absent(self, key:'str', value:'any_', expiry:'int'=0) -> 'bool':
-        if key in self.data:
-            return False
-        self.set(key, value, expiry)
-        return True
-
-    def delete_if_value(self, key:'str', value:'any_') -> 'bool':
-        if key not in self.data:
-            return False
-        if self.data[key] != dumps(value):
-            return False
-        del self.data[key]
-        del self.ttl[key]
-        return True
-
     def get_counter(self, counter_key:'str') -> 'int':
         if counter_key in self.counters:
             return self.counters[counter_key]

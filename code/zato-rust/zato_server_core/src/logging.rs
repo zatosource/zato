@@ -1,8 +1,8 @@
 //! Rotating file loggers for Zato REST summary and access logs.
 //!
 //! A writer with a size limit rotates on overflow: the current file becomes `.log.1`, the previous `.log.1` becomes `.log.2`.
-//! In a server with several worker processes, each worker opens its writers without a limit, the arbiter renames the files,
-//! and [`reopen_logs`] opens them under their paths again on the command of the arbiter.
+//! In a server that an arbiter started, the worker and the config process open their writers without a limit,
+//! the arbiter renames the files, and [`reopen_logs`] opens them under their paths again on the command of the arbiter.
 
 use std::fs::{File, OpenOptions};
 use std::io::Write;
@@ -208,7 +208,7 @@ pub fn init_access_log(path: &str, max_bytes: u64) -> PyResult<()> {
     init_writer(&ACCESS_WRITER, path, max_bytes)
 }
 
-/// Python-callable reopen of the REST summary and access log writers, which a worker runs on the command of the arbiter.
+/// Python-callable reopen of the REST summary and access log writers, which a process runs on the command of the arbiter.
 ///
 /// Each writer is reopened under its lock, so no line is split across the renamed file and the new one.
 /// A writer that was not initialized in this process is skipped.

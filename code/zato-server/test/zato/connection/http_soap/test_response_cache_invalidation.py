@@ -62,10 +62,8 @@ class FakeRedis:
         self.data[key] = str(out)
         return out
 
-    def register_script(self, script:'str') -> 'any_':
-        if script == cache_module.ModuleCtx.Set_If_Counter_Script:
-            return self._set_if_counter
-        return self._delete_if_value
+    def register_script(self, _script:'str') -> 'any_':
+        return self._set_if_counter
 
     def _set_if_counter(self, keys:'anylist', args:'anylist') -> 'int':
         key, counter_key = keys
@@ -73,13 +71,6 @@ class FakeRedis:
         if int(self.data.get(counter_key, 0)) != counter:
             return 0
         self.data[key] = serialized
-        return 1
-
-    def _delete_if_value(self, keys:'anylist', args:'anylist') -> 'int':
-        key = keys[0]
-        if self.data.get(key) != args[0]:
-            return 0
-        del self.data[key]
         return 1
 
 # ################################################################################################################################

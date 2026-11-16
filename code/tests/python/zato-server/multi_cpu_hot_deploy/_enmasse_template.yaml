@@ -1,7 +1,0 @@
-channel_rest:
-
-  # The service that returns the slot of the worker that served the request
-  - name: test.multi-cpu.hot-deploy.worker-slot
-    service: test.multi-cpu.worker-slot
-    url_path: /test/multi-cpu/worker-slot
-    data_format: json

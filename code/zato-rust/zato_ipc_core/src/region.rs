@@ -1,6 +1,6 @@
 //! Creation of the shared memory region in an anonymous memory file.
 //!
-//! The arbiter creates the region before it forks the workers, so every worker inherits
+//! The arbiter creates the region before it forks the worker and the config process, so both inherit
 //! the mapping at the same address. The memory file has no name in the file system,
 //! so the size limit of `/dev/shm` in containers does not apply to it.
 
@@ -63,17 +63,17 @@ fn map_words(memory_file: &OwnedFd, layout: &Layout) -> Result<&'static [AtomicU
 
 impl Region {
 
-    /// Creates the region of a server, with the given table sizes and the start ID of its arbiter.
-    pub fn create(params: RegionParams, start_id: u64) -> Result<Self, RegionError> {
+    /// Creates the region of a server with the given table sizes.
+    pub fn create(params: RegionParams) -> Result<Self, RegionError> {
         let layout = Layout::new(params)?;
         let byte_count = u64::try_from(layout.total_bytes()?).map_err(|_conversion_error| RegionError::LayoutTooLarge)?;
 
-        // Workers inherit the descriptor at fork, and no program the server starts later needs it.
+        // The worker and the config process inherit the descriptor at fork, and no program the server starts later needs it.
         let memory_file = memfd_create(MEMORY_FILE_NAME, MemfdFlags::CLOEXEC)?;
         ftruncate(&memory_file, byte_count)?;
 
         let words = map_words(&memory_file, &layout)?;
-        layout.write_header(words, start_id)?;
+        layout.write_header(words)?;
 
         let out = Self {
             memory_file,
@@ -110,19 +110,16 @@ mod tests {
 
     #[test]
     fn created_region_has_a_valid_header() -> Result<(), RegionError> {
-        let region = Region::create(small_params(), 1_794_000_000)?;
+        let region = Region::create(small_params())?;
 
         region.verify()?;
-
-        let view = region.view()?;
-        assert_eq!(view.start_id()?, 1_794_000_000);
 
         Ok(())
     }
 
     #[test]
     fn region_starts_at_a_block_boundary() -> Result<(), RegionError> {
-        let region = Region::create(small_params(), 1)?;
+        let region = Region::create(small_params())?;
 
         // The offsets of the layout align each entry to a block only if the mapping itself starts at one
         let block_bytes = BLOCK_WORDS * BYTES_PER_WORD;
@@ -133,7 +130,7 @@ mod tests {
 
     #[test]
     fn changed_header_is_detected() -> Result<(), RegionError> {
-        let region = Region::create(small_params(), 1)?;
+        let region = Region::create(small_params())?;
         let view = region.view()?;
 
         view.word(HEADER_VERSION)?.store(99, Ordering::SeqCst);
@@ -145,13 +142,13 @@ mod tests {
 
     #[test]
     fn region_is_shared_with_a_second_mapping() -> Result<(), RegionError> {
-        let region = Region::create(small_params(), 1)?;
+        let region = Region::create(small_params())?;
         let second = map_words(region.memory_file(), &region.layout)?;
         let second_view = RegionView::new(second, region.layout)?;
 
-        region.view()?.wake_increment("zpsk.rest.orders")?;
+        region.view()?.set_heartbeat(1_794_000_000)?;
 
-        assert_eq!(second_view.wake_value("zpsk.rest.orders")?, 1);
+        assert_eq!(second_view.heartbeat()?, 1_794_000_000);
 
         Ok(())
     }

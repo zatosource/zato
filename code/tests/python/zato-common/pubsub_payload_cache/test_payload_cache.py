@@ -17,41 +17,23 @@ import gevent
 from sqlalchemy import event
 
 # Zato
-from zato.common.pubsub.sql.payload_cache import get_payload_cache_size, LocalPayloadEpoch, Max_Payload_Cache_Size, \
-     PayloadCache, SharedPayloadEpoch
+from zato.common.pubsub.sql.payload_cache import PayloadCache, PayloadEpoch
 from zato.common.pubsub.sql.pull import payload_query
-from zato_ipc_core.zato_ipc_core import SharedRegion
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from multiprocessing.connection import Connection
     from zato.common.typing_ import any_, callable_
 
     any_ = any_
     callable_ = callable_
-    Connection = Connection
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The workers of another process are forked, so that they inherit the region
+# The body of a test that starts a backend runs in a forked process
 _context = get_context('fork')
-
-_region_config = {
-    'slot_count': 2,
-    'wake_capacity': 8,
-    'cell_capacity': 0,
-    'queue_count': 0,
-    'metric_count': 0,
-    'series_capacity': 0,
-    'series_key_bytes': 0,
-    'dedup_capacity': 0,
-    'breaker_capacity': 0,
-    'lock_capacity': 0,
-    'start_id': 1,
-}
 
 _cache_size = 100
 
@@ -88,30 +70,22 @@ def _fetch_payload(backend:'any_', msg_id:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _new_backend(db_path:'str', region:'SharedRegion | None') -> 'any_':
+def _new_backend(db_path:'str') -> 'any_':
     gevent.reinit()
     os.environ['Zato_PubSub_DB_Path'] = db_path
 
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
 
     out = SQLPubSubBackend()
-
-    if region:
-        out.share_payload_cache(region)
-
     return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_each_worker_keeps_its_share_of_the_payloads() -> 'None':
-    assert get_payload_cache_size(1) == Max_Payload_Cache_Size
-    assert get_payload_cache_size(4) == Max_Payload_Cache_Size // 4
-
 # ################################################################################################################################
 
 def test_the_payloads_used_least_recently_are_evicted() -> 'None':
-    cache = PayloadCache(_cache_size, LocalPayloadEpoch())
+    cache = PayloadCache(_cache_size, PayloadEpoch())
     read_epoch = cache.get_epoch()
 
     cache.put(_first_msg_id, 'first', 60, read_epoch)
@@ -135,7 +109,7 @@ def test_the_payloads_used_least_recently_are_evicted() -> 'None':
 # ################################################################################################################################
 
 def test_an_edit_drops_every_payload_kept() -> 'None':
-    cache = PayloadCache(_cache_size, LocalPayloadEpoch())
+    cache = PayloadCache(_cache_size, PayloadEpoch())
     read_epoch = cache.get_epoch()
 
     cache.put(_first_msg_id, 'first', 10, read_epoch)
@@ -150,7 +124,7 @@ def test_an_edit_drops_every_payload_kept() -> 'None':
 # ################################################################################################################################
 
 def test_a_payload_read_before_an_edit_is_not_kept() -> 'None':
-    cache = PayloadCache(_cache_size, LocalPayloadEpoch())
+    cache = PayloadCache(_cache_size, PayloadEpoch())
 
     # The delivery reads the epoch before its queries, the edit commits and returns, and another delivery looks
     # the message up before the first one keeps the payload ..
@@ -171,111 +145,8 @@ def test_a_payload_read_before_an_edit_is_not_kept() -> 'None':
 
 # ################################################################################################################################
 
-def test_an_edit_in_another_worker_drops_the_payload() -> 'None':
-    region = SharedRegion(_region_config)
-
-    delivering = PayloadCache(_cache_size, SharedPayloadEpoch(region))
-    editing = PayloadCache(_cache_size, SharedPayloadEpoch(region))
-
-    delivering.put(_first_msg_id, 'first', 10, delivering.get_epoch())
-    assert delivering.get(_first_msg_id) == 'first'
-
-    editing.invalidate()
-
-    assert delivering.get(_first_msg_id) is None
-
-# ################################################################################################################################
-
-def _invalidate_in_forked_worker(region:'SharedRegion') -> 'None':
-    cache = PayloadCache(_cache_size, SharedPayloadEpoch(region))
-    cache.invalidate()
-
-# ################################################################################################################################
-
-def test_an_edit_in_another_process_drops_the_payload() -> 'None':
-    region = SharedRegion(_region_config)
-
-    cache = PayloadCache(_cache_size, SharedPayloadEpoch(region))
-    cache.put(_first_msg_id, 'first', 10, cache.get_epoch())
-
-    _run_forked(_invalidate_in_forked_worker, region)
-
-    assert cache.get(_first_msg_id) is None
-
-# ################################################################################################################################
-
-def _check_the_share_of_a_backend(db_path:'str', region:'SharedRegion') -> 'None':
-    backend = _new_backend(db_path, region)
-
-    assert backend.payload_cache.max_size == Max_Payload_Cache_Size // _region_config['slot_count']
-    assert isinstance(backend.payload_cache.epoch, SharedPayloadEpoch)
-
-# ################################################################################################################################
-
-def test_a_backend_takes_its_share_under_the_shared_epoch(tmp_path:'any_') -> 'None':
-    region = SharedRegion(_region_config)
-    db_path = os.path.join(tmp_path, 'pubsub.db')
-
-    _run_forked(_check_the_share_of_a_backend, db_path, region)
-
-# ################################################################################################################################
-
-def _deliver_in_forked_worker(db_path:'str', region:'SharedRegion', conn:'Connection') -> 'None':
-    backend = _new_backend(db_path, region)
-
-    backend.subscribe(_sub_key, _topic_name)
-    msg_id = backend.publish(_topic_name, _payload_before).msg_id
-
-    assert _fetch_payload(backend, msg_id) == _payload_before
-
-    conn.send(msg_id)
-    _ = conn.recv()
-
-    assert _fetch_payload(backend, msg_id) == _payload_after
-
-# ################################################################################################################################
-
-def _edit_in_forked_worker(db_path:'str', region:'SharedRegion', conn:'Connection') -> 'None':
-    msg_id = conn.recv()
-
-    backend = _new_backend(db_path, region)
-    assert backend.update_message(_topic_name, msg_id, _payload_after)
-
-    conn.send(None)
-
-# ################################################################################################################################
-
-def test_the_next_delivery_in_another_worker_sends_the_edited_payload(tmp_path:'any_') -> 'None':
-    region = SharedRegion(_region_config)
-    db_path = os.path.join(tmp_path, 'pubsub.db')
-
-    delivering_conn, delivering_child = _context.Pipe()
-    editing_conn, editing_child = _context.Pipe()
-
-    delivering = _context.Process(target=_deliver_in_forked_worker, args=(db_path, region, delivering_child))
-    editing = _context.Process(target=_edit_in_forked_worker, args=(db_path, region, editing_child))
-
-    delivering.start()
-    editing.start()
-
-    # The payload is kept by the delivering worker before the other one edits it ..
-    msg_id = delivering_conn.recv()
-    editing_conn.send(msg_id)
-
-    # .. and the delivering worker delivers it again once update_message returned.
-    _ = editing_conn.recv()
-    delivering_conn.send(None)
-
-    delivering.join(_timeout)
-    editing.join(_timeout)
-
-    assert delivering.exitcode == 0
-    assert editing.exitcode == 0
-
-# ################################################################################################################################
-
 def _edit_during_a_delivery(db_path:'str') -> 'None':
-    backend = _new_backend(db_path, None)
+    backend = _new_backend(db_path)
 
     backend.subscribe(_sub_key, _topic_name)
     msg_id = backend.publish(_topic_name, _payload_before).msg_id

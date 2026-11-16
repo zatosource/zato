@@ -24,7 +24,6 @@ from zato.common.typing_ import cast_
 if 0:
     from gevent.lock import BoundedSemaphore
     from zato.common.pubsub.delivery_scope import DeliveryScope
-    from zato.common.pubsub.fence import DeliveryFence
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
     from zato.common.typing_ import any_, anydict, anylist, callable_, intlist, strlist, strset
     from zato.server.base.parallel import ParallelServer
@@ -45,7 +44,6 @@ Attempt_Recorded_Key = 'zato.pubsub.attempt_recorded'
 
 def deliver_atomic_batch(
     backend:'SQLPubSubBackend',
-    fence:'DeliveryFence',
     database_slots:'BoundedSemaphore',
     paused:'strset',
     deliver_one:'callable_',
@@ -62,10 +60,7 @@ def deliver_atomic_batch(
     msg_ids:'strlist' = []
     sequence_ids:'intlist' = []
 
-    # A worker whose slot received a replacement records no attempt ..
-    fence.check()
-
-    # .. one transaction records the first attempt of every message of the batch ..
+    # One transaction records the first attempt of every message of the batch ..
     with database_slots:
         pending_delivery_ids = backend.record_attempts(messages)
 
@@ -97,13 +92,12 @@ def deliver_atomic_batch(
     finally:
         close_delivery_scope()
 
-    _commit_batch(backend, fence, scope, sub_key, msg_ids, sequence_ids)
+    _commit_batch(backend, scope, sub_key, msg_ids, sequence_ids)
 
 # ################################################################################################################################
 
 def _commit_batch(
     backend:'SQLPubSubBackend',
-    fence:'DeliveryFence',
     scope:'DeliveryScope',
     sub_key:'str',
     msg_ids:'strlist',
@@ -129,7 +123,6 @@ def _commit_batch(
 
     # .. the acknowledgement and the publications commit together ..
     if msg_ids:
-        fence.check()
         backend.ack_with_publications(sub_key, msg_ids, sequence_ids, scope.publications)
 
     # .. and only then are the publications recorded.

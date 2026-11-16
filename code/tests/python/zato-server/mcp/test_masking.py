@@ -82,7 +82,7 @@ def _make_handler(gateway_config:'stranydict', invoke_func:'callable_'=_invoke_c
     """ Creates an MCPHandler the way the gateway wrapper builds one, with agent filters allowed.
     """
     registry = cast_('any_', _MockToolRegistry())
-    session_manager = MCPSessionManager(_test_public_name)
+    session_manager = MCPSessionManager()
 
     safeguard_config = build_safeguard_config(gateway_config)
     token_cap_config = build_token_cap_config(gateway_config)

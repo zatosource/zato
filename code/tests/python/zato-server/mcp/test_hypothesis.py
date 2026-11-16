@@ -70,19 +70,13 @@ class _MockToolRegistry:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The fuzzing tests create one session per example under a single identity and never exercise the per-identity
-# session cap, so the harness lifts it well above the example count of any test in this module.
-_fuzz_session_cap = 100_000
-
-# ################################################################################################################################
-
 def _make_handler(allowed_tools:'any_' = None) -> 'any_':
 
     if allowed_tools is None:
         allowed_tools = set()
 
     registry = _MockToolRegistry(allowed_tools=allowed_tools)
-    session_manager = MCPSessionManager(_test_public_name, max_sessions=_fuzz_session_cap)
+    session_manager = MCPSessionManager()
 
     def invoke_func(name:'str', payload:'any_') -> 'anydict':
         return {'echoed': payload}

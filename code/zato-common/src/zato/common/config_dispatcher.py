@@ -68,8 +68,8 @@ def _to_json_value(value:'any_') -> 'any_':
 # ################################################################################################################################
 
 def get_relay_body(msg:'anydict') -> 'anydict':
-    """ Returns a config event as the JSON body that the arbiter relays to the other workers, taken before the handler
-    of this worker runs, because a handler may add objects to the event that exist in this worker only.
+    """ Returns a config event as the JSON body that the arbiter relays to the other process, taken before the handler
+    of this process runs, because a handler may add objects to the event that exist in this process only.
     """
     msg_json = dumps(msg, default=_to_json_value)
     out = loads(msg_json)
@@ -135,7 +135,7 @@ class ConfigDispatcher:
 
     def publish(self, msg:'any_', *args:'any_', **kwargs:'any_') -> 'None':
 
-        # A worker process applies the event itself first and then sends it to the other workers ..
+        # A process that an arbiter started applies the event itself first and then sends it to the other process ..
         if self.relay:
             relay_body = get_relay_body(msg)
             _ = handle_config_event(msg, self.server.config_manager)

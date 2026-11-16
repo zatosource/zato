@@ -281,7 +281,7 @@ class ServerFunctionInvoker(AdminService):
         elif func_name == 'reload_config':
             response = func()
 
-            # Each worker loads the configuration that the config process reloaded, between two changes
+            # The worker loads the configuration that the config process reloaded, between two changes
             if is_config_process():
                 config_runtime = cast_('ConfigRuntime', self.server.worker)
                 config_runtime.request_worker_reload()

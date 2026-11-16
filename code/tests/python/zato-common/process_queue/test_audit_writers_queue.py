@@ -34,8 +34,10 @@ if 0:
 class ModuleCtx:
 
     Queue = 0
-    Holder_Slot = 0
-    Writer_Slot = 1
+
+    # The config process holds the turn and the worker writes
+    Holder_Place = 1
+    Writer_Place = 0
 
     # How long each write waits for the turn that the holder never gives up, in seconds
     Deadline = 0.2
@@ -61,24 +63,15 @@ class ModuleCtx:
 _context = get_context('fork')
 
 _region_config = {
-    'slot_count': 2,
-    'wake_capacity': 8,
-    'cell_capacity': 8,
     'queue_count': 1,
-    'metric_count': 1,
-    'series_capacity': 0,
-    'series_key_bytes': 0,
-    'dedup_capacity': 0,
-    'breaker_capacity': 0,
     'lock_capacity': 0,
-    'start_id': 1,
 }
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def _write_through_every_writer(region:'SharedRegion', db_path:'str', conn:'Connection') -> 'None':
-    """ Calls every writer of the audit database while another worker holds the turn of its file,
+    """ Calls every writer of the audit database while the config process holds the turn of its file,
     and reports the name of the exception that each call raised, or the name of its result.
     """
     exit_code = 1
@@ -119,8 +112,8 @@ def _write_through_every_writer(region:'SharedRegion', db_path:'str', conn:'Conn
         # .. one alert exists before the queue is in use, so that raising it again updates its row ..
         _ = raise_alert(engine, rule, repeated_finding, now)
 
-        # .. and from now on, the writes of this worker take turns with those of the other workers.
-        process_queue = ProcessQueue(region, ModuleCtx.Queue, ModuleCtx.Writer_Slot, ModuleCtx.Deadline)
+        # .. and from now on, the writes of the worker take turns with those of the config process.
+        process_queue = ProcessQueue(region, ModuleCtx.Queue, ModuleCtx.Writer_Place, ModuleCtx.Deadline)
         set_process_queue(engine, process_queue)
 
         writers:'writerdict' = {
@@ -160,13 +153,13 @@ def _write_through_every_writer(region:'SharedRegion', db_path:'str', conn:'Conn
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_every_writer_of_the_audit_database_waits_for_the_turn_of_its_worker(tmp_path:'Path') -> 'None':
+def test_every_writer_of_the_audit_database_waits_for_its_turn(tmp_path:'Path') -> 'None':
     region = SharedRegion(_region_config)
     db_path = str(tmp_path / 'audit.db')
 
-    # Another worker takes the turn of the file and keeps it throughout ..
-    _ = region.queue_enter(ModuleCtx.Queue, ModuleCtx.Holder_Slot)
-    assert region.queue_poll(ModuleCtx.Queue, ModuleCtx.Holder_Slot)
+    # The config process takes the turn of the file and keeps it throughout ..
+    _ = region.queue_enter(ModuleCtx.Queue, ModuleCtx.Holder_Place)
+    assert region.queue_poll(ModuleCtx.Queue, ModuleCtx.Holder_Place)
 
     parent_conn, child_conn = _context.Pipe()
     process = _context.Process(target=_write_through_every_writer, args=(region, db_path, child_conn))
@@ -178,9 +171,9 @@ def test_every_writer_of_the_audit_database_waits_for_the_turn_of_its_worker(tmp
     process.join(ModuleCtx.Report_Timeout)
     assert process.exitcode == 0
 
-    region.queue_release(ModuleCtx.Queue, ModuleCtx.Holder_Slot)
+    region.queue_release(ModuleCtx.Queue, ModuleCtx.Holder_Place)
 
-    # .. so every write of this worker waits in the queue until its deadline and runs no statement of its own.
+    # .. so every write of the worker waits in the queue until its deadline and runs no statement of its own.
     unqueued:'dict_[str, str]' = {}
 
     for name, outcome in outcomes.items():

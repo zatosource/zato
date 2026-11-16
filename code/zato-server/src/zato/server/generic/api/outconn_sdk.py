@@ -27,7 +27,7 @@ from zato.common.sdk import Connector, ConnectionLost, CredentialsExpired, Field
 from zato.common.sdk.connector import get_schema
 from zato.common.typing_ import cast_, list_
 from zato.common.util.api import as_bool
-from zato.common.worker_slot import is_singleton_owner
+from zato.common.worker_slot import is_worker_process
 from zato.server.connection.wrapper import Wrapper
 
 # ################################################################################################################################
@@ -326,8 +326,8 @@ class SDKConnectorWrapper(Wrapper):
         connector = self._build_connector()
         client = self._build_client(connector)
 
-        # Of the workers of a server, one subscribes, so that the remote side pushes each event to one subscription.
-        is_owner = is_singleton_owner()
+        # The worker subscribes and the config process does not, so that the remote side pushes each event to one subscription.
+        is_owner = is_worker_process()
 
         # Subscribing connectors subscribe now, before anyone can use the connection (2.3).
         if is_owner and isinstance(connector, SubscribingConnector):

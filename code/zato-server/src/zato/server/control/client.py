@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The worker's side of the control channel. One greenlet reads the datagrams of the arbiter and applies the events
+# The side of the control channel of the worker and of the config process. One greenlet reads the datagrams of the arbiter and applies the events
 # in the order in which they arrive, which is the order of their sequence numbers. Each query runs in a greenlet
 # of its own, so a slow query never holds the events that follow it.
 
@@ -28,11 +28,11 @@ from zato.server.control.envelope import decode, encode, MessageType, ModuleCtx 
 
 if 0:
     from gevent import Greenlet
-    from zato.common.typing_ import any_, anylist, callable_, dict_
+    from zato.common.typing_ import any_, anydict, callable_, dict_
     from zato.server.control.envelope import Message
 
     any_ = any_
-    anylist = anylist
+    anydict = anydict
     callable_ = callable_
     Greenlet = Greenlet
     Message = Message
@@ -54,7 +54,7 @@ _call_results = {MessageType.Query_Result, MessageType.Forward_Result, MessageTy
 # ################################################################################################################################
 
 class ControlClient:
-    """ Sends the messages of one worker to the arbiter and applies the messages that the arbiter sends to it.
+    """ Sends the messages of one process to the arbiter and applies the messages that the arbiter sends to it.
     """
 
     def __init__(
@@ -100,7 +100,7 @@ class ControlClient:
 # ################################################################################################################################
 
     def report_ready(self) -> 'None':
-        """ Tells the arbiter that the worker loaded its configuration, after which the arbiter relays events to it.
+        """ Tells the arbiter that the process loaded its configuration, after which the arbiter relays events to it.
         """
         message = new_message(MessageType.Ready, None)
         self.send(message)
@@ -108,7 +108,7 @@ class ControlClient:
 # ################################################################################################################################
 
     def report_replaced(self) -> 'None':
-        """ Tells the arbiter that another server took over the pub/sub database, after which the arbiter drains every worker.
+        """ Tells the arbiter that another server took over the pub/sub database, after which the arbiter drains its processes.
         """
         message = new_message(MessageType.Replaced, None)
         self.send(message)
@@ -116,15 +116,15 @@ class ControlClient:
 # ################################################################################################################################
 
     def publish(self, body:'any_') -> 'None':
-        """ Sends an event that the arbiter relays to every other worker.
+        """ Sends an event that the arbiter relays to the other process.
         """
         message = new_message(MessageType.Event, body)
         self.send(message)
 
 # ################################################################################################################################
 
-    def query(self, body:'any_') -> 'anylist':
-        """ Sends a query to every worker, this one included, and returns the entry of each slot,
+    def query(self, body:'any_') -> 'anydict':
+        """ Sends a query to the worker and returns its result, with the status and the body of the response,
         which the arbiter returns within the deadline of the query.
         """
         cid = new_cid()
@@ -136,7 +136,7 @@ class ControlClient:
         self.send(message)
 
         out = result.get()
-        out = cast_('anylist', out)
+        out = cast_('anydict', out)
         return out
 
 # ################################################################################################################################

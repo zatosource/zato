@@ -28,33 +28,27 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Workers are forked, as the arbiter forks them, so that they inherit the mapping and the descriptors
+# The processes are forked, as the arbiter forks them, so that they inherit the mapping and the descriptors
 _context = get_context('fork')
 
 _region_config = {
-    'slot_count': 3,
-    'wake_capacity': 8,
-    'cell_capacity': 8,
     'queue_count': 1,
-    'metric_count': 1,
-    'series_capacity': 0,
-    'series_key_bytes': 0,
-    'dedup_capacity': 0,
-    'breaker_capacity': 0,
     'lock_capacity': 0,
-    'start_id': 1,
 }
 
 _queue = 0
 
-# How many greenlets of each worker write, and how many writes each of them makes
-_greenlets_per_worker = 4
+# The places of the worker and of the config process
+_places = (0, 1)
+
+# How many greenlets of each process write, and how many writes each of them makes
+_greenlets_per_process = 4
 _writes_per_greenlet = 10
 
 # How long a write holds the file, in seconds
 _write_time = 0.001
 
-# How long a write waits for its turn at most, and how long the test waits for a worker, in seconds
+# How long a write waits for its turn at most, and how long the test waits for a process, in seconds
 _deadline = 20.0
 _join_timeout = 60.0
 
@@ -63,21 +57,21 @@ _join_timeout = 60.0
 
 def _write_through_call_database(
     region:'SharedRegion',
-    slot:'int',
+    place:'int',
     db_path:'str',
     inside:'intsync',
     max_inside:'intsync',
     total:'intsync',
     ) -> 'None':
-    """ Writes from several greenlets of one worker through call_database, counting how many writes run at once
-    across all the workers.
+    """ Writes from several greenlets of one process through call_database, counting how many writes run at once
+    across the worker and the config process.
     """
     exit_code = 1
 
     try:
 
-        # The worker runs under gevent, as a server does, so call_database runs the writes in the pool of the hub,
-        # whose loop and threads are its own, as the arbiter makes them for each worker that it forks ..
+        # The process runs under gevent, as a server does, so call_database runs the writes in the pool of the hub,
+        # whose loop and threads are its own, as the arbiter makes them for each process that it forks ..
         from gevent import joinall, monkey, reinit, spawn
         reinit()
         _ = monkey.patch_all()
@@ -88,8 +82,8 @@ def _write_through_call_database(
 
         engine = create_engine(f'sqlite:///{db_path}')
 
-        # .. and takes turns with the other workers in the queue of the file.
-        process_queue = ProcessQueue(region, _queue, slot, _deadline)
+        # .. and takes turns with the other process in the queue of the file.
+        process_queue = ProcessQueue(region, _queue, place, _deadline)
         set_process_queue(engine, process_queue)
 
         def write() -> 'None':
@@ -109,14 +103,14 @@ def _write_through_call_database(
 
         greenlets = []
 
-        for _ in range(_greenlets_per_worker):
+        for _ in range(_greenlets_per_process):
             greenlet = spawn(write_many)
             greenlets.append(greenlet)
 
         _ = joinall(greenlets, raise_error=True)
         exit_code = 0
 
-    # The exception reaches the output of the test, since the worker exits without unwinding
+    # The exception reaches the output of the test, since the process exits without unwinding
     except BaseException:
         traceback.print_exc()
 
@@ -126,9 +120,8 @@ def _write_through_call_database(
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_the_writes_of_call_database_take_turns_across_workers(tmp_path:'Path') -> 'None':
+def test_the_writes_of_call_database_take_turns_across_processes(tmp_path:'Path') -> 'None':
     region = SharedRegion(_region_config)
-    slot_count = _region_config['slot_count']
     db_path = str(tmp_path / 'queued.db')
 
     inside = _context.Value('i', 0)
@@ -137,8 +130,8 @@ def test_the_writes_of_call_database_take_turns_across_workers(tmp_path:'Path') 
 
     processes = []
 
-    for slot in range(slot_count):
-        args = (region, slot, db_path, inside, max_inside, total)
+    for place in _places:
+        args = (region, place, db_path, inside, max_inside, total)
         process = _context.Process(target=_write_through_call_database, args=args)
         processes.append(process)
 
@@ -149,9 +142,9 @@ def test_the_writes_of_call_database_take_turns_across_workers(tmp_path:'Path') 
         process.join(_join_timeout)
         assert process.exitcode == 0
 
-    expected_total = slot_count * _greenlets_per_worker * _writes_per_greenlet
+    expected_total = len(_places) * _greenlets_per_process * _writes_per_greenlet
 
-    # Each write ran alone, although each worker had several greenlets writing at once
+    # Each write ran alone, although each process had several greenlets writing at once
     assert max_inside.value == 1
     assert total.value == expected_total
 

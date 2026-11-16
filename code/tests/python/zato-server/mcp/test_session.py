@@ -101,7 +101,7 @@ def _make_handler(session_manager:'any_'=None) -> 'MCPHandler':
     registry = _MockToolRegistry()
 
     if session_manager is None:
-        session_manager = MCPSessionManager(_gateway_name)
+        session_manager = MCPSessionManager()
 
     # Response shaping and input validation stay off in these tests - empty configs keep every stage disabled.
     safeguard_config = build_safeguard_config({})
@@ -111,9 +111,6 @@ def _make_handler(session_manager:'any_'=None) -> 'MCPHandler':
     return out
 
 # ################################################################################################################################
-
-# The gateway whose sessions the tests create
-_gateway_name = 'test.mcp.gateway'
 
 # Standard params for initialize requests in tests
 _initialize_params = {
@@ -129,7 +126,7 @@ class SessionManagerCreate(TestCase):
 
     def test_create_returns_session_id(self) -> 'None':
 
-        manager = MCPSessionManager(_gateway_name)
+        manager = MCPSessionManager()
         session_id = manager.create(_mcp_protocol_version, _test_identity)
 
         self.assertIsInstance(session_id, str)
@@ -137,7 +134,7 @@ class SessionManagerCreate(TestCase):
 
     def test_create_increments_count(self) -> 'None':
 
-        manager = MCPSessionManager(_gateway_name)
+        manager = MCPSessionManager()
 
         self.assertEqual(manager.session_count, 0)
 
@@ -149,7 +146,7 @@ class SessionManagerCreate(TestCase):
 
     def test_each_session_has_unique_id(self) -> 'None':
 
-        manager = MCPSessionManager(_gateway_name)
+        manager = MCPSessionManager()
 
         session_id_1 = manager.create(_mcp_protocol_version, _test_identity)
         session_id_2 = manager.create(_mcp_protocol_version, _test_identity)
@@ -158,7 +155,7 @@ class SessionManagerCreate(TestCase):
 
     def test_cap_reached_rejects_creation(self) -> 'None':
 
-        manager = MCPSessionManager(_gateway_name, max_sessions=2)
+        manager = MCPSessionManager(max_sessions=2)
 
         _ = manager.create(_mcp_protocol_version, _test_identity)
         _ = manager.create(_mcp_protocol_version, _test_identity)
@@ -170,7 +167,7 @@ class SessionManagerCreate(TestCase):
         """ A session past its TTL frees its slot even before the reaper sweeps it.
         """
 
-        manager = MCPSessionManager(_gateway_name, ttl=0, max_sessions=2)
+        manager = MCPSessionManager(ttl=0, max_sessions=2)
 
         _ = manager.create(_mcp_protocol_version, _test_identity)
         _ = manager.create(_mcp_protocol_version, _test_identity)
@@ -190,7 +187,7 @@ class SessionManagerValidate(TestCase):
 
     def test_validate_existing_session(self) -> 'None':
 
-        manager = MCPSessionManager(_gateway_name)
+        manager = MCPSessionManager()
         session_id = manager.create(_mcp_protocol_version, _test_identity)
 
         result = manager.validate(session_id, _test_identity)
@@ -199,7 +196,7 @@ class SessionManagerValidate(TestCase):
 
     def test_validate_unknown_session(self) -> 'None':
 
-        manager = MCPSessionManager(_gateway_name)
+        manager = MCPSessionManager()
 
         result = manager.validate('nonexistent-session-id', _test_identity)
 
@@ -209,7 +206,7 @@ class SessionManagerValidate(TestCase):
         """ A session is only valid for the identity that created it.
         """
 
-        manager = MCPSessionManager(_gateway_name)
+        manager = MCPSessionManager()
         session_id = manager.create(_mcp_protocol_version, _test_identity)
 
         other_identity = _test_identity + '.other'
@@ -224,7 +221,7 @@ class SessionManagerDelete(TestCase):
 
     def test_delete_existing_session(self) -> 'None':
 
-        manager = MCPSessionManager(_gateway_name)
+        manager = MCPSessionManager()
         session_id = manager.create(_mcp_protocol_version, _test_identity)
 
         result = manager.delete(session_id)
@@ -235,7 +232,7 @@ class SessionManagerDelete(TestCase):
 
     def test_delete_unknown_session(self) -> 'None':
 
-        manager = MCPSessionManager(_gateway_name)
+        manager = MCPSessionManager()
 
         result = manager.delete('nonexistent-session-id')
 
@@ -248,7 +245,7 @@ class SessionManagerCleanup(TestCase):
 
     def test_cleanup_removes_expired(self) -> 'None':
 
-        manager = MCPSessionManager(_gateway_name, ttl=0)
+        manager = MCPSessionManager(ttl=0)
         _ = manager.create(_mcp_protocol_version, _test_identity)
         _ = manager.create(_mcp_protocol_version, _test_identity)
 
@@ -259,7 +256,7 @@ class SessionManagerCleanup(TestCase):
 
     def test_cleanup_keeps_fresh_sessions(self) -> 'None':
 
-        manager = MCPSessionManager(_gateway_name, ttl=9999)
+        manager = MCPSessionManager(ttl=9999)
         _ = manager.create(_mcp_protocol_version, _test_identity)
 
         removed = manager.cleanup_expired()
@@ -276,7 +273,7 @@ class SessionManagerReaping(TestCase):
         """ With a 0-second TTL, validate rejects an existing session without waiting for the sweep.
         """
 
-        manager = MCPSessionManager(_gateway_name, ttl=0, max_lifetime=9999)
+        manager = MCPSessionManager(ttl=0, max_lifetime=9999)
         session_id = manager.create(_mcp_protocol_version, _test_identity)
 
         # The session was just created but the TTL is 0, so any elapsed time makes it idle-expired ..
@@ -290,7 +287,7 @@ class SessionManagerReaping(TestCase):
         """ Sessions older than the idle TTL are removed by cleanup_expired.
         """
 
-        manager = MCPSessionManager(_gateway_name, ttl=0, max_lifetime=9999)
+        manager = MCPSessionManager(ttl=0, max_lifetime=9999)
         _ = manager.create(_mcp_protocol_version, _test_identity)
         _ = manager.create(_mcp_protocol_version, _test_identity)
 
@@ -309,7 +306,7 @@ class SessionManagerReaping(TestCase):
         """
 
         # Use a generous idle TTL but a 0-second max lifetime ..
-        manager = MCPSessionManager(_gateway_name, ttl=9999, max_lifetime=0)
+        manager = MCPSessionManager(ttl=9999, max_lifetime=0)
         session_id = manager.create(_mcp_protocol_version, _test_identity)
 
         # The session was just created but max_lifetime=0 means any elapsed time exceeds it ..
@@ -324,10 +321,10 @@ class SessionManagerReaping(TestCase):
         """
 
         # Build two managers, each with one expired session ..
-        orders_manager = MCPSessionManager('test.mcp.orders', ttl=0, max_lifetime=9999)
+        orders_manager = MCPSessionManager(ttl=0, max_lifetime=9999)
         _ = orders_manager.create(_mcp_protocol_version, _test_identity)
 
-        notifications_manager = MCPSessionManager('test.mcp.notifications', ttl=0, max_lifetime=9999)
+        notifications_manager = MCPSessionManager(ttl=0, max_lifetime=9999)
         _ = notifications_manager.create(_mcp_protocol_version, _test_identity)
 
         # .. mock the gateway_mcp_dict structure that the reaper expects ..
@@ -352,7 +349,7 @@ class SessionManagerReaping(TestCase):
         """
 
         # Use a generous idle TTL but a 0-second max lifetime ..
-        manager = MCPSessionManager(_gateway_name, ttl=9999, max_lifetime=0)
+        manager = MCPSessionManager(ttl=9999, max_lifetime=0)
         _ = manager.create(_mcp_protocol_version, _test_identity)
 
         self.assertEqual(manager.session_count, 1)
@@ -370,7 +367,7 @@ class HandlerInitializeCreatesSession(TestCase):
 
     def test_initialize_returns_session_id(self) -> 'None':
 
-        session_manager = MCPSessionManager(_gateway_name)
+        session_manager = MCPSessionManager()
         handler = _make_handler(session_manager=session_manager)
 
         request = {
@@ -395,7 +392,7 @@ class HandlerInitializeCreatesSession(TestCase):
         """ Initialize with no protocolVersion in params is rejected.
         """
 
-        session_manager = MCPSessionManager(_gateway_name)
+        session_manager = MCPSessionManager()
         handler = _make_handler(session_manager=session_manager)
 
         # Send an initialize with empty params (no protocolVersion) ..
@@ -424,7 +421,7 @@ class HandlerInitializeCreatesSession(TestCase):
         """ An array body is rejected outright, so no element of it can ever create a session.
         """
 
-        session_manager = MCPSessionManager(_gateway_name)
+        session_manager = MCPSessionManager()
         handler = _make_handler(session_manager=session_manager)
 
         messages = [
@@ -447,7 +444,7 @@ class HandlerSessionValidation(TestCase):
 
     def test_valid_session_id_accepted(self) -> 'None':
 
-        session_manager = MCPSessionManager(_gateway_name)
+        session_manager = MCPSessionManager()
         handler = _make_handler(session_manager=session_manager)
 
         # First, initialize to get a session ..
@@ -487,7 +484,7 @@ class HandlerSessionValidation(TestCase):
         """ A request presenting a session created by a different identity is rejected.
         """
 
-        session_manager = MCPSessionManager(_gateway_name)
+        session_manager = MCPSessionManager()
         handler = _make_handler(session_manager=session_manager)
 
         # Create a session for one identity ..
@@ -509,7 +506,7 @@ class HandlerDeleteSession(TestCase):
 
     def test_delete_existing_session(self) -> 'None':
 
-        session_manager = MCPSessionManager(_gateway_name)
+        session_manager = MCPSessionManager()
         handler = _make_handler(session_manager=session_manager)
 
         # Create a session ..
@@ -543,7 +540,7 @@ class HandlerDeleteSession(TestCase):
         """ Deleting a session created by a different identity is rejected with 400.
         """
 
-        session_manager = MCPSessionManager(_gateway_name)
+        session_manager = MCPSessionManager()
         handler = _make_handler(session_manager=session_manager)
 
         # Create a session for one identity ..
@@ -562,7 +559,7 @@ class HandlerDeleteSession(TestCase):
 
     def test_deleted_session_is_rejected(self) -> 'None':
 
-        session_manager = MCPSessionManager(_gateway_name)
+        session_manager = MCPSessionManager()
         handler = _make_handler(session_manager=session_manager)
 
         # Create and delete a session ..

@@ -107,8 +107,8 @@ class ActiveServer(NamedTuple):
 # ################################################################################################################################
 
 class _ForkTakeover:
-    """ The guard of the takeover that the arbiter of a multi-process server ran before it forked its workers,
-    which every worker inherits and follows in place of raising the generation itself.
+    """ The guard of the takeover that the arbiter ran before it forked the worker and the config process,
+    which each of them inherits and follows in place of raising the generation itself.
     """
     guard: 'GenerationGuard | None' = None
 
@@ -430,8 +430,8 @@ def take_over(get_engine:'callable_') -> 'GenerationGuard':
 # ################################################################################################################################
 
 def take_over_before_fork(new_engine:'callable_') -> 'GenerationGuard':
-    """ Makes this server the active one once for all the worker processes that its arbiter forks next, through an engine
-    that is disposed before the fork, and retains the guard for the workers, each of which follows it on an engine of its own.
+    """ Makes this server the active one once for the processes that its arbiter forks next, through an engine
+    that is disposed before the fork, and retains the guard for those processes, each of which follows it on an engine of its own.
     """
     recorder = _EngineRecorder(new_engine)
     out = take_over(recorder.get_engine)
@@ -455,8 +455,8 @@ def get_fork_takeover() -> 'GenerationGuard | None':
 # ################################################################################################################################
 
 def follow_takeover(engine:'Engine', fork_guard:'GenerationGuard') -> 'GenerationGuard':
-    """ Guards every transaction of the engine of a worker process with the generation and the owner that its arbiter
-    recorded, without raising the generation, which would replace the arbiter and every other worker of the server.
+    """ Guards every transaction of the engine of a process that an arbiter started with the generation and the owner
+    that its arbiter recorded, without raising the generation, which would replace the arbiter and the other process.
     """
     out = GenerationGuard(fork_guard.generation, fork_guard.owner)
     out.is_replaced = fork_guard.is_replaced

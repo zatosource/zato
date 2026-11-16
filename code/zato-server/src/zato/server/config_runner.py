@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The runner of the services that change configuration. In a worker of a multi-process server, the runner forwards
+# The runner of the services that change configuration. In the worker of a server that an arbiter started, the runner forwards
 # such an invocation to the config process, and in the config process, it runs the invocation as the only change
 # in progress. A process without a runner runs such a service as it runs any other.
 

@@ -38,7 +38,6 @@ server_conf_dict = deepcopy(CONTENT_TYPE)
 
 server_conf_template = """[main]
 bind=0.0.0.0:{{port}}
-workers=auto # Either auto, which is one worker per available CPU, or a positive integer
 
 work_dir=../../work
 

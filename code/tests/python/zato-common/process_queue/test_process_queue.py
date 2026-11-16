@@ -31,22 +31,18 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Workers are forked, as the arbiter forks them, so that they inherit the mapping and the descriptors
+# The processes are forked, as the arbiter forks them, so that they inherit the mapping and the descriptors
 _context = get_context('fork')
 
 _region_config = {
-    'slot_count': 4,
-    'wake_capacity': 8,
-    'cell_capacity': 8,
     'queue_count': 2,
-    'metric_count': 1,
-    'series_capacity': 0,
-    'series_key_bytes': 0,
-    'dedup_capacity': 0,
-    'breaker_capacity': 0,
     'lock_capacity': 0,
-    'start_id': 1,
 }
+
+# The places of the worker and of the config process
+_worker_place = 0
+_config_place = 1
+_places = (_worker_place, _config_place)
 
 # The queues of two SQLite files
 _first_queue = 0
@@ -58,8 +54,8 @@ _long_deadline = 20.0
 # The deadline of a write that is expected to run out, in seconds
 _short_deadline = 0.3
 
-# How many writes each worker of the overlap test makes
-_writes_per_worker = 50
+# How many writes each process of the overlap test makes
+_writes_per_process = 50
 
 # How long a write of the overlap test holds the turn, in seconds
 _write_time = 0.001
@@ -70,7 +66,7 @@ _report_timeout = 20
 # A wake-up arrives well within this period when the turn is released, in seconds
 _prompt_wake_up = 2.0
 
-# How often a test reads the record of a slot while it waits for the slot to take its place, in seconds
+# How often a test reads the record of a place while it waits for its process to take it, in seconds
 _place_check_interval = 0.01
 
 # ################################################################################################################################
@@ -90,60 +86,60 @@ def _hold_until_told(conn:'Connection') -> 'None':
 
 # ################################################################################################################################
 
-def _run_holder(region:'SharedRegion', queue:'int', slot:'int', conn:'Connection') -> 'None':
-    process_queue = ProcessQueue(region, queue, slot, _long_deadline)
+def _run_holder(region:'SharedRegion', queue:'int', place:'int', conn:'Connection') -> 'None':
+    process_queue = ProcessQueue(region, queue, place, _long_deadline)
     _ = process_queue.run(_hold_until_told, (conn,))
 
 # ################################################################################################################################
 
-def _report_write(conn:'Connection', slot:'int', sequence:'intsync') -> 'None':
+def _report_write(conn:'Connection', place:'int', sequence:'intsync') -> 'None':
     """ A write that takes the next position of a sequence the writers of a test share, and reports it.
     """
     with sequence.get_lock():
         sequence.value += 1
         position = sequence.value
 
-    conn.send(f'wrote {slot} at {position}')
+    conn.send(f'wrote {place} at {position}')
 
 # ################################################################################################################################
 
 def _run_one_write(
     region:'SharedRegion',
     queue:'int',
-    slot:'int',
+    place:'int',
     deadline:'float',
     sequence:'intsync',
     conn:'Connection',
     ) -> 'None':
     """ Makes one write, reporting the moment of entry and then the outcome.
     """
-    process_queue = ProcessQueue(region, queue, slot, deadline)
+    process_queue = ProcessQueue(region, queue, place, deadline)
     conn.send('entering')
 
     try:
-        _ = process_queue.run(_report_write, (conn, slot, sequence))
+        _ = process_queue.run(_report_write, (conn, place, sequence))
     except ProcessQueueTimeout:
-        conn.send(f'timeout {slot}')
+        conn.send(f'timeout {place}')
 
 # ################################################################################################################################
 
-def _wait_for_ticket(region:'SharedRegion', queue:'int', slot:'int', conn:'Connection') -> 'None':
+def _wait_for_ticket(region:'SharedRegion', queue:'int', place:'int', conn:'Connection') -> 'None':
     """ Waits until the child behind a connection has taken its place, which its record of the queue shows.
     """
     assert conn.poll(_report_timeout)
     assert conn.recv() == 'entering'
 
-    _wait_for_place(region, queue, slot)
+    _wait_for_place(region, queue, place)
 
 # ################################################################################################################################
 
-def _wait_for_place(region:'SharedRegion', queue:'int', slot:'int') -> 'None':
-    """ Waits until a slot holds a place in a queue, which the child of the slot takes right after it reports.
+def _wait_for_place(region:'SharedRegion', queue:'int', place:'int') -> 'None':
+    """ Waits until a place in a queue is taken, which the child of the place takes right after it reports.
     """
     now = time.monotonic()
     deadline = now + _report_timeout
 
-    while not region.queue_has_place(queue, slot):
+    while not region.queue_has_place(queue, place):
         assert time.monotonic() < deadline
         time.sleep(_place_check_interval)
 
@@ -151,14 +147,14 @@ def _wait_for_place(region:'SharedRegion', queue:'int', slot:'int') -> 'None':
 
 def _overlap_writer(
     region:'SharedRegion',
-    slot:'int',
+    place:'int',
     inside:'intsync',
     max_inside:'intsync',
     total:'intsync',
     ) -> 'None':
     """ Makes its writes in the queue, counting how many writers are inside at once.
     """
-    process_queue = ProcessQueue(region, _first_queue, slot, _long_deadline)
+    process_queue = ProcessQueue(region, _first_queue, place, _long_deadline)
 
     def write() -> 'None':
         with inside.get_lock():
@@ -171,20 +167,19 @@ def _overlap_writer(
             inside.value -= 1
             total.value += 1
 
-    for _ in range(_writes_per_worker):
+    for _ in range(_writes_per_process):
         _ = process_queue.run(write, ())
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_deadline_is_busy_timeouts_for_each_worker() -> 'None':
-    assert get_deadline_seconds(5000, 4) == 40.0
+def test_the_deadline_is_a_number_of_busy_timeouts() -> 'None':
+    assert get_deadline_seconds(5000) == 10.0
 
 # ################################################################################################################################
 
-def test_writes_of_several_workers_never_overlap() -> 'None':
+def test_writes_of_the_worker_and_the_config_process_never_overlap() -> 'None':
     region = _new_region()
-    slot_count = _region_config['slot_count']
 
     inside = _context.Value('i', 0)
     max_inside = _context.Value('i', 0)
@@ -192,102 +187,66 @@ def test_writes_of_several_workers_never_overlap() -> 'None':
 
     processes = []
 
-    for slot in range(slot_count):
-        args = (region, slot, inside, max_inside, total)
+    for place in _places:
+        args = (region, place, inside, max_inside, total)
         process = _context.Process(target=_overlap_writer, args=args)
         processes.append(process)
 
     for process in processes:
         process.start()
 
-    join_timeout = _report_timeout * slot_count
+    join_timeout = _report_timeout * len(_places)
 
     for process in processes:
         process.join(join_timeout)
         assert process.exitcode == 0
 
-    expected_total = _writes_per_worker * slot_count
+    expected_total = _writes_per_process * len(_places)
 
     assert max_inside.value == 1
     assert total.value == expected_total
 
 # ################################################################################################################################
 
-def test_the_turn_follows_the_order_of_entry() -> 'None':
-    region = _new_region()
-
-    # The first worker holds the turn ..
-    holder_conn, holder_child = _context.Pipe()
-    holder = _context.Process(target=_run_holder, args=(region, _first_queue, 0, holder_child))
-    holder.start()
-    assert holder_conn.poll(_report_timeout)
-    assert holder_conn.recv() == 'holding'
-
-    # .. the workers of slots 2 and 1 enter in this order ..
-    sequence = _context.Value('i', 0)
-    writers = []
-
-    for slot in (2, 1):
-        conn, child = _context.Pipe()
-        args = (region, _first_queue, slot, _long_deadline, sequence, child)
-        writer = _context.Process(target=_run_one_write, args=args)
-        writer.start()
-        _wait_for_ticket(region, _first_queue, slot, conn)
-        writers.append((writer, conn))
-
-    # .. the holder releases the turn ..
-    holder_conn.send('release')
-    holder.join(_report_timeout)
-
-    # .. and the writes take their positions in the order of entry.
-    reported = []
-
-    for writer, conn in writers:
-        assert conn.poll(_report_timeout)
-        reported.append(conn.recv())
-        writer.join(_report_timeout)
-
-    assert reported == ['wrote 2 at 1', 'wrote 1 at 2']
-
-# ################################################################################################################################
-
 def test_a_write_withdraws_its_place_after_the_deadline() -> 'None':
     region = _new_region()
 
-    # One worker holds the turn ..
+    # The worker holds the turn ..
     holder_conn, holder_child = _context.Pipe()
-    holder = _context.Process(target=_run_holder, args=(region, _first_queue, 0, holder_child))
+    holder = _context.Process(target=_run_holder, args=(region, _first_queue, _worker_place, holder_child))
     holder.start()
     assert holder_conn.poll(_report_timeout)
     assert holder_conn.recv() == 'holding'
 
-    # .. a second one waits past its deadline, which withdraws its place ..
+    # .. a write of the config process waits past its deadline, which withdraws its place ..
     sequence = _context.Value('i', 0)
 
     conn, child = _context.Pipe()
-    writer = _context.Process(target=_run_one_write, args=(region, _first_queue, 1, _short_deadline, sequence, child))
+    args = (region, _first_queue, _config_place, _short_deadline, sequence, child)
+    writer = _context.Process(target=_run_one_write, args=args)
     writer.start()
 
     assert conn.poll(_report_timeout)
     assert conn.recv() == 'entering'
     assert conn.poll(_report_timeout)
-    assert conn.recv() == 'timeout 1'
+    assert conn.recv() == f'timeout {_config_place}'
     writer.join(_report_timeout)
 
-    assert not region.queue_has_place(_first_queue, 1)
+    assert not region.queue_has_place(_first_queue, _config_place)
 
-    # .. a third one enters behind the place withdrawn ..
+    # .. its next write enters again ..
     conn, child = _context.Pipe()
-    writer = _context.Process(target=_run_one_write, args=(region, _first_queue, 2, _long_deadline, sequence, child))
+    args = (region, _first_queue, _config_place, _long_deadline, sequence, child)
+    writer = _context.Process(target=_run_one_write, args=args)
     writer.start()
-    _wait_for_ticket(region, _first_queue, 2, conn)
+    _wait_for_ticket(region, _first_queue, _config_place, conn)
 
-    # .. and it writes promptly once the holder releases the turn.
+    # .. and it runs promptly once the holder releases the turn.
     holder_conn.send('release')
     holder.join(_report_timeout)
 
     assert conn.poll(_prompt_wake_up)
-    assert conn.recv() == 'wrote 2 at 1'
+    assert conn.recv() == f'wrote {_config_place} at 1'
     writer.join(_report_timeout)
 
 # ################################################################################################################################
@@ -295,43 +254,44 @@ def test_a_write_withdraws_its_place_after_the_deadline() -> 'None':
 def test_a_terminated_holder_is_removed_by_the_arbiter() -> 'None':
     region = _new_region()
 
-    # One worker holds the turn ..
+    # The worker holds the turn ..
     holder_conn, holder_child = _context.Pipe()
-    holder = _context.Process(target=_run_holder, args=(region, _first_queue, 0, holder_child))
+    holder = _context.Process(target=_run_holder, args=(region, _first_queue, _worker_place, holder_child))
     holder.start()
     assert holder_conn.poll(_report_timeout)
     assert holder_conn.recv() == 'holding'
 
-    # .. a second one waits ..
+    # .. a write of the config process waits ..
     sequence = _context.Value('i', 0)
 
     conn, child = _context.Pipe()
-    writer = _context.Process(target=_run_one_write, args=(region, _first_queue, 1, _long_deadline, sequence, child))
+    args = (region, _first_queue, _config_place, _long_deadline, sequence, child)
+    writer = _context.Process(target=_run_one_write, args=args)
     writer.start()
-    _wait_for_ticket(region, _first_queue, 1, conn)
+    _wait_for_ticket(region, _first_queue, _config_place, conn)
 
     # .. the holder is terminated with SIGKILL while it holds the turn ..
     holder.kill()
     holder.join(_report_timeout)
 
     # .. the arbiter withdraws its place ..
-    region.queue_abandon(_first_queue, 0)
+    region.queue_abandon(_first_queue, _worker_place)
 
-    # .. and the waiting worker writes promptly.
+    # .. and the write of the config process runs promptly.
     assert conn.poll(_prompt_wake_up)
-    assert conn.recv() == 'wrote 1 at 1'
+    assert conn.recv() == f'wrote {_config_place} at 1'
     writer.join(_report_timeout)
 
 # ################################################################################################################################
 
 def _wait_in_both_queues(region:'SharedRegion', conn:'Connection') -> 'None':
-    """ Waits in two queues at once from two threads of one worker, as the writes to two SQLite files do.
+    """ Waits in two queues at once from two threads of the config process, as the writes to two SQLite files do.
     """
     results = []
     threads = []
 
     def write(queue:'int') -> 'None':
-        process_queue = ProcessQueue(region, queue, 1, _long_deadline)
+        process_queue = ProcessQueue(region, queue, _config_place, _long_deadline)
         result = process_queue.run(time.monotonic, ())
         results.append(result)
 
@@ -352,8 +312,8 @@ def _wait_in_both_queues(region:'SharedRegion', conn:'Connection') -> 'None':
 # ################################################################################################################################
 
 def _hold_both_queues(region:'SharedRegion', conn:'Connection') -> 'None':
-    first = ProcessQueue(region, _first_queue, 0, _long_deadline)
-    second = ProcessQueue(region, _second_queue, 0, _long_deadline)
+    first = ProcessQueue(region, _first_queue, _worker_place, _long_deadline)
+    second = ProcessQueue(region, _second_queue, _worker_place, _long_deadline)
 
     def hold_second() -> 'None':
         _ = second.run(_hold_until_told, (conn,))
@@ -362,17 +322,17 @@ def _hold_both_queues(region:'SharedRegion', conn:'Connection') -> 'None':
 
 # ################################################################################################################################
 
-def test_two_queues_of_one_worker_keep_their_own_wake_ups() -> 'None':
+def test_two_queues_of_one_process_keep_their_own_wake_ups() -> 'None':
     region = _new_region()
 
-    # One worker holds the turns of both queues ..
+    # The worker holds the turns of both queues ..
     holder_conn, holder_child = _context.Pipe()
     holder = _context.Process(target=_hold_both_queues, args=(region, holder_child))
     holder.start()
     assert holder_conn.poll(_report_timeout)
     assert holder_conn.recv() == 'holding'
 
-    # .. another one waits in both, from two threads ..
+    # .. the config process waits in both, from two threads ..
     conn, child = _context.Pipe()
     waiter = _context.Process(target=_wait_in_both_queues, args=(region, child))
     waiter.start()
@@ -380,7 +340,7 @@ def test_two_queues_of_one_worker_keep_their_own_wake_ups() -> 'None':
     assert conn.recv() == 'entering'
 
     for queue in (_first_queue, _second_queue):
-        _wait_for_place(region, queue, 1)
+        _wait_for_place(region, queue, _config_place)
 
     # .. both turns are released ..
     holder_conn.send('release')

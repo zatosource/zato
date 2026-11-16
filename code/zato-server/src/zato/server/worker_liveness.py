@@ -45,11 +45,11 @@ def now_us() -> 'int':
 
 # ################################################################################################################################
 
-def write_heartbeat(region:'SharedRegion', slot:'int') -> 'None':
-    """ Records in the slot of a worker that the worker is alive.
+def write_heartbeat(region:'SharedRegion') -> 'None':
+    """ Records in the region that the worker is alive.
     """
     heartbeat = now_us()
-    region.set_slot_heartbeat(slot, heartbeat)
+    region.set_heartbeat(heartbeat)
 
 # ################################################################################################################################
 

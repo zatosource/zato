@@ -33,19 +33,14 @@ from zato.common.audit_log.retention_runner import request_retention
 from zato.common.audit_log.search_index_merge import get_search_index_merger
 from zato.common.audit_log.sqlite_writes import apply_write_wait, dispose_stale_sqlite_engine, env_config, \
     mark_write_accepted, mark_write_refused
-from zato.common.audit_log.wire import batch_to_wire
 from zato.common.config_db import Default_Enabled, Env_Audit_Log_Enabled
 from zato.common.crypto.api import CryptoManager
 from zato.common.db_env import Default_SSL, Default_SSL_Verify, Default_Type, dispose_env_engine, get_env_engine, \
     Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.commit_queue import CommitQueue
-from zato.common.db_env.common import get_env_sqlite_path
 from zato.common.db_env.engine import call_database, execute_write, new_unshared_env_engine
 from zato.common.pubsub.delivery_scope import get_delivery_scope
-from zato.common.pubsub.writer_process.frames import ItemKind
-from zato.common.pubsub.writer_process.remote import get_writer_client
 from zato.common.util.api import as_bool, utcnow
-from zato.common.worker_slot import get_worker_slot, ModuleCtx as WorkerSlotCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,7 +49,6 @@ if 0:
     from datetime import datetime
     from sqlalchemy.engine import Engine
     from zato.common.audit_log.buffer import pending_event_list
-    from zato.common.pubsub.writer_process.client import WriterClient
     from zato.common.typing_ import anylist, anylistnone, intlist, intlistnone, intnone, stranydict, strdictnone
 
     # Dummy assignments to satisfy type checkers
@@ -68,7 +62,6 @@ if 0:
     pending_event_list = pending_event_list
     stranydict = stranydict
     strdictnone = strdictnone
-    WriterClient = WriterClient
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -419,13 +412,6 @@ class AuditLog:
         if parents is None:
             parents = []
 
-        # .. the event of a worker of a multi-process server names the slot of the worker,
-        # .. in a dict of its own, because the caller may reuse its attributes for other events ..
-        worker_slot = get_worker_slot()
-
-        if worker_slot is not None:
-            attrs = {**attrs, WorkerSlotCtx.Attr_Name: worker_slot}
-
         # .. and package the event up with everything that is written alongside it.
         pending = PendingEvent()
 
@@ -540,16 +526,7 @@ class AuditLog:
         # Trace point 9: every database transaction with its size and duration
         write_start = monotonic()
 
-        # A worker of a server with a writer process sends the events of a SQLite database to the writer,
-        # which commits them together with those of the other workers ..
-        client = get_writer_client()
-
-        if client and get_env_sqlite_path(env_config):
-            out = self._commit_remotely(client, batch)
-
-        # .. and any other process commits them itself.
-        else:
-            out = self.commit_batch(batch)
+        out = self.commit_batch(batch)
 
         write_elapsed = monotonic() - write_start
         write_elapsed_ms = write_elapsed * 1000
@@ -601,21 +578,6 @@ class AuditLog:
         # A write that went through brings the full busy timeout back
         mark_write_accepted()
 
-        return out
-
-# ################################################################################################################################
-
-    def _commit_remotely(self, client:'WriterClient', batch:'pending_event_list') -> 'int':
-        """ Sends one batch of events to the writer process, which commits it, and returns the id of the last event written.
-        """
-        body = {'events': batch_to_wire(batch)}
-        reply = client.call(ItemKind.Audit, body)
-
-        # The export and the links of the caller need the id of each event
-        for pending, event_id in zip(batch, reply['event_ids']):
-            pending.event_id = event_id
-
-        out = batch[-1].event_id
         return out
 
 # ################################################################################################################################

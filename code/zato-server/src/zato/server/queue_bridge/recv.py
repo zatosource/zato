@@ -29,7 +29,7 @@ from zato.common.pubsub.outgoing import Attempts_None, build_envelope, decode_pa
 from zato.common.typing_ import cast_
 from zato.common.util.api import new_cid_server
 from zato.common.util.retry import RetryPolicy
-from zato.common.worker_slot import is_singleton_owner
+from zato.common.worker_slot import is_worker_process
 from zato.server.queue_bridge.client import get_recv_stream
 
 # ################################################################################################################################
@@ -693,10 +693,10 @@ class ChannelListeners:
 # ################################################################################################################################
 
     def start(self, config:'anydict') -> 'None':
-        """ Starts the listener of one channel, replacing the one it may already have. Of the workers of a server,
-        the worker of the first slot runs the listeners, so that each entry of a recv stream is handled once.
+        """ Starts the listener of one channel, replacing the one it may already have. The worker runs the listeners
+        and the config process does not, so that each entry of a recv stream is handled once.
         """
-        if not is_singleton_owner():
+        if not is_worker_process():
             return
 
         channel_id = config['id']

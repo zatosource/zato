@@ -6,29 +6,22 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The timing of the supervision of the workers and the records that the arbiter keeps of its processes.
+# The timing of the supervision of the worker and the config process, and the records that the arbiter keeps of them.
 
 # stdlib
 from dataclasses import dataclass
-from tempfile import gettempdir
 
 # Zato
-from zato.common.worker_count import ServerWorkers
 from zato.server.control.hub import ModuleCtx as HubCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from socket import socket
-    from zato.common.typing_ import callable_, floatnone, intnone, list_, strlist, strnone
+    from zato.common.typing_ import floatnone, list_, strlist
 
-    callable_ = callable_
     floatnone = floatnone
-    intnone = intnone
-    socket = socket
     strlist = strlist
-    strnone = strnone
 
     floatlist = list_[float]
 
@@ -37,11 +30,11 @@ if 0:
 
 class ModuleCtx:
 
-    # The delay before the first respawn of a slot and the ceiling of its exponential growth, in seconds
+    # The delay before the first respawn of a process and the ceiling of its exponential growth, in seconds
     Respawn_Delay_Initial = 0.5
     Respawn_Delay_Max     = 30.0
 
-    # A slot whose workers terminate more often than this within the window is logged at error level
+    # A process that terminates more often than this within the window is logged at error level
     Failure_Count_Max = 5
     Failure_Window    = 60.0
 
@@ -56,7 +49,7 @@ class ModuleCtx:
     HA_Stop_Grace  = 10.0
     HA_Stop_Margin = 2.0
 
-    # How long the workers have to drain after a drain command, in seconds
+    # How long a process has to drain after a drain command, in seconds
     Grace_Period = HA_Stop_Grace - HA_Stop_Margin
 
     # How long of the grace period a draining worker waits for the requests in progress, and how long it then waits
@@ -74,7 +67,7 @@ class ModuleCtx:
     Log_Check_Interval = 10.0
 
     # The size limit of each file that the REST and access log writers of zato_server_core append to,
-    # and how many backups of it the arbiter keeps, as those writers keep in a server with one process
+    # and how many backups of it the arbiter keeps, as those writers keep in a process that no arbiter started
     Native_Log_Max_Bytes    = 10 * 1024 * 1024
     Native_Log_Backup_Count = 2
 
@@ -87,31 +80,13 @@ class ModuleCtx:
 
     # The names that ps and top list for each role, which Linux truncates to 15 bytes
     Process_Name_Arbiter = 'zato-arbiter'
-    Process_Name_Worker  = 'zato-worker-{}'
-    Process_Name_Writer  = 'zato-writer'
+    Process_Name_Worker  = 'zato-worker'
 
     # How many bytes of the wake-up pipe one read drains
     Wake_Read_Size = 4096
 
     # The prefix of the directory under the server's tmp directory that holds the control bodies of one arbiter
     Body_Dir_Prefix = 'zato-control-'
-
-    # The prefix of the directory that holds the listening socket of the pub/sub writer process, and the name of the socket
-    Writer_Dir_Prefix  = 'zato-writer-'
-    Writer_Socket_Name = 'pubsub-writer.sock'
-
-    # The slot number by which the logs name the pub/sub writer process, which has no slot in the region
-    Writer_Slot = -1
-
-    # The slot whose worker performs the startup writes, before which no other slot starts
-    First_Slot = 0
-
-    # How long a worker waits for the reply of the writer to one item, restarts of the writer included, in seconds
-    Writer_Deadline = 60.0
-
-    # How long the trace of a fully delivered message is kept at least after its receipt, in seconds,
-    # which exceeds the deadline of the writer and the duration of one commit
-    Trace_Grace_Seconds = 600
 
     Exit_Code_OK           = 0
     Exit_Code_Worker_Error = 1
@@ -121,15 +96,34 @@ class ModuleCtx:
 # ################################################################################################################################
 
 class ArbiterError(Exception):
-    """ The arbiter or a worker it forked could not configure a process.
+    """ The arbiter or a process it forked could not configure a process.
     """
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class WorkerState:
+    """ The state of the worker, which the arbiter records.
+    """
+
+    # The worker loads its configuration
+    Starting = 'starting'
+
+    # The worker serves requests
+    Ready = 'ready'
+
+    # The worker completes its requests before it exits
+    Draining = 'draining'
+
+    # No worker runs
+    Stopped = 'stopped'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @dataclass(init=False)
 class ArbiterConfig:
-    """ The timing of the supervision of the workers.
+    """ The timing of the supervision of the worker and the config process.
     """
     respawn_delay_initial: 'float'
     respawn_delay_max:     'float'
@@ -141,10 +135,8 @@ class ArbiterConfig:
     loop_interval:         'float'
     log_check_interval:    'float'
     query_timeout:         'float'
-    writer_deadline:       'float'
-    trace_grace_seconds:   'int'
 
-    # The files that the REST and access log writers of zato_server_core append to in every worker,
+    # The files that the REST and access log writers of zato_server_core append to in the worker,
     # each of which the arbiter renames once it reaches its limit
     native_log_files:        'strlist'
     native_log_max_bytes:    'int'
@@ -152,13 +144,6 @@ class ArbiterConfig:
 
     # The server's tmp directory, which holds the control bodies above the inline size
     tmp_dir: 'str'
-
-    # The directory in which the arbiter creates the directory of the listening socket of the writer,
-    # a short path by default, because the kernel limits the path of a Unix socket to 107 bytes
-    socket_dir: 'str'
-
-    # The file of cgroup v2 that holds the CPU quota of the server, which decides whether the workers are pinned to CPUs
-    cpu_max_path: 'str'
 
     @staticmethod
     def from_defaults(tmp_dir:'str') -> 'ArbiterConfig':
@@ -174,14 +159,10 @@ class ArbiterConfig:
         out.loop_interval           = ModuleCtx.Loop_Interval
         out.log_check_interval      = ModuleCtx.Log_Check_Interval
         out.query_timeout           = HubCtx.Query_Timeout
-        out.writer_deadline         = ModuleCtx.Writer_Deadline
-        out.trace_grace_seconds     = ModuleCtx.Trace_Grace_Seconds
         out.native_log_files        = []
         out.native_log_max_bytes    = ModuleCtx.Native_Log_Max_Bytes
         out.native_log_backup_count = ModuleCtx.Native_Log_Backup_Count
         out.tmp_dir                 = tmp_dir
-        out.socket_dir              = gettempdir()
-        out.cpu_max_path            = ServerWorkers.CPU_Max_Path
 
         return out
 
@@ -190,62 +171,38 @@ class ArbiterConfig:
 
 @dataclass(init=False)
 class WorkerContext:
-    """ What a forked worker receives from the arbiter.
+    """ What a forked worker or config process receives from the arbiter.
     """
     slot:       'int'
     generation: 'int'
 
-    # The worker's end of its control socket and the directory of the control bodies above the inline size
+    # The process's end of its control socket and the directory of the control bodies above the inline size
     control_fd: 'int'
     body_dir:   'str'
-
-    # The address of the pub/sub writer process, if the server runs one, and how long a worker waits for its replies
-    writer_address:  'strnone'
-    writer_deadline: 'float'
-
-    # The CPU to which the worker pins itself, if the workers are pinned
-    cpu: 'intnone'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @dataclass(init=False)
 class WorkerSlot:
-    """ The arbiter's record of one slot and of the worker that runs in it.
+    """ The arbiter's record of the worker or of the config process.
     """
     slot: 'int'
 
-    # The process ID of the worker, or 0 when the slot has none
+    # The process ID, or 0 when no process runs
     pid: 'int'
 
-    # The moments at which the workers of the slot terminated within the failure window
+    # The moments at which the processes terminated within the failure window
     failure_times: 'floatlist'
 
-    # When the next worker of the slot is due to start, if one is
+    # When the next process is due to start, if one is
     respawn_at: 'floatnone'
 
-    # Whether the arbiter has sent SIGKILL to the current worker
+    # Whether the arbiter has sent SIGKILL to the current process
     is_killed: 'bool'
 
-    # How the logs name the processes of the slot
+    # How the logs name the processes
     label: 'str'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass(init=False)
-class WriterProcess:
-    """ The arbiter's record of the pub/sub writer process and of the listening socket that the writer serves.
-    """
-    main:     'callable_'
-    address:  'str'
-    listener: 'socket'
-
-    # The private directory of the listening socket, which the arbiter removes on stop
-    socket_dir: 'str'
-
-    # The writer is supervised with the backoff of a slot
-    process: 'WorkerSlot'
 
 # ################################################################################################################################
 # ################################################################################################################################

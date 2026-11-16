@@ -88,7 +88,7 @@ def _invoke_noop(service_name:'str', payload:'anydict') -> 'anydict':
 def _make_handler(skill_prompts:'SkillPrompts') -> 'MCPHandler':
     """ Creates an MCPHandler serving the given skill prompts.
     """
-    session_manager = MCPSessionManager(_test_public_name)
+    session_manager = MCPSessionManager()
 
     # Response shaping and input validation stay off in these tests
     safeguard_config = build_safeguard_config({})

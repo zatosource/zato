@@ -6,11 +6,11 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The runtime of one worker process of a server. It binds the worker to the shared region and to the control channel
+# The runtime of the worker process of a server. It binds the worker to the shared region and to the control channel
 # of its arbiter before the server starts, loads its configuration after the mark of the config process, reports ready,
-# records the heartbeat of its slot, applies the events and answers the queries that the arbiter relays, forwards
-# the services that change configuration to the config process, and drains the worker on the drain command
-# of the arbiter or on its own SIGTERM.
+# records its heartbeat, applies the events and answers the queries that the arbiter relays, forwards the services
+# that change configuration to the config process, and drains the worker on the drain command of the arbiter
+# or on its own SIGTERM.
 
 # stdlib
 import os
@@ -28,19 +28,13 @@ from zato.common.config_dispatcher import handle_config_event
 from zato.common.db_env.connection import SQLite_Busy_Timeout_Ms
 from zato.common.db_env.engine import bind_process_queues
 from zato.common.db_env.process_queue import get_deadline_seconds
-from zato.common.log_streaming import bind_log_streaming, ModuleCtx as LogStreamingCtx
-from zato.common.pubsub.fence import DeliveryFence
 from zato.common.pubsub.sql.replaced import set_on_replaced
-from zato.common.pubsub.writer_process.remote import start_writer_client
 from zato.common.typing_ import cast_
 from zato.server.arbiter_config import ModuleCtx as ArbiterCtx
 from zato.server.config_forward import apply_forward_result, new_forward_body
 from zato.server.config_runner import bind_config_runner
 from zato.server.control.client import ControlClient
-from zato.server.control.queries import QueryKey, QueryName, QueryRouter
 from zato.server.outgoing_region import bind_outgoing_control, handle_outgoing_query
-from zato.server.server_region import ModuleCtx as RegionCtx
-from zato.server.worker_list import answer_worker_list, bind_worker_list
 from zato.server.worker_liveness import reopen_worker_logs, write_heartbeat
 
 # ################################################################################################################################
@@ -48,7 +42,7 @@ from zato.server.worker_liveness import reopen_worker_logs, write_heartbeat
 
 if 0:
     from gevent import Greenlet
-    from zato.common.typing_ import any_, anydict, strintdict, strlist
+    from zato.common.typing_ import any_, anydict, strintdict
     from zato.server.arbiter_config import WorkerContext
     from zato.server.base.parallel import ParallelServer
     from zato.server.control.envelope import Message
@@ -65,7 +59,6 @@ if 0:
     Service = Service
     SharedRegion = SharedRegion
     strintdict = strintdict
-    strlist = strlist
     WorkerContext = WorkerContext
 
 # ################################################################################################################################
@@ -85,7 +78,7 @@ class ModuleCtx:
 # ################################################################################################################################
 
 class WorkerRuntime:
-    """ The binding of one worker process to its arbiter, to the shared region of its server and to its server object.
+    """ The binding of the worker process to its arbiter, to the shared region of its server and to its server object.
     """
 
     def __init__(self, region:'SharedRegion', ctx:'WorkerContext', queue_by_path:'strintdict') -> 'None':
@@ -119,13 +112,6 @@ class WorkerRuntime:
         self.is_reloading = False
         self.is_reload_requested = False
 
-        # The queries of other workers that the control client receives are answered by name
-        self.router = QueryRouter()
-        self.router.register(QueryName.Worker_Get_List, answer_worker_list)
-
-        # Each subscription key is delivered by the worker that owns it, under the generation of its slot
-        self.fence = DeliveryFence(region, self.slot, self.generation, self.on_fenced)
-
         self.client = ControlClient(ctx.control_fd, ctx.body_dir, self.on_event, self.on_query, self.on_drain,
             self.on_reload, reopen_worker_logs)
 
@@ -142,34 +128,25 @@ class WorkerRuntime:
 # ################################################################################################################################
 
     def bind(self, server:'ParallelServer') -> 'None':
-        """ Binds the worker to its region, to its arbiter and to the writer process before its server starts.
+        """ Binds the worker to its region and to its arbiter before its server starts.
         """
         self._server = server
         server.worker = self
 
-        # The writes of the worker to each SQLite file take turns with those of the other workers ..
-        deadline_seconds = get_deadline_seconds(SQLite_Busy_Timeout_Ms, self.region.slot_count)
-        bind_process_queues(self.region, self.slot, deadline_seconds, self.queue_by_path)
-
-        # .. on SQLite with several workers, the publications and acknowledgements go to the writer process ..
-        if self.ctx.writer_address:
-            _ = start_writer_client(self.ctx.writer_address, self.ctx.writer_deadline, self.on_writer_reconnect)
-
-        # .. the rate limits count against the counters of every worker ..
-        server.rate_limiting_manager.use_region(self.region, self.slot, RegionCtx.Metric_Rate_Limit_Table_Full)
+        # The writes of the worker to each SQLite file take turns with those of the config process ..
+        deadline_seconds = get_deadline_seconds(SQLite_Busy_Timeout_Ms)
+        bind_process_queues(self.region, self.region.worker_place, deadline_seconds, self.queue_by_path)
 
         # .. the control channel is read from now on, and the worker exits once the arbiter closes it ..
         reader = self.client.start()
         reader.link(self.on_control_closed)
         self.reader = reader
 
-        # .. the heartbeat of the slot is recorded whenever the hub of the worker runs ..
+        # .. the heartbeat is recorded whenever the hub of the worker runs ..
         _ = spawn(self.write_heartbeats)
 
-        # .. the queues of outgoing connections, log streaming and the worker list reach the other workers ..
+        # .. the queues of outgoing connections reach the config process ..
         bind_outgoing_control(self.client)
-        bind_log_streaming(self.region, self.client.publish)
-        bind_worker_list(self.region, self.slot, self.generation, self.client.query, self.get_sub_keys)
 
         # .. a worker that learns that this server is no longer the active one tells the arbiter ..
         set_on_replaced(self.on_replaced)
@@ -190,13 +167,12 @@ class WorkerRuntime:
 
     def on_started(self, load_cid:'str') -> 'None':
         """ Reports ready once the server loaded its configuration, after which the arbiter relays to the worker the events
-        that it held for it and the configuration events of the worker reach the other workers, and lets the config process
+        that it held for it and the configuration events of the worker reach the config process, and lets the config process
         resume its changes.
         """
         server = self.server
 
         server.config_dispatcher.relay = self.client.publish
-        server.log_streaming_manager.apply_streaming()
 
         # The services that change configuration run in the config process from now on, while those that the startup
         # of the worker invoked deployed what each process deploys for itself, such as the files of the pickup directory.
@@ -205,7 +181,7 @@ class WorkerRuntime:
         self.client.report_ready()
         self.client.report_load_done(load_cid)
 
-        logger.info('Worker of slot %s, generation %s, PID %s is ready', self.slot, self.generation, os.getpid())
+        logger.info('Worker, generation %s, PID %s is ready', self.generation, os.getpid())
 
 # ################################################################################################################################
 
@@ -223,47 +199,28 @@ class WorkerRuntime:
 
     def write_heartbeats(self) -> 'None':
         while True:
-            write_heartbeat(self.region, self.slot)
+            write_heartbeat(self.region)
             sleep(ArbiterCtx.Heartbeat_Interval)
 
 # ################################################################################################################################
 
-    def get_sub_keys(self) -> 'strlist':
-        out = list(self.server.config_manager._push_subs)
-        return out
-
-# ################################################################################################################################
-
-    def on_writer_reconnect(self) -> 'None':
-        self.server.pubsub_backend.on_writer_reconnect()
-
-# ################################################################################################################################
-
     def on_event(self, message:'Message') -> 'None':
-        """ Applies an event that another worker published.
+        """ Applies an event that the config process published.
         """
         body:'anydict' = message.body
 
         # An event that cannot be applied is logged, and the events that follow it are applied
         try:
-            if body[LogStreamingCtx.Key_Action] == LogStreamingCtx.Action_Apply_Streaming:
-                self.server.log_streaming_manager.apply_streaming()
-            else:
-                _ = handle_config_event(body, self.server.config_manager)
+            _ = handle_config_event(body, self.server.config_manager)
         except Exception:
-            logger.exception('Could not apply an event of slot %s', message.slot)
+            logger.exception('Could not apply an event of the config process -> %s', message.cid)
 
 # ################################################################################################################################
 
-    def on_query(self, body:'anydict') -> 'any_':
-        """ Answers a query of another worker, a named one or an action on the delivery of an outgoing queue.
+    def on_query(self, body:'anydict') -> 'None':
+        """ Answers a query of the config process, which is an action on the delivery of an outgoing queue.
         """
-        if QueryKey.Name in body:
-            out = self.router.on_query(body)
-        else:
-            out = handle_outgoing_query(self.server.pubsub_push_delivery, body)
-
-        return out
+        handle_outgoing_query(self.server.pubsub_push_delivery, body)
 
 # ################################################################################################################################
 
@@ -310,7 +267,7 @@ class WorkerRuntime:
             try:
                 self.server.reload_config()
             except Exception:
-                logger.exception('Could not reload the configuration of the worker of slot %s', self.slot)
+                logger.exception('Could not reload the configuration of the worker')
 
             self.client.report_load_done(load_cid)
 
@@ -339,13 +296,13 @@ class WorkerRuntime:
             return
 
         self.is_draining = True
-        logger.info('Worker of slot %s is draining', self.slot)
+        logger.info('Worker is draining')
 
         # A worker that serves no requests yet has nothing to complete ..
         if self.http_server is None:
             os._exit(ArbiterCtx.Exit_Code_OK)
 
-        # .. otherwise the listening socket closes, so that the kernel assigns new connections to the other workers ..
+        # .. otherwise the listening socket closes, so that no new connection is accepted ..
         self.http_server.stop()
 
         # .. the requests in progress complete ..
@@ -353,11 +310,11 @@ class WorkerRuntime:
 
         while self.in_flight:
             if monotonic() >= deadline:
-                logger.warning('Worker of slot %s stops with %s requests in progress', self.slot, self.in_flight)
+                logger.warning('Worker stops with %s requests in progress', self.in_flight)
                 break
             sleep(ModuleCtx.Drain_Check_Interval)
 
-        # .. a message whose delivery is in progress remains in its queue for the next owner of its key ..
+        # .. a message whose delivery is in progress remains in its queue for the next worker ..
         self.server.pubsub_push_delivery.pause_all(ArbiterCtx.Delivery_Pause_Period)
 
         # .. and the audit events that wait in a buffer are written before the worker exits.
@@ -370,16 +327,8 @@ class WorkerRuntime:
     def on_control_closed(self, _reader:'Greenlet') -> 'None':
         """ Exits once the arbiter closed the control channel, which it does only when it terminated.
         """
-        logger.warning('Worker of slot %s exits because its arbiter terminated', self.slot)
+        logger.warning('Worker exits because its arbiter terminated')
         os._exit(ArbiterCtx.Exit_Code_Parent_Gone)
-
-# ################################################################################################################################
-
-    def on_fenced(self) -> 'None':
-        """ Exits once a replacement started in the slot of this worker, which owns its subscription keys now.
-        """
-        logger.warning('Worker of slot %s exits because a later generation started in its slot', self.slot)
-        os._exit(ArbiterCtx.Exit_Code_Worker_Error)
 
 # ################################################################################################################################
 

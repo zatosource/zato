@@ -527,7 +527,7 @@ class SQLAdminAPI(SQLBrowseAPI):
         with self.engine.begin() as connection:
             result = connection.execute(update_statement)
 
-        # .. and the payloads kept from earlier deliveries are dropped in every worker, or the next delivery would send
+        # .. and the payloads kept from earlier deliveries are dropped, or the next delivery would send
         # the replaced one instead.
         self.payload_cache.invalidate()
 

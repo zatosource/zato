@@ -28,7 +28,6 @@ if 0:
     from zato.common.pubsub.delivery import DeliveryExhausted
     from zato.common.typing_ import anydict, anytuple, callable_, stranydict
     from zato.server.base.config_manager.outgoing_queues import OutgoingQueueDepth
-    from zato.server.outgoing_region import SharedQueueDepth
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,7 +42,7 @@ class OutgoingDLQs(ConfigManagerImpl):
     """
 
     _outgoing_sub_key_cache: 'set[str]'
-    outgoing_queue_depth: 'OutgoingQueueDepth | SharedQueueDepth'
+    outgoing_queue_depth: 'OutgoingQueueDepth'
     get_outgoing_publish_lock: 'callable_'
 
     _outgoing_dlq_cache: 'set[str]'

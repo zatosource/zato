@@ -60,9 +60,6 @@ class ModuleCtx:
     # Response directives that keep a response out of the cache
     Uncacheable_Directives = ('no-store', 'no-cache', 'private')
 
-    # How often, in seconds, a request that does not hold the coalescing lock of its key reads the key again
-    Coalesce_Poll_Interval = 0.05
-
     # The key under which the fingerprint of a channel item is memoized on the item
     Fingerprint_Key = 'response_cache_fingerprint'
 

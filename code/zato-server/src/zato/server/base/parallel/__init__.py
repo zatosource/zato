@@ -74,7 +74,7 @@ from zato.common.util.scheduler import ensure_alerting_job_exists, ensure_cert_c
     ensure_ms_health_job_exists, ensure_test_transfer_job_exists
 from zato.common.util.time_ import TimeUtil
 from zato.common.util.url_dispatcher import build_methods_allowed_re
-from zato.common.worker_slot import get_slot_or_single, is_config_owner, is_config_process, is_first_start
+from zato.common.worker_slot import is_config_owner, is_config_process, is_first_start
 from zato.hl7.common import add_config_location as hl7_add_config_location
 from zato.distlock import LockManager
 from zato.server.base.parallel.config import ConfigLoader
@@ -234,7 +234,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     rate_limiting_manager: 'RateLimitingManager'
     quota_tiers_manager: 'QuotaTiersManager'
 
-    # The binding of this process to its arbiter and to the shared region of the server
+    # The binding of this process to its arbiter and to the region of the server
     worker: 'WorkerRuntime | ConfigRuntime'
 
     pubsub_backend: 'SQLPubSubBackend'
@@ -1054,7 +1054,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         # A fresh environment - one with no user services to deploy and no user-defined
         # objects - receives the configured demo config sets on its first start. The pass
-        # runs in the background so startup never waits for it, in one worker of the server.
+        # runs in the background so startup never waits for it, in one process of the server.
         if is_first_start():
             _ = spawn_greenlet(self._import_demo_config_on_first_start)
 
@@ -1121,8 +1121,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # Create the MCP gateway wrappers that were skipped during init_generic_connections ..
         self._create_mcp_gateways()
 
-        # .. the sessions are in a table that every process shares, so one process of the server removes the expired ones ..
-        if not is_config_owner():
+        # .. the sessions are in the memory of the process that serves the gateways, which the config process does not ..
+        if is_config_process():
             return
 
         # .. now all wrappers exist with their registries populated,
@@ -1153,7 +1153,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self._scheduler_run_state = SchedulerRunState(self.shared_objects)
 
         # A worker that starts while Redis is unavailable keeps connecting in the background, so that it consumes
-        # the fire events, including the ones its predecessor in the slot left pending, once Redis accepts connections.
+        # the fire events, including the ones its predecessor left pending, once Redis accepts connections.
         try:
             self._connect_scheduler(scheduler_adapter)
         except (OSError, RedisError):
@@ -1238,7 +1238,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             error_since = 0.0
             last_logged = 0.0
 
-            # The entries that a terminated worker of this slot read and never acknowledged are handled first
+            # The entries that a terminated worker read and never acknowledged are handled first
             needs_pending = True
 
             while True:
@@ -1323,7 +1323,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             error_since = 0.0
             last_logged = 0.0
 
-            # The requests that a terminated worker of this slot read and never acknowledged are handled first
+            # The requests that a terminated worker read and never acknowledged are handled first
             needs_pending = True
 
             while True:
@@ -1681,9 +1681,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                         else:
                             outgoing.append(config)
 
-            slot = get_slot_or_single()
-
-            self._queue_bridge = QueueBridgeClient(slot=slot)
+            self._queue_bridge = QueueBridgeClient()
             self._channel_listeners = ChannelListeners(self)
             self._start_channel_listeners(channel_types)
 
@@ -1823,7 +1821,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             error_since = 0.0
             last_logged = 0.0
 
-            # The requests that a terminated worker of this slot read and never acknowledged are handled first
+            # The requests that a terminated worker read and never acknowledged are handled first
             needs_pending = True
 
             while True:
@@ -1935,13 +1933,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             encrypt_at_rest=self.encrypt_at_rest,
         )
 
-        # The payload cache is a share of the one of the server, and the wake-ups of subscribers reach every worker ..
-        self.pubsub_backend.share_payload_cache(self.worker.region)
-
-        # .. the config process delivers nothing, so it neither wakes subscribers nor is woken for them ..
-        if not is_config_process():
-            self.pubsub_backend.start_cross_worker_wakes(self.worker.region, self.worker.slot)
-
         # The common database confirms the generation in the row of the pub/sub database, so on PostgreSQL both are one ..
         check_common_db_config()
 
@@ -1961,9 +1952,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.config_manager._sync_pubsub_topics()
 
         # All delivery greenlets share the backend - its per-subscriber events
-        # wake their blocking fetches up, so no dedicated connections are needed,
-        # and each worker delivers only the subscription keys that it owns.
-        self.pubsub_push_delivery = PushDelivery(self, self.pubsub_backend, self.worker.fence)
+        # wake their blocking fetches up, so no dedicated connections are needed.
+        self.pubsub_push_delivery = PushDelivery(self, self.pubsub_backend)
 
         # Publishing to an outgoing connection is only possible once its type knows how to be delivered to ..
         register_delivery_handlers()
@@ -2211,7 +2201,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def set_logging(self, text:'str') -> 'strdict':
         out = set_logging_levels(text)
 
-        # Every other process of the server sets the same levels
+        # The other process of the server sets the same levels
         self.config_dispatcher.relay_only({
             'action': BrokerMessageServer.Logging_Set.value,
             'text': text,

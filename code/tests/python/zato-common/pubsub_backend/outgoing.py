@@ -22,7 +22,6 @@ from zato.common.pubsub.dlq import get_dlq_sub_key, get_dlq_topic_name
 from zato.common.pubsub.outgoing import deliver_envelope, get_outgoing_sub_key, get_outgoing_topic_name, Key_Data, \
     OutgoingPublisher, register_outgoing_conn_type
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
-from zato.common.test.pubsub_in_process import new_single_slot_fence
 from zato.common.typing_ import cast_
 from zato.server.base.config_manager import ConfigManager
 from zato.server.base.config_manager.outgoing_queues import OutgoingNameMark, OutgoingQueueDepth
@@ -318,7 +317,7 @@ def _new_server() -> 'anytuple':
     """
     backend = SQLPubSubBackend()
     server = _StubServer(backend)
-    delivery = PushDelivery(_as_server(server), backend, new_single_slot_fence())
+    delivery = PushDelivery(_as_server(server), backend)
 
     server.pubsub_push_delivery = delivery
 

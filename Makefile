@@ -9,7 +9,7 @@
 	stop-dashboard restart-dashboard scheduler queue-bridge on-prem-gateway on-prem-gateway-hub file-listener sftp api-portal api-portal-demo api-portal-tutorial b2b-portal mcp-demo \
 	help install-deps install-fhir-converter \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-rest-outgoing test-rest-perf test-rest-channel test-rest-channel-perf test-scheduler test-scheduler-failover test-ha test-ha-sqlite test-ha-postgresql \
-	test-multi-cpu _multi-cpu-unit _multi-cpu-rest _multi-cpu-config _multi-cpu-rate-limiting _multi-cpu-cache _multi-cpu-scheduler _multi-cpu-hot-deploy _multi-cpu-dashboard _multi-cpu-audit _multi-cpu-audit-postgresql _multi-cpu-singletons _multi-cpu-pubsub _multi-cpu-writer _multi-cpu-migration _multi-cpu-faults _multi-cpu-ha _multi-cpu-container _multi-cpu-existing-suites \
+	test-arbiter \
 	test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
@@ -121,7 +121,7 @@ server-build: rust-target-prune
 	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_server_core/Cargo.toml
 
 ipc-build: rust-target-prune
-	@echo ">>> Building the shared memory region of the workers"
+	@echo ">>> Building the shared memory region of the server"
 	$(LOAD_CARGO_ENV) && \
 	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
 	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_ipc_core/Cargo.toml
@@ -693,7 +693,6 @@ test-rest-channel: ## REST and SOAP channel invocation tests through a running s
 		$(CURDIR)/code/tests/python/zato-server/rest_channel_invocation/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest_channel_invocation -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	$(MAKE) _multi-cpu-cache _multi-cpu-rest $(Zato_Log)
 
 # The measurement environment of REST and SOAP channels - the load client and the scripts
 REST_CHANNEL_BENCH_DIR ?= $(HOME)/reports/rest-channel/bench
@@ -732,7 +731,6 @@ test-scheduler: ## All scheduler tests.
 	$(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-scheduler/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_scheduler -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	$(MAKE) _multi-cpu-scheduler $(Zato_Log)
 
 test-scheduler-failover: ## Active-passive scheduler failover tests on PostgreSQL and PostgreSQL with TLS.
 	$(Zato_Log_Reset)
@@ -786,117 +784,20 @@ test-ha-sqlite: ## Active-standby pair on SQLite - the pair, Kubernetes and cont
 test-ha-postgresql: ## Active-standby pair on PostgreSQL - the pair and Kubernetes suites, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(call Zato_Test_HA_Suites,$(Zato_Test_HA_PostgreSQL),$(Zato_Test_HA_PostgreSQL_Resume_File))
 
-# The stages of test-multi-cpu in the order they run, and the stage that the run is currently on.
-Zato_Test_Multi_CPU             := _multi-cpu-unit _multi-cpu-rest _multi-cpu-config _multi-cpu-hot-deploy _multi-cpu-dashboard _multi-cpu-audit _multi-cpu-audit-postgresql _multi-cpu-rate-limiting _multi-cpu-cache _multi-cpu-scheduler _multi-cpu-singletons _multi-cpu-pubsub _multi-cpu-writer _multi-cpu-migration _multi-cpu-faults \
-	_multi-cpu-ha _multi-cpu-container _multi-cpu-existing-suites
-Zato_Test_Multi_CPU_Resume_File := $(CURDIR)/code/tests/.test-multi-cpu-resume
-
-# The existing live suites that run again with several workers, the worker count they run with,
-# and the suite that the run is currently on.
-Zato_Test_Multi_CPU_Existing             = $(filter-out test-multi-cpu,$(Zato_Test_Live))
-Zato_Test_Multi_CPU_Existing_Workers    := 4
-Zato_Test_Multi_CPU_Existing_Resume_File := $(CURDIR)/code/tests/.test-multi-cpu-existing-suites-resume
-
-# The active-standby targets that run again with several workers on both nodes, and the target that the run is currently on
-Zato_Test_Multi_CPU_HA_Resume_File := $(CURDIR)/code/tests/.test-multi-cpu-ha-resume
-
-# The unit tests of the arbiter, the region, the control channel and the modules that the workers share.
-Zato_Test_Multi_CPU_Unit := \
-	zato-common/ipc_region zato-common/log_rotation zato-common/process_queue zato-common/worker_count \
-	zato-common/worker_slot zato-common/rate_limiting_region zato-common/mllp_region zato-common/log_streaming_region \
-	zato-common/audit_retention_workers zato-common/analytics_rollup_workers zato-common/pubsub_writer_process \
-	zato-server/arbiter zato-server/config_process zato-server/control zato-server/worker_list zato-server/metrics_region \
+# The unit tests of the arbiter, the config process, the control channel and the shared region of the server.
+Zato_Test_Arbiter_Unit := \
+	zato-common/log_rotation zato-common/process_queue zato-common/mllp_region zato-common/log_streaming_region \
+	zato-common/rate_limiting_region zato-common/audit_retention_workers zato-common/analytics_rollup_workers \
+	zato-server/arbiter zato-server/config_process zato-server/control zato-server/metrics_region \
 	zato-server/outgoing_region zato-server/queue_bridge_workers zato-server/response_cache_workers
 
-# Runs each live suite in $(1) in a pytest invocation of its own, because each suite starts a server of its own,
-# resuming each suite from the test that failed or was interrupted, or starting it from the beginning under RESTART.
-define Zato_Test_Multi_CPU_Suites
-	@for suite in $(1); do \
-		ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/$$suite/ \
-			-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_$$suite -W ignore::DeprecationWarning \
-			$(Zato_Test_HA_Stepwise) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
-	done
-endef
-
-test-multi-cpu: ## Multi-process server - arbiter, workers, shared memory, live, fault and container suites, resuming from the stage that last failed or was interrupted. Zato_Server_Workers=N sets the worker count, RESTART=1 starts from scratch.
-	$(call Zato_Test_Walk,$(Zato_Test_Multi_CPU),$(Zato_Test_Multi_CPU_Resume_File))
-
-_multi-cpu-container:
-	$(Zato_Log_Reset)
-	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_container)
-
-_multi-cpu-ha: export Zato_Server_Workers = $(Zato_Test_Multi_CPU_Existing_Workers)
-_multi-cpu-ha:
-	$(call Zato_Test_Walk,$(Zato_Test_HA),$(Zato_Test_Multi_CPU_HA_Resume_File))
-
-_multi-cpu-existing-suites: export Zato_Server_Workers = $(Zato_Test_Multi_CPU_Existing_Workers)
-_multi-cpu-existing-suites:
-	$(call Zato_Test_Walk,$(Zato_Test_Multi_CPU_Existing),$(Zato_Test_Multi_CPU_Existing_Resume_File))
-
-_multi-cpu-unit:
+test-arbiter: ## The arbiter, the config process, the control channel and the shared region of the server.
 	$(Zato_Log_Reset)
 	$(MAKE) ipc-build $(Zato_Log)
 	$(LOAD_CARGO_ENV) && cargo test --manifest-path $(ZATO_RUST)/zato_ipc_core/Cargo.toml $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(addprefix $(CURDIR)/code/tests/python/,$(addsuffix /,$(Zato_Test_Multi_CPU_Unit))) \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_multi_cpu_unit -W ignore::DeprecationWarning \
-		$(Zato_Test_HA_Stepwise) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-
-_multi-cpu-rest:
-	$(Zato_Log_Reset)
-	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_rest multi_cpu_metrics multi_cpu_mcp multi_cpu_logging)
-
-_multi-cpu-rate-limiting:
-	$(Zato_Log_Reset)
-	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_rate_limiting)
-
-_multi-cpu-config:
-	$(Zato_Log_Reset)
-	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_config)
-
-_multi-cpu-hot-deploy:
-	$(Zato_Log_Reset)
-	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_hot_deploy)
-
-_multi-cpu-dashboard:
-	$(Zato_Log_Reset)
-	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_dashboard)
-
-_multi-cpu-audit:
-	$(Zato_Log_Reset)
-	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_audit)
-
-_multi-cpu-audit-postgresql: export Zato_Test_Multi_CPU_Audit_DB = postgresql
-_multi-cpu-audit-postgresql:
-	$(Zato_Log_Reset)
-	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_audit)
-
-_multi-cpu-cache:
-	$(Zato_Log_Reset)
-	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_cache)
-
-_multi-cpu-scheduler:
-	$(Zato_Log_Reset)
-	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_scheduler)
-
-_multi-cpu-singletons:
-	$(Zato_Log_Reset)
-	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_singletons)
-
-_multi-cpu-pubsub:
-	$(Zato_Log_Reset)
-	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_pubsub)
-
-_multi-cpu-writer:
-	$(Zato_Log_Reset)
-	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_writer)
-
-_multi-cpu-migration:
-	$(Zato_Log_Reset)
-	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_migration)
-
-_multi-cpu-faults:
-	$(Zato_Log_Reset)
-	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_faults multi_cpu_arbiter)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(addprefix $(CURDIR)/code/tests/python/,$(addsuffix /,$(Zato_Test_Arbiter_Unit))) \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_arbiter_unit -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 test-rate-limiting: rust-target-prune ## All rate limiting tests.
 	$(Zato_Log_Reset)
@@ -904,7 +805,6 @@ test-rate-limiting: rust-target-prune ## All rate limiting tests.
 	$(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-rate-limiting/python-unit-tests \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rate_limiting_py -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	$(MAKE) _multi-cpu-rate-limiting $(Zato_Log)
 
 test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing delivery.
 	$(Zato_Log_Reset)
@@ -970,7 +870,6 @@ test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing del
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_amqp/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend_amqp \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	$(MAKE) _multi-cpu-pubsub $(Zato_Log)
 
 test-queue-delivery-rest: ## Queue delivery of outgoing REST connections, live, on every pub/sub backend.
 	$(Zato_Log_Reset)
@@ -1069,7 +968,6 @@ test-enmasse: ## Enmasse tests - every importer, every exporter, the round trips
 # Secret rotation needs the live services switched on, which the discovery above leaves off
 	Zato_Test_Live_SQL=1 Zato_Test_FTP=1 Zato_Test_SFTP=1 Zato_Test_SMB=1 Zato_Test_MongoDB=1 \
 		$(ZATO_PY) -m unittest discover -s $(CURDIR)/code/zato-cli/test/zato/enmasse_ -p 'test_secret_rotation_live.py' -v $(Zato_Log)
-	$(MAKE) _multi-cpu-hot-deploy _multi-cpu-config $(Zato_Log)
 
 test-enmasse-delete-live: ## Enmasse should_delete against a live server - every object created and deleted through the pickup directory.
 	$(Zato_Log_Reset)
@@ -1505,10 +1403,6 @@ test-hl7: ## Every HL7 test - parsing, FHIR, MLLP channels, outgoing connections
 		$(CURDIR)/code/tests/python/zato-common/fhir_display/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_fhir -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-server/multi_cpu_rest/test_mllp_state.py \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_multi_cpu -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 test-ui: ## Every dashboard test - the UI kit, the rule engine screens, the audit log, the whole Playwright suite and the web-admin access checks.
 	$(Zato_Log_Reset)
@@ -1575,7 +1469,6 @@ test-audit-log: ## Audit log tests against live SQLite, MySQL and PostgreSQL, pl
 		$(CURDIR)/code/tests/python/zato-common/audit_log/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_audit_log \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	$(MAKE) _multi-cpu-audit _multi-cpu-audit-postgresql $(Zato_Log)
 
 test-alerting: ## Alerting engine tests - rules, actions, dedup, lifecycle and collectors, fully offline.
 	$(Zato_Log_Reset)
@@ -1798,7 +1691,7 @@ Zato_Test_Offline := \
 # Rust toolchain suites and the database matrices
 Zato_Test_Toolchain := \
 	test-distlock test-common test-rate-limiting test-cli test-scheduler \
-	test-audit-log test-analytics
+	test-audit-log test-analytics test-arbiter
 
 # Suites needing a live server or an external service
 # discord_disabled - test-discord
@@ -1806,7 +1699,7 @@ Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub test-queue-delivery test-mongodb test-es \
 	test-sql test-oracle-db test-mssql-db test-microsoft-cloud test-salesforce test-bearer \
 	test-ibm-mq test-kafka test-sdk test-hl7 test-ccda test-documents test-llm test-rule-engine test-enmasse test-audit-export \
-	test-api-portal-live test-file-transfer test-multi-cpu
+	test-api-portal-live test-file-transfer
 
 # The whole browser and dashboard suite
 # Zato_Test_Browser := test-ui

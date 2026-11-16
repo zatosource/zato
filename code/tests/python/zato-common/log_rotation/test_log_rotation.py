@@ -59,21 +59,6 @@ class _Broadcast:
         return out
 
 # ################################################################################################################################
-
-class _CheckingDuringRecord(WorkerFileHandler):
-    """ Stands for the handler of the pub/sub writer process, during whose record the arbiter runs the check of an interval.
-    RotatingFileHandler.emit calls shouldRollover after the comparison of the stream and before the write of the record.
-    """
-    rotator:'LogRotator'
-    results:'list_[bool]'
-
-    def shouldRollover(self, record:'logging.LogRecord') -> 'int':
-        is_rotated = self.rotator.rotate_due()
-        self.results.append(is_rotated)
-
-        return 0
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 def _new_handler(path:'str') -> 'WorkerFileHandler':
@@ -170,7 +155,7 @@ def test_the_arbiter_renames_a_full_file_and_writes_to_the_new_one(tmp_path:'Pat
 
 # ################################################################################################################################
 
-def test_no_file_is_renamed_again_before_every_worker_acknowledged(tmp_path:'Path') -> 'None':
+def test_no_file_is_renamed_again_before_the_worker_acknowledged(tmp_path:'Path') -> 'None':
     path = str(tmp_path / 'server.log')
 
     arbiter_handler = _new_handler(path)
@@ -195,65 +180,13 @@ def test_no_file_is_renamed_again_before_every_worker_acknowledged(tmp_path:'Pat
 
     # A worker that terminated before its acknowledgement permits the next rotation as well.
     _write(arbiter_handler, _large_record)
-    rotator.on_worker_exit(_slot)
+    rotator.on_process_exit(_slot)
 
     assert rotator.rotate_due()
     assert broadcast.rotation_ids == [1, 2, 3]
     assert sorted(os.listdir(tmp_path)) == ['server.log', 'server.log.1', 'server.log.2', 'server.log.3']
 
     _close([arbiter_handler])
-
-# ################################################################################################################################
-
-def test_a_watched_handler_follows_a_rename_by_itself(tmp_path:'Path') -> 'None':
-    path = str(tmp_path / 'server.log')
-
-    arbiter_handler = _new_handler(path)
-    writer_handler = _new_handler(path)
-    writer_handler.watch()
-
-    rotator = LogRotator([arbiter_handler], _Broadcast())
-
-    _write(writer_handler, _large_record)
-    assert rotator.rotate_due()
-
-    # The handler of the pub/sub writer process receives no command, and its next record is in the new file
-    _write(writer_handler, 'writer-1')
-
-    assert _read_lines(path) == ['writer-1']
-    assert _read_lines(f'{path}.1') == [_large_record]
-
-    _close([arbiter_handler, writer_handler])
-
-# ################################################################################################################################
-
-def test_no_file_is_renamed_while_a_watched_handler_writes_a_record(tmp_path:'Path') -> 'None':
-    path = str(tmp_path / 'server.log')
-
-    arbiter_handler = _new_handler(path)
-    broadcast = _Broadcast()
-    rotator = LogRotator([arbiter_handler], broadcast)
-
-    writer_handler = _CheckingDuringRecord(path, maxBytes=_max_bytes, backupCount=_backup_count, encoding='utf8')
-    writer_handler.setFormatter(logging.Formatter('%(message)s'))
-    writer_handler.rotator = rotator
-    writer_handler.results = []
-    writer_handler.watch()
-
-    _write(arbiter_handler, _large_record)
-
-    # The check of an interval that falls between the comparison of the pub/sub writer process and its write renames nothing ..
-    _write(writer_handler, 'writer-1')
-
-    assert writer_handler.results == [False]
-    assert broadcast.rotation_ids == []
-
-    # .. and the check of the next interval renames the file, with the record of the writer process in it.
-    assert rotator.rotate_due()
-    assert broadcast.rotation_ids == [1]
-    assert _read_lines(f'{path}.1') == [_large_record, 'writer-1']
-
-    _close([arbiter_handler, writer_handler])
 
 # ################################################################################################################################
 # ################################################################################################################################

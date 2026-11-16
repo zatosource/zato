@@ -157,7 +157,7 @@ def get_redis_conn_from_values(values:'stranydict', *, decode_responses:'bool'=F
 
     # .. and the pool of the process takes them over, so a greenlet that finds every connection in use
     # waits for a released one instead of failing with MaxConnectionsError. After a fork, the pool
-    # of the new process opens its own connections, so every worker keeps a pool of its own.
+    # of the new process opens its own connections, so each process keeps a pool of its own.
     pool = BlockingConnectionPool(
         connection_class=resolved.connection_class,
         max_connections=values['pool_size'],

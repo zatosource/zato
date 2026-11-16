@@ -69,21 +69,21 @@ class MessageType:
     Reopen_Logs   = 'reopen-logs'
     Logs_Reopened = 'logs-reopened'
 
-    # A worker learned that another server took over the pub/sub database, after which the arbiter drains every worker
+    # A process learned that another server took over the pub/sub database, after which the arbiter drains its processes
     Replaced = 'replaced'
 
-    # A worker forwards an invocation of a service that changes configuration to the config process,
+    # The worker forwards an invocation of a service that changes configuration to the config process,
     # which returns its result to the worker after the events of the change
     Forward        = 'forward'
     Forward_Result = 'forward-result'
 
-    # A worker asks the config process for a load of its configuration, the config process sends a mark to that worker
+    # The worker asks the config process for a load of its configuration, the config process sends a mark to the worker
     # once no change is in progress, and the worker reports that it loaded its configuration
     Load_Request = 'load-request'
     Mark         = 'mark'
     Load_Done    = 'load-done'
 
-    # The arbiter tells the config process which workers it waits for and that the worker of a slot terminated
+    # The arbiter tells the config process whether it waits for a load of the worker and that the worker terminated
     Loading_State = 'loading-state'
     Worker_Gone   = 'worker-gone'
 

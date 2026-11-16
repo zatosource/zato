@@ -201,7 +201,7 @@ class ZatoApplication:
         # .. the outgoing REST calls of the services that it runs append to the files that the arbiter rotates ..
         init_rest_log(os.path.join(server.logs_dir, ModuleCtx.REST_Log_Name), ModuleCtx.Log_No_Rotation)
 
-        # .. it loads the configuration and reports ready, after which the arbiter starts the workers ..
+        # .. it loads the configuration and reports ready, after which the arbiter starts the worker ..
         ParallelServer.start_server_process(server)
         runtime.on_started()
 
@@ -211,7 +211,7 @@ class ZatoApplication:
 # ################################################################################################################################
 
     def run_worker(self, worker:'WorkerRuntime') -> 'None':
-        """ Runs the server in a worker process that the arbiter forked, until the worker is drained.
+        """ Runs the server in the worker process that the arbiter forked, until the worker is drained.
         """
 
         # stdlib
@@ -242,7 +242,7 @@ class ZatoApplication:
         # .. the worker is bound to its arbiter and to the region of its server ..
         worker.bind(server)
 
-        # .. the REST and access logs of each worker append to the files that the arbiter rotates ..
+        # .. the REST and access logs of the worker append to the files that the arbiter rotates ..
         init_rest_log(os.path.join(server.logs_dir, ModuleCtx.REST_Log_Name), ModuleCtx.Log_No_Rotation)
         init_access_log(os.path.join(server.logs_dir, ModuleCtx.Access_Log_Name), ModuleCtx.Log_No_Rotation)
 
@@ -266,7 +266,7 @@ class ZatoApplication:
         # .. which we convert to bytes for the HTTP server.
         max_msg_size = max_msg_size * _megabyte
 
-        # Each worker binds the port with SO_REUSEPORT and serves until it is drained.
+        # The worker binds the port and serves until it is drained.
         http_server = HTTPServer(host, port, request_handler, server_software, max_msg_size)
         worker.serve(http_server)
 
@@ -518,7 +518,7 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
         init_access_log(os.path.join(server.logs_dir, ModuleCtx.Access_Log_Name), ModuleCtx.Log_Max_Bytes)
         return server
 
-    # .. while a started server runs as an arbiter that forks its workers and returns its exit code once they stopped.
+    # .. while a started server runs as an arbiter that forks its worker and returns its exit code once it stopped.
     from zato.server.arbiter_start import run_arbiter
 
     exit_code = run_arbiter(zato_app)

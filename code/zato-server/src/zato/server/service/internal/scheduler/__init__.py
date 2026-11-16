@@ -742,7 +742,7 @@ class Delete(_SchedulerAdmin):
                 session.delete(job_row)
                 session.commit()
 
-            # The run state of the job goes after the commit, so no reload of any worker deletes the run state
+            # The run state of the job goes after the commit, so no reload of the worker deletes the run state
             # of a job that its ODB read did not return, which may be a job created after that read
             self.server._scheduler_run_state.delete(job_name)
 

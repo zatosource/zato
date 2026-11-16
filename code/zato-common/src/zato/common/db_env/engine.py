@@ -64,14 +64,6 @@ if 0:
 # and the preparation of statements.
 _network_max_overflow = 0
 
-# The smallest pool that one worker process receives of a configured pool, with which the push deliveries of the worker
-# still hold a connection of their share. A configured pool below it is used as it is.
-Min_Worker_Pool_Size = 4
-
-# The worker processes of the server among which the configured pool of each network database is divided,
-# one in a server with one process and in every process that is not a server
-_pool_worker_count = 1
-
 # The PostgreSQL advisory lock under which the schemas are created
 _schema_lock_key = 7_401_852_117_309
 
@@ -97,9 +89,9 @@ _sqlite_file_engine_cache:'anydict' = {}
 # a single thread can wait past the timeout.
 _sqlite_write_locks:'anydict' = {}
 
-# The queues of the shared region in which the worker processes of one server take turns for the writes to one SQLite file,
-# by the URL of the file. The thread lock of the file admits one thread of a worker to the queue at a time,
-# and a server with one process has no queues.
+# The queues of the shared region in which the worker and the config process of one server take turns for the writes
+# to one SQLite file, by the URL of the file. The thread lock of the file admits one thread of a process to the queue
+# at a time, and a process that no arbiter started has no queues.
 _process_queues:'anydict' = {}
 
 # The lock of the threads of the operating system, which the threads of the gevent pool require.
@@ -109,11 +101,11 @@ _allocate_thread_lock = get_original('_thread', 'allocate_lock')
 # ################################################################################################################################
 
 class _QueueBinding:
-    """ The shared region of the server of a worker process, the place of the worker in its queues, how long a write
-    waits for its turn, and the queue of each SQLite file, by its real path, which is the same in every worker.
+    """ The shared region of the server of a process, the place of the process in its queues, how long a write
+    waits for its turn, and the queue of each SQLite file, by its real path, which is the same in both processes.
     """
     region: 'SharedRegion'
-    slot: 'int'
+    place: 'int'
     deadline_seconds: 'float'
     queue_by_path: 'strintdict'
 
@@ -258,7 +250,7 @@ def get_sqlite_file_engine(
 
 def new_unshared_sqlite_file_engine(db_path:'str', *, replicated_database:'str') -> 'Engine':
     """ Returns an engine of a SQLite file that no other caller receives and that runs no background checkpoints,
-    which its caller disposes, e.g. the arbiter before it forks the workers.
+    which its caller disposes, e.g. the arbiter before it forks the worker and the config process.
     """
     file_engine = _new_sqlite_file_engine(db_path, needs_pool=False, needs_background_checkpoint=False,
         replicated_database=replicated_database)
@@ -313,27 +305,6 @@ def create_schema(engine:'Engine', metadata:'MetaData') -> 'None':
             metadata.create_all(connection)
     else:
         metadata.create_all(engine)
-
-# ################################################################################################################################
-
-def set_pool_worker_count(worker_count:'int') -> 'None':
-    """ Divides the pool of each network database that this process and the processes it forks create
-    among the given number of worker processes.
-    """
-    global _pool_worker_count
-    _pool_worker_count = worker_count
-
-# ################################################################################################################################
-
-def get_worker_pool_size(pool_size:'int') -> 'int':
-    """ Returns the part of a configured pool size that one worker process receives, so that the workers together
-    hold no more connections than configured, unless the minimum of a worker requires more.
-    """
-    share = pool_size // _pool_worker_count
-    floor = min(pool_size, Min_Worker_Pool_Size)
-
-    out = max(share, floor)
-    return out
 
 # ################################################################################################################################
 
@@ -414,7 +385,7 @@ def _new_env_engine(config:'EnvDBConfig') -> '_EnvEngine':
         # .. stores with many concurrent small transactions also need enough
         # .. connections for the database to group their commits into shared flushes ..
         if config.needs_pool:
-            engine_kwargs['pool_size'] = get_worker_pool_size(values['pool_size'])
+            engine_kwargs['pool_size'] = values['pool_size']
             engine_kwargs['max_overflow'] = _network_max_overflow
 
     engine = create_engine(engine_url, connect_args=connect_args, **engine_kwargs)
@@ -489,7 +460,7 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
 
 def new_unshared_env_engine(config:'EnvDBConfig') -> 'Engine':
     """ Returns an engine of an environment-configured database that no other caller receives and that runs
-    no background checkpoints, which its caller disposes, e.g. the arbiter before it forks the workers.
+    no background checkpoints, which its caller disposes, e.g. the arbiter before it forks the worker and the config process.
     """
     env_engine = _new_env_engine(config)
 
@@ -536,7 +507,7 @@ def _call_under_lock(lock:'any_', func:'callable_', args:'anytuple') -> 'any_':
 # ################################################################################################################################
 
 def set_process_queue(engine:'Engine', process_queue:'ProcessQueue') -> 'None':
-    """ Makes the writes of this worker process to the SQLite file of an engine take turns with those of the other workers.
+    """ Makes the writes of this process to the SQLite file of an engine take turns with those of the other process.
     """
     url = str(engine.url)
     _process_queues[url] = process_queue
@@ -544,7 +515,7 @@ def set_process_queue(engine:'Engine', process_queue:'ProcessQueue') -> 'None':
 # ################################################################################################################################
 
 def get_cached_engine_count() -> 'int':
-    """ Returns how many engines this process holds for its callers, none of which a process that forks workers may hold,
+    """ Returns how many engines this process holds for its callers, none of which a process that forks may hold,
     because a pooled connection inherited by several processes is used by all of them at once.
     """
     out = len(_engine_cache) + len(_sqlite_file_engine_cache)
@@ -568,13 +539,13 @@ def get_queue_by_path(db_paths:'strlist') -> 'strintdict':
 
 # ################################################################################################################################
 
-def bind_process_queues(region:'SharedRegion', slot:'int', deadline_seconds:'float', queue_by_path:'strintdict') -> 'None':
-    """ Makes the writes of this worker process to each SQLite file of the server take turns with those of the other workers,
+def bind_process_queues(region:'SharedRegion', place:'int', deadline_seconds:'float', queue_by_path:'strintdict') -> 'None':
+    """ Makes the writes of this process to each SQLite file of the server take turns with those of the other process,
     in the queue of the file that the arbiter assigned before the fork.
     """
     binding = _QueueBinding()
     binding.region = region
-    binding.slot = slot
+    binding.place = place
     binding.deadline_seconds = deadline_seconds
     binding.queue_by_path = queue_by_path
 
@@ -583,7 +554,7 @@ def bind_process_queues(region:'SharedRegion', slot:'int', deadline_seconds:'flo
 # ################################################################################################################################
 
 def _get_process_queue(engine:'Engine', url:'str') -> 'ProcessQueue | None':
-    """ Returns the place of this worker process in the queue of the SQLite file of an engine, if it is bound to one.
+    """ Returns the place of this process in the queue of the SQLite file of an engine, if it is bound to one.
     """
     if process_queue := _process_queues.get(url):
         return process_queue
@@ -607,7 +578,7 @@ def _get_process_queue(engine:'Engine', url:'str') -> 'ProcessQueue | None':
 
     queue = binding.queue_by_path[real_path]
 
-    out = ProcessQueue(binding.region, queue, binding.slot, binding.deadline_seconds)
+    out = ProcessQueue(binding.region, queue, binding.place, binding.deadline_seconds)
     _process_queues[url] = out
 
     return out
@@ -629,7 +600,7 @@ def call_database(engine:'Engine', func:'callable_', *args:'any_') -> 'any_':
         hub = get_hub()
         threadpool = hub.threadpool
 
-        # The thread that waits for the turn of this worker blocks in the pool, while the greenlet of the caller is suspended
+        # The thread that waits for the turn of this process blocks in the pool, while the greenlet of the caller is suspended
         if process_queue := _get_process_queue(engine, url):
             out = threadpool.apply(process_queue.run_under_lock, (write_lock, func, args))
         else:

@@ -1,11 +1,11 @@
 //! Access to the words of a shared memory region through its layout.
 
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::AtomicU64;
 
 use xxhash_rust::xxh3::xxh3_64_with_seed;
 
 use crate::error::RegionError;
-use crate::layout::{HEADER_START_ID, Layout};
+use crate::layout::{Layout, PLACE_COUNT};
 
 /// Key word of a table entry that no key has claimed yet.
 pub const EMPTY_KEY: u64 = 0;
@@ -54,12 +54,6 @@ impl<'region> RegionView<'region> {
         Ok(out)
     }
 
-    /// Returns the start ID of the arbiter that created the region, which differs from that of every earlier arbiter.
-    pub fn start_id(&self) -> Result<u64, RegionError> {
-        let out = self.word(HEADER_START_ID)?.load(Ordering::SeqCst);
-        Ok(out)
-    }
-
     /// Returns the offset of a word within a block that follows `start`.
     pub fn block_word(start: usize, block: usize, field: usize) -> Result<usize, RegionError> {
         let block_offset = block.checked_mul(crate::layout::BLOCK_WORDS).ok_or(RegionError::OutOfBounds)?;
@@ -68,22 +62,12 @@ impl<'region> RegionView<'region> {
         Ok(out)
     }
 
-    /// Confirms that a place exists in the writer queues, which is a worker slot, the place of the writer process
-    /// or the place of the config process.
-    pub const fn check_queue_place(&self, place: usize) -> Result<(), RegionError> {
-        if place < self.layout.queue_place_count {
+    /// Confirms that a place exists in the queues, which is the place of the worker or that of the config process.
+    pub const fn check_queue_place(place: usize) -> Result<(), RegionError> {
+        if place < PLACE_COUNT {
             Ok(())
         } else {
-            Err(RegionError::NoSuchSlot(place))
-        }
-    }
-
-    /// Confirms that a slot number exists in the region.
-    pub const fn check_slot(&self, slot: usize) -> Result<(), RegionError> {
-        if slot < self.layout.params.slot_count {
-            Ok(())
-        } else {
-            Err(RegionError::NoSuchSlot(slot))
+            Err(RegionError::NoSuchPlace(place))
         }
     }
 }
@@ -135,15 +119,7 @@ pub mod test_support {
     #[must_use]
     pub const fn small_params() -> RegionParams {
         RegionParams {
-            slot_count: 4,
-            wake_capacity: 8,
-            cell_capacity: 8,
             queue_count: 2,
-            metric_count: 3,
-            series_capacity: 8,
-            series_key_bytes: 512,
-            dedup_capacity: 4,
-            breaker_capacity: 4,
             lock_capacity: 4,
         }
     }

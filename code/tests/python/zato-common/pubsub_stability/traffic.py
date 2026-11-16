@@ -23,7 +23,6 @@ from gevent.lock import RLock
 from production_documents import get_production_documents
 from zato.common.api import PubSub
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
-from zato.common.test.pubsub_in_process import new_single_slot_fence
 from zato.common.typing_ import cast_
 from zato.server.base.parallel.delivery import PushDelivery
 
@@ -181,7 +180,7 @@ class Traffic:
         self.broadcast_sub_keys:'strlist' = []
 
         self.server = _StubServer(self)
-        self.push_delivery = PushDelivery(cast_('any_', self.server), self.backend, new_single_slot_fence())
+        self.push_delivery = PushDelivery(cast_('any_', self.server), self.backend)
 
         self._publisher_greenlets:'anylist' = []
         self._consumer_greenlets:'anylist' = []

@@ -19,8 +19,8 @@ if 0:
 # ################################################################################################################################
 
 class _ReplacedState:
-    """ What a worker process of a multi-process server calls once it learns that this server is no longer the active one,
-    which tells its arbiter to drain every worker.
+    """ What a process that an arbiter started calls once it learns that this server is no longer the active one,
+    which tells its arbiter to drain its processes.
     """
     on_replaced: 'callable_ | None' = None
 

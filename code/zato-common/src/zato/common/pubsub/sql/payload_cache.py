@@ -14,9 +14,6 @@ from collections import OrderedDict
 
 if 0:
     from zato.common.typing_ import strnone
-    from zato_ipc_core.zato_ipc_core import SharedRegion
-
-    SharedRegion = SharedRegion
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,16 +24,8 @@ Max_Payload_Cache_Size = 64 * 1024 * 1024
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ModuleCtx:
-
-    # The wake counter of the shared region whose value is the payload epoch of every worker of a server
-    Epoch_Key = 'zato.pubsub.payload-epoch'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class LocalPayloadEpoch:
-    """ The payload epoch of a server that runs one worker. Each edit of a message advances it.
+class PayloadEpoch:
+    """ The payload epoch of the server. Each edit of a message advances it.
     """
 
     def __init__(self) -> 'None':
@@ -51,45 +40,14 @@ class LocalPayloadEpoch:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SharedPayloadEpoch:
-    """ The payload epoch of every worker of a server, held in a wake counter of the shared region. Each edit
-    of a message advances it, and a value that differs from an earlier one means that an edit took place in between.
-    """
-
-    def __init__(self, region:'SharedRegion') -> 'None':
-        self.region = region
-
-    def get(self) -> 'int':
-        return self.region.wake_value(ModuleCtx.Epoch_Key)
-
-    def advance(self) -> 'None':
-        self.region.wake_increment(ModuleCtx.Epoch_Key)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-payloadepoch = LocalPayloadEpoch | SharedPayloadEpoch
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def get_payload_cache_size(worker_count:'int') -> 'int':
-    """ Returns how many bytes of payloads each worker of a server keeps at most.
-    """
-    out = Max_Payload_Cache_Size // worker_count
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class PayloadCache:
     """ The payloads of the messages that push delivery read most recently, up to a total size, by the identifier
     of each message. A message pushed to many subscribers is read from the database and decrypted once
     rather than once per subscriber. A payload changes only through an edit of its message, which advances the payload
-    epoch, after which every worker drops the payloads it keeps.
+    epoch, after which the cache drops the payloads it keeps.
     """
 
-    def __init__(self, max_size:'int', epoch:'payloadepoch') -> 'None':
+    def __init__(self, max_size:'int', epoch:'PayloadEpoch') -> 'None':
         self.max_size = max_size
         self.size = 0
         self._payloads:'OrderedDict[str, tuple[str, int]]' = OrderedDict()
@@ -157,7 +115,7 @@ class PayloadCache:
 # ################################################################################################################################
 
     def invalidate(self) -> 'None':
-        """ Advances the payload epoch after an edit committed, so that every worker reads each payload from the database
+        """ Advances the payload epoch after an edit committed, so that each payload is read from the database
         on the next delivery.
         """
         self.epoch.advance()

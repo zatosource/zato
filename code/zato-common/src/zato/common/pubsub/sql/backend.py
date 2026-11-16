@@ -20,15 +20,14 @@ from sqlalchemy import and_, select
 # Zato
 from zato.common.api import HTTP_SOAP, PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
+from zato.common.db_env.engine import call_database
 from zato.common.marshal_.api import Model
 from zato.common.pubsub.delivery_scope import get_delivery_scope
 from zato.common.pubsub.sql.admin import SQLAdminAPI
 from zato.common.pubsub.sql.config import get_batch_size, get_pull_lease_seconds
-from zato.common.pubsub.sql.pull import fetch_query, outgoing_fetch_query, payload_query
+from zato.common.pubsub.sql.pull import fetch_query, lease_messages, outgoing_fetch_query, payload_query
 from zato.common.pubsub.sql.schema import delivery_table, topic_sub_table
-from zato.common.pubsub.sql.writes import new_pending_ack, new_pending_publication, PubSubWriter
-from zato.common.pubsub.writer_process.remote import lease
-from zato.common.typing_ import cast_
+from zato.common.pubsub.sql.writes import new_pending_ack, new_pending_publication
 from zato.common.util.api import new_msg_id
 from zato.common.util.time_ import datetime_to_ms, parse_utc
 from zato.server.metrics import zato_pubsub_messages_delivered_total, zato_pubsub_messages_published_total
@@ -253,27 +252,17 @@ class SQLPubSubBackend(SQLAdminAPI):
 
 # ################################################################################################################################
 
-    def is_atomic_delivery_supported(self) -> 'bool':
-        """ Whether this worker commits the acknowledgement of a push delivery batch in one transaction
-        with the publications of its subscriber services, which a worker that writes through a writer process does not.
-        """
-        out = isinstance(self._writer, PubSubWriter)
-        return out
-
-# ################################################################################################################################
-
     def ack_with_publications(self, sub_key:'str', msg_ids:'strlist', sequence_ids:'intlist', publications:'anylist') -> 'None':
         """ Acknowledges the messages of a push delivery batch in one transaction with the publications that its
         subscriber services made, which commits all of them or none, and then wakes up the subscribers of the publications.
         """
-        writer = cast_('PubSubWriter', self._writer)
         ack = new_pending_ack(sub_key, msg_ids, sequence_ids)
 
         items:'anylist' = []
         items.extend(publications)
         items.append(ack)
 
-        writer.write_atomic(items)
+        self._writer.write_atomic(items)
 
         # A publication whose message ID already stands for different content is the only one not committed.
         for pending in publications:
@@ -523,7 +512,7 @@ class SQLPubSubBackend(SQLAdminAPI):
         now_ms = self._database_now_ms()
         leased_until_ms = now_ms + get_pull_lease_seconds() * 1000
 
-        rows, attempts = lease(engine, sub_key, max_messages, max_len, now_ms, leased_until_ms)
+        rows, attempts = call_database(engine, lease_messages, engine, sub_key, max_messages, max_len, now_ms, leased_until_ms)
 
         out:'anylist' = []
 

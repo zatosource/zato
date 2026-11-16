@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The queues in front of outgoing connections. A worker that the arbiter bound to the region of its server keeps
-# the depth and the publish lock of each queue in that region, which every worker of the server shares.
+# The queues in front of outgoing connections. A process that the arbiter bound to the region of its server keeps
+# the publish lock and the name mark of each queue in that region, which the worker and the config process share.
 
 # stdlib
 import logging
@@ -24,11 +24,11 @@ from zato.common.broker_message import Server as BrokerMessageServer
 from zato.common.pubsub.dlq import get_dlq_sub_key, get_dlq_topic_name, is_dlq_sub_key
 from zato.common.pubsub.outgoing import audit_disabled_conn_types, find_outgoing_conn, get_outgoing_sub_config, \
     get_outgoing_sub_key, get_outgoing_topic_name, locate_outgoing_conn, parse_outgoing_sub_key
-from zato.common.worker_slot import get_worker_slot, is_config_process
+from zato.common.worker_slot import is_config_owner, is_config_process
 from zato.server.base.config_manager.common import ConfigManagerImpl
 from zato.server.control.hub import ModuleCtx as HubCtx
 from zato.server.outgoing_region import get_outgoing_binding, pause_outgoing_delivery, resume_outgoing_delivery, \
-    SharedNameMark, SharedPublishLock, SharedQueueDepth
+    SharedNameMark, SharedPublishLock
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How long a worker waits for the change that renamed or deleted a connection to reach its configuration,
+# How long the worker waits for the change that renamed or deleted a connection to reach its configuration,
 # and how often it checks, in seconds
 _name_wait_timeout = HubCtx.Query_Timeout
 _name_wait_interval = 0.01
@@ -114,10 +114,10 @@ class OutgoingQueueDepth:
 
 def changes_shared_queues() -> 'bool':
     """ Whether a change of configuration in this process changes the queues of outgoing connections in the pub/sub
-    database, which the config process of a multi-process server and a server of one process do, while each worker
-    of a multi-process server applies the change that the config process relayed to its own state alone.
+    database, which the config process and the process that no arbiter started do, while the worker applies the change
+    that the config process relayed to its own state alone.
     """
-    out = is_config_process() or get_worker_slot() is None
+    out = is_config_owner()
     return out
 
 # ################################################################################################################################
@@ -132,7 +132,7 @@ class OutgoingQueues(ConfigManagerImpl):
     _outgoing_sub_key_cache: 'set[str]'
     _outgoing_sub_key_lock: 'RLock'
     _outgoing_conn_locks: 'dict[str, publish_lock]'
-    outgoing_queue_depth: 'OutgoingQueueDepth | SharedQueueDepth'
+    outgoing_queue_depth: 'OutgoingQueueDepth'
     outgoing_name_mark: 'OutgoingNameMark | SharedNameMark'
 
     init_outgoing_dlqs: 'callable_'
@@ -155,12 +155,12 @@ class OutgoingQueues(ConfigManagerImpl):
         # One lock per connection, under which publications take turns with renames and deletes
         self._outgoing_conn_locks = {}
 
-        # A worker of a server with several workers shares the depths with the other workers
+        self.outgoing_queue_depth = OutgoingQueueDepth()
+
+        # A process that the arbiter started shares the name marks with the other process of its server
         if binding := get_outgoing_binding():
-            self.outgoing_queue_depth = SharedQueueDepth(binding)
             self.outgoing_name_mark = SharedNameMark(binding)
         else:
-            self.outgoing_queue_depth = OutgoingQueueDepth()
             self.outgoing_name_mark = OutgoingNameMark()
 
         self.init_outgoing_dlqs()
@@ -169,7 +169,7 @@ class OutgoingQueues(ConfigManagerImpl):
 
     def get_outgoing_publish_lock(self, conn_type:'str', conn_id:'int') -> 'publish_lock':
         """ The lock under which publications to one outgoing connection take turns with its renames and deletes,
-        in every worker of the server.
+        in both processes of the server.
         """
         sub_key = get_outgoing_sub_key(conn_type, conn_id)
 
@@ -199,8 +199,8 @@ class OutgoingQueues(ConfigManagerImpl):
         """ Holds one connection's queue still for as long as the block runs - nothing is published to it and its delivery
         stops between two rounds, so no message is in flight while the block changes the connection or the messages of its
         queue. A round in flight would otherwise resolve the connection's topics from a configuration the block is replacing,
-        or go on with a message the block discarded or replaced. The delivery stops in the worker that owns the queue,
-        whichever worker holds it. Without resumes_on_success, a block that completes leaves the delivery stopped,
+        or go on with a message the block discarded or replaced. The delivery stops in the worker,
+        whichever process holds the queue. Without resumes_on_success, a block that completes leaves the delivery stopped,
         and only a block that raises starts it again.
         """
         sub_key = get_outgoing_sub_key(conn_type, conn_id)
@@ -234,13 +234,13 @@ class OutgoingQueues(ConfigManagerImpl):
 
     @contextmanager
     def pause_outgoing_queue_locally(self, conn_type:'str', conn_id:'int') -> 'any_':
-        """ Stops the delivery of one connection's queue in this worker, if this worker owns the queue, while the worker
-        applies a change that the config process relayed, and starts it again afterwards, unless the change deleted the queue.
+        """ Stops the delivery of one connection's queue in the worker while the worker applies a change that the config
+        process relayed, and starts it again afterwards, unless the change deleted the queue.
         """
         sub_key = get_outgoing_sub_key(conn_type, conn_id)
         delivery = self.server.pubsub_push_delivery
 
-        # A worker that does not own the queue has no delivery greenlet to stop or to start ..
+        # A queue without a delivery greenlet has nothing to stop or to start ..
         delivery.pause_sub_key(sub_key)
 
         try:
@@ -255,11 +255,11 @@ class OutgoingQueues(ConfigManagerImpl):
 
     def hold_outgoing_queue_for_change(self, conn_type:'str', conn_id:'int') -> 'any_':
         """ Holds one connection's queue through hold_outgoing_queue while a change of configuration renames or deletes it
-        in the process that changes the shared queues. The config process of a server with several workers leaves
-        the delivery of the owner of the queue stopped, and the owner starts it again once it applied the relayed change,
-        so that no round of the owner runs under the configuration that the change replaces. A worker that applies
-        the relayed change takes no publish lock, because it applies the change on the control channel through which
-        the worker that owns the queue confirms a pause, and stops only a delivery of its own.
+        in the process that changes the shared queues. The config process leaves the delivery of the queue in the worker
+        stopped, and the worker starts it again once it applied the relayed change, so that no round runs under
+        the configuration that the change replaces. The worker that applies the relayed change takes no publish lock,
+        because it applies the change on the control channel through which it confirms a pause, and stops only
+        a delivery of its own.
         """
         if is_config_process():
             out = self.hold_outgoing_queue(conn_type, conn_id, resumes_on_success=False)
@@ -276,7 +276,7 @@ class OutgoingQueues(ConfigManagerImpl):
 
     def _wait_for_current_outgoing_name(self, conn_type:'str', conn_id:'int', sub_key:'str') -> 'None':
         """ Waits until the configuration of this process holds the name of one outgoing connection that the config process
-        gave it last. The change that renames a connection reaches each worker after the config process released
+        gave it last. The change that renames a connection reaches the worker after the config process released
         the publish lock of the queue, and a publication under the previous name would go to a topic that no queue reads.
         """
         deadline = monotonic() + _name_wait_timeout
@@ -324,8 +324,8 @@ class OutgoingQueues(ConfigManagerImpl):
 
                 logger.info('Created outgoing connection queue `%s` for topic `%s`', sub_key, topic_name)
 
-                # The worker that owns the sub key delivers the messages of the queue, which may be another worker,
-                # and each process of the server lists, renames and deletes the queue, so each of them adds it as well
+                # The worker delivers the messages of the queue, and each process of the server lists, renames
+                # and deletes the queue, so each of them adds it as well
                 self.server.config_dispatcher.relay_only({
                     'action': BrokerMessageServer.Outgoing_Queue_Created.value,
                     'sub_key': sub_key,
@@ -337,7 +337,7 @@ class OutgoingQueues(ConfigManagerImpl):
 # ################################################################################################################################
 
     def _add_outgoing_queue(self, sub_key:'str', topic_name:'str') -> 'None':
-        """ Adds the queue of an outgoing connection to this process, whose delivery starts if this worker owns its sub key.
+        """ Adds the queue of an outgoing connection to this process, whose delivery starts if this process is the worker.
         """
         sub_config = get_outgoing_sub_config(sub_key, topic_name)
         self._push_subs[sub_key] = [sub_config]
@@ -363,7 +363,7 @@ class OutgoingQueues(ConfigManagerImpl):
         """
         sub_key = get_outgoing_sub_key(conn_type, conn_id)
 
-        # A worker that has not applied the rename yet publishes only once it has, including the first publication
+        # The worker that has not applied the rename yet publishes only once it has, including the first publication
         # that creates the queue ..
         if changes_shared_queues():
             self.outgoing_name_mark.set_name(sub_key, new_name)

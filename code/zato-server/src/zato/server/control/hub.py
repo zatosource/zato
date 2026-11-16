@@ -6,11 +6,11 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The arbiter's side of the control channel. The hub holds one SEQPACKET socket per slot, relays the events of a worker
-# to every other worker in the order of their sequence numbers, holds the events of a starting worker until it reports
-# ready, fans out queries and returns their results, and sends drain, reload and log reopen commands. Its sockets are
-# non-blocking, and a datagram that a socket cannot take waits in the queue of its slot, so a worker that reads nothing
-# never holds the arbiter.
+# The arbiter's side of the control channel. The hub holds one SEQPACKET socket for the worker and one for the config
+# process, relays the events of each to the other in the order of their sequence numbers, holds the events of a starting
+# process until it reports ready, sends the queries of the config process to the worker and returns their results,
+# and sends drain, reload and log reopen commands. Its sockets are non-blocking, and a datagram that a socket cannot
+# take waits in the queue of its slot, so a process that reads nothing never holds the arbiter.
 
 # stdlib
 import os
@@ -31,21 +31,19 @@ from zato.server.control.envelope import decode, encode, join, MessageType, Modu
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, callable_, dict_, floatnone, list_, set_, tuple_
+    from zato.common.typing_ import any_, anydict, callable_, dict_, floatnone, list_, set_, tuple_
 
     any_ = any_
     anydict = anydict
-    anylist = anylist
     callable_ = callable_
     floatnone = floatnone
 
-    bytesdeque    = deque[bytes]
-    intanydict    = dict_[int, 'anydict']
-    intset        = set_[int]
-    pollevents    = list_[tuple_[int, int]]
-    channellist   = list_['SlotChannel']
+    bytesdeque     = deque[bytes]
+    intset         = set_[int]
+    pollevents     = list_[tuple_[int, int]]
+    channellist    = list_['SlotChannel']
     intchanneldict = dict_[int, 'SlotChannel']
-    querydict     = dict_[str, 'PendingQuery']
+    querydict      = dict_[str, 'PendingQuery']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,7 +55,7 @@ logger = getLogger(__name__)
 
 class ModuleCtx:
 
-    # How long a query waits for the responses of the workers, in seconds
+    # How long a query waits for the response of the worker, in seconds
     Query_Timeout = 5.0
 
 # ################################################################################################################################
@@ -65,23 +63,22 @@ class ModuleCtx:
 
 class EntryStatus:
 
-    # The worker of the slot responded within the deadline
+    # The worker responded within the deadline
     OK = 'ok'
 
-    # The worker of the slot did not respond within the deadline
+    # The worker did not respond within the deadline
     Timeout = 'timeout'
 
-    # The slot had no worker that reported ready when the query was received, or its worker terminated
+    # No worker that reported ready ran when the query was received, or the worker terminated
     Unavailable = 'unavailable'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def new_entry(slot:'int', status:'str', body:'any_') -> 'anydict':
-    """ Returns the entry of one slot in the result of a query.
+def new_entry(status:'str', body:'any_') -> 'anydict':
+    """ Returns the result of a query.
     """
     out = {
-        'slot': slot,
         'status': status,
         'body': body,
     }
@@ -92,24 +89,24 @@ def new_entry(slot:'int', status:'str', body:'any_') -> 'anydict':
 
 @dataclass(init=False)
 class SlotChannel:
-    """ The arbiter's end of the control socket of one slot.
+    """ The arbiter's end of the control socket of the worker or of the config process.
     """
     slot: 'int'
     sock: 'socket.socket'
 
-    # Whether the worker reported ready, before which relayed messages wait in the startup buffer
+    # Whether the process reported ready, before which relayed messages wait in the startup buffer
     is_ready: 'bool'
 
-    # Whether the worker closed its end and every datagram it sent was read, after which the socket is no longer polled
+    # Whether the process closed its end and every datagram it sent was read, after which the socket is no longer polled
     is_eof: 'bool'
 
-    # Whether the socket refused a datagram because the worker closed its end, after which nothing is sent to it
+    # Whether the socket refused a datagram because the process closed its end, after which nothing is sent to it
     is_broken: 'bool'
 
     # The datagrams that the socket has not taken yet
     out_queue: 'bytesdeque'
 
-    # The datagrams that wait for the worker to report ready
+    # The datagrams that wait for the process to report ready
     startup_buffer: 'bytesdeque'
 
 # ################################################################################################################################
@@ -117,40 +114,32 @@ class SlotChannel:
 
 @dataclass(init=False)
 class PendingQuery:
-    """ A query that the arbiter fanned out and whose responses it collects.
+    """ A query that the arbiter sent to the worker and whose response it waits for.
     """
     cid: 'str'
     origin_slot: 'int'
     deadline: 'float'
 
-    # The slots whose responses the query still waits for
-    expected: 'intset'
-
-    # The entry of each slot, by slot
-    entries: 'intanydict'
-
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ControlHub:
-    """ Relays the messages of the control channel between the workers of one arbiter.
+    """ Relays the messages of the control channel between the worker and the config process of one arbiter.
     """
 
     def __init__(
         self,
         body_dir:'str',
-        slot_count:'int',
         query_timeout:'float',
         on_ready:'callable_',
         on_logs_reopened:'callable_',
         on_replaced:'callable_',
         ) -> 'None':
 
-        # The hub calls on_ready with a slot whose worker reported ready, on_logs_reopened with a slot
-        # whose worker reopened its log files and with the ID of the rotation that it acknowledges,
-        # and on_replaced with a slot whose worker learned that another server took over the pub/sub database
+        # The hub calls on_ready with a slot whose process reported ready, on_logs_reopened with a slot
+        # whose process reopened its log files and with the ID of the rotation that it acknowledges,
+        # and on_replaced with a slot whose process learned that another server took over the pub/sub database
         self.body_dir         = body_dir
-        self.slot_count       = slot_count
         self.query_timeout    = query_timeout
         self.on_ready         = on_ready
         self.on_logs_reopened = on_logs_reopened
@@ -161,13 +150,13 @@ class ControlHub:
         self.fd_to_channel:'intchanneldict' = {}
         self.queries:'querydict' = {}
 
-        # The messages between the workers and the config process follow routes of their own
+        # The messages between the worker and the config process follow routes of their own
         self.config_route = ConfigRoute(self)
 
 # ################################################################################################################################
 
     def open_slot(self, slot:'int') -> 'socket.socket':
-        """ Creates the control socket of a slot before its worker is forked and returns the end of the worker.
+        """ Creates the control socket of a slot before its process is forked and returns the end of the process.
         """
         arbiter_end, worker_end = socket.socketpair(socket.AF_UNIX, socket.SOCK_SEQPACKET)
         arbiter_end.setblocking(False)
@@ -194,7 +183,7 @@ class ControlHub:
 # ################################################################################################################################
 
     def close_in_worker(self) -> 'None':
-        """ Closes in a forked worker the ends of the arbiter, which the worker inherited.
+        """ Closes in a forked process the ends of the arbiter, which the process inherited.
         """
         for channel in self.channels.values():
             channel.sock.close()
@@ -210,16 +199,16 @@ class ControlHub:
 # ################################################################################################################################
 
     def close_slot(self, slot:'int') -> 'None':
-        """ Closes the control socket of a slot whose worker terminated, together with the datagrams it did not receive.
+        """ Closes the control socket of a slot whose process terminated, together with the datagrams it did not receive.
         """
-        # The worker may have sent datagrams after the last poll, which are read up to the end of the stream
+        # The process may have sent datagrams after the last poll, which are read up to the end of the stream
         self._receive(self.channels[slot])
 
         channel = self.channels.pop(slot)
         _ = self.fd_to_channel.pop(channel.sock.fileno())
         channel.sock.close()
 
-        # The bodies of the datagrams that the worker never received have no other reader ..
+        # The bodies of the datagrams that the process never received have no other reader ..
         for datagram in channel.out_queue:
             self.remove_body_file(datagram)
 
@@ -227,9 +216,9 @@ class ControlHub:
             self.remove_body_file(datagram)
 
         # .. the queries that wait for it are answered without it ..
-        for query in list(self.queries.values()):
-            if slot in query.expected:
-                self._record_entry(query, slot, EntryStatus.Unavailable, None)
+        if slot == WorkerSlotCtx.Worker_Slot:
+            for query in list(self.queries.values()):
+                self._complete(query, EntryStatus.Unavailable, None)
 
         # .. and the forwarded invocations and the loads that involve it are resolved.
         self.config_route.on_slot_closed(slot)
@@ -284,7 +273,7 @@ class ControlHub:
 # ################################################################################################################################
 
     def _flush(self, channel:'SlotChannel') -> 'None':
-        """ Sends to the worker of a slot as many queued datagrams as its socket takes.
+        """ Sends to the process of a slot as many queued datagrams as its socket takes.
         """
         while channel.out_queue:
             if channel.is_broken:
@@ -297,7 +286,7 @@ class ControlHub:
             except BlockingIOError:
                 return
 
-            # The worker terminated, and its datagrams are removed when the arbiter reaps it
+            # The process terminated, and its datagrams are removed when the arbiter reaps it
             except (BrokenPipeError, ConnectionResetError):
                 channel.is_broken = True
                 return
@@ -313,7 +302,7 @@ class ControlHub:
 # ################################################################################################################################
 
     def discard_startup_buffer(self, channel:'SlotChannel') -> 'None':
-        """ Discards the datagrams held for a starting worker, whose load of its configuration contains them.
+        """ Discards the datagrams held for a starting process, whose load of its configuration contains them.
         """
         while channel.startup_buffer:
             datagram = channel.startup_buffer.popleft()
@@ -322,7 +311,7 @@ class ControlHub:
 # ################################################################################################################################
 
     def deliver(self, channel:'SlotChannel', datagram:'bytes') -> 'None':
-        """ Sends a relayed datagram to a ready worker, or holds it until the worker reports ready.
+        """ Sends a relayed datagram to a ready process, or holds it until the process reports ready.
         """
         if channel.is_ready:
             self.send(channel, datagram)
@@ -339,7 +328,7 @@ class ControlHub:
 # ################################################################################################################################
 
     def _receive(self, channel:'SlotChannel') -> 'None':
-        """ Handles every datagram that the worker of a slot sent.
+        """ Handles every datagram that the process of a slot sent.
         """
         while True:
             try:
@@ -349,7 +338,7 @@ class ControlHub:
             except ConnectionResetError:
                 datagram = b''
 
-            # The worker closed its end, and the arbiter closes the slot when it reaps the worker
+            # The process closed its end, and the arbiter closes the slot when it reaps the process
             if not datagram:
                 channel.is_eof = True
                 return
@@ -369,10 +358,10 @@ class ControlHub:
             self._on_ready(channel)
 
         elif message_type == MessageType.Query:
-            self._fan_out(channel.slot, header, body)
+            self._send_query(channel.slot, header, body)
 
         elif message_type == MessageType.Response:
-            self._on_response(channel.slot, datagram)
+            self._on_response(datagram)
 
         elif message_type == MessageType.Logs_Reopened:
             message = decode(datagram)
@@ -396,7 +385,7 @@ class ControlHub:
         elif message_type == MessageType.Load_Done:
             self.config_route.on_load_done(channel, header, body)
 
-        # The config process asks for a reload of every worker after a change that reached the ODB without its events
+        # The config process asks for a reload of the worker after a change that reached the ODB without its events
         elif message_type == MessageType.Reload:
             self.broadcast_reload()
 
@@ -406,7 +395,7 @@ class ControlHub:
 # ################################################################################################################################
 
     def _on_ready(self, channel:'SlotChannel') -> 'None':
-        """ Delivers to a worker that reported ready the datagrams that were relayed during its startup.
+        """ Delivers to a process that reported ready the datagrams that were relayed during its startup.
         """
         channel.is_ready = True
 
@@ -456,7 +445,7 @@ class ControlHub:
 # ################################################################################################################################
 
     def broadcast_reload(self) -> 'None':
-        """ Requests every worker to read its configuration again, which a starting worker does after it reports ready.
+        """ Requests the worker to read its configuration again, which a starting worker does after it reports ready.
         The config process commits every change itself, so it receives no such request.
         """
         message = new_message(MessageType.Reload, None)
@@ -468,7 +457,7 @@ class ControlHub:
 # ################################################################################################################################
 
     def send_drain(self, slot:'int') -> 'None':
-        """ Sends the drain command to the worker of a slot, whether or not it reported ready.
+        """ Sends the drain command to the process of a slot, whether or not it reported ready.
         """
         message = new_message(MessageType.Drain, None)
         message.seq = self._next_seq()
@@ -481,8 +470,8 @@ class ControlHub:
 # ################################################################################################################################
 
     def broadcast_reopen_logs(self, rotation_id:'int') -> 'intset':
-        """ Asks the worker of every open slot to reopen its log files, a starting one included, and returns those slots.
-        The command does not wait in the startup buffer, because a starting worker writes to the renamed files already.
+        """ Asks the process of every open slot to reopen its log files, a starting one included, and returns those slots.
+        The command does not wait in the startup buffer, because a starting process writes to the renamed files already.
         """
         out:'intset' = set()
 
@@ -499,89 +488,50 @@ class ControlHub:
 
 # ################################################################################################################################
 
-    def _fan_out(self, origin_slot:'int', header:'anydict', body:'bytes') -> 'None':
-        """ Sends a query to every ready worker, the origin included, and records the others as unavailable.
+    def _send_query(self, origin_slot:'int', header:'anydict', body:'bytes') -> 'None':
+        """ Sends a query to the worker, or completes it as unavailable if no worker that reported ready runs.
         """
         query = PendingQuery()
         query.cid = header['cid']
         query.origin_slot = origin_slot
         query.deadline = monotonic() + self.query_timeout
-        query.expected = set()
-        query.entries = {}
 
         self.queries[query.cid] = query
 
         header['seq'] = self._next_seq()
         header['slot'] = origin_slot
 
-        source_path = header.get('path')
+        channel = self.channels.get(WorkerSlotCtx.Worker_Slot)
 
-        # A slot whose worker awaits its respawn has no channel and receives an entry of its own
-        for slot in range(self.slot_count):
-            if slot not in self.channels:
-                query.entries[slot] = new_entry(slot, EntryStatus.Unavailable, None)
-
-        for channel in list(self.channels.values()):
-
-            # The config process holds no runtime state of its own to answer a query with
-            if channel.slot == WorkerSlotCtx.Config_Slot:
-                continue
-
-            if not channel.is_ready:
-                query.entries[channel.slot] = new_entry(channel.slot, EntryStatus.Unavailable, None)
-                continue
-
-            if source_path:
-                link_path = new_body_path(self.body_dir)
-                os.link(source_path, link_path)
-                header['path'] = link_path
-
-            query.expected.add(channel.slot)
+        if channel and channel.is_ready:
             datagram = join(header, body)
             self.send(channel, datagram)
+        else:
+            if source_path := header.get('path'):
+                os.remove(source_path)
 
-        if source_path:
-            os.remove(source_path)
-
-        # A query that no worker can answer is complete already
-        if not query.expected:
-            self._complete(query)
+            self._complete(query, EntryStatus.Unavailable, None)
 
 # ################################################################################################################################
 
-    def _on_response(self, slot:'int', datagram:'bytes') -> 'None':
+    def _on_response(self, datagram:'bytes') -> 'None':
         message = decode(datagram)
 
         # A response that arrives after the deadline of its query belongs to a result returned already
         if query := self.queries.get(message.cid):
-            if slot in query.expected:
-                self._record_entry(query, slot, EntryStatus.OK, message.body)
+            self._complete(query, EntryStatus.OK, message.body)
 
 # ################################################################################################################################
 
-    def _record_entry(self, query:'PendingQuery', slot:'int', status:'str', body:'any_') -> 'None':
-        query.expected.discard(slot)
-        query.entries[slot] = new_entry(slot, status, body)
-
-        if not query.expected:
-            self._complete(query)
-
-# ################################################################################################################################
-
-    def _complete(self, query:'PendingQuery') -> 'None':
-        """ Returns the entries of a query to its origin, in the order of the slots.
+    def _complete(self, query:'PendingQuery', status:'str', body:'any_') -> 'None':
+        """ Returns the result of a query to its origin.
         """
         _ = self.queries.pop(query.cid)
-
-        entries:'anylist' = []
-
-        for slot in sorted(query.entries):
-            entry = query.entries[slot]
-            entries.append(entry)
+        entry = new_entry(status, body)
 
         # The origin may have terminated while the query waited
         if channel := self.channels.get(query.origin_slot):
-            message = new_message(MessageType.Query_Result, entries, query.cid)
+            message = new_message(MessageType.Query_Result, entry, query.cid)
             message.seq = self._next_seq()
 
             datagram = encode(message, self.body_dir)
@@ -605,14 +555,11 @@ class ControlHub:
 # ################################################################################################################################
 
     def expire_queries(self, now:'float') -> 'None':
-        """ Records a timeout entry for each slot that did not respond to a query before its deadline.
+        """ Completes as timed out each query to which the worker did not respond before its deadline.
         """
         for query in list(self.queries.values()):
-            if query.deadline > now:
-                continue
-
-            for slot in sorted(query.expected):
-                self._record_entry(query, slot, EntryStatus.Timeout, None)
+            if query.deadline <= now:
+                self._complete(query, EntryStatus.Timeout, None)
 
 # ################################################################################################################################
 # ################################################################################################################################
