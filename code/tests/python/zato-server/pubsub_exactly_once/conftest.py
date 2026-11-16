@@ -12,9 +12,9 @@ import tempfile
 
 # Zato
 from zato.common.crypto.api import CryptoManager
-from zato.common.test.config_pubsub_exactly_once import TestConfig
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
-from zato.common.test.exactly_once import create_control_dir, Env_Dir
+from zato.common.test.exactly_once.config import TestConfig
+from zato.common.test.exactly_once.control import create_control_dir, Env_Dir
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,15 +27,17 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_template_path = os.path.join(os.path.dirname(__file__), '_enmasse_template.yaml')
-_services_source = os.path.join(os.path.dirname(__file__), '_services.py')
+_current_dir = os.path.dirname(__file__)
+
+_template_path   = os.path.join(_current_dir, '_enmasse_template.yaml')
+_services_source = os.path.join(_current_dir, '_services.py')
 
 _publisher_username = 'test.exactly-once.publisher'
 _reader_username    = 'test.exactly-once.reader'
 _orders_username    = 'test.exactly-once.orders'
 _verifier_username  = 'test.exactly-once.verifier'
 
-# The lease of a pulled message, short enough for the tests of copies that compete for a message
+# The lease of a pulled message, in seconds
 _extra_server_env:'strstrdict' = {
     'Zato_PubSub_Pull_Lease_Seconds': '2',
 }
@@ -49,7 +51,7 @@ def _build_config(
     zato_bin:'str',
     server_port:'int',
     invoke_password:'str',
-) -> 'anydict':
+    ) -> 'anydict':
 
     # The control files of the relay are shared by the server and the test process ..
     control_dir = tempfile.mkdtemp(prefix='zato_pubsub_exactly_once_control_')
@@ -61,10 +63,10 @@ def _build_config(
     os.environ.update(_extra_server_env)
 
     placeholders:'strstrdict' = {
-        'publisher_password': 'test.pub.' + CryptoManager.generate_hex_string(),
-        'reader_password': 'test.reader.' + CryptoManager.generate_hex_string(),
-        'orders_password': 'test.orders.' + CryptoManager.generate_hex_string(),
-        'verifier_password': 'test.verifier.' + CryptoManager.generate_hex_string(),
+        'publisher_password':    'test.publisher.' + CryptoManager.generate_hex_string(),
+        'reader_password':       'test.reader.'    + CryptoManager.generate_hex_string(),
+        'orders_password':       'test.orders.'    + CryptoManager.generate_hex_string(),
+        'verifier_password':     'test.verifier.'  + CryptoManager.generate_hex_string(),
         'relay_delivery_active': 'true',
     }
 
@@ -74,7 +76,7 @@ def _build_config(
         invoke_password:'str',
         server_directory:'str',
         zato_bin:'str',
-    ) -> 'None':
+        ) -> 'None':
 
         TestConfig.base_url         = f'http://{host}:{server_port}'
         TestConfig.password         = invoke_password

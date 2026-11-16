@@ -11,8 +11,8 @@ from gevent import spawn
 
 # Zato
 from zato.common.db_env.engine import call_database
-from zato.common.test.exactly_once import claim_failure, claim_hold, claim_write_hold, hold_write_lock, Output_Topic, \
-    record_invocation, wait_while_exists
+from zato.common.test.exactly_once.control import claim_failure, claim_hold, claim_write_hold, hold_write_lock, \
+    Output_Topic, record_invocation, wait_while_exists
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -47,7 +47,8 @@ class Relay(Service):
         if held_path := claim_hold(key):
             wait_while_exists(held_path)
 
-        _ = self.publish(Output_Topic, {'key': key}, correl_id=key)
+        data = {'key': key}
+        _ = self.publish(Output_Topic, data, correl_id=key)
 
         # .. and a failure requested by the test fails the invocation after its publication.
         if claim_failure(key):
@@ -68,7 +69,8 @@ class Publish(Service):
         key = self.request.payload['key']
         msg_id = self.request.payload['msg_id']
 
-        result = self.publish(topic_name, {'key': key}, correl_id=key, msg_id=msg_id)
+        data = {'key': key}
+        result = self.publish(topic_name, data, correl_id=key, msg_id=msg_id)
 
         self.response.payload = {'msg_id': result.msg_id}
 
