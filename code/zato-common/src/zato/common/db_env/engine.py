@@ -11,6 +11,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # so all callers in a process share one pool.
 
 # stdlib
+import fcntl
 import os
 from typing import NamedTuple
 
@@ -73,6 +74,9 @@ _pool_worker_count = 1
 
 # The PostgreSQL advisory lock under which the schemas are created
 _schema_lock_key = 7_401_852_117_309
+
+# The suffix of the file beside a SQLite file, the lock of which the processes that create its schema take in turns
+_schema_lock_suffix = '.schema-lock'
 
 # Engines are cached per configuration so all callers in a process share one pool
 _engine_cache:'anydict' = {}
@@ -195,6 +199,20 @@ def _new_sqlite_file_engine(
 
 # ################################################################################################################################
 
+def _create_sqlite_schema(db_path:'str', engine:'Engine', metadata:'MetaData') -> 'None':
+    """ Creates the tables of a SQLite file that do not exist yet under an exclusive lock of a file beside it,
+    so that processes that open a new file at the same time take turns in setting its journal mode and in creating
+    its tables. Without the lock, each of them finds a table missing and creates it, and SQLite refuses the change
+    of the journal mode at once, without its busy timeout, while another process holds a lock of the file.
+    """
+    lock_path = f'{db_path}{_schema_lock_suffix}'
+
+    with open(lock_path, 'a') as lock_file:
+        fcntl.flock(lock_file, fcntl.LOCK_EX)
+        metadata.create_all(engine)
+
+# ################################################################################################################################
+
 def get_sqlite_file_engine(
     db_path:'str',
     metadata:'MetaData',
@@ -221,7 +239,7 @@ def get_sqlite_file_engine(
     out = file_engine.engine
 
     # .. create the schema ..
-    metadata.create_all(out)
+    _create_sqlite_schema(db_path, out, metadata)
 
     # .. start the checkpoints of the WAL that the commits no longer run, in one process of the server,
     # retaining the checkpointer by the engine's key so dispose_sqlite_file_engine can stop its thread ..

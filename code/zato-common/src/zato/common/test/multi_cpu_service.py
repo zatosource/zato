@@ -22,13 +22,18 @@ from gevent import sleep
 
 # Zato
 from zato.common.api import CONNECTION, HTTP_SOAP, URL_TYPE
+from zato.common.audit_log.api import AuditLog
+from zato.common.audit_log.file_transfer_run import find_running_runs
 from zato.common.hl7.mllp.circuit_breaker import SendingStopped
 from zato.common.hl7.mllp.dedup import extract_control_id
 from zato.common.test.config_multi_cpu_cache import CacheConfig
 from zato.common.test.config_multi_cpu_hl7 import HL7Config
 from zato.common.test.config_multi_cpu_scheduler import SchedulerConfig
+from zato.common.test.config_multi_cpu_singletons import SingletonsConfig
+from zato.common.util.file_transfer_scheduler import apply_schedule_defaults
 from zato.common.worker_slot import get_slot_or_single
 from zato.server.service import Service
+from zato.server.service.internal.outgoing.file_transfer.run import close_interrupted_runs, open_run
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -212,6 +217,100 @@ class CachedSlow(Service):
         self.response.payload = {
             'invocation_id': invocation_id,
             'slot': get_slot_or_single(),
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class QueueBridgeRecord(Service):
+    """ Records each message of a Kafka channel that the worker handles, with the offset in its payload
+    and the slot of the worker, in the file shared by every worker.
+    """
+    name = SingletonsConfig.Bridge_Record_Service
+
+    def handle(self) -> 'None':
+        message = json.loads(self.request.raw_request)
+
+        entry = {
+            'offset': message['offset'],
+            'slot': get_slot_or_single(),
+        }
+
+        with open(os.environ[SingletonsConfig.Bridge_Record_Env], 'a') as record_file:
+            _ = record_file.write(json.dumps(entry) + '\n')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class QueueBridgePing(Service):
+    """ Pings a connection through the queue bridge client of the worker and returns the reply with the slot of the worker.
+    """
+    name = SingletonsConfig.Bridge_Ping_Service
+
+    def handle(self) -> 'None':
+        payload = self.request.payload
+        reply = self.server._queue_bridge.ping(payload['conn_name'], payload['timeout'])
+
+        self.response.payload = {
+            'slot': get_slot_or_single(),
+            'reply': reply,
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FileTransferOpenRun(Service):
+    """ Opens a file transfer run of a schedule through the worker, under the slot of the worker as its run number,
+    and leaves it running.
+    """
+    name = SingletonsConfig.Transfer_Open_Service
+
+    def handle(self) -> 'None':
+        payload = self.request.payload
+        slot = get_slot_or_single()
+
+        schedule = {'name': payload['schedule_name']}
+        apply_schedule_defaults(schedule)
+
+        scheduler_context = {
+            'job_id': payload['job_id'],
+            'current_run': slot,
+        }
+
+        audit_log = AuditLog(self.server.name)
+        _ = open_run(audit_log, payload['conn_name'], payload['directory'], self.cid, schedule, scheduler_context)
+
+        self.response.payload = {
+            'slot': slot,
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FileTransferCloseRuns(Service):
+    """ Concludes the interrupted runs of a schedule through the worker, as a new run does before it opens,
+    and returns the run numbers of the runs that remain running.
+    """
+    name = SingletonsConfig.Transfer_Close_Service
+
+    def handle(self) -> 'None':
+        payload = self.request.payload
+        conn_name = payload['conn_name']
+        schedule_name = payload['schedule_name']
+
+        audit_log = AuditLog(self.server.name)
+
+        # The runs of this schedule carry no file, so no claim is released and no connection is needed
+        close_interrupted_runs(audit_log, conn_name, schedule_name, None)
+
+        running_slots:'list[int]' = []
+
+        for _, data in find_running_runs(conn_name, schedule_name, self.server.name):
+            running_slots.append(data['current_run'])
+
+        self.response.payload = {
+            'slot': get_slot_or_single(),
+            'running_slots': sorted(running_slots),
         }
 
 # ################################################################################################################################

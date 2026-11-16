@@ -296,36 +296,28 @@ def _get_watermark(connection:'Connection') -> 'int':
     """ Returns the id of the last audit event already aggregated, creating and locking
     the watermark row on the way so overlapping runs serialize on it.
     """
-    select_statement = select(watermark_table.c.id)
+    # The watermark is written back unchanged first, whether or not its row exists yet - the no-op update acquires
+    # the SQLite write lock, so a second rollup started by an overlapping cron run waits here
+    # within the busy timeout until this one commits. The update assigns the column to itself,
+    # because a value read before the lock can be older than the one the other run commits ..
+    update_statement = update(watermark_table)
+    update_statement = update_statement.values(last_event_id=watermark_table.c.last_event_id)
+    _ = connection.execute(update_statement)
 
-    result = connection.execute(select_statement)
-    row_id = result.scalar()
+    # .. the watermark is read only under that lock, because a read before the transaction began
+    # returns the watermark as it was before the commit of the other run ..
+    locked_statement = select(watermark_table.c.last_event_id)
 
-    # The very first run creates the watermark row ..
-    if row_id is None:
+    result = connection.execute(locked_statement)
+    out = result.scalar()
+
+    # .. and the very first run creates the watermark row, which no other run can create in the meantime.
+    if out is None:
         insert_statement = watermark_table.insert()
         insert_statement = insert_statement.values(last_event_id=0)
         _ = connection.execute(insert_statement)
 
         out = 0
-        return out
-
-    # .. later runs write it back unchanged first - the no-op update acquires the SQLite
-    # write lock, so a second rollup started by an overlapping cron run waits here
-    # within the busy timeout until this one commits. The update assigns the column to itself,
-    # because a value read before the lock can be older than the one the other run commits ..
-    update_statement = update(watermark_table)
-    update_statement = update_statement.where(watermark_table.c.id == row_id)
-    update_statement = update_statement.values(last_event_id=watermark_table.c.last_event_id)
-    _ = connection.execute(update_statement)
-
-    # .. and reads the watermark only under that lock, because a read before the transaction began
-    # returns the watermark as it was before the commit of the other run.
-    locked_statement = select(watermark_table.c.last_event_id)
-    locked_statement = locked_statement.where(watermark_table.c.id == row_id)
-
-    result = connection.execute(locked_statement)
-    out = result.scalar_one()
 
     return out
 

@@ -59,7 +59,7 @@ class ModuleCtx:
 
     Archive_Kind_Event = 'event'
 
-    Event_Count_Query = 'select count(*) from event where id in ({})'
+    Event_Query = 'select id, cid, event_type from event where id in ({})'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -82,10 +82,12 @@ def _get_deleted_lines() -> 'strlist':
 
 # ################################################################################################################################
 
-def _get_archived_event_ids() -> 'intlist':
-    """ Returns the ID of each event of the REST channels in the archive files, once per line that holds it.
+def _get_archived_events() -> 'list[tuple[int, str, str]]':
+    """ Returns the ID, the correlation ID and the type of each event of the REST channels in the archive files,
+    once per line that holds it. SQLite gives the ID of a deleted event to the next event written,
+    so an event is identified by all three.
     """
-    out:'intlist' = []
+    out:'list[tuple[int, str, str]]' = []
 
     for file_name in sorted(os.listdir(SingletonsConfig.archive_dir)):
         path = os.path.join(SingletonsConfig.archive_dir, file_name)
@@ -95,21 +97,25 @@ def _get_archived_event_ids() -> 'intlist':
                 row = json.loads(line)
 
                 if row['kind'] == ModuleCtx.Archive_Kind_Event and row['source'] == AuditSource.REST_Channel:
-                    out.append(row['id'])
+                    out.append((row['id'], row['cid'], row['event_type']))
 
     return out
 
 # ################################################################################################################################
 
-def _count_events(event_ids:'intlist') -> 'int':
-    """ Returns how many of the events are in the audit database, which the test reads without becoming a writer of it.
+def _get_stored_events(event_ids:'intlist') -> 'set[tuple[int, str, str]]':
+    """ Returns the ID, the correlation ID and the type of each event in the audit database under one of the IDs,
+    which the test reads without becoming a writer of the database.
     """
     path = os.environ[AuditLogCtx.Env_Name]
     placeholders = ', '.join('?' * len(event_ids))
-    query = ModuleCtx.Event_Count_Query.format(placeholders)
+    query = ModuleCtx.Event_Query.format(placeholders)
+
+    out:'set[tuple[int, str, str]]' = set()
 
     with sqlite3.connect(f'file:{path}?mode=ro', uri=True) as connection:
-        out = connection.execute(query, event_ids).fetchone()[0]
+        for event_id, cid, event_type in connection.execute(query, event_ids):
+            out.add((event_id, cid, event_type))
 
     return out
 
@@ -166,13 +172,20 @@ class TestAuditRetentionAcrossWorkers(unittest.TestCase):
         logger.info('Retention runs: %d, deleted events: %d', len(deleted_lines), deleted_count)
 
         # .. which archived each event that it deleted once ..
-        archived_ids = _get_archived_event_ids()
+        archived_events = _get_archived_events()
+        archived_event_set = set(archived_events)
 
-        self.assertEqual(len(archived_ids), deleted_count)
-        self.assertEqual(len(set(archived_ids)), deleted_count)
+        self.assertEqual(len(archived_events), deleted_count)
+        self.assertEqual(len(archived_event_set), deleted_count)
 
         # .. and none of which remains in the database.
-        self.assertEqual(_count_events(archived_ids), 0)
+        archived_ids:'intlist' = []
+
+        for event_id, _, _ in archived_events:
+            archived_ids.append(event_id)
+
+        stored_events = _get_stored_events(archived_ids)
+        self.assertEqual(archived_event_set & stored_events, set())
 
 # ################################################################################################################################
 # ################################################################################################################################

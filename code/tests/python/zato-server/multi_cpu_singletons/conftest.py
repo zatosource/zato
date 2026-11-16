@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import atexit
 import os
 from tempfile import mkdtemp
 
@@ -19,6 +20,7 @@ from zato.common.audit_log.retention import Env_Archive_Dir
 from zato.common.test.conftest_base_multi_cpu import create_multi_cpu_server_fixture, get_worker_count, \
     ModuleCtx as MultiCPUCtx, MultiCPUTestConfig, remove_interrupted_run_state
 from zato.common.test.config_multi_cpu_singletons import SingletonsConfig
+from zato.common.test.queue_bridge_stand_in import QueueBridgeStandIn
 from zato.common.test.resume import pytest_runtest_protocol as pytest_runtest_protocol
 from zato.common.test.resume import pytest_runtest_teardown as pytest_runtest_teardown
 
@@ -74,6 +76,16 @@ def _build_config(
     rest_channel_suffix = get_source_env_suffix(AuditSource.REST_Channel)
     os.environ[f'{Env_Retention_Days_Prefix}{rest_channel_suffix}'] = SingletonsConfig.Retention_Days
     os.environ[Env_Archive_Dir] = SingletonsConfig.archive_dir
+
+    # The queue bridge client of every worker connects to the Redis server of a stand-in for the queue bridge,
+    # and the service of the Kafka channel records each message in a file of the suite.
+    stand_in = QueueBridgeStandIn()
+    stand_in.start()
+    _ = atexit.register(stand_in.stop)
+
+    SingletonsConfig.bridge_stand_in = stand_in
+    os.environ.update(stand_in.server_environment())
+    os.environ[SingletonsConfig.Bridge_Record_Env] = os.path.join(stand_in.directory, SingletonsConfig.Bridge_Record_File)
 
     out:'anydict' = {
         'placeholders': {},

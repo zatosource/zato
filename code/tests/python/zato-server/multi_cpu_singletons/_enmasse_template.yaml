@@ -5,3 +5,10 @@ channel_rest:
     service: test.multi-cpu.worker-slot
     url_path: /test/multi-cpu/worker-slot
     data_format: json
+
+  # The service that returns the correlation ID of the request and the slot of the worker that served it,
+  # the responses of which the analytics rollup counts
+  - name: test.multi-cpu.singletons.audit-echo
+    service: test.multi-cpu.audit-echo
+    url_path: /test/multi-cpu/singletons/audit-echo
+    data_format: json

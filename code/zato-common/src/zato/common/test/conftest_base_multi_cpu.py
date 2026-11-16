@@ -541,7 +541,7 @@ def _kill_processes_naming(directories:'strlist') -> 'None':
         try:
             with open(os.path.join(ModuleCtx.Proc_Directory, name, 'cmdline'), 'rb') as cmdline_file:
                 cmdline = cmdline_file.read().decode('utf8', 'replace')
-        except FileNotFoundError:
+        except (FileNotFoundError, ProcessLookupError):
             continue
 
         for directory in directories:

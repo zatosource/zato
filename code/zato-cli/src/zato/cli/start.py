@@ -298,6 +298,10 @@ Examples:
                     # .. do handle the input now ..
                     return self._handle_deploy_local_zip(deploy)
 
+                # .. deploy local directories ..
+                if os.path.isdir(deploy):
+                    return self._handle_deploy_local_dir(deploy)
+
 # ################################################################################################################################
 
     def _on_server(self, *ignored:'any_') -> 'int': # show_output was an old param, *ignored is safer for dispatch
