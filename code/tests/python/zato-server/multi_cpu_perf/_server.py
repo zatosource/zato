@@ -13,13 +13,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import os
 import shutil
+import signal
+import subprocess
 from dataclasses import dataclass
+from time import monotonic, sleep
 
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.conftest_base_multi_cpu import ModuleCtx as MultiCPUCtx, MultiCPUTestConfig
-from zato.common.test.conftest_base_pubsub import find_free_port, run_quickstart_and_enmasse, SessionState, \
-    start_server_process
+from zato.common.test.conftest_base_pubsub import find_free_port, patch_server_conf, run_quickstart_and_enmasse, \
+    SessionState, wait_for_server
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,13 +49,21 @@ class ModuleCtx:
     Core_CPUs_Path = '/sys/devices/system/cpu/cpu{}/topology/core_cpus_list'
     Max_Frequency_Path = '/sys/devices/system/cpu/cpu{}/cpufreq/cpuinfo_max_freq'
 
+    # The directory whose entries are the PIDs of the processes of the host, and the state of a zombie in their stat files
+    Proc_Directory = '/proc'
+    State_Zombie = 'Z'
+
     Quickstart_Prefix = 'zato_multi_cpu_perf_qs_'
     Server_Log_Copy_Name = 'server-logs-multi-cpu-perf.txt'
 
     Services_Path = os.path.join(os.path.dirname(__file__), '_services.py')
 
-    # How long a server may take to drain and exit after SIGTERM, in seconds
+    # How long a server may take to drain and exit after SIGTERM, and how often its processes are checked, in seconds
     Stop_Timeout = 60
+    Stop_Poll_Interval = 0.2
+
+    # The file in the logs directory of the server to which the output of the server goes
+    Output_File_Name = 'server-output.txt'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,6 +84,32 @@ def _read_int(path:'str') -> 'int':
     with open(path) as file:
         out = int(file.read())
     return out
+
+# ################################################################################################################################
+
+def _is_group_running(process_group:'int') -> 'bool':
+    """ Whether a process of the group still runs, other than as a zombie that its parent has not collected.
+    """
+    for name in os.listdir(ModuleCtx.Proc_Directory):
+        if not name.isdigit():
+            continue
+
+        # A process may exit between the listing and the read
+        try:
+            with open(os.path.join(ModuleCtx.Proc_Directory, name, 'stat')) as stat_file:
+                stat = stat_file.read()
+        except FileNotFoundError:
+            continue
+
+        # The fields after the name, which may contain spaces, begin with the state, the parent PID and the process group
+        fields = stat[stat.rindex(')') + 2:].split()
+        state = fields[0]
+        group = int(fields[2])
+
+        if group == process_group and state != ModuleCtx.State_Zombie:
+            return True
+
+    return False
 
 # ################################################################################################################################
 
@@ -189,23 +226,36 @@ class PerfServer:
         """
         self.port = find_free_port()
 
-        # The server inherits the affinity of the thread that starts it, and the thread receives its own again afterwards
+        environment = os.environ.copy()
+        environment['Zato_Config_Bind_Port'] = str(self.port)
+        environment['Zato_Broker_HTTP_Port'] = str(find_free_port())
+        environment[MultiCPUCtx.Worker_Count_Env] = str(worker_count)
+        _ = environment.pop('COVERAGE_PROCESS_START', None)
+
+        patch_server_conf(self.server_directory, self.port, True)
+
+        # The output of the server goes to a file, which no process of the measurement reads while the load runs
+        output_path = os.path.join(self.server_directory, 'logs', ModuleCtx.Output_File_Name)
+        output_file = open(output_path, 'ab')
+
+        # The server inherits the affinity of the thread that starts it, and the thread receives its own again afterwards,
+        # and it runs in a session of its own, whose process group a stop signals as a whole
         affinity = os.sched_getaffinity(0)
         os.sched_setaffinity(0, cpus)
 
         try:
-            _ = start_server_process(
-                state=self.state,
-                logger=logger,
-                zato_bin=self.zato_bin,
-                server_directory=self.server_directory,
-                server_port=self.port,
-                broker_port=find_free_port(),
-                extra_server_env={MultiCPUCtx.Worker_Count_Env: str(worker_count)},
-                patch_server_conf_bind=True,
+            self.state.server_process = subprocess.Popen(
+                [self.zato_bin, 'start', self.server_directory, '--fg'],
+                env=environment,
+                stdout=output_file,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
             )
         finally:
             os.sched_setaffinity(0, affinity)
+            output_file.close()
+
+        wait_for_server(logger, '127.0.0.1', self.port)
 
         MultiCPUTestConfig.host = '127.0.0.1'
         MultiCPUTestConfig.port = self.port
@@ -220,14 +270,26 @@ class PerfServer:
 # ################################################################################################################################
 
     def stop(self) -> 'None':
-        """ Stops the server through SIGTERM, which drains and stops each of its processes, and waits until it exits.
+        """ Sends SIGTERM to every process of the server, as killpg of the server does, and waits until none remains.
         """
         server_process = self.state.server_process
 
-        if server_process:
-            server_process.terminate()
-            _ = server_process.wait(ModuleCtx.Stop_Timeout)
-            self.state.server_process = None
+        if not server_process:
+            return
+
+        process_group = server_process.pid
+        os.killpg(process_group, signal.SIGTERM)
+
+        deadline = monotonic() + ModuleCtx.Stop_Timeout
+
+        while _is_group_running(process_group):
+            if monotonic() > deadline:
+                os.killpg(process_group, signal.SIGKILL)
+                raise Exception(f'Server of process group {process_group} still running after {ModuleCtx.Stop_Timeout}s')
+            sleep(ModuleCtx.Stop_Poll_Interval)
+
+        _ = server_process.wait()
+        self.state.server_process = None
 
 # ################################################################################################################################
 

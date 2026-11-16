@@ -35,8 +35,8 @@ from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, HTTP_SOAP, NotGiven, P
      RESTAdapterResponse, zato_no_op_marker
 from zato.common.audit_log.facade import AuditFacade
 from zato.common.audit_log.scheduler import append_job_log_entry
-from zato.common.audit_log.service import Invoking_Service_Key, record_service_request, record_service_response, \
-    resolve_caller
+from zato.common.audit_log.service import Invoking_Service_Key, Push_Delivery_Key, record_service_request, \
+    record_service_response, resolve_caller
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.facade import PubSubFacade, SecurityFacade
 from zato.common.json_internal import dumps
@@ -959,9 +959,13 @@ class Service:
         if is_queue_response_only:
             service.request.queue.msg_id = kwargs['queue_msg_id']
 
-        # Only invocations of user-defined services are recorded in the audit log.
+        # Only invocations of user-defined services are recorded in the audit log, other than those of a pub/sub
+        # push delivery, which the Delivered event of the message records.
         service_info = server.service_store.services[service.impl_name]
         needs_audit = not service_info['is_internal']
+
+        if request_ctx.get(Push_Delivery_Key):
+            needs_audit = False
         caller = resolve_caller(request_ctx, channel_item)
 
         def _record_request() -> 'None':

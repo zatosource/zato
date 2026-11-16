@@ -21,12 +21,14 @@ from sqlalchemy import and_, select
 from zato.common.api import HTTP_SOAP, PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.marshal_.api import Model
+from zato.common.pubsub.delivery_scope import get_delivery_scope
 from zato.common.pubsub.sql.admin import SQLAdminAPI
 from zato.common.pubsub.sql.config import get_batch_size, get_pull_lease_seconds
 from zato.common.pubsub.sql.pull import fetch_query, outgoing_fetch_query, payload_query
 from zato.common.pubsub.sql.schema import delivery_table, topic_sub_table
-from zato.common.pubsub.sql.writes import new_pending_publication
+from zato.common.pubsub.sql.writes import new_pending_ack, new_pending_publication, PubSubWriter
 from zato.common.pubsub.writer_process.remote import lease
+from zato.common.typing_ import cast_
 from zato.common.util.api import new_msg_id
 from zato.common.util.time_ import datetime_to_ms, parse_utc
 from zato.server.metrics import zato_pubsub_messages_delivered_total, zato_pubsub_messages_published_total
@@ -35,7 +37,7 @@ from zato.server.metrics import zato_pubsub_messages_delivered_total, zato_pubsu
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, intlist, intnone, strdict, strnone
+    from zato.common.typing_ import any_, anydict, anylist, intlist, intnone, strdict, strlist, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -191,7 +193,13 @@ class SQLPubSubBackend(SQLAdminAPI):
         # .. one transaction, possibly shared with other callers, inserts the message and one delivery row
         # .. per subscriber, and a topic without subscribers has its message stored without its payload ..
         pending = new_pending_publication(message_values)
-        self._writer.publish(pending)
+
+        # .. though the publications of a subscriber service that processes a push delivery batch
+        # .. commit in the transaction that acknowledges the batch, which wakes up their subscribers ..
+        if scope := get_delivery_scope():
+            scope.publications.append(pending)
+        else:
+            self._writer.publish(pending)
 
         subscriber_keys = pending.subscriber_keys
 
@@ -242,6 +250,41 @@ class SQLPubSubBackend(SQLAdminAPI):
         out.msg_id = message_id
 
         return out
+
+# ################################################################################################################################
+
+    def is_atomic_delivery_supported(self) -> 'bool':
+        """ Whether this worker commits the acknowledgement of a push delivery batch in one transaction
+        with the publications of its subscriber services, which a worker that writes through a writer process does not.
+        """
+        out = isinstance(self._writer, PubSubWriter)
+        return out
+
+# ################################################################################################################################
+
+    def ack_with_publications(self, sub_key:'str', msg_ids:'strlist', sequence_ids:'intlist', publications:'anylist') -> 'None':
+        """ Acknowledges the messages of a push delivery batch in one transaction with the publications that its
+        subscriber services made, which commits all of them or none, and then wakes up the subscribers of the publications.
+        """
+        writer = cast_('PubSubWriter', self._writer)
+        ack = new_pending_ack(sub_key, msg_ids, sequence_ids)
+
+        items:'anylist' = []
+        items.extend(publications)
+        items.append(ack)
+
+        writer.write_atomic(items)
+
+        # A publication whose message ID already stands for different content is the only one not committed.
+        for pending in publications:
+            if pending.exception:
+                logger.warning('Publication of a push subscriber not committed -> sub_key:%s, msg_id:%s, %s',
+                    sub_key, pending.message_values['msg_id'], pending.exception)
+            elif pending.subscriber_keys:
+                self.notify_sub_keys(pending.subscriber_keys)
+
+        logger.info('ack_with_publications -> sub_key:%s, acked:%d, fully_delivered:%d, publications:%d',
+            sub_key, len(msg_ids), ack.fully_delivered_count, len(publications))
 
 # ################################################################################################################################
 

@@ -209,7 +209,7 @@ class _StubServer:
 
 # ################################################################################################################################
 
-    def invoke(self, service_name:'str', payload:'str', data_format:'str') -> 'None':
+    def invoke(self, service_name:'str', payload:'str', data_format:'str', request_ctx:'any_'=None) -> 'None':
 
         self.invoked.append(service_name)
 

@@ -102,7 +102,7 @@ class _StubServer:
         self.config_manager = _StubConfigManager()
         self.workload = workload
 
-    def invoke(self, service_name:'str', payload:'any_', data_format:'strnone'=None) -> 'None':
+    def invoke(self, service_name:'str', payload:'any_', data_format:'strnone'=None, request_ctx:'any_'=None) -> 'None':
         msg_id = payload.split(_payload_separator, 1)[0]
         self.workload.on_pushed(msg_id)
         sleep(0)

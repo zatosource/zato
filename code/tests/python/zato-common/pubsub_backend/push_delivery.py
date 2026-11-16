@@ -84,7 +84,7 @@ class _StubServer:
         self.attempt_times:'anylist' = []
         self.fail_count = 0
 
-    def invoke(self, service_name:'str', payload:'any_', data_format:'str') -> 'None':
+    def invoke(self, service_name:'str', payload:'any_', data_format:'str', request_ctx:'any_'=None) -> 'None':
 
         self.attempt_times.append(monotonic())
 

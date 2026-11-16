@@ -20,7 +20,7 @@ from gevent.lock import BoundedSemaphore, RLock
 from sqlalchemy.exc import DBAPIError
 
 # Zato
-from zato.common.api import DATA_FORMAT, PubSub
+from zato.common.api import PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.db_env.common import get_env_values
 from zato.common.db_env.engine import get_worker_pool_size
@@ -32,6 +32,7 @@ from zato.common.pubsub.sql.config import pubsub_db_config
 from zato.common.pubsub.sql.replaced import PubSubReplaced
 from zato.common.util.retry import RetryPolicy
 from zato.common.util.time_ import parse_utc
+from zato.server.base.parallel.delivery_batch import Attempt_Recorded_Key, deliver_atomic_batch, deliver_to_service
 from zato.server.base.parallel.delivery_rest import deliver_to_rest, get_rest_push_url
 
 # ################################################################################################################################
@@ -305,7 +306,8 @@ class PushDelivery:
 
     def _deliver_batch(self, messages:'list', sub_key:'str', read_epoch:'int') -> 'None':
         """ Deliver a batch of raw messages, retrying each one individually. An outgoing connection's queue acknowledges
-        each message as it is concluded, any other subscriber's batch is acknowledged in one transaction.
+        each message as it is concluded, any other subscriber's batch is acknowledged in one transaction,
+        together with what its services published, unless this worker writes through a writer process.
         An acknowledgement removes this subscriber's delivery rows only - a message expired or undeliverable
         for this subscriber stays behind for every other subscriber that needs it.
         """
@@ -315,10 +317,15 @@ class PushDelivery:
         for config in config_list:
             config_by_topic[config['topic_name']] = config
 
+        is_outgoing = sub_key.startswith(_outgoing_sub_key_prefix)
+
+        if not is_outgoing and self.backend.is_atomic_delivery_supported():
+            deliver_atomic_batch(self.backend, self.fence, self._database_slots, self._paused, self._deliver_one,
+                messages, config_by_topic, sub_key, read_epoch)
+            return
+
         msg_ids:'strlist' = []
         sequence_ids:'intlist' = []
-
-        is_outgoing = sub_key.startswith(_outgoing_sub_key_prefix)
 
         for message in messages:
 
@@ -327,13 +334,10 @@ class PushDelivery:
             if sub_key in self._paused:
                 break
 
-            topic_name = message['topic_name']
-            sub_config = config_by_topic[topic_name]
-
-            is_concluded = self._deliver_one(message, sub_config, sub_key, read_epoch)
+            sub_config = config_by_topic[message['topic_name']]
 
             # A message that was not concluded is not acked, and nothing behind it is either
-            if not is_concluded:
+            if not self._deliver_one(message, sub_config, sub_key, read_epoch):
                 break
 
             msg_id = message['msg_id']
@@ -643,6 +647,10 @@ class PushDelivery:
         is still the active one. Each outcome other than a recorded attempt stops the round without counting
         as a failed attempt.
         """
+        # The first attempt of a message of an atomic batch was recorded with the other messages of the batch
+        if message.pop(Attempt_Recorded_Key, False):
+            return
+
         # A worker whose slot received a replacement sends no further attempt
         try:
             self.fence.check()
@@ -665,31 +673,7 @@ class PushDelivery:
 # ################################################################################################################################
 
     def _deliver_to_service(self, message:'anydict', sub_config:'anydict') -> 'None':
-        """ Deliver a raw message by invoking a Zato service.
-        """
-
-        # stdlib
-        import json
-        from importlib import import_module
-
-        service_name = sub_config['push_service_name']
-
-        # Extract the user data ..
-        data_raw = message['data']
-
-        # .. if a data_class was stored, reconstruct the original Model ..
-        if data_class_name := message['data_class']:
-            data = json.loads(data_raw)
-            module_path, _, class_name = data_class_name.rpartition('.')
-            module = import_module(module_path)
-            model_class = getattr(module, class_name)
-            payload = model_class.from_dict(data)
-            self.server.invoke(service_name, payload)
-
-        # .. otherwise, the stored text is handed over under the JSON data format, so a dict that was
-        # published is parsed back into the subscriber's input and text that is not JSON stays text.
-        else:
-            self.server.invoke(service_name, data_raw, data_format=DATA_FORMAT.JSON)
+        deliver_to_service(self.server, message, sub_config)
 
 # ################################################################################################################################
 

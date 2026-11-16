@@ -130,7 +130,7 @@ class _DeliveringServer(_StubServer):
     """ A server whose invoke runs the delivery service, which moves a message whose round failed to the DLQ.
     """
 
-    def invoke(self, service_name:'str', payload:'str', data_format:'str') -> 'None':
+    def invoke(self, service_name:'str', payload:'str', data_format:'str', request_ctx:'any_'=None) -> 'None':
 
         self.invoked.append(service_name)
 

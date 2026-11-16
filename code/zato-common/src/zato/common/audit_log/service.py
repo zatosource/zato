@@ -35,6 +35,9 @@ logger = getLogger(__name__)
 # The request context key under which a service invoking another one leaves its own name.
 Invoking_Service_Key = 'zato.request_ctx.invoking_service'
 
+# The request context key that marks an invocation by a pub/sub push delivery, which its own Delivered event records.
+Push_Delivery_Key = 'zato.request_ctx.pubsub_push_delivery'
+
 # The request context key under which the config manager leaves the message that triggered the invocation.
 _async_message_key = 'zato.request_ctx.async_msg'
 

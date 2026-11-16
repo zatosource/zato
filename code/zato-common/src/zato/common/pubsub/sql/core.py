@@ -47,7 +47,7 @@ if 0:
     from zato.common.pubsub.sql.clock import DatabaseClock
     from zato.common.pubsub.sql.generation import GenerationGuard
     from zato.common.pubsub.sql.writes import PendingAck
-    from zato.common.typing_ import any_, anydict, intlist, intlistnone, strlist, strset
+    from zato.common.typing_ import any_, anydict, anylist, intlist, intlistnone, intset, strlist, strset
     from zato_ipc_core.zato_ipc_core import SharedRegion
 
     # Dummy assignments to satisfy type checkers
@@ -83,6 +83,13 @@ _record_attempt_statement = delivery_table.update()
 _record_attempt_statement = _record_attempt_statement.where(delivery_table.c.id == bindparam('attempt_delivery_id'))
 _record_attempt_statement = _record_attempt_statement.values(attempt=delivery_table.c.attempt + 1)
 _record_attempt_statement = _record_attempt_statement.returning(delivery_table.c.attempt)
+
+# What records one push attempt of each delivery row of a batch and returns their numbers.
+_record_attempts_statement = delivery_table.update()
+_record_attempts_statement = _record_attempts_statement.where(
+    delivery_table.c.id.in_(bindparam('attempt_delivery_ids', expanding=True)))
+_record_attempts_statement = _record_attempts_statement.values(attempt=delivery_table.c.attempt + 1)
+_record_attempts_statement = _record_attempts_statement.returning(delivery_table.c.id, delivery_table.c.attempt)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -543,6 +550,37 @@ class SQLBackendCore:
         else:
             message['delivery_attempt'] = attempt
             out = True
+
+        return out
+
+# ################################################################################################################################
+
+    def record_attempts(self, messages:'anylist') -> 'intset':
+        """ Records the next push attempt of each message of a batch, in one transaction on PostgreSQL,
+        under the same terms as record_attempt. Returns the delivery IDs of the messages still in the subscriber's queue.
+        """
+        engine = self.engine
+        out:'intset' = set()
+
+        if engine.dialect.name == Type_SQLite:
+            for message in messages:
+                message['delivery_attempt'] += 1
+                out.add(message['delivery_id'])
+            return out
+
+        message_by_delivery_id:'anydict' = {}
+
+        for message in messages:
+            message_by_delivery_id[message['delivery_id']] = message
+
+        parameters = {'attempt_delivery_ids': list(message_by_delivery_id)}
+
+        with engine.begin() as connection:
+            rows = connection.execute(_record_attempts_statement, parameters).all()
+
+        for row in rows:
+            message_by_delivery_id[row.id]['delivery_attempt'] = row.attempt
+            out.add(row.id)
 
         return out
 

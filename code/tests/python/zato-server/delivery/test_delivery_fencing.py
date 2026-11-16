@@ -167,7 +167,7 @@ class Server:
         # Whether a replacement worker starts in the delivering slot while the service runs
         self.is_replaced_during_invoke = False
 
-    def invoke(self, service_name:'str', data:'any_', data_format:'str') -> 'None':
+    def invoke(self, service_name:'str', data:'any_', data_format:'str', request_ctx:'any_'=None) -> 'None':
         self.invoked.append(data)
 
         if self.is_replaced_during_invoke:

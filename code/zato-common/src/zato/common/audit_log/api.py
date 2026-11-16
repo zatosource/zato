@@ -17,11 +17,12 @@ from sqlalchemy.exc import OperationalError
 
 # Zato
 from zato.common.audit_log.attachment import build_attachment_rows
+from zato.common.audit_log.attr_rows import build_attr_rows
 from zato.common.audit_log.buffer import Env_Flush_Max_Size, Env_Flush_Max_Wait_Ms, EventBuffer, get_flush_max_size, \
     get_flush_max_wait_ms, PendingEvent
 from zato.common.audit_log.bulk_insert import insert_events, insert_rows
 from zato.common.audit_log.classification import derive_classification
-from zato.common.audit_log.common import Attr_Value_Max_Len, Audit_DB_File_Name, AuditBody, AuditClassification, \
+from zato.common.audit_log.common import Audit_DB_File_Name, AuditBody, AuditClassification, \
     AuditEvent, AuditLink, AuditOutcome, AuditSource, Env_Retention_Days, \
     Env_Retention_Days_Prefix, event_attr_table, event_body_table, event_link_table, event_table, get_retention_days, \
     get_source_env_suffix, metadata, Status_Outstanding
@@ -40,6 +41,7 @@ from zato.common.db_env import Default_SSL, Default_SSL_Verify, Default_Type, di
 from zato.common.db_env.commit_queue import CommitQueue
 from zato.common.db_env.common import get_env_sqlite_path
 from zato.common.db_env.engine import call_database, execute_write, new_unshared_env_engine
+from zato.common.pubsub.delivery_scope import get_delivery_scope
 from zato.common.pubsub.writer_process.frames import ItemKind
 from zato.common.pubsub.writer_process.remote import get_writer_client
 from zato.common.util.api import as_bool, utcnow
@@ -225,38 +227,6 @@ def is_audit_log_enabled() -> 'bool':
     return out
 
 # ################################################################################################################################
-
-def build_attr_rows(event_id:'int', attrs:'stranydict') -> 'anylist':
-    """ Turns an attribute dict into rows - every value is stored as capped text
-    and numbers additionally go to the numeric column for aggregation queries.
-    """
-    out:'anylist' = []
-
-    for name, value in attrs.items():
-
-        row:'stranydict' = {
-            'event_id': event_id,
-            'name': name,
-            'value': '',
-            'value_number': None,
-        }
-
-        # Real numbers are stored twice, and everything else is text -
-        # numeric-looking strings such as identifiers with leading zeros stay text only.
-        if isinstance(value, bool):
-            row['value'] = str(value)
-        elif isinstance(value, (int, float)):
-            row['value'] = str(value)
-            row['value_number'] = value
-        else:
-            value = str(value)
-            row['value'] = value[:Attr_Value_Max_Len]
-
-        out.append(row)
-
-    return out
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 class AuditLog:
@@ -371,8 +341,13 @@ class AuditLog:
             status=status, duration_ms=duration_ms, data=data, attrs=attrs, bodies=bodies, attachments=attachments,
             parents=parents, parent_link_type=parent_link_type, is_export_payload_active=is_export_payload_active)
 
-        # Write it now if batching is off, or if the caller needs the id for the events it links to this one ..
-        if self.flush_max_size <= 1 or needs_id:
+        # An event of a push delivery batch commits along with the batch, unless the caller needs its id at once ..
+        if not needs_id and (scope := get_delivery_scope()):
+            scope.audit_events.append(pending)
+            return None
+
+        # .. write it now if batching is off, or if the caller needs the id for the events it links to this one ..
+        elif self.flush_max_size <= 1 or needs_id:
             self._commit_queue.write(pending, weight=_commit_event_weight, is_urgent=False)
 
             out = pending.event_id
@@ -496,6 +471,13 @@ class AuditLog:
         already, only their trip to the database was pending.
         """
         self._buffer.flush()
+
+# ################################################################################################################################
+
+    def write_pending(self, batch:'pending_event_list') -> 'None':
+        """ Writes the events that a push delivery batch collected, in one transaction.
+        """
+        _ = self._write_batch(batch)
 
 # ################################################################################################################################
 

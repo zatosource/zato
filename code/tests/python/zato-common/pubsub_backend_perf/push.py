@@ -75,7 +75,7 @@ class _StubServer:
         self.config_manager = _StubConfigManager()
         self.invoked_count = 0
 
-    def invoke(self, service_name:'str', payload:'any_', data_format:'strnone'=None) -> 'None':
+    def invoke(self, service_name:'str', payload:'any_', data_format:'strnone'=None, request_ctx:'any_'=None) -> 'None':
         self.invoked_count += 1
 
         # A real invocation switches greenlets on its network I/O - without this yield

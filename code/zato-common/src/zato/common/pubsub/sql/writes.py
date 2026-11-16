@@ -354,6 +354,14 @@ class PubSubWriter:
 
 # ################################################################################################################################
 
+    def write_atomic(self, items:'anylist') -> 'None':
+        """ Writes the items in one transaction that no other caller shares, which commits all of them or none.
+        """
+        engine = get_pubsub_engine()
+        call_database(engine, self._write_items, engine, items, True)
+
+# ################################################################################################################################
+
     def _write_batch(self, batch:'anylist') -> 'None':
         """ Writes all the items of one batch, in a thread of the pool under gevent with SQLite.
         """
@@ -369,7 +377,7 @@ class PubSubWriter:
 
 # ################################################################################################################################
 
-    def _write_items(self, engine:'Engine', batch:'anylist') -> 'None':
+    def _write_items(self, engine:'Engine', batch:'anylist', is_atomic:'bool'=False) -> 'None':
         """ Writes the items of a batch in one transaction, which PostgreSQL may roll back as a whole on a conflict
         with concurrent transactions, in which case nothing of it was committed and it runs again.
         """
@@ -382,9 +390,9 @@ class PubSubWriter:
 
             except DBAPIError as e:
 
-                # A value of one item that PostgreSQL rejects fails the whole commit, so each item is written again
-                # in a transaction of its own and only the caller of the item at fault receives the error ..
-                if len(batch) > 1 and is_value_error(e):
+                # A value of one item that PostgreSQL rejects fails the whole commit, so each item of a batch that is not atomic
+                # is written again in a transaction of its own and only the caller of the item at fault receives the error ..
+                if len(batch) > 1 and is_value_error(e) and not is_atomic:
                     logger.info('Pub/sub commit rejected a value, writing its %d items one by one -> %s', len(batch), e.orig)
                     self._write_items_one_by_one(engine, batch)
                     break
