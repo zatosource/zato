@@ -21,6 +21,7 @@ from uuid import uuid4
 from gevent import sleep
 
 # Zato
+from zato.common.api import CONNECTION, HTTP_SOAP, URL_TYPE
 from zato.common.hl7.mllp.circuit_breaker import SendingStopped
 from zato.common.hl7.mllp.dedup import extract_control_id
 from zato.common.test.config_multi_cpu_cache import CacheConfig
@@ -34,6 +35,12 @@ from zato.server.service import Service
 
 if 0:
     from zato.common.typing_ import anydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The fields of the invocation profile, the health check and the retries of an outgoing REST connection
+_http_profile_fields = HTTP_SOAP.Invocation.FieldList + HTTP_SOAP.HealthCheck.FieldList + HTTP_SOAP.Retry.FieldList
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -373,6 +380,48 @@ class OutconnPublish(Service):
     def handle(self) -> 'None':
         request = self.request.payload
         _ = self.rest[request['conn_name']].publish(request['data'])
+
+        self.response.payload = {
+            'slot': get_slot_or_single(),
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class OutconnRename(Service):
+    """ Renames an outgoing REST connection the way the Dashboard does, by sending the current configuration
+    of the connection back under a new name, and returns the slot of the worker that renamed it.
+    """
+    name = 'test.multi-cpu.outconn-rename'
+
+    def handle(self) -> 'None':
+        request = self.request.payload
+
+        item = self.server.config_manager.config_store.out_plain_http[request['conn_name']]
+        config = item['config']
+
+        edit_request = {
+            'id': config['id'],
+            'name': request['new_name'],
+            'connection': CONNECTION.OUTGOING,
+            'transport': URL_TYPE.PLAIN_HTTP,
+            'host': config['host'],
+            'url_path': config['url_path'],
+            'data_format': config['data_format'],
+            'timeout': config['timeout'],
+            'ping_method': config['ping_method'],
+            'pool_size': config['pool_size'],
+            'is_active': config['is_active'],
+            'security_id': config['security_id'],
+        }
+
+        # The invocation profile, which holds the method that the connection sends with, is stored
+        # in the opaque attributes of the connection, so an edit without it would clear it.
+        for field_name in _http_profile_fields:
+            if field_name in config:
+                edit_request[field_name] = config[field_name]
+
+        _ = self.invoke('zato.http-soap.edit', edit_request)
 
         self.response.payload = {
             'slot': get_slot_or_single(),

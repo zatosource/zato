@@ -44,7 +44,6 @@ class ModuleCtx:
     Publish_Service = 'test.multi-cpu.outconn-publish'
     Queue_List_Service = 'zato.pubsub.outgoing.get-queue-list'
     Message_List_Service = 'zato.pubsub.outgoing.get-message-list'
-    Delete_Service = 'zato.http-soap.delete'
 
     Kind_Queue = 'queue'
 
@@ -199,8 +198,12 @@ class TestOutgoingQueuesAcrossWorkers(unittest.TestCase):
             wait_for_every_slot(_reports_empty, 'depth 0', ModuleCtx.Deadline)
 
             # .. and once the connection is deleted, no slot lists its queue.
-            status, body = invoke_on_slot(0, ModuleCtx.Delete_Service, {'id': row['conn_id']})
-            self.assertEqual(status, MultiCPUCtx.Status_OK, body)
+            enmasse_import({
+                'outgoing_rest': [{
+                    'name': conn_name,
+                    'should_delete': True,
+                }],
+            })
 
             def _lists_no_queue(slot:'int') -> 'bool':
                 row = _get_queue_row(slot, conn_name)
