@@ -16,6 +16,7 @@ from zlib import crc32
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.pubsub.sql.config import get_pubsub_db_path, get_pubsub_engine
 from zato.common.pubsub.sql.schema import metadata
+from zato.common.test.pubsub_database import get_db_mode, is_managed_mode
 from zato.common.util.time_ import datetime_to_ms, utcnow
 
 # ################################################################################################################################
@@ -160,9 +161,13 @@ def _finish_load(cursor:'any_') -> 'None':
 
 def _write_checkpoint(connection:'any_') -> 'None':
     """ On PostgreSQL, writes the seeded pages to disk in a checkpoint of its own, so that the checkpoint
-    of the seeding does not run over the scenario that follows it and slow its WAL flushes.
+    of the seeding does not run over the scenario that follows it and slow its WAL flushes. A managed database
+    runs its own checkpoints and its role holds no privilege to request one.
     """
     if not _is_postgresql():
+        return
+
+    if is_managed_mode(get_db_mode()):
         return
 
     cursor = connection.cursor()
