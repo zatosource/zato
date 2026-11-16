@@ -24,6 +24,9 @@ class SingletonsConfig:
     Startup_Channel_Name = 'test.multi-cpu.singletons.startup'
     Startup_Channel_Path = '/test/multi-cpu/singletons/startup'
 
+    # How many days audit log retention keeps the events of the REST channels
+    Retention_Days = '0'
+
     # The root of the deployment, set by the conftest of the suite
     deploy_root = ''
 

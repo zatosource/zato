@@ -25,7 +25,7 @@ from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.test.pubsub_in_process import new_single_slot_fence
 from zato.common.typing_ import cast_
 from zato.server.base.config_manager import ConfigManager
-from zato.server.base.config_manager.outgoing_queues import OutgoingQueueDepth
+from zato.server.base.config_manager.outgoing_queues import OutgoingNameMark, OutgoingQueueDepth
 from zato.server.base.parallel.delivery import PushDelivery
 
 # ################################################################################################################################
@@ -149,6 +149,7 @@ class _StubConfigManager:
     rename_outgoing_dlq = ConfigManager.rename_outgoing_dlq
     delete_outgoing_dlq = ConfigManager.delete_outgoing_dlq
     restore_outgoing_dlqs = ConfigManager.restore_outgoing_dlqs
+    _wait_for_current_outgoing_name = ConfigManager._wait_for_current_outgoing_name
 
     def __init__(self, server:'any_') -> 'None':
         self.server = server
@@ -157,6 +158,7 @@ class _StubConfigManager:
         self._outgoing_sub_key_lock = RLock()
         self._outgoing_conn_locks:'anydict' = {}
         self.outgoing_queue_depth = OutgoingQueueDepth()
+        self.outgoing_name_mark = OutgoingNameMark()
         self.init_outgoing_dlqs()
 
 # ################################################################################################################################
