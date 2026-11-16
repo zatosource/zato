@@ -178,6 +178,10 @@ class ConfigLoader:
         query = self.odb.get_http_soap_list('outgoing', 'plain_http', True)
         self.config.out_plain_http = ConfigDict.from_query('out_plain_http', query, decrypt_func=self.decrypt)
 
+        # A delivery resolves a connection by its ID during a reload too, before the connections are built anew
+        for item in list(self.config.out_plain_http.values()):
+            self.config.out_plain_http.set_key_id_data(item.config)
+
         # SOAP
         query = self.odb.get_http_soap_list('outgoing', 'soap', True)
         self.config.out_soap = ConfigDict.from_query('out_soap', query, decrypt_func=self.decrypt)

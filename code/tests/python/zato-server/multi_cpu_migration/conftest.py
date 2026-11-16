@@ -68,6 +68,12 @@ def _build_template() -> 'str':
     lines.append(f'    url_path: {MultiCPUCtx.Worker_Slot_Path}')
     lines.append('    data_format: json')
 
+    # .. the channel of the service whose requests are in progress while the server stops ..
+    lines.append(f'  - name: {MigrationConfig.Drain_Sleep_Channel}')
+    lines.append('    service: test.multi-cpu.worker-drain-sleep')
+    lines.append(f'    url_path: {MigrationConfig.Drain_Sleep_Path}')
+    lines.append('    data_format: json')
+
     # .. one outgoing connection per receiver ..
     lines.append('outgoing_rest:')
 

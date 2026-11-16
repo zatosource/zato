@@ -40,6 +40,7 @@ logger = logging.getLogger('zato.test.pubsub_push.receiver')
 _Mode_Accept     = 'accept'
 _Mode_Reject_503 = 'reject_503'
 _Mode_Hang       = 'hang'
+_Mode_Gate       = 'gate'
 
 # How long the delivered file count has to stay unchanged before receivers count as quiet
 # and for how long we keep observing them at most.
@@ -78,6 +79,9 @@ class ReceiverBehavior:
         self.reject_count:'int' = 0
         self.auto_recover_after:'int' = 0
         self.rejected_bodies:'anylist' = []
+        self.request_arrived = Event()
+        self.gate_released = Event()
+        self.response_sent = Event()
         self._lock = threading.Lock()
 
 # ################################################################################################################################
@@ -122,6 +126,18 @@ class ReceiverBehavior:
 
 # ################################################################################################################################
 
+    def set_gate(self) -> 'None':
+        """ Switches to gate mode, in which the next request is held until the gate is released
+        and every request after it is accepted.
+        """
+        with self._lock:
+            self.mode = _Mode_Gate
+            self.request_arrived.clear()
+            self.gate_released.clear()
+            self.response_sent.clear()
+
+# ################################################################################################################################
+
     def evaluate(self, body:'bytes') -> 'EvaluationResult':
         """ Returns an EvaluationResult for the current request.
         """
@@ -142,8 +158,22 @@ class ReceiverBehavior:
                 out = EvaluationResult(status_code=503, should_persist=False)
                 return out
 
-            # .. mode is hang - capture the delay while under lock ..
+            is_gated = self.mode == _Mode_Gate
+
+            # .. only the first request is held, which is why the mode reverts before the gate opens ..
+            if is_gated:
+                self.mode = _Mode_Accept
+
+            # .. otherwise, mode is hang - capture the delay while under lock ..
             delay = self.hang_seconds
+
+        # .. a held request waits outside the lock until the gate is released ..
+        if is_gated:
+            self.request_arrived.set()
+            _ = self.gate_released.wait()
+
+            out = EvaluationResult(status_code=200, should_persist=True)
+            return out
 
         # .. sleep outside the lock so other threads are not blocked ..
         time.sleep(delay)
@@ -256,10 +286,13 @@ class _RequestHandler(BaseHTTPRequestHandler):
             delivery_event = self.server.delivery_event
             _ = delivery_event.set()
 
-        # .. send the response.
+        # .. send the response ..
         self.send_response(result.status_code)
         self.send_header('Content-Type', 'text/plain')
         self.end_headers()
+
+        # .. and signal that it was written to the connection.
+        behavior.response_sent.set()
 
 # ################################################################################################################################
 # ################################################################################################################################

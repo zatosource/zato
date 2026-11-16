@@ -152,6 +152,25 @@ class SchedulerProcess:
     def start(self) -> 'None':
         """ Starts the binary in a session of its own and waits for its API.
         """
+        self.spawn()
+        self.wait_until_ready()
+
+# ################################################################################################################################
+
+    def wait_until_ready(self) -> 'None':
+        """ Waits for the API of the binary, which it opens once a server sent it the initial list of jobs.
+        """
+        try:
+            self._wait_for_api()
+        except Exception:
+            self.stop()
+            raise
+
+# ################################################################################################################################
+
+    def spawn(self) -> 'None':
+        """ Starts the binary in a session of its own without waiting for its API.
+        """
         binary = find_binary()
 
         environment = dict(os.environ)
@@ -173,12 +192,6 @@ class SchedulerProcess:
         output_thread = threading.Thread(target=self._drain_output, args=(self._process,), daemon=True)
         output_thread.start()
 
-        try:
-            self._wait_for_api()
-        except Exception:
-            self.stop()
-            raise
-
 # ################################################################################################################################
 
     def stop(self) -> 'None':
@@ -192,7 +205,16 @@ class SchedulerProcess:
     def delete_streams(self) -> 'None':
         """ Removes this scheduler's streams from Redis.
         """
-        redis_connection = Redis(host=_redis_host, port=_redis_port, decode_responses=True)
+        # The streams are in the Redis that the binary was started with
+        host = _redis_defaults['Zato_Scheduler_Redis_Host']
+        if host_from_env := os.environ.get('Zato_Scheduler_Redis_Host'):
+            host = host_from_env
+
+        port = _redis_defaults['Zato_Scheduler_Redis_Port']
+        if port_from_env := os.environ.get('Zato_Scheduler_Redis_Port'):
+            port = port_from_env
+
+        redis_connection = Redis(host=host, port=int(port), decode_responses=True)
 
         pattern = self.stream_prefix + ':stream:*'
         keys = redis_connection.keys(pattern)

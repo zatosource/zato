@@ -46,6 +46,10 @@ class MigrationConfig:
     Topic_Name     = 'multi.cpu.migration'
     Publisher_Name = 'test.multi-cpu.migration.publisher'
 
+    # The channel whose requests are in progress while the server stops
+    Drain_Sleep_Channel = 'test.multi-cpu.migration.drain-sleep'
+    Drain_Sleep_Path    = '/test/multi-cpu/migration/drain-sleep'
+
     # The number of workers of the server that the suite starts first
     Single_Worker_Count = 1
 

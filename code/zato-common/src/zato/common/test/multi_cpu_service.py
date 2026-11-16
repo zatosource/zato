@@ -84,6 +84,26 @@ class WorkerSleep(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class WorkerDrainSleep(Service):
+    """ Returns the correlation ID of the request and the slot of the worker after a delay shorter than
+    the request drain period of a worker, which keeps the request in progress while the server stops.
+    """
+    name = 'test.multi-cpu.worker-drain-sleep'
+
+    # How long the request stays in progress, in seconds
+    Duration = 1.0
+
+    def handle(self) -> 'None':
+        sleep(self.Duration)
+
+        self.response.payload = {
+            'cid': self.cid,
+            'slot': get_slot_or_single(),
+        }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Publish(Service):
     """ Publishes one message to a topic and returns the slot of the worker that published it.
     """

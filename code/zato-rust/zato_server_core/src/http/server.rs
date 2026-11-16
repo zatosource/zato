@@ -51,15 +51,11 @@ impl HTTPServer {
         Ok(py.None().into_bound(py))
     }
 
-    /// Closes the listener and stops the accept watcher to break the accept loop.
-    #[expect(
-        clippy::unused_self,
-        clippy::unnecessary_wraps,
-        reason = "PyO3 method signature requires &self and PyResult return"
-    )]
+    /// Closes the listener and wakes the accept loop, so that `serve_forever` returns.
+    #[expect(clippy::unused_self, reason = "PyO3 method signature requires &self")]
     fn stop<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         close_listen_fd();
-        stop_accept_watcher(py);
+        cancel_accept_wait(py)?;
         Ok(py.None().into_bound(py))
     }
 }
@@ -93,10 +89,24 @@ pub(super) fn close_listen_fd() {
     }
 }
 
-/// Stops the gevent IO watcher to unblock the accept loop.
-pub(super) fn stop_accept_watcher(py: Python<'_>) {
-    let mut guard = ACCEPT_WATCHER.lock();
-    if let Some(watcher) = guard.take() {
-        let _stop_result = watcher.call_method0(py, "stop");
+/// Wakes the greenlet of the accept loop that waits on the gevent IO watcher of the listening socket.
+///
+/// The hub throws `cancel_wait_ex` into that greenlet and then closes the watcher. Stopping the watcher instead
+/// would leave the greenlet waiting forever, because a stopped watcher never switches back to it.
+pub(super) fn cancel_accept_wait(py: Python<'_>) -> PyResult<()> {
+    // The lock is held only to take the watcher, and is released before the hub is called
+    let taken_watcher = ACCEPT_WATCHER.lock().take();
+
+    // A loop that already returned has cleared its watcher and has nothing to wake
+    if let Some(watcher) = taken_watcher {
+        let gevent = py.import("gevent")?;
+        let hub = gevent.call_method0("get_hub")?;
+
+        // The accept loop sees the listener closed once it wakes, so the error it receives ends it
+        let cancel_error = py.import("gevent.socket")?.getattr("cancel_wait_ex")?;
+        let close_watcher = true;
+        hub.call_method1("cancel_wait", (watcher, cancel_error, close_watcher))?;
     }
+
+    Ok(())
 }

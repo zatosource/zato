@@ -97,6 +97,7 @@ class HASession:
     template_dir: 'str'
     publisher_password: 'str'
     puller_password: 'str'
+    invoke_password: 'str'
     receivers: 'anydict'
     server_directories: 'strstrdict'
 
@@ -329,6 +330,7 @@ def create_session(control_planes:'int') -> 'HASession':
 
     # .. the receivers listen on the gateway of the network, which is the address of the host on it ..
     rendered_yaml, invoke_password = start_receivers(session, TopologyCtx.Gateway)
+    session.invoke_password = invoke_password
 
     # .. and the environment of each node is kept as it was created, so that each test begins from it.
     for short_name in ModuleCtx.Node_Names:

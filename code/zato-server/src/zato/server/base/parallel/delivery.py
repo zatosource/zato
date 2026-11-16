@@ -20,17 +20,19 @@ from gevent.lock import BoundedSemaphore, RLock
 from sqlalchemy.exc import DBAPIError
 
 # Zato
-from zato.common.api import DATA_FORMAT, MISC, PubSub
+from zato.common.api import DATA_FORMAT, PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.db_env.common import get_env_values
 from zato.common.db_env.engine import get_worker_pool_size
 from zato.common.db_env.outage import OutageTracker
 from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryFenced, DeliveryInterrupted, \
-    Interrupt_Database, Interrupt_Expired, Interrupt_Fenced, Interrupt_Paused, Interrupt_Replaced, Interrupt_Withdrawn
+    Interrupt_Database, Interrupt_Expired, Interrupt_Fenced, Interrupt_Paused, Interrupt_Replaced, Interrupt_Withdrawn, \
+    wait_between_rounds
 from zato.common.pubsub.sql.config import pubsub_db_config
 from zato.common.pubsub.sql.replaced import PubSubReplaced
 from zato.common.util.retry import RetryPolicy
 from zato.common.util.time_ import parse_utc
+from zato.server.base.parallel.delivery_rest import deliver_to_rest, get_rest_push_url
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -69,17 +71,6 @@ _fetch_error_sleep = PubSub.Delivery.Fetch_Error_Sleep
 _delivery_defaults = PubSub.Delivery
 
 _outgoing_sub_key_prefix = PubSub.Outgoing.Sub_Key_Prefix
-
-# How long one push to a REST endpoint may take, in seconds, the same as for an outgoing REST connection,
-# so that an endpoint that never responds fails the attempt rather than holding up the queue.
-_rest_push_timeout = MISC.DEFAULT_HTTP_TIMEOUT
-
-# The headers of a push request that identify the message and its attempt
-_header_msg_id = 'X-Zato-Msg-ID'
-_header_delivery_attempt = 'X-Zato-Delivery-Attempt'
-
-# The header of a push response that declares the length of its body, absent from a chunked response
-_header_content_length = 'Content-Length'
 
 sub_key_greenlet_dict = dict[str, 'Greenlet']
 greenletlist = list['Greenlet']
@@ -453,7 +444,13 @@ class PushDelivery:
 
         except Exception:
             reason = format_exc()
-            return self._keep_for_next_round(message, sub_config, sub_key, expiration_time, reason)
+            is_concluded = self._keep_for_next_round(message, sub_config, sub_key, expiration_time, reason)
+
+            # A push message fails here only outside its retry policy, which therefore did not wait before the next read
+            if not is_concluded and not is_outgoing:
+                wait_between_rounds()
+
+            return is_concluded
 
         self._insert_audit_event(message, sub_config, sub_key, True, False)
         return True
@@ -578,7 +575,7 @@ class PushDelivery:
         if sub_config['push_type'] == PubSub.Push_Type.Service:
             out = sub_config['push_service_name']
         else:
-            out = sub_config['rest_push_url']
+            out = get_rest_push_url(self.server.config_manager.config_store, sub_config)
 
         return out
 
@@ -697,37 +694,7 @@ class PushDelivery:
 # ################################################################################################################################
 
     def _deliver_to_rest(self, message:'anydict', sub_config:'anydict') -> 'None':
-        """ Deliver a raw message by posting to a REST endpoint.
-        """
-        from json import dumps
-        from requests import post as requests_post
-
-        url = sub_config['rest_push_url']
-
-        # Each copy of a message carries its identifier and the number of its attempt, in the body and in the headers,
-        # by which a subscriber recognizes a copy it processed already. The delivery row is internal to the database.
-        envelope = dict(message)
-        del envelope['delivery_id']
-
-        headers = {
-            'Content-Type': 'application/json',
-            _header_msg_id: message['msg_id'],
-            _header_delivery_attempt: str(message['delivery_attempt']),
-        }
-
-        response = requests_post(url, data=dumps(envelope), headers=headers, timeout=_rest_push_timeout)
-        response.raise_for_status()
-
-        # A response that ends before the length it declared is a failed attempt - the endpoint closed the connection
-        # in the middle of it, so it may not have processed the message. The bytes are counted as received, before decoding.
-        content_length = response.headers.get(_header_content_length)
-
-        if content_length is not None:
-            expected = int(content_length)
-            received = response.raw.tell()
-
-            if received < expected:
-                raise Exception(f'Incomplete response from {url}, received {received} of {expected} bytes')
+        deliver_to_rest(self.server.config_manager.config_store, message, sub_config)
 
 # ################################################################################################################################
 # ################################################################################################################################

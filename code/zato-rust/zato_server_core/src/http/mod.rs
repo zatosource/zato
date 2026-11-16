@@ -44,7 +44,7 @@ use std::sync::atomic::AtomicI32;
 /// File descriptor of the listening TCP socket (-1 when not listening).
 pub(crate) static LISTEN_FD: AtomicI32 = AtomicI32::new(-1);
 
-/// Gevent IO watcher for the listen socket - stopped on shutdown to break the accept loop.
+/// Gevent IO watcher of the listening socket, whose wait is cancelled on shutdown to end the accept loop.
 pub(crate) static ACCEPT_WATCHER: Mutex<Option<PyObject>> = Mutex::new(None);
 
 /// Maximum HTTP headers parsed per request.

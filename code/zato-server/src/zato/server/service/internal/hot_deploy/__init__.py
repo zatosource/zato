@@ -7,11 +7,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import fcntl
 import os
 import shutil
 from base64 import b64decode
 from dataclasses import dataclass
 from errno import ENOENT
+from tempfile import mkdtemp
 from time import sleep
 from traceback import format_exc
 
@@ -41,6 +43,18 @@ if 0:
 
 MAX_BACKUPS = 1000
 _first_prefix = '0' * (len(str(MAX_BACKUPS)) - 1) # So it runs from, e.g.,  000 to 999
+
+# The file next to the backup directory whose lock the processes of a server hold in turn while each makes its backup,
+# because each process deletes the archives that it found in the directory before it made its own.
+_backup_lock_suffix = '.lock'
+
+# How long a process waits, in seconds, before it tries again to take the lock of the backup directory.
+_backup_lock_interval = 0.05
+
+# The directory of the work directory to which the modules of an archive are extracted, followed by the name of the archive,
+# and the temporary directory that each process extracts the archive to first.
+_archive_dir_prefix = 'archive-'
+_archive_staging_prefix = 'archive-staging-'
 
 # What an IDE plugin's connection test receives in reply.
 _msg_server_reached = 'OK, server reached'
@@ -176,14 +190,34 @@ class Create(AdminService):
         backup_history = self.server.hot_deploy_config.backup_history
         backup_format = self.server.hot_deploy_config.backup_format
 
-        # Safe to use as a directory name
-        fs_now = fs_safe_now()
+        lock_path = f'{backup_work_dir}{_backup_lock_suffix}'
 
-        # Store the last backup
-        self._backup_last(fs_now, current_work_dir, backup_format, last_backup_work_dir)
+        with open(lock_path, 'a') as lock_file:
 
-        # Now store the same thing in the linear log of backups
-        self._backup_linear_log(fs_now, current_work_dir, backup_format, backup_work_dir, backup_history)
+            # Only one process of the server makes its backup at a time ..
+            self._lock_backup(lock_file)
+
+            # .. the name is taken under the lock, so the archives of the processes keep their order ..
+            fs_now = fs_safe_now()
+
+            # .. store the last backup ..
+            self._backup_last(fs_now, current_work_dir, backup_format, last_backup_work_dir)
+
+            # .. and store the same thing in the linear log of backups.
+            self._backup_linear_log(fs_now, current_work_dir, backup_format, backup_work_dir, backup_history)
+
+# ################################################################################################################################
+
+    def _lock_backup(self, lock_file:'any_') -> 'None':
+        """ Waits until this process holds the lock of the backup directory, which the closing of the file releases.
+        """
+        while True:
+            try:
+                fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                sleep(_backup_lock_interval)
+            else:
+                return
 
 # ################################################################################################################################
 
@@ -201,8 +235,9 @@ class Create(AdminService):
 
             # .. and redeploy all such files in this process, because every other process deploys the module
             # from the event of its own deployment and then redeploys the files that import it in turn.
+            # The server invokes the deployment, because a service may not invoke itself.
             for item in file_name_list:
-                _ = self.invoke('zato.hot-deploy.create', {'payload_name': item, 'payload': '', 'is_relayed': True})
+                _ = self.server.invoke('zato.hot-deploy.create', {'payload_name': item, 'payload': '', 'is_relayed': True})
 
 # ################################################################################################################################
 
@@ -491,9 +526,57 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
+    def _deploy_archive(self, payload_name:'str') -> 'intlist':
+        """ Extracts an archive to a directory of its own in the work directory and deploys each Python module in it.
+        """
+        current_work_dir = self.server.hot_deploy_config.current_work_dir
+        archive_name = os.path.basename(payload_name)
+
+        # The staging directory is outside the work directory, which the backups of other processes archive,
+        # and on the same file system, so that a module is moved into place in one step.
+        target_dir = os.path.join(current_work_dir, f'{_archive_dir_prefix}{archive_name}')
+        staging_dir = mkdtemp(prefix=_archive_staging_prefix, dir=os.path.dirname(current_work_dir))
+
+        # Each process of the server extracts the archive on its own ..
+        try:
+            shutil.unpack_archive(payload_name, staging_dir)
+
+            module_paths:'strlist' = []
+
+            for staging_root, _, file_names in os.walk(staging_dir):
+                for file_name in file_names:
+                    if is_python_file(file_name):
+
+                        staging_path = os.path.join(staging_root, file_name)
+                        relative_path = os.path.relpath(staging_path, staging_dir)
+                        module_path = os.path.join(target_dir, relative_path)
+
+                        os.makedirs(os.path.dirname(module_path), exist_ok=True)
+                        os.replace(staging_path, module_path)
+
+                        module_paths.append(module_path)
+        finally:
+            shutil.rmtree(staging_dir)
+
+        # .. and each module is deployed from where it now is.
+        out:'intlist' = []
+
+        for module_path in sorted(module_paths):
+            service_id_list = self._deploy_package('', module_path)
+
+            if service_id_list:
+                out.extend(service_id_list)
+
+        return out
+
+# ################################################################################################################################
+
     def deploy_package(self, payload:'str', payload_name:'str') -> 'any_':
 
-        if is_archive_file(payload_name) or is_python_file(payload_name):
+        if is_archive_file(payload_name):
+            return self._deploy_archive(payload_name)
+
+        elif is_python_file(payload_name):
             return self._deploy_package(payload, payload_name)
 
         elif self._is_enmasse_file(payload_name):

@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import os
 import shutil
+import socket
 import ssl
 import tempfile
 import threading
@@ -175,7 +176,8 @@ class _RecordingServer(ThreadingHTTPServer):
     """ A threading HTTP server that carries the recorded requests and the per-path response configuration.
     """
 
-    daemon_threads = True
+    # The thread of each request is joined when the server closes, after its connection was shut down
+    daemon_threads = False
 
     def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
         super().__init__(*args, **kwargs)
@@ -183,11 +185,42 @@ class _RecordingServer(ThreadingHTTPServer):
         self.recorded_requests:'anylist' = []
         self.path_config:'anydict' = {}
 
+        # The connections that a request thread serves, which a client may keep open after its last request
+        self.open_connections:'set[any_]' = set()
+        self.connections_lock = threading.Lock()
+
         self.default_config = {
             'status': _Default_Response_Status,
             'body': _Default_Response_Body,
             'delay': 0,
         }
+
+    def process_request(self, request:'any_', client_address:'any_') -> 'None':
+        with self.connections_lock:
+            self.open_connections.add(request)
+
+        super().process_request(request, client_address)
+
+    def shutdown_request(self, request:'any_') -> 'None':
+        with self.connections_lock:
+            self.open_connections.discard(request)
+
+        super().shutdown_request(request)
+
+    def server_close(self) -> 'None':
+        """ Shuts down each connection that is still open, so that its request thread ends, and joins every request thread.
+        """
+        with self.connections_lock:
+            open_connections = list(self.open_connections)
+
+        for connection in open_connections:
+            try:
+                connection.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                # The client closed the connection in the meantime
+                pass
+
+        super().server_close()
 
 # ################################################################################################################################
 # ################################################################################################################################

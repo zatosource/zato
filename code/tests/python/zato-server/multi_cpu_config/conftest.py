@@ -28,6 +28,9 @@ if 0:
 
 _template_path = os.path.join(os.path.dirname(__file__), '_enmasse_template.yaml')
 
+# The services of the flood of configuration events, which only this suite deploys
+_flood_service_path = os.path.join(os.path.dirname(MultiCPUCtx.Worker_Slot_Service_Path), 'multi_cpu_flood_service.py')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -45,7 +48,7 @@ def _build_config(
             'server_port': server_port,
         },
         'populate_callback': MultiCPUTestConfig.populate,
-        'hot_deploy_sources': [MultiCPUCtx.Worker_Slot_Service_Path],
+        'hot_deploy_sources': [MultiCPUCtx.Worker_Slot_Service_Path, _flood_service_path],
     }
 
     return out
