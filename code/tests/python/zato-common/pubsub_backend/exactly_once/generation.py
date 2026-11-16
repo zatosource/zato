@@ -121,7 +121,7 @@ Operation_Names = list(_operations)
 def _new_env(database:'PubSubDatabase', pool_size:'int') -> 'strstrdict':
     """ Returns the environment of one server, with an engine and a generation file of its own.
     """
-    work_dir = tempfile.mkdtemp(prefix='zato_pubsub_exactly_once_generation_', dir=os.environ['TMPDIR'])
+    work_dir = tempfile.mkdtemp(prefix='zato_pubsub_exactly_once_generation_')
     generation_file_path = os.path.join(work_dir, 'generation')
 
     out = dict(database.env)

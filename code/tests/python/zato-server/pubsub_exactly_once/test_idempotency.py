@@ -32,8 +32,10 @@ _key_count = 50
 _service_repeats = 2
 _rest_repeats    = 3
 
-# The channel of the service that publishes under a message ID derived from its request
-_publish_channel_path = '/test/exactly-once/publish'
+# The service that publishes under a message ID derived from its request, deployed after the import of the template,
+# and the user of the server that invokes it
+_publish_service_path = '/zato/api/invoke/test.exactly-once.publish'
+_invoke_username      = 'admin.invoke'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,7 +55,7 @@ def test_idempotent_publication_through_service(zato_server:'any_') -> 'None':
         }
 
         for _ in range(_service_repeats):
-            result = post_json(_publish_channel_path, TestConfig.publisher_username, TestConfig.publisher_password, payload)
+            result = post_json(_publish_service_path, _invoke_username, TestConfig.password, payload)
 
             assert result.status_code == OK, result
             assert result.body['msg_id'] == key, result

@@ -869,6 +869,7 @@ test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing del
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_amqp/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend_amqp \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	$(MAKE) test-pubsub-exactly-once $(Zato_Log)
 
 test-queue-delivery-rest: ## Queue delivery of outgoing REST connections, live, on every pub/sub backend.
 	$(Zato_Log_Reset)
@@ -953,36 +954,61 @@ test-pubsub-perf: ## Every pub/sub performance test - SQL, AMQP, system-level lo
 		--basetemp="$$basetemp" \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-# The live suites of exactly-once delivery and the pub/sub databases that each of their sections runs on, in this order.
+# The live suites of exactly-once delivery.
 Zato_Test_Exactly_Once_Dir      := $(CURDIR)/code/tests/python/zato-server/pubsub_exactly_once
 Zato_Test_Exactly_Once_Takeover := $(CURDIR)/code/tests/python/zato-server/pubsub_exactly_once_takeover
-Zato_Test_Exactly_Once_Modes    := sqlite postgresql
 
-# Runs the tests in $(1) on each pub/sub database in turn, stopping at the first failure.
-define Zato_Test_Exactly_Once_Section
-	for mode in $(Zato_Test_Exactly_Once_Modes); do \
-		echo ">>> $(1) on $$mode" $(Zato_Log); \
-		Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(1) \
-			-v -s -x --tb=short -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_exactly_once \
-			-W ignore::DeprecationWarning \
-			$(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
-	done
-endef
+# The tests of each group and the pytest invocation that runs them.
+Zato_Test_Exactly_Once_Gevent := -m gevent.monkey --module pytest -W "ignore:This process:DeprecationWarning"
+Zato_Test_Exactly_Once_Live   := -m pytest -W ignore::DeprecationWarning
 
-test-pubsub-exactly-once: ## Exactly-once delivery of pub/sub - the backend, a single server without and with faults, pull clients, takeovers and load, on SQLite and PostgreSQL, stopping at the first failure.
+Zato_Test_Exactly_Once_Tests_backend  := $(CURDIR)/code/tests/python/zato-common/pubsub_backend/exactly_once/
+Zato_Test_Exactly_Once_Tests_relay    := $(Zato_Test_Exactly_Once_Dir)/test_relay.py $(Zato_Test_Exactly_Once_Dir)/test_idempotency.py
+Zato_Test_Exactly_Once_Tests_pull     := $(Zato_Test_Exactly_Once_Dir)/test_pull.py
+Zato_Test_Exactly_Once_Tests_crash    := $(Zato_Test_Exactly_Once_Dir)/test_crash.py
+Zato_Test_Exactly_Once_Tests_takeover := $(Zato_Test_Exactly_Once_Takeover)/
+Zato_Test_Exactly_Once_Tests_load     := $(Zato_Test_Exactly_Once_Dir)/test_load.py
+
+Zato_Test_Exactly_Once_Runner_backend  := $(Zato_Test_Exactly_Once_Gevent)
+Zato_Test_Exactly_Once_Runner_relay    := $(Zato_Test_Exactly_Once_Live)
+Zato_Test_Exactly_Once_Runner_pull     := $(Zato_Test_Exactly_Once_Live)
+Zato_Test_Exactly_Once_Runner_crash    := $(Zato_Test_Exactly_Once_Live)
+Zato_Test_Exactly_Once_Runner_takeover := $(Zato_Test_Exactly_Once_Live)
+Zato_Test_Exactly_Once_Runner_load     := $(Zato_Test_Exactly_Once_Live)
+
+# The steps in the order they run, each a group of tests on one pub/sub database, the step that the target is currently on,
+# and the pytest option that resumes each step from the test that failed or was interrupted, or starts it over under RESTART.
+Zato_Test_Exactly_Once_Steps := backend \
+	$(foreach group,relay pull crash takeover load,$(foreach mode,sqlite postgresql,$(group):$(mode)))
+Zato_Test_Exactly_Once_Resume_File := $(CURDIR)/code/tests/.test-pubsub-exactly-once-resume
+Zato_Test_Exactly_Once_Stepwise     = $(if $(RESTART),--sw-reset,--sw)
+
+# Runs the group $(2) on the pub/sub database $(3) as the step $(1), unless the walk is still looking for the step it resumes from.
+Zato_Test_Exactly_Once_Run = \
+	if [ -z "$$resume" ] || [ "$$resume" = "$(1)" ]; then \
+		resume=''; \
+		echo "$(1)" > $(Zato_Test_Exactly_Once_Resume_File); \
+		echo ">>> $(1)" $(Zato_Log); \
+		$(if $(3),Zato_Test_PubSub_DB_Mode=$(3)) ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) $(Zato_Test_Exactly_Once_Runner_$(2)) \
+			$(Zato_Test_Exactly_Once_Tests_$(2)) -v -s --tb=short \
+			-o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_exactly_once_$(subst :,_,$(1)) \
+			$(Zato_Test_Exactly_Once_Stepwise) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
+	fi;
+
+Zato_Test_Exactly_Once_Step = $(call Zato_Test_Exactly_Once_Run,$(1),$(word 1,$(subst :, ,$(1))),$(word 2,$(subst :, ,$(1))))
+
+test-pubsub-exactly-once: ## Exactly-once delivery of pub/sub - the backend, a single server without and with faults, pull clients, takeovers and load, on SQLite and PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+	@if [ -n "$(RESTART)" ]; then rm -f $(Zato_Test_Exactly_Once_Resume_File); fi
 	$(Zato_Log_Reset)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/exactly_once/ \
-		-v -s -x --tb=short -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_exactly_once_backend \
-		-W "ignore:This process:DeprecationWarning" \
-		$(PYTEST_ARGS) $(Zato_Log)
-	$(call Zato_Test_Exactly_Once_Section,$(Zato_Test_Exactly_Once_Dir)/test_relay.py $(Zato_Test_Exactly_Once_Dir)/test_idempotency.py)
-	$(call Zato_Test_Exactly_Once_Section,$(Zato_Test_Exactly_Once_Dir)/test_pull.py)
-	$(call Zato_Test_Exactly_Once_Section,$(Zato_Test_Exactly_Once_Dir)/test_crash.py)
 	$(MAKE) ha-node-build $(Zato_Log)
 	$(MAKE) scheduler-build $(Zato_Log)
-	$(call Zato_Test_Exactly_Once_Section,$(Zato_Test_Exactly_Once_Takeover)/)
-	$(call Zato_Test_Exactly_Once_Section,$(Zato_Test_Exactly_Once_Dir)/test_load.py)
+	@resume=''; \
+	if [ -f $(Zato_Test_Exactly_Once_Resume_File) ]; then \
+		resume=$$(cat $(Zato_Test_Exactly_Once_Resume_File)); \
+		echo ">>> Resuming from $$resume" $(Zato_Log); \
+	fi; \
+	$(foreach step,$(Zato_Test_Exactly_Once_Steps),$(call Zato_Test_Exactly_Once_Step,$(step))) \
+	rm -f $(Zato_Test_Exactly_Once_Resume_File)
 
 # discord_disabled - these enmasse suites run in test-discord only
 Zato_Test_Enmasse_Disabled := \

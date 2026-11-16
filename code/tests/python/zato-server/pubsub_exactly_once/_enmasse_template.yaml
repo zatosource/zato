@@ -78,10 +78,3 @@ pubsub_subscription:
     topic_list:
       - invoices
       - audit
-
-channel_rest:
-
-  - name: test.exactly-once.publish
-    service: test.exactly-once.publish
-    url_path: /test/exactly-once/publish
-    data_format: json
