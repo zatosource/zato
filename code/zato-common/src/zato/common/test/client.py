@@ -151,6 +151,7 @@ class PublishClient:
         in_reply_to:'str'='',
         ext_client_id:'str'='',
         pub_time:'str'='',
+        msg_id:'str'='',
         ) -> 'anydict':
         """ Publishes a message to the given topic and returns the response dict.
         """
@@ -177,6 +178,9 @@ class PublishClient:
 
         if pub_time:
             payload['pub_time'] = pub_time
+
+        if msg_id:
+            payload['msg_id'] = msg_id
 
         serialized = json.dumps(payload)
         body = serialized.encode()

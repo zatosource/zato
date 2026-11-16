@@ -34,6 +34,7 @@ from zato.common.test.pubsub_database import get_db_mode, is_postgresql_mode, st
 # ################################################################################################################################
 
 if 0:
+    from zato.common.test.pubsub_database import PubSubDatabase
     from zato.common.typing_ import any_, anydict, callable_, strnone, strstrdict
 
 # ################################################################################################################################
@@ -67,6 +68,7 @@ class SessionState:
         self.quickstart_directory:'str | None' = None
         self.test_data_directory:'str | None' = None
         self.receivers:'list' = []
+        self.pubsub_database:'PubSubDatabase | None' = None
         self._logger = logging.getLogger(logger_name)
         self._server_log_copy_name = server_log_copy_name
 
@@ -460,6 +462,7 @@ def create_zato_server_fixture(
 
         if is_postgresql_mode(pubsub_db_mode):
             pubsub_database = start_pubsub_database('live', pubsub_db_mode)
+            state.pubsub_database = pubsub_database
             _ = atexit.register(stop_pubsub_database, pubsub_database)
             os.environ.update(pubsub_database.env)
             logger.info('Pub/sub database: %s (%s)', pubsub_database.container_name, pubsub_db_mode)

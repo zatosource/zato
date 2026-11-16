@@ -1,0 +1,87 @@
+security:
+
+  - name: test.eo.publisher
+    type: basic_auth
+    username: test.eo.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.eo.reader
+    type: basic_auth
+    username: test.eo.reader
+    password: "{{reader_password}}"
+
+  - name: test.eo.orders
+    type: basic_auth
+    username: test.eo.orders
+    password: "{{orders_password}}"
+
+  - name: test.eo.verifier
+    type: basic_auth
+    username: test.eo.verifier
+    password: "{{verifier_password}}"
+
+pubsub_topic:
+
+  - name: eo.input
+  - name: eo.output
+  - name: orders
+  - name: invoices
+  - name: audit
+
+  - name: eo.inactive
+    is_active: false
+
+pubsub_permission:
+
+  - security: test.eo.publisher
+    pub:
+      - eo.input
+      - orders
+
+  - security: test.eo.reader
+    sub:
+      - eo.output
+
+  - security: test.eo.orders
+    pub:
+      - invoices
+      - audit
+      - eo.inactive
+    sub:
+      - orders
+
+  - security: test.eo.verifier
+    sub:
+      - invoices
+      - audit
+
+pubsub_subscription:
+
+  - delivery_type: push
+    push_service: test.eo.relay
+    is_delivery_active: {{relay_delivery_active}}
+    topic_list:
+      - eo.input
+
+  - security: test.eo.reader
+    delivery_type: pull
+    topic_list:
+      - eo.output
+
+  - security: test.eo.orders
+    delivery_type: pull
+    topic_list:
+      - orders
+
+  - security: test.eo.verifier
+    delivery_type: pull
+    topic_list:
+      - invoices
+      - audit
+
+channel_rest:
+
+  - name: test.eo.publish
+    service: test.eo.publish
+    url_path: /test/eo/publish
+    data_format: json

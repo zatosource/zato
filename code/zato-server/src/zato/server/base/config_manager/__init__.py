@@ -1350,7 +1350,8 @@ class ConfigManager(_ConfigManagerBase):
 
     def init_pubsub(self) -> 'None':
         """ Registers in the pub/sub backend the ODB subscriptions that appeared after the server started,
-        e.g. ones imported by enmasse, and starts push delivery for the push ones among them.
+        e.g. ones imported by enmasse, starts push delivery for the push ones among them, and stops push delivery
+        for the subscriptions that are no longer push subscriptions with active delivery.
         """
         from contextlib import closing
         from zato.common.odb.query.pubsub import pubsub_subscription_topic_pairs
@@ -1370,12 +1371,12 @@ class ConfigManager(_ConfigManagerBase):
                 self.server.pubsub_backend.subscribe(sub_key, topic_name)
                 synced += 1
 
-                # .. pull subscriptions need nothing more ..
-                if row.delivery_type != _push:
-                    continue
-
-                # .. nor do push subscriptions whose delivery is paused, their messages wait in their queues ..
-                if not row.is_delivery_active:
+                # .. pull subscriptions and push subscriptions whose delivery is paused need no delivery greenlet,
+                # .. their messages wait in their queues, and one that this server still runs is stopped ..
+                if row.delivery_type != _push or not row.is_delivery_active:
+                    if sub_key in self._push_subs:
+                        self.server.pubsub_push_delivery.stop_sub_key(sub_key)
+                        _ = self._push_subs.pop(sub_key)
                     continue
 
                 # .. push subscriptions this server does not deliver to yet need a config and a greenlet.

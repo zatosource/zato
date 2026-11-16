@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from collections import OrderedDict
 from dataclasses import dataclass
-from http.client import BAD_REQUEST, FORBIDDEN, OK, UNAUTHORIZED
+from http.client import BAD_REQUEST, CONFLICT, FORBIDDEN, OK, UNAUTHORIZED
 from http.client import responses as http_responses
 from numbers import Number
 
@@ -2831,6 +2831,7 @@ class PubSub:
         Bad_Request  = f'{BAD_REQUEST} {http_responses[BAD_REQUEST]}'
         Unauthorized = f'{UNAUTHORIZED} {http_responses[UNAUTHORIZED]}'
         Forbidden    = f'{FORBIDDEN} {http_responses[FORBIDDEN]}'
+        Conflict     = f'{CONFLICT} {http_responses[CONFLICT]}'
 
     class Exchange_Name:
         Pubsub_Push = 'pubsub.push.1'
