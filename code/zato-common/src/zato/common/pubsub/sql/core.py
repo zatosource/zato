@@ -22,6 +22,7 @@ from sqlalchemy import bindparam
 from zato.common.api import HTTP_SOAP
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
+from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.ha.common import get_generation, get_node_name, is_active_standby
 from zato.common.pubsub.sql.clock import get_engine_clock
 from zato.common.pubsub.sql.config import get_pubsub_db_type, get_pubsub_engine
@@ -90,6 +91,7 @@ _record_attempts_statement = _record_attempts_statement.where(
     delivery_table.c.id.in_(bindparam('attempt_delivery_ids', expanding=True)))
 _record_attempts_statement = _record_attempts_statement.values(attempt=delivery_table.c.attempt + 1)
 _record_attempts_statement = _record_attempts_statement.returning(delivery_table.c.id, delivery_table.c.attempt)
+_record_attempts_statement_plain = PlainStatement(_record_attempts_statement)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -576,7 +578,7 @@ class SQLBackendCore:
         parameters = {'attempt_delivery_ids': list(message_by_delivery_id)}
 
         with engine.begin() as connection:
-            rows = connection.execute(_record_attempts_statement, parameters).all()
+            rows = _record_attempts_statement_plain.execute(connection, parameters).all()
 
         for row in rows:
             message_by_delivery_id[row.id]['delivery_attempt'] = row.attempt

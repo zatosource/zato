@@ -3100,6 +3100,8 @@ class ConfigManager(_ConfigManagerBase):
 
     def on_config_event_PUBSUB_TOPIC_CREATE(self, msg:'bunch_') -> 'None':
 
+        self.pubsub_topic_manager.forget_topic(msg.topic_name)
+
         # Every new topic announces its audit log state ..
         self.server.pubsub_backend.set_topic_audit_flag(msg.topic_name, msg.is_audit_log_active)
         self.server.pubsub_backend.set_topic_payload_flag(msg.topic_name, msg.get('is_audit_export_payload_active', False))
@@ -3123,6 +3125,9 @@ class ConfigManager(_ConfigManagerBase):
         old_name = msg.old_topic_name
         new_name = msg.new_topic_name
         is_active = getattr(msg, 'is_active', None)
+
+        self.pubsub_topic_manager.forget_topic(old_name)
+        self.pubsub_topic_manager.forget_topic(new_name)
 
         # Re-register the audit log state under the topic's current name,
         # which also covers renames since the old name is forgotten first.
@@ -3254,6 +3259,8 @@ class ConfigManager(_ConfigManagerBase):
     def on_config_event_PUBSUB_TOPIC_DELETE(self, msg:'bunch_') -> 'None':
 
         topic_name = msg.topic_name
+
+        self.pubsub_topic_manager.forget_topic(topic_name)
 
         # .. forget about the topic's audit log state ..
         self.server.pubsub_backend.delete_topic_audit_flag(topic_name)

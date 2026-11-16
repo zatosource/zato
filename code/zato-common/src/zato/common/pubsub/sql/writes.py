@@ -23,6 +23,7 @@ from zato.common.db_env.engine import call_database
 from zato.common.db_env.errors import is_conflict, is_value_error
 from zato.common.db_env.outage import OutageTracker
 from zato.common.db_env.pg8000_copy import copy_rows
+from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.pubsub.sql.config import get_batch_size, get_commit_max_messages, get_commits_in_flight, \
     get_pubsub_engine, get_urgent_commits_in_flight
 from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
@@ -90,7 +91,7 @@ def drop_payloads(connection:'Connection', message_ids:'intlist') -> 'intlist':
 
             needed:'set[int]' = set()
 
-            for row in connection.execute(_needed_messages_query, {'drop_message_ids': chunk}):
+            for row in _needed_messages_query_plain.execute(connection, {'drop_message_ids': chunk}):
                 needed.add(row.id)
 
             candidates:'intlist' = []
@@ -103,13 +104,13 @@ def drop_payloads(connection:'Connection', message_ids:'intlist') -> 'intlist':
                 continue
 
             parameters = {'drop_message_ids': candidates}
-            _ = connection.execute(_lock_messages_query, parameters).fetchall()
+            _ = _lock_messages_query_plain.execute(connection, parameters).fetchall()
 
         # .. while SQLite, with its single writer, looks at all of them.
         else:
             parameters = {'drop_message_ids': chunk}
 
-        for row in connection.execute(_drop_payloads_statement, parameters):
+        for row in _drop_payloads_statement_plain.execute(connection, parameters):
             out.append(row.id)
 
     return out
@@ -124,41 +125,40 @@ _subscribers_query = _subscribers_query.where(
 
 # On PostgreSQL, an unsubscription deletes the subscription row and only then the pending deliveries,
 # so its delete must wait until each publication that read the row has committed its deliveries.
-_subscribers_query = _subscribers_query.with_for_update(read=True, key_share=True)
+_subscribers_query_plain = PlainStatement(_subscribers_query.with_for_update(read=True, key_share=True))
 
 # A message whose identifier exists already is not inserted, and the statement returns the messages it inserted ..
 _message_inserts:'anydict' = {}
 
 for _dialect_name, _insert in ((Type_SQLite, sqlite_insert), (Type_PostgreSQL, postgresql_insert)):
-    _message_insert = _insert(message_table)
-    _message_insert = _message_insert.on_conflict_do_nothing(index_elements=[message_table.c.msg_id])
+    _message_insert = _insert(message_table).on_conflict_do_nothing(index_elements=[message_table.c.msg_id])
     _message_insert = _message_insert.returning(message_table.c.id, message_table.c.msg_id)
-    _message_inserts[_dialect_name] = _message_insert
+    _message_inserts[_dialect_name] = PlainStatement(_message_insert)
 
 # .. and what a message that exists already was published with tells a repeated publication from a different message.
 _existing_messages_query = select(message_table.c.msg_id, message_table.c.topic_name, message_table.c.payload_crc32)
 _existing_messages_query = _existing_messages_query.where(
     message_table.c.msg_id.in_(bindparam('write_msg_ids', expanding=True)))
 
-_delivery_insert = delivery_table.insert()
+_delivery_insert = PlainStatement(delivery_table.insert())
 
 _message_ids_query = select(message_table.c.id, message_table.c.msg_id)
-_message_ids_query = _message_ids_query.where(message_table.c.msg_id.in_(bindparam('write_msg_ids', expanding=True)))
+_message_ids_query_plain = PlainStatement(_message_ids_query.where(
+    message_table.c.msg_id.in_(bindparam('write_msg_ids', expanding=True))))
 
 # The subscriber column is concatenated with an empty string, which keeps SQLite from looking the rows up
 # through an index of subscribers, whose queues may be deep, rather than through the index of messages.
 _unindexed_sub_key = delivery_table.c.sub_key.concat('')
 
 _ack_deliveries_query = select(delivery_table.c.id, delivery_table.c.sub_key, delivery_table.c.message_id)
-_ack_deliveries_query = _ack_deliveries_query.where(and_(
+_ack_deliveries_query_plain = PlainStatement(_ack_deliveries_query.where(and_(
     delivery_table.c.message_id.in_(bindparam('ack_message_ids', expanding=True)),
     _unindexed_sub_key.in_(bindparam('ack_sub_keys', expanding=True)),
-))
+)))
 
 # A concurrent commit on PostgreSQL may have removed some of the rows first, so the statement returns those it removed.
-_delivery_delete = delivery_table.delete()
-_delivery_delete = _delivery_delete.where(delivery_table.c.id.in_(bindparam('ack_delivery_ids', expanding=True)))
-_delivery_delete = _delivery_delete.returning(delivery_table.c.id)
+_delivery_delete = delivery_table.delete().where(delivery_table.c.id.in_(bindparam('ack_delivery_ids', expanding=True)))
+_delivery_delete_plain = PlainStatement(_delivery_delete.returning(delivery_table.c.id))
 
 # A message is still in flight while any delivery row references it -
 # the update drops the payloads of the given messages that have none left.
@@ -172,7 +172,7 @@ _drop_payloads_statement = _drop_payloads_statement.where(and_(
     ~_still_needed,
 ))
 _drop_payloads_statement = _drop_payloads_statement.values(payload=None, payload_encrypted=False)
-_drop_payloads_statement = _drop_payloads_statement.returning(message_table.c.id)
+_drop_payloads_statement_plain = PlainStatement(_drop_payloads_statement.returning(message_table.c.id))
 
 # Two transactions of PostgreSQL that remove the last two delivery rows of a message would each see the row
 # of the other one and both keep the payload, so the message rows are locked first, and the update that follows
@@ -181,7 +181,7 @@ _lock_messages_query = select(message_table.c.id)
 _lock_messages_query = _lock_messages_query.where(
     message_table.c.id.in_(bindparam('drop_message_ids', expanding=True)))
 _lock_messages_query = _lock_messages_query.order_by(message_table.c.id)
-_lock_messages_query = _lock_messages_query.with_for_update(key_share=True)
+_lock_messages_query_plain = PlainStatement(_lock_messages_query.with_for_update(key_share=True))
 
 # A message with a delivery row that no transaction is removing still has a subscriber, and the row is held for key share
 # until the commit, so that the transaction which removes it later waits for this one and then sees its removals.
@@ -195,8 +195,8 @@ _live_delivery = _live_delivery.lateral()
 
 _needed_messages_query = select(message_table.c.id)
 _needed_messages_query = _needed_messages_query.select_from(message_table.join(_live_delivery, true()))
-_needed_messages_query = _needed_messages_query.where(
-    message_table.c.id.in_(bindparam('drop_message_ids', expanding=True)))
+_needed_messages_query_plain = PlainStatement(_needed_messages_query.where(
+    message_table.c.id.in_(bindparam('drop_message_ids', expanding=True))))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -300,7 +300,7 @@ def _get_message_ids(connection:'Connection', msg_ids:'strlist') -> 'anydict':
     out:'anydict' = {}
 
     for chunk in _get_chunks(msg_ids):
-        for row in connection.execute(_message_ids_query, {'write_msg_ids': chunk}):
+        for row in _message_ids_query_plain.execute(connection, {'write_msg_ids': chunk}):
             out[row.msg_id] = row.id
 
     return out
@@ -460,7 +460,7 @@ class PubSubWriter:
 
         out:'anydict' = {}
 
-        for row in connection.execute(_subscribers_query, {'write_topic_names': topic_names}):
+        for row in _subscribers_query_plain.execute(connection, {'write_topic_names': topic_names}):
 
             if row.topic_name not in out:
                 out[row.topic_name] = []
@@ -518,7 +518,7 @@ class PubSubWriter:
         if dialect_name == Type_PostgreSQL and len(delivery_rows) >= _copy_min_delivery_rows:
             copy_rows(connection, delivery_table, delivery_rows)
         else:
-            _ = connection.execute(_delivery_insert, delivery_rows)
+            _ = _delivery_insert.insert_rows(connection, delivery_rows)
 
 # ################################################################################################################################
 
@@ -551,7 +551,7 @@ class PubSubWriter:
 
         inserted:'anydict' = {}
 
-        for row in connection.execute(message_insert, message_rows):
+        for row in message_insert.insert_rows(connection, message_rows):
             inserted[row.msg_id] = row.id
 
         # .. a message that was not inserted has an identifier that exists already ..
@@ -660,7 +660,7 @@ class PubSubWriter:
                 'ack_sub_keys': sub_keys,
             }
 
-            for row in connection.execute(_ack_deliveries_query, parameters):
+            for row in _ack_deliveries_query_plain.execute(connection, parameters):
                 pair = (row.sub_key, row.message_id)
 
                 if pair in acked_pairs:
@@ -672,7 +672,7 @@ class PubSubWriter:
         removed_ids:'set[int]' = set()
 
         for chunk in _get_chunks(delivery_ids):
-            for row in connection.execute(_delivery_delete, {'ack_delivery_ids': chunk}):
+            for row in _delivery_delete_plain.execute(connection, {'ack_delivery_ids': chunk}):
                 removed_ids.add(row.id)
 
         # .. assign each removed row to the acknowledgement that removed it ..

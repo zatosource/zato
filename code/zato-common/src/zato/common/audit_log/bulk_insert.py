@@ -15,6 +15,7 @@ from sqlalchemy import select
 from zato.common.audit_log.common import event_table
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.pg8000_copy import copy_rows
+from zato.common.db_env.plain_sql import PlainStatement
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -22,7 +23,7 @@ from zato.common.db_env.pg8000_copy import copy_rows
 if 0:
     from sqlalchemy.engine import Connection, Dialect
     from sqlalchemy.sql.schema import Table
-    from zato.common.typing_ import dictlist, intlist
+    from zato.common.typing_ import anydict, dictlist, intlist
 
     # Dummy assignments to satisfy type checkers
     Connection = Connection
@@ -40,6 +41,12 @@ _copy_driver = 'pg8000'
 # The fewest rows a COPY statement inserts. COPY takes one round trip more than a multi-row insert,
 # so the few rows of a single event are inserted with a statement of their own.
 _copy_min_rows = 16
+
+# The insert of a single event, which returns its id
+_insert_event_statement = PlainStatement(event_table.insert().returning(event_table.c.id))
+
+# The multi-row insert of each table, by the name of the table
+_insert_statements:'anydict' = {}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -95,15 +102,8 @@ def insert_events(connection:'Connection', rows:'dictlist', commit_id:'str') -> 
 
     # A single event receives its id from the insert itself ..
     if len(rows) == 1:
-        insert_statement = event_table.insert()
-
-        first_row = rows[0]
-        result = connection.execute(insert_statement, first_row)
-
-        primary_key = result.inserted_primary_key
-        event_id = primary_key[0]
-
-        out = [event_id]
+        inserted = _insert_event_statement.insert_rows(connection, rows)
+        out = [inserted[0].id]
 
     # .. a database that returns the ids of a multi-row insert in order receives them with the insert ..
     elif returns_ordered_ids(connection.dialect):
@@ -126,8 +126,11 @@ def insert_rows(connection:'Connection', table:'Table', rows:'dictlist') -> 'Non
     if connection.dialect.driver == _copy_driver and row_count >= _copy_min_rows:
         copy_rows(connection, table, rows)
     else:
-        insert_statement = table.insert()
-        _ = connection.execute(insert_statement, rows)
+        if not (insert_statement := _insert_statements.get(table.name)):
+            insert_statement = PlainStatement(table.insert())
+            _insert_statements[table.name] = insert_statement
+
+        _ = insert_statement.insert_rows(connection, rows)
 
 # ################################################################################################################################
 # ################################################################################################################################
