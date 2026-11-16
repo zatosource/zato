@@ -105,7 +105,7 @@ if 0:
     from kombu.transport.pyamqp import Message as KombuMessage
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
-    from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, intset, strdict, strbytes, \
+    from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, intset, list_, strdict, strbytes, \
         strlist, strorlistnone, strnone, strorlist, strset, strtuple
     from zato.server.connection.http_soap.url_data import URLData
     from zato.server.scheduler_.run_state import ClaimResult
@@ -154,6 +154,9 @@ _needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 
 # How often, at most, a still-failing Redis stream listener logs a reminder (in seconds).
 _listener_error_log_interval = 60.0
+
+# How long a worker waits before it connects to the scheduler again after Redis refused the connection (in seconds).
+_scheduler_start_retry_interval = 1.0
 
 # The prefixes of an encrypted secret
 _secret_prefixes = (SECRETS.Encrypted_Indicator, SECRETS.PREFIX)
@@ -1139,39 +1142,69 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def _start_scheduler(self) -> 'None':
         """ Connect to the standalone scheduler binary via Redis Streams and HTTP.
         """
+        logger.info('Connecting to scheduler')
+
+        scheduler_adapter = SchedulerODBAdapter(self.odb)
+
+        # Job runs are recorded in the audit log the same way any other source's events are.
+        self._scheduler_audit_log = AuditLog(self.name)
+
+        # Each run of a job is claimed in the common database first, so a slot runs once across all servers.
+        self._scheduler_run_state = SchedulerRunState(self.shared_objects)
+
+        # A worker that starts while Redis is unavailable keeps connecting in the background, so that it consumes
+        # the fire events, including the ones its predecessor in the slot left pending, once Redis accepts connections.
         try:
-            logger.info('Connecting to scheduler')
-
-            scheduler_adapter = SchedulerODBAdapter(self.odb)
-
-            # Job runs are recorded in the audit log the same way any other source's events are.
-            self._scheduler_audit_log = AuditLog(self.name)
-
-            # Each run of a job is claimed in the common database first, so a slot runs once across all servers.
-            self._scheduler_run_state = SchedulerRunState(self.shared_objects)
-
-            self._scheduler = SchedulerClient()
-
-            # The consumer group of the fire stream exists before the reload, because the scheduler fires
-            # the jobs that are due at once, and a group created afterwards would not receive these events.
-            # The config process runs no jobs, so it consumes no fire events.
-            if not is_config_process():
-                self._start_scheduler_fire_listener()
-
-            self._scheduler.reload(scheduler_adapter, self._scheduler_run_state)
-            self._scheduler_started = True
-
-            self._start_scheduler_request_listener(scheduler_adapter)
-
-            logger.info('Scheduler client connected, fire and request listeners started')
+            self._connect_scheduler(scheduler_adapter)
         except (OSError, RedisError):
             logger.warning('Scheduler could not be started: %s', format_exc())
+            _ = spawn(self._retry_scheduler_start, scheduler_adapter)
 
 # ################################################################################################################################
 
-    def _start_scheduler_fire_listener(self) -> 'None':
-        """ Starts a dedicated greenlet that consumes fire and timeout events
-        from the scheduler via Redis Streams.
+    def _retry_scheduler_start(self, scheduler_adapter:'any_') -> 'None':
+        """ Connects to the scheduler until Redis accepts the connection.
+        """
+        while True:
+            sleep(_scheduler_start_retry_interval)
+
+            try:
+                self._connect_scheduler(scheduler_adapter)
+                return
+            except (OSError, RedisError) as e:
+                logger.info('Scheduler not started yet: %s', e)
+
+# ################################################################################################################################
+
+    def _connect_scheduler(self, scheduler_adapter:'any_') -> 'None':
+        """ Connects to the scheduler and starts its listeners, which start only once every step that uses Redis
+        succeeded, so that a repeated attempt starts no listener twice.
+        """
+        self._scheduler = SchedulerClient()
+
+        # The consumer group of the fire stream exists before the reload, because the scheduler fires
+        # the jobs that are due at once, and a group created afterwards would not receive these events.
+        # The config process runs no jobs, so it consumes no fire events.
+        listener_loops:'list_[callable_]' = []
+
+        if not is_config_process():
+            listener_loops.append(self._new_scheduler_fire_listener())
+
+        listener_loops.append(self._new_scheduler_request_listener(scheduler_adapter))
+
+        self._scheduler.reload(scheduler_adapter, self._scheduler_run_state)
+        self._scheduler_started = True
+
+        for listener_loop in listener_loops:
+            _ = spawn(listener_loop)
+
+        logger.info('Scheduler client connected, fire and request listeners started')
+
+# ################################################################################################################################
+
+    def _new_scheduler_fire_listener(self) -> 'callable_':
+        """ Creates the consumer groups of the fire and timeout streams of the scheduler and returns the loop
+        that consumes their events in a greenlet of its own.
         """
         fire_redis = self._scheduler.new_redis_conn()
 
@@ -1261,13 +1294,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                         error_since, last_logged)
                     sleep(1)
 
-        _ = spawn(_fire_listener_loop)
-        logger.debug('Scheduler fire listener greenlet started')
+        return _fire_listener_loop
 
 # ################################################################################################################################
 
-    def _start_scheduler_request_listener(self, scheduler_adapter:'any_') -> 'None':
-        """ Listens for request_jobs messages from the scheduler and responds with a reload. """
+    def _new_scheduler_request_listener(self, scheduler_adapter:'any_') -> 'callable_':
+        """ Creates the consumer group of the request stream of the scheduler and returns the loop that answers
+        each request_jobs message with a reload.
+        """
         req_redis = self._scheduler.new_redis_conn()
 
         request_stream = SchedulerStreamCtx.Request_Stream
@@ -1327,8 +1361,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                         'scheduler request', exc, req_redis, (request_stream,), group_name, error_since, last_logged)
                     sleep(1)
 
-        _ = spawn(_request_listener_loop)
-        logger.debug('Scheduler request listener greenlet started')
+        return _request_listener_loop
 
 # ################################################################################################################################
 

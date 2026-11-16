@@ -37,8 +37,9 @@ logger = logging.getLogger('zato.test.multi_cpu_scheduler.redis_restart')
 
 class ModuleCtx:
 
-    # How long the test waits before it kills a worker, in seconds, so that runs of the slow job are in progress
-    Kill_Delay = 5.0
+    # How long the test waits for a run of the slow job in the worker that it kills, and how often it checks, in seconds
+    Slow_Run_Wait_Timeout = 60.0
+    Slow_Run_Poll_Interval = 0.2
 
     # How long Redis stays stopped after the replacement worker is ready, in seconds
     Outage_Period = 5.0
@@ -79,6 +80,30 @@ def _get_nominal_set(entries:'anylist') -> 'set[float]':
     return out
 
 # ################################################################################################################################
+
+def _wait_for_slow_run(slot:'int') -> 'None':
+    """ Waits until a run of the slow job is in progress in the worker of a slot, which runs one at a time across all workers.
+    """
+    deadline = time() + ModuleCtx.Slow_Run_Wait_Timeout
+
+    while time() < deadline:
+
+        # The workers create the file with the first run that they record
+        if not os.path.exists(os.environ[SchedulerConfig.Fire_Log_Env]):
+            sleep(ModuleCtx.Slow_Run_Poll_Interval)
+            continue
+
+        ended = _get_nominal_set(_read_entries(SchedulerConfig.Slow_Job, SchedulerConfig.Phase_End))
+
+        for entry in _read_entries(SchedulerConfig.Slow_Job, SchedulerConfig.Phase_Start):
+            if entry['slot'] == slot and entry['nominal_ts'] not in ended:
+                return
+
+        sleep(ModuleCtx.Slow_Run_Poll_Interval)
+
+    raise Exception(f'No run of the slow job started in slot {slot} within {ModuleCtx.Slow_Run_Wait_Timeout}s')
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestSchedulerRedisRestart(unittest.TestCase):
@@ -91,10 +116,10 @@ class TestSchedulerRedisRestart(unittest.TestCase):
         control = WorkerControl(MultiCPUTestConfig.base_url, MultiCPUTestConfig.invoke_password)
         _ = control.wait_for_all_ready()
 
-        sleep(ModuleCtx.Kill_Delay)
-
-        # The worker is killed while it runs fires of the slow job that it read and did not acknowledge ..
+        # The worker is killed while it runs a fire of the slow job that it read and did not acknowledge ..
         slot = MultiCPUTestConfig.worker_count - ModuleCtx.Last_Slot_Offset
+        _wait_for_slow_run(slot)
+
         killed = control.kill(slot)
         kill_time = time()
         logger.info('Killed slot %s -> %s', slot, killed)

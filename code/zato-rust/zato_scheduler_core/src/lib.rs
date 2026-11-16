@@ -27,6 +27,9 @@ pub mod watchdog;
 /// Redis stream integration for command ingestion and fire event publishing.
 pub mod redis_streams;
 
+/// The Redis connection of the scheduler binary that is opened again after a restart of Redis.
+pub mod redis_link;
+
 /// HTTP query API served by actix-web for the Zato server to read scheduler state.
 pub mod http_api;
 

@@ -48,6 +48,9 @@ class ModuleCtx:
     # The first slot whose worker a test kills is the last one, which runs no duties of its own
     Last_Slot_Offset = 1
 
+    # How long a completion of a run takes to reach the scheduler after the run returned, at most, in seconds
+    Completion_Latency = 0.5
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -117,6 +120,26 @@ class TestSchedulerAcrossWorkers(unittest.TestCase):
 
 # ################################################################################################################################
 
+    def _assert_next_slot_after_each_run(self, end_entries:'anylist', interval:'int') -> 'None':
+        """ Each run of a job that outlasts its interval is followed by the first slot after the run returned,
+        because the scheduler skips the slots that a run in flight outlasted and no other one.
+        """
+        self.assertTrue(end_entries, 'No runs in the window')
+
+        end_entries = sorted(end_entries, key=_nominal_key)
+
+        for index in range(1, len(end_entries)):
+            previous:'anydict' = end_entries[index - 1]
+            current:'anydict' = end_entries[index]
+
+            gap = current['nominal_ts'] - previous['nominal_ts']
+            latest = previous['time'] + interval + ModuleCtx.Completion_Latency
+
+            self.assertEqual(gap % interval, 0, f'Runs at {previous["nominal"]} and {current["nominal"]} off the slots')
+            self.assertLessEqual(current['nominal_ts'], latest, f'Slot after {previous["nominal"]} skipped')
+
+# ################################################################################################################################
+
     def _kill_and_wait(self) -> 'None':
         """ Kills the worker of the last slot and waits for its replacement.
         """
@@ -170,7 +193,11 @@ class TestSchedulerAcrossWorkers(unittest.TestCase):
         entries = _read_entries(SchedulerConfig.Slow_Job, SchedulerConfig.Phase_End)
         entries = _in_window(entries, window_start, window_end)
 
-        self._assert_once_each_on_cadence(entries, SchedulerConfig.Interval_Seconds)
+        # Each fire completes once, and no slot is lost other than those that a run in flight outlasted ..
+        nominal = _sorted_nominal(entries)
+        self.assertEqual(len(nominal), len(set(nominal)), f'A fire completed more than once in {nominal}')
+
+        self._assert_next_slot_after_each_run(entries, SchedulerConfig.Interval_Seconds)
 
         # .. the run numbers rise with the fire times and never start again from the beginning.
         entries.sort(key=_nominal_key)

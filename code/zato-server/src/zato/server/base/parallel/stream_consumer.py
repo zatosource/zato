@@ -12,7 +12,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # delivered to its slot and that were never acknowledged.
 
 # gevent
-from gevent import spawn
+from gevent import sleep, spawn
+
+# redis
+from redis.exceptions import ConnectionError as RedisConnectionError, TimeoutError as RedisTimeoutError
 
 # Zato
 from zato.common.worker_slot import get_slot_or_single
@@ -41,6 +44,9 @@ class ModuleCtx:
 
     # The prefix of an exclusive start of an XPENDING range
     Exclusive_Prefix = '('
+
+    # How long an acknowledgement waits before it is sent again to a Redis that could not be reached, in seconds
+    Unreachable_Retry_Interval = 1.0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -108,7 +114,21 @@ def _run_then_ack(
     try:
         handler(fields)
     finally:
-        _ = redis_conn.xack(stream, group_name, msg_id)
+        _ack_until_reachable(redis_conn, stream, group_name, msg_id)
+
+# ################################################################################################################################
+
+def _ack_until_reachable(redis_conn:'Redis', stream:'str', group_name:'str', msg_id:'str') -> 'None':
+    """ Acknowledges an entry, again until Redis accepts it, because an entry that a live worker did not acknowledge
+    remains pending until the worker of its slot is replaced.
+    """
+    while True:
+        try:
+            _ = redis_conn.xack(stream, group_name, msg_id)
+        except (RedisConnectionError, RedisTimeoutError):
+            sleep(ModuleCtx.Unreachable_Retry_Interval)
+        else:
+            return
 
 # ################################################################################################################################
 

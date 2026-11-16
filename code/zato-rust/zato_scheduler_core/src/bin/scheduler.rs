@@ -15,6 +15,7 @@ use std::sync::Arc;
 use tracing_subscriber::EnvFilter;
 
 use zato_scheduler_core::http_api;
+use zato_scheduler_core::redis_link::RedisLink;
 use zato_scheduler_core::redis_streams;
 use zato_scheduler_core::scheduler::{self, SchedulerShared};
 use zato_scheduler_core::watchdog;
@@ -64,7 +65,7 @@ impl SchedulerConfig {
 /// Waits for the server to send a `reload` command with initial jobs.
 ///
 /// Retries indefinitely, requesting jobs every 10 seconds until the server responds.
-fn wait_for_initial_reload(conn: &mut redis::Connection, keys: &redis_streams::StreamKeys, shared: &SchedulerShared) {
+fn wait_for_initial_reload(conn: &mut RedisLink, keys: &redis_streams::StreamKeys, shared: &SchedulerShared) {
     let mut attempt: u64 = 0;
     loop {
         attempt += 1;
@@ -153,14 +154,14 @@ async fn main() -> std::io::Result<()> {
         )
     })?;
 
-    let mut command_conn = redis_client.get_connection().map_err(|err| {
+    let mut command_conn = RedisLink::open(redis_client.clone()).map_err(|err| {
         std::io::Error::new(
             std::io::ErrorKind::ConnectionRefused,
             format!("Failed to connect to Redis (command): {err}"),
         )
     })?;
 
-    let mut fire_conn = redis_client.get_connection().map_err(|err| {
+    let mut fire_conn = RedisLink::open(redis_client).map_err(|err| {
         std::io::Error::new(
             std::io::ErrorKind::ConnectionRefused,
             format!("Failed to connect to Redis (fire): {err}"),

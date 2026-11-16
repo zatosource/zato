@@ -13,8 +13,12 @@ import os
 import time
 from uuid import uuid4
 
+# gevent
+from gevent import sleep
+
 # redis
 from redis import Redis
+from redis.exceptions import ConnectionError as RedisConnectionError, TimeoutError as RedisTimeoutError
 
 # requests
 import requests
@@ -59,6 +63,9 @@ class ModuleCtx:
     Consumer_Name = 'server-0'
     Http_Base = f'http://127.0.0.1:{_scheduler_http_port}'
     Reply_Timeout = 1.0
+
+    # How long a completion waits before it is sent again to a Redis that could not be reached, in seconds
+    Unreachable_Retry_Interval = 1.0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -222,13 +229,35 @@ class SchedulerClient:
 # ################################################################################################################################
 
     def mark_complete(self, job_id:'int', outcome:'str', duration_ms:'int', current_run:'int', error:'str') -> 'None':
-        _ = self.invoke('mark_complete', {
+        """ Sends the completion of a run, again until Redis accepts it, because the scheduler keeps a run
+        whose completion it never receives in flight, and the job does not fire while it is.
+        """
+        payload = {
             'job_id': job_id,
             'outcome': outcome,
             'duration_ms': duration_ms,
             'current_run': current_run,
             'error': error,
-        })
+        }
+
+        is_unreachable = False
+
+        while True:
+            try:
+                _ = self.invoke('mark_complete', payload)
+            except (RedisConnectionError, RedisTimeoutError) as e:
+
+                # An outage is reported once, not on each attempt
+                if not is_unreachable:
+                    logger.warning('Completion of job_id=%s run=%s not sent, retrying every %ss: %s',
+                        job_id, current_run, ModuleCtx.Unreachable_Retry_Interval, e)
+                    is_unreachable = True
+
+                sleep(ModuleCtx.Unreachable_Retry_Interval)
+            else:
+                if is_unreachable:
+                    logger.info('Completion of job_id=%s run=%s sent after Redis became reachable again', job_id, current_run)
+                return
 
 # ################################################################################################################################
 

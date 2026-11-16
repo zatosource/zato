@@ -18,6 +18,7 @@ use serde::Deserialize;
 
 use crate::job::RunningJob;
 use crate::model::{ReloadedJob, SchedulerJob};
+use crate::redis_link::RedisLink;
 use crate::reload_jobs;
 use crate::scheduler::SchedulerShared;
 use crate::types::{FireBatch, JobId, OutgoingEvent, TimeoutEvent};
@@ -74,7 +75,7 @@ impl StreamKeys {
 /// Ensures the consumer group exists on the command stream.
 ///
 /// Creates the stream and group if they do not exist.
-pub fn ensure_consumer_group(conn: &mut redis::Connection, keys: &StreamKeys) {
+pub fn ensure_consumer_group(conn: &mut RedisLink, keys: &StreamKeys) {
     let result: Result<(), redis::RedisError> = redis::cmd("XGROUP")
         .arg("CREATE")
         .arg(&keys.command)
@@ -98,7 +99,7 @@ pub fn ensure_consumer_group(conn: &mut redis::Connection, keys: &StreamKeys) {
 
 /// Publishes a `request_jobs` message to the request stream, asking the server
 /// to send a reload command with jobs from ODB.
-pub fn request_jobs(conn: &mut redis::Connection, keys: &StreamKeys) {
+pub fn request_jobs(conn: &mut RedisLink, keys: &StreamKeys) {
     let result: Result<String, redis::RedisError> = redis::cmd("XADD")
         .arg(&keys.request)
         .arg("MAXLEN")
@@ -117,7 +118,7 @@ pub fn request_jobs(conn: &mut redis::Connection, keys: &StreamKeys) {
 
 /// Processes a reload command received during the startup wait phase.
 pub fn process_startup_reload(
-    conn: &mut redis::Connection,
+    conn: &mut RedisLink,
     keys: &StreamKeys,
     shared: &crate::scheduler::SchedulerShared,
     correlation_id: &str,
@@ -128,7 +129,7 @@ pub fn process_startup_reload(
 }
 
 /// Publishes a fire event to the fire stream via XADD.
-pub fn publish_fire_event(conn: &mut redis::Connection, keys: &StreamKeys, batch: &FireBatch) {
+pub fn publish_fire_event(conn: &mut RedisLink, keys: &StreamKeys, batch: &FireBatch) {
     // A batch that cannot be rendered would be published as an empty field, so it is logged
     // and skipped instead - the server has nothing to act on either way.
     let payload = match crate::wire::render_payload(batch) {
@@ -138,7 +139,8 @@ pub fn publish_fire_event(conn: &mut redis::Connection, keys: &StreamKeys, batch
             return;
         }
     };
-    let result: Result<String, redis::RedisError> = redis::cmd("XADD")
+    let mut command = redis::cmd("XADD");
+    command
         .arg(&keys.fire)
         .arg("MAXLEN")
         .arg("~")
@@ -157,8 +159,10 @@ pub fn publish_fire_event(conn: &mut redis::Connection, keys: &StreamKeys, batch
         .arg("nominal_fire_time_iso")
         .arg(&batch.nominal_fire_time_iso)
         .arg("payload")
-        .arg(&payload)
-        .query(conn);
+        .arg(&payload);
+
+    // The run is in flight from the moment it fired, so a fire event that is lost would hold back the job
+    let result: Result<String, redis::RedisError> = conn.query_until_reachable(&command);
 
     if let Err(err) = result {
         tracing::error!("Failed to XADD fire event for job '{}': {err}", batch.name);
@@ -166,10 +170,11 @@ pub fn publish_fire_event(conn: &mut redis::Connection, keys: &StreamKeys, batch
 }
 
 /// Publishes a timeout event to the timeout stream via XADD.
-pub fn publish_timeout_event(conn: &mut redis::Connection, keys: &StreamKeys, event: &TimeoutEvent) {
+pub fn publish_timeout_event(conn: &mut RedisLink, keys: &StreamKeys, event: &TimeoutEvent) {
     let job_id = event.job_id;
 
-    let result: Result<String, redis::RedisError> = redis::cmd("XADD")
+    let mut command = redis::cmd("XADD");
+    command
         .arg(&keys.timeout)
         .arg("MAXLEN")
         .arg("~")
@@ -182,8 +187,10 @@ pub fn publish_timeout_event(conn: &mut redis::Connection, keys: &StreamKeys, ev
         .arg("elapsed_ms")
         .arg(event.elapsed_ms)
         .arg("error")
-        .arg(event.error_msg.as_str())
-        .query(conn);
+        .arg(event.error_msg.as_str());
+
+    // The server records the run as timed out only from this event, so it is not given up during an outage
+    let result: Result<String, redis::RedisError> = conn.query_until_reachable(&command);
 
     if let Err(err) = result {
         tracing::error!("Failed to XADD timeout event for job_id={job_id}: {err}");
@@ -191,7 +198,7 @@ pub fn publish_timeout_event(conn: &mut redis::Connection, keys: &StreamKeys, ev
 }
 
 /// Publishes a synchronous reply to the reply stream.
-fn publish_reply(conn: &mut redis::Connection, keys: &StreamKeys, correlation_id: &str, status: &str) {
+fn publish_reply(conn: &mut RedisLink, keys: &StreamKeys, correlation_id: &str, status: &str) {
     let result: Result<String, redis::RedisError> = redis::cmd("XADD")
         .arg(&keys.reply)
         .arg("MAXLEN")
@@ -216,7 +223,7 @@ pub type StreamReadResult = Vec<(String, Vec<(String, Vec<(String, String)>)>)>;
 /// Reads and processes commands from the command stream in a blocking loop.
 ///
 /// This function blocks on XREADGROUP and should be run on its own thread.
-pub fn command_listener_loop(conn: &mut redis::Connection, keys: &StreamKeys, shared: &Arc<SchedulerShared>) {
+pub fn command_listener_loop(conn: &mut RedisLink, keys: &StreamKeys, shared: &Arc<SchedulerShared>) {
     tracing::info!("Command listener started on '{}'", keys.command);
 
     loop {
@@ -296,7 +303,7 @@ struct IncomingCommand {
 }
 
 /// Dispatches a single command to the appropriate handler.
-fn process_command(conn: &mut redis::Connection, keys: &StreamKeys, shared: &SchedulerShared, incoming: &IncomingCommand) {
+fn process_command(conn: &mut RedisLink, keys: &StreamKeys, shared: &SchedulerShared, incoming: &IncomingCommand) {
     let command = incoming.command.as_str();
     let correlation_id = incoming.correlation_id.as_str();
     let payload = incoming.payload.as_str();
