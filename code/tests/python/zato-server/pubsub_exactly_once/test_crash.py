@@ -12,14 +12,13 @@ from threading import Thread
 
 # Zato
 from pubsub_exactly_once.database import add_insert_delay, postgresql_only, remove_insert_delay, restart_database, \
-    sqlite_only, terminate_session, wait_for_delayed_session
+    terminate_session, wait_for_delayed_session
 from pubsub_exactly_once.harness import get_engine, Hold_Timeout, import_enmasse, new_keys, publish_input, publish_inputs, \
     Settle_Timeout, stage_batch, verify
 from pubsub_exactly_once.rest import ack, drain, publish, pull_by_key
 from pubsub_exactly_once.server import kill_server, kill_worker, start_server
 from zato.common.test.exactly_once.config import TestConfig
-from zato.common.test.exactly_once.control import arm_write_hold, count_invocations, hold, release, release_write_hold, \
-    wait_for_invocations, wait_for_write_hold, wait_until_held
+from zato.common.test.exactly_once.control import count_invocations, hold, release, wait_for_invocations, wait_until_held
 from zato.common.test.exactly_once.verify import count_deliveries
 
 # ################################################################################################################################
@@ -223,16 +222,16 @@ def test_server_killed_during_pull_ack(zato_server:'any_') -> 'None':
 
 # ################################################################################################################################
 
-@sqlite_only
+@postgresql_only
 def test_subscription_edit_during_batch_commit(zato_server:'any_') -> 'None':
-    """ A batch whose commit waits for the write lock while its delivery is stopped and started again,
+    """ A batch whose commit waits in its transaction while its delivery is stopped and started again,
     and whose new delivery processes it again, relays each key once.
     """
     prefix, keys = new_keys(_batch_count)
 
     gate_key = keys[0]
     batch_keys = keys[1:]
-    lock_key = batch_keys[0]
+    delayed_key = batch_keys[0]
 
     # The first key keeps the delivery busy while the others are published ..
     hold(gate_key)
@@ -241,15 +240,12 @@ def test_subscription_edit_during_batch_commit(zato_server:'any_') -> 'None':
 
     publish_inputs(batch_keys)
 
-    # .. the first invocation of the next batch takes the write lock of the process ..
-    arm_write_hold(lock_key)
-    release(gate_key)
-    wait_for_write_hold(Hold_Timeout)
+    # .. the commit of the next batch waits in the insert of the output of its first key ..
+    add_insert_delay(delayed_key)
 
     try:
-
-        # .. the batch is processed and its commit waits for the lock ..
-        wait_for_invocations(batch_keys, 1, Hold_Timeout)
+        release(gate_key)
+        _ = wait_for_delayed_session()
 
         # .. the delivery is stopped and started again, and the new delivery processes the same batch ..
         import_enmasse(False)
@@ -257,9 +253,9 @@ def test_subscription_edit_during_batch_commit(zato_server:'any_') -> 'None':
 
         wait_for_invocations(batch_keys, 2, Settle_Timeout)
 
-    # .. and the lock is released, which lets both commits of the batch proceed.
+    # .. and the delay is removed, which lets the commit of the new delivery proceed.
     finally:
-        release_write_hold()
+        remove_insert_delay()
 
     _ = verify(prefix, keys)
 

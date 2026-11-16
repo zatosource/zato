@@ -15,9 +15,6 @@ import glob
 import os
 import time
 
-# gevent
-from gevent.monkey import get_original
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -35,25 +32,15 @@ Input_Topic  = 'exactly-once.input'
 Output_Topic = 'exactly-once.output'
 
 # The subdirectories of the control directory
-_hold_dir_name       = 'hold'
-_held_dir_name       = 'held'
-_fail_dir_name       = 'fail'
-_write_hold_dir_name = 'write-hold'
+_hold_dir_name = 'hold'
+_held_dir_name = 'held'
+_fail_dir_name = 'fail'
 
 # The file of the invocations of the relay
 _invocations_file_name = 'invocations.txt'
 
-# The files of the write lock that a relay invocation holds - the trigger names the key that takes the lock,
-# the lock is held for as long as the active file exists, and the acquired file says that the lock is held.
-_write_hold_trigger_suffix = '.trigger'
-_write_hold_active_name    = 'active'
-_write_hold_acquired_name  = 'acquired'
-
 # How often a held invocation and a waiting test look at the control files, in seconds
 _poll_seconds = 0.1
-
-# The sleep of the operating system, which a thread of the pool of the gevent hub blocks in
-_native_sleep = get_original('time', 'sleep')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,7 +62,7 @@ def _get_path(*parts:'str') -> 'str':
 def create_control_dir(control_dir:'str') -> 'None':
     """ Creates the control directory with its subdirectories.
     """
-    for name in (_hold_dir_name, _held_dir_name, _fail_dir_name, _write_hold_dir_name):
+    for name in (_hold_dir_name, _held_dir_name, _fail_dir_name):
         path = os.path.join(control_dir, name)
         os.makedirs(path, exist_ok=True)
 
@@ -136,40 +123,6 @@ def claim_failure(key:'str') -> 'bool':
     return out
 
 # ################################################################################################################################
-
-def claim_write_hold(key:'str') -> 'bool':
-    """ Claims the write lock request of a key, which only the first invocation that claims it receives.
-    """
-    trigger_name = key + _write_hold_trigger_suffix
-    path = _get_path(_write_hold_dir_name, trigger_name)
-
-    try:
-        os.remove(path)
-    except FileNotFoundError:
-        out = False
-    else:
-        out = True
-
-    return out
-
-# ################################################################################################################################
-
-def hold_write_lock() -> 'None':
-    """ Runs in a thread of the pool under the write lock of the pub/sub database of the process
-    and keeps the lock for as long as the active file exists.
-    """
-    active_path = _get_path(_write_hold_dir_name, _write_hold_active_name)
-    acquired_path = _get_path(_write_hold_dir_name, _write_hold_acquired_name)
-
-    with open(acquired_path, 'w'):
-        pass
-
-    while os.path.exists(active_path):
-        _native_sleep(_poll_seconds)
-
-    os.remove(acquired_path)
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 def hold(key:'str') -> 'None':
@@ -219,43 +172,6 @@ def fail_once(key:'str') -> 'None':
         pass
 
 # ################################################################################################################################
-
-def arm_write_hold(key:'str') -> 'None':
-    """ Makes the next invocation of the relay for the key take the write lock of the pub/sub database of its process,
-    which every commit of that process waits for until the lock is released.
-    """
-    trigger_name = key + _write_hold_trigger_suffix
-
-    active_path = _get_path(_write_hold_dir_name, _write_hold_active_name)
-    trigger_path = _get_path(_write_hold_dir_name, trigger_name)
-
-    for path in (active_path, trigger_path):
-        with open(path, 'w'):
-            pass
-
-# ################################################################################################################################
-
-def wait_for_write_hold(timeout:'float') -> 'None':
-    """ Waits until an invocation of the relay holds the write lock.
-    """
-    path = _get_path(_write_hold_dir_name, _write_hold_acquired_name)
-    deadline = time.monotonic() + timeout
-
-    while not os.path.exists(path):
-        if time.monotonic() > deadline:
-            raise Exception(f'Write lock not held within {timeout}s')
-        time.sleep(_poll_seconds)
-
-# ################################################################################################################################
-
-def release_write_hold() -> 'None':
-    """ Releases the write lock that an invocation of the relay holds.
-    """
-    path = _get_path(_write_hold_dir_name, _write_hold_active_name)
-
-    if os.path.exists(path):
-        os.remove(path)
-
 # ################################################################################################################################
 
 def read_invocations() -> 'strlist':

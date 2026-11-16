@@ -63,6 +63,15 @@ $body$
 _delay_trigger = 'create trigger zato_test_delay_insert before insert on pubsub_message ' + \
     'for each row execute function zato_test_delay_insert()'
 
+# The same function without the delay, which replaces it without a lock on the table that the delayed inserts hold
+_no_delay_function = """
+create or replace function zato_test_delay_insert() returns trigger language plpgsql as $body$
+begin
+    return new;
+end
+$body$
+"""
+
 _drop_trigger  = 'drop trigger if exists zato_test_delay_insert on pubsub_message'
 _drop_function = 'drop function if exists zato_test_delay_insert()'
 
@@ -109,9 +118,41 @@ def add_insert_delay(correl_id:'str') -> 'None':
 
 # ################################################################################################################################
 
-def remove_insert_delay() -> 'None':
-    """ Removes the delay of the inserts.
+def _find_delayed_session() -> 'int':
+    """ Returns the process ID of a session that waits in the delay of an insert, or 0 if none does.
     """
+    database = _get_database()
+    connection = connect(database, is_admin=True)
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute(_sleeping_session_query)
+        row = cursor.fetchone()
+    finally:
+        connection.close()
+
+    if row:
+        out = row[0]
+    else:
+        out = 0
+
+    return out
+
+# ################################################################################################################################
+
+def remove_insert_delay() -> 'None':
+    """ Ends the delay of the inserts, waits until no insert waits in it, and removes the trigger, whose removal
+    needs a lock on the table that a delayed insert holds until its delay ends.
+    """
+    _execute(_no_delay_function)
+
+    deadline = time.monotonic() + _session_timeout
+
+    while _find_delayed_session():
+        if time.monotonic() > deadline:
+            raise Exception(f'A session still waits in the delay of an insert after {_session_timeout}s')
+        time.sleep(_poll_seconds)
+
     _execute(_drop_trigger, _drop_function)
 
 # ################################################################################################################################
@@ -119,28 +160,17 @@ def remove_insert_delay() -> 'None':
 def wait_for_delayed_session() -> 'int':
     """ Waits until a session of the server waits in the delay of an insert and returns its process ID.
     """
-    database = _get_database()
     deadline = time.monotonic() + _session_timeout
 
     out = 0
 
     while not out:
 
-        connection = connect(database, is_admin=True)
-
-        try:
-            cursor = connection.cursor()
-            cursor.execute(_sleeping_session_query)
-            row = cursor.fetchone()
-        finally:
-            connection.close()
-
         # The session is there ..
-        if row:
-            out = row[0]
+        out = _find_delayed_session()
 
         # .. or it is looked for again after a while, until the deadline.
-        else:
+        if not out:
             if time.monotonic() > deadline:
                 raise Exception(f'No session waits in the delay of an insert within {_session_timeout}s')
 

@@ -24,6 +24,7 @@ from zato.common.test.conftest_base_pubsub import find_free_port, patch_server_c
     SessionState
 from zato.common.test.exactly_once.control import create_control_dir, Env_Dir
 from zato.common.test.pubsub_database import get_db_mode, get_runtime_dir, start_pubsub_database, stop_pubsub_database
+from zato_container import build_image
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -115,6 +116,9 @@ def create_server_pair(rendered_yaml:'str', services_source:'str') -> 'ServerPai
     out = ServerPair()
     out.states = []
 
+    # The image of the containers takes only as long to build as the layers that changed since the previous build ..
+    build_image()
+
     out.database = start_pubsub_database(ModuleCtx.Database_Label, get_db_mode())
     out.work_dir = tempfile.mkdtemp(prefix='zato_exactly_once_takeover_', dir=get_runtime_dir())
 
@@ -126,9 +130,14 @@ def create_server_pair(rendered_yaml:'str', services_source:'str') -> 'ServerPai
     out.active = _new_server(out, 'a', rendered_yaml, invoke_password, services_source)
     out.standby = _new_server(out, 'b', rendered_yaml, invoke_password, services_source)
 
-    run_container(out.active)
-    _ = wait_until_up(out.active)
-    create_container(out.standby)
+    # .. and a pair whose servers do not start is removed here, because no fixture receives it to remove it later.
+    try:
+        run_container(out.active)
+        _ = wait_until_up(out.active)
+        create_container(out.standby)
+    except Exception:
+        remove_server_pair(out)
+        raise
 
     return out
 

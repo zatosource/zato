@@ -15,10 +15,11 @@ from threading import Event
 
 # Zato
 from pubsub_exactly_once.harness import get_engine, new_keys
+from pubsub_exactly_once.load_report import Latencies, LoadReport, Milliseconds_Per_Second
 from pubsub_exactly_once.rest import ack, drain, get_correl_ids, post_json, publish
 from pubsub_exactly_once.server import kill_worker
 from zato.common.test.exactly_once.config import TestConfig
-from zato.common.test.exactly_once.control import Input_Topic
+from zato.common.test.exactly_once.control import Input_Topic, read_invocations
 from zato.common.test.exactly_once.verify import assert_exactly_once, count_topic_deliveries, read_correl_ids, \
     wait_for_outputs
 
@@ -77,9 +78,10 @@ def _get_lease_seconds() -> 'float':
 
 # ################################################################################################################################
 
-def _publish_until_stored(username:'str', password:'str', topic_name:'str', key:'str') -> 'None':
+def _publish_until_stored(username:'str', password:'str', topic_name:'str', key:'str', latencies:'Latencies') -> 'int':
     """ Publishes one message under its key as the message ID, repeating the request until the server confirms it,
-    which is safe because a repeated publication with the same message ID stores nothing new.
+    which is safe because a repeated publication with the same message ID stores nothing new. Returns how many times
+    the request was sent again.
     """
     payload:'anydict' = {
         'data': {'key': key},
@@ -87,23 +89,31 @@ def _publish_until_stored(username:'str', password:'str', topic_name:'str', key:
         'correl_id': key,
     }
 
+    out = 0
     is_stored = False
 
     while not is_stored:
+
+        request_start = time.monotonic()
 
         # A request whose connection the killed worker closed is sent again ..
         try:
             result = publish(username, password, topic_name, payload)
         except OSError:
+            out += 1
             time.sleep(_retry_seconds)
             continue
 
         # .. as is one that the server did not complete, while anything else is a response to the publication.
         if result.status_code >= INTERNAL_SERVER_ERROR:
+            out += 1
             time.sleep(_retry_seconds)
         else:
             assert result.status_code == OK, result
+            latencies.add(time.monotonic() - request_start)
             is_stored = True
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -115,6 +125,9 @@ class _OutputReader:
     def __init__(self, prefix:'str') -> 'None':
         self.prefix = prefix
         self.received:'strlist' = []
+        self.received_times:'list[float]' = []
+        self.pull_latencies = Latencies('Output pull request')
+        self.ack_latencies = Latencies('Output acknowledgement transaction')
 
 # ################################################################################################################################
 
@@ -123,6 +136,7 @@ class _OutputReader:
         that it handed out are handed out again once their lease runs out, ahead of any later message.
         """
         payload = {'max_messages': _consumer_batch_size}
+        request_start = time.monotonic()
 
         try:
             result = post_json('/pubsub/messages/get', TestConfig.reader_username, TestConfig.reader_password, payload)
@@ -135,6 +149,7 @@ class _OutputReader:
             return []
 
         assert result.status_code == OK, result
+        self.pull_latencies.add(time.monotonic() - request_start)
 
         out = result.body['messages']
         return out
@@ -156,6 +171,8 @@ class _OutputReader:
 
         while not is_acknowledged:
 
+            request_start = time.monotonic()
+
             try:
                 result = ack(TestConfig.reader_username, TestConfig.reader_password, payload)
             except OSError:
@@ -166,6 +183,7 @@ class _OutputReader:
                 time.sleep(_retry_seconds)
             else:
                 assert result.status_code == OK, result
+                self.ack_latencies.add(time.monotonic() - request_start)
                 is_acknowledged = True
 
 # ################################################################################################################################
@@ -181,8 +199,12 @@ class _OutputReader:
                 time.sleep(_retry_seconds)
                 continue
 
+            received_at = time.monotonic()
             correl_ids = get_correl_ids(messages, self.prefix)
-            self.received.extend(correl_ids)
+
+            for correl_id in correl_ids:
+                self.received.append(correl_id)
+                self.received_times.append(received_at)
 
             self._ack(messages)
 
@@ -196,6 +218,10 @@ class _CompetingConsumer:
 
     def __init__(self) -> 'None':
         self.conflict_count = 0
+        self.late_batch_count = 0
+        self.consumed_count = 0
+        self.pull_latencies = Latencies('Order pull request')
+        self.ack_latencies = Latencies('Order acknowledgement transaction with invoices')
 
 # ################################################################################################################################
 
@@ -241,9 +267,12 @@ class _CompetingConsumer:
 
         while not stop.is_set():
 
+            request_start = time.monotonic()
+
             result = post_json('/pubsub/messages/get', TestConfig.orders_username, TestConfig.orders_password, payload)
             assert result.status_code == OK, result
 
+            self.pull_latencies.add(time.monotonic() - request_start)
             messages = result.body['messages']
 
             if not messages:
@@ -254,8 +283,10 @@ class _CompetingConsumer:
 
             # A late batch is handed out to another client in the meantime ..
             if random.random() < _late_batch_share:
+                self.late_batch_count += 1
                 time.sleep(_get_lease_seconds() + _lease_margin)
 
+            request_start = time.monotonic()
             ack_result = ack(TestConfig.orders_username, TestConfig.orders_password, ack_payload)
 
             # .. which concludes it, so the acknowledgement of this client is rejected with nothing published.
@@ -263,6 +294,8 @@ class _CompetingConsumer:
                 self.conflict_count += 1
             else:
                 assert ack_result.status_code == OK, ack_result
+                self.ack_latencies.add(time.monotonic() - request_start)
+                self.consumed_count += len(messages)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -303,6 +336,106 @@ def _wait_for_received(reader:'_OutputReader', count:'int') -> 'None':
 
 # ################################################################################################################################
 
+def _get_longest_pause(times:'list[float]') -> 'float':
+    """ Returns the longest time between two consecutive receipts, in seconds.
+    """
+    out = 0.0
+
+    for index in range(1, len(times)):
+        pause = times[index] - times[index - 1]
+        out = max(out, pause)
+
+    return out
+
+# ################################################################################################################################
+
+def _report_continuous_publication(
+    prefix:'str',
+    keys:'strlist',
+    timing:'anydict',
+    publish_latencies:'Latencies',
+    stored_times:'anydict',
+    reader:'_OutputReader',
+    ) -> 'None':
+    """ Logs the rates and latencies of the test of crashes under continuous publication.
+    """
+    start = timing['start']
+
+    # The time from the confirmed publication of each input to the receipt of its output ..
+    end_to_end = Latencies('Publication to receipt of the output')
+
+    for key, received_at in zip(reader.received, reader.received_times):
+        end_to_end.add(received_at - stored_times[key])
+
+    # .. and the invocations of the relay beyond one per input, which a killed worker caused.
+    invocation_count = 0
+
+    for key in read_invocations():
+        if key.startswith(prefix):
+            invocation_count += 1
+
+    repeated_count = invocation_count - len(keys)
+    longest_pause_ms = _get_longest_pause(reader.received_times) * Milliseconds_Per_Second
+
+    report = LoadReport('test_crashes_under_continuous_publication')
+
+    report.add_rate('Publication', len(keys), timing['published'] - start, 'msg')
+    report.add_rate('Relay outputs committed', len(keys), timing['committed'] - start, 'msg')
+    report.add_rate('Outputs received', len(keys), timing['received'] - start, 'msg')
+    report.add_rate('Output acknowledgement transactions', len(reader.ack_latencies.values), timing['received'] - start, 'tx')
+
+    report.add_latencies(publish_latencies)
+    report.add_latencies(end_to_end)
+    report.add_latencies(reader.pull_latencies)
+    report.add_latencies(reader.ack_latencies)
+
+    report.add_value('Publications sent again', str(timing['retry_count']))
+    report.add_value('Worker kills', str(_worker_kills))
+    report.add_value('Relay invocations repeated after a kill', str(repeated_count))
+    report.add_value('Longest pause between outputs', f'{longest_pause_ms:.0f} ms')
+
+    report.log()
+
+# ################################################################################################################################
+
+def _report_competing_consumers(keys:'strlist', timing:'anydict', consumers:'list[_CompetingConsumer]') -> 'None':
+    """ Logs the rates and latencies of the test of competing consumers.
+    """
+    start = timing['start']
+    consumed_seconds = timing['consumed'] - start
+
+    pull_latencies = Latencies('Order pull request')
+    ack_latencies = Latencies('Order acknowledgement transaction with invoices')
+
+    conflict_count = 0
+    late_batch_count = 0
+    consumed_count = 0
+
+    for consumer in consumers:
+        pull_latencies.values.extend(consumer.pull_latencies.values)
+        ack_latencies.values.extend(consumer.ack_latencies.values)
+        conflict_count += consumer.conflict_count
+        late_batch_count += consumer.late_batch_count
+        consumed_count += consumer.consumed_count
+
+    report = LoadReport('test_competing_consumers_with_lease_expiry')
+
+    report.add_rate('Publication', len(keys), timing['published'] - start, 'msg')
+    report.add_rate('Orders consumed with their invoices', len(keys), consumed_seconds, 'msg')
+    report.add_rate('Acknowledgement transactions with invoices', len(ack_latencies.values), consumed_seconds, 'tx')
+    report.add_rate('Acknowledgements rejected with 409', conflict_count, consumed_seconds, 'tx')
+
+    report.add_latencies(pull_latencies)
+    report.add_latencies(ack_latencies)
+
+    report.add_value('Consumers', str(_consumer_count))
+    report.add_value('Batches acknowledged after their lease', str(late_batch_count))
+    report.add_value('Orders acknowledged', str(consumed_count))
+
+    report.log()
+
+# ################################################################################################################################
+
 def _wait_for_invoices(prefix:'str', count:'int') -> 'None':
     """ Waits until no order remains in the queue and the given number of invoices exists.
     """
@@ -338,6 +471,10 @@ def test_crashes_under_continuous_publication(zato_server:'any_') -> 'None':
     stop = Event()
     reader = _OutputReader(prefix)
 
+    publish_latencies = Latencies('Publication request')
+    stored_times:'anydict' = {}
+    timing:'anydict' = {'retry_count': 0}
+
     with ThreadPoolExecutor() as executor:
 
         # The reader reads throughout, and the worker is killed while the inputs are published ..
@@ -346,6 +483,7 @@ def test_crashes_under_continuous_publication(zato_server:'any_') -> 'None':
 
         try:
             start = time.monotonic()
+            timing['start'] = start
 
             for index, key in enumerate(keys):
                 delay = start + index * interval - time.monotonic()
@@ -353,17 +491,24 @@ def test_crashes_under_continuous_publication(zato_server:'any_') -> 'None':
                 if delay > 0:
                     time.sleep(delay)
 
-                _publish_until_stored(TestConfig.publisher_username, TestConfig.publisher_password, Input_Topic, key)
+                timing['retry_count'] += _publish_until_stored(
+                    TestConfig.publisher_username, TestConfig.publisher_password, Input_Topic, key, publish_latencies)
 
+                stored_times[key] = time.monotonic()
+
+            timing['published'] = time.monotonic()
             killer_future.result()
 
             # .. the relay commits each output once and in order ..
             engine = get_engine()
             check = wait_for_outputs(engine, keys, prefix, _load_timeout)
+            timing['committed'] = time.monotonic()
+
             assert_exactly_once(check, keys)
 
             # .. and the reader receives each of them once and in order.
             _wait_for_received(reader, _message_count)
+            timing['received'] = reader.received_times[-1]
 
         finally:
             stop.set()
@@ -371,6 +516,8 @@ def test_crashes_under_continuous_publication(zato_server:'any_') -> 'None':
         reader_future.result()
 
     assert reader.received == keys
+
+    _report_continuous_publication(prefix, keys, timing, publish_latencies, stored_times, reader)
 
 # ################################################################################################################################
 
@@ -387,6 +534,9 @@ def test_competing_consumers_with_lease_expiry(zato_server:'any_') -> 'None':
     stop = Event()
     consumers:'list[_CompetingConsumer]' = []
 
+    publish_latencies = Latencies('Publication request')
+    timing:'anydict' = {}
+
     with ThreadPoolExecutor() as executor:
 
         futures:'anylist' = []
@@ -400,10 +550,16 @@ def test_competing_consumers_with_lease_expiry(zato_server:'any_') -> 'None':
 
         # The orders are published while the clients consume them ..
         try:
+            timing['start'] = time.monotonic()
+
             for key in keys:
-                _publish_until_stored(TestConfig.publisher_username, TestConfig.publisher_password, _orders_topic, key)
+                _ = _publish_until_stored(
+                    TestConfig.publisher_username, TestConfig.publisher_password, _orders_topic, key, publish_latencies)
+
+            timing['published'] = time.monotonic()
 
             _wait_for_invoices(prefix, _message_count)
+            timing['consumed'] = time.monotonic()
 
         finally:
             stop.set()
@@ -426,6 +582,8 @@ def test_competing_consumers_with_lease_expiry(zato_server:'any_') -> 'None':
         conflict_count += consumer.conflict_count
 
     assert conflict_count > 0
+
+    _report_competing_consumers(keys, timing, consumers)
 
 # ################################################################################################################################
 # ################################################################################################################################
