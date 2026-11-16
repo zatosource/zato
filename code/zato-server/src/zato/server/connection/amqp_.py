@@ -893,7 +893,7 @@ class ConnectorAMQP(Connector):
         # The config process of a server receives no messages, so its consumers stay as those of an inactive channel
         if config.is_active:
             if not is_config_process():
-                consumer.start()
+                _ = consumer.start()
 
 # ################################################################################################################################
 
