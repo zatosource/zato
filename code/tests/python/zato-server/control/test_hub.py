@@ -16,6 +16,7 @@ from socket import MSG_PEEK
 import pytest
 
 # Zato
+from zato.common.worker_slot import ModuleCtx as WorkerSlotCtx
 from zato.server.control.envelope import decode, encode, MessageType, ModuleCtx as EnvelopeCtx, new_message
 from zato.server.control.hub import ControlHub, EntryStatus
 
@@ -25,7 +26,7 @@ from zato.server.control.hub import ControlHub, EntryStatus
 if 0:
     from pathlib import Path
     from socket import socket
-    from zato.common.typing_ import any_, anylist, intlist, list_
+    from zato.common.typing_ import any_, anylist, dict_, intlist, list_
     from zato.server.control.envelope import Message
 
     any_ = any_
@@ -35,22 +36,26 @@ if 0:
     Path = Path
     socket = socket
 
-    socketlist  = list_[socket]
-    messagelist = list_[Message]
+    intsocketdict = dict_[int, socket]
+    messagelist   = list_[Message]
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+# The slots of the worker and of the config process
+_worker = WorkerSlotCtx.Worker_Slot
+_config = WorkerSlotCtx.Config_Slot
 
 # How long a poll of the hub waits for its descriptors, in milliseconds
 _poll_timeout_ms = 100
 
-# How long a worker end waits for a datagram, in seconds
+# How long the end of a process waits for a datagram, in seconds
 _receive_timeout = 2.0
 
-# How long a query waits for its responses in the tests of its deadline, in seconds
+# How long a query waits for its response in the tests of its deadline, in seconds
 _short_query_timeout = 0.05
 
-# How many events a test sends to a worker that reads nothing, and the size of each
+# How many events a test sends to a process that reads nothing, and the size of each
 _backlog_count = 2000
 _backlog_body_size = 1024
 
@@ -58,22 +63,22 @@ _backlog_body_size = 1024
 # ################################################################################################################################
 
 class HubUnderTest:
-    """ A hub with the worker ends of its slots and the slots that reported ready to it.
+    """ A hub with the ends of the worker and of the config process, and the slots that reported ready to it.
     """
 
-    def __init__(self, body_dir:'str', slot_count:'int', query_timeout:'float'=_receive_timeout) -> 'None':
+    def __init__(self, body_dir:'str', query_timeout:'float'=_receive_timeout) -> 'None':
         self.body_dir = body_dir
         self.ready_slots:'intlist' = []
         self.reopened:'anylist' = []
         self.replaced_slots:'intlist' = []
-        self.hub = ControlHub(body_dir, slot_count, query_timeout, self.ready_slots.append, self.on_logs_reopened,
+        self.hub = ControlHub(body_dir, query_timeout, self.ready_slots.append, self.on_logs_reopened,
             self.replaced_slots.append)
-        self.worker_ends:'socketlist' = []
+        self.ends:'intsocketdict' = {}
 
-        for slot in range(slot_count):
-            worker_end = self.hub.open_slot(slot)
-            worker_end.settimeout(_receive_timeout)
-            self.worker_ends.append(worker_end)
+        for slot in (_worker, _config):
+            end = self.hub.open_slot(slot)
+            end.settimeout(_receive_timeout)
+            self.ends[slot] = end
 
     def on_logs_reopened(self, slot:'int', rotation_id:'int') -> 'None':
         self.reopened.append((slot, rotation_id))
@@ -93,31 +98,39 @@ class HubUnderTest:
         message = new_message(message_type, body, cid)
         datagram = encode(message, self.body_dir)
 
-        _ = self.worker_ends[slot].send(datagram)
+        _ = self.ends[slot].send(datagram)
         self.pump()
 
     def report_ready(self, slot:'int') -> 'None':
+        """ Reports a process ready, and reads the loading state that a config process receives ahead of everything else.
+        """
         self.send(slot, MessageType.Ready, None)
 
+        if slot == _config:
+            message = self.receive(_config)
+
+            assert message.type == MessageType.Loading_State
+            assert message.body == []
+
     def receive(self, slot:'int') -> 'Message':
-        datagram = self.worker_ends[slot].recv(EnvelopeCtx.Max_Datagram)
+        datagram = self.ends[slot].recv(EnvelopeCtx.Max_Datagram)
         out = decode(datagram)
         return out
 
     def has_nothing(self, slot:'int') -> 'bool':
-        """ Returns whether the worker end of a slot holds no datagram.
+        """ Returns whether the end of a process holds no datagram.
         """
-        worker_end = self.worker_ends[slot]
-        worker_end.setblocking(False)
+        end = self.ends[slot]
+        end.setblocking(False)
 
         try:
-            _ = worker_end.recv(EnvelopeCtx.Max_Datagram, MSG_PEEK)
+            _ = end.recv(EnvelopeCtx.Max_Datagram, MSG_PEEK)
         except BlockingIOError:
             out = True
         else:
             out = False
 
-        worker_end.settimeout(_receive_timeout)
+        end.settimeout(_receive_timeout)
         return out
 
 # ################################################################################################################################
@@ -130,63 +143,59 @@ def _assert_in_order(messages:'messagelist') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_an_event_reaches_every_other_slot_in_sequence_order(tmp_path:'Path') -> 'None':
-    test = HubUnderTest(str(tmp_path), 3)
+def test_an_event_reaches_the_other_process_in_sequence_order(tmp_path:'Path') -> 'None':
+    test = HubUnderTest(str(tmp_path))
+    test.report_ready(_worker)
+    test.report_ready(_config)
 
-    for slot in range(3):
-        test.report_ready(slot)
+    assert test.ready_slots == [_worker, _config]
 
-    assert test.ready_slots == [0, 1, 2]
-
-    # Two slots publish events ..
+    # The worker publishes events ..
     for body in range(5):
-        test.send(0, MessageType.Event, body)
+        test.send(_worker, MessageType.Event, body)
 
-    test.send(1, MessageType.Event, 'from-1')
-
-    # .. the third slot receives all of them in sequence order ..
+    # .. the config process receives all of them in sequence order ..
     received:'messagelist' = []
 
-    for _ in range(6):
-        message = test.receive(2)
+    for _ in range(5):
+        message = test.receive(_config)
         received.append(message)
 
     _assert_in_order(received)
 
     for body in range(5):
         assert received[body].body == body
-        assert received[body].slot == 0
+        assert received[body].slot == _worker
 
-    assert received[5].body == 'from-1'
-    assert received[5].slot == 1
+    # .. and the event of the config process reaches the worker, which never receives its own.
+    test.send(_config, MessageType.Event, 'from-config')
+    message = test.receive(_worker)
 
-    # .. and an origin receives the events of the other slot, never its own.
-    message = test.receive(0)
-
-    assert message.body == 'from-1'
-    assert test.has_nothing(0)
+    assert message.body == 'from-config'
+    assert message.slot == _config
+    assert test.has_nothing(_worker)
 
 # ################################################################################################################################
 
-def test_events_for_a_starting_slot_wait_until_it_reports_ready(tmp_path:'Path') -> 'None':
-    test = HubUnderTest(str(tmp_path), 2)
-    test.report_ready(0)
+def test_events_for_a_starting_process_wait_until_it_reports_ready(tmp_path:'Path') -> 'None':
+    test = HubUnderTest(str(tmp_path))
+    test.report_ready(_config)
 
-    # The starting slot receives nothing while the other publishes ..
+    # The starting worker receives nothing while the config process publishes ..
     for body in range(3):
-        test.send(0, MessageType.Event, body)
+        test.send(_config, MessageType.Event, body)
 
-    assert test.has_nothing(1)
-    assert test.ready_slots == [0]
+    assert test.has_nothing(_worker)
+    assert test.ready_slots == [_config]
 
     # .. and every event once it reports ready, in order.
-    test.report_ready(1)
-    assert test.ready_slots == [0, 1]
+    test.report_ready(_worker)
+    assert test.ready_slots == [_config, _worker]
 
     received:'messagelist' = []
 
     for _ in range(3):
-        message = test.receive(1)
+        message = test.receive(_worker)
         received.append(message)
 
     _assert_in_order(received)
@@ -196,235 +205,212 @@ def test_events_for_a_starting_slot_wait_until_it_reports_ready(tmp_path:'Path')
 
 # ################################################################################################################################
 
-def test_a_large_event_gives_each_recipient_a_file_of_its_own(tmp_path:'Path') -> 'None':
+def test_a_large_event_gives_the_recipient_a_file_of_its_own(tmp_path:'Path') -> 'None':
     body_dir = str(tmp_path)
-    test = HubUnderTest(body_dir, 3)
-
-    for slot in range(3):
-        test.report_ready(slot)
+    test = HubUnderTest(body_dir)
+    test.report_ready(_worker)
+    test.report_ready(_config)
 
     body_size = EnvelopeCtx.Max_Inline_Body + 1
     body = 'a' * body_size
 
-    # The origin's file is replaced by one file for each recipient ..
-    test.send(0, MessageType.Event, body)
-    assert len(os.listdir(body_dir)) == 2
-
-    # .. and each recipient removes its own file when it reads the body.
-    first = test.receive(1)
+    # The file of the origin is replaced by one file of the recipient ..
+    test.send(_worker, MessageType.Event, body)
     assert len(os.listdir(body_dir)) == 1
 
-    second = test.receive(2)
-    assert os.listdir(body_dir) == []
+    # .. which the recipient removes when it reads the body.
+    message = test.receive(_config)
 
-    assert first.body == body
-    assert second.body == body
+    assert message.body == body
+    assert os.listdir(body_dir) == []
 
 # ################################################################################################################################
 
-def test_a_query_returns_an_entry_for_every_slot(tmp_path:'Path') -> 'None':
-    test = HubUnderTest(str(tmp_path), 3)
-    test.report_ready(0)
-    test.report_ready(1)
+def test_a_query_of_the_config_process_returns_the_response_of_the_worker(tmp_path:'Path') -> 'None':
+    test = HubUnderTest(str(tmp_path))
+    test.report_ready(_worker)
+    test.report_ready(_config)
 
-    # The ready slots receive the query, the origin included, and the starting slot does not ..
-    test.send(0, MessageType.Query, 'my-query', 'my-cid')
+    # The worker receives the query ..
+    test.send(_config, MessageType.Query, 'my-query', 'my-cid')
+    query = test.receive(_worker)
 
-    for slot in (0, 1):
-        query = test.receive(slot)
+    assert query.type == MessageType.Query
+    assert query.cid == 'my-cid'
+    assert query.body == 'my-query'
 
-        assert query.type == MessageType.Query
-        assert query.cid == 'my-cid'
-        assert query.body == 'my-query'
-
-    assert test.has_nothing(2)
-
-    # .. and once both respond, the origin receives an entry for each slot, in the order of the slots.
-    test.send(1, MessageType.Response, 'from-1', 'my-cid')
-    test.send(0, MessageType.Response, 'from-0', 'my-cid')
-
-    result = test.receive(0)
+    # .. and its response reaches the config process.
+    test.send(_worker, MessageType.Response, 'from-worker', 'my-cid')
+    result = test.receive(_config)
 
     assert result.type == MessageType.Query_Result
     assert result.cid == 'my-cid'
-    assert result.body == [
-        {'slot': 0, 'status': EntryStatus.OK, 'body': 'from-0'},
-        {'slot': 1, 'status': EntryStatus.OK, 'body': 'from-1'},
-        {'slot': 2, 'status': EntryStatus.Unavailable, 'body': None},
-    ]
+    assert result.body == {'status': EntryStatus.OK, 'body': 'from-worker'}
 
 # ################################################################################################################################
 
-def test_a_slot_that_awaits_its_respawn_has_an_entry(tmp_path:'Path') -> 'None':
-    test = HubUnderTest(str(tmp_path), 2)
+def test_a_query_without_a_ready_worker_is_unavailable(tmp_path:'Path') -> 'None':
+    test = HubUnderTest(str(tmp_path))
+    test.report_ready(_config)
 
-    # The worker of slot 1 terminated and its slot is closed until the respawn ..
-    test.hub.close_slot(1)
-    test.report_ready(0)
+    test.send(_config, MessageType.Query, None, 'my-cid')
+    result = test.receive(_config)
 
-    test.send(0, MessageType.Query, None, 'my-cid')
-    _ = test.receive(0)
-
-    test.send(0, MessageType.Response, 'from-0', 'my-cid')
-
-    # .. which the result still reports.
-    result = test.receive(0)
-
-    assert result.body == [
-        {'slot': 0, 'status': EntryStatus.OK, 'body': 'from-0'},
-        {'slot': 1, 'status': EntryStatus.Unavailable, 'body': None},
-    ]
+    assert result.body == {'status': EntryStatus.Unavailable, 'body': None}
+    assert test.has_nothing(_worker)
 
 # ################################################################################################################################
 
-def test_a_slot_that_does_not_respond_has_a_timeout_entry(tmp_path:'Path') -> 'None':
-    test = HubUnderTest(str(tmp_path), 2, _short_query_timeout)
-    test.report_ready(0)
-    test.report_ready(1)
+def test_a_query_that_the_worker_does_not_answer_times_out(tmp_path:'Path') -> 'None':
+    test = HubUnderTest(str(tmp_path), _short_query_timeout)
+    test.report_ready(_worker)
+    test.report_ready(_config)
 
-    test.send(0, MessageType.Query, None, 'my-cid')
-    _ = test.receive(0)
+    test.send(_config, MessageType.Query, None, 'my-cid')
+    _ = test.receive(_worker)
 
-    test.send(0, MessageType.Response, 'from-0', 'my-cid')
-
-    # The query waits for the slot that did not respond until its deadline ..
+    # The query waits for the worker until its deadline ..
     assert test.hub.get_next_deadline() is not None
-    assert test.has_nothing(0)
+    assert test.has_nothing(_config)
 
     time.sleep(_short_query_timeout)
     test.hub.expire_queries(time.monotonic())
 
-    result = test.receive(0)
+    result = test.receive(_config)
+    assert result.body == {'status': EntryStatus.Timeout, 'body': None}
 
-    assert result.body == [
-        {'slot': 0, 'status': EntryStatus.OK, 'body': 'from-0'},
-        {'slot': 1, 'status': EntryStatus.Timeout, 'body': None},
-    ]
-
-    # .. and its late response belongs to no query any more.
+    # .. and the late response belongs to no query any more.
     assert test.hub.get_next_deadline() is None
 
-    test.send(1, MessageType.Response, 'from-1', 'my-cid')
-    assert test.has_nothing(0)
+    test.send(_worker, MessageType.Response, 'from-worker', 'my-cid')
+    assert test.has_nothing(_config)
 
 # ################################################################################################################################
 
-def test_closing_a_slot_removes_its_undelivered_bodies_and_answers_its_queries(tmp_path:'Path') -> 'None':
+def test_closing_the_worker_answers_its_queries(tmp_path:'Path') -> 'None':
+    test = HubUnderTest(str(tmp_path))
+    test.report_ready(_worker)
+    test.report_ready(_config)
+
+    # A query waits for the worker ..
+    test.send(_config, MessageType.Query, None, 'my-cid')
+    _ = test.receive(_worker)
+
+    # .. the worker terminates, which completes the query ..
+    test.hub.close_slot(_worker)
+
+    result = test.receive(_config)
+    assert result.body == {'status': EntryStatus.Unavailable, 'body': None}
+
+    # .. after which the config process learns that the worker terminated.
+    message = test.receive(_config)
+
+    assert message.type == MessageType.Worker_Gone
+    assert message.body == _worker
+
+# ################################################################################################################################
+
+def test_closing_a_starting_worker_removes_its_undelivered_bodies(tmp_path:'Path') -> 'None':
     body_dir = str(tmp_path)
-    test = HubUnderTest(body_dir, 3)
-    test.report_ready(0)
-    test.report_ready(1)
+    test = HubUnderTest(body_dir)
+    test.report_ready(_config)
 
     body_size = EnvelopeCtx.Max_Inline_Body + 1
     body = 'a' * body_size
 
-    # The starting slot holds a body in its startup buffer, and the other recipient reads its own ..
-    test.send(0, MessageType.Event, body)
-    _ = test.receive(1)
-
+    # The starting worker holds a body in its startup buffer ..
+    test.send(_config, MessageType.Event, body)
     assert len(os.listdir(body_dir)) == 1
 
-    # .. a query waits for a slot that does not respond ..
-    test.send(0, MessageType.Query, None, 'my-cid')
-    test.send(0, MessageType.Response, 'from-0', 'my-cid')
-
-    # .. the starting slot closes, and no file remains ..
-    test.hub.close_slot(2)
+    # .. and once it closes, no file remains.
+    test.hub.close_slot(_worker)
     assert os.listdir(body_dir) == []
-
-    # .. and the slot that does not respond closes, which completes the query.
-    test.hub.close_slot(1)
-    _ = test.receive(0)
-
-    result = test.receive(0)
-
-    assert result.body == [
-        {'slot': 0, 'status': EntryStatus.OK, 'body': 'from-0'},
-        {'slot': 1, 'status': EntryStatus.Unavailable, 'body': None},
-        {'slot': 2, 'status': EntryStatus.Unavailable, 'body': None},
-    ]
 
 # ################################################################################################################################
 
-def test_a_worker_that_reads_nothing_does_not_hold_the_hub(tmp_path:'Path') -> 'None':
-    test = HubUnderTest(str(tmp_path), 2)
-    test.report_ready(0)
-    test.report_ready(1)
+def test_a_process_that_reads_nothing_does_not_hold_the_hub(tmp_path:'Path') -> 'None':
+    test = HubUnderTest(str(tmp_path))
+    test.report_ready(_worker)
+    test.report_ready(_config)
 
     body = 'a' * _backlog_body_size
 
     # More events than the socket of the recipient holds wait in the queue of its slot ..
     for _ in range(_backlog_count):
-        test.send(0, MessageType.Event, body)
+        test.send(_worker, MessageType.Event, body)
 
-    assert test.hub.channels[1].out_queue
+    assert test.hub.channels[_config].out_queue
 
     # .. and the recipient receives every one of them in order once it reads.
     received:'messagelist' = []
 
     # The socket reports that it takes more only once most of its buffer is free, so the hub runs when it is empty.
     while len(received) < _backlog_count:
-        if test.has_nothing(1):
+        if test.has_nothing(_config):
             test.pump()
 
-        message = test.receive(1)
+        message = test.receive(_config)
         received.append(message)
 
     _assert_in_order(received)
-    assert not test.hub.channels[1].out_queue
+    assert not test.hub.channels[_config].out_queue
 
 # ################################################################################################################################
 
 def test_the_event_of_a_terminated_worker_is_relayed_before_its_slot_closes(tmp_path:'Path') -> 'None':
-    test = HubUnderTest(str(tmp_path), 2)
-    test.report_ready(0)
-    test.report_ready(1)
+    test = HubUnderTest(str(tmp_path))
+    test.report_ready(_worker)
+    test.report_ready(_config)
 
     # The worker sends its event and terminates before a poll of the arbiter reports the datagram ..
     message = new_message(MessageType.Event, 'last-event')
     datagram = encode(message, test.body_dir)
 
-    _ = test.worker_ends[1].send(datagram)
-    test.worker_ends[1].close()
+    _ = test.ends[_worker].send(datagram)
+    test.ends[_worker].close()
 
-    # .. and the arbiter relays it when it closes the slot.
-    test.hub.close_slot(1)
+    # .. and the arbiter relays it when it closes the slot, ahead of the notice of the termination.
+    test.hub.close_slot(_worker)
 
-    received = test.receive(0)
+    received = test.receive(_config)
     assert received.body == 'last-event'
+
+    received = test.receive(_config)
+    assert received.type == MessageType.Worker_Gone
 
 # ################################################################################################################################
 
-def test_a_drain_reaches_a_starting_slot(tmp_path:'Path') -> 'None':
-    test = HubUnderTest(str(tmp_path), 1)
-    test.hub.send_drain(0)
+def test_a_drain_reaches_a_starting_worker(tmp_path:'Path') -> 'None':
+    test = HubUnderTest(str(tmp_path))
+    test.hub.send_drain(_worker)
 
-    message = test.receive(0)
+    message = test.receive(_worker)
     assert message.type == MessageType.Drain
 
 # ################################################################################################################################
 
-def test_a_reload_reaches_a_starting_slot_after_it_reports_ready(tmp_path:'Path') -> 'None':
-    test = HubUnderTest(str(tmp_path), 2)
-    test.report_ready(0)
+def test_a_reload_reaches_a_starting_worker_after_it_reports_ready(tmp_path:'Path') -> 'None':
+    test = HubUnderTest(str(tmp_path))
+    test.report_ready(_config)
 
     test.hub.broadcast_reload()
 
-    message = test.receive(0)
-    assert message.type == MessageType.Reload
-    assert test.has_nothing(1)
+    # The config process commits every change itself and receives no reload ..
+    assert test.has_nothing(_config)
+    assert test.has_nothing(_worker)
 
-    test.report_ready(1)
+    # .. and the worker receives it once it reports ready.
+    test.report_ready(_worker)
 
-    message = test.receive(1)
+    message = test.receive(_worker)
     assert message.type == MessageType.Reload
 
 # ################################################################################################################################
 
-def test_a_closed_worker_end_is_no_longer_polled(tmp_path:'Path') -> 'None':
-    test = HubUnderTest(str(tmp_path), 2)
+def test_a_closed_end_is_no_longer_polled(tmp_path:'Path') -> 'None':
+    test = HubUnderTest(str(tmp_path))
 
-    test.worker_ends[1].close()
+    test.ends[_worker].close()
     test.pump()
 
     requests = test.hub.get_poll_requests()
@@ -432,24 +418,24 @@ def test_a_closed_worker_end_is_no_longer_polled(tmp_path:'Path') -> 'None':
 
 # ################################################################################################################################
 
-def test_a_reopen_of_logs_reaches_every_slot_a_starting_one_included(tmp_path:'Path') -> 'None':
-    test = HubUnderTest(str(tmp_path), 2)
-    test.report_ready(0)
+def test_a_reopen_of_logs_reaches_both_processes_a_starting_one_included(tmp_path:'Path') -> 'None':
+    test = HubUnderTest(str(tmp_path))
+    test.report_ready(_worker)
 
-    # The command is sent to both slots at once, although one has not reported ready ..
+    # The command is sent to both processes at once, although the config process has not reported ready ..
     slots = test.hub.broadcast_reopen_logs(7)
-    assert slots == {0, 1}
+    assert slots == {_worker, _config}
 
-    for slot in range(2):
+    for slot in (_worker, _config):
         message = test.receive(slot)
         assert message.type == MessageType.Reopen_Logs
         assert message.body == 7
 
     # .. and each acknowledgement reaches the arbiter with its slot and its rotation.
-    test.send(1, MessageType.Logs_Reopened, 7)
-    test.send(0, MessageType.Logs_Reopened, 7)
+    test.send(_config, MessageType.Logs_Reopened, 7)
+    test.send(_worker, MessageType.Logs_Reopened, 7)
 
-    assert test.reopened == [(1, 7), (0, 7)]
+    assert test.reopened == [(_config, 7), (_worker, 7)]
 
 # ################################################################################################################################
 # ################################################################################################################################
