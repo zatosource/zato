@@ -172,7 +172,7 @@ class TestSubscriptionChangesAcrossWorkers(unittest.TestCase):
         self._wait_on_every_slot('Pull after subscribe', _pull, _ok)
 
         subscription = self._get_item(ModuleCtx.Sub_List_Service, 'sec_name', PubSubConfig.Joiner_Name)
-        _ = self.admin.invoke(ModuleCtx.Sub_Delete_Service, {'sub_key': subscription['sub_key']})
+        _ = self.admin.invoke(ModuleCtx.Sub_Delete_Service, {'id': subscription['id']})
         self._wait_on_every_slot('Pull after unsubscribe', _pull, _refused)
 
 # ################################################################################################################################

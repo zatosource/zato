@@ -54,6 +54,10 @@ _Header_Msg_ID           = 'X-Zato-Msg-ID'
 _Header_Delivery_Attempt = 'X-Zato-Delivery-Attempt'
 _Request_Records_File    = 'requests.jsonl'
 
+# The number of digits of the arrival time that opens the name of each delivered message file,
+# so that the order of the names is the order in which the messages arrived.
+_File_Name_Time_Width = 20
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -232,7 +236,8 @@ class _RequestHandler(BaseHTTPRequestHandler):
             output_directory = self.server.output_directory
             unique_id = uuid.uuid4()
             hex_string = unique_id.hex
-            file_name = f'{hex_string}.json'
+            arrival_time = time.monotonic_ns()
+            file_name = f'{arrival_time:0{_File_Name_Time_Width}d}-{hex_string}.json'
             file_path = os.path.join(output_directory, file_name)
 
             # Write to a temporary name first and rename atomically - readers polling
@@ -316,7 +321,7 @@ class WebhookReceiver:
 # ################################################################################################################################
 
     def get_delivered_messages(self) -> 'anydict_list':
-        """ Returns all delivered message payloads from disk, sorted by file creation order.
+        """ Returns all delivered message payloads from disk, in the order of their arrival.
         """
         out:'anydict_list' = []
 

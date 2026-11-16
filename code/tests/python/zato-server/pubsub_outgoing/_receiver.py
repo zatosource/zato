@@ -206,7 +206,7 @@ class RecordingReceiver:
 
         self._server = server
 
-        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread = threading.Thread(target=server.serve_forever, name=f'receiver-{self.port}', daemon=True)
         thread.start()
 
         self._thread = thread

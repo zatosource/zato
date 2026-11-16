@@ -14,6 +14,7 @@ from threading import Thread
 from time import sleep
 
 # Zato
+from zato.common.api import PubSub
 from zato.common.test.client import AdminClient, PublishClient, PullClient
 from zato.common.test.config_multi_cpu_pubsub import PubSubConfig
 from zato.common.test.conftest_base_multi_cpu import connection_to_slot, MultiCPUTestConfig, post_json, WorkerControl
@@ -97,7 +98,7 @@ class TestPubSubAcrossWorkers(unittest.TestCase):
 # ################################################################################################################################
 
     def test_every_slot_owns_subscription_keys(self) -> 'None':
-        """ The keys are spread over every slot, and the counts of all slots add up to the number of subscriptions.
+        """ The keys are spread over every slot, and the counts of all slots add up to the number of push subscriptions.
         """
         rows = self.control.wait_for_all_ready()
         items, _ = self.admin.get_list(ModuleCtx.Subscription_List_Service)
@@ -109,7 +110,13 @@ class TestPubSubAcrossWorkers(unittest.TestCase):
             self.assertGreater(row['sub_key_count'], 0, f'Slot {row["slot"]}')
             total += row['sub_key_count']
 
-        self.assertEqual(total, len(items))
+        push_count = 0
+
+        for item in items:
+            if item['delivery_type'] == PubSub.Delivery_Type.Push:
+                push_count += 1
+
+        self.assertEqual(total, push_count)
 
 # ################################################################################################################################
 

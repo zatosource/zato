@@ -14,6 +14,7 @@ from threading import Thread
 from time import monotonic, sleep
 
 # Zato
+from zato.common.db_env.connection import SQLite_Busy_Timeout_Ms
 from zato.common.test.conftest_base_multi_cpu import connection_to_slot, get_json, ModuleCtx as MultiCPUCtx, post_json, \
      SQLiteWriteLock
 from zato.common.test.config_multi_cpu_pubsub import PubSubConfig
@@ -41,8 +42,11 @@ class ModuleCtx:
 
     Publish_Path = '/test/multi-cpu/publish'
 
-    # How long the test process holds the write lock, well above the short busy timeout, in seconds
-    Lock_Duration = 6.0
+    Milliseconds_Per_Second = 1000
+
+    # How long the test process holds the write lock, in seconds - half of the busy timeout of SQLite,
+    # which is how long a write waits for the lock before it fails.
+    Lock_Duration = SQLite_Busy_Timeout_Ms / Milliseconds_Per_Second / 2
 
     # How long the lock is held before the publication is sent, in seconds
     Publish_Delay = 0.5

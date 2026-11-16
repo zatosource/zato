@@ -254,7 +254,7 @@ def start_server_process(
             if _all_workers_ready_pattern.search(text):
                 all_workers_ready.set()
 
-    stdout_thread = threading.Thread(target=_stream_server_output, daemon=True)
+    stdout_thread = threading.Thread(target=_stream_server_output, name='server-output', daemon=True)
     stdout_thread.start()
 
     # .. wait for the server to come up ..

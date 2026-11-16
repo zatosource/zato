@@ -336,6 +336,19 @@ class SQLPubSubBackend(SQLAdminAPI):
 
 # ################################################################################################################################
 
+    def read_payload(self, message:'anydict') -> 'str':
+        """ Reads the payload of one fetched message from the database, which is the payload of its most recent edit.
+        """
+        parameters = {'payload_message_ids': [message['sequence_id']]}
+
+        with self.engine.connect() as connection:
+            row = connection.execute(payload_query, parameters).one()
+
+        out = self._load_payload_from_row(row)
+        return out
+
+# ################################################################################################################################
+
     def _fetch_rows(self, sub_key:'str', max_messages:'int') -> 'tuple[anylist, strdict]':
         """ Reads the subscriber's deliverable messages in (priority highest-first,
         publication order) sequence - one index-ordered query no matter the backlog depth -

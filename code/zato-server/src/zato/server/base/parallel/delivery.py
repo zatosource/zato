@@ -248,12 +248,13 @@ class PushDelivery:
             if sub_key in self._paused:
                 break
             try:
+                read_epoch = self.backend.payload_cache.get_epoch()
                 with self._database_slots:
                     pending = self.backend.fetch_pending(sub_key, max_messages=_delivery_batch_size)
                 outage.on_success()
                 if not pending:
                     break
-                self._deliver_batch(pending, sub_key)
+                self._deliver_batch(pending, sub_key, read_epoch)
 
             except (PubSubReplaced, DeliveryFenced):
                 raise
@@ -271,10 +272,10 @@ class PushDelivery:
             if sub_key in self._paused:
                 break
             try:
-                messages = self._fetch_new(sub_key)
+                messages, read_epoch = self._fetch_new(sub_key)
                 outage.on_success()
                 if messages:
-                    self._deliver_batch(messages, sub_key)
+                    self._deliver_batch(messages, sub_key, read_epoch)
 
             except (PubSubReplaced, DeliveryFenced):
                 raise
@@ -287,27 +288,31 @@ class PushDelivery:
 
 # ################################################################################################################################
 
-    def _fetch_new(self, sub_key:'str') -> 'anylist':
+    def _fetch_new(self, sub_key:'str') -> 'tuple[anylist, int]':
         """ Reads the deliverable messages of a subscriber and, if there are none, waits for a publication
-        and reads them again, holding a database slot during each read and never during the wait.
+        and reads them again, holding a database slot during each read and never during the wait. Returns the messages
+        and the payload epoch from before the read that returned them.
         """
         # Each read clears the wake-up event of the subscriber before its query ..
+        read_epoch = self.backend.payload_cache.get_epoch()
         with self._database_slots:
-            out = self.backend.fetch_messages(sub_key, max_messages=_delivery_batch_size)
+            messages = self.backend.fetch_messages(sub_key, max_messages=_delivery_batch_size)
 
         # .. so a publication committed after the query leaves the event set and the wait returns at once,
         # .. whereas a wait that ends without a publication means there is nothing new to read.
-        if not out:
+        if not messages:
             event = self.backend.get_sub_event(sub_key)
             if event.wait(_delivery_wait_seconds):
+                read_epoch = self.backend.payload_cache.get_epoch()
                 with self._database_slots:
-                    out = self.backend.fetch_messages(sub_key, max_messages=_delivery_batch_size)
+                    messages = self.backend.fetch_messages(sub_key, max_messages=_delivery_batch_size)
 
+        out = (messages, read_epoch)
         return out
 
 # ################################################################################################################################
 
-    def _deliver_batch(self, messages:'list', sub_key:'str') -> 'None':
+    def _deliver_batch(self, messages:'list', sub_key:'str', read_epoch:'int') -> 'None':
         """ Deliver a batch of raw messages, retrying each one individually. An outgoing connection's queue acknowledges
         each message as it is concluded, any other subscriber's batch is acknowledged in one transaction.
         An acknowledgement removes this subscriber's delivery rows only - a message expired or undeliverable
@@ -334,7 +339,7 @@ class PushDelivery:
             topic_name = message['topic_name']
             sub_config = config_by_topic[topic_name]
 
-            is_concluded = self._deliver_one(message, sub_config, sub_key)
+            is_concluded = self._deliver_one(message, sub_config, sub_key, read_epoch)
 
             # A message that was not concluded is not acked, and nothing behind it is either
             if not is_concluded:
@@ -367,6 +372,7 @@ class PushDelivery:
         message:'anydict',
         sub_config:'anydict',
         sub_key:'str',
+        read_epoch:'int',
     ) -> 'bool':
         """ Delivers one message, returning whether it was concluded - delivered, expired or given up on.
         A message of an outgoing connection's queue whose round failed is not concluded, it stays for the next round,
@@ -401,7 +407,7 @@ class PushDelivery:
             return ''
 
         try:
-            self._deliver_message(message, sub_config, sub_key, should_continue)
+            self._deliver_message(message, sub_config, sub_key, should_continue, read_epoch)
 
         except DeliveryInterrupted as e:
 
@@ -584,10 +590,12 @@ class PushDelivery:
         sub_config:'anydict',
         sub_key:'str',
         should_continue:'callable_',
+        read_epoch:'int',
     ) -> 'None':
         """ Delivers one message to its target. An outgoing connection's queue invokes its delivery service once,
         which retries as the connection says, whereas a push message runs one round under its own retry policy
-        right here, raising DeliveryExhausted when the round ran out.
+        right here, raising DeliveryExhausted when the round ran out. Each attempt sends the payload of the most recent
+        edit of the message, including an edit that took place during the round.
         """
         push_type = sub_config['push_type']
 
@@ -599,6 +607,7 @@ class PushDelivery:
         # Outgoing connections have retry policies of their own
         if sub_key.startswith(_outgoing_sub_key_prefix):
             self._record_attempt(message)
+            _ = self._use_current_payload(message, read_epoch)
             deliver(message, sub_config)
             return
 
@@ -610,10 +619,25 @@ class PushDelivery:
             message_cid = ''
 
         def attempt() -> 'None':
+            nonlocal read_epoch
             self._record_attempt(message)
+            read_epoch = self._use_current_payload(message, read_epoch)
             deliver(message, sub_config)
 
         deliver_with_policy(policy, 0, message_cid, endpoint, attempt, should_continue)
+
+# ################################################################################################################################
+
+    def _use_current_payload(self, message:'anydict', read_epoch:'int') -> 'int':
+        """ Replaces the payload of a message with the one in the database if an edit advanced the payload epoch
+        after the payload was read, and returns the epoch under which the payload of the message was read.
+        """
+        out = self.backend.payload_cache.get_epoch()
+
+        if out != read_epoch:
+            message['data'] = self.backend.read_payload(message)
+
+        return out
 
 # ################################################################################################################################
 

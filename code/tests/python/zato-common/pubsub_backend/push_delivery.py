@@ -54,6 +54,9 @@ _short_expiration_seconds = 1
 # The sleep a publisher asks for between its two attempts, in seconds.
 _publisher_sleep_time = 1
 
+# How many retries the message edited during its round allows, more than the test needs before the edit.
+_edit_max_retries = 100
+
 # The sleep a message without settings gets before its first retry, in seconds, and how much
 # more than that the retry may take - the policy's jitter plus the greenlet's own overhead.
 _default_sleep_time = PubSub.Delivery.Default_Sleep_Time
@@ -230,6 +233,23 @@ def _run_push_delivery_flow(backend:'SQLPubSubBackend', server:'_StubServer', de
 
     _wait_until(lambda: len(server.invoked) == delivered_so_far, 'the message after the given-up one is delivered')
     assert server.invoked[-1] == (_service_name, 'push-after-given-up', DATA_FORMAT.JSON), server.invoked[-1]
+
+    # .. a message edited between two attempts of its round is sent with the payload of the edit ..
+    server.fail_count = _fail_until_expired
+    attempts_so_far = len(server.attempt_times)
+
+    edited_msg_id = backend.publish(_topic, 'push-before-edit', max_retries=_edit_max_retries,
+        retry_sleep_time=_publisher_sleep_time).msg_id
+
+    _wait_until(lambda: len(server.attempt_times) > attempts_so_far, 'the first attempt of the edited message fails')
+
+    assert backend.update_message(_topic, edited_msg_id, 'push-after-edit')
+    server.fail_count = 0
+
+    delivered_so_far += 1
+
+    _wait_until(lambda: len(server.invoked) == delivered_so_far, 'the edited message is delivered')
+    assert server.invoked[-1] == (_service_name, 'push-after-edit', DATA_FORMAT.JSON), server.invoked[-1]
 
     # .. a message that keeps failing expires for the push subscriber and leaves
     # .. its queue, while the second subscriber - a pull one with no push greenlet -
