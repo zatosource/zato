@@ -39,6 +39,10 @@ class ModuleCtx:
         ('zato.common.audit_log.retention_runner', 'stop_retention_runner'),
     )
 
+    # How long a thread that remains after a test may take to end, in seconds, such as a thread of a receiver
+    # of the session that answers a delivery in flight when the test ends
+    Thread_End_Timeout = 5.0
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -75,10 +79,18 @@ def no_thread_outlives_its_test() -> 'nonegen':
     _stop_process_wide_threads()
 
     threads_after = Counter(thread.name for thread in threading.enumerate())
+    remaining = threads_after - threads_before
 
-    remaining:'strlist' = sorted((threads_after - threads_before).elements())
+    # A thread that ends shortly after the test is not left behind
+    for thread in threading.enumerate():
+        if thread.name in remaining:
+            thread.join(ModuleCtx.Thread_End_Timeout)
 
-    assert remaining == []
+    threads_after = Counter(thread.name for thread in threading.enumerate())
+
+    remaining_names:'strlist' = sorted((threads_after - threads_before).elements())
+
+    assert remaining_names == []
 
 # ################################################################################################################################
 # ################################################################################################################################

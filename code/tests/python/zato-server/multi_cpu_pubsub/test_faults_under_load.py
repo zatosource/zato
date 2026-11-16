@@ -15,6 +15,7 @@ from threading import Lock, Thread
 from time import monotonic, sleep
 
 # Zato
+from zato.common.api import PubSub
 from zato.common.test.client import AdminClient, PublishClient
 from zato.common.test.conftest_base_multi_cpu import get_json, ModuleCtx as MultiCPUCtx, MultiCPUTestConfig, new_connection, \
      WorkerControl
@@ -58,6 +59,29 @@ def _get_seq(message:'anydict') -> 'int':
 
     out = data['seq']
     return out
+
+# ################################################################################################################################
+
+def _wait_for_seqs(receiver:'any_', expected:'intset') -> 'intset':
+    """ Waits until a receiver holds every expected sequence number and returns the numbers it holds. A worker killed
+    during a delivery delivers its messages again and a publication that failed with its worker may still be stored,
+    so the count of the messages received does not show that every expected one arrived.
+    """
+    deadline = monotonic() + ModuleCtx.Delivery_Timeout
+
+    while True:
+        received:'intset' = set()
+
+        for message in receiver.get_delivered_messages():
+            received.add(_get_seq(message))
+
+        if expected <= received:
+            return received
+
+        if monotonic() > deadline:
+            return received
+
+        sleep(MultiCPUCtx.Poll_Interval)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -146,27 +170,27 @@ class TestFaultsUnderLoad(unittest.TestCase):
 
         # Every subscriber receives every acknowledged message ..
         for index, receiver in enumerate(PubSubConfig.receivers):
-            messages = receiver.wait_for_delivery(len(acknowledged), ModuleCtx.Delivery_Timeout)
-
-            received:'intset' = set()
-
-            for message in messages:
-                received.add(_get_seq(message))
-
+            received = _wait_for_seqs(receiver, acknowledged)
             missing = acknowledged - received
             self.assertEqual(missing, set(), f'Subscriber {index} did not receive {len(missing)} messages')
 
-        # .. and the keys of every subscription are owned by the workers once more.
+        # .. and the keys of every push subscription, which are the keys that the workers deliver, are owned once more.
         rows = control.wait_for_all_ready()
         admin = AdminClient(MultiCPUTestConfig.base_url, MultiCPUTestConfig.invoke_password)
         items, _ = admin.get_list(ModuleCtx.Subscription_List_Service)
+
+        push_count = 0
+
+        for item in items:
+            if item['delivery_type'] == PubSub.Delivery_Type.Push:
+                push_count += 1
 
         total = 0
 
         for row in rows:
             total += row['sub_key_count']
 
-        self.assertEqual(total, len(items))
+        self.assertEqual(total, push_count)
 
 # ################################################################################################################################
 # ################################################################################################################################

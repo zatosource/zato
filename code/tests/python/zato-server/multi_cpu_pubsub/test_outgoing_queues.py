@@ -63,8 +63,10 @@ class _ReceiverHandler(BaseHTTPRequestHandler):
 
         server.bodies.append(json.loads(body))
 
+        # The thread of a connection that the pool of a worker kept open would outlive the receiver
         self.send_response(200)
         self.send_header('Content-Length', '0')
+        self.send_header('Connection', 'close')
         self.end_headers()
 
     def log_message(self, format:'str', *args:'any_') -> 'None':
@@ -198,6 +200,7 @@ class TestOutgoingQueuesAcrossWorkers(unittest.TestCase):
         finally:
             receiver.release.set()
             receiver.shutdown()
+            receiver.server_close()
 
 # ################################################################################################################################
 # ################################################################################################################################

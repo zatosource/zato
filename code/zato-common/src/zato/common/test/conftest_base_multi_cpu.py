@@ -34,7 +34,7 @@ import yaml
 from zato.common.file_transfer import listener as file_listener
 from zato.common.test.client import AdminClient
 from zato.common.hl7.mllp.haproxy import Env_Port_Name as MLLP_Port_Env
-from zato.common.test.conftest_base_pubsub import create_zato_server_fixture, find_free_port
+from zato.common.test.conftest_base_pubsub import create_zato_server_fixture, find_free_port, render_template
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -106,6 +106,11 @@ class ModuleCtx:
     Worker_Slot_Service = 'test.multi-cpu.worker-slot'
     Worker_Slot_Service_Path = os.path.join(os.path.dirname(__file__), 'multi_cpu_service.py')
     Worker_Slot_Path = '/test/multi-cpu/worker-slot'
+
+    # The file in the services pickup directory to which the enmasse template of a suite is rendered, and how long
+    # every worker may take to serve the channels of the template once the file listener deployed it, in seconds
+    Template_File_Name = 'enmasse-multi-cpu-template.yaml'
+    Template_Deadline = 60.0
 
     # The state of a slot whose worker serves requests
     State_Ready = 'ready'
@@ -182,6 +187,9 @@ class MultiCPUTestConfig:
     # The password of the security definitions that a suite creates through its enmasse template
     sec_password = uuid4().hex
 
+    # The enmasse template of the suite, rendered with the placeholders of the suite before the server starts
+    template_yaml = ''
+
     @classmethod
     def populate(
         cls,
@@ -200,6 +208,10 @@ class MultiCPUTestConfig:
         cls.worker_count = get_worker_count()
 
         start_file_listeners(server_directory, server_port)
+
+        # The channels of the template name services that the server deploys from its pickup directory at startup,
+        # so the template is imported once every worker is ready
+        import_template()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -419,6 +431,44 @@ def enmasse_import(config:'anydict') -> 'None':
 
 # ################################################################################################################################
 
+def _serves_worker_slot(slot:'int') -> 'bool':
+    """ Whether the worker of a slot answered a request to the channel of test.multi-cpu.worker-slot. A request that
+    the kernel assigns to the worker of another slot leaves the slot pending until a later poll.
+    """
+    connection = new_connection()
+
+    try:
+        response = get_json(connection, ModuleCtx.Worker_Slot_Path)
+    except Exception as e:
+        logger.info('Channel `%s` not served yet -> %s', ModuleCtx.Worker_Slot_Path, e)
+        out = False
+    else:
+        out = response['slot'] == slot
+    finally:
+        connection.close()
+
+    return out
+
+# ################################################################################################################################
+
+def import_template() -> 'None':
+    """ Deploys the rendered enmasse template of the suite through the file listener of the services pickup directory
+    and waits until the worker of every slot serves its channels.
+    """
+    services_directory = ModuleCtx.Listener_Directories[0]
+
+    staging_path = get_staging_path(services_directory)
+    path = os.path.join(MultiCPUTestConfig.server_directory, services_directory, ModuleCtx.Template_File_Name)
+
+    with open(staging_path, 'w') as staging_file:
+        _ = staging_file.write(MultiCPUTestConfig.template_yaml)
+
+    os.replace(staging_path, path)
+
+    wait_for_every_slot(_serves_worker_slot, 'The channels of the enmasse template', ModuleCtx.Template_Deadline)
+
+# ################################################################################################################################
+
 def wait_for_every_slot(is_done:'callable_', description:'str', deadline:'float') -> 'None':
     """ Waits until the condition holds for every slot of the server, where is_done receives a slot and returns
     whether the worker of that slot satisfies the condition. Raises an exception after the deadline, in seconds.
@@ -552,14 +602,21 @@ def create_multi_cpu_server_fixture(
         MLLP_Port_Env: str(MultiCPUTestConfig.mllp_port),
     }
 
+    # The template is rendered here and imported by MultiCPUTestConfig.populate, once the server deployed the services
+    # that its channels name, rather than before the server starts
+    def build_config(**kwargs:'any_') -> 'anydict':
+        out = build_config_callback(**kwargs)
+        MultiCPUTestConfig.template_yaml = render_template(template_path, out['placeholders'])
+        return out
+
     out = create_zato_server_fixture(
         logger_name=logger_name,
         server_log_copy_name=server_log_copy_name,
-        template_path=template_path,
+        template_path='',
         quickstart_prefix=quickstart_prefix,
         extra_server_env=extra_server_env,
-        patch_server_conf_bind=False,
-        build_config_callback=build_config_callback,
+        patch_server_conf_bind=True,
+        build_config_callback=build_config,
     )
     return out
 
