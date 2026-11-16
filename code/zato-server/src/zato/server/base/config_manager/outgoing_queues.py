@@ -13,6 +13,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from contextlib import contextmanager, nullcontext
 from threading import RLock
+from time import monotonic
+
+# gevent
+from gevent import sleep
 
 # Zato
 from zato.common.api import PubSub
@@ -22,8 +26,9 @@ from zato.common.pubsub.outgoing import audit_disabled_conn_types, find_outgoing
     get_outgoing_sub_key, get_outgoing_topic_name, locate_outgoing_conn, parse_outgoing_sub_key
 from zato.common.worker_slot import get_worker_slot, is_config_process
 from zato.server.base.config_manager.common import ConfigManagerImpl
+from zato.server.control.hub import ModuleCtx as HubCtx
 from zato.server.outgoing_region import get_outgoing_binding, pause_outgoing_delivery, resume_outgoing_delivery, \
-    SharedPublishLock, SharedQueueDepth
+    SharedNameMark, SharedPublishLock, SharedQueueDepth
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,6 +45,30 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# How long a worker waits for the change that renamed or deleted a connection to reach its configuration,
+# and how often it checks, in seconds
+_name_wait_timeout = HubCtx.Query_Timeout
+_name_wait_interval = 0.01
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class OutgoingNameMark:
+    """ The name marks of a server of one process, whose configuration holds the current name of each connection.
+    """
+
+    def set_name(self, sub_key:'str', conn_name:'str') -> 'None':
+        pass
+
+    def clear(self, sub_key:'str') -> 'None':
+        pass
+
+    def is_current(self, sub_key:'str', conn_name:'str') -> 'bool':
+        return True
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -104,6 +133,7 @@ class OutgoingQueues(ConfigManagerImpl):
     _outgoing_sub_key_lock: 'RLock'
     _outgoing_conn_locks: 'dict[str, publish_lock]'
     outgoing_queue_depth: 'OutgoingQueueDepth | SharedQueueDepth'
+    outgoing_name_mark: 'OutgoingNameMark | SharedNameMark'
 
     init_outgoing_dlqs: 'callable_'
     rename_outgoing_dlq: 'callable_'
@@ -128,8 +158,10 @@ class OutgoingQueues(ConfigManagerImpl):
         # A worker of a server with several workers shares the depths with the other workers
         if binding := get_outgoing_binding():
             self.outgoing_queue_depth = SharedQueueDepth(binding)
+            self.outgoing_name_mark = SharedNameMark(binding)
         else:
             self.outgoing_queue_depth = OutgoingQueueDepth()
+            self.outgoing_name_mark = OutgoingNameMark()
 
         self.init_outgoing_dlqs()
 
@@ -207,12 +239,42 @@ class OutgoingQueues(ConfigManagerImpl):
 
 # ################################################################################################################################
 
+    def _wait_for_current_outgoing_name(self, conn_type:'str', conn_id:'int', sub_key:'str') -> 'None':
+        """ Waits until the configuration of this process holds the name of one outgoing connection that the config process
+        gave it last. The change that renames a connection reaches each worker after the config process released
+        the publish lock of the queue, and a publication under the previous name would go to a topic that no queue reads.
+        """
+        deadline = monotonic() + _name_wait_timeout
+
+        while True:
+
+            # A connection that no longer exists in this process raises here ..
+            conn_name, _ = locate_outgoing_conn(self.server, conn_type, conn_id)
+
+            # .. one under the name that the config process gave it is ready for the publication ..
+            if self.outgoing_name_mark.is_current(sub_key, conn_name):
+                return
+
+            # .. and one whose change did not arrive in time is refused.
+            if monotonic() > deadline:
+                message = f'Outgoing {conn_type} connection `{conn_name}` (id `{conn_id}`) was renamed'
+                message += f' and the change did not reach this process within {_name_wait_timeout}s'
+                raise Exception(message)
+
+            sleep(_name_wait_interval)
+
+# ################################################################################################################################
+
     def ensure_outgoing_subscription(self, conn_type:'str', conn_id:'int') -> 'anytuple':
         """ Makes sure that one outgoing connection has a topic and a queue, returning the topic's name and the connection's
         current name.
         """
         sub_key = get_outgoing_sub_key(conn_type, conn_id)
 
+        # The name of the connection is the one that the config process gave it last ..
+        self._wait_for_current_outgoing_name(conn_type, conn_id, sub_key)
+
+        # .. and the topic is that name's.
         with self._outgoing_sub_key_lock:
 
             conn_name, _ = locate_outgoing_conn(self.server, conn_type, conn_id)
@@ -266,6 +328,12 @@ class OutgoingQueues(ConfigManagerImpl):
         """
         sub_key = get_outgoing_sub_key(conn_type, conn_id)
 
+        # A worker that has not applied the rename yet publishes only once it has, including the first publication
+        # that creates the queue ..
+        if changes_shared_queues():
+            self.outgoing_name_mark.set_name(sub_key, new_name)
+
+        # .. and a connection that was never published to has no topic to move.
         if sub_key not in self._outgoing_sub_key_cache:
             return
 
@@ -298,7 +366,11 @@ class OutgoingQueues(ConfigManagerImpl):
         # The queue is held first, so no round of its delivery moves a message to the DLQ while the DLQ goes away
         with self.hold_outgoing_queue_for_change(conn_type, conn_id):
 
-            # The DLQ goes first, while its queue's lock still exists
+            # A connection created later under the same id starts without a mark ..
+            if changes_shared_queues():
+                self.outgoing_name_mark.clear(sub_key)
+
+            # .. and the DLQ goes first, while its queue's lock still exists.
             self.delete_outgoing_dlq(conn_type, conn_id, conn_name)
 
             if sub_key not in self._outgoing_sub_key_cache:

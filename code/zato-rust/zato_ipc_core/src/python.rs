@@ -151,7 +151,8 @@ pub struct SharedRegion {
     /// in one worker never take each other's wake-ups.
     queue_wake_fds: WakeFds,
 
-    /// The wake-up descriptor of each slot for the keyed locks, which every waiter for a keyed lock in its worker shares.
+    /// The wake-up descriptor of each place of the queues for the keyed locks, the config process included,
+    /// which every waiter for a keyed lock in its process shares.
     lock_wake_fds: WakeFds,
 }
 
@@ -242,7 +243,8 @@ impl SharedRegion {
         let place_count = region.view()?.layout().queue_place_count;
         let queue_wake_count = params.queue_count.checked_mul(place_count).ok_or(RegionError::LayoutTooLarge)?;
         let queue_wake_fds = WakeFds::create(queue_wake_count)?;
-        let lock_wake_fds = WakeFds::create(params.slot_count)?;
+        // The config process takes the keyed locks as well, so a turn that passes to its place wakes it.
+        let lock_wake_fds = WakeFds::create(place_count)?;
 
         let out = Self {
             region,

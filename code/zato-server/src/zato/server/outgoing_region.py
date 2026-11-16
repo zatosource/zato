@@ -11,10 +11,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # of the keyed lock of its sub key, and the publish lock is that keyed lock, which one greenlet of one worker holds
 # at a time, the workers taking turns in the order in which they asked for it. A worker that holds a queue still
 # while the worker of another slot owns its delivery has the owner pause that delivery through a query of the control
-# channel, and resume it once the hold ends.
+# channel, and resume it once the hold ends. The counter of a second keyed entry of each sub key holds the mark
+# of the current name of the connection, which the config process sets under the publish lock when it renames or deletes
+# the connection, and against which a worker checks the name in its own configuration before it publishes.
 
 # stdlib
 from dataclasses import dataclass
+from hashlib import blake2b
 from logging import getLogger
 
 # gevent
@@ -67,6 +70,17 @@ class ModuleCtx:
     # asked for, which stays below the deadline of the query that carries the request
     Relay_Join_Share = 0.6
     Relay_Join_Timeout = HubCtx.Query_Timeout * Relay_Join_Share
+
+    # The keyed entry of the name mark of a sub key is the sub key followed by this suffix
+    Name_Mark_Suffix = '.name-mark'
+
+    # The mark of a name is its digest of this many bytes, which stays below the range of the counter, plus this offset,
+    # so that no mark equals the value of a counter that no process has set
+    Name_Mark_Digest_Size = 7
+    Name_Mark_Offset = 1
+
+    # The value of the counter of a queue whose connection was never renamed, or was deleted, which every name matches
+    Name_Mark_Unset = 0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -136,7 +150,8 @@ _state = OutgoingState()
 # ################################################################################################################################
 
 def bind_outgoing(region:'SharedRegion', slot:'int') -> 'None':
-    """ Gives this process the region of its server for the depths and the publish locks of the outgoing queues.
+    """ Gives this process the region of its server for the depths, the publish locks and the name marks
+    of the outgoing queues, under the slot of a worker or the place of the config process.
     """
     binding = OutgoingBinding()
     binding.region = region
@@ -206,6 +221,60 @@ class SharedQueueDepth:
         for sub_key, count in counts.items():
             entry = self.region.lock_entry(sub_key)
             _ = self.region.lock_counter_init(entry, count)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _get_name_mark(conn_name:'str') -> 'int':
+    digest = blake2b(conn_name.encode('utf8'), digest_size=ModuleCtx.Name_Mark_Digest_Size).digest()
+    out = int.from_bytes(digest) + ModuleCtx.Name_Mark_Offset
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SharedNameMark:
+    """ The mark of the current name of the connection of each outgoing queue, by sub key, across every process of the server.
+    A queue whose connection was never renamed has no mark, which every name matches, and the deletion of a connection
+    clears its mark, because a new connection may receive the id and with it the sub key of the deleted one.
+    """
+
+    def __init__(self, binding:'OutgoingBinding') -> 'None':
+        self.region = binding.region
+
+# ################################################################################################################################
+
+    def _set(self, sub_key:'str', mark:'int') -> 'None':
+        """ Sets the mark of one queue, which only the holder of the publish lock of the queue changes.
+        """
+        entry = self.region.lock_entry(sub_key + ModuleCtx.Name_Mark_Suffix)
+        current = self.region.lock_counter(entry)
+        _ = self.region.lock_counter_replace(entry, current, mark)
+
+# ################################################################################################################################
+
+    def set_name(self, sub_key:'str', conn_name:'str') -> 'None':
+        """ The connection of this queue is now called by this name.
+        """
+        self._set(sub_key, _get_name_mark(conn_name))
+
+# ################################################################################################################################
+
+    def clear(self, sub_key:'str') -> 'None':
+        """ The connection of this queue no longer exists.
+        """
+        self._set(sub_key, ModuleCtx.Name_Mark_Unset)
+
+# ################################################################################################################################
+
+    def is_current(self, sub_key:'str', conn_name:'str') -> 'bool':
+        """ Whether the connection of this queue is still called by this name.
+        """
+        entry = self.region.lock_entry(sub_key + ModuleCtx.Name_Mark_Suffix)
+        mark = self.region.lock_counter(entry)
+
+        out = mark == ModuleCtx.Name_Mark_Unset or mark == _get_name_mark(conn_name)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

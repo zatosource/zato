@@ -38,6 +38,7 @@ from zato.server.config_gate import ChangeGate
 from zato.server.config_runner import bind_config_runner
 from zato.server.control.client import ControlClient
 from zato.server.control.envelope import MessageType, new_message
+from zato.server.outgoing_region import bind_outgoing_control
 from zato.server.worker_liveness import reopen_worker_logs
 
 # ################################################################################################################################
@@ -138,6 +139,9 @@ class ConfigRuntime:
         # .. the control channel is read from now on, and the process exits once the arbiter closes it ..
         reader = self.client.start()
         reader.link(self.on_control_closed)
+
+        # .. the owner of an outgoing queue that a change renames or deletes pauses its delivery on request ..
+        bind_outgoing_control(self.client)
 
         # .. a process that learns that this server is no longer the active one tells the arbiter ..
         set_on_replaced(self.on_replaced)

@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from time import monotonic
 
 # gevent
-from gevent import sleep
+from gevent import sleep, spawn
 
 # SQLAlchemy
 from sqlalchemy import text
@@ -132,6 +132,22 @@ class FaultRun:
 
 # ################################################################################################################################
 
+    def _apply_fault(self, fault:'Fault', level:'int') -> 'None':
+        """ Applies a fault, marking each minute that its application overlaps, because a fault such as a restart
+        of the database keeps the database unavailable for as long as it is being applied.
+        """
+        applying = spawn(fault.apply, level)
+
+        # Each minute that ends while the fault is being applied reports what the fault caused ..
+        while not applying.ready():
+            self._mark_fault_minute(0)
+            sleep(1)
+
+        # .. and an exception raised by the fault propagates to the run.
+        _ = applying.get()
+
+# ################################################################################################################################
+
     def _get_missing(self) -> 'intpair':
         """ How many acknowledged partner messages were not pulled and how many acknowledged broadcasts
         were not pushed to every subscriber.
@@ -230,7 +246,7 @@ class FaultRun:
 
             # .. the fault itself, removed in any case ..
             try:
-                fault.apply(level)
+                self._apply_fault(fault, level)
 
                 if probe:
                     probe.start()

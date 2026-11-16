@@ -46,6 +46,9 @@ class ModuleCtx:
     # How long the receiver is observed for deliveries after the deletion returned, in seconds
     Quiet_Period = 3.0
 
+    # The sequence number of the publication through which each slot confirms that it has the connection
+    Warm_Up_Seq = -1
+
     # How long every slot has to report a value and how long the receiver has to receive every message, in seconds
     Deadline = 60.0
 
@@ -170,8 +173,27 @@ def _get_queue_row(slot:'int', conn_name:'str') -> 'anydict | None':
 
 # ################################################################################################################################
 
+def _wait_for_publication(slot:'int', conn_name:'str') -> 'None':
+    """ Publishes through the worker of a slot until that worker has the connection that the import created.
+    """
+    deadline = monotonic() + ModuleCtx.Deadline
+    request = {'conn_name': conn_name, 'data': {'seq': ModuleCtx.Warm_Up_Seq}}
+
+    while True:
+        status, body = invoke_on_slot(slot, ModuleCtx.Publish_Service, request)
+
+        if status == MultiCPUCtx.Status_OK:
+            return
+
+        if monotonic() > deadline:
+            raise Exception(f'Message not published through slot {slot} -> {status} {body}')
+
+        sleep(MultiCPUCtx.Poll_Interval)
+
+# ################################################################################################################################
+
 def _create_connection(receiver:'_Receiver') -> 'str':
-    """ Creates an outgoing REST connection to the receiver and returns its name once every slot lists its queue.
+    """ Creates an outgoing REST connection to the receiver and returns its name once every slot publishes to its queue.
     """
     out = f'test.multi-cpu.outgoing-change.{uuid4().hex[:12]}'
 
@@ -185,11 +207,8 @@ def _create_connection(receiver:'_Receiver') -> 'str':
         }],
     })
 
-    def _lists_queue(slot:'int') -> 'bool':
-        row = _get_queue_row(slot, out)
-        return row is not None
-
-    wait_for_every_slot(_lists_queue, f'queue of {out}', ModuleCtx.Deadline)
+    for slot in range(MultiCPUTestConfig.worker_count):
+        _wait_for_publication(slot, out)
 
     return out
 

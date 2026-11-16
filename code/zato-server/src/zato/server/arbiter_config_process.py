@@ -23,6 +23,7 @@ from gevent.monkey import get_original
 # Zato
 from zato.common.worker_slot import ModuleCtx as WorkerSlotCtx, set_worker_generation, set_worker_slot
 from zato.server.arbiter_config import ModuleCtx, new_worker_slot, WorkerContext
+from zato.server.outgoing_region import bind_outgoing
 from zato.server.worker_liveness import set_parent_death_signal
 from zato_server_core.zato_server_core import set_process_name
 
@@ -107,9 +108,11 @@ class ConfigSupervisor:
 
                 arbiter.reinit_hub_in_child()
 
-                # .. its log records and audit events name the slot of the config process ..
+                # .. its log records and audit events name the slot of the config process, and its renames and deletes
+                # of outgoing connections take the publish locks of the region under the place of the config process ..
                 set_worker_slot(ctx.slot)
                 set_worker_generation(ctx.generation)
+                bind_outgoing(arbiter.region, arbiter.region.config_place)
 
                 # .. and it runs until it returns.
                 self.main(ctx)
