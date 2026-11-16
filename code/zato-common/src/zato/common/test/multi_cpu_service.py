@@ -407,6 +407,7 @@ class OutconnRename(Service):
             'transport': URL_TYPE.PLAIN_HTTP,
             'host': config['host'],
             'url_path': config['url_path'],
+            'method': config['method'],
             'data_format': config['data_format'],
             'timeout': config['timeout'],
             'ping_method': config['ping_method'],

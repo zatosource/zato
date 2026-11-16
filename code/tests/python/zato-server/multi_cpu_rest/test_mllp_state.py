@@ -27,7 +27,7 @@ from zato.common.test.conftest_base_pubsub import find_free_port
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, strset
+    from zato.common.typing_ import anydict, anylist, strset
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -139,14 +139,16 @@ def _import_channel(channel_name:'str', sending_app:'str') -> 'None':
 
 # ################################################################################################################################
 
-def _get_channel_state(slot:'int', channel_name:'str') -> 'anydict':
+def _get_channel_states(slot:'int', channel_name:'str') -> 'anylist':
+    """ Returns the state of the channel as a slot reports it, which is an empty list until the slot has the channel.
+    """
     status, body = invoke_on_slot(slot, ModuleCtx.State_Service, {'name': channel_name})
 
     if status != MultiCPUCtx.Status_OK:
         raise Exception(f'{ModuleCtx.State_Service} returned {status} through slot {slot} -> {body}')
 
     response = json.loads(body)
-    out = json.loads(response['response_data'])['channels'][0]
+    out = json.loads(response['response_data'])['channels']
     return out
 
 # ################################################################################################################################
@@ -237,7 +239,12 @@ class TestMLLPAcrossWorkers(unittest.TestCase):
 
             # .. and the counters of the channel, read through each slot, cover the messages of every worker.
             def _reports_every_message(slot:'int') -> 'bool':
-                state = _get_channel_state(slot, channel_name)
+                states = _get_channel_states(slot, channel_name)
+
+                if not states:
+                    return False
+
+                state = states[0]
                 out = state['received'] == accepted_count and state['acked'] == accepted_count
                 return out
 

@@ -1,5 +1,12 @@
 channel_rest:
 
+  # The service that returns the slot of the worker that served the request, through which the fixture confirms
+  # that every worker serves the channels of this template
+  - name: test.multi-cpu.audit.worker-slot
+    service: test.multi-cpu.worker-slot
+    url_path: /test/multi-cpu/worker-slot
+    data_format: json
+
   # The service that returns the correlation ID of the request and the slot of the worker that served it,
   # the requests and responses of which the audit log records
   - name: test.multi-cpu.audit.echo

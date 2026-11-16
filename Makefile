@@ -9,7 +9,7 @@
 	stop-dashboard restart-dashboard scheduler queue-bridge on-prem-gateway on-prem-gateway-hub file-listener sftp api-portal api-portal-demo api-portal-tutorial b2b-portal mcp-demo \
 	help install-deps install-fhir-converter \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-rest-outgoing test-rest-perf test-rest-channel test-rest-channel-perf test-scheduler test-scheduler-failover test-ha test-ha-sqlite test-ha-postgresql \
-	test-multi-cpu _multi-cpu-unit _multi-cpu-rest _multi-cpu-config _multi-cpu-rate-limiting _multi-cpu-cache _multi-cpu-scheduler _multi-cpu-hot-deploy _multi-cpu-dashboard _multi-cpu-audit _multi-cpu-audit-postgresql _multi-cpu-singletons _multi-cpu-pubsub _multi-cpu-writer _multi-cpu-faults _multi-cpu-ha _multi-cpu-container _multi-cpu-existing-suites \
+	test-multi-cpu _multi-cpu-unit _multi-cpu-rest _multi-cpu-config _multi-cpu-rate-limiting _multi-cpu-cache _multi-cpu-scheduler _multi-cpu-hot-deploy _multi-cpu-dashboard _multi-cpu-audit _multi-cpu-audit-postgresql _multi-cpu-singletons _multi-cpu-pubsub _multi-cpu-writer _multi-cpu-migration _multi-cpu-faults _multi-cpu-ha _multi-cpu-container _multi-cpu-existing-suites \
 	test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
@@ -787,8 +787,8 @@ test-ha-postgresql: ## Active-standby pair on PostgreSQL - the pair and Kubernet
 	$(call Zato_Test_HA_Suites,$(Zato_Test_HA_PostgreSQL),$(Zato_Test_HA_PostgreSQL_Resume_File))
 
 # The stages of test-multi-cpu in the order they run, and the stage that the run is currently on.
-Zato_Test_Multi_CPU             := _multi-cpu-unit _multi-cpu-rest _multi-cpu-config _multi-cpu-hot-deploy _multi-cpu-dashboard _multi-cpu-audit _multi-cpu-audit-postgresql _multi-cpu-rate-limiting _multi-cpu-cache _multi-cpu-scheduler _multi-cpu-singletons _multi-cpu-pubsub _multi-cpu-writer _multi-cpu-faults _multi-cpu-ha \
-	_multi-cpu-container _multi-cpu-existing-suites
+Zato_Test_Multi_CPU             := _multi-cpu-unit _multi-cpu-rest _multi-cpu-config _multi-cpu-hot-deploy _multi-cpu-dashboard _multi-cpu-audit _multi-cpu-audit-postgresql _multi-cpu-rate-limiting _multi-cpu-cache _multi-cpu-scheduler _multi-cpu-singletons _multi-cpu-pubsub _multi-cpu-writer _multi-cpu-migration _multi-cpu-faults \
+	_multi-cpu-ha _multi-cpu-container _multi-cpu-existing-suites
 Zato_Test_Multi_CPU_Resume_File := $(CURDIR)/code/tests/.test-multi-cpu-resume
 
 # The existing live suites that run again with several workers, the worker count they run with,
@@ -889,6 +889,10 @@ _multi-cpu-pubsub:
 _multi-cpu-writer:
 	$(Zato_Log_Reset)
 	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_writer)
+
+_multi-cpu-migration:
+	$(Zato_Log_Reset)
+	$(call Zato_Test_Multi_CPU_Suites,multi_cpu_migration)
 
 _multi-cpu-faults:
 	$(Zato_Log_Reset)
@@ -1501,6 +1505,10 @@ test-hl7: ## Every HL7 test - parsing, FHIR, MLLP channels, outgoing connections
 		$(CURDIR)/code/tests/python/zato-common/fhir_display/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_fhir -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/multi_cpu_rest/test_mllp_state.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_multi_cpu -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 test-ui: ## Every dashboard test - the UI kit, the rule engine screens, the audit log, the whole Playwright suite and the web-admin access checks.
 	$(Zato_Log_Reset)
@@ -1567,6 +1575,7 @@ test-audit-log: ## Audit log tests against live SQLite, MySQL and PostgreSQL, pl
 		$(CURDIR)/code/tests/python/zato-common/audit_log/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_audit_log \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	$(MAKE) _multi-cpu-audit _multi-cpu-audit-postgresql $(Zato_Log)
 
 test-alerting: ## Alerting engine tests - rules, actions, dedup, lifecycle and collectors, fully offline.
 	$(Zato_Log_Reset)

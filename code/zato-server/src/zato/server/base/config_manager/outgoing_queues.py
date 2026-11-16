@@ -11,7 +11,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from contextlib import contextmanager, nullcontext
+from contextlib import contextmanager
 from threading import RLock
 from time import monotonic
 
@@ -195,12 +195,13 @@ class OutgoingQueues(ConfigManagerImpl):
 # ################################################################################################################################
 
     @contextmanager
-    def hold_outgoing_queue(self, conn_type:'str', conn_id:'int') -> 'any_':
+    def hold_outgoing_queue(self, conn_type:'str', conn_id:'int', resumes_on_success:'bool'=True) -> 'any_':
         """ Holds one connection's queue still for as long as the block runs - nothing is published to it and its delivery
         stops between two rounds, so no message is in flight while the block changes the connection or the messages of its
         queue. A round in flight would otherwise resolve the connection's topics from a configuration the block is replacing,
         or go on with a message the block discarded or replaced. The delivery stops in the worker that owns the queue,
-        whichever worker holds it.
+        whichever worker holds it. Without resumes_on_success, a block that completes leaves the delivery stopped,
+        and only a block that raises starts it again.
         """
         sub_key = get_outgoing_sub_key(conn_type, conn_id)
         delivery = self.server.pubsub_push_delivery
@@ -213,27 +214,61 @@ class OutgoingQueues(ConfigManagerImpl):
             if has_queue:
                 pause_outgoing_delivery(delivery, sub_key)
 
+            is_completed = False
+
             try:
                 yield
+                is_completed = True
             finally:
 
-                # A queue the block deleted has nothing to start again
+                # A queue the block deleted has nothing to start again ..
                 is_still_there = sub_key in self._outgoing_sub_key_cache
 
-                if has_queue and is_still_there:
+                # .. and one whose delivery the caller starts again later stays stopped, unless the block raised.
+                needs_resume = resumes_on_success or not is_completed
+
+                if has_queue and is_still_there and needs_resume:
                     resume_outgoing_delivery(delivery, sub_key)
+
+# ################################################################################################################################
+
+    @contextmanager
+    def pause_outgoing_queue_locally(self, conn_type:'str', conn_id:'int') -> 'any_':
+        """ Stops the delivery of one connection's queue in this worker, if this worker owns the queue, while the worker
+        applies a change that the config process relayed, and starts it again afterwards, unless the change deleted the queue.
+        """
+        sub_key = get_outgoing_sub_key(conn_type, conn_id)
+        delivery = self.server.pubsub_push_delivery
+
+        # A worker that does not own the queue has no delivery greenlet to stop or to start ..
+        delivery.pause_sub_key(sub_key)
+
+        try:
+            yield
+        finally:
+
+            # .. and a queue that the change deleted has nothing to start again.
+            if sub_key in self._outgoing_sub_key_cache:
+                delivery.resume_sub_key(sub_key)
 
 # ################################################################################################################################
 
     def hold_outgoing_queue_for_change(self, conn_type:'str', conn_id:'int') -> 'any_':
         """ Holds one connection's queue through hold_outgoing_queue while a change of configuration renames or deletes it
-        in the process that changes the shared queues. A worker that applies the relayed change holds nothing, because
-        it applies the change on the control channel through which the worker that owns the queue confirms a pause.
+        in the process that changes the shared queues. The config process of a server with several workers leaves
+        the delivery of the owner of the queue stopped, and the owner starts it again once it applied the relayed change,
+        so that no round of the owner runs under the configuration that the change replaces. A worker that applies
+        the relayed change takes no publish lock, because it applies the change on the control channel through which
+        the worker that owns the queue confirms a pause, and stops only a delivery of its own.
         """
-        if changes_shared_queues():
+        if is_config_process():
+            out = self.hold_outgoing_queue(conn_type, conn_id, resumes_on_success=False)
+
+        elif changes_shared_queues():
             out = self.hold_outgoing_queue(conn_type, conn_id)
+
         else:
-            out = nullcontext()
+            out = self.pause_outgoing_queue_locally(conn_type, conn_id)
 
         return out
 

@@ -27,5 +27,8 @@ class SingletonsConfig:
     # The root of the deployment, set by the conftest of the suite
     deploy_root = ''
 
+    # The directory into which audit log retention archives the events it deletes, set by the conftest of the suite
+    archive_dir = ''
+
 # ################################################################################################################################
 # ################################################################################################################################

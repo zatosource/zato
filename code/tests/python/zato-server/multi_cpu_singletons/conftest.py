@@ -14,6 +14,8 @@ from tempfile import mkdtemp
 import yaml
 
 # Zato
+from zato.common.audit_log.common import AuditSource, Env_Retention_Days_Prefix, get_source_env_suffix
+from zato.common.audit_log.retention import Env_Archive_Dir
 from zato.common.test.conftest_base_multi_cpu import create_multi_cpu_server_fixture, get_worker_count, \
     ModuleCtx as MultiCPUCtx, MultiCPUTestConfig, remove_interrupted_run_state
 from zato.common.test.config_multi_cpu_singletons import SingletonsConfig
@@ -64,6 +66,14 @@ def _build_config(
 
     # .. and the start command reads the directory of the file from the environment that the server inherits.
     os.environ[SingletonsConfig.Deploy_From_Env] = SingletonsConfig.deploy_root
+
+    # Audit log retention deletes every event of the REST channels written before it runs,
+    # and archives each event it deletes into a directory of the suite.
+    SingletonsConfig.archive_dir = mkdtemp(prefix='zato_multi_cpu_singletons_archive_')
+
+    rest_channel_suffix = get_source_env_suffix(AuditSource.REST_Channel)
+    os.environ[f'{Env_Retention_Days_Prefix}{rest_channel_suffix}'] = SingletonsConfig.Retention_Days
+    os.environ[Env_Archive_Dir] = SingletonsConfig.archive_dir
 
     out:'anydict' = {
         'placeholders': {},
