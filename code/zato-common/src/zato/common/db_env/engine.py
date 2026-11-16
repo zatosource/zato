@@ -223,11 +223,13 @@ def get_sqlite_file_engine(
     # .. create the schema ..
     metadata.create_all(out)
 
-    # .. start the checkpoints of the WAL that the commits no longer run, in one process of the server ..
+    # .. start the checkpoints of the WAL that the commits no longer run, in one process of the server,
+    # retaining the checkpointer by the engine's key so dispose_sqlite_file_engine can stop its thread ..
     if file_engine.needs_background_checkpoint:
         if is_config_owner():
             checkpointer = WALCheckpointer(out, db_path=db_path)
             checkpointer.start()
+            _checkpointer_cache[cache_key] = checkpointer
 
     # .. and retain the engine for subsequent callers.
     _sqlite_file_engine_cache[cache_key] = out
@@ -245,6 +247,22 @@ def new_unshared_sqlite_file_engine(db_path:'str', *, replicated_database:'str')
 
     out = file_engine.engine
     return out
+
+# ################################################################################################################################
+
+def dispose_sqlite_file_engine(db_path:'str', *, needs_pool:'bool') -> 'None':
+    """ Removes this file's engine from the cache and closes its pooled connections, stopping the background
+    checkpointer first - the next get_sqlite_file_engine call builds a fresh engine.
+    """
+    cache_key = (db_path, needs_pool)
+
+    # The checkpoints of the engine end with it ..
+    if checkpointer := _checkpointer_cache.pop(cache_key, None):
+        checkpointer.stop()
+
+    # .. and an engine that was never built has nothing to close.
+    if engine := _sqlite_file_engine_cache.pop(cache_key, None):
+        engine.dispose()
 
 # ################################################################################################################################
 

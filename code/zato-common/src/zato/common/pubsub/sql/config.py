@@ -12,7 +12,8 @@ import os
 # Zato
 from zato.common.db_env import get_sqlite_file_engine
 from zato.common.db_env.common import Default_Type, EnvDBConfig
-from zato.common.db_env.engine import get_env_engine, new_unshared_env_engine, new_unshared_sqlite_file_engine
+from zato.common.db_env.engine import dispose_env_engine, dispose_sqlite_file_engine, get_env_engine, \
+    new_unshared_env_engine, new_unshared_sqlite_file_engine
 from zato.common.defaults import default_env_base_dir
 from zato.common.ha.common import Database_PubSub
 from zato.common.pubsub.sql.schema import metadata, pubsub_db_file_name
@@ -158,6 +159,20 @@ def new_unshared_pubsub_engine() -> 'Engine':
         out = new_unshared_env_engine(pubsub_db_config)
 
     return out
+
+# ################################################################################################################################
+
+def dispose_pubsub_engine() -> 'None':
+    """ Disposes the shared engine of the pub/sub database, stopping its background checkpointer, so the next
+    get_pubsub_engine call builds a fresh engine and no checkpoint thread is left running.
+    """
+    db_type = get_pubsub_db_type()
+
+    if db_type == Default_Type:
+        db_path = get_pubsub_db_path()
+        dispose_sqlite_file_engine(db_path, needs_pool=True)
+    else:
+        dispose_env_engine(pubsub_db_config)
 
 # ################################################################################################################################
 

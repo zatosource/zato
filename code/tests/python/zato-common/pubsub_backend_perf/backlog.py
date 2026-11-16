@@ -14,7 +14,7 @@ from humanize import intcomma
 
 # Zato
 from common import set_progress_context
-from perf import measure_median_seconds, Max_Operation_Seconds
+from perf import measure_median_seconds, Max_Durable_Operation_Seconds, Max_Operation_Seconds
 from seeding import count_rows, seed_backlog
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 
@@ -82,8 +82,9 @@ def _measure_fetch_median(backend:'SQLPubSubBackend', topic_count:'int') -> 'flo
 # ################################################################################################################################
 
 def _assert_operations_within_bound(backend:'SQLPubSubBackend') -> 'None':
-    """ Every user-visible operation must complete within the 50 ms bound
-    at the full one-million-message backlog.
+    """ Every user-visible operation must complete within its bound at the full one-million-message backlog -
+    the read-only operations within the read bound, and the operations that commit durably within the
+    durable-commit bound, which covers the write-ahead log flush that synchronous=full performs at each commit.
     """
 
     # Publishing into a subscribed topic - one outside the deep subscriber's range
@@ -155,18 +156,27 @@ def _assert_operations_within_bound(backend:'SQLPubSubBackend') -> 'None':
         'count_distinct_publishers': distinct_publishers,
     }
 
+    # The operations that write and commit pay the write-ahead log flush of synchronous=full, so they are held
+    # to the durable-commit bound - the rest are read-only and held to the read bound.
+    commit_bound_operations = {'publish', 'fetch_and_ack'}
+
     for name, operation in operations.items():
         median = measure_median_seconds(operation, _iterations)
 
-        assert median <= Max_Operation_Seconds, \
+        if name in commit_bound_operations:
+            bound = Max_Durable_Operation_Seconds
+        else:
+            bound = Max_Operation_Seconds
+
+        assert median <= bound, \
             f'{name} too slow at the full backlog: median {median * 1000:.1f} ms'
 
 # ################################################################################################################################
 
 def run_backlog_scenario() -> 'None':
-    """ The one-million-message backlog - every user-visible operation stays under 50 ms,
-    fetch latency stays flat between a 10k and a 1M backlog (the index regression detector)
-    and clearing a 100,000-message queue completes within its batch bounds.
+    """ The one-million-message backlog - every read-only operation stays within the read bound and every
+    durable-commit operation within the durable-commit bound, fetch latency stays flat between a 10k and a 1M
+    backlog (the index regression detector) and clearing a 100,000-message queue completes within its batch bounds.
     """
     set_progress_context('backlog', 0, 0)
 

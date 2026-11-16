@@ -28,8 +28,9 @@ from sqlalchemy import func, select
 # Zato
 from perf import silence_logging_teardown, Max_Operation_Seconds, Min_Delivery_Rate_Per_Second, \
     Min_Publish_Rate_Per_Second, Progress_Interval_Seconds
-from zato.common.pubsub.sql.config import get_pubsub_engine, ModuleCtx
+from zato.common.pubsub.sql.config import dispose_pubsub_engine, get_pubsub_engine, ModuleCtx
 from zato.common.pubsub.sql.schema import topic_sub_table
+from zato.common.util.memory_trim import stop_memory_trimmer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -260,9 +261,10 @@ def cleanup_sqlite_db(db_path:'str') -> 'None':
     which at mass scale would hold many gigabytes.
     """
 
-    # Release all pooled connections first so the files can be removed ..
-    engine = get_pubsub_engine()
-    engine.dispose()
+    # Release all pooled connections and stop the background threads first, so the files can be removed
+    # and no checkpoint or trimmer thread outlives the test ..
+    dispose_pubsub_engine()
+    stop_memory_trimmer()
 
     # .. and remove the database along with its WAL companions.
     for suffix in ('', '-wal', '-shm'):

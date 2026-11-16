@@ -15,6 +15,7 @@ from sqlalchemy.exc import DBAPIError
 # Zato
 from common import delete_all_rows, get_delivery_rows, get_message_rows
 from zato.common.db_env.common import Type_PostgreSQL
+from zato.common.db_env.engine import _sqlite_write_locks
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.writes import new_pending_ack, PubSubDuplicateMsgID, PubSubWriter
 from zato.common.typing_ import cast_
@@ -40,6 +41,17 @@ _caller_count = 200
 
 # How many callers try to claim the same message.
 _claimer_count = 20
+
+# The topic and subscriber of the concurrent-clear assertion.
+_clear_topic = 'pubsub.backend.test.concurrency.clear'
+_clear_sub_key = 'zpsk.test.concurrency.clear'
+
+# How many pending messages the cleared queue holds before the clear starts.
+_clear_backlog = 200
+
+# How long the writer lock is held while a concurrent clear is watched for progress, in seconds - long enough
+# that a clear running outside the serialization would finish within it many times over.
+_clear_block_seconds = 0.5
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -396,6 +408,62 @@ def _run_concurrent_claim_flow() -> 'None':
 
 # ################################################################################################################################
 
+def _clear_queue_into(backend:'SQLPubSubBackend', sub_key:'str', result:'anydict') -> 'None':
+    """ Clears one subscriber's queue and records the outcome, so the greenlet running it can be watched for progress.
+    """
+    result['cleared'] = backend.clear_queue(sub_key)
+
+# ################################################################################################################################
+
+def _run_concurrent_clear_flow() -> 'None':
+    """ A clear commits in turn with the server's other writes to the SQLite file, taking the same in-process
+    writer lock they take, rather than opening a raw transaction that races the single writer lock and fails with
+    a locked database when a turn waits longer than the busy timeout. The serialization is shown by holding that
+    writer lock and watching a concurrent clear make no progress until the lock is released - a clear that wrote
+    outside the serialization would empty the queue regardless of the held lock. PostgreSQL has no single writer
+    lock and its concurrent clears take different rows, so there the clear simply succeeds.
+    """
+    delete_all_rows()
+
+    backend = SQLPubSubBackend()
+    backend.subscribe(_clear_sub_key, _clear_topic)
+
+    # A backlog to clear, published through the writer, which is also what creates the in-process writer lock ..
+    for index in range(_clear_backlog):
+        _ = backend.publish(_clear_topic, f'clear-seed-{index}')
+
+    assert len(get_delivery_rows(_clear_sub_key)) == _clear_backlog
+
+    # PostgreSQL does not serialize writes in process, so the held-lock assertion is specific to SQLite.
+    if backend.engine.dialect.name == Type_PostgreSQL:
+        _ = backend.clear_queue(_clear_sub_key)
+        assert get_delivery_rows(_clear_sub_key) == []
+        return
+
+    writer_lock = _sqlite_write_locks[str(backend.engine.url)]
+    result:'anydict' = {}
+
+    # Hold the writer lock, then start a clear - its first batch blocks on the lock before it reads or deletes ..
+    _ = writer_lock.acquire()
+
+    greenlet = gevent.spawn(_clear_queue_into, backend, _clear_sub_key, result)
+
+    # .. so after a pause long enough for an unserialized clear to finish many times over, the queue is untouched ..
+    _ = gevent.sleep(_clear_block_seconds)
+
+    assert 'cleared' not in result
+    assert len(get_delivery_rows(_clear_sub_key)) == _clear_backlog
+
+    # .. and only once the lock is released does the clear take its turn and empty the queue.
+    _ = writer_lock.release()
+
+    _ = gevent.joinall([greenlet], raise_error=True)
+
+    assert result['cleared']['cleared_count'] == _clear_backlog
+    assert get_delivery_rows(_clear_sub_key) == []
+
+# ################################################################################################################################
+
 def run_concurrency_scenario() -> 'None':
     """ Concurrent publications and acknowledgements, written in shared commits.
     """
@@ -405,6 +473,7 @@ def run_concurrency_scenario() -> 'None':
     _run_concurrent_ack_flow()
     _run_disjoint_ack_flow()
     _run_concurrent_claim_flow()
+    _run_concurrent_clear_flow()
 
 # ################################################################################################################################
 # ################################################################################################################################

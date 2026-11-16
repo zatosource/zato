@@ -72,9 +72,11 @@ class MemoryTrimmer:
 # ################################################################################################################################
 
     def stop(self) -> 'None':
-        """ Stops releasing the free memory after the release in progress, if any.
+        """ Stops releasing the free memory after the release in progress, if any, and waits for the thread to end
+        so that no trimmer thread survives into a process that forks workers.
         """
         self._stop_event.set()
+        self._thread.join()
 
 # ################################################################################################################################
 
@@ -123,6 +125,16 @@ def start_memory_trimmer() -> 'None':
 
     ModuleCtx.Trimmer = MemoryTrimmer()
     ModuleCtx.Trimmer.start()
+
+# ################################################################################################################################
+
+def stop_memory_trimmer() -> 'None':
+    """ Stops the trimmer of this process and waits for its thread to end, if one is running, so that a process
+    which forks workers carries no trimmer thread into them.
+    """
+    if ModuleCtx.Trimmer:
+        ModuleCtx.Trimmer.stop()
+        ModuleCtx.Trimmer = None
 
 # ################################################################################################################################
 # ################################################################################################################################

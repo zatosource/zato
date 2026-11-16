@@ -15,6 +15,7 @@ from sqlalchemy import and_, BigInteger, cast, func, select
 
 # Zato
 from zato.common.api import PubSub
+from zato.common.db_env.engine import call_database
 from zato.common.pubsub.sql.browse import SQLBrowseAPI
 from zato.common.pubsub.sql.config import get_batch_size
 from zato.common.pubsub.sql.counts import Milliseconds_Per_Minute, No_Publisher
@@ -25,7 +26,8 @@ from zato.common.pubsub.sql.schema import delivery_table, message_table, publish
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, dictlist, intlist, strlist
+    from sqlalchemy.engine import Engine
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, dictlist, intlist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -370,47 +372,22 @@ class SQLAdminAPI(SQLBrowseAPI):
         batch_size = get_batch_size()
         cleared_count = 0
 
-        # Work in bounded batches ..
+        # Work in bounded batches, each committed in turn with the server's other writes to this file.
+        # Many queues cleared at once then take orderly turns at the single SQLite writer rather than
+        # racing its lock and timing out when a turn waits longer than the busy timeout allows ..
         while True:
 
             batch_started = monotonic()
 
-            with self.engine.begin() as connection:
+            rows_found, batch_cleared = call_database(self.engine, self._clear_queue_batch, self.engine, sub_key, batch_size)
 
-                # .. take the next batch of this subscriber's delivery rows ..
-                query = select(delivery_table.c.id)
-                query = query.where(delivery_table.c.sub_key == sub_key)
-                query = query.limit(batch_size)
+            cleared_count += batch_cleared
 
-                rows = connection.execute(query).fetchall()
+            # .. an empty read means the queue holds no more pending rows ..
+            if not rows_found:
+                break
 
-                if not rows:
-                    break
-
-                delivery_ids:'intlist' = []
-
-                for row in rows:
-                    delivery_ids.append(row.id)
-
-                # .. remove the delivery rows that still exist - a consumer may have acknowledged some of them
-                # .. after the batch was read, and those count as delivered, not as cleared ..
-                delete_statement = delivery_table.delete()
-                delete_statement = delete_statement.where(delivery_table.c.id.in_(delivery_ids))
-                delete_statement = delete_statement.returning(delivery_table.c.message_id)
-
-                deleted_rows = connection.execute(delete_statement).fetchall()
-
-                message_ids:'intlist' = []
-
-                for deleted_row in deleted_rows:
-                    message_ids.append(deleted_row.message_id)
-
-                # .. and drop the payloads of messages no subscriber needs anymore.
-                _ = self._drop_fully_delivered_payloads(connection, message_ids)
-
-                cleared_count += len(message_ids)
-
-            # Let the other greenlets run between the batches.
+            # .. let the other greenlets run between the batches.
             self._yield_after_batch(monotonic() - batch_started)
 
         logger.info('clear_queue -> sub_key:%s, cleared_count:%d', sub_key, cleared_count)
@@ -420,6 +397,48 @@ class SQLAdminAPI(SQLBrowseAPI):
         }
 
         return out
+
+# ################################################################################################################################
+
+    def _clear_queue_batch(self, engine:'Engine', sub_key:'str', batch_size:'int') -> 'anytuple':
+        """ Clears one bounded batch of a subscriber's pending delivery rows in a transaction of its own.
+        Returns whether the read found any rows, so the caller knows whether the queue still has more,
+        and how many messages the batch cleared.
+        """
+        with engine.begin() as connection:
+
+            # Take the next batch of this subscriber's delivery rows ..
+            query = select(delivery_table.c.id)
+            query = query.where(delivery_table.c.sub_key == sub_key)
+            query = query.limit(batch_size)
+
+            rows = connection.execute(query).fetchall()
+
+            if not rows:
+                return False, 0
+
+            delivery_ids:'intlist' = []
+
+            for row in rows:
+                delivery_ids.append(row.id)
+
+            # .. remove the delivery rows that still exist - a consumer may have acknowledged some of them
+            # .. after the batch was read, and those count as delivered, not as cleared ..
+            delete_statement = delivery_table.delete()
+            delete_statement = delete_statement.where(delivery_table.c.id.in_(delivery_ids))
+            delete_statement = delete_statement.returning(delivery_table.c.message_id)
+
+            deleted_rows = connection.execute(delete_statement).fetchall()
+
+            message_ids:'intlist' = []
+
+            for deleted_row in deleted_rows:
+                message_ids.append(deleted_row.message_id)
+
+            # .. and drop the payloads of messages no subscriber needs anymore.
+            _ = self._drop_fully_delivered_payloads(connection, message_ids)
+
+            return True, len(message_ids)
 
 # ################################################################################################################################
 

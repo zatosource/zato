@@ -16,8 +16,9 @@ from gevent import joinall, sleep, spawn
 from humanize import intcomma
 
 # Zato
-from common import get_min_delivery_rate, get_min_publish_rate, set_progress_context
+from common import get_min_publish_rate, set_progress_context
 from documents import get_document_mix
+from perf import Min_Document_Delivery_Rate_Per_Second
 from load import consume_until_done
 from seeding import delete_all_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
@@ -159,7 +160,8 @@ def run_document_mix_scenario() -> 'None':
     average_kb = counters['published_bytes'] / _document_count / 1000
 
     assert publish_rate >= get_min_publish_rate(), f'Document mix publish rate too low: {intcomma(int(publish_rate))}/s'
-    assert delivery_rate >= get_min_delivery_rate(), f'Document mix delivery rate too low: {intcomma(int(delivery_rate))}/s'
+    assert delivery_rate >= Min_Document_Delivery_Rate_Per_Second, \
+        f'Document mix delivery rate too low: {intcomma(int(delivery_rate))}/s'
 
     message = f'Document mix: {intcomma(int(publish_rate))} publishes/s at {intcomma(int(publish_mb_rate))} MB/s,'
     message += f' {intcomma(int(delivery_rate))} deliveries/s, average document {intcomma(int(average_kb))} KB'

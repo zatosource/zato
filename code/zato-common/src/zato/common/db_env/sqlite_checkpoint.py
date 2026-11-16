@@ -91,9 +91,11 @@ class WALCheckpointer:
 # ################################################################################################################################
 
     def stop(self) -> 'None':
-        """ Stops checkpointing the log after the checkpoint in progress, if any.
+        """ Stops checkpointing the log after the checkpoint in progress, if any, and waits for the thread to end
+        so that no checkpoint thread survives into a process that forks workers.
         """
         self._stop_event.set()
+        self._thread.join()
 
 # ################################################################################################################################
 
