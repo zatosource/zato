@@ -2250,3 +2250,7 @@ hl7-scenario-lab: ## The laboratory scenario - the LIS orders on an analyzer and
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 hl7-scenarios: hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab ## Every live clinical scenario, one after another.
+
+# ----------------------------------------------------------------------------
+# The targets of the repositories linked to this installation, one makefile for each in links/.
+include $(wildcard $(CURDIR)/links/*.mk)

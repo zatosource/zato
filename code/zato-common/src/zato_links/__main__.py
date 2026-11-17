@@ -31,6 +31,9 @@ _pth_line = 'import zato_links.finder; zato_links.finder.install()\n'
 # The indentation of a stored link file
 _link_indent = 4
 
+# The suffix of the makefile through which the Zato Makefile includes the targets of a linked repository
+_makefile_suffix = '.mk'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -65,7 +68,7 @@ def add_link(manifest_path:'str') -> 'None':
     with open(link_path, 'w') as link_file:
         dump(link, link_file, indent=_link_indent)
 
-    # .. and each Python process of this installation reads it when it starts.
+    # .. each Python process of this installation reads it when it starts ..
     site_packages_dir = sysconfig.get_path('purelib')
     pth_path = os.path.join(site_packages_dir, _pth_name)
 
@@ -73,6 +76,18 @@ def add_link(manifest_path:'str') -> 'None':
         _ = pth_file.write(_pth_line)
 
     print(f'Link `{name}` stored in {link_path}')
+
+    # .. and the Zato Makefile includes the targets of a repository that has any.
+    if makefile := manifest.get('makefile'):
+        makefile = os.path.join(repository_dir, makefile)
+
+        makefile_name = name + _makefile_suffix
+        makefile_link_path = os.path.join(ModuleCtx.Links_Dir, makefile_name)
+
+        with open(makefile_link_path, 'w') as makefile_link_file:
+            _ = makefile_link_file.write(f'include {makefile}\n')
+
+        print(f'Targets of `{name}` stored in {makefile_link_path}')
 
 # ################################################################################################################################
 # ################################################################################################################################
