@@ -287,28 +287,37 @@ class PubSubWriter:
             else:
                 leases.append(item)
 
+        # Each acknowledged message, with the acknowledgement that its full delivery counts towards
+        ack_by_message_id:'anydict' = {}
+
         with engine.begin() as connection:
 
             if publications:
                 self._insert_publications(connection, publications)
 
             if acks:
-                self._delete_acks(connection, acks)
+                self._delete_acks(connection, acks, ack_by_message_id)
 
             # Each fenced acknowledgement commits with its publications or not at all, without failing the others ..
             for atomic in atomics:
-                self._write_atomic(connection, atomic)
+                self._write_atomic(connection, atomic, ack_by_message_id)
 
-            # .. and a pull leases nothing that this transaction has acknowledged already.
+            # .. a pull leases nothing that this transaction has acknowledged already ..
             for lease in leases:
                 rows, attempts = lease_messages(
                     connection, lease.sub_key, lease.max_messages, lease.max_len, lease.now_ms, lease.leased_until_ms)
                 lease.rows = rows
                 lease.attempts = attempts
 
+            # .. and the payloads are dropped last. Dropping one holds the delivery rows of the other subscribers
+            # of its message until the commit, so a transaction that locked a delivery row after a drop could wait
+            # for one that waits for it in turn.
+            if ack_by_message_id:
+                self._drop_payloads(connection, ack_by_message_id)
+
 # ################################################################################################################################
 
-    def _write_atomic(self, connection:'Connection', atomic:'PendingAtomic') -> 'None':
+    def _write_atomic(self, connection:'Connection', atomic:'PendingAtomic', ack_by_message_id:'anydict') -> 'None':
         """ Writes a fenced acknowledgement with its publications in the caller's transaction. Each reason for which
         the item fails is checked before anything of it is written, so that an item that fails writes nothing,
         and on PostgreSQL the item is also enclosed in a savepoint, against a concurrent commit that changes
@@ -355,6 +364,10 @@ class PubSubWriter:
 
         if savepoint:
             savepoint.commit()
+
+        # The full delivery of a message counts towards the last acknowledgement that removed one of its rows
+        for message_id in fenced_rows.message_ids:
+            ack_by_message_id[message_id] = atomic.ack
 
 # ################################################################################################################################
 
@@ -578,11 +591,11 @@ class PubSubWriter:
 
 # ################################################################################################################################
 
-    def _delete_acks(self, connection:'Connection', acks:'pending_ack_list') -> 'None':
-        """ Removes the delivery rows the acknowledgements are about and drops the payloads of the messages
-        that no subscriber needs anymore. A row that two acknowledgements of one commit are about counts
-        towards the first of them, and a message that became fully delivered counts towards the last acknowledgement
-        that removed one of its rows, or, with no such acknowledgement, the first one that was about it.
+    def _delete_acks(self, connection:'Connection', acks:'pending_ack_list', ack_by_message_id:'anydict') -> 'None':
+        """ Removes the delivery rows the acknowledgements are about and records each of their messages with the
+        acknowledgement that its full delivery counts towards. A row that two acknowledgements of one commit are about
+        counts towards the first of them, and a message counts towards the last acknowledgement that removed one
+        of its rows, or, with no such acknowledgement, the first one that was about it.
         """
         message_ids_by_ack = self._resolve_ack_message_ids(connection, acks)
 
@@ -629,9 +642,7 @@ class PubSubWriter:
             for row in _delivery_delete_plain.execute(connection, {'ack_delivery_ids': chunk}):
                 removed_ids.add(row.id)
 
-        # .. assign each removed row to the acknowledgement that removed it ..
-        ack_by_message_id:'anydict' = {}
-
+        # .. and assign each removed row to the acknowledgement that removed it.
         for pending, message_ids in zip(acks, message_ids_by_ack):
             for message_id in message_ids:
 
@@ -645,8 +656,15 @@ class PubSubWriter:
                 elif message_id not in ack_by_message_id:
                     ack_by_message_id[message_id] = pending
 
-        # .. and drop the payloads of the messages that no subscriber needs anymore.
-        for message_id in drop_payloads(connection, all_message_ids):
+# ################################################################################################################################
+
+    def _drop_payloads(self, connection:'Connection', ack_by_message_id:'anydict') -> 'None':
+        """ Drops the payloads of the acknowledged messages that no subscriber needs anymore, each counting
+        as fully delivered towards its acknowledgement.
+        """
+        message_ids = list(ack_by_message_id)
+
+        for message_id in drop_payloads(connection, message_ids):
             pending = ack_by_message_id[message_id]
             pending.fully_delivered_count += 1
 

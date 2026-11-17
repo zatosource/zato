@@ -33,7 +33,7 @@ from zato.common.db_env.pg8000_wire import install as install_pg8000_wire
 from zato.common.db_env.process_queue import ProcessQueue
 from zato.common.db_env.sqlite_checkpoint import set_background_checkpoint_limit, WALCheckpointer
 from zato.common.defaults import default_env_base_dir
-from zato.common.ha.sqlite import holds_log_for_node, ReplicatedConnection, ReplicatedPragmas
+from zato.common.ha.sqlite import holds_log_for_node, ReplicatedConnection, set_replicated_pragmas
 from zato.common.worker_slot import is_config_owner
 
 # ################################################################################################################################
@@ -42,7 +42,7 @@ from zato.common.worker_slot import is_config_owner
 if 0:
     from sqlalchemy import MetaData
     from sqlalchemy.engine import Engine
-    from zato.common.db_env.common import EnvDBConfig
+    from zato.common.db_env.common import EnvDBConfig, metadata_tuple
     from zato.common.typing_ import any_, anydict, anytuple, callable_, strintdict, strlist, stranydict, strtuple
     from zato_ipc_core.zato_ipc_core import SharedRegion
 
@@ -52,6 +52,7 @@ if 0:
     Engine = Engine
     EnvDBConfig = EnvDBConfig
     MetaData = MetaData
+    metadata_tuple = metadata_tuple
     SharedRegion = SharedRegion
     strintdict = strintdict
     strlist = strlist
@@ -84,14 +85,14 @@ install_pg8000_copy()
 # SQLite file engines are cached per path and pool mode
 _sqlite_file_engine_cache:'anydict' = {}
 
-# The thread locks under which the writes of this process to one SQLite file run one at a time, by the URL of the file.
-# The busy timeout of SQLite does not queue its waiters, and with a hundred threads writing at once
+# The thread locks under which the writes of this process to one SQLite file run one at a time, by the real path
+# of the file. The busy timeout of SQLite does not queue its waiters, and with a hundred threads writing at once
 # a single thread can wait past the timeout.
 _sqlite_write_locks:'anydict' = {}
 
 # The queues of the shared region in which the worker and the config process of one server take turns for the writes
-# to one SQLite file, by the URL of the file. The thread lock of the file admits one thread of a process to the queue
-# at a time, and a process that no arbiter started has no queues.
+# to one SQLite file, by the real path of the file. The thread lock of the file admits one thread of a process
+# to the queue at a time, and a process that no arbiter started has no queues.
 _process_queues:'anydict' = {}
 
 # The lock of the threads of the operating system, which the threads of the gevent pool require.
@@ -147,10 +148,10 @@ def _new_sqlite_file_engine(
     *,
     needs_pool:'bool',
     needs_background_checkpoint:'bool',
-    replicated_database:'str',
+    is_replicated:'bool',
     ) -> '_EnvEngine':
     """ Builds an SQLAlchemy engine for a SQLite file, with the settings of its connections, and says whether its WAL
-    is to be checkpointed in the background, which a file that the active-standby node replicates under the given name is not.
+    is to be checkpointed in the background, which a file that the active-standby node replicates is not.
     """
 
     # Create the file's directory ..
@@ -166,7 +167,7 @@ def _new_sqlite_file_engine(
         engine_kwargs['poolclass'] = QueuePool
 
     # .. a file whose log the active-standby node holds is checkpointed by the node only ..
-    is_log_held = holds_log_for_node(replicated_database)
+    is_log_held = holds_log_for_node(is_replicated)
 
     if is_log_held:
         needs_background_checkpoint = False
@@ -177,8 +178,7 @@ def _new_sqlite_file_engine(
     engine = create_engine(engine_url, connect_args=connect_args, **engine_kwargs)
 
     if is_log_held:
-        replicated_pragmas = ReplicatedPragmas(replicated_database)
-        sa_event.listen(engine, 'connect', replicated_pragmas.on_connect)
+        sa_event.listen(engine, 'connect', set_replicated_pragmas)
 
     sa_event.listen(engine, 'connect', set_sqlite_pragmas)
 
@@ -191,7 +191,7 @@ def _new_sqlite_file_engine(
 
 # ################################################################################################################################
 
-def _create_sqlite_schema(db_path:'str', engine:'Engine', metadata:'MetaData') -> 'None':
+def _create_sqlite_schema(db_path:'str', engine:'Engine', metadata_tuple:'metadata_tuple') -> 'None':
     """ Creates the tables of a SQLite file that do not exist yet under an exclusive lock of a file beside it,
     so that processes that open a new file at the same time take turns in setting its journal mode and in creating
     its tables. Without the lock, each of them finds a table missing and creates it, and SQLite refuses the change
@@ -201,7 +201,9 @@ def _create_sqlite_schema(db_path:'str', engine:'Engine', metadata:'MetaData') -
 
     with open(lock_path, 'a') as lock_file:
         fcntl.flock(lock_file, fcntl.LOCK_EX)
-        metadata.create_all(engine)
+
+        for metadata in metadata_tuple:
+            metadata.create_all(engine)
 
 # ################################################################################################################################
 
@@ -211,10 +213,9 @@ def get_sqlite_file_engine(
     *,
     needs_pool:'bool',
     needs_background_checkpoint:'bool',
-    replicated_database:'str',
     ) -> 'Engine':
-    """ Returns an SQLAlchemy engine for a SQLite file and creates its schema if needed. A file that the active-standby
-    node replicates under the given name is checkpointed by the node only.
+    """ Returns an SQLAlchemy engine for a SQLite file that the active-standby node does not replicate,
+    and creates its schema if needed.
     """
 
     # Reuse the engine for this file and pool mode ..
@@ -226,12 +227,13 @@ def get_sqlite_file_engine(
 
     # .. build the engine ..
     file_engine = _new_sqlite_file_engine(db_path, needs_pool=needs_pool,
-        needs_background_checkpoint=needs_background_checkpoint, replicated_database=replicated_database)
+        needs_background_checkpoint=needs_background_checkpoint, is_replicated=False)
 
     out = file_engine.engine
 
     # .. create the schema ..
-    _create_sqlite_schema(db_path, out, metadata)
+    metadata_tuple = (metadata,)
+    _create_sqlite_schema(db_path, out, metadata_tuple)
 
     # .. start the checkpoints of the WAL that the commits no longer run, in one process of the server,
     # retaining the checkpointer by the engine's key so dispose_sqlite_file_engine can stop its thread ..
@@ -245,34 +247,6 @@ def get_sqlite_file_engine(
     _sqlite_file_engine_cache[cache_key] = out
 
     return out
-
-# ################################################################################################################################
-
-def new_unshared_sqlite_file_engine(db_path:'str', *, replicated_database:'str') -> 'Engine':
-    """ Returns an engine of a SQLite file that no other caller receives and that runs no background checkpoints,
-    which its caller disposes, e.g. the arbiter before it forks the worker and the config process.
-    """
-    file_engine = _new_sqlite_file_engine(db_path, needs_pool=False, needs_background_checkpoint=False,
-        replicated_database=replicated_database)
-
-    out = file_engine.engine
-    return out
-
-# ################################################################################################################################
-
-def dispose_sqlite_file_engine(db_path:'str', *, needs_pool:'bool') -> 'None':
-    """ Removes this file's engine from the cache and closes its pooled connections, stopping the background
-    checkpointer first - the next get_sqlite_file_engine call builds a fresh engine.
-    """
-    cache_key = (db_path, needs_pool)
-
-    # The checkpoints of the engine end with it ..
-    if checkpointer := _checkpointer_cache.pop(cache_key, None):
-        checkpointer.stop()
-
-    # .. and an engine that was never built has nothing to close.
-    if engine := _sqlite_file_engine_cache.pop(cache_key, None):
-        engine.dispose()
 
 # ################################################################################################################################
 

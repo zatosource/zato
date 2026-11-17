@@ -190,7 +190,14 @@ class ScenarioRun:
         waiting_peak = progress.peaks[_waiting_name]
 
         report.add_value('Publishers', f'{self.scenario.publisher_count}')
-        report.add_value('Subscribers', f'{self.scenario.subscriber_count}, each with its own subscription')
+        subscriber_count = self.scenario.subscriber_count
+
+        if subscriber_count == 1:
+            subscribers = f'{subscriber_count}, with its own subscription'
+        else:
+            subscribers = f'{subscriber_count}, each with its own subscription'
+
+        report.add_value('Subscribers', subscribers)
         report.add_rate('Publications', published_count, published_seconds, 'publications')
         report.add_rate('Deliveries', delivered_count, settled_seconds, 'deliveries')
         report.add_value('Lost deliveries', f'{check.lost_count}')

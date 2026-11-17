@@ -7,11 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from pubsub_perf.config import Level_Scenarios
+from pubsub_perf.config import get_scenario_name, Level_Scenarios
 from pubsub_perf.progress import PerfReport, Progress
 from pubsub_perf.runner import new_prefix, run_scenario
 from pubsub_perf.scenario import report_and_verify, ScenarioRun
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -22,7 +21,7 @@ if 0:
 # ################################################################################################################################
 
 # How long the publishers of each level publish, in seconds
-_level_duration = 15.0
+_level_duration = 20.0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,7 +35,7 @@ def test_concurrency_levels(zato_server:'any_') -> 'None':
 
     for scenario in Level_Scenarios:
 
-        level_name = f'{test_name} at {scenario.publisher_count} publishers and {scenario.subscriber_count} subscribers'
+        level_name = get_scenario_name(test_name, scenario)
 
         prefix = new_prefix()
         run = ScenarioRun(scenario, prefix)

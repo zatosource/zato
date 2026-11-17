@@ -17,8 +17,10 @@ import yaml
 
 _current_dir = os.path.dirname(os.path.abspath(__file__))
 _server_tests_dir = os.path.dirname(_current_dir)
+_common_lib_dir = os.path.join(os.path.dirname(_server_tests_dir), 'zato-common', 'lib')
 
 sys.path.insert(0, _server_tests_dir)
+sys.path.insert(0, _common_lib_dir)
 
 # Zato
 from pubsub_perf.config import All_Scenarios, Credentials, credentialslist, PerfConfig, Receipts_Topic

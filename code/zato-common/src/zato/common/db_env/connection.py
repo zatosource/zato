@@ -75,11 +75,13 @@ def set_sqlite_pragmas(dbapi_connection:'any_', connection_record:'any_') -> 'No
     Secure deletion in its fast form zeroes deleted content on the pages a delete writes anyway and leaves freed
     overflow pages as they are, because SQLite builds that enable full secure deletion by default otherwise write
     each freed page of a large payload again, which doubles the cost of every commit that removes message bodies.
+    Foreign keys are enforced, as on PostgreSQL.
     """
     cursor = dbapi_connection.cursor()
     _ = cursor.execute('pragma journal_mode=wal')
     _ = cursor.execute('pragma synchronous=full')
     _ = cursor.execute('pragma secure_delete=fast')
+    _ = cursor.execute('pragma foreign_keys=on')
     _ = cursor.execute(f'pragma busy_timeout={SQLite_Busy_Timeout_Ms}')
     cursor.close()
 
@@ -111,9 +113,11 @@ def set_postgresql_keepalive(dbapi_connection:'any_', connection_record:'any_') 
 
 def set_postgresql_session(dbapi_connection:'any_', connection_record:'any_') -> 'None':
     """ Ends a session that holds a transaction open without activity, so that a client which stopped
-    responding in the middle of a transaction does not keep its row locks indefinitely.
+    responding in the middle of a transaction does not keep its row locks indefinitely. Each commit of the session
+    returns only once its write-ahead log record is flushed to disk, whatever the configuration of the server.
     """
     cursor = dbapi_connection.cursor()
+    _ = cursor.execute('set synchronous_commit = on')
     _ = cursor.execute(f"set idle_in_transaction_session_timeout = '{_idle_in_transaction_timeout_ms}ms'")
     cursor.close()
     dbapi_connection.commit()

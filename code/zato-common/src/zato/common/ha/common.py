@@ -38,25 +38,11 @@ class ModuleCtx:
     # The value of the mode variable that turns the active-standby mode on
     Mode_Active_Standby = 'active-standby'
 
-    # The type of the pub/sub database, which selects the storage mode of the node
-    Env_PubSub_DB_Type = 'Zato_PubSub_DB_Type'
+    # The type of the Zato database, which selects the storage mode of the node
+    Env_Database_Type = 'Zato_Database_Type'
 
-    # The type of the pub/sub database under which both hosts of a pair use one PostgreSQL database
-    PubSub_DB_Type_PostgreSQL = 'postgresql'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# The names under which the node replicates each database.
-Database_PubSub = 'pubsub'
-Database_Common = 'common'
-Database_Audit  = 'audit'
-
-# The name of a database that the node does not replicate.
-Not_Replicated = ''
-
-# The databases whose commits return only once the standby has stored them.
-Synchronous_Databases = (Database_PubSub, Database_Common)
+    # The type of the Zato database under which both hosts of a pair use one PostgreSQL database
+    Database_Type_PostgreSQL = 'postgresql'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,9 +61,9 @@ def is_shared_storage() -> 'bool':
     """ Returns whether both hosts of the pair use one PostgreSQL database, in which case the node replicates
     no database of its host.
     """
-    db_type = os.environ.get(ModuleCtx.Env_PubSub_DB_Type, '')
+    db_type = os.environ.get(ModuleCtx.Env_Database_Type, '')
 
-    out = db_type == ModuleCtx.PubSub_DB_Type_PostgreSQL
+    out = db_type == ModuleCtx.Database_Type_PostgreSQL
     return out
 
 # ################################################################################################################################

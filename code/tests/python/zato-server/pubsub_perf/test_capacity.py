@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from pubsub_perf.config import Capacity_Scenario, Faults_Scenario
+from pubsub_perf.config import Capacity_Scenario, Faults_Scenario, get_scenario_name
 from pubsub_perf.progress import PerfReport, Progress
 from pubsub_perf.runner import new_prefix, run_scenario
 from pubsub_perf.scenario import report_and_verify, ScenarioRun
@@ -22,8 +22,8 @@ if 0:
 # ################################################################################################################################
 
 # How long the publishers of each test publish, in seconds
-_capacity_duration = 15.0
-_faults_duration   = 15.0
+_capacity_duration = 30.0
+_faults_duration   = 60.0
 
 # How many times the worker is killed while the publishers publish
 _worker_kills = 3
@@ -35,7 +35,7 @@ def test_publishers_to_subscribers(zato_server:'any_') -> 'None':
     """ Sixteen publishers publish to one topic as fast as the server accepts, and sixteen subscribers, each with
     a subscription of its own, receive every message. Each subscriber processes each message exactly once.
     """
-    test_name = 'test_publishers_to_subscribers'
+    test_name = get_scenario_name('test_publishers_to_subscribers', Capacity_Scenario)
 
     prefix = new_prefix()
     run = ScenarioRun(Capacity_Scenario, prefix)
@@ -53,7 +53,7 @@ def test_publishers_to_subscribers_under_worker_kills(zato_server:'any_') -> 'No
     every message, while the worker of the server is killed three times. Each subscriber processes each message
     exactly once.
     """
-    test_name = 'test_publishers_to_subscribers_under_worker_kills'
+    test_name = get_scenario_name('test_publishers_to_subscribers_under_worker_kills', Faults_Scenario)
 
     prefix = new_prefix()
     run = ScenarioRun(Faults_Scenario, prefix)

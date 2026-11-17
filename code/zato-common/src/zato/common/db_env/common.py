@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Environment-configured SQLAlchemy engines for the audit log. This package builds
-# and caches an engine selected through the Zato_Audit_Log_DB_* variables.
+# Environment-configured SQLAlchemy engines. This package builds and caches the engine of the Zato database,
+# which the Zato_Database_* variables select.
 
 # stdlib
 import os
@@ -21,7 +21,6 @@ from sqlalchemy.types import TypeDecorator
 
 # Zato
 from zato.common.defaults import default_env_base_dir
-from zato.common.ha.common import Not_Replicated
 from zato.common.util.api import as_bool
 
 # ################################################################################################################################
@@ -33,7 +32,7 @@ if 0:
     from sqlalchemy.engine import Dialect
     from sqlalchemy.sql.compiler import SQLCompiler
     from sqlalchemy.types import TypeEngine
-    from zato.common.typing_ import any_, stranydict, strnone
+    from zato.common.typing_ import any_, stranydict, strnone, tuple_
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
@@ -43,6 +42,8 @@ if 0:
     MetaData = MetaData
     SQLCompiler = SQLCompiler
     TypeEngine = TypeEngine
+
+    metadata_tuple = tuple_[MetaData, ...]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -178,7 +179,7 @@ def compile_hour_period_postgresql(element:'_HourPeriod', compiler:'SQLCompiler'
 
 class EnvDBConfig:
     """ Describes one environment-configured database - the environment variables
-    selecting it, its default SQLite file name and the schema it needs.
+    selecting it, its default SQLite file name and the schemas it needs.
     """
 
     def __init__(
@@ -186,15 +187,15 @@ class EnvDBConfig:
         *,
         env_prefix:'str',
         sqlite_file_name:'str',
-        metadata:'MetaData',
+        metadata_tuple:'metadata_tuple',
         needs_pool:'bool' = False,
         needs_background_checkpoint:'bool' = False,
-        replicated_database:'str' = Not_Replicated,
+        is_replicated:'bool' = False,
         ) -> 'None':
 
         self.env_prefix = env_prefix
         self.sqlite_file_name = sqlite_file_name
-        self.metadata = metadata
+        self.metadata_tuple = metadata_tuple
 
         # Whether SQLite connections are pooled - SQLAlchemy's default for file-based SQLite
         # is no pooling at all, which makes every transaction open and close the database file,
@@ -205,11 +206,12 @@ class EnvDBConfig:
         # Whether the WAL of a SQLite database is checkpointed in a thread of its own rather than by the commits
         self.needs_background_checkpoint = needs_background_checkpoint
 
-        # The name under which the active-standby node replicates a SQLite database, empty if it is not replicated
-        self.replicated_database = replicated_database
+        # Whether the active-standby node replicates the SQLite file of the database
+        self.is_replicated = is_replicated
 
         # The full names of the environment variables selecting and configuring the database
         self.env_type     = f'{env_prefix}Type'
+        self.env_path     = f'{env_prefix}Path'
         self.env_host     = f'{env_prefix}Host'
         self.env_port     = f'{env_prefix}Port'
         self.env_username = f'{env_prefix}Username'
@@ -269,13 +271,15 @@ def get_env_values(config:'EnvDBConfig') -> 'stranydict':
     else:
         out['type'] = Default_Type
 
-    # .. the SQLite file path defaults to this store's shared file ..
-    if name := os.environ.get(config.env_name, ''):
-        out['name'] = name
-    elif out['type'] == Type_SQLite:
-        out['name'] = config.get_sqlite_path()
+    # .. a SQLite file is given by its path, which defaults to the file in the environment directory,
+    # .. and a network database by its name ..
+    if out['type'] == Type_SQLite:
+        if path := os.environ.get(config.env_path, ''):
+            out['name'] = path
+        else:
+            out['name'] = config.get_sqlite_path()
     else:
-        out['name'] = ''
+        out['name'] = os.environ.get(config.env_name, '')
 
     # .. the network location and credentials are empty unless given ..
     out['host']     = os.environ.get(config.env_host, '')

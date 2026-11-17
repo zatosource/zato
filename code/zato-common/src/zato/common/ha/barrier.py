@@ -6,10 +6,10 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The client of the replication barrier of the active-standby node. A request is the name of a database followed
-# by a newline. The node answers `ok` once every frame of that database committed before the request is stored
-# on the standby, or synced locally while the node runs alone, `replaced` when the node is no longer active,
-# and `error` followed by a description when the request cannot be answered.
+# The client of the replication barrier of the active-standby node. A request is a single newline. The node answers `ok`
+# once every frame of the Zato database committed before the request is stored on the standby, or synced locally
+# while the node runs alone, `replaced` when the node is no longer active, and `error` followed by a description
+# when the request cannot be answered.
 
 # stdlib
 import socket
@@ -72,26 +72,24 @@ def _read_answer(connection:'socket.socket') -> 'str':
 
 # ################################################################################################################################
 
-def wait_for_replication(database:'str') -> 'None':
-    """ Returns once every commit of a database made before the call is stored on the standby or synced locally.
-    For a database shipped asynchronously, returns at once if the node serves requests. Raises PubSubReplaced
-    if the node is no longer active and BarrierError if the node cannot answer.
+def wait_for_replication() -> 'None':
+    """ Returns once every commit of the Zato database made before the call is stored on the standby or synced locally.
+    Raises PubSubReplaced if the node is no longer active and BarrierError if the node cannot answer.
     """
     path = get_barrier_socket_path()
-    request = database.encode('utf8') + ModuleCtx.Line_End
 
-    # Send the name of the database ..
+    # Send the request ..
     try:
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
             connection.settimeout(ModuleCtx.Timeout_Seconds)
             connection.connect(path)
-            connection.sendall(request)
+            connection.sendall(ModuleCtx.Line_End)
 
             # .. and wait for the node to answer.
             answer = _read_answer(connection)
 
     except OSError as e:
-        raise BarrierError(f'Replication barrier of `{database}` not answered through `{path}` -> {e}') from e
+        raise BarrierError(f'Replication barrier not answered through `{path}` -> {e}') from e
 
     # The commits are stored ..
     if answer == ModuleCtx.Answer_OK:
@@ -99,11 +97,11 @@ def wait_for_replication(database:'str') -> 'None':
 
     # .. this node no longer serves requests ..
     elif answer == ModuleCtx.Answer_Replaced:
-        raise_replaced(f'The active-standby node of this server is no longer active, database `{database}`')
+        raise_replaced('The active-standby node of this server is no longer active')
 
     # .. and anything else is an error that the node describes.
     else:
-        raise BarrierError(f'Replication barrier of `{database}` failed -> {answer}')
+        raise BarrierError(f'Replication barrier failed -> {answer}')
 
 # ################################################################################################################################
 # ################################################################################################################################

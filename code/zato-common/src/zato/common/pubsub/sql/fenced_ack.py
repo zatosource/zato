@@ -13,7 +13,7 @@ from typing import NamedTuple
 from sqlalchemy import and_, bindparam, select
 
 # Zato
-from zato.common.pubsub.sql.payloads import drop_payloads, get_chunks
+from zato.common.pubsub.sql.payloads import get_chunks
 from zato.common.pubsub.sql.schema import delivery_table, message_table
 
 # ################################################################################################################################
@@ -142,10 +142,11 @@ def check_fenced(connection:'Connection', ack:'PendingAck', has_new_message:'boo
 # ################################################################################################################################
 
 def delete_fenced(connection:'Connection', ack:'PendingAck', rows:'FencedRows') -> 'None':
-    """ Removes the delivery rows that check_fenced returned, in the caller's transaction.
+    """ Removes the delivery rows that check_fenced returned, in the caller's transaction, which drops the payloads
+    of their messages once it holds every delivery row that it locks.
     """
 
-    # The rows are removed in the order of their keys, so that concurrent transactions lock them in the same order ..
+    # The rows are removed in the order of their keys, so that concurrent transactions lock them in the same order.
     delivery_ids = sorted(rows.delivery_ids)
 
     for chunk in get_chunks(delivery_ids):
@@ -153,10 +154,6 @@ def delete_fenced(connection:'Connection', ack:'PendingAck', rows:'FencedRows') 
 
         for _ in connection.execute(_fenced_delete, parameters):
             ack.removed_count += 1
-
-    # .. and the payloads of the messages that no subscriber needs anymore are dropped.
-    dropped = drop_payloads(connection, rows.message_ids)
-    ack.fully_delivered_count = len(dropped)
 
 # ################################################################################################################################
 # ################################################################################################################################

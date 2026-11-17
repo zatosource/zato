@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from typing import NamedTuple
 
+# Zato
+from zato.common.util.api import pluralize
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -20,6 +23,15 @@ class Scenario(NamedTuple):
     subscriber_count: 'int'
 
 scenariolist = list[Scenario]
+
+def get_scenario_name(test_name:'str', scenario:'Scenario') -> 'str':
+    """ Returns the name under which a test logs the progress and the results of a scenario, with its publishers and subscribers.
+    """
+    publishers = pluralize(scenario.publisher_count, 'publisher')
+    subscribers = pluralize(scenario.subscriber_count, 'subscriber')
+
+    out = f'{test_name} with {publishers} and {subscribers}'
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
