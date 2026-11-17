@@ -36,7 +36,7 @@ from zato.common.bearer_token_identity import build_auth_block, Auth_Type_Bearer
 from zato.common.hl7.audit import audit_message_received
 from zato.common.model.security import BearerAuthInfo, BearerRefusalReason
 from zato.server.connection.mcp.audit import build_audit_event, build_rate_limit_audit_event
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################

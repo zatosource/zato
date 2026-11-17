@@ -36,7 +36,7 @@ from zato.common.test.process_util import kill_process_tree
 from zato.common.util.local_server import read_pid_file, stop_pid
 from zato.common.util.tcp import get_free_port
 from zato.server.demo_file_transfer.common import get_paths, Root_Env_Name
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -12,6 +12,7 @@ _ = monkey.patch_all()
 
 # stdlib
 import atexit
+import gc
 import os
 import sys
 
@@ -28,7 +29,7 @@ from live_sql.env import database_env
 from perf import silence_logging_teardown
 from support import Backend_PostgreSQL, Backend_SQLite, delete_all_rows
 from zato.common.db_env.database import dispose_database_engine
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 _ = atexit.register(silence_logging_teardown)
 
@@ -63,6 +64,15 @@ class ModuleCtx:
     SQLite_File_Name = 'zato.db'
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def pytest_collection_finish(session:'pytest.Session') -> 'None':
+    """ Excludes the objects loaded with the test modules from the collector, as the arbiter of a server does
+    before it starts its processes, so that a full collection during a test scans only what the test creates.
+    """
+    _ = gc.collect()
+    gc.freeze()
+
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')

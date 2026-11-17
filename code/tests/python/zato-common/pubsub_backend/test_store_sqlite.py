@@ -16,31 +16,34 @@ from sqlalchemy.pool import QueuePool
 # Zato
 from common import pubsub_path_env
 from zato.common.defaults import default_env_base_dir
-from zato.common.db_env.database import get_database_engine, get_database_sqlite_path
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database import database_config, get_database_engine, get_database_sqlite_path
+from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from pytest import MonkeyPatch
+    from zato.common.typing_ import strset
 
     # Dummy assignments to satisfy type checkers
     MonkeyPatch = MonkeyPatch
+    strset = strset
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-_expected_tables = {
-    'zato_active',
-    'pubsub_delivery',
-    'pubsub_message',
-    'pubsub_publish_count',
-    'pubsub_queue_count',
-    'pubsub_topic_count',
-    'pubsub_topic_sub',
-    'pubsub_trace',
-}
+def _get_expected_tables() -> 'strset':
+    """ Returns the names of the tables of every schema of the Zato database, all of which the engine creates in one file,
+    next to the tables that SQLite itself creates for the full-text search of the audit log.
+    """
+    out:'strset' = set()
+
+    for metadata in database_config.metadata_tuple:
+        for table_name in metadata.tables:
+            out.add(table_name)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -80,8 +83,10 @@ def test_path_from_environment(tmp_path:'os.PathLike') -> 'None':
 
         inspector = inspect(engine)
         table_names = set(inspector.get_table_names())
+        expected_tables = _get_expected_tables()
+        missing_tables = expected_tables - table_names
 
-        assert table_names == _expected_tables, f'Expected {_expected_tables}, got {table_names}'
+        assert not missing_tables, f'Missing tables {missing_tables}, got {table_names}'
 
     assert os.path.exists(db_path)
 

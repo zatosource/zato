@@ -30,7 +30,7 @@ from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import get_attachment, list_attachments
 from zato.common.ext.bunch import Bunch
 from zato.server.connection.email import Microsoft365SMTPConnection, SMTPConnection, SMTPConnStore
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # Test support
 from chat_simulators import find_free_port

@@ -31,7 +31,7 @@ from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import build_attachment, list_attachments
 from zato.common.ext.bunch import Bunch, bunchify
 from zato.common.pubsub.outgoing import Body_Mode_HL7, Key_CID, Key_Conn_Name, Key_Data, Key_Msg_ID, Key_Request
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # Test support
 from live_sql.env import database_env

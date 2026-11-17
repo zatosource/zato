@@ -30,7 +30,7 @@ from zato.common.audit_log.export.mapping import ModuleCtx as MappingCtx
 from zato.common.audit_log.file_transfer import record_file_transfer
 from zato.common.audit_log.file_transfer_run import update_run_event
 from zato.common.audit_log.scheduler import record_job_complete, record_job_start, record_job_timeout
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################

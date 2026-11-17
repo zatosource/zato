@@ -20,7 +20,7 @@ import pytest
 
 # Zato
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # Live environment
 from live_containers.ready import wait_until

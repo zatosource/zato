@@ -23,7 +23,7 @@ import pytest
 # Zato
 from zato.common.alerting.explain.skill import get_default_skills_dir, Skills_Dir_Name
 from zato.common.alerting.rendering import get_default_template_dir, Template_Dir_Name
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # Test helpers
 from chat_simulators import find_free_port, start_slack_server

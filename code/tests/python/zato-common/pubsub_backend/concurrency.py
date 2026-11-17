@@ -15,7 +15,7 @@ from sqlalchemy.exc import DBAPIError
 # Zato
 from common import delete_all_rows, get_delivery_rows, get_message_rows
 from zato.common.db_env.common import Type_PostgreSQL
-from zato.common.db_env.engine import _sqlite_write_locks
+from zato.common.db_env.engine import _get_write_key, _sqlite_write_locks
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.pending import new_pending_ack
 from zato.common.pubsub.sql.writes import PubSubDuplicateMsgID, PubSubWriter
@@ -442,7 +442,8 @@ def _run_concurrent_clear_flow() -> 'None':
         assert get_delivery_rows(_clear_sub_key) == []
         return
 
-    writer_lock = _sqlite_write_locks[str(backend.engine.url)]
+    write_key = _get_write_key(backend.engine)
+    writer_lock = _sqlite_write_locks[write_key]
     result:'anydict' = {}
 
     # Hold the writer lock, then start a clear - its first batch blocks on the lock before it reads or deletes ..

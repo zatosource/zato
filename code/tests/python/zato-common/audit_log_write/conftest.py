@@ -28,7 +28,7 @@ from live_sql.env import database_env
 from perf import silence_logging_teardown
 from support import Backend_PostgreSQL, Backend_SQLite, delete_all_rows
 from zato.common.db_env.database import dispose_database_engine
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 _ = atexit.register(silence_logging_teardown)
 

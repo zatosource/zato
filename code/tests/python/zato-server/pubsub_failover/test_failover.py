@@ -67,6 +67,9 @@ _blocked_takeover_max_seconds = 30
 # in seconds - longer than the three failed checks, one second apart, that a replacement requires.
 _controller_settle_seconds = 10
 
+# How long a replaced server may take to learn of its replacement and to stop, in seconds.
+_replaced_stop_timeout_seconds = 60
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -150,6 +153,18 @@ def _assert_repeats_have_higher_attempts(delivered:'dictlist') -> 'None':
         assert len(attempts) == len(set(attempts)), (msg_id, attempts)
 
 # ################################################################################################################################
+
+def _wait_until_stopped(server:'ContainerServer') -> 'None':
+    """ Waits until the container of a replaced server exits, because the arbiter of a server stops all of its processes
+    once one of them learns that another server raised the generation.
+    """
+    deadline = time.monotonic() + _replaced_stop_timeout_seconds
+
+    while get_container_state(server) != 'exited':
+        assert time.monotonic() < deadline, f'Server {server.name} still running after its replacement'
+        time.sleep(_poll_seconds)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 @pytest.mark.parametrize('stop_command', ['kill', 'stop'])
@@ -217,8 +232,7 @@ def test_takeover_after_kill(failover_env:'FailoverEnvironment', stop_command:'s
 # ################################################################################################################################
 
 def test_replaced_server_rejected(failover_env:'FailoverEnvironment') -> 'None':
-    """ A server whose generation was replaced while it kept running publishes, hands out and changes nothing,
-    and the server that replaced it serves everything.
+    """ A server whose generation was replaced while it kept running stops, and the server that replaced it serves everything.
     """
     env = failover_env
     generation = reset_pair(env)
@@ -228,28 +242,21 @@ def test_replaced_server_rejected(failover_env:'FailoverEnvironment') -> 'None':
     _ = wait_until_up(env.server_b)
     _ = wait_for_generation(env.database, generation + 1, _takeover_timeout_seconds)
 
-    # .. server A rejects every publication ..
-    with pytest.raises(Exception, match='HTTP'):
-        _ = _publish(env, env.server_a, 1)
+    # .. server A learns of its replacement and stops ..
+    _wait_until_stopped(env.server_a)
 
-    # .. server B accepts them ..
+    # .. server B accepts every publication ..
     msg_ids = _publish(env, env.server_b, 5)
 
-    # .. server A hands out nothing ..
-    with pytest.raises(Exception, match='HTTP'):
-        _ = _puller(env, env.server_a).pull(max_messages=100)
-
-    # .. so server B hands out everything.
+    # .. and hands out everything.
     pulled = _pull_all(env, env.server_b)
     assert sorted(pulled) == sorted(msg_ids)
-
-    _ = docker('stop', '--time', '10', env.server_a.container_name)
 
 # ################################################################################################################################
 
 def test_takeover_from_frozen_server(failover_env:'FailoverEnvironment') -> 'None':
     """ The active server is frozen, the standby takes over, and the frozen server resumes afterwards.
-    The resumed server publishes and hands out nothing, and the server that replaced it serves every message.
+    The resumed server stops, and the server that replaced it serves every message.
     """
     env = failover_env
     generation = reset_pair(env)
@@ -269,16 +276,9 @@ def test_takeover_from_frozen_server(failover_env:'FailoverEnvironment') -> 'Non
     _ = wait_until_up(env.server_b)
     _ = wait_for_generation(env.database, generation + 1, _takeover_timeout_seconds)
 
-    # .. the frozen server resumes and its greenlets continue where they stopped ..
+    # .. the frozen server resumes, its greenlets continue where they stopped, and it learns of its replacement and stops ..
     _ = docker('unpause', env.server_a.container_name)
-    _ = wait_until_up(env.server_a)
-
-    # .. it rejects every publication and hands out nothing ..
-    with pytest.raises(Exception, match='HTTP'):
-        _ = _publish(env, env.server_a, 1)
-
-    with pytest.raises(Exception, match='HTTP'):
-        _ = _puller(env, env.server_a).pull(max_messages=100)
+    _wait_until_stopped(env.server_a)
 
     # .. the generation is still the one of the server that replaced it ..
     assert read_generation(env.database) == generation + 1
@@ -293,14 +293,12 @@ def test_takeover_from_frozen_server(failover_env:'FailoverEnvironment') -> 'Non
     delivered = _wait_for_deliveries(receiver, msg_ids)
     _assert_repeats_have_higher_attempts(delivered)
 
-    _ = docker('stop', '--time', '10', env.server_a.container_name)
-
 # ################################################################################################################################
 
 def test_takeover_from_cut_off_server(failover_env:'FailoverEnvironment') -> 'None':
     """ The active server is cut off from its database and from its clients while its process keeps running,
-    the standby takes over, and the links of the old server are restored afterwards. The old server publishes
-    and hands out nothing, and the server that replaced it serves every message.
+    the standby takes over, and the links of the old server are restored afterwards. The old server stops,
+    and the server that replaced it serves every message.
     """
     env = failover_env
     _ = reset_pair(env)
@@ -346,17 +344,10 @@ def test_takeover_from_cut_off_server(failover_env:'FailoverEnvironment') -> 'No
         _ = wait_until_up(env.server_b)
         _ = wait_for_generation(env.database, generation + 1, _takeover_timeout_seconds)
 
-        # .. the links of the old server are restored ..
+        # .. the links of the old server are restored, and it learns of its replacement and stops ..
         _ = database_proxy.command('unblock')
         _ = http_proxy.command('unblock')
-        _ = wait_until_up(server_a)
-
-        # .. it rejects every publication and hands out nothing ..
-        with pytest.raises(Exception, match='HTTP'):
-            _ = _publish(env, server_a, 1)
-
-        with pytest.raises(Exception, match='HTTP'):
-            _ = _puller(env, server_a).pull(max_messages=100)
+        _wait_until_stopped(server_a)
 
         # .. the generation is still the one of the server that replaced it ..
         assert read_generation(env.database) == generation + 1

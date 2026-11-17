@@ -89,7 +89,8 @@ def _topic_to_key(topic_name:'str') -> 'str':
 
 def _new_server(name:'str', state:'SessionState', rendered_yaml:'str', invoke_password:'str',
     database:'PubSubDatabase') -> 'ContainerServer':
-    """ Creates the quickstart environment of one server of the pair from the shared enmasse file.
+    """ Creates the quickstart environment of one server of the pair from the shared enmasse file,
+    in the runtime directory, which is the only temporary directory the container of the server mounts.
     """
     server_directory = run_quickstart_and_enmasse(
         state=state,
@@ -98,6 +99,7 @@ def _new_server(name:'str', state:'SessionState', rendered_yaml:'str', invoke_pa
         invoke_password=invoke_password,
         rendered_yaml=rendered_yaml,
         quickstart_prefix=f'zato_pubsub_failover_{name}_',
+        quickstart_parent_dir=get_runtime_dir(),
     )
 
     out = ContainerServer(

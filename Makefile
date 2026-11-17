@@ -813,6 +813,15 @@ test-rate-limiting: rust-target-prune ## All rate limiting tests.
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rate_limiting_py -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
+# The managed PostgreSQL profiles and the databases of the stability suites that test-pubsub runs.
+Zato_Test_PubSub_Managed_Modes   := postgresql-rds postgresql-azure
+Zato_Test_PubSub_Stability_Modes := sqlite postgresql
+
+# The resolver library that the managed profiles require, in a directory of its own, which the server containers mount.
+Zato_Test_Resolver_Source  := $(CURDIR)/code/zato-common/src/zato/common/test/native/resolver.c
+Zato_Test_Resolver_Dir     := /tmp/zato-test-resolver
+Zato_Test_Resolver_Library := $(Zato_Test_Resolver_Dir)/resolver.so
+
 test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing delivery.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -850,23 +859,32 @@ test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing del
 		$(CURDIR)/code/tests/python/zato-server/pubsub_failover/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_failover -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-# Each of these suites patches gevent in its conftest and runs in a pytest process of its own
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+# Each of these suites runs in a pytest process of its own, patched by gevent before pytest loads its plugins,
+# some of which import ssl. The faults apply to a PostgreSQL container, the managed suites run on each managed profile,
+# with the resolver library preloaded, and the stability suites run on SQLite and PostgreSQL.
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_replication/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_replication -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+	Zato_Test_PubSub_DB_Mode=postgresql ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_faults/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_faults -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_managed/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_managed -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_stability/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_stability -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	mkdir -p $(Zato_Test_Resolver_Dir)
+	gcc -shared -fPIC -o $(Zato_Test_Resolver_Library) $(Zato_Test_Resolver_Source) -ldl -lresolv
+	for mode in $(Zato_Test_PubSub_Managed_Modes); do \
+		LD_PRELOAD=$(Zato_Test_Resolver_Library) Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) \
+		$(ZATO_PY) -m gevent.monkey --module pytest \
+			$(CURDIR)/code/tests/python/zato-common/pubsub_managed/ \
+			-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_managed_$$mode -W ignore::DeprecationWarning \
+			$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
+	done
+	for mode in $(Zato_Test_PubSub_Stability_Modes); do \
+		Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
+			$(CURDIR)/code/tests/python/zato-common/pubsub_stability/ \
+			-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_stability_$$mode -W ignore::DeprecationWarning \
+			$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
+	done
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_topic.py \
 		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_subscription.py \

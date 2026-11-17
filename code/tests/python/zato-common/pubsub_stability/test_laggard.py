@@ -18,6 +18,7 @@ from runner import get_count_mismatches, get_duration, get_report_path, run_for,
     stop_cleanup_process
 from seeding import seed_backlog
 from traffic import get_traffic_profile, Traffic
+from zato.common.api import PubSub
 from zato.common.db_env.database import get_database_engine
 
 # ################################################################################################################################
@@ -37,6 +38,10 @@ _lag_seconds = 15 * 60
 
 # How long the backlog may take to drain once the partner is back, in seconds.
 _drain_seconds = 4 * 60 * 60
+
+# The expirations of the publications, none of them shorter than the lag and the drain together, because the messages
+# published to the partner while it is away wait behind its backlog for that long and would otherwise expire undelivered.
+_laggard_expirations = [PubSub.Message.Default_Expiration, 86_400, 7 * 86_400]
 
 # The first partner of the traffic is the one that is behind - its topic and its subscriber,
 # named as the traffic names them, so that the seeded backlog is in its queue.
@@ -91,6 +96,7 @@ def test_laggard(stability_env:'strstrdict') -> 'None':
     print(f'Seeded {backlog_messages} messages in {seed_seconds:.0f}s', flush=True)
 
     traffic = Traffic(get_traffic_profile())
+    traffic.expirations = _laggard_expirations
     traffic.backend.take_over()
     traffic.subscribe_all()
 

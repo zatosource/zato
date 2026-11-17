@@ -30,9 +30,9 @@ from live_sql.env import database_env
 from zato.common.api import MS_SQL
 from zato.common.audit_log.api import event_table, AuditEvent, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
+from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.odb.api import PoolStore
 from zato.common.oracledb import RowsOut, StringIn, StringOut
-from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################

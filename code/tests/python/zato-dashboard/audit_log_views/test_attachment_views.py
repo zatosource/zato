@@ -22,8 +22,8 @@ from django.http import QueryDict
 from zato.admin.web.views.audit_log import attachment_download, attachments
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.attachment import build_attachment
+from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.ext.bunch import Bunch
-from zato.common.test.database_env import DatabaseEnv
 
 # Test support
 from live_sql.env import database_env

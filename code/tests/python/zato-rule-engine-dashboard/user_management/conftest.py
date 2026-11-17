@@ -20,7 +20,7 @@ import pytest
 
 # Zato
 from zato.common.crypto.api import CryptoManager
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################

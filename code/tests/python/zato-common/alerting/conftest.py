@@ -18,7 +18,7 @@ sys.path.insert(0, _conftest_dir)
 import pytest
 
 # Zato
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################

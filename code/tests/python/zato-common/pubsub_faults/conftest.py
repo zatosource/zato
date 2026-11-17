@@ -36,8 +36,8 @@ from process import ProcessEnvironment
 from tools import build_fsfault
 from toxiproxy import Toxiproxy, Toxiproxy_Host
 from zato.common.db_env.database import get_database_engine
+from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.pubsub.sql.config import ModuleCtx
-from zato.common.test.database_env import DatabaseEnv
 from zato.common.test.pubsub_database import get_database_address, get_db_mode, get_runtime_dir, is_postgresql_mode, \
     PubSubDatabase, pubsub_db_env, start_pubsub_database, stop_pubsub_database
 from zato.common.test.pubsub_profile import session_dns

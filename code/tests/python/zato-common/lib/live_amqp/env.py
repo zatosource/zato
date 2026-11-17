@@ -12,7 +12,7 @@ from contextlib import contextmanager
 
 # Zato
 from zato.common.db_env.database import get_database_engine
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################

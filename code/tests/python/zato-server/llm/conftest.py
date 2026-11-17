@@ -33,7 +33,7 @@ if 0:
 from llm_test_server import LLMTestServer
 
 # Zato
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # How long to wait for the test-managed Redis to accept connections
 _Redis_Wait_Timeout = 30

@@ -11,7 +11,7 @@ import os
 
 # Zato
 from common import analytics_test_env, run_rollup_scenario
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################

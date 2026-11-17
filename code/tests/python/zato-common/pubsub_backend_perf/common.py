@@ -29,8 +29,8 @@ from sqlalchemy import func, select
 from perf import silence_logging_teardown, Max_Operation_Seconds, Min_Delivery_Rate_Per_Second, \
     Min_Publish_Rate_Per_Second, Progress_Interval_Seconds
 from zato.common.db_env.database import dispose_database_engine, get_database_engine
+from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.pubsub.sql.schema import topic_sub_table
-from zato.common.test.database_env import DatabaseEnv
 from zato.common.util.memory_trim import stop_memory_trimmer
 
 # ################################################################################################################################

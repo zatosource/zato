@@ -20,7 +20,7 @@ from live_sql.env import database_env
 from zato.common.api import URL_TYPE
 from zato.common.soap.common import SOAPVersion
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################

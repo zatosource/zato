@@ -35,7 +35,7 @@ from zato.common.pubsub.outgoing import audit_disabled_conn_types, build_envelop
 from zato.common.sftp import SFTPOutput
 from zato.server.connection.file_transfer_base import spool_file_payload, Key_Remote_Path, Key_Spool_Path
 from zato.server.connection.outgoing_delivery import publishable_generic_types, register_delivery_handlers
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # Test support
 from live_sql.env import database_env

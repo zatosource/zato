@@ -21,9 +21,9 @@ from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditS
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.resubmit import get_resubmit_handler, load_event, Action_Reprocess, Action_Resend, \
     ResubmitException
+from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.hl7.resubmit import reprocess, resend, validate_payload, Reprocess_Destinations
 from zato.common.json_internal import dumps, loads
-from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################

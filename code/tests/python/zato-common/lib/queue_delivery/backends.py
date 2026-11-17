@@ -13,7 +13,7 @@ import os
 from contextlib import contextmanager
 
 # Zato
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.test.rabbitmq_ import RabbitMQProcess
 
 # ################################################################################################################################

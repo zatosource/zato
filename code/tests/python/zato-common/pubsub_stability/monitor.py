@@ -33,7 +33,7 @@ from sqlalchemy import text
 # Zato
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.database import get_database_engine
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################

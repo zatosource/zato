@@ -30,8 +30,8 @@ import pytest
 # Zato
 from capture import limit_captured_logs
 from zato.common.db_env.database import get_database_engine
+from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.pubsub.sql.config import ModuleCtx
-from zato.common.test.database_env import DatabaseEnv
 from zato.common.test.pubsub_database import get_db_mode, get_runtime_dir, is_postgresql_mode, pubsub_db_env, \
     start_pubsub_database, stop_pubsub_database
 

@@ -22,7 +22,7 @@ from zato.common.audit_log.reports import Range_Day
 from zato.common.audit_log.usage import get_object_options, get_usage, normalize_sources, usage_csv, Usage_Sources
 from zato.common.hl7.audit import audit_ack_sent
 from zato.common.util.api import utcnow
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################

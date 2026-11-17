@@ -27,7 +27,7 @@ import pytest
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.api import PubSub
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.test.pubsub_database import get_db_mode, is_postgresql_mode, start_pubsub_database, \
     stop_pubsub_database
 

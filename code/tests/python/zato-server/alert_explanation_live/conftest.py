@@ -43,9 +43,9 @@ import pytest
 # Zato
 from zato.common.alerting.explain.skill import get_default_skills_dir, Skills_Dir_Name
 from zato.common.alerting.rendering import get_default_template_dir, Template_Dir_Name
+from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.hl7.mllp.haproxy import Env_Port_Name as MLLP_Port_Env_Name
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
-from zato.common.test.database_env import DatabaseEnv
 from zato.common.test.sftp_ import SFTPTestServer
 from zato.common.typing_ import cast_
 
@@ -111,7 +111,7 @@ from json import dumps
 
 # Zato
 from zato.server.service import Service
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 class AlwaysRaise(Service):
     """ Fails on purpose, so that the channel in front of it answers with a 500.

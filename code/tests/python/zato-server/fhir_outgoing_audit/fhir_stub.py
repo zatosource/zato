@@ -25,7 +25,7 @@ from zato.common.hl7.fhir.fields import Outgoing_Opaque_Defaults
 from zato.common.json_internal import dumps
 from zato.common.typing_ import cast_
 from zato.server.generic.api.outconn_hl7_fhir import _HL7FHIRConnection
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################

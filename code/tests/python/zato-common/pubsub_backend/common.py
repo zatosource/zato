@@ -17,7 +17,7 @@ from sqlalchemy import select
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
     topic_count_table, topic_sub_table
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################

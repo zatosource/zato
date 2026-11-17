@@ -24,7 +24,7 @@ import pytest
 
 # Zato
 from perf import silence_logging_teardown
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # The late log-handler cleanup would otherwise fail under gevent once the hub is gone.
 _ = atexit.register(silence_logging_teardown)

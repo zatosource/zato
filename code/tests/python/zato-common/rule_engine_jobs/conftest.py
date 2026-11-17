@@ -26,8 +26,8 @@ sys.path.insert(0, _lib_dir)
 import pytest
 
 # Zato
+from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
-from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################

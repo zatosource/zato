@@ -20,7 +20,7 @@ from sqlalchemy import select
 from live_sql.env import database_env
 from zato.common.audit_log.api import event_link_table, event_table
 from zato.common.db_env.database import get_database_engine
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################

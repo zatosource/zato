@@ -21,8 +21,8 @@ from zato.admin.web.views.audit_log import strip
 from zato.admin.web.views.audit_log.poll import _strip_max_buckets, _strip_min_buckets
 from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
+from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.ext.bunch import Bunch
-from zato.common.test.database_env import DatabaseEnv
 
 # Test support
 from live_sql.env import database_env

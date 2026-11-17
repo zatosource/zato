@@ -36,7 +36,7 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.test.process_util import kill_process_tree
 from zato.common.util.config import get_config_object, update_config_file
 from zato.common.typing_ import cast_
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # Live environment
 from live_environment.scheduler import SchedulerProcess

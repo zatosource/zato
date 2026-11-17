@@ -21,7 +21,7 @@ from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.request_context import Key_Payload, Key_Payload_Kind, Key_Redacted, Payload_Kind_Described
 from zato.common.ext.bunch import Bunch
 from zato.common.json_internal import dumps, loads
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # Test support
 from live_sql.env import database_env

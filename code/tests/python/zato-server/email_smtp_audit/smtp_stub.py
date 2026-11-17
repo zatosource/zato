@@ -19,7 +19,7 @@ from live_sql.env import database_env
 from zato.common.audit_log.api import AuditLog
 from zato.common.ext.bunch import Bunch
 from zato.server.connection.email import SMTPConnection
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################

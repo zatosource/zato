@@ -140,6 +140,7 @@ class Traffic:
         self.documents = _weight_documents(get_production_documents())
 
         self.rate = profile.publish_rate
+        self.expirations = _expirations
         self.is_publishing = False
         self.is_consuming = False
 
@@ -254,7 +255,7 @@ class Traffic:
 
             document = self.documents[position % len(self.documents)]
             priority = _priorities[position % len(_priorities)]
-            expiration = _expirations[position % len(_expirations)]
+            expiration = self.expirations[position % len(self.expirations)]
 
             # .. every so often to the broadcast topic and otherwise to the queue of one partner.
             is_broadcast = position % self.profile.broadcast_every == 0

@@ -22,7 +22,7 @@ from zato.common.audit_log.api import AuditLog
 from zato.common.ext.bunch import Bunch
 from zato.common.ext.imbox.parser import Struct
 from zato.server.connection.email import GenericIMAPConnection
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################

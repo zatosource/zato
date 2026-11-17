@@ -27,7 +27,7 @@ from zato.common.hl7.mllp.router import HL7MessageRouter
 from zato.common.hl7.mllp.server import ConnectionContext, HL7MLLPServer
 from zato.common.hl7.mllp.settings import ListenerConfig, RouteSettings
 from zato.common.typing_ import cast_
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 from mllp_live_util import sample_adt_a01
 

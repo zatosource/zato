@@ -19,7 +19,7 @@ from retention_tiers import run_retention_tiers_scenario
 from scheduler_history import run_scheduler_history_scenario
 from storage_types import run_storage_types_scenario
 from structured import run_structured_events_scenario
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################

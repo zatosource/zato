@@ -92,7 +92,7 @@ def _write_through_every_writer(region:'SharedRegion', db_path:'str', conn:'Conn
         from zato.common.audit_log.scheduler import append_job_log_entry, record_job_complete, record_job_timeout
         from zato.common.db_env.engine import set_process_queue
         from zato.common.db_env.process_queue import ProcessQueue
-        from zato.common.test.database_env import DatabaseEnv
+        from zato.common.db_env.database_env import DatabaseEnv
         from zato.common.util.api import utcnow
 
         os.environ[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite

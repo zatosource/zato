@@ -19,8 +19,8 @@ from gevent import sleep
 # Zato
 from cleanup import set_expired
 from common import delete_all_rows, get_message_rows
+from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
-from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################

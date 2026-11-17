@@ -6,10 +6,10 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The start of a server as an arbiter with the config process and the worker. The arbiter creates the schemas
-# of the Zato database, removes the MCP sessions of the previous start, takes over the Zato database on PostgreSQL,
-# creates the shared region with the queue of the SQLite file of the Zato database, confirms that nothing
-# that a fork would duplicate is open, and forks the config process and the worker.
+# The start of a server as an arbiter with the config process and the worker. The arbiter reads the name of the server
+# from the configuration database, creates the schemas of the Zato database, removes the MCP sessions of the previous start,
+# takes over the Zato database on PostgreSQL, creates the shared region with the queue of the SQLite file
+# of the Zato database, confirms that nothing that a fork would duplicate is open, and forks the config process and the worker.
 
 # stdlib
 import os
@@ -24,7 +24,10 @@ from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.database import database_config, get_database_sqlite_path, get_database_type, \
     new_unshared_database_engine
 from zato.common.db_env.engine import create_schemas, get_cached_engine_count, get_queue_by_path
+from zato.common.db_env.outage import call_until_available
+from zato.common.odb.model import Server
 from zato.common.pubsub.sql.generation import take_over_before_fork
+from zato.common.util.api import get_odb_session_from_server_config
 from zato.server.arbiter import Arbiter
 from zato.server.arbiter_config import ArbiterConfig, ArbiterError
 from zato.server.server_region import new_server_region
@@ -35,11 +38,13 @@ from zato.server.worker_runtime import WorkerRuntime
 # ################################################################################################################################
 
 if 0:
+    from zato.common.ext.bunch import Bunch
     from zato.common.typing_ import strintdict, strlist
     from zato.server.arbiter_config import WorkerContext
     from zato.server.main import ZatoApplication
     from zato_ipc_core.zato_ipc_core import SharedRegion
 
+    Bunch = Bunch
     SharedRegion = SharedRegion
     strintdict = strintdict
     strlist = strlist
@@ -81,14 +86,46 @@ def get_sqlite_paths() -> 'strlist':
 
 # ################################################################################################################################
 
-def prepare_databases(server_name:'str') -> 'None':
-    """ Creates the schemas of the Zato database and, on PostgreSQL, makes the server the active one,
-    all through engines that are disposed before the fork,
-    so that neither the worker nor the config process runs DDL concurrently with the other or raises the generation itself.
+def get_server_name(server_config:'Bunch') -> 'str':
+    """ Returns the name of the server, which the configuration database holds under the token of the server
+    and which the server itself loads only after the fork, through a session whose engine is disposed before the fork.
+    """
+    token = server_config.main.token.decode('utf8')
+
+    session = get_odb_session_from_server_config(server_config)
+    engine = session.get_bind()
+
+    try:
+        query = session.query(Server.name)
+        query = query.filter(Server.token == token)
+        row = query.one()
+        out = row.name
+    finally:
+        session.close()
+        engine.dispose()
+
+    return out
+
+# ################################################################################################################################
+
+def _create_database_schemas() -> 'None':
+    """ Creates the schemas of the Zato database through an engine of its own, which is disposed whether or not they were created.
     """
     engine = new_unshared_database_engine()
-    create_schemas(engine, database_config.metadata_tuple)
-    engine.dispose()
+
+    try:
+        create_schemas(engine, database_config.metadata_tuple)
+    finally:
+        engine.dispose()
+
+# ################################################################################################################################
+
+def prepare_databases(server_name:'str') -> 'None':
+    """ Creates the schemas of the Zato database and, on PostgreSQL, makes the server the active one,
+    each waiting for the database to become available if it is not, all through engines that are disposed before the fork,
+    so that neither the worker nor the config process runs DDL concurrently with the other or raises the generation itself.
+    """
+    _ = call_until_available('Zato database schemas', _create_database_schemas)
 
     if get_database_type() == Type_PostgreSQL:
         _ = take_over_before_fork(new_unshared_database_engine, server_name)
@@ -174,8 +211,9 @@ def run_arbiter(zato_app:'ZatoApplication') -> 'int':
     """
     server = zato_app.zato_server
 
-    # The shared databases are ready before any process starts ..
-    prepare_databases(server.name)
+    # The shared databases are ready before any process starts, and the takeover is recorded with the name of the server ..
+    server_name = get_server_name(server.fs_server_config)
+    prepare_databases(server_name)
 
     # .. each SQLite file receives one queue of the region ..
     sqlite_paths = get_sqlite_paths()

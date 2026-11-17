@@ -17,7 +17,7 @@ from sqlalchemy import create_engine, func, select
 from common import audit_log_env
 from zato.common.audit_log.api import event_table, is_audit_log_enabled, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
-from zato.common.test.database_env import DatabaseEnv
+from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################

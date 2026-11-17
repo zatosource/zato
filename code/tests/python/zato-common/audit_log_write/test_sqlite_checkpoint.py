@@ -21,6 +21,7 @@ from live_sql.env import database_env
 from support import Object_Name, Server_Name
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.db_env.database import dispose_database_engine, get_database_engine
+from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.db_env.engine import _checkpointer_cache
 from zato.common.db_env.sqlite_checkpoint import Autocheckpoint_Pages, Checkpoint_Interval_Seconds
 
@@ -71,8 +72,8 @@ def sqlite_db_path(tmp_path:'os.PathLike') -> 'strgen':
     db_path = os.path.join(str(tmp_path), ModuleCtx.SQLite_File_Name)
 
     details = {
-        'type': 'sqlite',
-        'name': db_path,
+        'type': DatabaseEnv.Type_SQLite,
+        'path': db_path,
     }
 
     with database_env(details):
