@@ -21,14 +21,13 @@ from sqlalchemy.exc import DBAPIError
 # Zato
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.errors import is_transient
+from zato.common.db_env.fence import follow_environment_generation, get_generation_file_path
 from zato.common.db_env.outage import OutageTracker
 from zato.common.db_env.write_path import Mechanism, write_path
 from zato.common.pubsub.sql.clock import get_database_clock
 from zato.common.db_env.database import get_database_engine
-from zato.common.pubsub.sql.config import get_batch_size, get_delivered_max_days, get_delivered_max_messages, \
-    get_generation_file_path
+from zato.common.pubsub.sql.config import get_batch_size, get_delivered_max_days, get_delivered_max_messages
 from zato.common.pubsub.sql.counts import compact_counts
-from zato.common.pubsub.sql.generation import GenerationGuard, read_generation_file
 from zato.common.pubsub.sql.replaced import PubSubReplaced
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
     topic_count_table, trace_table
@@ -118,9 +117,6 @@ class PubSubCleanup:
         self.interval_seconds = interval_seconds
         self._should_stop = False
 
-        # The generation of the server of this environment, which the sweeps confirm on PostgreSQL
-        self._guard:'GenerationGuard | None' = None
-
         # How long the sweeps were unable to complete
         self._outage = OutageTracker('Pub/sub cleanup')
 
@@ -146,24 +142,15 @@ class PubSubCleanup:
         if engine.dialect.name != Type_PostgreSQL:
             return True
 
-        # .. with no server started in this environment yet, there is no generation to confirm ..
+        # .. every engine of the Zato database confirms the generation that the server of this environment recorded ..
+        follow_environment_generation()
+
+        # .. which a sweep requires a server of this environment to have recorded.
         generation_file_path = get_generation_file_path()
 
         if not os.path.exists(generation_file_path):
             logger.info('Sweep skipped, no server of this environment has taken over the database')
             return False
-
-        # .. and the generation and the owner are read again before each sweep, as the server may have been restarted.
-        active_server = read_generation_file()
-
-        if self._guard is not None:
-            if self._guard.generation == active_server.generation:
-                if self._guard.owner == active_server.owner:
-                    return True
-            self._guard.uninstall(engine)
-
-        self._guard = GenerationGuard(active_server.generation, active_server.owner)
-        self._guard.install(engine)
 
         return True
 

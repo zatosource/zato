@@ -320,28 +320,14 @@ def follow_environment_generation() -> 'None':
 
 # ################################################################################################################################
 
-def _get_guard(engine:'Engine') -> 'GenerationGuard | None':
-    """ Returns the guard that the transactions of an engine confirm the generation with, or None if there is none.
+def _get_environment_guard(generation_file_path:'str') -> 'EnvironmentGenerationGuard':
+    """ Returns the guard that follows the generation file of an environment, creating it on first use.
     """
+    if generation_file_path not in _Fences.by_environment:
+        _Fences.by_environment[generation_file_path] = EnvironmentGenerationGuard(generation_file_path)
 
-    # An engine that a server took the database over through confirms the generation of that server ..
-    if engine in _Fences.by_engine:
-        return _Fences.by_engine[engine]
-
-    generation_file_path = get_generation_file_path()
-
-    # .. any other engine of a server confirms the generation of the server it is built for ..
-    if generation_file_path in _Fences.by_generation_file:
-        return _Fences.by_generation_file[generation_file_path]
-
-    # .. an engine of a process that follows its environment confirms the generation of the server of the environment ..
-    if _Fences.follows_environment:
-        if generation_file_path not in _Fences.by_environment:
-            _Fences.by_environment[generation_file_path] = EnvironmentGenerationGuard(generation_file_path)
-        return _Fences.by_environment[generation_file_path]
-
-    # .. and in a process that has not taken the database over, there is no generation to confirm.
-    return None
+    out = _Fences.by_environment[generation_file_path]
+    return out
 
 # ################################################################################################################################
 
@@ -356,14 +342,30 @@ def _before_cursor_execute(
     """ Confirms the generation before the first read and before the first write of each transaction of an engine.
     """
 
-    # The takeover changes the generation that every other transaction confirms
+    # The takeover changes the generation that every other transaction confirms ..
     if get_write_path() == Mechanism.Takeover:
         return
 
-    guard = _get_guard(connection.engine)
+    engine = connection.engine
 
-    if guard is not None:
-        guard.before_cursor_execute(connection, cursor, statement)
+    # .. an engine that a server took the database over through confirms the generation of that server ..
+    if engine in _Fences.by_engine:
+        _Fences.by_engine[engine].before_cursor_execute(connection, cursor, statement)
+        return
+
+    generation_file_path = get_generation_file_path()
+
+    # .. any other engine of a server confirms the generation of the server it is built for ..
+    if generation_file_path in _Fences.by_generation_file:
+        _Fences.by_generation_file[generation_file_path].before_cursor_execute(connection, cursor, statement)
+        return
+
+    # .. an engine of a process that follows its environment confirms the generation of the server of the environment ..
+    if _Fences.follows_environment:
+        environment_guard = _get_environment_guard(generation_file_path)
+        environment_guard.before_cursor_execute(connection, cursor, statement)
+
+    # .. and a server that has not taken the database over yet has no generation to confirm.
 
 # ################################################################################################################################
 

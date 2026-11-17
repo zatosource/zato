@@ -30,6 +30,7 @@ from zato.common.db_env.common import get_env_values, Type_PostgreSQL, Type_SQLi
 from zato.common.db_env.connection import build_connect_args_from_values, build_engine_url_from_values, \
     DatabaseDurabilityError, set_postgresql_keepalive, set_postgresql_no_delay, set_postgresql_session, \
     set_sqlite_pragmas, verify_postgresql_server
+from zato.common.db_env.fence import install_fence
 from zato.common.db_env.pg8000_copy import install as install_pg8000_copy
 from zato.common.db_env.pg8000_wire import install as install_pg8000_wire
 from zato.common.db_env.process_queue import ProcessQueue
@@ -372,6 +373,9 @@ def _new_env_engine(config:'EnvDBConfig') -> '_EnvEngine':
         sa_event.listen(engine, 'connect', set_postgresql_keepalive)
         sa_event.listen(engine, 'connect', set_postgresql_session)
         sa_event.listen(engine, 'connect', verify_postgresql_server)
+
+        # .. each transaction confirms that the server it runs for was not replaced by another one ..
+        install_fence(engine)
 
         # .. a password kept in a file is read again for each new connection, which lets it be rotated ..
         if password_file := values['password_file']:

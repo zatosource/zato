@@ -39,9 +39,9 @@ class ModuleCtx:
         'sqlalchemy.ext.asyncio.create_async_engine',
     })
 
-    # The connection of tokio-postgres, in a module that uses it
+    # The connection of tokio-postgres, in a module that uses it, other than a call of a method of the same type
     Rust_PostgreSQL_Crate = 'tokio_postgres'
-    Rust_PostgreSQL_Connect = re.compile(r'\.connect\s*\(')
+    Rust_PostgreSQL_Connect = re.compile(r'(?<!\bself)\.connect\s*\(')
 
     # The Rust functions that may open a database, each by its file and its name - the two that open the SQLite file
     # of the active-standby node with its settings and the probe of the PostgreSQL primary, which only reads.

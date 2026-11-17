@@ -46,7 +46,7 @@ class ModuleCtx:
         ('mount_type_tmpfs',     r'\btype\s*=\s*(?:tmpfs|ramfs)\b'),
         ('mount_command_tmpfs',  r'\bmount\s+-t\s+(?:tmpfs|ramfs)\b'),
         ('compose_tmpfs',        r'^\s*tmpfs\s*:'),
-        ('shared_memory_dir',    r'/dev/shm/\w'),
+        ('shared_memory_dir',    r'/dev/shm/(?![\w.-]+\.html\b)\w'),
         ('in_memory_container',  r'\bis_in_memory\s*=\s*True\b'),
     )
 

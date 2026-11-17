@@ -17,6 +17,7 @@ from django.core.wsgi import get_wsgi_application
 # ################################################################################################################################
 
 from zato.admin.zato_settings import update_globals
+from zato.common.db_env.fence import follow_environment_generation
 from zato.common.json_internal import loads
 from zato.common.util.open_ import open_r
 
@@ -55,6 +56,9 @@ if original_log_config:
 # This function injects the loaded configuration into the global scope
 # where zato.admin.settings can access them.
 update_globals(config)
+
+# Every transaction of the Zato database confirms the generation that the server of this environment recorded
+follow_environment_generation()
 
 _ = os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'zato.admin.settings')
 

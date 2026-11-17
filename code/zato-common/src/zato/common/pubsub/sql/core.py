@@ -41,7 +41,7 @@ if 0:
     from zato.common.audit_log.api import AuditLog
     from zato.common.crypto.api import CryptoManager
     from zato.common.pubsub.sql.clock import DatabaseClock
-    from zato.common.pubsub.sql.generation import GenerationGuard
+    from zato.common.db_env.fence import GenerationGuard
     from zato.common.pubsub.sql.pending import PendingAck
     from zato.common.typing_ import any_, anydict, anylist, intlist, intlistnone, intset, strlist, strset
 

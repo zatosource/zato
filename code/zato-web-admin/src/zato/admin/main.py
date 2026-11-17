@@ -24,6 +24,7 @@ from django.core.management import call_command, execute_from_command_line
 
 # Zato
 from zato.admin.zato_settings import update_globals
+from zato.common.db_env.fence import follow_environment_generation
 from zato.common.json_internal import loads
 from zato.common.repo import RepoManager
 from zato.common.util.api import store_pidfile
@@ -127,6 +128,9 @@ def main():
 
     # Load our configuration for Django
     update_globals(config)
+
+    # Every transaction of the Zato database confirms the generation that the server of this environment recorded
+    follow_environment_generation()
 
     # Initialize Django
     os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'

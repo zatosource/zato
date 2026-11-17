@@ -282,12 +282,13 @@ def take_over(get_engine:'callable_', server_name:'strnone') -> 'GenerationGuard
 def take_over_before_fork(new_engine:'callable_', server_name:'str') -> 'GenerationGuard':
     """ Makes this server the active one once for the processes that its arbiter forks next, through an engine
     that is disposed before the fork, and retains the guard for those processes, each of which follows it on an engine of its own.
+    The guard remains bound to the generation file of the server, so every engine that a forked process builds
+    confirms the generation from the start of the process.
     """
     recorder = _EngineRecorder(new_engine)
     out = take_over(recorder.get_engine, server_name)
 
     engine = cast_('Engine', recorder.engine)
-    out.uninstall(engine)
     engine.dispose()
 
     _ForkTakeover.guard = out

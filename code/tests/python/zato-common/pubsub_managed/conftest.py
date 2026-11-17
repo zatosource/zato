@@ -37,6 +37,7 @@ from capture import limit_captured_logs
 from container import Container, get_disk_device
 from profiles import get_profile_limits
 from zato.common.db_env.database import get_database_engine
+from zato.common.db_env.fence import ModuleCtx as FenceCtx
 from zato.common.pubsub.sql.config import ModuleCtx
 from zato.common.test.pubsub_database import get_db_mode, get_runtime_dir, is_managed_mode, PubSubDatabase, \
     pubsub_db_env, start_pubsub_database, stop_pubsub_database
@@ -107,7 +108,7 @@ def pytest_generate_tests(metafunc:'pytest.Metafunc') -> 'None':
 
 def _get_run_env(work_dir:'str', database_env:'strstrdict') -> 'strstrdict':
     out = {
-        ModuleCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
+        FenceCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
         ModuleCtx.Env_Delivered_Max_Messages: _delivered_max_messages,
     }
     out.update(database_env)

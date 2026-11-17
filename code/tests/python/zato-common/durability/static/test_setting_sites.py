@@ -7,7 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import io
 import re
+import tokenize
 
 # Zato
 from zato.common.test.durability.rust_source import get_enclosing_function, get_line, remove_test_modules
@@ -91,6 +93,53 @@ def _get_text(source:'SourceFile') -> 'str':
     return out
 
 # ################################################################################################################################
+
+def _get_string_ranges(text:'str') -> 'list[tuple[int, int]]':
+    """ Returns the start and the end offset of each string literal of Python code.
+    """
+    out:'list[tuple[int, int]]' = []
+
+    line_offsets = [0]
+    for line in text.splitlines(keepends=True):
+        line_offsets.append(line_offsets[-1] + len(line))
+
+    for token in tokenize.generate_tokens(io.StringIO(text).readline):
+        if token.type == tokenize.STRING:
+            start_line, start_column = token.start
+            end_line, end_column = token.end
+            start = line_offsets[start_line - 1] + start_column
+            end = line_offsets[end_line - 1] + end_column
+            out.append((start, end))
+
+    return out
+
+# ################################################################################################################################
+
+def _get_setting_matches(source:'SourceFile', text:'str') -> 'list[re.Match[str]]':
+    """ Returns each statement of a source that sets a setting of durability. In Python code, a statement
+    is a string literal, so a variable whose name is that of a setting is not one.
+    """
+    out:'list[re.Match[str]]' = []
+    is_python = source.path.endswith(SourcesModuleCtx.Python_Suffix)
+
+    if is_python:
+        string_ranges = _get_string_ranges(text)
+    else:
+        string_ranges = []
+
+    for pattern in ModuleCtx.Setting_Patterns:
+        for match in pattern.finditer(text):
+
+            if is_python:
+                index = match.start()
+                if not any(start <= index < end for start, end in string_ranges):
+                    continue
+
+            out.append(match)
+
+    return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def test_settings_only_in_their_module() -> 'None':
@@ -102,11 +151,10 @@ def test_settings_only_in_their_module() -> 'None':
     for source in get_setting_files():
         text = _get_text(source)
 
-        for pattern in ModuleCtx.Setting_Patterns:
-            for match in pattern.finditer(text):
-                if not _is_allowed_site(source, text, match.start()):
-                    line = get_line(text, match.start())
-                    findings.append(f'{source.path}:{line} -> {match.group(0)}')
+        for match in _get_setting_matches(source, text):
+            if not _is_allowed_site(source, text, match.start()):
+                line = get_line(text, match.start())
+                findings.append(f'{source.path}:{line} -> {match.group(0)}')
 
     assert not findings, '\n'.join(findings)
 
@@ -121,20 +169,19 @@ def test_settings_are_literal() -> 'None':
     for source in get_setting_files():
         text = _get_text(source)
 
-        for pattern in ModuleCtx.Setting_Patterns:
-            for match in pattern.finditer(text):
-                statement = _get_statement(text, match.start())
+        for match in _get_setting_matches(source, text):
+            statement = _get_statement(text, match.start())
 
-                is_formatted = False
-                for marker in ModuleCtx.Formatted_Value_Markers:
-                    if marker in statement:
-                        is_formatted = True
+            is_formatted = False
+            for marker in ModuleCtx.Formatted_Value_Markers:
+                if marker in statement:
+                    is_formatted = True
 
-                is_literal = ModuleCtx.Literal_Value_Pattern.match(statement)
+            is_literal = ModuleCtx.Literal_Value_Pattern.match(statement)
 
-                if is_formatted or not is_literal:
-                    line = get_line(text, match.start())
-                    findings.append(f'{source.path}:{line} -> {statement}')
+            if is_formatted or not is_literal:
+                line = get_line(text, match.start())
+                findings.append(f'{source.path}:{line} -> {statement}')
 
     assert not findings, '\n'.join(findings)
 

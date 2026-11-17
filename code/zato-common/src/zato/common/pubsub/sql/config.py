@@ -12,7 +12,6 @@ import os
 # Zato
 from zato.common.db_env.common import Type_SQLite
 from zato.common.db_env.database import get_database_type
-from zato.common.defaults import default_env_base_dir
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,9 +36,6 @@ class ModuleCtx:
     # before the next pull hands them out again.
     Env_Pull_Lease_Seconds = 'Zato_PubSub_Pull_Lease_Seconds'
 
-    # The environment variable with the path to the file in which the active server records its generation.
-    Env_Generation_File = 'Zato_Database_Generation_File'
-
 # ################################################################################################################################
 
 # How long the messages of a pull wait for their acknowledgement, in seconds.
@@ -63,22 +59,7 @@ _default_commits_in_flight = 2
 # How many group commits of publications may be in progress on PostgreSQL in addition to the ones above.
 _urgent_commits_in_flight = 1
 
-# The name of the file in which the active server records its generation, under the environment directory.
-_generation_file_name = 'database-generation'
-
 # ################################################################################################################################
-# ################################################################################################################################
-
-def get_generation_file_path() -> 'str':
-    """ Returns the path to the file in which the active server records its generation.
-    """
-    if path := os.environ.get(ModuleCtx.Env_Generation_File, ''):
-        out = path
-    else:
-        out = os.path.join(default_env_base_dir, _generation_file_name)
-
-    return out
-
 # ################################################################################################################################
 
 def get_delivered_max_messages() -> 'int':

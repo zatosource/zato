@@ -37,6 +37,7 @@ from tools import build_fsfault
 from toxiproxy import Toxiproxy, Toxiproxy_Host
 from zato.common.db_env.database import get_database_engine
 from zato.common.db_env.database_env import DatabaseEnv
+from zato.common.db_env.fence import ModuleCtx as FenceCtx
 from zato.common.pubsub.sql.config import ModuleCtx
 from zato.common.test.pubsub_database import get_database_address, get_db_mode, get_runtime_dir, is_postgresql_mode, \
     PubSubDatabase, pubsub_db_env, start_pubsub_database, stop_pubsub_database
@@ -106,7 +107,7 @@ def fault_database() -> 'databasegen':
     database = start_pubsub_database('faults', mode)
 
     env = {
-        ModuleCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
+        FenceCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
         ModuleCtx.Env_Delivered_Max_Messages: _delivered_max_messages,
     }
     env.update(database.env)
@@ -133,7 +134,7 @@ def standby_database() -> 'databasegen':
     replicated = start_replicated_database('faults-standby', mode, is_sync=True)
 
     env = {
-        ModuleCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
+        FenceCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
         ModuleCtx.Env_Delivered_Max_Messages: _delivered_max_messages,
     }
     env.update(replicated.env)
@@ -163,7 +164,7 @@ def failover_database() -> 'replicatedgen':
     replicated = start_replicated_database('faults-failover', mode, is_sync=True)
 
     env = {
-        ModuleCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
+        FenceCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
         ModuleCtx.Env_Delivered_Max_Messages: _delivered_max_messages,
     }
     env.update(replicated.env)
@@ -187,7 +188,7 @@ def endpoint_work_dir() -> 'strgen':
     work_dir = tempfile.mkdtemp(prefix='zato-pubsub-endpoints-', dir=get_runtime_dir())
 
     env:'strstrdict' = {
-        ModuleCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
+        FenceCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
         ModuleCtx.Env_Delivered_Max_Messages: _delivered_max_messages,
     }
 
@@ -233,7 +234,7 @@ def stream_database() -> 'streamgen':
             session_dns.register(runtime_dir, database.endpoint, Toxiproxy_Host)
 
         env = {
-            ModuleCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
+            FenceCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
             ModuleCtx.Env_Delivered_Max_Messages: _delivered_max_messages,
         }
         env.update(database.env)
@@ -259,7 +260,7 @@ def process_environment() -> 'environmentgen':
     work_dir = tempfile.mkdtemp(prefix='zato-pubsub-process-faults-', dir=get_runtime_dir())
 
     env:'strstrdict' = {
-        ModuleCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
+        FenceCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
         ModuleCtx.Env_Delivered_Max_Messages: _delivered_max_messages,
     }
 

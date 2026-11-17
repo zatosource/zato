@@ -15,6 +15,7 @@ from zato.common.alerting.notification_config import set_notification_config
 from zato.common.alerting.seed import ensure_alerting_definitions
 from zato.common.api import Alerting, GENERIC
 from zato.common.db_env.database import get_database_engine
+from zato.common.db_env.fence import follow_environment_generation
 from zato.common.odb.model import GenericConn
 from zato.common.rule_engine.sql import RuleSQLBackend
 from zato.common.util.scheduler import ensure_alerting_job_exists
@@ -75,8 +76,11 @@ def _ensure_llm_connection_exists(name:'str', session:'SASession') -> 'None':
 # ################################################################################################################################
 
 def get_rule_backend() -> 'RuleSQLBackend':
-    """ The typed SQL facade over the rule engine tables of the Zato database.
+    """ The typed SQL facade over the rule engine tables of the Zato database, whose transactions confirm
+    the generation that the server of this environment recorded.
     """
+    follow_environment_generation()
+
     engine = get_database_engine()
     out = RuleSQLBackend.from_engine(engine)
     return out

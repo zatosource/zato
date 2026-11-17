@@ -18,7 +18,7 @@ from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
-from zato.common.pubsub.sql.generation import read_generation_file, write_generation_file
+from zato.common.db_env.fence import read_generation_file, write_generation_file
 from zato.common.pubsub.sql.replaced import PubSubReplaced
 from zato.common.test.direct_sql.fault import restore_previous_generation
 from zato.common.test.takeover import take_over_as_another_server
