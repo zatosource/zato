@@ -17,7 +17,7 @@ from time import monotonic
 from gevent import sleep
 
 # Zato
-from cleanup import set_expired
+from cleanup import publish_expired, wait_past_expiry
 from common import delete_all_rows, get_message_rows
 from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
@@ -67,10 +67,10 @@ def run_cleanup_lock_scenario() -> 'None':
     expired_msg_ids:'strlist' = []
 
     for index in range(_expired_count):
-        result = backend.publish(_topic_name, f'cleanup-lock-{index}')
-        expired_msg_ids.append(result.msg_id)
+        msg_id = publish_expired(backend, _topic_name, f'cleanup-lock-{index}')
+        expired_msg_ids.append(msg_id)
 
-    set_expired(expired_msg_ids)
+    wait_past_expiry()
 
     # Another writer holds the write lock ..
     db_path = os.environ[DatabaseEnv.Env_Path]

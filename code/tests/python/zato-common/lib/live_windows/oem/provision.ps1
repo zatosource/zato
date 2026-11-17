@@ -32,6 +32,9 @@ Set-NetFirewallRule -Name 'FPS-SMB-In-TCP' -Enabled True -Profile Any
 
 try {
 
+    # The emulated hardware clock runs in UTC, and the guest reads it in its own time zone at each boot
+    Set-TimeZone -Id 'UTC'
+
     # The guest network is classified as private
     Get-NetConnectionProfile | Set-NetConnectionProfile -NetworkCategory Private
 

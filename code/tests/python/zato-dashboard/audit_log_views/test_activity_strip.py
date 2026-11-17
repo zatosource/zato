@@ -23,6 +23,7 @@ from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOu
 from zato.common.db_env.database import get_database_engine
 from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.ext.bunch import Bunch
+from zato.common.test.direct_sql.seed import seed_rows
 
 # Test support
 from live_sql.env import database_env
@@ -61,8 +62,8 @@ _last_time_iso = _last_time.isoformat()
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _insert_event(connection:'any_', object_name:'str', event_time:'datetime', outcome:'str') -> 'None':
-    insert = event_table.insert().values(
+def _new_event_row(object_name:'str', event_time:'datetime', outcome:'str') -> 'anydict':
+    out = dict(
         cid='cid-activity-strip',
         source=AuditSource.MLLP_Channel,
         event_type=AuditEvent.Message_Received,
@@ -80,7 +81,7 @@ def _insert_event(connection:'any_', object_name:'str', event_time:'datetime', o
         data='MSH|^~\\&|',
     )
 
-    _ = connection.execute(insert)
+    return out
 
 # ################################################################################################################################
 
@@ -98,17 +99,20 @@ def _strip_events(tmp_path:'any_') -> 'envgen':
 
     with database_env(details_config):
 
-        # Creating the log creates the schema the events are inserted straight into -
-        # straight, because their times have to be exact for the buckets to be known.
+        # Creating the log creates the schema that the events are seeded into, with their exact times,
+        # so that the buckets are known.
         _ = AuditLog(_server_name)
 
         engine = get_database_engine()
 
-        with engine.begin() as connection:
-            _insert_event(connection, _channel_name, _first_time, AuditOutcome.OK)
-            _insert_event(connection, _channel_name, _middle_time, AuditOutcome.Error)
-            _insert_event(connection, _channel_name, _last_time, AuditOutcome.OK)
-            _insert_event(connection, _other_channel_name, _middle_time, AuditOutcome.OK)
+        event_rows = [
+            _new_event_row(_channel_name, _first_time, AuditOutcome.OK),
+            _new_event_row(_channel_name, _middle_time, AuditOutcome.Error),
+            _new_event_row(_channel_name, _last_time, AuditOutcome.OK),
+            _new_event_row(_other_channel_name, _middle_time, AuditOutcome.OK),
+        ]
+
+        seed_rows(engine, [(event_table, event_rows)])
 
         yield
 

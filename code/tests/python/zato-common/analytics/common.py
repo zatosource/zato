@@ -22,6 +22,8 @@ from zato.common.analytics.rollup import run_rollup
 from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.json_internal import loads
+from zato.common.test.direct_sql.reset import reset_table_rows
+from zato.common.test.direct_sql.seed import seed_rows
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -102,12 +104,12 @@ def _insert_event(
     duration_ms:'int',
     size:'int',
 ) -> 'None':
-    """ Writes one audit event at the start of the given hourly period, which is how the test
+    """ Seeds one audit event at the start of the given hourly period, which is how the test
     places events in known hourly periods.
     """
     event_time = period_to_datetime(period)
 
-    insert_statement = event_table.insert().values(
+    event_row = dict(
         cid='cid-analytics-test',
         source=source,
         event_type=event_type,
@@ -128,9 +130,7 @@ def _insert_event(
     )
 
     engine = get_database_engine()
-
-    with engine.begin() as connection:
-        _ = connection.execute(insert_statement)
+    seed_rows(engine, [(event_table, [event_row])])
 
 # ################################################################################################################################
 
@@ -138,15 +138,10 @@ def _clean_tables() -> 'None':
     """ Starts from empty tables because containers and SQLite files can be reused between runs.
     """
     audit_engine = get_database_engine()
-
-    with audit_engine.begin() as connection:
-        _ = connection.execute(event_table.delete())
+    reset_table_rows(audit_engine, [event_table])
 
     analytics_engine = get_analytics_engine()
-
-    with analytics_engine.begin() as connection:
-        _ = connection.execute(usage_table.delete())
-        _ = connection.execute(watermark_table.delete())
+    reset_table_rows(analytics_engine, [usage_table, watermark_table])
 
 # ################################################################################################################################
 

@@ -10,12 +10,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import time
 import unittest
+from datetime import timedelta
 
 # Zato
 from zato.common.pubsub.sql.config import ModuleCtx
+from zato.common.db_env.database import get_database_engine
 from zato.common.test import pubsub_db
+from zato.common.test.direct_sql.fault import remove_topic_subscriptions
 from zato.common.test.base_cleanup_live import BaseCleanupLiveTestCase
-from zato.common.util.time_ import datetime_to_ms, utcnow
+from zato.common.util.time_ import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -25,11 +28,8 @@ logger = logging.getLogger('zato.test.pubsub_push.cleanup_live')
 # How long messages that must not expire during a test live, in seconds.
 _long_ttl_seconds = 3600
 
-# How far in the past an aged trace is placed - past the default retention of seven days.
+# How far in the past an aged trace was published - past the default retention of seven days.
 _aged_days = 30
-
-# How many milliseconds one day has.
-_ms_per_day = 24 * 60 * 60 * 1000
 
 # How long the write lock is held, in seconds - longer than the busy timeout of 5 seconds,
 # so the first attempt of the sweep cannot obtain the lock.
@@ -119,7 +119,7 @@ class TestCleanupAfterSubscriptionDeleted(BaseCleanupLiveTestCase):
         self.assert_all_present(msg_ids)
 
         # .. remove all subscribers from the topic so no delivery can happen ..
-        pubsub_db.remove_topic_subscriptions(topic_name)
+        remove_topic_subscriptions(get_database_engine(), topic_name)
         logger.info('Removed subscription rows -> %s', topic_name)
 
         # .. wait for expiry ..
@@ -143,8 +143,11 @@ class TestCleanupAgedTraces(BaseCleanupLiveTestCase):
 
         topic_name = 'iam.password.changed'
 
-        # Publish three messages that will age and one that will not ..
-        aged_ids = self.publish_messages(topic_name, 3, _long_ttl_seconds)
+        # Publish three messages past the retention age and one within it ..
+        aged_pub_time = utcnow() - timedelta(days=_aged_days)
+        aged_pub_time_iso = aged_pub_time.isoformat()
+
+        aged_ids = self.publish_messages(topic_name, 3, _long_ttl_seconds, aged_pub_time_iso)
         recent_ids = self.publish_messages(topic_name, 1, _long_ttl_seconds)
 
         all_ids = aged_ids + recent_ids
@@ -155,11 +158,6 @@ class TestCleanupAgedTraces(BaseCleanupLiveTestCase):
 
         trace_count = pubsub_db.count_message_rows(all_ids)
         self.assertEqual(trace_count, len(all_ids))
-
-        # .. three of the traces move past the retention age ..
-        now_ms = int(datetime_to_ms(utcnow()))
-        aged_ms = now_ms - _aged_days * _ms_per_day
-        pubsub_db.set_pub_time_ms(aged_ids, aged_ms)
 
         # .. run the cleanup ..
         self._run_cleanup_once()

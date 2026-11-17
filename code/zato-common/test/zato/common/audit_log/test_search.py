@@ -14,6 +14,7 @@ from unittest import main, TestCase
 # Zato
 from zato.common.audit_log.common import event_attr_table, event_table, AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.search import last_seen, search_events
+from zato.common.test.direct_sql.seed import seed_row, seed_rows
 from zato.common.test.zato_database import file_database_engine
 
 # ################################################################################################################################
@@ -46,15 +47,7 @@ class SearchEventsTestCase(TestCase):
     def _insert_event(self, **values:'any_') -> 'int':
         """ Writes one event row and returns its id.
         """
-        statement = event_table.insert()
-        statement = statement.values(**values)
-
-        with self.engine.begin() as connection:
-            result = connection.execute(statement)
-
-        primary_key = result.inserted_primary_key
-
-        out = primary_key[0]
+        out = seed_row(self.engine, event_table, values)
         return out
 
 # ################################################################################################################################
@@ -62,11 +55,8 @@ class SearchEventsTestCase(TestCase):
     def _insert_attr(self, event_id:'int', name:'str', value:'str') -> 'None':
         """ Writes one searchable attribute of one event.
         """
-        statement = event_attr_table.insert()
-        statement = statement.values(event_id=event_id, name=name, value=value)
-
-        with self.engine.begin() as connection:
-            _ = connection.execute(statement)
+        attr_row = {'event_id': event_id, 'name': name, 'value': value}
+        seed_rows(self.engine, [(event_attr_table, [attr_row])])
 
 # ################################################################################################################################
 

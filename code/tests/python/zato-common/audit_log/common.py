@@ -21,6 +21,8 @@ from zato.common.audit_log.api import event_attr_table, event_body_table, event_
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import event_dedup_table
 from zato.common.audit_log.search import build_search_conditions
+from zato.common.test.direct_sql.reset import reset_table_rows
+from zato.common.test.direct_sql.seed import seed_rows
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -63,13 +65,7 @@ def delete_all_events() -> 'None':
     """ Starts a scenario from empty tables because containers can be reused between test runs.
     """
     engine = get_database_engine()
-
-    with engine.begin() as connection:
-        _ = connection.execute(event_attr_table.delete())
-        _ = connection.execute(event_body_table.delete())
-        _ = connection.execute(event_link_table.delete())
-        _ = connection.execute(event_dedup_table.delete())
-        _ = connection.execute(event_table.delete())
+    reset_table_rows(engine, [event_attr_table, event_body_table, event_link_table, event_dedup_table, event_table])
 
 # ################################################################################################################################
 
@@ -179,7 +175,7 @@ def run_audit_log_scenario() -> 'None':
     assert _count_events(AuditSource.REST_Channel, _channel_name, 'value_a') == 1
 
     # .. retention deletes events older than the window and keeps the recent ones ..
-    expired_insert = event_table.insert().values(
+    expired_row = dict(
         cid='cid-expired',
         source=AuditSource.REST_Channel,
         event_type=AuditEvent.Request_Received,
@@ -197,8 +193,7 @@ def run_audit_log_scenario() -> 'None':
         data='{"note": "this event is old enough to be deleted by retention"}',
     )
 
-    with engine.begin() as connection:
-        _ = connection.execute(expired_insert)
+    seed_rows(engine, [(event_table, [expired_row])])
 
     assert _count_events(AuditSource.REST_Channel, _channel_name) == 4
 

@@ -15,6 +15,7 @@ from sqlalchemy import func, select
 
 # Zato
 from zato.common.db_env.database import get_database_engine
+from zato.common.test.direct_sql.reset import reset_table_rows
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
     topic_count_table, topic_sub_table
 
@@ -186,20 +187,6 @@ def count_messages_with_payload(msg_ids:'strlist') -> 'int':
 
 # ################################################################################################################################
 
-def set_pub_time_ms(msg_ids:'strlist', pub_time_ms:'int') -> 'None':
-    """ Sets the publication time of the given messages, the way tests move messages past their retention age.
-    """
-    update_statement = message_table.update()
-    update_statement = update_statement.where(message_table.c.msg_id.in_(msg_ids))
-    update_statement = update_statement.values(pub_time_ms=pub_time_ms)
-
-    engine = get_database_engine()
-
-    with engine.begin() as connection:
-        _ = connection.execute(update_statement)
-
-# ################################################################################################################################
-
 def _count_zero_keys_query(key_columns:'anylist', count_column:'any_') -> 'any_':
     """ Builds the query counting the keys of one count table whose rows add up to zero - a single row each on SQLite,
     any number of change rows each on PostgreSQL.
@@ -246,24 +233,7 @@ def delete_all_messages() -> 'None':
     across tests, while the subscription state stays as the server knows it.
     """
     engine = get_database_engine()
-
-    with engine.begin() as connection:
-        _ = connection.execute(delivery_table.delete())
-        _ = connection.execute(message_table.delete())
-
-# ################################################################################################################################
-
-def remove_topic_subscriptions(topic_name:'str') -> 'None':
-    """ Removes all of one topic's subscription rows straight from the database,
-    the way tests simulate a subscription that disappeared behind the server's back.
-    """
-    delete_statement = topic_sub_table.delete()
-    delete_statement = delete_statement.where(topic_sub_table.c.topic_name == topic_name)
-
-    engine = get_database_engine()
-
-    with engine.begin() as connection:
-        _ = connection.execute(delete_statement)
+    reset_table_rows(engine, [delivery_table, message_table])
 
 # ################################################################################################################################
 # ################################################################################################################################

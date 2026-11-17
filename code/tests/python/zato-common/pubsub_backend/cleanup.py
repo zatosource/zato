@@ -8,16 +8,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from datetime import timedelta
+
+# gevent
+from gevent import sleep
 
 # Zato
 from common import delete_all_rows, get_delivery_rows, get_message_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
-from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.config import ModuleCtx
-from zato.common.pubsub.sql.schema import message_table
-from zato.common.util.time_ import datetime_to_ms, utcnow
+from zato.common.util.time_ import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,48 +38,35 @@ _sub_key_1 = 'zpsk.test.cleanup.1'
 _sub_key_2 = 'zpsk.test.cleanup.2'
 _sub_key_3 = 'zpsk.test.cleanup.3'
 
-# How many milliseconds one second and one day have.
-_ms_per_second = 1000
-_ms_per_day = 24 * 60 * 60 * _ms_per_second
+# The expiration, in seconds, of a message that expires as it is published.
+_expires_at_once = 0
 
-# How far in the past an aged trace is placed - well past the default retention of days.
+# How long the time of the database advances past the expiration of a message that expires as it is published.
+_past_expiry_seconds = 0.01
+
+# The expiration, in seconds, of a message that is still pending at the first sweep and expired at the second one.
+_trace_expiration_seconds = 2
+
+# How far in the past an aged trace was published - well past the default retention of days.
 _aged_days = 30
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def set_expired(msg_ids:'strlist') -> 'None':
-    """ Moves the expiration of the given messages into the past, straight in the database.
+def publish_expired(backend:'SQLPubSubBackend', topic_name:'str', data:'str') -> 'str':
+    """ Publishes one message that expires as it is published and returns its id.
     """
-    engine = get_database_engine()
+    result = backend.publish(topic_name, data, expiration=_expires_at_once)
 
-    now_ms = int(datetime_to_ms(utcnow()))
-    expired_ms = now_ms - _ms_per_second
-
-    update_statement = message_table.update()
-    update_statement = update_statement.where(message_table.c.msg_id.in_(msg_ids))
-    update_statement = update_statement.values(expiration_ms=expired_ms)
-
-    with engine.begin() as connection:
-        _ = connection.execute(update_statement)
+    out = result.msg_id
+    return out
 
 # ################################################################################################################################
 
-def _set_aged(msg_ids:'strlist') -> 'None':
-    """ Moves the publication time of the given messages far into the past,
-    straight in the database.
+def wait_past_expiry() -> 'None':
+    """ Waits until the time of the database is past the expiration of every message that expired as it was published.
     """
-    engine = get_database_engine()
-
-    now_ms = int(datetime_to_ms(utcnow()))
-    aged_ms = now_ms - _aged_days * _ms_per_day
-
-    update_statement = message_table.update()
-    update_statement = update_statement.where(message_table.c.msg_id.in_(msg_ids))
-    update_statement = update_statement.values(pub_time_ms=aged_ms)
-
-    with engine.begin() as connection:
-        _ = connection.execute(update_statement)
+    sleep(_past_expiry_seconds)
 
 # ################################################################################################################################
 
@@ -132,15 +121,17 @@ def run_cleanup_scenario() -> 'None':
     kept_msg_ids:'strlist' = []
     expired_msg_ids:'strlist' = []
 
-    for index in range(2):
-        result = backend.publish(_topic_expiry, f'cleanup-kept-{index}')
-        kept_msg_ids.append(result.msg_id)
+    result = backend.publish(_topic_expiry, 'cleanup-kept-0', expiration=_trace_expiration_seconds)
+    kept_msg_ids.append(result.msg_id)
+
+    result = backend.publish(_topic_expiry, 'cleanup-kept-1')
+    kept_msg_ids.append(result.msg_id)
 
     for index in range(3):
-        result = backend.publish(_topic_expiry, f'cleanup-expired-{index}')
-        expired_msg_ids.append(result.msg_id)
+        msg_id = publish_expired(backend, _topic_expiry, f'cleanup-expired-{index}')
+        expired_msg_ids.append(msg_id)
 
-    set_expired(expired_msg_ids)
+    wait_past_expiry()
 
     # .. the expiry sweep removes exactly the expired ones, delivery rows included ..
     counts = cleanup.sweep_once()
@@ -162,7 +153,7 @@ def run_cleanup_scenario() -> 'None':
     _ = backend.ack_message(_sub_key_1, trace_msg_id)
     _ = backend.ack_message(_sub_key_2, trace_msg_id)
 
-    set_expired([trace_msg_id])
+    sleep(_trace_expiration_seconds)
 
     counts = cleanup.sweep_once()
     assert counts['expired'] == 0, counts
@@ -174,7 +165,13 @@ def run_cleanup_scenario() -> 'None':
     # .. with its own subscriber so draining it cannot touch the expiry topic ..
     backend.subscribe(_sub_key_3, _topic_traces)
 
-    for index in range(4):
+    aged_pub_time = utcnow() - timedelta(days=_aged_days)
+    aged_pub_time_iso = aged_pub_time.isoformat()
+
+    for index in range(2):
+        _ = backend.publish(_topic_traces, f'cleanup-trace-{index}', pub_time=aged_pub_time_iso)
+
+    for index in range(2, 4):
         _ = backend.publish(_topic_traces, f'cleanup-trace-{index}')
 
     _fetch_and_ack_all(backend, _sub_key_3)
@@ -182,9 +179,7 @@ def run_cleanup_scenario() -> 'None':
     trace_msg_ids = _get_trace_msg_ids(_topic_traces)
     assert len(trace_msg_ids) == 4, trace_msg_ids
 
-    # .. the two oldest traces age past the retention and the age sweep removes them ..
-    _set_aged(trace_msg_ids[:2])
-
+    # .. the two oldest traces were published past the retention and the age sweep removes them ..
     counts = cleanup.sweep_once()
 
     assert counts['aged'] == 2, counts

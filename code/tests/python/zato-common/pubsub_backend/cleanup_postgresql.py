@@ -18,7 +18,7 @@ from sqlalchemy import create_engine, select, text
 from sqlalchemy.exc import DBAPIError
 
 # Zato
-from cleanup import set_expired
+from cleanup import publish_expired, wait_past_expiry
 from common import delete_all_rows, get_message_rows
 from zato.common.db_env.errors import get_sqlstate, is_transient, SQLState
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
@@ -69,15 +69,15 @@ _deadlocks_query = text('select deadlocks from pg_stat_database where datname = 
 # ################################################################################################################################
 
 def _publish_expired(backend:'SQLPubSubBackend') -> 'strlist':
-    """ Publishes the messages of a flow and marks them as expired.
+    """ Publishes the messages of a flow, each of which expires as it is published.
     """
     out:'strlist' = []
 
     for index in range(_expired_count):
-        result = backend.publish(_topic_name, f'cleanup-postgresql-{index}')
-        out.append(result.msg_id)
+        msg_id = publish_expired(backend, _topic_name, f'cleanup-postgresql-{index}')
+        out.append(msg_id)
 
-    set_expired(out)
+    wait_past_expiry()
 
     return out
 

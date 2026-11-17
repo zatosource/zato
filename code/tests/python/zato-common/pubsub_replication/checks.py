@@ -91,24 +91,6 @@ def read_generation(database:'ReplicatedDatabase') -> 'int':
 
 # ################################################################################################################################
 
-def raise_generation(database:'ReplicatedDatabase') -> 'int':
-    """ Raises the generation the way the startup of another server does and returns the new value.
-    """
-    connection = _connect(database)
-
-    try:
-        cursor = connection.cursor()
-        cursor.execute('update zato_active set generation = generation + 1 where id = 1 returning generation')
-        row = cursor.fetchone()
-        connection.commit()
-    finally:
-        connection.close()
-
-    out = row[0]
-    return out
-
-# ################################################################################################################################
-
 def check_counts_equal_rows(database:'ReplicatedDatabase', workload:'Workload') -> 'None':
     """ The queue depths that the counts report equal the delivery rows of each subscriber.
     """

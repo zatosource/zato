@@ -14,6 +14,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from contextlib import contextmanager
 
 # Zato
+from zato.common.audit_log.bulk_insert import insert_pending_events
 from zato.common.db_env.engine import call_database
 from zato.common.db_env.write_path import Mechanism, write_path
 
@@ -24,9 +25,13 @@ if 0:
     from collections.abc import Iterator
     from sqlalchemy import Table
     from sqlalchemy.engine import Connection, Engine
-    from zato.common.typing_ import any_, callable_, dictlist
+    from zato.common.audit_log.pending import pending_event_list
+    from zato.common.typing_ import any_, callable_, dictlist, intlist, stranydict
 
     any_ = any_
+    stranydict = stranydict
+    intlist = intlist
+    pending_event_list = pending_event_list
     callable_ = callable_
     Connection = Connection
     dictlist = dictlist
@@ -75,10 +80,37 @@ def run_seed(engine:'Engine', func:'callable_', *args:'any_') -> 'any_':
 
 # ################################################################################################################################
 
+def _insert_row(connection:'Connection', table:'Table', values:'stranydict') -> 'any_':
+    result = connection.execute(table.insert(), values)
+
+    out = result.inserted_primary_key[0]
+    return out
+
+# ################################################################################################################################
+
 def seed_rows(engine:'Engine', table_rows:'table_rows_list') -> 'None':
     """ Inserts the rows of each table in one transaction, in turn with the other writes to the database.
     """
     _ = run_seed(engine, _insert_rows, table_rows)
+
+# ################################################################################################################################
+
+def seed_row(engine:'Engine', table:'Table', values:'stranydict') -> 'any_':
+    """ Inserts one row in a transaction of its own, in turn with the other writes to the database,
+    and returns its primary key.
+    """
+    out = run_seed(engine, _insert_row, table, values)
+    return out
+
+# ################################################################################################################################
+
+def seed_audit_events(engine:'Engine', batch:'pending_event_list') -> 'intlist':
+    """ Inserts audit events that AuditLog.new_pending_event built, each complete with its own time, which may be
+    in the past, together with their attributes, bodies and links, in one transaction. Returns the ids of the events
+    in the order of the batch.
+    """
+    out = run_seed(engine, insert_pending_events, batch)
+    return out
 
 # ################################################################################################################################
 

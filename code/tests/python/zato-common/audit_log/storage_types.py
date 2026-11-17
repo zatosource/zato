@@ -21,6 +21,8 @@ from common import delete_all_events
 from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.search import build_search_conditions
+from zato.common.audit_log.writes import execute_audit_write
+from zato.common.test.direct_sql.seed import seed_row, seed_rows
 from zato.common.db_env.common import hour_period, Type_SQLite
 
 # ################################################################################################################################
@@ -68,9 +70,9 @@ _index_markers = {
 # ################################################################################################################################
 
 def _insert_event(engine:'Engine', cid:'str', event_time:'datetime', data:'str') -> 'int':
-    """ Inserts one event and returns its id.
+    """ Seeds one event and returns its id.
     """
-    insert = event_table.insert().values(
+    event_row = dict(
         cid=cid,
         source=_search_source,
         event_type=AuditEvent.Message_Received,
@@ -80,10 +82,7 @@ def _insert_event(engine:'Engine', cid:'str', event_time:'datetime', data:'str')
         data=data,
     )
 
-    with engine.begin() as connection:
-        result = connection.execute(insert)
-        out = result.inserted_primary_key[0]
-
+    out = seed_row(engine, event_table, event_row)
     return out
 
 # ################################################################################################################################
@@ -228,10 +227,8 @@ def run_search_scenario() -> 'None':
     with_attr_id = _insert_event(engine, 'trace', now, 'MSH|^~\\&|')
     _ = _insert_event(engine, 'trace', now, 'MSA|AA|')
 
-    attr_insert = event_attr_table.insert().values(event_id=with_attr_id, name=_attr_name, value=_attr_value)
-
-    with engine.begin() as connection:
-        _ = connection.execute(attr_insert)
+    attr_row = {'event_id': with_attr_id, 'name': _attr_name, 'value': _attr_value}
+    seed_rows(engine, [(event_attr_table, [attr_row])])
 
     # .. terms long enough for every index ..
     assert _search(engine, 'ORDER-2026') == {'scripts'}
@@ -260,18 +257,14 @@ def run_search_scenario() -> 'None':
 
     # The index follows updates ..
     update = event_table.update().where(event_table.c.id == updated_id).values(data='item replaced')
-
-    with engine.begin() as connection:
-        _ = connection.execute(update)
+    _ = execute_audit_write(engine, update)
 
     assert _search(engine, 'valuexa') == set()
     assert _search(engine, 'replaced') == {'updated'}
 
     # .. and deletes.
     delete = event_table.delete().where(event_table.c.id == deleted_id)
-
-    with engine.begin() as connection:
-        _ = connection.execute(delete)
+    _ = execute_audit_write(engine, delete)
 
     assert _search(engine, 'x y') == set()
 

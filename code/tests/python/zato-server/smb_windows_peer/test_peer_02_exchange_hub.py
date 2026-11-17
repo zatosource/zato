@@ -6,21 +6,16 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-""" The tests of the live suite in test_exchange_hub.py, run against the peer in place of a Zato server.
-"""
-
 # Local
-from test_exchange_hub import test_single_file, test_burst, test_fan_out, test_empty_file_rejected
+from _live_tests import live_test
 
-# ##############################################################################################################################
-# ##############################################################################################################################
+# ################################################################################################################################
+# ################################################################################################################################
 
-__all__ = [
-    'test_single_file',
-    'test_burst',
-    'test_fan_out',
-    'test_empty_file_rejected',
-]
+test_single_file = live_test('test_exchange_hub', 'test_single_file')
+test_burst = live_test('test_exchange_hub', 'test_burst')
+test_fan_out = live_test('test_exchange_hub', 'test_fan_out')
+test_empty_file_rejected = live_test('test_exchange_hub', 'test_empty_file_rejected')
 
-# ##############################################################################################################################
-# ##############################################################################################################################
+# ################################################################################################################################
+# ################################################################################################################################

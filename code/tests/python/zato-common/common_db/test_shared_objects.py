@@ -19,8 +19,9 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.db_env.database import database_config, dispose_database_engine, get_database_engine
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.test.audit_log_ import new_test_audit_log
+from zato.common.test.takeover import take_over_as_another_server
 from zato.common.pubsub.sql.replaced import PubSubReplaced
-from zato.common.test.pubsub_database import connect, get_suite_modes, PubSubDBMode, \
+from zato.common.test.pubsub_database import get_suite_modes, PubSubDBMode, \
     start_pubsub_database, stop_pubsub_database
 from zato.common.typing_ import cast_
 
@@ -35,6 +36,9 @@ if 0:
 # ################################################################################################################################
 
 _object_type = 'test.shared.object'
+
+# The pool size that gives the server which takes the database over an engine of its own
+_other_server_pool_size = 2
 
 _env_prefix = database_config.env_prefix
 
@@ -145,24 +149,6 @@ def pubsub_database(request:'pytest.FixtureRequest') -> 'any_':
 
 # ################################################################################################################################
 
-def _raise_generation(database:'PubSubDatabase') -> 'int':
-    """ Raises the generation the way the startup of another server does and returns the new value.
-    """
-    connection = connect(database)
-
-    try:
-        cursor = connection.cursor()
-        cursor.execute('update zato_active set generation = generation + 1 where id = 1 returning generation')
-        row = cast_('any_', cursor.fetchone())
-        connection.commit()
-    finally:
-        connection.close()
-
-    out = row[0]
-    return out
-
-# ################################################################################################################################
-
 def test_postgresql(monkeypatch:'pytest.MonkeyPatch', tmp_path:'pathlib.Path', pubsub_database:'PubSubDatabase') -> 'None':
     """ On PostgreSQL, the shared objects are in the Zato database, two stores contend for one object
     with one of them succeeding, and the writes of a replaced server are rejected.
@@ -207,11 +193,15 @@ def test_postgresql(monkeypatch:'pytest.MonkeyPatch', tmp_path:'pathlib.Path', p
     try:
         assert first_store.compare_and_set(_object_type, name, {'slot': 'fourth'}, stored.version)
 
-        # .. until another server raises the generation, after which the store writes nothing.
-        _ = _raise_generation(pubsub_database)
+        # .. until another server takes the database over, after which the store writes nothing.
+        other = take_over_as_another_server(pubsub_database.env, _other_server_pool_size)
+        other_guard = cast_('any_', other.generation_guard)
 
-        with pytest.raises(PubSubReplaced):
-            _ = first_store.compare_and_set(_object_type, name, {'slot': 'fifth'}, stored.version + 1)
+        try:
+            with pytest.raises(PubSubReplaced):
+                _ = first_store.compare_and_set(_object_type, name, {'slot': 'fifth'}, stored.version + 1)
+        finally:
+            other_guard.uninstall(other.engine)
 
     finally:
         guard.uninstall(backend.engine)

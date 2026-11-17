@@ -29,14 +29,16 @@ from zato.common.audit_log.common import event_count_table
 from zato.common.audit_log.dedup import build_dedup_key, get_in_doubt
 from zato.common.audit_log.resubmit import run_once, Action_Resend, DuplicateResubmitException
 from zato.common.audit_log.retention import run_retention, Env_Content_Retention_Days
+from zato.common.test.direct_sql.seed import seed_audit_events
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, intlist, strlist
+    from zato.common.typing_ import any_, anylist, intlist, strlist
     any_ = any_
+    anylist = anylist
     intlist = intlist
     strlist = strlist
 
@@ -111,32 +113,31 @@ where r.event_count is distinct from s.event_count
 # ################################################################################################################################
 
 def _insert_events(audit_log:'AuditLog', count:'int', age_days:'int') -> 'intlist':
-    """ Writes events with a body and an attribute each and backdates them by the given number of days in one statement.
+    """ Writes events with a body and an attribute each, which are the given number of days old - recent events through
+    the audit log and older ones as a seed that carries their past time.
     """
     out:'intlist' = []
 
+    if not age_days:
+        for _ in range(count):
+            event_id = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Interchange_Received, _channel_name,
+                cid=f'cid-active-standby-{age_days}', data='active-standby', attrs={'age_days': f'{age_days}'},
+                bodies={'request': f'active-standby-{age_days}'}, needs_id=True)
+            out.append(event_id)
+
+        return out
+
+    event_time = utcnow() - timedelta(days=age_days)
+    batch:'anylist' = []
+
     for _ in range(count):
-        event_id = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Interchange_Received, _channel_name,
+        pending = audit_log.new_pending_event(AuditSource.MLLP_Channel, AuditEvent.Interchange_Received, _channel_name,
             cid=f'cid-active-standby-{age_days}', data='active-standby', attrs={'age_days': f'{age_days}'},
-            bodies={'request': f'active-standby-{age_days}'}, needs_id=True)
-        out.append(event_id)
+            bodies={'request': f'active-standby-{age_days}'})
+        pending.values['event_time'] = event_time
+        batch.append(pending)
 
-    if age_days:
-
-        event_time = utcnow() - timedelta(days=age_days)
-
-        backdate_events = event_table.update()
-        backdate_events = backdate_events.where(event_table.c.id.in_(out))
-        backdate_events = backdate_events.values(event_time=event_time)
-
-        backdate_bodies = event_body_table.update()
-        backdate_bodies = backdate_bodies.where(event_body_table.c.event_id.in_(out))
-        backdate_bodies = backdate_bodies.values(event_time=event_time)
-
-        with get_database_engine().begin() as connection:
-            _ = connection.execute(backdate_events)
-            _ = connection.execute(backdate_bodies)
-
+    out = seed_audit_events(get_database_engine(), batch)
     return out
 
 # ################################################################################################################################

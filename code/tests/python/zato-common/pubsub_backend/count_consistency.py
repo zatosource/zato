@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from datetime import timedelta
+
 # SQLAlchemy
 from sqlalchemy import select
 
@@ -18,6 +21,7 @@ from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.counts import Milliseconds_Per_Minute, No_Publisher
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
     topic_count_table
+from zato.common.util.time_ import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -42,7 +46,7 @@ _sub_key_3 = 'zpsk.test.counts.3'
 _publisher_1 = 'alice'
 _publisher_2 = 'bob'
 
-# How far back the moved messages are published, in milliseconds.
+# How far back the earlier messages are published, in milliseconds.
 _moved_back_ms = 3 * Milliseconds_Per_Minute
 
 # ################################################################################################################################
@@ -149,22 +153,15 @@ def _assert_counts_match(backend:'SQLPubSubBackend', step:'str') -> 'None':
 
 # ################################################################################################################################
 
-def _move_back(msg_ids:'strlist') -> 'None':
-    """ Moves the publication time of the given messages a few minutes back and makes one of them anonymous.
+def _publish_earlier(backend:'SQLPubSubBackend', topic_name:'str') -> 'None':
+    """ Publishes two messages at an earlier publication time, of which the first one has no publisher.
     """
-    engine = get_database_engine()
+    now = utcnow()
+    pub_time = now - timedelta(milliseconds=_moved_back_ms)
+    pub_time_iso = pub_time.isoformat()
 
-    with engine.begin() as connection:
-        for index, msg_id in enumerate(msg_ids):
-
-            update_statement = message_table.update()
-            update_statement = update_statement.where(message_table.c.msg_id == msg_id)
-            update_statement = update_statement.values(pub_time_ms=message_table.c.pub_time_ms - _moved_back_ms)
-
-            if index == 0:
-                update_statement = update_statement.values(publisher=None)
-
-            _ = connection.execute(update_statement)
+    _ = backend.publish(topic_name, 'counts-earlier-0', publisher=None, pub_time=pub_time_iso)
+    _ = backend.publish(topic_name, 'counts-earlier-1', publisher=_publisher_1, pub_time=pub_time_iso)
 
 # ################################################################################################################################
 
@@ -208,9 +205,9 @@ def run_count_consistency_scenario() -> 'None':
     _ = backend.ack_message(_sub_key_2, topic_2_msg_ids[0])
     _assert_counts_match(backend, 'ack')
 
-    # .. a change of the publication time and of the publisher ..
-    _move_back(topic_1_msg_ids[2:4])
-    _assert_counts_match(backend, 'move-back')
+    # .. publications at an earlier time, with and without a publisher ..
+    _publish_earlier(backend, _topic_1)
+    _assert_counts_match(backend, 'publish-earlier')
 
     # .. a queue cleared ..
     _ = backend.clear_queue(_sub_key_3)

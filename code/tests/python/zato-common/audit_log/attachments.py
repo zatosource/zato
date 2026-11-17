@@ -19,6 +19,7 @@ from zato.common.audit_log.api import event_body_table, event_table, AuditBody, 
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import build_attachment, get_attachment, list_attachments, Env_Max_Attachment_Size
 from zato.common.audit_log.body import resolve_body
+from zato.common.test.direct_sql.seed import seed_audit_events
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -167,23 +168,13 @@ def run_attachment_scenario() -> 'None':
     assert oversized_attachment['content'] == b''
 
     # An event past the retention window takes its attachment rows with it ..
-    expired_event_id = audit_log.insert(AuditSource.Email_SMTP, AuditEvent.Message_Sent, _conn_name,
+    expired_event = audit_log.new_pending_event(AuditSource.Email_SMTP, AuditEvent.Message_Sent, _conn_name,
         cid='cid-attachment-3', outcome=AuditOutcome.OK,
         attachments=[build_attachment(_csv_name, _csv_type, _csv_content)])
 
-    expired_time = utcnow() - timedelta(days=_row_expired_age_days)
+    expired_event.values['event_time'] = utcnow() - timedelta(days=_row_expired_age_days)
 
-    backdate_event = event_table.update()
-    backdate_event = backdate_event.where(event_table.c.id == expired_event_id)
-    backdate_event = backdate_event.values(event_time=expired_time)
-
-    backdate_bodies = event_body_table.update()
-    backdate_bodies = backdate_bodies.where(event_body_table.c.event_id == expired_event_id)
-    backdate_bodies = backdate_bodies.values(event_time=expired_time)
-
-    with engine.begin() as connection:
-        _ = connection.execute(backdate_event)
-        _ = connection.execute(backdate_bodies)
+    expired_event_id = seed_audit_events(engine, [expired_event])[0]
 
     assert _count_attachment_rows(expired_event_id) == 1
 

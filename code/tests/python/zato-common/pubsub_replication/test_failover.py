@@ -18,9 +18,10 @@ import pytest
 # Zato
 from zato.common.pubsub.sql.replaced import PubSubReplaced
 from zato.common.test.pubsub_replication import kill_primary, promote_standby
+from zato.common.test.takeover import take_over_as_another_server
 
 # local
-from checks import check_counts_equal_rows, check_delivery, raise_generation, read_generation, stored_msg_ids
+from checks import check_counts_equal_rows, check_delivery, read_generation, stored_msg_ids
 from environment import replicated_environment
 from workload import Pull_Topic, Workload
 
@@ -36,6 +37,9 @@ _detection_seconds = 2
 # How long the traffic runs on the new primary, and how long the backlog may take to drain, in seconds.
 _traffic_after_seconds = 10
 _drain_timeout = 120
+
+# The pool size that gives the server which takes the promoted database over an engine of its own
+_other_server_pool_size = 2
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -89,13 +93,17 @@ def test_failover_synchronous() -> 'None':
         assert not workload.backend.is_replaced
 
         # .. and once another server takes over the promoted database, this one changes nothing.
-        _ = raise_generation(database)
+        other = take_over_as_another_server(database.env, _other_server_pool_size)
+
+        other_guard = other.generation_guard
+        assert other_guard is not None
 
         with pytest.raises(PubSubReplaced):
             _ = workload.backend.publish(Pull_Topic, 'rejected')
 
         assert workload.backend.is_replaced
         guard.uninstall(workload.backend.engine)
+        other_guard.uninstall(other.engine)
 
 # ################################################################################################################################
 # ################################################################################################################################

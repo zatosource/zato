@@ -23,13 +23,15 @@ from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log import retention
 from zato.common.audit_log.query import outstanding_conditions
 from zato.common.audit_log.retention import Env_Archive_Dir, Env_Content_Retention_Days
+from zato.common.test.direct_sql.seed import seed_audit_events
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anydictnone, strdictnone
+    from zato.common.typing_ import any_, anydict, anydictnone, anylist, strdictnone
+    anylist = anylist
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
@@ -85,29 +87,14 @@ def _insert_event_at(
     attrs:'strdictnone' = None,
     bodies:'strdictnone' = None,
     ) -> 'int':
-    """ Writes one event through the audit log and then backdates it by the given number of days -
-    retention only ever looks at the event time.
+    """ Seeds one event that is the given number of days old - retention only ever looks at the event time.
     """
-    event_id = audit_log.insert(source, AuditEvent.Interchange_Received, _channel_name,
+    pending = audit_log.new_pending_event(source, AuditEvent.Interchange_Received, _channel_name,
         cid=f'cid-retention-{age_days}-{outcome}', outcome=outcome, data=data, attrs=attrs, bodies=bodies)
 
-    event_time = utcnow() - timedelta(days=age_days)
+    pending.values['event_time'] = utcnow() - timedelta(days=age_days)
 
-    engine = get_database_engine()
-
-    backdate_event = event_table.update()
-    backdate_event = backdate_event.where(event_table.c.id == event_id)
-    backdate_event = backdate_event.values(event_time=event_time)
-
-    backdate_bodies = event_body_table.update()
-    backdate_bodies = backdate_bodies.where(event_body_table.c.event_id == event_id)
-    backdate_bodies = backdate_bodies.values(event_time=event_time)
-
-    with engine.begin() as connection:
-        _ = connection.execute(backdate_event)
-        _ = connection.execute(backdate_bodies)
-
-    out = event_id
+    out = seed_audit_events(get_database_engine(), [pending])[0]
     return out
 
 # ################################################################################################################################
@@ -288,26 +275,22 @@ def _run_chunk_order_checks(audit_log:'AuditLog') -> 'None':
     """
     delete_all_events()
 
+    # Every exchange is older than the retention window
+    event_time = utcnow() - timedelta(days=_row_expired_age_days)
+    batch:'anylist' = []
+
     for index in range(_mllp_pair_count):
         msg_id = f'MSG{index:05d}'
         cid = f'cid-retention-mllp-{index}'
 
-        _ = audit_log.insert(AuditSource.MLLP_Outgoing, AuditEvent.Message_Sent, _mllp_connection,
-            cid=cid, msg_id=msg_id, outcome=AuditOutcome.OK)
-        _ = audit_log.insert(AuditSource.MLLP_Outgoing, AuditEvent.Ack_Received, _mllp_connection,
-            cid=cid, msg_id=msg_id, outcome=AuditOutcome.OK)
-
-    # Every exchange is older than the retention window
-    event_time = utcnow() - timedelta(days=_row_expired_age_days)
+        for event_type in (AuditEvent.Message_Sent, AuditEvent.Ack_Received):
+            pending = audit_log.new_pending_event(AuditSource.MLLP_Outgoing, event_type, _mllp_connection,
+                cid=cid, msg_id=msg_id, outcome=AuditOutcome.OK)
+            pending.values['event_time'] = event_time
+            batch.append(pending)
 
     engine = get_database_engine()
-
-    backdate_events = event_table.update()
-    backdate_events = backdate_events.where(event_table.c.source == AuditSource.MLLP_Outgoing)
-    backdate_events = backdate_events.values(event_time=event_time)
-
-    with engine.begin() as connection:
-        _ = connection.execute(backdate_events)
+    _ = seed_audit_events(engine, batch)
 
     assert _count_outstanding(AuditSource.MLLP_Outgoing) == 0
 

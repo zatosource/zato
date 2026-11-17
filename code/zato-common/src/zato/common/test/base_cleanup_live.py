@@ -84,13 +84,14 @@ class BaseCleanupLiveTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
-    def publish_messages(self, topic_name:'str', count:'int', expiration:'int') -> 'strlist':
-        """ Publishes the requested number of messages and returns their msg_ids.
+    def publish_messages(self, topic_name:'str', count:'int', expiration:'int', pub_time:'str'='') -> 'strlist':
+        """ Publishes the requested number of messages, at the publication time given or at the current one,
+        and returns their msg_ids.
         """
         out:'strlist' = []
 
         for _ in range(count):
-            result = self.publisher.publish(topic_name, 'cleanup test payload', expiration=expiration)
+            result = self.publisher.publish(topic_name, 'cleanup test payload', expiration=expiration, pub_time=pub_time)
             msg_id = result['msg_id']
             out.append(msg_id)
 

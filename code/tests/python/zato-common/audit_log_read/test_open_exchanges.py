@@ -21,6 +21,7 @@ from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import Status_Outstanding
 from zato.common.audit_log.listing import event_conditions, new_search_filters
 from zato.common.audit_log.retention import Env_Archive_Dir, run_retention
+from zato.common.audit_log.writes import execute_audit_write
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -154,8 +155,7 @@ def _update(ids:'intlist', **values:'any_') -> 'None':
     is_selected = event_table.c.id.in_(ids)
     statement = event_table.update().where(is_selected).values(**values)
 
-    with engine.begin() as connection:
-        _ = connection.execute(statement)
+    _ = execute_audit_write(engine, statement)
 
 # ################################################################################################################################
 # ################################################################################################################################

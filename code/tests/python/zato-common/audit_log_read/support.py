@@ -21,15 +21,20 @@ from zato.common.db_env.database import database_config, dispose_database_engine
 from zato.common.audit_log.common import event_count_table, event_dedup_table, event_open_table, Status_Outstanding
 from zato.common.audit_log.event_count import compact_event_counts, count_key_columns
 from zato.common.audit_log.listing import new_search_filters
+from zato.common.audit_log.writes import execute_audit_write
 from zato.common.db_env.engine import call_database, create_schemas
+from zato.common.test.direct_sql.reset import reset_table_rows
+from zato.common.test.direct_sql.seed import run_seed, seed_rows
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy.engine import Connection
     from zato.common.audit_log.listing import SearchFilters
     from zato.common.typing_ import any_, anydict, anylist, anyset, anytuple, callable_, intlist, intset, stranydict
 
+    Connection = Connection
     SearchFilters = SearchFilters
     any_ = any_
     callable_ = callable_
@@ -104,15 +109,10 @@ def delete_all_rows() -> 'None':
     The event counts and the open exchanges are emptied last, after the triggers wrote what deleting the events changes.
     """
     engine = get_database_engine()
+    tables = [event_attr_table, event_body_table, event_link_table, event_dedup_table, event_table, event_count_table,
+        event_open_table]
 
-    with engine.begin() as connection:
-        _ = connection.execute(event_attr_table.delete())
-        _ = connection.execute(event_body_table.delete())
-        _ = connection.execute(event_link_table.delete())
-        _ = connection.execute(event_dedup_table.delete())
-        _ = connection.execute(event_table.delete())
-        _ = connection.execute(event_count_table.delete())
-        _ = connection.execute(event_open_table.delete())
+    reset_table_rows(engine, tables)
 
 # ################################################################################################################################
 
@@ -188,16 +188,16 @@ def new_event_rows(rng:'Random', count:'int', first_index:'int') -> 'anylist':
 # ################################################################################################################################
 
 def insert_rows(rows:'anylist') -> 'None':
-    """ Inserts event rows in one transaction, in statements of at most _rows_per_statement rows each.
+    """ Seeds event rows in one transaction, in statements of at most _rows_per_statement rows each.
     """
     engine = get_database_engine()
+    table_rows:'anylist' = []
 
-    with engine.begin() as connection:
-        for start in range(0, len(rows), _rows_per_statement):
-            end = start + _rows_per_statement
-            statement_rows = rows[start:end]
+    for start in range(0, len(rows), _rows_per_statement):
+        end = start + _rows_per_statement
+        table_rows.append((event_table, rows[start:end]))
 
-            _ = connection.execute(event_table.insert(), statement_rows)
+    seed_rows(engine, table_rows)
 
 # ################################################################################################################################
 
@@ -382,24 +382,27 @@ def drop_read_schema(backend:'str') -> 'None':
     """ Turns the database into one created before the event counts and the open exchanges existed.
     """
     engine = get_database_engine()
+    _ = run_seed(engine, _drop_read_schema, backend)
 
-    with engine.begin() as connection:
+# ################################################################################################################################
 
-        for prefix in _trigger_prefixes:
-            for kind in _trigger_kinds:
-                name = f'{prefix}_{kind}'
+def _drop_read_schema(connection:'Connection', backend:'str') -> 'None':
 
-                if backend == Backend_PostgreSQL:
-                    _ = connection.exec_driver_sql(f'DROP TRIGGER {name} ON event')
-                    _ = connection.exec_driver_sql(f'DROP FUNCTION {name}')
-                else:
-                    _ = connection.exec_driver_sql(f'DROP TRIGGER {name}')
+    for prefix in _trigger_prefixes:
+        for kind in _trigger_kinds:
+            name = f'{prefix}_{kind}'
 
-        for name in _read_tables:
-            _ = connection.exec_driver_sql(f'DROP TABLE {name}')
+            if backend == Backend_PostgreSQL:
+                _ = connection.exec_driver_sql(f'DROP TRIGGER {name} ON event')
+                _ = connection.exec_driver_sql(f'DROP FUNCTION {name}')
+            else:
+                _ = connection.exec_driver_sql(f'DROP TRIGGER {name}')
 
-        for name in _ordered_indexes:
-            _ = connection.exec_driver_sql(f'DROP INDEX {name}')
+    for name in _read_tables:
+        _ = connection.exec_driver_sql(f'DROP TABLE {name}')
+
+    for name in _ordered_indexes:
+        _ = connection.exec_driver_sql(f'DROP INDEX {name}')
 
 # ################################################################################################################################
 
@@ -441,9 +444,8 @@ def populate(rng:'Random', event_count:'int') -> 'None':
     update = event_table.update().where(is_changed).values(outcome=AuditOutcome.Error, status='closed')
     delete = event_table.delete().where(is_deleted)
 
-    with engine.begin() as connection:
-        _ = connection.execute(update)
-        _ = connection.execute(delete)
+    _ = execute_audit_write(engine, update)
+    _ = execute_audit_write(engine, delete)
 
     # .. their counts are compacted ..
     _ = compact_event_counts(engine, event_count_table, 0)
@@ -463,9 +465,8 @@ def populate(rng:'Random', event_count:'int') -> 'None':
         event_type=AuditEvent.Ack_Received)
     delete = event_table.delete().where(is_deleted)
 
-    with engine.begin() as connection:
-        _ = connection.execute(update)
-        _ = connection.execute(delete)
+    _ = execute_audit_write(engine, update)
+    _ = execute_audit_write(engine, delete)
 
 # ################################################################################################################################
 

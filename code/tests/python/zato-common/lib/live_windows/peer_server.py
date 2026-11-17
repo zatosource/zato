@@ -11,7 +11,7 @@ import os
 import runpy
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from threading import Event, Lock, Thread
+from threading import Event, Lock, Semaphore, Thread
 from time import monotonic
 from traceback import format_exc
 from uuid import uuid4
@@ -38,7 +38,7 @@ if 0:
     from pathlib import Path
     from zato.common.typing_ import any_, anydict, anylist, iterator_
     from zato.server.base.parallel import ParallelServer
-    from zato.server.config_manager import ConfigManager
+    from zato.server.base.config_manager import ConfigManager
     from zato.server.connection.smb import SMBConnection
 
 # ################################################################################################################################
@@ -62,6 +62,16 @@ class ModuleCtx:
 
     # A schedule with this value deletes each processed file rather than moving it
     On_Success_Delete = 'delete'
+
+    # The pool size of an SMB connection that enmasse imports without one
+    Default_Pool_Size = 1
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class PeerPoolTimeout(Exception):
+    """ Raised when no client of a connection becomes free within the time its caller waits for one.
+    """
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -89,14 +99,30 @@ class PeerWrapper:
         self.should_store_content = False
         self.verify_how = Default_Verify_How
 
-        server = cast_('ParallelServer', None)
+        server:'ParallelServer' = cast_('ParallelServer', None)
         self.smb_client = SMBClient(self.config, server)
+
+        # The operations of a connection share its pool of clients, as they do in a server
+        if 'pool_size' in definition:
+            pool_size = definition['pool_size']
+        else:
+            pool_size = ModuleCtx.Default_Pool_Size
+
+        self.pool = Semaphore(pool_size)
 
 # ################################################################################################################################
 
     @contextmanager
     def client(self, should_block:'bool'=True, block_timeout:'int'=0) -> 'iterator_':
-        yield self.smb_client
+        """ Checks out the client for the duration of one operation, waiting for it as long as the caller allows.
+        """
+        if not self.pool.acquire(timeout=block_timeout):
+            raise PeerPoolTimeout(f'No client of `{self.config.name}` became free within {block_timeout}s')
+
+        try:
+            yield self.smb_client
+        finally:
+            self.pool.release()
 
 # ################################################################################################################################
 
@@ -391,7 +417,7 @@ class PeerServer:
 # ################################################################################################################################
 
     def facade(self, cid:'str') -> 'SMBFacade':
-        config_manager = cast_('ConfigManager', self.config_manager)
+        config_manager:'ConfigManager' = cast_('ConfigManager', self.config_manager)
 
         out = SMBFacade()
         out.init(cid, config_manager)

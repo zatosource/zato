@@ -17,6 +17,7 @@ from zato.common.analytics.csv_export import channel_csv, consumer_csv, overview
 from zato.common.analytics.query import get_channel, get_consumer, get_overview, period_to_ms, Range_Day
 from zato.common.audit_log.api import AuditSource
 from zato.common.json_internal import dumps
+from zato.common.test.direct_sql.seed import seed_rows
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -85,7 +86,7 @@ def _insert_usage_row(
     latency_buckets = _seed_buckets(request_count)
     latency_buckets_json = dumps(latency_buckets)
 
-    insert_statement = usage_table.insert().values(
+    usage_row = dict(
         period=period,
         source=AuditSource.REST_Channel,
         channel=channel,
@@ -102,9 +103,7 @@ def _insert_usage_row(
     )
 
     engine = get_analytics_engine()
-
-    with engine.begin() as connection:
-        _ = connection.execute(insert_statement)
+    seed_rows(engine, [(usage_table, [usage_row])])
 
 # ################################################################################################################################
 

@@ -14,11 +14,14 @@ import tempfile
 import pytest
 
 # Zato
+from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
 from zato.common.pubsub.sql.generation import read_generation_file, write_generation_file
 from zato.common.pubsub.sql.replaced import PubSubReplaced
+from zato.common.test.direct_sql.fault import restore_previous_generation
+from zato.common.test.takeover import take_over_as_another_server
 from zato.common.test.pubsub_database import connect, get_suite_modes, pubsub_db_env, PubSubDBMode, \
     start_pubsub_database, stop_pubsub_database
 from zato.common.typing_ import cast_
@@ -28,7 +31,7 @@ from zato.common.typing_ import cast_
 
 if 0:
     from zato.common.test.pubsub_database import PubSubDatabase
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,9 +42,6 @@ _sub_key = 'zpsk.generation.guard'
 # The topic and the subscription of the server whose generation another server reaches again
 _reached_topic_name = 'generation.reached'
 _reached_sub_key = 'zpsk.generation.reached'
-
-# The owner that another server writes when it raises the generation
-_other_owner = 'other.server'
 
 # The topic of the servers of active-standby nodes and the subscription of each server
 _ha_topic_name = 'generation.ha'
@@ -55,12 +55,15 @@ _ha_generation_step = 10
 
 # The pool sizes that give each server of these tests an engine of its own, since engines are cached by their settings
 # and the guard of a cleanup process remains on the engine that it confirms the generation through
-_pool_size_replaced = 2
-_pool_size_reached  = 3
-_pool_size_current  = 4
-_pool_size_lower    = 5
-_pool_size_earlier  = 6
-_pool_size_later    = 7
+_pool_size_replaced  = 2
+_pool_size_reached   = 3
+_pool_size_current   = 4
+_pool_size_lower     = 5
+_pool_size_earlier   = 6
+_pool_size_later     = 7
+_pool_size_replacing = 8
+_pool_size_reaching  = 9
+_pool_size_failover  = 10
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,22 +84,29 @@ def pubsub_database(request:'pytest.FixtureRequest') -> 'any_':
 
 # ################################################################################################################################
 
-def _raise_generation(database:'PubSubDatabase') -> 'int':
-    """ Raises the generation and writes the owner the way the startup of another server does
-    and returns the new value.
+def _new_server_env(database:'PubSubDatabase', pool_size:'int') -> 'strstrdict':
+    """ The variables of a server with a generation file and an engine of its own.
     """
-    connection = connect(database)
+    work_dir = tempfile.mkdtemp(prefix='zato_pubsub_generation_', dir=os.environ['TMPDIR'])
 
-    try:
-        cursor = connection.cursor()
-        query = 'update zato_active set generation = generation + 1, owner = %s where id = 1 returning generation'
-        cursor.execute(query, (_other_owner,))
-        row = cast_('any_', cursor.fetchone())
-        connection.commit()
-    finally:
-        connection.close()
+    out = dict(database.env)
+    out['Zato_Database_Generation_File'] = os.path.join(work_dir, 'generation')
+    out['Zato_Database_Pool_Size'] = str(pool_size)
 
-    out = row[0]
+    return out
+
+# ################################################################################################################################
+
+def _start_server(env:'strstrdict') -> 'SQLPubSubBackend':
+    """ Starts the backend of a server, which takes over the database.
+    """
+    # The backend resolves its engine on first access, which happens here while the variables select the engine
+    # that its guard is installed on.
+    with pubsub_db_env(env):
+        out = SQLPubSubBackend(audit_log=new_test_audit_log())
+        out.take_over()
+        _ = out.engine
+
     return out
 
 # ################################################################################################################################
@@ -104,14 +114,12 @@ def _raise_generation(database:'PubSubDatabase') -> 'int':
 def _restore_previous_generation(database:'PubSubDatabase') -> 'None':
     """ Lowers the generation by one, as a failover to a replica that did not receive the last raise does.
     """
-    connection = connect(database)
+    env = dict(database.env)
+    env['Zato_Database_Pool_Size'] = str(_pool_size_failover)
 
-    try:
-        cursor = connection.cursor()
-        cursor.execute('update zato_active set generation = generation - 1 where id = 1')
-        connection.commit()
-    finally:
-        connection.close()
+    with pubsub_db_env(env):
+        engine = get_database_engine()
+        restore_previous_generation(engine)
 
 # ################################################################################################################################
 
@@ -136,20 +144,10 @@ def _take_over_as_node(database:'PubSubDatabase', ha_generation:'int', pool_size
     """ Starts the backend of a server whose active-standby node passed it the given generation,
     with an engine of its own.
     """
-    work_dir = tempfile.mkdtemp(prefix='zato_pubsub_generation_', dir=os.environ['TMPDIR'])
-
-    env = dict(database.env)
-    env['Zato_Database_Generation_File'] = os.path.join(work_dir, 'generation')
+    env = _new_server_env(database, pool_size)
     env['Zato_HA_Generation'] = str(ha_generation)
-    env['Zato_Database_Pool_Size'] = str(pool_size)
 
-    # The backend resolves its engine on first access, which happens here while the variables select the engine
-    # that its guard is installed on.
-    with pubsub_db_env(env):
-        out = SQLPubSubBackend(audit_log=new_test_audit_log())
-        out.take_over()
-        _ = out.engine
-
+    out = _start_server(env)
     return out
 
 # ################################################################################################################################
@@ -176,11 +174,7 @@ def test_replaced_backend_and_cleanup(pubsub_database:'PubSubDatabase') -> 'None
     """ Once another server raises the generation, the backend of the replaced server rejects every operation,
     its cleanup process deletes nothing, and the cleanup process of the new server deletes as before.
     """
-    work_dir = tempfile.mkdtemp(prefix='zato_pubsub_generation_', dir=os.environ['TMPDIR'])
-
-    env = dict(pubsub_database.env)
-    env['Zato_Database_Generation_File'] = os.path.join(work_dir, 'generation')
-    env['Zato_Database_Pool_Size'] = str(_pool_size_replaced)
+    env = _new_server_env(pubsub_database, _pool_size_replaced)
 
     with pubsub_db_env(env):
 
@@ -199,8 +193,11 @@ def test_replaced_backend_and_cleanup(pubsub_database:'PubSubDatabase') -> 'None
         assert _count_messages(pubsub_database) == 1
 
         # .. another server raises the generation ..
-        new_generation = _raise_generation(pubsub_database)
-        assert new_generation == guard.generation + 1
+        other = take_over_as_another_server(pubsub_database.env, _pool_size_replacing)
+
+        other_guard = other.generation_guard
+        assert other_guard is not None
+        assert other_guard.generation == guard.generation + 1
 
         # .. so the backend rejects a publication and knows it was replaced ..
         with pytest.raises(PubSubReplaced):
@@ -218,11 +215,13 @@ def test_replaced_backend_and_cleanup(pubsub_database:'PubSubDatabase') -> 'None
         assert _count_messages(pubsub_database) == 1
 
         # .. and once the new server records its generation, the cleanup process deletes the expired message.
-        write_generation_file(new_generation, _other_owner)
+        write_generation_file(other_guard.generation, other_guard.owner)
         counts = cleanup.run_guarded_sweep()
 
         assert counts['expired'] == 1, counts
         assert _count_messages(pubsub_database) == 0
+
+    other_guard.uninstall(other.engine)
 
 # ################################################################################################################################
 
@@ -230,11 +229,7 @@ def test_generation_reached_again_by_another_server(pubsub_database:'PubSubDatab
     """ After a failover of the database to a replica that did not receive the last raise, another server
     raises the generation to the value of this server, and this server is replaced and writes no row.
     """
-    work_dir = tempfile.mkdtemp(prefix='zato_pubsub_generation_', dir=os.environ['TMPDIR'])
-
-    env = dict(pubsub_database.env)
-    env['Zato_Database_Generation_File'] = os.path.join(work_dir, 'generation')
-    env['Zato_Database_Pool_Size'] = str(_pool_size_reached)
+    env = _new_server_env(pubsub_database, _pool_size_reached)
 
     with pubsub_db_env(env):
 
@@ -254,8 +249,11 @@ def test_generation_reached_again_by_another_server(pubsub_database:'PubSubDatab
         _restore_previous_generation(pubsub_database)
 
         # .. another server raises the generation to the value of the backend ..
-        new_generation = _raise_generation(pubsub_database)
-        assert new_generation == guard.generation
+        other = take_over_as_another_server(pubsub_database.env, _pool_size_reaching)
+
+        other_guard = other.generation_guard
+        assert other_guard is not None
+        assert other_guard.generation == guard.generation
 
         # .. so the backend rejects a publication and knows it was replaced ..
         with pytest.raises(PubSubReplaced):
@@ -267,6 +265,8 @@ def test_generation_reached_again_by_another_server(pubsub_database:'PubSubDatab
         assert _count_messages(pubsub_database) == message_count
 
         guard.uninstall(backend.engine)
+
+    other_guard.uninstall(other.engine)
 
 # ################################################################################################################################
 

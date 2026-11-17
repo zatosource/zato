@@ -6,22 +6,16 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-""" The tests of the live suite in test_connectivity.py, run against the peer in place of a Zato server.
-"""
-
 # Local
-from test_connectivity import test_agent_responds, test_exchange_account_reaches_every_share, test_round_trip, \
-    test_control_share_refused
+from _live_tests import live_test
 
-# ##############################################################################################################################
-# ##############################################################################################################################
+# ################################################################################################################################
+# ################################################################################################################################
 
-__all__ = [
-    'test_agent_responds',
-    'test_exchange_account_reaches_every_share',
-    'test_round_trip',
-    'test_control_share_refused',
-]
+test_agent_responds = live_test('test_connectivity', 'test_agent_responds')
+test_exchange_account_reaches_every_share = live_test('test_connectivity', 'test_exchange_account_reaches_every_share')
+test_round_trip = live_test('test_connectivity', 'test_round_trip')
+test_control_share_refused = live_test('test_connectivity', 'test_control_share_refused')
 
-# ##############################################################################################################################
-# ##############################################################################################################################
+# ################################################################################################################################
+# ################################################################################################################################

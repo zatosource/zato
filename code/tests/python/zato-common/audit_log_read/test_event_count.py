@@ -24,6 +24,7 @@ from zato.common.audit_log.common import event_count_table
 from zato.common.audit_log.event_count import compact_event_counts
 from zato.common.audit_log.listing import count_matching, event_conditions
 from zato.common.audit_log.retention import Env_Archive_Dir, run_retention
+from zato.common.audit_log.writes import execute_audit_write
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,8 +84,7 @@ def _update(ids:'intlist', **values:'any_') -> 'None':
     is_selected = event_table.c.id.in_(ids)
     statement = event_table.update().where(is_selected).values(**values)
 
-    with engine.begin() as connection:
-        _ = connection.execute(statement)
+    _ = execute_audit_write(engine, statement)
 
 # ################################################################################################################################
 
@@ -96,8 +96,7 @@ def _delete(ids:'intlist') -> 'None':
     is_selected = event_table.c.id.in_(ids)
     statement = event_table.delete().where(is_selected)
 
-    with engine.begin() as connection:
-        _ = connection.execute(statement)
+    _ = execute_audit_write(engine, statement)
 
 # ################################################################################################################################
 # ################################################################################################################################

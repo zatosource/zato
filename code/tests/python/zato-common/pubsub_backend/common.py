@@ -18,6 +18,8 @@ from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
     topic_count_table, topic_sub_table
 from zato.common.db_env.database_env import DatabaseEnv
+from zato.common.test.direct_sql.fault import interrupt_topic_rename
+from zato.common.test.direct_sql.reset import reset_table_rows
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,14 +54,9 @@ def delete_all_rows() -> 'None':
     """ Starts a scenario from empty tables because containers can be reused between test runs.
     """
     engine = get_database_engine()
+    tables = [delivery_table, message_table, topic_sub_table, queue_count_table, topic_count_table, publish_count_table]
 
-    with engine.begin() as connection:
-        _ = connection.execute(delivery_table.delete())
-        _ = connection.execute(message_table.delete())
-        _ = connection.execute(topic_sub_table.delete())
-        _ = connection.execute(queue_count_table.delete())
-        _ = connection.execute(topic_count_table.delete())
-        _ = connection.execute(publish_count_table.delete())
+    reset_table_rows(engine, tables)
 
 # ################################################################################################################################
 
@@ -118,13 +115,7 @@ def move_message_rows(old_topic_name:'str', new_topic_name:'str') -> 'None':
     halfway through leaves behind - the deliveries and the subscription still under the old name.
     """
     engine = get_database_engine()
-
-    update_statement = message_table.update()
-    update_statement = update_statement.where(message_table.c.topic_name == old_topic_name)
-    update_statement = update_statement.values(topic_name=new_topic_name)
-
-    with engine.begin() as connection:
-        _ = connection.execute(update_statement)
+    interrupt_topic_rename(engine, old_topic_name, new_topic_name)
 
 # ################################################################################################################################
 # ################################################################################################################################

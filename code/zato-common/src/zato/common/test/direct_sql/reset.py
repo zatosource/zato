@@ -16,11 +16,14 @@ from zato.common.db_env.write_path import Mechanism, write_path
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy import MetaData
+    from sqlalchemy import MetaData, Table
     from sqlalchemy.engine import Engine
 
     Engine = Engine
     MetaData = MetaData
+    Table = Table
+
+    tablelist = list[Table]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,6 +36,23 @@ def _delete_all_rows(engine:'Engine', metadata:'MetaData') -> 'None':
     with engine.begin() as connection:
         for table in tables:
             _ = connection.execute(table.delete())
+
+# ################################################################################################################################
+
+def _delete_rows_of(engine:'Engine', tables:'tablelist') -> 'None':
+
+    with engine.begin() as connection:
+        for table in tables:
+            _ = connection.execute(table.delete())
+
+# ################################################################################################################################
+
+def reset_table_rows(engine:'Engine', tables:'tablelist') -> 'None':
+    """ Deletes every row of each given table in one transaction, in the order given, in turn with the other writes
+    to the database.
+    """
+    with write_path(Mechanism.Seed):
+        _ = call_database(engine, _delete_rows_of, engine, tables)
 
 # ################################################################################################################################
 

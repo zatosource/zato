@@ -28,18 +28,23 @@ $WindowsEventLogs = @(
     'Microsoft-Windows-SMBServer/Connectivity'
 )
 
-$Started        = Get-Date
+# Intervals are measured on a monotonic clock, since the clock of the guest is stepped by time synchronization
+$Clock          = [Diagnostics.Stopwatch]::StartNew()
 $Tasks          = [ordered]@{}
 $ShareDefs      = @{}
 $LastRecordIds  = @{}
 $HeartbeatSeq   = 0
-$LastHeartbeat  = [DateTime]::MinValue
-$LastWindowsEvents = [DateTime]::MinValue
+$LastHeartbeat  = -$HeartbeatEveryMs
+$LastWindowsEvents = -$WindowsEventsEveryMs
 
 # ################################################################################################################################
 
 function Get-NowIso {
     (Get-Date).ToUniversalTime().ToString('o')
+}
+
+function Get-ClockMs {
+    $Clock.Elapsed.TotalMilliseconds
 }
 
 function Get-Sha256Hex([byte[]]$Data) {
@@ -187,7 +192,7 @@ function Start-Producer($Command) {
         kind     = 'produce'
         command  = $Command
         index    = 0
-        next_due = Get-Date
+        next_due = Get-ClockMs
         pending  = $null
     }
 }
@@ -207,7 +212,7 @@ function Complete-Produced($Task, [string]$Name, [byte[]]$Data) {
 function Step-Producer($Task) {
 
     $command = $Task.command
-    $now = Get-Date
+    $now = Get-ClockMs
 
     # A file that is still being written or still locked is finished before the next one starts ..
     if ($Task.pending) {
@@ -221,7 +226,7 @@ function Step-Producer($Task) {
                 $pending.stream.Write($pending.data, $offset, $count)
                 $pending.stream.Flush()
                 $pending.offset += $count
-                $pending.next_chunk_due = $now.AddMilliseconds($pending.chunk_interval_ms)
+                $pending.next_chunk_due = $now + $pending.chunk_interval_ms
             }
             if ($pending.offset -ge $pending.data.Length) {
                 $pending.stream.Dispose()
@@ -254,7 +259,7 @@ function Step-Producer($Task) {
 
     $name = $names[$Task.index]
     $Task.index++
-    $Task.next_due = $now.AddMilliseconds($command.interval_ms)
+    $Task.next_due = $now + $command.interval_ms
 
     $path = Join-Path $command.directory $name
     $data = New-FileContent $name $command.size
@@ -295,7 +300,7 @@ function Step-Producer($Task) {
             $Task.pending = @{
                 name       = $name
                 stream     = $stream
-                release_at = $now.AddMilliseconds($command.lock_ms)
+                release_at = $now + $command.lock_ms
             }
             Complete-Produced $Task $name $data
         }
@@ -478,7 +483,7 @@ function Step-UnblockWait($Task) {
 
     $command = $Task.command
 
-    if ((Get-Date) -lt $Task.release_at) {
+    if ((Get-ClockMs) -lt $Task.release_at) {
         return
     }
 
@@ -499,7 +504,7 @@ function Invoke-Fault($Command) {
             $Tasks[$Command.task] = @{
                 kind       = 'unblock-wait'
                 command    = $Command
-                release_at = (Get-Date).AddMilliseconds($Command.duration_ms)
+                release_at = (Get-ClockMs) + $Command.duration_ms
             }
         }
 
@@ -621,13 +626,22 @@ function Get-AvailableEventLogs {
     $out
 }
 
-function Send-WindowsEvents([string]$LogName, [hashtable]$Filter) {
+function Get-LastRecordId([string]$LogName) {
+    $newest = @(Get-WinEvent -LogName $LogName -MaxEvents 1 -ErrorAction SilentlyContinue)
+    if ($newest.Count -eq 0) {
+        return 0
+    }
+    $newest[0].RecordId
+}
 
-    $Filter['LogName'] = $LogName
-    $Filter['StartTime'] = $Started
+function Send-WindowsEvents([string]$LogName, [string]$Condition) {
+
+    # The events are selected by their record numbers, which, unlike their times, do not move when the clock is stepped
+    $lastRecordId = $LastRecordIds[$LogName]
+    $query = "*[System[($Condition) and EventRecordID > $lastRecordId]]"
 
     try {
-        $entries = @(Get-WinEvent -FilterHashtable $Filter -Oldest)
+        $entries = @(Get-WinEvent -LogName $LogName -FilterXPath $query -Oldest)
     }
     catch {
         # Get-WinEvent reports an empty result as an error of its own
@@ -637,17 +651,8 @@ function Send-WindowsEvents([string]$LogName, [hashtable]$Filter) {
         throw
     }
 
-    $lastKey = "$LogName|$($Filter['Id'])"
-    $lastRecordId = 0
-    if ($LastRecordIds.ContainsKey($lastKey)) {
-        $lastRecordId = $LastRecordIds[$lastKey]
-    }
-
     foreach ($entry in $entries) {
-        if ($entry.RecordId -le $lastRecordId) {
-            continue
-        }
-        $LastRecordIds[$lastKey] = $entry.RecordId
+        $LastRecordIds[$LogName] = $entry.RecordId
 
         Write-AgentEvent ([ordered]@{
             kind      = 'windows-event'
@@ -664,15 +669,20 @@ function Send-WindowsEvents([string]$LogName, [hashtable]$Filter) {
 
 function Send-AllWindowsEvents {
     foreach ($logName in $AvailableEventLogs) {
-        Send-WindowsEvents $logName @{ Level = 1, 2, 3 }
+        Send-WindowsEvents $logName 'Level=1 or Level=2 or Level=3'
     }
-    Send-WindowsEvents 'Security' @{ Id = 4625 }
+    Send-WindowsEvents 'Security' 'EventID=4625'
 }
 
 # ################################################################################################################################
 
 $null = New-Item -ItemType Directory -Force -Path $CommandsPath
 $AvailableEventLogs = Get-AvailableEventLogs
+
+# Only the events recorded after the agent started are forwarded
+foreach ($logName in @($AvailableEventLogs) + 'Security') {
+    $LastRecordIds[$logName] = Get-LastRecordId $logName
+}
 
 $os = Get-CimInstance -ClassName Win32_OperatingSystem
 
@@ -685,10 +695,10 @@ Write-AgentEvent ([ordered]@{
 
 while ($true) {
 
-    $now = Get-Date
+    $now = Get-ClockMs
 
     try {
-        if (($now - $LastHeartbeat).TotalMilliseconds -ge $HeartbeatEveryMs) {
+        if (($now - $LastHeartbeat) -ge $HeartbeatEveryMs) {
             $LastHeartbeat = $now
             Write-Heartbeat
         }
@@ -696,7 +706,7 @@ while ($true) {
         Read-Commands
         Step-Tasks
 
-        if (($now - $LastWindowsEvents).TotalMilliseconds -ge $WindowsEventsEveryMs) {
+        if (($now - $LastWindowsEvents) -ge $WindowsEventsEveryMs) {
             $LastWindowsEvents = $now
             Send-AllWindowsEvents
         }
