@@ -3,8 +3,6 @@
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.topic.config = {
-    backendTypeBuiltin: 'builtin',
-    backendTypeAMQP: 'amqp',
     backendBadgeLabels: {
         'builtin': 'Built-in',
         'amqp': 'AMQP',
@@ -13,10 +11,6 @@ $.fn.zato.pubsub.topic.config = {
         'builtin': 'zato-topic-backend-badge zato-topic-backend-badge-builtin',
         'amqp': 'zato-topic-backend-badge zato-topic-backend-badge-amqp',
     },
-    requiredFieldMessage: 'This field is required',
-    createNewValue: 'zato-create-new',
-    createOutconnURL: '/zato/outgoing/amqp/?create=1',
-    createChannelURL: '/zato/channel/amqp/?create=1',
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -36,27 +30,6 @@ $.fn.zato.pubsub.topic.fieldDescriptions = {
         $.fn.zato.pubsub.topic.highlight('It has no effect on how messages flow') + '.',
 
     'id_is_audit_log_active': 'Whether this topic\'s messages are recorded in the audit log. On by default.',
-
-    'id_backend_type': 'Where messages of this topic live. ' +
-        'Built-in keeps them inside Zato. ' +
-        'AMQP sends them to an external broker. ' +
-        $.fn.zato.pubsub.topic.highlight('Publishers and subscribers use the topic the same way in both cases') + '.',
-
-    'id_amqp_outconn_name': 'The outgoing AMQP connection that publishes ' +
-        'messages of this topic to the broker. ' +
-        $.fn.zato.pubsub.topic.highlight('Required for AMQP topics') + '.',
-
-    'id_amqp_exchange': 'The exchange in the broker that messages ' +
-        'of this topic are published to. ' +
-        $.fn.zato.pubsub.topic.highlight('The exchange must already exist in the broker') + '.',
-
-    'id_amqp_routing_key': 'The routing key the broker uses to route ' +
-        'messages of this topic to queues. ' +
-        $.fn.zato.pubsub.topic.highlight('The topic name is used when this is empty') + '.',
-
-    'id_amqp_channel_name': 'An AMQP channel that consumes messages ' +
-        'from a queue in the broker. ' +
-        $.fn.zato.pubsub.topic.highlight("Messages received by the channel are delivered to this topic's subscribers") + '.',
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -89,59 +62,16 @@ $(document).ready(function() {
     $.fn.zato.pubsub.topic.wireNameValidation('#id_name');
     $.fn.zato.pubsub.topic.wireNameValidation('#id_edit-name');
 
-    // .. show or hide the AMQP fields whenever the backend type changes ..
-    $('#id_backend_type').on('change', function() {
-        $.fn.zato.pubsub.topic.toggleAMQPRows('create');
-    });
-
-    $('#id_edit-backend_type').on('change', function() {
-        $.fn.zato.pubsub.topic.toggleAMQPRows('edit');
-    });
-
-    // .. let the create-new option in the AMQP selects open the relevant page ..
-    var config = $.fn.zato.pubsub.topic.config;
-
-    $.fn.zato.pubsub.topic.wireCreateNewOption('#id_amqp_outconn_name', config.createOutconnURL);
-    $.fn.zato.pubsub.topic.wireCreateNewOption('#id_edit-amqp_outconn_name', config.createOutconnURL);
-    $.fn.zato.pubsub.topic.wireCreateNewOption('#id_amqp_channel_name', config.createChannelURL);
-    $.fn.zato.pubsub.topic.wireCreateNewOption('#id_edit-amqp_channel_name', config.createChannelURL);
-
     // .. and block form submission when the name is invalid.
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.topic.beforeSubmitHook;
 })
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.topic.wireCreateNewOption = function(fieldId, url) {
-
-    $(fieldId).on('change', function() {
-
-        // Only the create-new option is of interest here ..
-        var select = $(this);
-        var isCreateNew = select.val() === $.fn.zato.pubsub.topic.config.createNewValue;
-
-        if(!isCreateNew) {
-            return;
-        }
-
-        // .. open the page where the definition can be created in a new tab ..
-        window.open(url, '_blank');
-
-        // .. and reset the select back to its empty option.
-        select.val('');
-        select.trigger('chosen:updated');
-    });
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-
 $.fn.zato.pubsub.topic.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new pub/sub topic', null);
 
-    // The form may have been reset since it was last open, so sync the AMQP rows with the select ..
-    $.fn.zato.pubsub.topic.toggleAMQPRows('create');
-
-    // .. and wire up the field help badge.
+    // Wire up the field help badge.
     $.fn.zato.how_it_works.init({
         badgeId: 'create-how-it-works',
         divId: '#create-div',
@@ -154,35 +84,12 @@ $.fn.zato.pubsub.topic.create = function() {
 $.fn.zato.pubsub.topic.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Edit pub/sub topic', id);
 
-    // The form was just populated with this topic's data, so sync the AMQP rows with the select ..
-    $.fn.zato.pubsub.topic.toggleAMQPRows('edit');
-
-    // .. and wire up the field help badge.
+    // Wire up the field help badge.
     $.fn.zato.how_it_works.init({
         badgeId: 'edit-how-it-works',
         divId: '#edit-div',
         descriptions: $.fn.zato.pubsub.topic.fieldDescriptions
     });
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.pubsub.topic.toggleAMQPRows = function(action) {
-
-    // Read the current backend type from the form the action refers to ..
-    var prefix = action === 'edit' ? 'edit-' : '';
-    var backendType = $('#id_' + prefix + 'backend_type').val();
-
-    // .. show the AMQP rows only when the AMQP backend is selected ..
-    var isAMQP = backendType === $.fn.zato.pubsub.topic.config.backendTypeAMQP;
-    var rows = $('.zato-topic-amqp-row-' + action);
-    rows.toggle(isAMQP);
-
-    // .. and let any Chosen selects in the rows recompute their width,
-    // .. they render with no width when initialized while hidden.
-    if(isAMQP) {
-        rows.find('select').trigger('chosen:updated');
-    }
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -342,53 +249,6 @@ $.fn.zato.pubsub.topic.clearNameInvalid = function(field) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.topic.showFieldRequired = function(field) {
-
-    // Remove any existing indicator first ..
-    $.fn.zato.pubsub.topic.clearNameInvalid(field);
-
-    // .. create and insert the indicator.
-    var message = $.fn.zato.pubsub.topic.config.requiredFieldMessage;
-    var indicator = String.format('<span class="zato-name-invalid">{0}</span>', message);
-    field.after(indicator);
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.pubsub.topic.validateAMQPFields = function(prefix) {
-
-    // Only the AMQP backend has required fields to check ..
-    var backendType = $('#id_' + prefix + 'backend_type').val();
-    var isAMQP = backendType === $.fn.zato.pubsub.topic.config.backendTypeAMQP;
-
-    if(!isAMQP) {
-        return true;
-    }
-
-    // .. the connection and exchange are both required ..
-    var isValid = true;
-    var requiredFields = ['amqp_outconn_name', 'amqp_exchange'];
-
-    $.each(requiredFields, function(fieldIdx, fieldName) {
-
-        var field = $('#id_' + prefix + fieldName);
-        var value = field.val().trim();
-
-        // .. clear any previous indicator ..
-        $.fn.zato.pubsub.topic.clearNameInvalid(field);
-
-        // .. and flag the field if it is empty.
-        if(!value) {
-            $.fn.zato.pubsub.topic.showFieldRequired(field);
-            isValid = false;
-        }
-    });
-
-    return isValid;
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-
 $.fn.zato.pubsub.topic.beforeSubmitHook = function(form) {
 
     var formId = form.attr('id');
@@ -428,10 +288,7 @@ $.fn.zato.pubsub.topic.beforeSubmitHook = function(form) {
         return false;
     }
 
-    // .. with the name valid, check the AMQP fields too.
-    var isAMQPValid = $.fn.zato.pubsub.topic.validateAMQPFields(prefix);
-
-    return isAMQPValid;
+    return true;
 }
 
 // /////////////////////////////////////////////////////////////////////////////

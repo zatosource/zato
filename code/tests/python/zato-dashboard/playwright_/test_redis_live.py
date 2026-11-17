@@ -28,10 +28,8 @@ from redis.exceptions import RedisError
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.test import rand_string
 from zato.common.test.conftest_base_pubsub import find_free_port
-from zato.common.test.playwright_pubsub import create_amqp_topic, create_basic_auth, create_outgoing_amqp, \
-    create_outgoing_rest_with_address, create_permission, create_push_rest_subscription, create_topic, get_item_id, \
-    navigate_to_page, open_publish_overlay, publish_via_overlay
-from zato.common.test.rabbitmq_ import drain_queue
+from zato.common.test.playwright_pubsub import create_basic_auth, create_outgoing_rest_with_address, create_permission, \
+    create_push_rest_subscription, create_topic, get_item_id, navigate_to_page, open_publish_overlay, publish_via_overlay
 from zato.common.test.receiver import WebhookReceiver
 from zato.common.util.api import new_cid
 from zato.common.typing_ import cast_
@@ -58,9 +56,6 @@ from config_db_screen import expect_redis_test_error, expect_redis_test_ok, open
 from rest_channel import create_channel, invoke_until_status
 from server_restart import restart_server
 
-# The broker fixture is resolved by pytest through this import
-from amqp_fixtures import rabbitmq_broker # noqa: F401 # pyright: ignore[reportUnusedImport]
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -75,10 +70,6 @@ _Cache_Check_Service = 'test.config-db.cache-check'
 
 # The default Redis server of the quickstart environment - the plain localhost one
 _Default_Redis_Port = 6379
-
-# RabbitMQ's default account, always allowed to connect over localhost
-_Broker_Username = 'guest'
-_Broker_Password = 'guest'
 
 # How long to wait for the TLS Redis server to become ready, in seconds
 _TLS_Ready_Timeout = 30
@@ -121,33 +112,6 @@ def _check_cache(api_client:'any_', suffix:'str') -> 'tuple':
 
     out = key, value
     return out
-
-# ################################################################################################################################
-
-def _publish_to_amqp_topic(page:'Page', base_url:'str', rabbitmq_broker:'anydict', label:'str') -> 'None': # noqa: F811
-    """ Publishes through the overlay of the module's AMQP-backed topic and asserts
-    the message flowed through AMQP to the broker's queue.
-    """
-    topic_name = _shared_state['amqp_topic_name']
-
-    # The list is paginated so filter it by the topic's name first ..
-    navigate_to_page(page, base_url, f'/zato/pubsub/topic/?query={topic_name}')
-    item_id = get_item_id(page, topic_name)
-
-    # .. drain anything left on the queue ..
-    _ = drain_queue(rabbitmq_broker['amqp_url'], rabbitmq_broker['queue'], timeout=1)
-
-    # .. publish through the overlay ..
-    payload = f'amqp-roundtrip-{label}-' + new_cid()
-
-    open_publish_overlay(page, item_id)
-    publish_via_overlay(page, payload)
-
-    # .. and the message landed on the RabbitMQ queue, not anywhere near Redis.
-    messages = drain_queue(rabbitmq_broker['amqp_url'], rabbitmq_broker['queue'])
-
-    assert len(messages) == 1, f'Expected exactly one message, got: {messages}'
-    assert messages[0] == payload, f'Expected `{payload}`, got `{messages[0]}`'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -243,8 +207,8 @@ def redis_tls_server() -> 'any_':
 class TestRedisLive:
     """ The Redis connection is reconfigured on the fly through the Redis screen -
     self.redis moves to the saved server immediately, the configuration is persisted
-    in server.conf and survives a restart, TLS works end to end, and neither Redis-backed
-    nor AMQP-backed pub/sub topics are disturbed.
+    in server.conf and survives a restart, TLS works end to end, and Redis-backed
+    pub/sub topics are not disturbed.
     """
 
     # The dashboard returns HTTP 500 for a failed connection test on purpose
@@ -275,39 +239,7 @@ class TestRedisLive:
 
 # ################################################################################################################################
 
-    def test_02_amqp_topic_roundtrip_before_save(
-        self,
-        logged_in_page:'Page',
-        zato_dashboard:'anydict',
-        rabbitmq_broker:'anydict', # noqa: F811
-        ) -> 'None':
-        """ An AMQP-backed topic routes through an outgoing AMQP connection,
-        not through the [redis] section - this is the baseline roundtrip
-        the later tests repeat after the Redis save and after the restart.
-        """
-        page = logged_in_page
-        base_url = zato_dashboard['dashboard_url']
-
-        amqp_port = rabbitmq_broker['amqp_port']
-        address = f'amqp://127.0.0.1:{amqp_port}//'
-
-        # The outgoing connection the topic publishes through ..
-        outconn_name = _Test_Name_Prefix + 'amqp.outconn'
-        _ = create_outgoing_amqp(page, base_url, outconn_name, address, _Broker_Username, _Broker_Password)
-
-        # .. the AMQP-backed topic itself, publishing to the fixture queue's binding ..
-        topic_name = _Test_Name_Prefix + 'amqp.topic'
-        _ = create_amqp_topic(
-            page, base_url, topic_name, outconn_name, rabbitmq_broker['exchange'], rabbitmq_broker['routing_key'], '')
-
-        _shared_state['amqp_topic_name'] = topic_name
-
-        # .. and the baseline roundtrip flows through AMQP.
-        _publish_to_amqp_topic(page, base_url, rabbitmq_broker, 'before-save')
-
-# ################################################################################################################################
-
-    def test_03_save_moves_cache(
+    def test_02_save_moves_cache(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -342,7 +274,7 @@ class TestRedisLive:
 
 # ################################################################################################################################
 
-    def test_04_server_conf_persisted(self, zato_dashboard:'anydict') -> 'None':
+    def test_03_server_conf_persisted(self, zato_dashboard:'anydict') -> 'None':
         """ The save landed in the [redis] section of server.conf on disk,
         which is what a restart rebuilds the connections from.
         """
@@ -362,7 +294,7 @@ class TestRedisLive:
 
 # ################################################################################################################################
 
-    def test_05_rest_and_redis_pubsub_stay_healthy(
+    def test_04_rest_and_redis_pubsub_stay_healthy(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -416,23 +348,7 @@ class TestRedisLive:
 
 # ################################################################################################################################
 
-    def test_06_amqp_topic_unaffected_by_save(
-        self,
-        logged_in_page:'Page',
-        zato_dashboard:'anydict',
-        rabbitmq_broker:'anydict', # noqa: F811
-        ) -> 'None':
-        """ The same AMQP-backed topic still flows through AMQP after the Redis save -
-        the save did not reach into the AMQP path.
-        """
-        page = logged_in_page
-        base_url = zato_dashboard['dashboard_url']
-
-        _publish_to_amqp_topic(page, base_url, rabbitmq_broker, 'after-save')
-
-# ################################################################################################################################
-
-    def test_07_restart_cache_still_on_saved_redis(
+    def test_05_restart_cache_still_on_saved_redis(
         self,
         zato_dashboard:'anydict',
         api_client:'any_',
@@ -451,23 +367,7 @@ class TestRedisLive:
 
 # ################################################################################################################################
 
-    def test_08_amqp_topic_unaffected_by_restart(
-        self,
-        logged_in_page:'Page',
-        zato_dashboard:'anydict',
-        rabbitmq_broker:'anydict', # noqa: F811
-        ) -> 'None':
-        """ The AMQP-backed topic still flows through AMQP after the restart too,
-        with its registry rebuilt from the database.
-        """
-        page = logged_in_page
-        base_url = zato_dashboard['dashboard_url']
-
-        _publish_to_amqp_topic(page, base_url, rabbitmq_broker, 'after-restart')
-
-# ################################################################################################################################
-
-    def test_09_tls_via_screen(
+    def test_06_tls_via_screen(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
@@ -508,7 +408,7 @@ class TestRedisLive:
 
 # ################################################################################################################################
 
-    def test_10_restore_original_values(
+    def test_07_restore_original_values(
         self,
         logged_in_page:'Page',
         zato_dashboard:'anydict',
