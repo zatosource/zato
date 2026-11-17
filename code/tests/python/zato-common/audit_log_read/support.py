@@ -7,34 +7,45 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from random import Random
+from uuid import uuid4
 
 # SQLAlchemy
-from sqlalchemy import select
+from sqlalchemy import create_engine, MetaData, select
 
 # Zato
+from live_sql.env import database_env
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, AuditEvent, \
-    AuditOutcome, AuditSource
+    AuditOutcome, AuditSource, metadata as audit_metadata
 from zato.common.db_env.database import database_config, dispose_database_engine, get_database_engine, \
     new_unshared_database_engine
+from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.audit_log.common import event_count_table, event_dedup_table, event_open_table, Status_Outstanding
 from zato.common.audit_log.event_count import compact_event_counts, count_key_columns
 from zato.common.audit_log.listing import new_search_filters
+from zato.common.audit_log.search_index import register_search_indexes
 from zato.common.audit_log.writes import execute_audit_write
 from zato.common.db_env.engine import call_database, create_schemas
 from zato.common.test.direct_sql.reset import reset_table_rows
-from zato.common.test.direct_sql.seed import run_seed, seed_rows
+from zato.common.test.direct_sql.seed import seed_rows
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.engine import Connection
+    from collections.abc import Iterator
+    from pytest import FixtureRequest
+    from sqlalchemy.engine import Connection, Engine
     from zato.common.audit_log.listing import SearchFilters
     from zato.common.typing_ import any_, anydict, anylist, anyset, anytuple, callable_, intlist, intset, stranydict
 
     Connection = Connection
+    Engine = Engine
+    FixtureRequest = FixtureRequest
+    Iterator = Iterator
     SearchFilters = SearchFilters
     any_ = any_
     callable_ = callable_
@@ -84,18 +95,25 @@ _msg_id_count = 400
 # The most rows one insert statement writes, so that preparing one statement does not block the event loop
 _rows_per_statement = 500
 
-# The triggers, tables and indexes that serve the reads, as an existing database created before them lacks them
-_trigger_prefixes = ('event_count', 'event_open_mllp_outgoing')
-_trigger_kinds = ('insert', 'update', 'delete')
+# The tables and the indexes that serve the reads, which a database created before them lacks,
+# and the triggers of the tables, which their creation creates
 _read_tables = ('event_count', 'event_open')
 _ordered_indexes = ('idx_event_time', 'idx_event_source_time', 'idx_event_outcome_time')
+
+# The SQLite file of a database of the previous version, the prefix of the name of a PostgreSQL one,
+# and the database that a PostgreSQL one is created and dropped from
+_previous_sqlite_file = 'previous-version.db'
+_previous_postgresql_prefix = 'zato_previous_'
+_postgresql_admin_db = 'postgres'
+_autocommit = 'AUTOCOMMIT'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def run_blocking(func:'callable_', *args:'any_') -> 'any_':
     """ Runs a function that makes blocking database calls, in the thread pool of the gevent hub when the database needs it,
-    so that a long run of statements does not block the event loop.
+    so that a long run of statements does not block the event loop. The function makes its calls on connections
+    of its own and never through call_database, whose lock of the SQLite file admits one call at a time.
     """
     engine = get_database_engine()
 
@@ -191,6 +209,13 @@ def insert_rows(rows:'anylist') -> 'None':
     """ Seeds event rows in one transaction, in statements of at most _rows_per_statement rows each.
     """
     engine = get_database_engine()
+    insert_rows_into(engine, rows)
+
+# ################################################################################################################################
+
+def insert_rows_into(engine:'Engine', rows:'anylist') -> 'None':
+    """ Seeds event rows in one transaction of a given engine, in statements of at most _rows_per_statement rows each.
+    """
     table_rows:'anylist' = []
 
     for start in range(0, len(rows), _rows_per_statement):
@@ -206,6 +231,14 @@ def read_event_ids() -> 'intlist':
     """
     engine = get_database_engine()
 
+    out = read_event_ids_of(engine)
+    return out
+
+# ################################################################################################################################
+
+def read_event_ids_of(engine:'Engine') -> 'intlist':
+    """ The ids of all the events of the database of a given engine, in their order.
+    """
     query = select(event_table.c.id)
     query = query.order_by(event_table.c.id)
 
@@ -378,31 +411,84 @@ def read_open_ids() -> 'intlist':
 
 # ################################################################################################################################
 
-def drop_read_schema(backend:'str') -> 'None':
-    """ Turns the database into one created before the event counts and the open exchanges existed.
+def _previous_metadata() -> 'MetaData':
+    """ Returns the schema of the audit log of the version that preceded the event counts and the open exchanges,
+    with the text indexes that the creation of its tables creates.
     """
-    engine = get_database_engine()
-    _ = run_seed(engine, _drop_read_schema, backend)
+    out = MetaData()
+
+    for table in audit_metadata.sorted_tables:
+
+        if table.name in _read_tables:
+            continue
+
+        previous_table = table.to_metadata(out)
+
+        for index in list(previous_table.indexes):
+            if index.name in _ordered_indexes:
+                previous_table.indexes.remove(index)
+
+    # A copy of a table carries no hooks of the creation of the original
+    previous_event_table = out.tables[event_table.name]
+    previous_attr_table = out.tables[event_attr_table.name]
+
+    register_search_indexes(previous_event_table, previous_attr_table)
+
+    return out
 
 # ################################################################################################################################
 
-def _drop_read_schema(connection:'Connection', backend:'str') -> 'None':
+def _postgresql_admin_url(details:'stranydict') -> 'str':
+    username = details['username']
+    password = details['password']
+    port = details['port']
 
-    for prefix in _trigger_prefixes:
-        for kind in _trigger_kinds:
-            name = f'{prefix}_{kind}'
+    out = f'postgresql+pg8000://{username}:{password}@localhost:{port}/{_postgresql_admin_db}'
+    return out
 
-            if backend == Backend_PostgreSQL:
-                _ = connection.exec_driver_sql(f'DROP TRIGGER {name} ON event')
-                _ = connection.exec_driver_sql(f'DROP FUNCTION {name}')
-            else:
-                _ = connection.exec_driver_sql(f'DROP TRIGGER {name}')
+# ################################################################################################################################
 
-    for name in _read_tables:
-        _ = connection.exec_driver_sql(f'DROP TABLE {name}')
+def _run_postgresql_admin(details:'stranydict', statement:'str') -> 'None':
+    """ Runs a statement that creates or drops a database of the test container, outside of a transaction.
+    """
+    admin_url = _postgresql_admin_url(details)
+    engine = create_engine(admin_url, isolation_level=_autocommit)
 
-    for name in _ordered_indexes:
-        _ = connection.exec_driver_sql(f'DROP INDEX {name}')
+    with engine.connect() as connection:
+        _ = connection.exec_driver_sql(statement)
+
+    engine.dispose()
+
+# ################################################################################################################################
+
+@contextmanager
+def previous_version_database(request:'FixtureRequest', backend:'str', directory:'str') -> 'Iterator[Engine]':
+    """ Points the Zato database at an empty database of its own, creates in it the audit log of the version
+    that preceded the event counts and the open exchanges, through the schema creation of the product, and yields
+    an engine of it that creates no schema of its own.
+    """
+    if backend == Backend_PostgreSQL:
+        server = request.getfixturevalue('postgresql_server')
+        details = dict(server.details)
+        details['name'] = _previous_postgresql_prefix + uuid4().hex
+        _run_postgresql_admin(details, f'create database {details["name"]}')
+    else:
+        details = {'type': DatabaseEnv.Type_SQLite, 'path': os.path.join(directory, _previous_sqlite_file)}
+
+    with database_env(details):
+
+        engine = new_unshared_database_engine()
+        previous_metadata = _previous_metadata()
+        _ = call_database(engine, create_schemas, engine, (previous_metadata,))
+
+        try:
+            yield engine
+        finally:
+            engine.dispose()
+            dispose_database_engine()
+
+    if backend == Backend_PostgreSQL:
+        _run_postgresql_admin(details, f'drop database {details["name"]}')
 
 # ################################################################################################################################
 
@@ -434,7 +520,7 @@ def populate(rng:'Random', event_count:'int') -> 'None':
     rows = new_event_rows(rng, first_count, 0)
     insert_rows(rows)
 
-    ids = read_event_ids()
+    ids = run_blocking(read_event_ids)
     changed_ids = rng.sample(ids, first_count // 10)
     deleted_ids = rng.sample(ids, first_count // 15)
 
@@ -448,13 +534,13 @@ def populate(rng:'Random', event_count:'int') -> 'None':
     _ = execute_audit_write(engine, delete)
 
     # .. their counts are compacted ..
-    _ = compact_event_counts(engine, event_count_table, 0)
+    _ = run_blocking(compact_event_counts, engine, event_count_table, 0)
 
     # .. and more events are written, changed and deleted after that.
     rows = new_event_rows(rng, later_count, event_count)
     insert_rows(rows)
 
-    ids = read_event_ids()
+    ids = run_blocking(read_event_ids)
     changed_ids = rng.sample(ids, later_count // 7)
     deleted_ids = rng.sample(ids, later_count // 15)
 

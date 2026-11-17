@@ -181,7 +181,7 @@ def _populate_and_check(seed:'int', filter_sets:'anylist') -> 'None':
     rng = Random(seed)
     populate(rng, _event_count)
 
-    _check_searches(filter_sets)
+    _ = run_blocking(_check_searches, filter_sets)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -191,7 +191,7 @@ def test_strip_from_event_counts(audit_backend:'str') -> 'None':
     with buckets and time windows that cut minutes.
     """
     filter_sets = count_filter_sets()
-    _ = run_blocking(_populate_and_check, 20261106, filter_sets)
+    _populate_and_check(20261106, filter_sets)
 
 # ################################################################################################################################
 
@@ -199,7 +199,7 @@ def test_strip_from_events(audit_backend:'str') -> 'None':
     """ The strip of a search with a free-text query or the outstanding filter is the strip its matching events give.
     """
     filter_sets = event_filter_sets()
-    _ = run_blocking(_populate_and_check, 20261107, filter_sets)
+    _populate_and_check(20261107, filter_sets)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -171,7 +171,7 @@ def _sends_and_acks_in_one_statement() -> 'None':
     rows = new_event_rows(rng, 1000, 10000)
     insert_rows(rows)
 
-    _assert_open_exact()
+    _ = run_blocking(_assert_open_exact)
 
 # ################################################################################################################################
 
@@ -185,7 +185,7 @@ def _sends_and_acks_in_separate_transactions() -> 'None':
     for row in rows:
         insert_rows([row])
 
-    _assert_open_exact()
+    _ = run_blocking(_assert_open_exact)
 
 # ################################################################################################################################
 
@@ -200,37 +200,37 @@ def _updates() -> 'None':
     rows = new_event_rows(rng, 600, 10000)
     insert_rows(rows)
 
-    ids = read_event_ids()
+    ids = run_blocking(read_event_ids)
 
     # Events turned into acknowledgments ..
     acked_ids = rng.sample(ids, 100)
     _update(acked_ids, source=AuditSource.MLLP_Outgoing, event_type=AuditEvent.Ack_Received)
 
-    _assert_open_exact()
+    _ = run_blocking(_assert_open_exact)
 
     # .. events turned into messages ..
     sent_ids = rng.sample(ids, 100)
     _update(sent_ids, source=AuditSource.MLLP_Outgoing, event_type=AuditEvent.Message_Sent)
 
-    _assert_open_exact()
+    _ = run_blocking(_assert_open_exact)
 
     # .. events moved to another message id, one by one ..
     for event_id in rng.sample(ids, 50):
         _update([event_id], msg_id='msg.moved')
 
-    _assert_open_exact()
+    _ = run_blocking(_assert_open_exact)
 
     # .. events moved to no connection at all ..
     unnamed_ids = rng.sample(ids, 50)
     _update(unnamed_ids, object_name=None)
 
-    _assert_open_exact()
+    _ = run_blocking(_assert_open_exact)
 
     # .. and events moved to another source.
     moved_ids = rng.sample(ids, 50)
     _update(moved_ids, source=AuditSource.MLLP_Channel)
 
-    _assert_open_exact()
+    _ = run_blocking(_assert_open_exact)
 
 # ################################################################################################################################
 
@@ -254,14 +254,14 @@ def _retention() -> 'None':
     rows = _exchange_rows(rng, 200, 2000)
     insert_rows(rows)
 
-    _assert_open_exact()
+    _ = run_blocking(_assert_open_exact)
 
     engine = get_database_engine()
     now = Base_Time + _retention_run_offset
 
-    run_retention(engine, now)
+    _ = run_blocking(run_retention, engine, now)
 
-    _assert_open_exact()
+    _ = run_blocking(_assert_open_exact)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -270,14 +270,14 @@ def test_sends_and_acks_in_one_statement(audit_backend:'str') -> 'None':
     """ Messages and their acknowledgments written in one statement, in either order, close each other,
     and messages without one stay open.
     """
-    _ = run_blocking(_sends_and_acks_in_one_statement)
+    _sends_and_acks_in_one_statement()
 
 # ################################################################################################################################
 
 def test_sends_and_acks_in_separate_transactions(audit_backend:'str') -> 'None':
     """ Messages and their acknowledgments written each in a transaction of its own, in either order, close each other.
     """
-    _ = run_blocking(_sends_and_acks_in_separate_transactions)
+    _sends_and_acks_in_separate_transactions()
 
 # ################################################################################################################################
 
@@ -311,7 +311,7 @@ def test_open_exchanges_after_updates(audit_backend:'str') -> 'None':
     """ Messages turned into acknowledgments, and messages and acknowledgments moved to other message ids
     or connections, open and close exchanges accordingly.
     """
-    _ = run_blocking(_updates)
+    _updates()
 
 # ################################################################################################################################
 
@@ -322,7 +322,7 @@ def test_open_exchanges_after_retention(audit_backend:'str', monkeypatch:'Monkey
     monkeypatch.setenv(Env_Retention_Days, str(_retention_days))
     monkeypatch.delenv(Env_Archive_Dir, raising=False)
 
-    _ = run_blocking(_retention)
+    _retention()
 
 # ################################################################################################################################
 # ################################################################################################################################

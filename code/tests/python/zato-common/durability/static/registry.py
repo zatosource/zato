@@ -105,6 +105,18 @@ Write_Path_Markers = (
 # The prefix of the full name of a member of Mechanism
 Mechanism_Prefix = 'zato.common.db_env.write_path.Mechanism.'
 
+# The full name of Mechanism itself
+Mechanism_Name = 'zato.common.db_env.write_path.Mechanism'
+
+# The tests that set the marks of the write path themselves, which the tests of the guard of the write path alone do
+Write_Path_Mark_Tests = (
+    ('code/tests/python/zato-common/durability/writers/test_write_path.py', 'The refusal of writes outside a mechanism'),
+)
+
+# The function that runs the work of a seed, with the module that defines it
+Run_Seed_Name = 'zato.common.test.direct_sql.seed.run_seed'
+Run_Seed_Path = 'code/zato-common/src/zato/common/test/direct_sql/seed.py'
+
 # The tables of the audit log that its own writes alone may change, which are every table of its schema but the alerts,
 # which the alerting store writes through a serialized write
 Audit_Log_Schema_Path = 'code/zato-common/src/zato/common/audit_log/common.py'
