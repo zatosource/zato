@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from contextlib import contextmanager
 from io import BytesIO
 from logging import getLogger
 from shutil import copyfileobj
@@ -33,7 +34,7 @@ from zato.server.connection.queue import Wrapper
 if 0:
     from smbprotocol.session import Session
     from zato.common.ext.bunch import Bunch
-    from zato.common.typing_ import any_, anylist, callable_, stranydict
+    from zato.common.typing_ import any_, anylist, callable_, iterator_, stranydict
     from zato.server.base.parallel import ParallelServer
     Bunch = Bunch
 
@@ -118,6 +119,41 @@ class SMBClient:
 
 # ################################################################################################################################
 
+    def _forget_share(self, unc_path:'str') -> 'None':
+        """ Removes the cached connection to the share of a UNC path, so that the next operation connects to the share anew.
+        """
+        session:'Session' = smbclient.register_session(self.host, **self.conn_kwargs)
+
+        # The library keys its connections to shares by the server and the share name, e.g. \\host\share ..
+        server, share = unc_path.lstrip('\\').split('\\')[:2]
+        share_name = '\\\\{}\\{}'.format(server, share)
+
+        # .. and the server no longer knows the connection, which is why it is only removed from the cache.
+        for tree_id, tree in list(session.tree_connect_table.items()):
+            if tree.share_name == share_name:
+                del session.tree_connect_table[tree_id]
+
+# ################################################################################################################################
+
+    @contextmanager
+    def _share_access(self, unc_path:'str') -> 'iterator_[None]':
+        """ Runs one operation on the share of a UNC path. The library keeps its connection to a share even after
+        the server deleted the share, e.g. because it was removed and created again, and every later operation fails.
+        """
+        try:
+            yield
+
+        except SMBOSError as e:
+
+            # The connection to a deleted share is removed, so that the next operation connects to the share again ..
+            if e.ntstatus == NtStatus.STATUS_NETWORK_NAME_DELETED:
+                self._forget_share(unc_path)
+
+            # .. and the caller receives the error in each case.
+            raise
+
+# ################################################################################################################################
+
     def ping(self) -> 'None':
 
         # Establish or reuse a session - this runs the full protocol negotiation
@@ -152,7 +188,9 @@ class SMBClient:
 
         unc_path = self.to_unc(remote_path)
 
-        out = smbclient.stat(unc_path, **self.conn_kwargs)
+        with self._share_access(unc_path):
+            out = smbclient.stat(unc_path, **self.conn_kwargs)
+
         return out
 
 # ################################################################################################################################
@@ -163,7 +201,8 @@ class SMBClient:
 
         # The path exists only if the remote server can tell us anything about it
         try:
-            _ = smbclient.stat(unc_path, **self.conn_kwargs)
+            with self._share_access(unc_path):
+                _ = smbclient.stat(unc_path, **self.conn_kwargs)
         except SMBOSError:
             out = False
         else:
@@ -179,8 +218,9 @@ class SMBClient:
 
         # Materialize the generator so that the underlying handles are not held open longer than needed
         out = []
-        for entry in smbclient.scandir(unc_path, **self.conn_kwargs):
-            out.append(entry)
+        with self._share_access(unc_path):
+            for entry in smbclient.scandir(unc_path, **self.conn_kwargs):
+                out.append(entry)
 
         return out
 
@@ -191,9 +231,10 @@ class SMBClient:
         """
         unc_path = self.to_unc(remote_path)
 
-        with smbclient.open_file(unc_path, mode='rb', **self.conn_kwargs) as remote_file:
-            while chunk := remote_file.read(Chunk_Size):
-                callback(chunk)
+        with self._share_access(unc_path):
+            with smbclient.open_file(unc_path, mode='rb', **self.conn_kwargs) as remote_file:
+                while chunk := remote_file.read(Chunk_Size):
+                    callback(chunk)
 
 # ################################################################################################################################
 
@@ -201,8 +242,9 @@ class SMBClient:
 
         unc_path = self.to_unc(remote_path)
 
-        with smbclient.open_file(unc_path, mode='rb', **self.conn_kwargs) as remote_file:
-            out = remote_file.read()
+        with self._share_access(unc_path):
+            with smbclient.open_file(unc_path, mode='rb', **self.conn_kwargs) as remote_file:
+                out = remote_file.read()
 
         return out
 
@@ -226,8 +268,9 @@ class SMBClient:
 
         # .. and the file is now created anew - note that the 'x' mode maps to the FILE_CREATE disposition,
         # which, unlike the overwrite-if dispositions, is handled correctly by all the SMB server implementations.
-        with smbclient.open_file(unc_path, mode='xb', **self.conn_kwargs) as remote_file:
-            copyfileobj(source_file, remote_file, Chunk_Size)
+        with self._share_access(unc_path):
+            with smbclient.open_file(unc_path, mode='xb', **self.conn_kwargs) as remote_file:
+                copyfileobj(source_file, remote_file, Chunk_Size)
 
 # ################################################################################################################################
 
@@ -235,7 +278,8 @@ class SMBClient:
 
         unc_path = self.to_unc(remote_path)
 
-        smbclient.remove(unc_path, **self.conn_kwargs)
+        with self._share_access(unc_path):
+            smbclient.remove(unc_path, **self.conn_kwargs)
 
 # ################################################################################################################################
 
@@ -243,7 +287,8 @@ class SMBClient:
 
         unc_path = self.to_unc(remote_path)
 
-        smbclient.rmdir(unc_path, **self.conn_kwargs)
+        with self._share_access(unc_path):
+            smbclient.rmdir(unc_path, **self.conn_kwargs)
 
 # ################################################################################################################################
 
@@ -251,7 +296,8 @@ class SMBClient:
 
         unc_path = self.to_unc(remote_path)
 
-        smbclient.makedirs(unc_path, exist_ok=exist_ok, **self.conn_kwargs)
+        with self._share_access(unc_path):
+            smbclient.makedirs(unc_path, exist_ok=exist_ok, **self.conn_kwargs)
 
 # ################################################################################################################################
 
@@ -260,24 +306,26 @@ class SMBClient:
         from_unc_path = self.to_unc(from_path)
         to_unc_path = self.to_unc(to_path)
 
-        # A rename always overwrites its target, and the source takes its place in a single operation,
-        # which means that a reader of the target directory never finds an incomplete file under the target name ..
-        try:
-            smbclient.replace(from_unc_path, to_unc_path, **self.conn_kwargs)
+        with self._share_access(from_unc_path):
 
-        except SMBOSError as e:
-
-            # .. some SMB server implementations report a missing target with a status code that the client library
-            # .. does not recognize, whereas an existing target is handled correctly everywhere,
-            # .. which is why for these servers the target is created first ..
-            if e.ntstatus == NtStatus.STATUS_NO_SUCH_FILE:
-                with smbclient.open_file(to_unc_path, mode='xb', **self.conn_kwargs):
-                    pass
+            # A rename always overwrites its target, and the source takes its place in a single operation,
+            # which means that a reader of the target directory never finds an incomplete file under the target name ..
+            try:
                 smbclient.replace(from_unc_path, to_unc_path, **self.conn_kwargs)
 
-            # .. and any other status is an error of its own.
-            else:
-                raise
+            except SMBOSError as e:
+
+                # .. some SMB server implementations report a missing target with a status code that the client library
+                # .. does not recognize, whereas an existing target is handled correctly everywhere,
+                # .. which is why for these servers the target is created first ..
+                if e.ntstatus == NtStatus.STATUS_NO_SUCH_FILE:
+                    with smbclient.open_file(to_unc_path, mode='xb', **self.conn_kwargs):
+                        pass
+                    smbclient.replace(from_unc_path, to_unc_path, **self.conn_kwargs)
+
+                # .. and any other status is an error of its own.
+                else:
+                    raise
 
 # ################################################################################################################################
 # ################################################################################################################################

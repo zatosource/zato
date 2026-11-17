@@ -16,9 +16,10 @@ from time import monotonic
 import pytest
 
 # SQLAlchemy
-from sqlalchemy import create_engine, func, select
+from sqlalchemy import func, select
 
 # Zato
+from zato.common.db_env.engine import new_zato_engine
 from zato.common.audit_log.api import event_table, AuditEvent, AuditOutcome
 from zato.common.hl7.feed import run_feed, FeedConfig, FeedItem
 from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
@@ -126,7 +127,7 @@ def _ensure_schema(audit_db_path:'str') -> 'None':
     the baseline is read before the server ever wrote an event, and creating
     from the same metadata is exactly what the server itself would do.
     """
-    engine = create_engine(f'sqlite:///{audit_db_path}')
+    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
     event_table.metadata.create_all(engine)
     engine.dispose()
 
@@ -151,7 +152,7 @@ def _count_events(audit_db_path:'str', event_type:'str', outcome:'str'='') -> 'i
     """ Returns how many events of one type the audit database holds.
     """
 
-    engine = create_engine(f'sqlite:///{audit_db_path}')
+    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
 
     query = select(func.count()).select_from(event_table)
     query = query.where(event_table.c.event_type == event_type)
@@ -173,7 +174,7 @@ def _count_all_events(audit_db_path:'str') -> 'int':
     """ Returns how many event rows the audit database holds in total.
     """
 
-    engine = create_engine(f'sqlite:///{audit_db_path}')
+    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
 
     query = select(func.count()).select_from(event_table)
 

@@ -15,10 +15,11 @@ from hashlib import pbkdf2_hmac
 import pytest
 
 # SQLAlchemy
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 
 # Zato
+from zato.common.db_env.engine import new_zato_engine
 from zato.common.crypto.api import CryptoManager
 from zato.common.webapp.auth.dashboard_users import is_dashboard_admin, verify_django_password
 
@@ -106,7 +107,7 @@ def engine(tmp_path:'any_') -> 'Engine':
     external_row = {'username':_external_username, 'password':_unusable_password_marker, 'is_active':True}
 
     # .. and seed the database with them.
-    engine = create_engine(f'sqlite:///{database_path}')
+    engine = new_zato_engine(f'sqlite:///{database_path}')
 
     with engine.begin() as connection:
         _ = connection.execute(text(_auth_user_create_table))

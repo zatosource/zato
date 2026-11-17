@@ -11,7 +11,6 @@ import atexit
 import os
 import shutil
 import socket
-import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -19,8 +18,12 @@ import threading
 import time
 from unittest import main, TestCase
 
+# SQLAlchemy
+from sqlalchemy import inspect
+
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.db_env.engine import new_zato_engine
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -247,12 +250,11 @@ class TestODBSQLiteDefault(TestCase):
 
     def test_sqlite_db_has_tables(self):
         db_path = os.path.join(cast_('any_', _tmpdir), 'config.db')
-        conn = sqlite3.connect(db_path)
+        engine = new_zato_engine(f'sqlite:///{db_path}')
         try:
-            cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
-            tables = {row[0] for row in cursor.fetchall()}
+            tables = set(inspect(engine).get_table_names())
         finally:
-            conn.close()
+            engine.dispose()
 
         for expected in ('server', 'http_soap'):
             self.assertIn(expected, tables, f'Table "{expected}" not found in ODB, got: {sorted(tables)}')

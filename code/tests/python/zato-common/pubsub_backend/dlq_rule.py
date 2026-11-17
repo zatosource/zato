@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from json import dumps, loads
+from unittest.mock import MagicMock
 
 # gevent
 from gevent import sleep
@@ -28,6 +29,7 @@ from zato.common.util.time_ import utcnow
 from zato.server.base.parallel.delivery import PushDelivery
 from zato.server.service.internal.pubsub.dlq import DLQRun, ForwardMessage, RetryMessage
 from zato.server.service.internal.pubsub.outgoing import Deliver
+from zato.common.test.service_ import deploy_service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -134,7 +136,7 @@ class _DeliveringServer(_StubServer):
 
         self.invoked.append(service_name)
 
-        service = object.__new__(Deliver)
+        service = deploy_service(Deliver, MagicMock())
         service.server = _as_server(self)
         service.cid = 'test-cid'
         service.request = cast_('any_', _Request(payload, None))
@@ -160,7 +162,7 @@ def _new_server() -> '_DeliveringServer':
 def _new_rule(server:'_DeliveringServer') -> 'DLQRun':
     """ The DLQ rule, as the scheduler's job runs it.
     """
-    out = object.__new__(DLQRun)
+    out = deploy_service(DLQRun, MagicMock())
     out.server = _as_server(server)
 
     return out
@@ -170,7 +172,7 @@ def _new_rule(server:'_DeliveringServer') -> 'DLQRun':
 def _retry_by_operator(server:'_DeliveringServer', msg_id:'str') -> 'None':
     """ An operator's retry of one DLQ message.
     """
-    service = object.__new__(RetryMessage)
+    service = deploy_service(RetryMessage, MagicMock())
     service.server = _as_server(server)
     dlq_sub_key = _get_dlq_sub_key()
     retry_input = _RetryInput(dlq_sub_key, msg_id)
@@ -185,7 +187,7 @@ def _retry_by_operator(server:'_DeliveringServer', msg_id:'str') -> 'None':
 def _forward_by_operator(server:'_DeliveringServer', msg_id:'str') -> 'None':
     """ An operator's forward of one DLQ message to the forward topic.
     """
-    service = object.__new__(ForwardMessage)
+    service = deploy_service(ForwardMessage, MagicMock())
     service.server = _as_server(server)
     dlq_sub_key = _get_dlq_sub_key()
     forward_input = _ForwardInput(dlq_sub_key, msg_id, _forward_topic)

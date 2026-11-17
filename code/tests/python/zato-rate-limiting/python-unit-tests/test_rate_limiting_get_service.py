@@ -14,6 +14,7 @@ from unittest.mock import MagicMock
 from zato.common.json_internal import dumps
 from zato.common.rate_limiting.common import Window_Unit_Second
 from zato.server.service.internal.http_soap.rate_limiting import RateLimitingGet
+from zato.common.test.service_ import deploy_service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -25,9 +26,9 @@ if 0:
 # ################################################################################################################################
 
 def _make_service(channel_id:'any_', existing_opaque:'any_' = None):
-    """ Builds a bare object with just enough state for handle() to work.
+    """ Deploys the service through the service store and sets the state that handle() uses.
     """
-    service = object.__new__(RateLimitingGet)
+    service = deploy_service(RateLimitingGet, MagicMock())
 
     service.request = MagicMock()
     service.request.input = {'id': str(channel_id)}

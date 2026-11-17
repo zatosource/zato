@@ -19,6 +19,7 @@ from zato.server.service.internal.security.rate_limiting import APIKeyRateLimiti
 from zato.server.service.internal.security.tier import Create as TierCreate, Delete as TierDelete, \
     Edit as TierEdit, SetForGroup as TierSetForGroup
 from zato.common.typing_ import cast_
+from zato.common.test.service_ import deploy_service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,9 +55,9 @@ class _MockInput(dict):
 # ################################################################################################################################
 
 def _make_service(class_:'any_', input_data:'any_'):
-    """ Builds a bare service object with just enough state for handle() to work.
+    """ Deploys the service through the service store and sets the state that handle() uses.
     """
-    service = object.__new__(class_)
+    service = deploy_service(class_, MagicMock())
 
     service.request = MagicMock()
     service.request.input = _MockInput(input_data)

@@ -24,9 +24,10 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import pytest
 
 # SQLAlchemy
-from sqlalchemy import create_engine, select
+from sqlalchemy import select
 
 # Zato
+from zato.common.db_env.engine import new_zato_engine
 from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditOutcome, AuditSource
 from zato.common.destination.constants import DeliveryMode, DestinationType, Respond_From_Service
 from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
@@ -210,7 +211,7 @@ def _as_stored(destinations:'anylist') -> 'str':
 def _get_events(audit_db_path:'str', object_name:'str', event_type:'str', msg_id:'str'='') -> 'anylist':
     """ Returns the audit events one object recorded, oldest first, each as a dict.
     """
-    engine = create_engine(f'sqlite:///{audit_db_path}')
+    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
 
     query = select(event_table)
     query = query.where(event_table.c.object_name == object_name)
@@ -235,7 +236,7 @@ def _get_events(audit_db_path:'str', object_name:'str', event_type:'str', msg_id
 def _get_attr_map(audit_db_path:'str', event_id:'int') -> 'anydict':
     """ Returns the attributes of one event as a dict of name to value.
     """
-    engine = create_engine(f'sqlite:///{audit_db_path}')
+    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
 
     query = select(event_attr_table)
     query = query.where(event_attr_table.c.event_id == event_id)
@@ -275,7 +276,7 @@ def _get_message_cid(audit_db_path:'str', channel_name:'str', control_id:'str') 
 def _get_hops(audit_db_path:'str', cid:'str') -> 'anylist':
     """ Returns every delivery recorded under one correlation id, oldest first.
     """
-    engine = create_engine(f'sqlite:///{audit_db_path}')
+    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
 
     query = select(event_table)
     query = query.where(event_table.c.event_type == AuditEvent.Request_Sent)

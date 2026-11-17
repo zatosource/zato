@@ -51,6 +51,10 @@ class ModuleCtx:
     # How many files are sent before and after a password change
     Rotation_Batch = 5
 
+    # How long a test waits after the password is restored, so that the failed logons of the time in which only
+    # the guest had the restored one reach the test that expects them, in seconds
+    Rotation_Settle_Seconds = 3
+
     # How many documents are written while their share is removed, and how long the share stays removed, in seconds
     Document_Count       = 3
     Share_Absent_Seconds = 3
@@ -223,6 +227,7 @@ def test_credential_rotation(smb_suite:'SMBWindowsSuite', version:'str', run:'st
     finally:
         handle.set_password(run, Accounts.Exchange_Username, Accounts.Exchange_Password)
         smb_suite.import_guest(version)
+        monitor.pause(ModuleCtx.Rotation_Settle_Seconds)
 
 # ################################################################################################################################
 

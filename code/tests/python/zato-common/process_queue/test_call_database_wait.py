@@ -95,12 +95,10 @@ def _write_while_counting(region:'SharedRegion', db_path:'str', deadline:'float'
         from gevent import monkey, reinit, sleep, spawn
         reinit()
         _ = monkey.patch_all()
-
-        from sqlalchemy import create_engine
-        from zato.common.db_env.engine import call_database, set_process_queue
+        from zato.common.db_env.engine import call_database, new_zato_engine, set_process_queue
         from zato.common.db_env.process_queue import ProcessQueue
 
-        engine = create_engine(f'sqlite:///{db_path}')
+        engine = new_zato_engine(f'sqlite:///{db_path}')
         process_queue = ProcessQueue(region, _queue, _writer_place, deadline)
         set_process_queue(engine, process_queue)
 

@@ -107,12 +107,15 @@ def monitor(smb_suite:'PeerSuite', run:'str', request:'any_') -> 'iterator_':
         yield out
 
     finally:
-        for version, handle in smb_suite.handles.items():
-            watch = out.watches[version]
-            if not watch.may_stop:
-                handle.stop_run(run)
 
-        out.stop()
+        # The monitor is stopped even if a guest fails to stop the tasks of the test
+        try:
+            for version, handle in smb_suite.handles.items():
+                watch = out.watches[version]
+                if not watch.may_stop:
+                    handle.stop_run(run)
+        finally:
+            out.stop()
 
 # ################################################################################################################################
 # ################################################################################################################################

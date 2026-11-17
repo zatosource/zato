@@ -12,9 +12,10 @@ import threading
 import time
 
 # SQLAlchemy
-from sqlalchemy import create_engine, select
+from sqlalchemy import select
 
 # Zato
+from zato.common.db_env.engine import new_zato_engine
 from zato.common.api import Alerting
 from zato.common.alerting.names import get_notification_conn_name
 from zato.common.audit_log.api import AuditEvent
@@ -150,7 +151,7 @@ def _get_alerts(audit_db_path:'str', rule_name:'str') -> 'anylist':
     """ Returns the alert rows one rule raised, oldest first, each as a dict.
     """
 
-    engine = create_engine(f'sqlite:///{audit_db_path}')
+    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
 
     query = select(alert_table)
     query = query.where(alert_table.c.rule_name == rule_name)

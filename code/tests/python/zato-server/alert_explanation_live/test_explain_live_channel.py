@@ -21,10 +21,11 @@ from dataclasses import dataclass
 import requests
 
 # SQLAlchemy
-from sqlalchemy import create_engine, select
+from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 # Zato
+from zato.common.db_env.engine import new_zato_engine
 from zato.common.alerting.explain.evidence import Heading_Object
 from zato.common.alerting.explain.store import ExplanationStore
 from zato.common.alerting.names import get_notification_conn_name
@@ -419,7 +420,7 @@ def _server_audit_engine() -> 'any_':
     """ The audit database of the live server - the one file the server writes and this process reads.
     """
     path = os.path.join(LiveServer.server_directory, 'zato.db')
-    out = create_engine(f'sqlite:///{path}')
+    out = new_zato_engine(f'sqlite:///{path}')
     return out
 
 # ################################################################################################################################
@@ -452,7 +453,7 @@ def _get_stored_explanations(channel:'_ChannelDescription') -> 'anylist':
     share the server, so each reads the explanations of its own channel kind alone.
     """
     path = os.path.join(os.path.dirname(LiveServer.server_directory), 'config.db')
-    session_maker = sessionmaker(bind=create_engine(f'sqlite:///{path}'))
+    session_maker = sessionmaker(bind=new_zato_engine(f'sqlite:///{path}'))
 
     store = ExplanationStore(session_maker)
 

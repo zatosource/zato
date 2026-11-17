@@ -16,10 +16,10 @@ from datetime import datetime
 import pytest
 
 # SQLAlchemy
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Zato
+from zato.common.db_env.engine import new_zato_engine
 from zato.common.api import SCHEDULER
 from zato.common.common_db.schema import metadata
 from zato.common.common_db.store import SharedObjectStore
@@ -147,11 +147,11 @@ class _Environment:
     """
     def __init__(self, tmp_path:'Path') -> 'None':
 
-        odb_engine = create_engine(f'sqlite:///{os.path.join(tmp_path, "config.db")}')
+        odb_engine = new_zato_engine(f'sqlite:///{os.path.join(tmp_path, "config.db")}')
         Base.metadata.create_all(odb_engine)
         self.odb_session = sessionmaker(bind=odb_engine)
 
-        database_engine = create_engine(f'sqlite:///{os.path.join(tmp_path, "zato.db")}')
+        database_engine = new_zato_engine(f'sqlite:///{os.path.join(tmp_path, "zato.db")}')
         metadata.create_all(database_engine)
 
         self.events:'anylist' = []

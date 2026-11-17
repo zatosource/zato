@@ -21,6 +21,7 @@ from zato.common.odb.model import HTTPSOAP
 from zato.common.util.sql import parse_instance_opaque_attr
 from zato.server.service.internal.http_soap.create import Create
 from zato.server.service.internal.http_soap.get import Get, GetList
+from zato.common.test.service_ import deploy_service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,7 +76,7 @@ def new_service(class_:'any_', session_factory:'any_', input_data:'stranydict') 
         out = value
         return out
 
-    service:'any_' = object.__new__(class_)
+    service:'any_' = deploy_service(class_, MagicMock())
 
     service.cid = 'cid-http-soap-alerts'
     service.request = SimpleNamespace(input=full_input(class_, input_data))

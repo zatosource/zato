@@ -17,12 +17,13 @@ import shutil
 import time
 
 # SQLAlchemy
-from sqlalchemy import create_engine, select
+from sqlalchemy import select
 
 # pytest
 import pytest
 
 # Zato
+from zato.common.db_env.engine import new_zato_engine
 from zato.common.audit_log.api import event_table
 from zato.common.audit_log.common import AuditSource
 from zato.common.sftp_local import has_sshd, LocalSFTPServer
@@ -222,7 +223,7 @@ def _read_sshd_port(config_path:'str') -> 'int':
 def _get_audit_counts(zato_server:'stranydict') -> 'anydict':
     """ How many outgoing file transfer events the audit log has per connection name.
     """
-    engine = create_engine(f'sqlite:///{zato_server["audit_db_path"]}')
+    engine = new_zato_engine(f'sqlite:///{zato_server["audit_db_path"]}')
 
     query = select(event_table.c.object_name)
     query = query.where(event_table.c.source == AuditSource.File_Outgoing)

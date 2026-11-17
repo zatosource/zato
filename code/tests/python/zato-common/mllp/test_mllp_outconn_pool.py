@@ -10,10 +10,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import gevent
 from gevent import sleep
 
+# stdlib
+from unittest.mock import MagicMock
+
 # pytest
 import pytest
 
 # Zato
+from zato.common.api import HL7, HTTP_SOAP
 from zato.common.ext.bunch import Bunch
 from zato.common.hl7.mllp.ack import AckResult
 from zato.common.typing_ import cast_
@@ -96,6 +100,31 @@ def _build_container(pool:'ConnectionQueue', is_active:'bool') -> 'strdict':
 
 # ################################################################################################################################
 
+def _build_wrapper(pool:'ConnectionQueue') -> 'OutconnHL7MLLPWrapper':
+    """ Builds an inactive outgoing connection, which builds no connections of its own, and gives it the pool.
+    """
+    config = Bunch()
+    config.id = 1
+    config.name = _conn_name
+    config.address = '127.0.0.1:2575'
+    config.username = None
+    config.is_active = False
+    config.pool_size = 1
+    config.queue_build_cap = 30
+    config.needs_spawn = False
+    config.is_audit_log_active = False
+    config[HTTP_SOAP.Queue.Field_Use_Queue] = False
+    config.circuit_breaker_threshold_percent = HL7.Default.circuit_breaker_threshold_percent
+    config.circuit_breaker_window_seconds = HL7.Default.circuit_breaker_window_seconds
+    config.circuit_breaker_reset_seconds = HL7.Default.circuit_breaker_reset_seconds
+
+    out = OutconnHL7MLLPWrapper(config, MagicMock())
+    out.client = pool
+
+    return out
+
+# ################################################################################################################################
+
 def _build_facade(container:'strdict') -> 'MLLPFacade':
     config_manager = cast_('any_', Bunch(outconn_hl7_mllp=container))
 
@@ -161,8 +190,7 @@ class TestOutgoingPool:
         pooled = _PooledConnection()
         pool = _build_pool(pooled)
 
-        wrapper = OutconnHL7MLLPWrapper.__new__(OutconnHL7MLLPWrapper)
-        wrapper.client = pool
+        wrapper = _build_wrapper(pool)
 
         container = _build_container(pool, True)
         invoker = HL7MLLPInvoker(_conn_name, 'test-cid', container)

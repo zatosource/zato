@@ -590,7 +590,14 @@ function Read-Commands {
 
     foreach ($file in @(Get-ChildItem -LiteralPath $CommandsPath -File -Filter '*.json' | Sort-Object Name)) {
 
-        $text = [IO.File]::ReadAllText($file.FullName, $Utf8)
+        # The harness keeps a command file open for a moment after it renames it into place,
+        # in which case the file is read on the next tick
+        try {
+            $text = [IO.File]::ReadAllText($file.FullName, $Utf8)
+        }
+        catch [IO.IOException] {
+            continue
+        }
         Remove-Item -LiteralPath $file.FullName -Force
         $command = $text | ConvertFrom-Json
 

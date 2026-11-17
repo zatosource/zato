@@ -60,10 +60,19 @@ class ModuleCtx:
         r'^\s*(?:with\b.*?\)\s*)?(insert|update|delete|replace|merge|upsert|copy|truncate|create|drop|alter|vacuum|reindex)\b',
         re.IGNORECASE | re.DOTALL)
 
+    # The keywords that precede the table of a statement that writes rows
+    Table_Keywords = (
+        r'insert\s+(?:or\s+\w+\s+)?into',
+        r'replace\s+into',
+        r'update(?:\s+or\s+\w+)?',
+        r'delete\s+from',
+        r'copy',
+        r'truncate(?:\s+table)?',
+    )
+
     # The table of a statement that writes rows, after its keyword
     Statement_Table = re.compile(
-        r'^\s*(?:with\b.*?\)\s*)?(?:insert\s+(?:or\s+\w+\s+)?into|replace\s+into|update(?:\s+or\s+\w+)?|delete\s+from|'
-        r'copy|truncate(?:\s+table)?)\s+["`]?(\w+)',
+        r'^\s*(?:with\b.*?\)\s*)?(?:' + '|'.join(Table_Keywords) + r')\s+["`]?(\w+)',
         re.IGNORECASE | re.DOTALL)
 
     # The tables of the audit log, which only a group commit, maintenance, schema creation and a takeover write

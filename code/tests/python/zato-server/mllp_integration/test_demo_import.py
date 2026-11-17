@@ -15,9 +15,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 
 # SQLAlchemy
-from sqlalchemy import create_engine, func, select
+from sqlalchemy import func, select
 
 # Zato
+from zato.common.db_env.engine import new_zato_engine
 from zato.common.audit_log.api import event_table
 
 # ################################################################################################################################
@@ -62,7 +63,7 @@ _rest_object_count = 2
 def _count_demo_events(audit_db_path:'str') -> 'int':
     """ Returns how many events in the server's audit database belong to the demo.
     """
-    engine = create_engine(f'sqlite:///{audit_db_path}')
+    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
 
     query = select(func.count()).select_from(event_table)
     query = query.where(event_table.c.cid.like(f'{_cid_prefix}%'))

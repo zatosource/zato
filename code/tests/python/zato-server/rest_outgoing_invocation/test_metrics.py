@@ -23,7 +23,6 @@ from requests.exceptions import ChunkedEncodingError
 
 # Zato
 from zato.common.exception import BackendInvocationError
-from zato.common.util import http_retry
 
 # Test support
 from endpoint import CloseMode, EndpointResponse
@@ -187,12 +186,9 @@ def test_retried_call_metrics(
     endpoint:'TestEndpoint',
     server:'ServerStub',
     path:'str',
-    monkeypatch:'pytest.MonkeyPatch',
     ) -> 'None':
     """ Each response of a retried call is counted, and the connection errors that preceded the last attempt are not.
     """
-    monkeypatch.setattr(http_retry, 'sleep', [].append)
-
     connection_name = _get_connection_name(path)
     endpoint.set_responses(path, [
         EndpointResponse(close_mode=CloseMode.Reset_Before_Response),
@@ -200,7 +196,8 @@ def test_retried_call_metrics(
         EndpointResponse(),
     ])
 
-    connection = new_connection(server, endpoint.http_base, path, name=connection_name, max_retries=2)
+    connection = new_connection(server, endpoint.http_base, path, name=connection_name, max_retries=2, retry_sleep_time=1,
+        retry_backoff_multiplier=1)
 
     response = connection.get(Test_CID)
 

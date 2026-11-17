@@ -14,10 +14,8 @@ import shutil
 from functools import partial
 from tempfile import TemporaryDirectory
 
-# SQLAlchemy
-from sqlalchemy import create_engine
-
 # Zato
+from zato.common.db_env.engine import new_zato_engine
 from ha_env import create_session as create_ha_session, ModuleCtx as EnvCtx
 from nodes import Node, NodeHook
 from pair import import_jobs
@@ -128,7 +126,7 @@ def _read_copied_check(path:'str', keys:'strlist', prefix:'str') -> 'OutputCheck
             pass
 
         _ = shutil.copyfile(path, copy_path)
-        engine = create_engine(f'sqlite:///{copy_path}')
+        engine = new_zato_engine(f'sqlite:///{copy_path}')
 
         try:
             out = check_outputs(engine, keys, prefix)

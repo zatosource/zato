@@ -21,10 +21,8 @@ import jwt as pyjwt
 # requests
 import requests
 
-# SQLAlchemy
-from sqlalchemy import create_engine
-
 # Zato
+from zato.common.db_env.engine import new_zato_engine
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.common import MCPAttr
 from zato.common.audit_log.search import search_events
@@ -125,7 +123,7 @@ def build_unpublished_key_token() -> 'str':
 # ################################################################################################################################
 
 def audit_engine(oauth_live:'OAuthLiveEnvironment') -> 'any_':
-    out = create_engine(f'sqlite:///{oauth_live.audit_db_path}')
+    out = new_zato_engine(f'sqlite:///{oauth_live.audit_db_path}')
     return out
 
 # ################################################################################################################################

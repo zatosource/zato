@@ -16,9 +16,10 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.request import Request, urlopen
 
 # SQLAlchemy
-from sqlalchemy import create_engine, select
+from sqlalchemy import select
 
 # Zato
+from zato.common.db_env.engine import new_zato_engine
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
     AuditEvent, AuditLink, AuditOutcome, AuditSource
 from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
@@ -166,7 +167,7 @@ def _get_events(audit_db_path:'str', object_name:'str', event_type:'str'='') -> 
     """ Returns the audit events written for one object, oldest first, each as a dict.
     """
 
-    engine = create_engine(f'sqlite:///{audit_db_path}')
+    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
 
     query = select(event_table)
     query = query.where(event_table.c.object_name == object_name)
@@ -191,7 +192,7 @@ def _get_attr_map(audit_db_path:'str', event_id:'int') -> 'anydict':
     """ Returns the attributes of one event as a dict of name to value.
     """
 
-    engine = create_engine(f'sqlite:///{audit_db_path}')
+    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
 
     query = select(event_attr_table)
     query = query.where(event_attr_table.c.event_id == event_id)
@@ -212,7 +213,7 @@ def _get_body_map(audit_db_path:'str', event_id:'int') -> 'anydict':
     """ Returns the bodies of one event as a dict of kind to data.
     """
 
-    engine = create_engine(f'sqlite:///{audit_db_path}')
+    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
 
     query = select(event_body_table)
     query = query.where(event_body_table.c.event_id == event_id)
@@ -233,7 +234,7 @@ def _get_children(audit_db_path:'str', parent_event_id:'int', link_type:'str') -
     """ Returns the child event ids linked to one parent, oldest first.
     """
 
-    engine = create_engine(f'sqlite:///{audit_db_path}')
+    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
 
     query = select(event_link_table.c.child_event_id)
     query = query.where(event_link_table.c.parent_event_id == parent_event_id)

@@ -30,14 +30,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ModuleCtx:
-
-    # The generation that a replica holds which did not receive the last raise of the generation
-    Previous_Generation = text('update zato_active set generation = generation - 1 where id = 1')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 def _execute(engine:'Engine', statement:'any_') -> 'None':
     with engine.begin() as connection:
         _ = connection.execute(statement)
@@ -71,7 +63,9 @@ def restore_previous_generation(engine:'Engine') -> 'None':
     """ Lowers the generation by one, which is what a failover to a replica that did not receive the last raise
     of the generation leaves behind.
     """
-    _ = call_database(engine, _execute, engine, ModuleCtx.Previous_Generation)
+    statement = text('update zato_active set generation = generation - 1 where id = 1')
+
+    _ = call_database(engine, _execute, engine, statement)
 
 # ################################################################################################################################
 

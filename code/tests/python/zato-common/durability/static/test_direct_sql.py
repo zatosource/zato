@@ -16,7 +16,7 @@ from zato.common.test.durability.python_ast import get_dotted_name, get_import_a
 from zato.common.test.durability.sources import get_python_files
 
 # Local
-from registry import Direct_SQL_Purposes, External_Database_Tests, Write_Path_Tests
+from registry import Direct_SQL_Purposes, External_Database_Tests, Takeover_Faults, Write_Path_Tests
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -86,6 +86,18 @@ class ModuleCtx:
 
     # The statements that administer the database server of a test container, which change no table of a database
     Server_Statement = re.compile(r'^\s*(create|drop|alter)\s+(role|user|extension|tablespace|database|system)\b', re.IGNORECASE)
+
+    # The table of the active server, which only a takeover of the product writes
+    Active_Table = 'zato.common.pubsub.sql.schema.active_table'
+
+    # A literal statement that writes the table of the active server
+    Active_Statement = re.compile(r'\b(insert\s+into|update|delete\s+from)\s+["`]?zato_active\b', re.IGNORECASE)
+
+    # The function of the standard library that opens a connection to an SQLite file
+    SQLite_Connect = 'sqlite3.connect'
+
+    # What names the file of config.db in the expression of its path
+    Config_DB_Path = re.compile(r'config\.db|config_db|\bodb', re.IGNORECASE)
 
     # The functions that turn a literal into a statement
     Text_Functions = frozenset({'text', 'sqlalchemy.text', 'sqlalchemy.sql.text', 'sqlalchemy.sql.expression.text'})
@@ -237,6 +249,134 @@ def test_direct_writes_only_in_direct_sql() -> 'None':
         if source.relative_path not in external_paths and source.relative_path not in write_path_paths:
             for line in _get_direct_writes(tree, aliases):
                 findings.append(f'{source.path}:{line} -> direct write')
+
+    assert not findings, '\n'.join(findings)
+
+# ################################################################################################################################
+
+def _get_function_ranges(tree:'ast.Module') -> 'list[tuple[str, int, int]]':
+    """ Returns the name, the first line and the last line of each function at the top level of a module.
+    """
+    out:'list[tuple[str, int, int]]' = []
+
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            out.append((node.name, node.lineno, node.end_lineno or node.lineno))
+
+    return out
+
+# ################################################################################################################################
+
+def _get_active_writes(tree:'ast.Module', aliases:'strdict') -> 'list[int]':
+    """ Returns the line of each write to the table of the active server that a module builds or runs.
+    """
+    out:'list[int]' = []
+
+    for node in ast.walk(tree):
+
+        # The table's own insert, update or delete ..
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+            if node.func.attr in ModuleCtx.Table_Write_Methods:
+                if get_dotted_name(node.func.value, aliases) == ModuleCtx.Active_Table:
+                    out.append(node.lineno)
+
+        # .. or a literal statement that writes it.
+        elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+            if ModuleCtx.Active_Statement.search(node.value):
+                out.append(node.lineno)
+
+    return out
+
+# ################################################################################################################################
+
+def test_no_takeover_writes_in_tests() -> 'None':
+    """ Test code changes the active server only through take_over, as a server that takes over does,
+    with the registered faults that stand for a failover to a replica as the only exceptions.
+    """
+    exempt = set(Takeover_Faults)
+    findings:'strlist' = []
+
+    for source in get_python_files(is_production=False):
+        if source.is_linked:
+            continue
+
+        tree = parse(source)
+        aliases = get_import_aliases(tree, '')
+        ranges = _get_function_ranges(tree)
+
+        for line in _get_active_writes(tree, aliases):
+            function_name = ''
+
+            for name, first_line, last_line in ranges:
+                if first_line <= line <= last_line:
+                    function_name = name
+                    break
+
+            if (source.relative_path, function_name) not in exempt:
+                findings.append(f'{source.path}:{line} -> write to zato_active')
+
+    assert not findings, '\n'.join(findings)
+
+# ################################################################################################################################
+
+def _get_assigned_values(tree:'ast.Module') -> 'dict[str, list[str]]':
+    """ Returns the source of each value that a module assigns to each plain name.
+    """
+    out:'dict[str, list[str]]' = {}
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    values = out.setdefault(target.id, [])
+                    values.append(ast.unparse(node.value))
+
+    return out
+
+# ################################################################################################################################
+
+def _get_config_db_connections(tree:'ast.Module', aliases:'strdict') -> 'list[int]':
+    """ Returns the line of each connection of the standard library to config.db that a module opens.
+    """
+    assigned = _get_assigned_values(tree)
+    out:'list[int]' = []
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not node.args:
+            continue
+
+        if get_dotted_name(node.func, aliases) != ModuleCtx.SQLite_Connect:
+            continue
+
+        # The path is either given in place or through a name that the module assigns it to
+        path = node.args[0]
+        texts = [ast.unparse(path)]
+
+        if isinstance(path, ast.Name) and path.id in assigned:
+            texts.extend(assigned[path.id])
+
+        if any(ModuleCtx.Config_DB_Path.search(text) for text in texts):
+            out.append(node.lineno)
+
+    return out
+
+# ################################################################################################################################
+
+def test_no_sqlite_connections_to_config_db() -> 'None':
+    """ Test code reaches config.db only through the engine factory and the deployment of the product,
+    never through a connection of the standard library.
+    """
+    findings:'strlist' = []
+
+    for source in get_python_files(is_production=False):
+        if source.is_linked:
+            continue
+
+        tree = parse(source)
+        aliases = get_import_aliases(tree, '')
+
+        for line in _get_config_db_connections(tree, aliases):
+            findings.append(f'{source.path}:{line} -> sqlite3.connect to config.db')
 
     assert not findings, '\n'.join(findings)
 

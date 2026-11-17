@@ -75,12 +75,10 @@ def _write_through_call_database(
         from gevent import joinall, monkey, reinit, spawn
         reinit()
         _ = monkey.patch_all()
-
-        from sqlalchemy import create_engine
-        from zato.common.db_env.engine import call_database, set_process_queue
+        from zato.common.db_env.engine import call_database, new_zato_engine, set_process_queue
         from zato.common.db_env.process_queue import ProcessQueue
 
-        engine = create_engine(f'sqlite:///{db_path}')
+        engine = new_zato_engine(f'sqlite:///{db_path}')
 
         # .. and takes turns with the other process in the queue of the file.
         process_queue = ProcessQueue(region, _queue, place, _deadline)

@@ -12,6 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import re
 from base64 import b64encode
 from json import dumps, loads
 from logging import Formatter, getLogger, INFO
@@ -60,6 +61,9 @@ _log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name
 # The size at which the test log file rotates, large enough for it not to rotate during a run
 _log_max_bytes = 1_000_000_000
 
+# The warning that the retry loop of a connection logs before each sleep, with the length of the sleep in seconds
+_retry_sleep_pattern = re.compile(r' retry cid=.*?; attempt=\d+; sleep=(\d+);')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -101,6 +105,22 @@ def read_log_lines(path:'str', text:'str') -> 'strlist':
             if text in line:
                 line = line.rstrip('\n')
                 out.append(line)
+
+    return out
+
+# ################################################################################################################################
+
+def get_retry_sleeps(caplog:'any_') -> 'list[int]':
+    """ Returns the length of each sleep between the attempts of a call, in seconds and in order,
+    as the retry loop logged it before sleeping.
+    """
+    out:'list[int]' = []
+
+    for record in caplog.records:
+        match = _retry_sleep_pattern.search(record.getMessage())
+        if match:
+            sleep_time = int(match.group(1))
+            out.append(sleep_time)
 
     return out
 

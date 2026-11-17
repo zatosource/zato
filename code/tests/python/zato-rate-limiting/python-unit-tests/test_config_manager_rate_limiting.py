@@ -21,13 +21,12 @@ from zato.server.base.config_manager import ConfigManager
 # ################################################################################################################################
 
 def _make_config_manager():
-    """ Builds a minimal ConfigManager with a mocked server that has a rate_limiting_manager.
+    """ Builds a ConfigManager with a mocked server that has a rate_limiting_manager.
     """
     server = MagicMock()
     server.rate_limiting_manager = MagicMock()
 
-    config_manager = object.__new__(ConfigManager)
-    config_manager.server = server
+    config_manager = ConfigManager(MagicMock(), server)
 
     return config_manager
 

@@ -24,6 +24,7 @@ from zato.common.util.sql import parse_instance_opaque_attr
 from zato.server.service.internal.generic.connection import Create
 from zato.server.service.internal.generic.get_list import GetList
 from zato.common.test.direct_sql.seed import seed_config_objects
+from zato.common.test.service_ import deploy_service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -100,7 +101,7 @@ def new_service(class_:'any_', session_factory:'any_', input_data:'stranydict') 
         out = value
         return out
 
-    service:'any_' = object.__new__(class_)
+    service:'any_' = deploy_service(class_, MagicMock())
 
     service.cid = 'cid-generic-alerts'
     service.request = SimpleNamespace(input=full_input(class_, input_data), raw=dict(input_data), payload={})

@@ -13,9 +13,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 
 # SQLAlchemy
-from sqlalchemy import create_engine, select
+from sqlalchemy import select
 
 # Zato
+from zato.common.db_env.engine import new_zato_engine
 from zato.common.audit_log.api import event_attr_table, event_table
 
 # ################################################################################################################################
@@ -43,7 +44,7 @@ def events(
     if not os.path.exists(audit_db_path):
         return out
 
-    engine = create_engine(f'sqlite:///{audit_db_path}')
+    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
 
     query = select(event_table)
     query = query.where(event_table.c.event_type == event_type)
@@ -72,7 +73,7 @@ def events(
 def attributes(audit_db_path:'str', event_id:'int') -> 'strstrdict':
     """ The attributes of one event, name to value.
     """
-    engine = create_engine(f'sqlite:///{audit_db_path}')
+    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
 
     query = select(event_attr_table)
     query = query.where(event_attr_table.c.event_id == event_id)

@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from itertools import count
 from time import monotonic
+from unittest.mock import MagicMock
 
 # gevent
 from gevent import sleep
@@ -24,6 +25,7 @@ from zato.server.base.config_manager import ConfigManager, _pubsub_amqp_bridge_s
 from zato.server.connection.amqp_ import ConnectorAMQP
 from zato.server.connection.connector import Connector_Type, ConnectorStore
 from zato.server.service.internal.pubsub.topic import OnAMQPMessage
+from zato.common.test.service_ import deploy_service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -397,7 +399,7 @@ class PubSubAMQPHarness:
         # with the real config manager methods underneath it ..
         if service_name == _pubsub_amqp_bridge_service:
 
-            service = OnAMQPMessage.__new__(OnAMQPMessage)
+            service = deploy_service(OnAMQPMessage, MagicMock())
             service.channel = cast_('any_', _ServiceChannel(channel_item['name']))
             service.request = cast_('any_', _ServiceRequest(body))
             service.server = cast_('any_', self.server)

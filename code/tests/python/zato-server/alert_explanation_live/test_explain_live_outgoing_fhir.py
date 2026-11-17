@@ -20,10 +20,11 @@ from json import loads
 from time import sleep, time
 
 # SQLAlchemy
-from sqlalchemy import create_engine, inspect, select
+from sqlalchemy import inspect, select
 from sqlalchemy.orm import sessionmaker
 
 # Zato
+from zato.common.db_env.engine import new_zato_engine
 from zato.common.alerting.explain.evidence import Heading_Object
 from zato.common.alerting.explain.settings_info import Label_Alerts, On
 from zato.common.alerting.explain.store import ExplanationStore
@@ -465,7 +466,7 @@ def _get_stored_outcome_explanations(source:'str', name:'str') -> 'anylist':
     the proofs share the server, so each one reads the explanations of its own connection alone.
     """
     path = os.path.join(os.path.dirname(LiveServer.server_directory), 'config.db')
-    session_maker = sessionmaker(bind=create_engine(f'sqlite:///{path}'))
+    session_maker = sessionmaker(bind=new_zato_engine(f'sqlite:///{path}'))
 
     store = ExplanationStore(session_maker)
 

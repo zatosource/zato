@@ -11,6 +11,7 @@ import ast
 import inspect
 import pkgutil
 from importlib import import_module
+from unittest.mock import MagicMock
 
 # Zato
 from zato.common.typing_ import cast_
@@ -19,6 +20,7 @@ from zato.server.service.internal import ServerFunctionInvoker
 from zato.server.service.internal.security import basic_auth
 from zato.server.service.reqresp import Request
 import zato.server.service.internal as internal_package
+from zato.common.test.service_ import deploy_service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -122,8 +124,8 @@ def test_every_service_that_publishes_a_change_is_marked() -> 'None':
 
 def test_the_server_invoker_changes_configuration_for_a_reload_only() -> 'None':
 
-    # .. the constructor of a service requires a deployed server, and the decision reads the request only ..
-    service = ServerFunctionInvoker.__new__(ServerFunctionInvoker)
+    # .. the service is deployed through the service store, and the decision reads the request only ..
+    service = deploy_service(ServerFunctionInvoker, MagicMock())
     service.request = Request(service)
 
     service.request.raw = {'func_name': 'reload_config'}

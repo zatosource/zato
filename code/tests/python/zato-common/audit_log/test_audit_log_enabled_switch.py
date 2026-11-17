@@ -11,9 +11,10 @@ import os
 from contextlib import contextmanager
 
 # SQLAlchemy
-from sqlalchemy import create_engine, func, select
+from sqlalchemy import func, select
 
 # Zato
+from zato.common.db_env.engine import new_zato_engine
 from common import audit_log_env
 from zato.common.audit_log.api import event_table, is_audit_log_enabled, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
@@ -65,7 +66,7 @@ def _count_events_in_file(db_path:'str') -> 'int':
     """ Counts the audit events in an SQLite file directly, with a throwaway engine,
     independently of whatever the environment variables currently point at.
     """
-    engine = create_engine(f'sqlite:///{db_path}')
+    engine = new_zato_engine(f'sqlite:///{db_path}')
 
     count_query = select(func.count()).select_from(event_table)
 

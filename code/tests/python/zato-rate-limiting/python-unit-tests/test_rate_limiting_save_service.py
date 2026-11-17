@@ -18,6 +18,7 @@ from zato.common.json_internal import dumps, loads
 from zato.common.rate_limiting.common import RateLimitError, Window_Unit_Second
 from zato.server.service.internal.http_soap.rate_limiting import RateLimitingSave
 from zato.common.typing_ import cast_
+from zato.common.test.service_ import deploy_service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,9 +53,9 @@ def _make_rule(cidr_list:'any_', time_range:'any_'):
 # ################################################################################################################################
 
 def _make_service(channel_id:'any_', rules:'any_', existing_opaque:'any_' = None):
-    """ Builds a bare object with just enough state for handle() to work.
+    """ Deploys the service through the service store and sets the state that handle() uses.
     """
-    service = object.__new__(RateLimitingSave)
+    service = deploy_service(RateLimitingSave, MagicMock())
 
     service.request = MagicMock()
     service.request.input = Bunch({

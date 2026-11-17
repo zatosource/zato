@@ -14,10 +14,11 @@ from time import monotonic
 import gevent
 
 # SQLAlchemy
-from sqlalchemy import create_engine, select, text
+from sqlalchemy import select, text
 from sqlalchemy.exc import DBAPIError
 
 # Zato
+from zato.common.db_env.engine import new_zato_engine
 from cleanup import publish_expired, wait_past_expiry
 from common import delete_all_rows, get_message_rows
 from zato.common.db_env.errors import get_sqlstate, is_transient, SQLState
@@ -258,7 +259,7 @@ def _run_unreachable_database_flow() -> 'None':
         probe.bind((_unreachable_host, 0))
         port = probe.getsockname()[1]
 
-    engine = create_engine(f'postgresql+pg8000://{_unreachable_user}@{_unreachable_host}:{port}/{_unreachable_user}')
+    engine = new_zato_engine(f'postgresql+pg8000://{_unreachable_user}@{_unreachable_host}:{port}/{_unreachable_user}')
 
     # .. so the connection is refused ..
     try:

@@ -7,15 +7,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import ast
 import re
 
 # Zato
-from zato.common.test.durability.python_ast import get_calls, get_module_name
+from zato.common.test.durability.python_ast import get_calls, get_dotted_name, get_import_aliases, get_module_name, parse
 from zato.common.test.durability.rust_source import get_enclosing_function, get_line, remove_test_modules
 from zato.common.test.durability.sources import get_python_files, get_rust_files
 
 # Local
-from registry import Customer_Engine_Sites, Engine_Constructors, ModuleCtx as RegistryModuleCtx
+from registry import Customer_Engine_Sites, Engine_Constructors, External_Database_Tests, ModuleCtx as RegistryModuleCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,6 +31,13 @@ class ModuleCtx:
 
     # The opening of a SQLite file by rusqlite
     Rust_SQLite_Open = re.compile(r'\bConnection::open\w*\s*\(')
+
+    # The functions of SQLAlchemy that build an engine, which the tests leave to the engine factory
+    Test_Engine_Constructors = frozenset({
+        'sqlalchemy.create_engine',
+        'sqlalchemy.engine.create_engine',
+        'sqlalchemy.ext.asyncio.create_async_engine',
+    })
 
     # The connection of tokio-postgres, in a module that uses it
     Rust_PostgreSQL_Crate = 'tokio_postgres'
@@ -61,6 +69,31 @@ def test_python_engines_from_the_factory() -> 'None':
                 site = (module_name, call.qualname)
                 if site not in Customer_Engine_Sites:
                     findings.append(f'{source.path}:{call.line} -> {module_name} {call.qualname} {call.name}')
+
+    assert not findings, '\n'.join(findings)
+
+# ################################################################################################################################
+
+def test_test_engines_from_the_factory() -> 'None':
+    """ Every engine of a database of Zato in test code is built by the engine factory, through get_database_engine
+    or new_zato_engine, so that each test runs with the settings of durability of production. The tests of external
+    databases are listed.
+    """
+    external_paths = {relative_path for relative_path, _ in External_Database_Tests}
+    findings:'strlist' = []
+
+    for source in get_python_files(is_production=False):
+        if source.is_linked or source.relative_path in external_paths:
+            continue
+
+        tree = parse(source)
+        aliases = get_import_aliases(tree, '')
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                name = get_dotted_name(node.func, aliases)
+                if name in ModuleCtx.Test_Engine_Constructors:
+                    findings.append(f'{source.path}:{node.lineno} -> {name}')
 
     assert not findings, '\n'.join(findings)
 

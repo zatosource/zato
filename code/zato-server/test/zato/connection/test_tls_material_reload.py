@@ -14,6 +14,7 @@ from unittest.mock import MagicMock, Mock
 
 # Zato
 from zato.server.service.internal.hot_deploy import Create
+from zato.common.test.service_ import deploy_service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -76,7 +77,7 @@ def _get_service(rest:'anydict', soap:'anydict') -> 'Create':
     for name, wrapper in soap.items():
         soap_items[name] = {'conn': wrapper}
 
-    service = Create.__new__(Create)
+    service = deploy_service(Create, MagicMock())
     service.logger = logging.getLogger(__name__)
 
     service.server = MagicMock()

@@ -12,10 +12,8 @@ import os
 # pytest
 import pytest
 
-# SQLAlchemy
-from sqlalchemy import create_engine
-
 # Zato
+from zato.common.db_env.engine import new_zato_engine
 from zato.common.api import SCHEDULER
 from zato.common.common_db.schema import metadata
 from zato.common.common_db.store import SharedObjectStore
@@ -78,7 +76,7 @@ class _InterleavedStore(SharedObjectStore):
 def store(tmp_path:'Path') -> '_InterleavedStore':
     db_path = os.path.join(tmp_path, 'zato.db')
 
-    engine = create_engine(f'sqlite:///{db_path}')
+    engine = new_zato_engine(f'sqlite:///{db_path}')
     metadata.create_all(engine)
 
     out = _InterleavedStore(engine)

@@ -141,6 +141,12 @@ Direct_SQL_Purposes = (
     ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_autocommit_connection',  'Seeding test data in bulk'),
 )
 
+# The faults that change the active server without a takeover, each standing for a failover to a replica
+# which did not receive the last change of the active server.
+Takeover_Faults = (
+    ('code/zato-common/src/zato/common/test/direct_sql/fault.py', 'restore_previous_generation'),
+)
+
 # The tests of the write path itself, which run its mechanisms and write outside of them on purpose.
 Write_Path_Tests = (
     ('code/tests/python/zato-common/durability/writers/test_write_path.py',       'The refusal of writes outside a mechanism'),
@@ -152,13 +158,16 @@ Write_Path_Tests = (
     ('code/tests/python/zato-common/audit_log_read/test_open_exchanges.py',       'The open exchanges under updates and deletes of events'),
 )
 
-# The tests whose direct writes go to a database of a customer or of a third party, never to a database of Zato.
+# The tests whose engines and direct writes reach a database of a customer or of a third party, never a database of Zato.
 External_Database_Tests = (
+    ('code/tests/python/tutorial_endpoints_check.py',                         'The Billing database of the tutorial'),
     ('code/tests/python/zato-common/pg8000_wire/test_pg8000_copy.py',         'The COPY protocol of the PostgreSQL driver'),
     ('code/tests/python/zato-common/pg8000_wire/test_pg8000_wire.py',         'The wire protocol of the PostgreSQL driver'),
+    ('code/tests/python/zato-common/pg8000_wire/conftest.py',                 'The PostgreSQL server of the driver tests'),
     ('code/tests/python/zato-common/lib/live_sql/containers.py',              'The databases of outgoing SQL connections'),
     ('code/tests/python/zato-server/facility_sync_live/_schema.py',           'The database of a facility system'),
     ('code/tests/python/zato-server/mcp_sql_live/conftest.py',                'The database of an MCP SQL tool'),
+    ('code/tests/python/zato-server/oracle_db_live/_engine_setup_check.py',   'An Oracle database of an outgoing connection'),
     ('code/tests/python/zato-server/oracle_db_live/_pool_workload.py',        'An Oracle database of an outgoing connection'),
     ('code/tests/python/zato-server/sql_outgoing_audit/common.py',            'The databases of outgoing SQL connections'),
 )

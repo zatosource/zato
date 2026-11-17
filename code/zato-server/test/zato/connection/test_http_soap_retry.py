@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from http.client import TOO_MANY_REQUESTS
 from typing import NamedTuple
 from unittest import main, TestCase
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 # Bunch
 from zato.common.ext.bunch import Bunch
@@ -25,6 +25,7 @@ from zato.common.typing_ import cast_
 from zato.common.util.retry import RetryPolicy
 from zato.server.connection.http_soap.outgoing import BaseHTTPSOAPWrapper
 from zato.server.service import RESTAdapter
+from zato.common.test.service_ import deploy_service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -531,13 +532,12 @@ class RESTAdapterRetryTestCase(TestCase):
 # ################################################################################################################################
 
     def _get_adapter(self, class_:'any_', wrapper:'_FakeRESTWrapper') -> 'any_':
-        """ Builds an adapter instance without the full service initialization,
-        wiring in a fake outgoing REST connection.
+        """ Deploys an adapter through the service store, wiring in a fake outgoing REST connection.
         """
         conn_item = Bunch()
         conn_item.conn = wrapper
 
-        out = object.__new__(class_)
+        out = deploy_service(class_, MagicMock())
         out.cid = ModuleCtx.CID
         out.out = Bunch()
         out.out.rest = {ModuleCtx.Conn_Name: conn_item}
