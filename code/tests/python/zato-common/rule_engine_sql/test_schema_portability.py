@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # SQLAlchemy
 from sqlalchemy import Text
-from sqlalchemy.dialects import mysql, postgresql, sqlite
+from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.engine import Dialect
 from sqlalchemy.schema import CreateIndex, CreateTable
 
@@ -34,11 +34,10 @@ def _dialects() -> 'dialect_list':
     """
     # Instantiate each required SQL compiler ..
     sqlite_dialect = sqlite.dialect()
-    mysql_dialect = mysql.dialect()
     postgresql_dialect = postgresql.dialect()
 
     # .. and return them in the stable test order.
-    out:'dialect_list' = [sqlite_dialect, mysql_dialect, postgresql_dialect]
+    out:'dialect_list' = [sqlite_dialect, postgresql_dialect]
     return out
 
 # ################################################################################################################################

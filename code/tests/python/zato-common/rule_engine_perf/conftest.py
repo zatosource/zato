@@ -21,7 +21,7 @@ import pytest
 
 # Zato
 from certificates import generate_certificates
-from live_sql.containers import start_mysql, start_postgresql, stop_container
+from live_sql.containers import start_postgresql, stop_container
 
 # Local
 from common import PerfDatabase, sqlite_database
@@ -45,14 +45,10 @@ if 0:
 class ModuleCtx:
 
     # Host ports the containers listen on - dedicated to this suite so nothing collides with other suites.
-    MySQL_Port          = 26336
-    MySQL_SSL_Port      = 26337
     PostgreSQL_Port     = 26462
     PostgreSQL_SSL_Port = 26463
 
     # Names of the containers so stale ones can be removed.
-    MySQL_Container          = 'zato-rule-engine-perf-mysql'
-    MySQL_SSL_Container      = 'zato-rule-engine-perf-mysql-ssl'
     PostgreSQL_Container     = 'zato-rule-engine-perf-postgresql'
     PostgreSQL_SSL_Container = 'zato-rule-engine-perf-postgresql-ssl'
 
@@ -93,43 +89,6 @@ def certificate_paths() -> 'certificatesgen':
     yield out
 
     rmtree(directory, ignore_errors=True)
-
-# ################################################################################################################################
-
-@pytest.fixture(scope='session')
-def mysql_server() -> 'servergen':
-    """ A plain MySQL server started on demand in a test-managed container.
-    """
-    server = start_mysql(
-        container_name=ModuleCtx.MySQL_Container,
-        port=ModuleCtx.MySQL_Port,
-        username=ModuleCtx.Username,
-        password=ModuleCtx.Password,
-        db_name=ModuleCtx.DB_Name,
-        needs_ssl=False,
-    )
-    yield server
-
-    stop_container(server.container_name)
-
-# ################################################################################################################################
-
-@pytest.fixture(scope='session')
-def mysql_ssl_server(certificate_paths:'CertificatePaths') -> 'servergen':
-    """ A MySQL server that requires TLS for all TCP connections.
-    """
-    server = start_mysql(
-        container_name=ModuleCtx.MySQL_SSL_Container,
-        port=ModuleCtx.MySQL_SSL_Port,
-        username=ModuleCtx.Username,
-        password=ModuleCtx.Password,
-        db_name=ModuleCtx.DB_Name,
-        needs_ssl=True,
-        certificates=certificate_paths,
-    )
-    yield server
-
-    stop_container(server.container_name)
 
 # ################################################################################################################################
 

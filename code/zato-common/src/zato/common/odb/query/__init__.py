@@ -393,8 +393,8 @@ def _amqp_subtype_filter(query:'any_', column:'any_', subtype:'str') -> 'any_':
 
     # The column is compared as text - the cast keeps the JSON column type
     # from serializing the comparison values themselves. Autoescape gives the LIKE pattern
-    # an explicit escape character, which keeps MySQL from treating the backslashes
-    # of the stored document as its default escape character.
+    # an explicit escape character, which keeps the backslashes of the stored document
+    # from being treated as a default escape character.
     column_as_text = sa_cast(column, Text)
 
     # Plain AMQP also covers connections that predate subtypes - their opaque attributes

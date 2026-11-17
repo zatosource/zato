@@ -24,7 +24,6 @@ if 0:
 
 # Database types the perf databases report in their connection details.
 Type_SQLite     = 'sqlite'
-Type_MySQL      = 'mysql'
 Type_PostgreSQL = 'postgresql'
 
 # ################################################################################################################################
@@ -47,7 +46,7 @@ Max_Definition_Query_Seconds     = 2.0
 Max_Definition_Query_Seconds_SSL = 2.0
 
 # The retention sweep over half the million-row log must finish within this many seconds -
-# calibrated at roughly twice the slowest measured run (MySQL needed 220 seconds, PostgreSQL 6).
+# calibrated with a wide margin over the measured runs.
 Max_Retention_Seconds     = 480.0
 Max_Retention_Seconds_SSL = 480.0
 
@@ -164,20 +163,15 @@ def database_from_details(label:'str', details:'anydict') -> 'PerfDatabase':
     port = details['port']
     name = details['name']
 
-    # Each server database has its one driver of choice, which takes an SSL context under its own keyword ..
-    if db_type == Type_MySQL:
-        url = f'mysql+pymysql://{username}:{password}@{host}:{port}/{name}'
-        ssl_keyword = 'ssl'
-    else:
-        url = f'postgresql+pg8000://{username}:{password}@{host}:{port}/{name}'
-        ssl_keyword = 'ssl_context'
+    # The server database is PostgreSQL through pg8000, which takes an SSL context under its own keyword ..
+    url = f'postgresql+pg8000://{username}:{password}@{host}:{port}/{name}'
 
     # .. and a TLS-required container hands us the CA its server certificate chains up to.
     uses_ssl = 'ssl' in details
 
     if uses_ssl:
         ssl_context = build_ssl_context(details)
-        connect_args:'anydict' = {ssl_keyword: ssl_context}
+        connect_args:'anydict' = {'ssl_context': ssl_context}
     else:
         connect_args = {}
 

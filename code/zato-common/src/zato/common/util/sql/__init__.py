@@ -13,12 +13,6 @@ from logging import DEBUG, getLogger
 # Bunch
 from zato.common.ext.bunch import bunchify
 
-# gevent
-from gevent import sleep
-
-# SQLAlchemy
-from sqlalchemy.exc import InternalError as SAInternalError, OperationalError as SAOperationalError
-
 # Zato
 from zato.common.api import GENERIC, query_parameters
 from zato.common.json_internal import dumps, loads
@@ -44,13 +38,6 @@ has_debug = logger_zato.isEnabledFor(DEBUG)
 
 _default_page_size = 20
 _max_page_size = _default_page_size * 5
-
-# All exceptions that can be raised when deadlocks occur
-_DeadlockException = (SAInternalError, SAOperationalError)
-
-# In MySQL, 1213 = 'Deadlock found when trying to get lock; try restarting transaction'
-# but the underlying PyMySQL library returns only a string rather than an integer code.
-_deadlock_code = 'Deadlock found when trying to get lock'
 
 _zato_opaque_skip_attrs = {'needs_details'} | {elem.lstrip('-') for elem in query_parameters}
 
@@ -95,47 +82,6 @@ def search(search_func, config, filter_by, session=None, *args, **kwargs):
     result.set_data(cur_page, page_size)
 
     return result
-
-# ################################################################################################################################
-
-def sql_op_with_deadlock_retry(cid, name, func, *args, **kwargs):
-    cid = cid or None
-    attempts = 0
-
-    while True:
-        attempts += 1
-
-        if has_debug:
-            logger_zato.info('In sql_op_with_deadlock_retry, %s %s %s %s %r %r', attempts, cid, name, func, args, kwargs)
-
-        try:
-            # Call the SQL function that will possibly result in a deadlock
-            func(*args, **kwargs)
-
-            if has_debug:
-                logger_zato.info('In sql_op_with_deadlock_retry, returning True')
-
-            # This will return only if there is no exception in calling the SQL function
-            return True
-
-        # Catch deadlocks - it may happen because both this function and delivery tasks update the same tables
-        except _DeadlockException as e:
-
-            if has_debug:
-                logger_zato.warning('Caught _DeadlockException `%s` `%s`', cid, e)
-
-            if _deadlock_code not in e.args[0]:
-                raise
-            else:
-                if attempts % 50 == 0:
-                    msg = 'Still in deadlock for `{}` after %d attempts cid:%s args:%s'.format(name)
-                    logger_zato.warning(msg, attempts, cid, args)
-
-                # Sleep for a while until the next attempt
-                sleep(0.005)
-
-                # Push the counter
-                attempts += 1
 
 # ################################################################################################################################
 

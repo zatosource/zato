@@ -65,9 +65,6 @@ class ModuleCtx:
     # How many rows of a bulk seed one statement carries
     Bulk_Batch_Size = 50_000
 
-    # The database whose statistics are refreshed for each table in one statement
-    Type_MySQL = 'mysql'
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -267,11 +264,6 @@ def _refresh_statistics(engine:'Engine', tables:'tablelist') -> 'None':
         if dialect_name == Type_PostgreSQL:
             for table_name in table_names:
                 _ = connection.exec_driver_sql(f'vacuum analyze {table_name}')
-
-        # .. MySQL analyzes all the tables in one statement ..
-        elif dialect_name == ModuleCtx.Type_MySQL:
-            joined = ', '.join(table_names)
-            _ = connection.exec_driver_sql(f'analyze table {joined}')
 
         # .. and SQLite analyzes the whole database.
         else:

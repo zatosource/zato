@@ -1714,7 +1714,7 @@ test-kafka-live: ## Kafka tests against live Kafka in Docker - one instance plai
 		-W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-audit-log: ## Audit log tests against live SQLite, MySQL and PostgreSQL, plain and TLS, plus live Redis tests.
+test-audit-log: ## Audit log tests against live SQLite and PostgreSQL, plain and TLS, plus live Redis tests.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/redis_/ \
@@ -1924,8 +1924,6 @@ test-rule-engine-perf: ## Rule engine SQL backend performance tests.
 	trap 'rm -rf "$$basetemp"' EXIT INT TERM; \
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/rule_engine_perf/test_rule_engine_perf_sqlite.py \
-		$(CURDIR)/code/tests/python/zato-common/rule_engine_perf/test_rule_engine_perf_mysql.py \
-		$(CURDIR)/code/tests/python/zato-common/rule_engine_perf/test_rule_engine_perf_mysql_ssl.py \
 		$(CURDIR)/code/tests/python/zato-common/rule_engine_perf/test_rule_engine_perf_postgresql.py \
 		$(CURDIR)/code/tests/python/zato-common/rule_engine_perf/test_rule_engine_perf_postgresql_ssl.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_engine_perf \
@@ -1933,7 +1931,7 @@ test-rule-engine-perf: ## Rule engine SQL backend performance tests.
 		--basetemp="$$basetemp" \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-analytics: ## Analytics rollup, view and baseline tests on SQLite, with the rollup reading audit logs held in SQLite, MySQL and PostgreSQL.
+test-analytics: ## Analytics rollup, view and baseline tests on SQLite, with the rollup reading audit logs held in SQLite and PostgreSQL.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/analytics/ \

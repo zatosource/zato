@@ -38,14 +38,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ModuleCtx:
-
-    # The database that cannot truncate a table which foreign keys refer to unless their checks are paused
-    Type_MySQL = 'mysql'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 def _delete_all_rows(engine:'Engine', metadata:'MetaData') -> 'None':
 
     # The tables that others refer to are emptied after the tables that refer to them
@@ -94,15 +86,6 @@ def _truncate_tables(engine:'Engine', tables:'tablelist') -> 'None':
         if dialect_name == Type_PostgreSQL:
             joined = ', '.join(table_names)
             _ = connection.exec_driver_sql(f'truncate table {joined} restart identity')
-
-        # .. MySQL truncates a table that foreign keys refer to only while their checks are paused ..
-        elif dialect_name == ModuleCtx.Type_MySQL:
-            _ = connection.exec_driver_sql('set foreign_key_checks = 0')
-
-            for table_name in table_names:
-                _ = connection.exec_driver_sql(f'truncate table {table_name}')
-
-            _ = connection.exec_driver_sql('set foreign_key_checks = 1')
 
         # .. and SQLite truncates a table that has no triggers when it deletes all of its rows.
         else:
