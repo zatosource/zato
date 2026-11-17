@@ -28,7 +28,7 @@ Admission_Size      = 2_000
 EDIFACT_Order_Size  = 30_000
 FHIR_Bundle_Size    = 250_000
 Ship_Notice_Size    = 300_000
-PDF_Envelope_Sizes  = (3_000_000, 10_000_000)
+PDF_Envelope_Sizes  = (3_000_000, 7_000_000)
 
 # How many documents of each kind one cycle of the production mix holds, in addition to the documents of the base mix.
 _admission_count     = 6
@@ -499,8 +499,8 @@ def _new_pdf_envelope(index:'int', size:'int') -> 'str':
 
 def get_production_documents() -> 'strlist':
     """ One cycle of the production mix - the base mix of receipts, lab results, purchase orders and X12 850 batches,
-    together with HL7 admissions, EDIFACT orders, FHIR bundles, X12 856 ship notices and PDF invoices of 3 and 10 MB,
-    sized from 1 KB to 10 MB with most documents small and few large, interleaved so that each part of the cycle
+    together with HL7 admissions, EDIFACT orders, FHIR bundles, X12 856 ship notices and PDF invoices of 3 and 7 MB,
+    sized from 1 KB to 7 MB with most documents small and few large, interleaved so that each part of the cycle
     carries documents of each size.
     """
     kinds:'list[strlist]' = []

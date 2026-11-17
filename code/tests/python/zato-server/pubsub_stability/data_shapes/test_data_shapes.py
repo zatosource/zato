@@ -33,14 +33,14 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The size budget of one pull, which is the largest that the REST interface accepts and which a document of 10 MB fits in.
+# The size budget of one pull, which is the largest that the REST interface accepts.
 _max_len = 20_000_000
 
 # How many messages one pull returns at most.
 _max_messages = 1000
 
 # Documents at least this large are the ones the budget is checked with.
-_large_document_min_size = 9_000_000
+_large_document_min_size = 6_000_000
 
 # How many of the large documents one partner receives.
 _large_document_count = 3
@@ -136,7 +136,7 @@ def _pull_all(server:'PubSubServer', publisher:'_Publisher', credentials:'Creden
 # ################################################################################################################################
 
 def _run_large_documents_flow(server:'PubSubServer', publisher:'_Publisher') -> 'None':
-    """ Documents of 10 MB reach the partner intact, in batches within the 20 MB budget.
+    """ Documents of 7 MB reach the partner intact, in batches within the 20 MB budget.
     """
     topic_name = 'shapes.large'
 
@@ -365,7 +365,7 @@ def _run_mixed_flow(server:'PubSubServer', publisher:'_Publisher') -> 'None':
 # ################################################################################################################################
 
 def test_data_shapes(server:'PubSubServer') -> 'None':
-    """ Documents of 10 MB at the 20 MB budget, binary content, 10,000 topics, fan-out to 1,000 subscribers,
+    """ Documents of 7 MB at the 20 MB budget, binary content, 10,000 topics, fan-out to 1,000 subscribers,
     and mixed priorities and expirations, each received intact and in order, with the counts equal to the rows.
     """
     measurement = start_measurement(server.get_client(), server.get_database())

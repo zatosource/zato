@@ -6,6 +6,15 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+import os
+import sys
+
+_here = os.path.dirname(os.path.abspath(__file__))
+_lib_dir = os.path.abspath(os.path.join(_here, '..', '..', '..', 'zato-common', 'lib'))
+
+sys.path.insert(0, _lib_dir)
+
 # pytest
 import pytest
 
