@@ -84,7 +84,7 @@ impl Database {
     /// Returns a database nothing was read from.
     fn new(path: &Path) -> Self {
         Self {
-            cursor: WalCursor::new(wal::wal_path(path)),
+            cursor: WalCursor::of_database(path),
             path: path.to_owned(),
             connections: None,
         }
@@ -103,7 +103,7 @@ impl Database {
         self.connections = Some(DatabaseConnections { lock, checkpoint });
 
         // A log read under another role describes files that may have been replaced since.
-        self.cursor = WalCursor::new(wal::wal_path(&self.path));
+        self.cursor = WalCursor::of_database(&self.path);
         Ok(())
     }
 
@@ -260,7 +260,10 @@ impl Shipper {
 
     /// Reads the log to its end, ships what the session has not sent yet and completes the scan for the barrier.
     fn scan_and_ship(&mut self, ticket: u64) -> Result<(), Error> {
-        let fresh = scan_to_end(&mut self.database.cursor)?;
+        let Some(connections) = self.database.connections.as_ref() else {
+            return Err(Error::other("the database is not open"));
+        };
+        let fresh = scan_to_end(&mut self.database.cursor, &connections.checkpoint)?;
 
         // The standby in sync owes the frames from the moment they are read, whether or not a session can ship them.
         self.record_read();
@@ -491,7 +494,7 @@ impl Shipper {
         // Under the write lock, no frame is appended while the end of the log is recorded,
         // and with no checkpoint running, neither file changes below that end afterwards.
         connections.lock.execute_batch("begin immediate").map_err(Error::other)?;
-        let scanned = scan_to_end(&mut database.cursor);
+        let scanned = scan_to_end(&mut database.cursor, &connections.checkpoint);
         connections.lock.execute_batch("rollback").map_err(Error::other)?;
         let _ = scanned?;
 
@@ -769,14 +772,22 @@ struct FreshFrames {
     bytes: Vec<u8>,
 }
 
-/// Reads a log until no new committed frame remains.
-fn scan_to_end(cursor: &mut WalCursor) -> Result<Vec<FreshFrames>, Error> {
+/// Reads a log until no new committed frame remains, using `connection` to settle its shared-memory index.
+fn scan_to_end(cursor: &mut WalCursor, connection: &Connection) -> Result<Vec<FreshFrames>, Error> {
     let mut out = Vec::new();
     loop {
         let outcome = cursor.scan().map_err(Error::other)?;
         let cycle = cursor.cycle();
         match outcome {
             ScanOutcome::Unchanged => return Ok(out),
+
+            // A read of the database waits for the writer that is updating the header of the index, or rebuilds
+            // the index that a stopped writer left half-written, and the scan is repeated after it.
+            ScanOutcome::Unsettled => {
+                let _: i64 = connection
+                    .query_row("select count(*) from sqlite_master", [], |row| row.get(0))
+                    .map_err(Error::other)?;
+            }
             ScanOutcome::Frames(frames) | ScanOutcome::Restarted { frames, .. } => out.push(FreshFrames {
                 cycle,
                 first_frame: frames.first_frame,

@@ -131,7 +131,8 @@ impl DatabaseCopy {
         let mut cursor = WalCursor::new(wal::wal_path(&self.db_path));
         loop {
             match cursor.scan().map_err(Error::other)? {
-                ScanOutcome::Unchanged => break,
+                // The cursor of a copy reads no index, so it is never unsettled.
+                ScanOutcome::Unchanged | ScanOutcome::Unsettled => break,
                 ScanOutcome::Frames(_) | ScanOutcome::Restarted { .. } => {}
             }
         }
@@ -260,7 +261,7 @@ mod tests {
     fn ship(cursor: &mut WalCursor, copy: &mut DatabaseCopy) {
         loop {
             match cursor.scan().unwrap() {
-                ScanOutcome::Unchanged => break,
+                ScanOutcome::Unchanged | ScanOutcome::Unsettled => break,
                 ScanOutcome::Frames(frames) => {
                     let _ = copy
                         .apply_frames(None, frames.first_frame, frames.end_frame, &frames.bytes)

@@ -53,6 +53,24 @@ const WAL_SUFFIX: &str = "-wal";
 /// The suffix `SQLite` appends to the database path to name the shared-memory index.
 const SHM_SUFFIX: &str = "-shm";
 
+/// The size of one of the two copies of the header of the shared-memory index.
+const INDEX_HEADER_SIZE: usize = 48;
+
+/// The offset of the flag that is set once the header of the index is initialized.
+const INDEX_IS_INIT_OFFSET: usize = 12;
+
+/// The offset of the number of frames that the index publishes as committed.
+const INDEX_MAX_FRAME_OFFSET: usize = 16;
+
+/// The offset of the salts of the log in the header of the index.
+const INDEX_SALT_OFFSET: usize = 32;
+
+/// The offset of the salts in the header of the log.
+const HEADER_SALT_OFFSET: usize = 16;
+
+/// The size of the two salts.
+const SALT_SIZE: usize = 8;
+
 /// Errors of reading the log.
 #[derive(Debug)]
 pub enum WalError {
@@ -103,6 +121,77 @@ fn read_u32(bytes: &[u8], offset: usize) -> Option<u32> {
     let slice = bytes.get(offset..end)?;
     let array: [u8; 4] = slice.try_into().ok()?;
     Some(u32::from_be_bytes(array))
+}
+
+/// The end of the log that `SQLite` published in the shared-memory index.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct PublishedEnd {
+    /// The salts of the cycle of the log that the end belongs to, as the header of the log holds them.
+    salts: [u8; SALT_SIZE],
+
+    /// The number of frames of that cycle that belong to committed transactions.
+    end_frame: u32,
+}
+
+/// What the header of the shared-memory index says about the end of the log.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum IndexHeader {
+    /// The index does not exist yet, so no frame is published.
+    Absent,
+
+    /// The header is being written or the index is being rebuilt, so it is to be read again.
+    Unsettled,
+
+    /// The end of the log that the index publishes.
+    Published(PublishedEnd),
+}
+
+/// Reads the header of the shared-memory index.
+///
+/// A writer appends the frames of a transaction to the log and syncs them before it publishes their end
+/// in the index, so frames past that end may belong to a writer that was stopped before it published them.
+/// `SQLite` does not consider such frames committed, and the next writer overwrites them.
+fn read_index_header(index_path: &Path) -> Result<IndexHeader, WalError> {
+    let mut file = match File::open(index_path) {
+        Ok(file) => file,
+        Err(error) if error.kind() == ErrorKind::NotFound => return Ok(IndexHeader::Absent),
+        Err(error) => return Err(WalError::Read(error)),
+    };
+
+    let mut first_copy = [0_u8; INDEX_HEADER_SIZE];
+    let mut second_copy = [0_u8; INDEX_HEADER_SIZE];
+    match file.read_exact(&mut first_copy).and_then(|()| file.read_exact(&mut second_copy)) {
+        Ok(()) => {}
+
+        // An index shorter than its two headers is being created.
+        Err(error) if error.kind() == ErrorKind::UnexpectedEof => return Ok(IndexHeader::Unsettled),
+        Err(error) => return Err(WalError::Read(error)),
+    }
+
+    // A writer updates the second copy of the header before the first, so copies that differ are being written,
+    // and a header that is not initialized is being rebuilt.
+    let is_init = first_copy.get(INDEX_IS_INIT_OFFSET).is_some_and(|is_init| *is_init != 0);
+    if first_copy != second_copy || !is_init {
+        return Ok(IndexHeader::Unsettled);
+    }
+
+    // The index is kept in the byte order of the host, unlike the log.
+    let max_frame_end = INDEX_MAX_FRAME_OFFSET + 4;
+    let salt_end = INDEX_SALT_OFFSET + SALT_SIZE;
+    let max_frame = first_copy
+        .get(INDEX_MAX_FRAME_OFFSET..max_frame_end)
+        .and_then(|bytes| <[u8; 4]>::try_from(bytes).ok());
+    let salts = first_copy
+        .get(INDEX_SALT_OFFSET..salt_end)
+        .and_then(|bytes| <[u8; SALT_SIZE]>::try_from(bytes).ok());
+    let (Some(max_frame), Some(salts)) = (max_frame, salts) else {
+        return Err(WalError::InvalidHeader("index header"));
+    };
+
+    Ok(IndexHeader::Published(PublishedEnd {
+        salts,
+        end_frame: u32::from_ne_bytes(max_frame),
+    }))
 }
 
 /// A running checksum of the log.
@@ -258,6 +347,10 @@ pub struct WalCursor {
     /// The path of the log.
     path: PathBuf,
 
+    /// The shared-memory index whose published end bounds every scan, or `None` for a log that no `SQLite`
+    /// connection writes to.
+    index_path: Option<PathBuf>,
+
     /// The header of the current cycle of the log, once one was read.
     header: Option<WalHeader>,
 
@@ -277,6 +370,9 @@ pub enum ScanOutcome {
     /// No new committed frame.
     Unchanged,
 
+    /// The shared-memory index is being written, so the end of the log is not known until the next scan.
+    Unsettled,
+
     /// New committed frames of the current cycle.
     Frames(ScannedFrames),
 
@@ -291,10 +387,24 @@ pub enum ScanOutcome {
 }
 
 impl WalCursor {
-    /// Returns a cursor that has read nothing yet.
+    /// Returns a cursor of a log that no `SQLite` connection writes to, which has read nothing yet.
     pub const fn new(path: PathBuf) -> Self {
         Self {
             path,
+            index_path: None,
+            header: None,
+            cycle: 0,
+            end_frame: 0,
+            checksum: Checksum { first: 0, second: 0 },
+        }
+    }
+
+    /// Returns a cursor of the log of a database that `SQLite` connections write to, which reads only the frames
+    /// that the shared-memory index publishes, and which has read nothing yet.
+    pub fn of_database(db_path: &Path) -> Self {
+        Self {
+            path: wal_path(db_path),
+            index_path: Some(shm_path(db_path)),
             header: None,
             cycle: 0,
             end_frame: 0,
@@ -319,6 +429,16 @@ impl WalCursor {
 
     /// Reads the committed frames appended since the previous scan.
     pub fn scan(&mut self) -> Result<ScanOutcome, WalError> {
+        // The index is read before the log, so every frame up to the end it publishes is in the log already.
+        let published = match &self.index_path {
+            Some(index_path) => match read_index_header(index_path)? {
+                IndexHeader::Published(published) => Some(published),
+                IndexHeader::Absent => return Ok(ScanOutcome::Unchanged),
+                IndexHeader::Unsettled => return Ok(ScanOutcome::Unsettled),
+            },
+            None => None,
+        };
+
         let mut file = match File::open(&self.path) {
             Ok(file) => file,
 
@@ -341,6 +461,21 @@ impl WalCursor {
             return Ok(ScanOutcome::Unchanged);
         };
 
+        // The index publishes the end of the cycle whose salts it holds. A restart updates the index and the log
+        // one after the other, and while their salts differ, the next scan reads both again.
+        let last_frame = match published {
+            Some(published) => {
+                let salt_end = HEADER_SALT_OFFSET + SALT_SIZE;
+                if on_disk.raw.get(HEADER_SALT_OFFSET..salt_end) != Some(published.salts.as_slice()) {
+                    return Ok(ScanOutcome::Unchanged);
+                }
+                published.end_frame
+            }
+
+            // A log that no connection writes to holds committed frames only.
+            None => u32::MAX,
+        };
+
         // The cursor is advanced only after every read succeeded, so a failed scan leaves it where it was.
         let is_new_cycle = self.header.as_ref().is_none_or(|current| current.raw != on_disk.raw);
         let (first_frame, first_checksum) = if is_new_cycle {
@@ -348,7 +483,7 @@ impl WalCursor {
         } else {
             (self.end_frame, self.checksum)
         };
-        let (frames, checksum) = read_frames(&mut file, &on_disk, first_frame, first_checksum)?;
+        let (frames, checksum) = read_frames(&mut file, &on_disk, first_frame, first_checksum, last_frame)?;
         self.end_frame = frames.end_frame;
         self.checksum = checksum;
 
@@ -368,13 +503,14 @@ impl WalCursor {
     }
 }
 
-/// Reads the valid frames from `first_frame` on and returns the committed ones
-/// with the running checksum after the last commit frame among them.
+/// Reads the valid frames from `first_frame` on, up to but not including `last_frame`, and returns
+/// the committed ones with the running checksum after the last commit frame among them.
 fn read_frames(
     file: &mut File,
     header: &WalHeader,
     first_frame: u32,
     first_checksum: Checksum,
+    last_frame: u32,
 ) -> Result<(ScannedFrames, Checksum), WalError> {
     let _ = file.seek(SeekFrom::Start(header.frame_offset(first_frame)))?;
 
@@ -388,6 +524,11 @@ fn read_frames(
     let mut index = first_frame;
 
     loop {
+        // Frames past the published end are not committed, whatever their commit flag says.
+        if index >= last_frame {
+            break;
+        }
+
         match file.read_exact(&mut frame) {
             Ok(()) => {}
 
@@ -428,6 +569,9 @@ fn read_frames(
 
 #[cfg(test)]
 mod tests {
+    use std::fs::OpenOptions;
+    use std::os::unix::fs::FileExt;
+
     use super::*;
     use rusqlite::Connection;
 
@@ -506,5 +650,45 @@ mod tests {
 
         connection.execute_batch("commit;").unwrap();
         assert!(matches!(cursor.scan().unwrap(), ScanOutcome::Frames(_)));
+    }
+
+    #[test]
+    fn frames_that_the_index_does_not_publish_are_not_read() {
+        let source_dir = tempfile::tempdir().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let source_path = source_dir.path().join("test.db");
+        let db_path = dir.path().join("test.db");
+
+        // Both databases begin with the same log, so the frames of the one continue the log of the other.
+        let source = open(&source_path);
+        source
+            .execute_batch("create table item (value text); insert into item values ('one');")
+            .unwrap();
+        let _ = std::fs::copy(&source_path, &db_path).unwrap();
+        let _ = std::fs::copy(wal_path(&source_path), wal_path(&db_path)).unwrap();
+        let connection = open(&db_path);
+        let _: i64 = connection.query_row("select count(*) from item", [], |row| row.get(0)).unwrap();
+
+        let mut cursor = WalCursor::of_database(&db_path);
+        let _ = cursor.scan().unwrap();
+        let end_before = cursor.end_frame();
+
+        // A writer that was stopped after it synced the frames of its transaction and before it published them.
+        let published_length = std::fs::metadata(wal_path(&source_path)).unwrap().len();
+        source.execute_batch("insert into item values ('unpublished');").unwrap();
+        let source_log = std::fs::read(wal_path(&source_path)).unwrap();
+        let unpublished = source_log.get(usize::try_from(published_length).unwrap()..).unwrap();
+        let log = OpenOptions::new().write(true).open(wal_path(&db_path)).unwrap();
+        log.write_all_at(unpublished, published_length).unwrap();
+        assert_eq!(cursor.scan().unwrap(), ScanOutcome::Unchanged);
+
+        // The next writer overwrites those frames with its own, which the cursor goes on to read.
+        connection.execute_batch("insert into item values ('two');").unwrap();
+        assert!(matches!(cursor.scan().unwrap(), ScanOutcome::Frames(_)));
+
+        let mut fresh = WalCursor::of_database(&db_path);
+        let _ = fresh.scan().unwrap();
+        assert!(cursor.end_frame() > end_before);
+        assert_eq!(cursor.end_frame(), fresh.end_frame());
     }
 }
