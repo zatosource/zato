@@ -25,6 +25,7 @@ from urllib.request import Request, urlopen
 # Zato
 from zato.common.test.conftest_base_pubsub import find_free_port
 from zato.common.test.pubsub_database import connect, get_runtime_dir, is_postgresql_mode
+from zato_links.finder import get_link_directories
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -137,6 +138,12 @@ def _container_command(server:'ContainerServer', action:'str') -> 'strlist':
         '-v', f'{_repository_dir}:{_repository_dir}',
         '-v', f'{runtime_dir}:{runtime_dir}',
     ]
+
+    # Each linked repository is mounted at its own path, which the links of the repository point to
+    link_directories = get_link_directories()
+
+    for link_directory in link_directories:
+        out.extend(['-v', f'{link_directory}:{link_directory}:ro'])
 
     for name, value in server.env.items():
         out.extend(['-e', f'{name}={value}'])

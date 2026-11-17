@@ -123,6 +123,20 @@ def is_content_prunable(row:'any_') -> 'bool':
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Sources that keep rows of their own next to their events register a function here that performs their retention
+# in place of the generic one. The function takes the engine, the current time and the source.
+_source_retention_registry:'strcalldict' = {}
+
+# ################################################################################################################################
+
+def register_source_retention(source:'str', func:'callable_') -> 'None':
+    """ Registers the function that performs the retention of one source in place of the generic retention of its events.
+    """
+    _source_retention_registry[source] = func
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _archive_value(value:'datetime | bytes') -> 'str':
     """ Returns the JSON form of a column value JSON has no type for - a timestamp in ISO 8601
     and the bytes of an attachment in base64.
@@ -513,8 +527,20 @@ def run_retention(engine:'Engine', now:'datetime') -> 'None':
     archiver = _Archiver(now)
     sources = _get_sources(engine)
 
+    # A source with a retention of its own keeps rows outside the event table too, so it runs even without events.
+    for source in _source_retention_registry:
+        if source not in sources:
+            sources.append(source)
+
     for source in sources:
-        _run_source_retention(engine, archiver, source, now)
+
+        # A source with a retention of its own runs it ..
+        if source_retention := _source_retention_registry.get(source):
+            source_retention(engine, now, source)
+
+        # .. and any other source has its events deleted the generic way.
+        else:
+            _run_source_retention(engine, archiver, source, now)
 
 # ################################################################################################################################
 # ################################################################################################################################

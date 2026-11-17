@@ -23,7 +23,7 @@ if 0:
     from collections.abc import Sequence
     from importlib.machinery import ModuleSpec
     from types import ModuleType
-    from zato.common.typing_ import any_, strlist, strset
+    from zato.common.typing_ import any_, anylist, strlist, strset
 
     strlistdict     = dict[str, strlist]
     strsequencenone = Sequence[str] | None
@@ -56,11 +56,13 @@ class ModuleCtx:
 # ################################################################################################################################
 
 class _ExtendingLoader(Loader):
-    """ Executes a module with its own loader and then runs the extensions of the linked repositories on it.
+    """ Executes a module with its own loader, then adds the directories of the linked repositories to it
+    if it is a package and runs the extensions of the linked repositories on it.
     """
 
-    def __init__(self, loader:'any_', extensions:'strlist') -> 'None':
+    def __init__(self, loader:'any_', directories:'strlist', extensions:'strlist') -> 'None':
         self.loader:'Loader' = loader
+        self.directories = directories
         self.extensions = extensions
 
 # ################################################################################################################################
@@ -75,6 +77,12 @@ class _ExtendingLoader(Loader):
 
         # The module is complete before any extension sees it ..
         self.loader.exec_module(module)
+
+        # .. the directories of the linked repositories come after those that the package itself added to its path,
+        # so that each package of the installation is found before a directory of the same name in a link ..
+        for directory in self.directories:
+            if directory not in module.__path__:
+                module.__path__.append(directory)
 
         # .. and each extension receives it in the order the links declare them.
         for extension in self.extensions:
@@ -115,16 +123,19 @@ class LinkFinder:
 
 # ################################################################################################################################
 
-    def _extend_package(self, fullname:'str', locations:'strlist') -> 'None':
-        """ Adds to the locations of a package the directory of the same package in each linked repository.
+    def _get_package_directories(self, fullname:'str') -> 'strlist':
+        """ Returns the directory of the same package in each linked repository that has one.
         """
+        out:'strlist' = []
+
         relative_path = fullname.replace('.', os.sep)
 
         for source_root in self.source_roots:
             directory = os.path.join(source_root, relative_path)
             if os.path.isdir(directory):
-                if directory not in locations:
-                    locations.append(directory)
+                out.append(directory)
+
+        return out
 
 # ################################################################################################################################
 
@@ -142,29 +153,70 @@ class LinkFinder:
             if out := self._find_by_next_finders(fullname, path, target):
 
                 # .. a package receives the directories of the same name from each link ..
-                if out.submodule_search_locations is not None:
-                    self._extend_package(fullname, out.submodule_search_locations)
+                if out.submodule_search_locations is None:
+                    directories:'strlist' = []
+                else:
+                    directories = self._get_package_directories(fullname)
 
-                # .. and a module that a link extends is executed by a loader that runs the extensions after it.
-                if extensions := self.extensions.get(fullname):
-                    out.loader = _ExtendingLoader(out.loader, extensions)
+                extensions = self.extensions.get(fullname, [])
+
+                # .. both of which a loader adds once the module is executed.
+                if directories or extensions:
+                    out.loader = _ExtendingLoader(out.loader, directories, extensions)
 
         return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _new_finder(link_paths:'strlist') -> 'LinkFinder':
+def _read_links() -> 'anylist':
+    """ Returns the links of this installation in the order of the names of their files.
+    """
+    out:'anylist' = []
+
+    # The links directory is absent when no repository has been linked or when its links were removed ..
+    if os.path.isdir(ModuleCtx.Links_Dir):
+
+        file_names = os.listdir(ModuleCtx.Links_Dir)
+        file_names.sort()
+
+        # .. and otherwise, each of its link files is one link.
+        for file_name in file_names:
+            if file_name.endswith(ModuleCtx.Link_Suffix):
+                link_path = os.path.join(ModuleCtx.Links_Dir, file_name)
+
+                with open(link_path) as link_file:
+                    link = load(link_file)
+
+                out.append(link)
+
+    return out
+
+# ################################################################################################################################
+
+def get_link_directories() -> 'strlist':
+    """ Returns the directory of each linked repository, which holds its source roots and the files its targets use,
+    e.g. for a container to mount at the same paths.
+    """
+    out:'strlist' = []
+
+    links = _read_links()
+
+    for link in links:
+        out.append(link['repository_dir'])
+
+    return out
+
+# ################################################################################################################################
+
+def _new_finder(links:'anylist') -> 'LinkFinder':
     """ Returns a finder for the source roots and the extensions of all the links.
     """
     source_roots:'strlist' = []
     top_level_names:'strset' = set()
     extensions:'strlistdict' = {}
 
-    for link_path in link_paths:
-
-        with open(link_path) as link_file:
-            link = load(link_file)
+    for link in links:
 
         # Each source root adds to the top-level packages it has directories for ..
         for source_root in link['source_roots']:
@@ -190,22 +242,17 @@ def _new_finder(link_paths:'strlist') -> 'LinkFinder':
 def install() -> 'None':
     """ Makes the linked repositories part of the packages of this installation in the current process.
     """
-    link_paths:'strlist' = []
+    # The site-packages directory may be processed more than once, e.g. through a lib64 link to it,
+    # and a process has one finder however many times its .pth file runs ..
+    for finder in sys.meta_path:
+        if isinstance(finder, LinkFinder):
+            return
 
-    # The links directory is absent when no repository has been linked or when its links were removed ..
-    if os.path.isdir(ModuleCtx.Links_Dir):
+    links = _read_links()
 
-        file_names = os.listdir(ModuleCtx.Links_Dir)
-        file_names.sort()
-
-        for file_name in file_names:
-            if file_name.endswith(ModuleCtx.Link_Suffix):
-                link_path = os.path.join(ModuleCtx.Links_Dir, file_name)
-                link_paths.append(link_path)
-
-    # .. and the finder is installed only if there is anything to link.
-    if link_paths:
-        finder = _new_finder(link_paths)
+    # .. which is installed only if there is anything to link.
+    if links:
+        finder = _new_finder(links)
         sys.meta_path.insert(0, finder)
 
 # ################################################################################################################################

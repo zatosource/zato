@@ -24,8 +24,9 @@ from zato.common.db_env.engine import call_database
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import strtuple
+    from zato.common.typing_ import strlist, strtuple
     Engine = Engine
+    strlist = strlist
     strtuple = strtuple
 
 # ################################################################################################################################
@@ -42,6 +43,16 @@ Merge_Interval_Seconds = 10.0
 
 # Merges the pending list of one GIN index into the index.
 _merge_query = text('select gin_clean_pending_list(cast(:index_name as regclass))')
+
+# The trigram indexes of other tables in the database whose pending lists are merged along with those of the audit log.
+_registered_index_names:'strlist' = []
+
+# ################################################################################################################################
+
+def register_merged_index(index_name:'str') -> 'None':
+    """ Adds a trigram GIN index of another table to the indexes whose pending lists the merger merges.
+    """
+    _registered_index_names.append(index_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -134,7 +145,11 @@ def get_search_index_merger(engine:'Engine') -> 'SearchIndexMerger | None':
 
         # .. and a PostgreSQL engine receives one of its own.
         if engine.dialect.name == Type_PostgreSQL:
-            index_names = get_postgresql_index_names(event_attr_table.name)
+            audit_index_names = get_postgresql_index_names(event_attr_table.name)
+
+            index_name_list = list(audit_index_names)
+            index_name_list.extend(_registered_index_names)
+            index_names = tuple(index_name_list)
 
             out = SearchIndexMerger(engine, index_names)
             out.start()

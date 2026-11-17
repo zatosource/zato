@@ -54,6 +54,7 @@ def add_link(manifest_path:'str') -> 'None':
         source_roots.append(source_root)
 
     link = {
+        'repository_dir': repository_dir,
         'source_roots': source_roots,
         'extensions': manifest['extensions'],
     }

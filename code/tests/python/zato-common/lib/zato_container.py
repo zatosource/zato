@@ -11,6 +11,9 @@ import os
 import subprocess
 import time
 
+# Zato
+from zato_links.finder import get_link_directories
+
 # local
 from local_docker import run_command
 
@@ -105,6 +108,12 @@ def start_container(container_name:'str', mounts:'strstrdict', run_options:'strt
         '--env', f'Zato_Password={_password}',
         '--volume', f'{Repository_Directory}:{Repository_Directory}:ro',
     ]
+
+    # Each linked repository is mounted at its own path, which the links of the repository point to
+    link_directories = get_link_directories()
+
+    for link_directory in link_directories:
+        command.extend(['--volume', f'{link_directory}:{link_directory}:ro'])
 
     for file_name, container_path in _docker_repository_files.items():
         host_path = os.path.join(docker_repository_directory, file_name)

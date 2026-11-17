@@ -1705,79 +1705,52 @@ def get_demo_extra_py_fs_locations(base_dir:'str') -> '_DemoExtraPyFsLocations':
 # ################################################################################################################################
 
 def find_internal_modules(root:'ModuleType') -> 'strlist':
-    """ Recursively finds all Python modules within the directory structure of the
-    given root module, including the root module itself. Modules are identified as .py files or subdirectories with __init__.py.
+    """ Returns the names of a package and of all the modules and packages under each of its directories,
+    including the directories that linked repositories add to it.
     """
     found_module_paths:'strset' = set()
 
-    # Ensure root is a module and has a name
-    if not hasattr(root, '__name__'):
-        # This is highly unlikely for a valid ModuleType object
-        return []
-
     root_module_name = root.__name__
-    found_module_paths.add(root_module_name) # Add the root module itself
+    found_module_paths.add(root_module_name)
 
-    # For finding submodules, root must be a package (have __path__)
-    # and its path must correspond to a directory on the filesystem.
-    if not hasattr(root, '__path__') or not root.__path__:
-        # Root is not a package (e.g., a single .py file module) or its __path__ is empty.
-        # No submodules to find through filesystem scan.
-        return sorted(found_module_paths)
+    for root_package_dir in root.__path__:
 
-    # Use the first path in __path__. For namespace packages, __path__ can have multiple entries.
-    # This function will only search the first one. For standard packages, there's usually one entry.
-    root_package_dir = root.__path__[0]
+        for dir_path, dir_names, file_names in os.walk(root_package_dir):
 
-    # Ensure the path is an actual directory on the filesystem.
-    if not os.path.isdir(root_package_dir):
-        # Path might be part of a zip archive or other non-standard location not scannable by os.walk.
-        return sorted(found_module_paths)
+            # Hidden directories and bytecode caches hold no modules, so the walk does not enter them ..
+            module_dir_names:'strlist' = []
 
-    # root_module_name is already defined and added
+            for dir_name in dir_names:
+                if not dir_name.startswith('.'):
+                    if dir_name != '__pycache__':
+                        module_dir_names.append(dir_name)
 
-    for dir_path, dir_names, file_names in os.walk(root_package_dir):
-        # Modify dir_names in-place to exclude common non-module directories (e.g., .git, __pycache__)
-        # This prevents os.walk from traversing into them, optimizing the walk.
-        dir_names[:] = [d for d in dir_names if not d.startswith('.') and d != '__pycache__']
+            dir_names[:] = module_dir_names
 
-        for file_name in file_names:
-            if file_name.endswith('.py'):
-                full_file_path = os.path.join(dir_path, file_name)
+            # .. and each Python file is a module, or a package if it is the __init__.py of a directory.
+            for file_name in file_names:
+                if file_name.endswith('.py'):
+                    full_file_path = os.path.join(dir_path, file_name)
+                    relative_file_path = os.path.relpath(full_file_path, root_package_dir)
 
-                # Calculate path relative to the root package directory
-                # e.g., 'sub_pkg/my_module.py' or 'sub_pkg/__init__.py' or 'top_level_module.py'
-                relative_file_path = os.path.relpath(full_file_path, root_package_dir)
-
-                # If relative_file_path is '__init__.py', it means this is the __init__.py
-                # of the root_package_dir itself. The root module is already added,
-                # so we skip processing this file further as a submodule.
-                if relative_file_path == '__init__.py':
-                    continue
-
-                # Convert file path to module suffix parts
-                # e.g., 'sub_pkg/my_module.py' -> ['sub_pkg', 'my_module']
-                # e.g., 'sub_pkg/__init__.py' -> ['sub_pkg'] (after processing __init__.py)
-                module_suffix_parts = relative_file_path.split(os.sep)
-
-                if module_suffix_parts[-1] == '__init__.py':
-                    _ = module_suffix_parts.pop()  # Represents the package name from its __init__.py
-                    if not module_suffix_parts:
-                        # This safeguard covers an unlikely scenario where an __init__.py path
-                        # might lead to empty parts after pop (e.g., if separators were unusual).
-                        # Given the `relative_file_path == '__init__.py'` check above,
-                        # this path should normally only be hit for sub-package __init__.py files,
-                        # meaning module_suffix_parts should not be empty here.
+                    # The root package itself is already on the list
+                    if relative_file_path == '__init__.py':
                         continue
-                else:
-                    # For regular .py files, remove the '.py' extension
-                    module_suffix_parts[-1] = module_suffix_parts[-1][:-3]
 
-                module_suffix = '.'.join(module_suffix_parts)
-                full_module_path = f'{root_module_name}.{module_suffix}'
-                found_module_paths.add(full_module_path)
+                    module_suffix_parts = relative_file_path.split(os.sep)
+                    last_part = module_suffix_parts.pop()
 
-    return sorted(found_module_paths)
+                    # A module is named after its file, and a package after its directory
+                    if last_part != '__init__.py':
+                        module_name = last_part[:-3]
+                        module_suffix_parts.append(module_name)
+
+                    module_suffix = '.'.join(module_suffix_parts)
+                    full_module_path = f'{root_module_name}.{module_suffix}'
+                    found_module_paths.add(full_module_path)
+
+    out = sorted(found_module_paths)
+    return out
 
 # ################################################################################################################################
 

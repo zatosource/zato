@@ -22,6 +22,7 @@ from urllib.request import Request, urlopen
 
 # Zato
 from topology import docker, ModuleCtx as TopologyCtx, remove_container, save_container_logs
+from zato_links.finder import get_link_directories
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -278,6 +279,12 @@ class Node:
 
         for path in self.fault_mounts:
             out.extend(['-v', f'{path}:{path}'])
+
+        # Each linked repository is mounted at its own path, which the links of the repository point to
+        link_directories = get_link_directories()
+
+        for link_directory in link_directories:
+            out.extend(['-v', f'{link_directory}:{link_directory}:ro'])
 
         environment = dict(self.env)
         environment['Zato_Test_Server_Directory'] = self.server_directory
