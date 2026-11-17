@@ -21,6 +21,7 @@ import time
 from topology import Backend, docker, ModuleCtx as TopologyCtx, remove_container
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.durability.disk import get_disk_dir
+from zato.common.test.durability.lazyfs import LazyFSMount
 from zato.common.test.pubsub_certs import generate_certificates
 from zato.common.test.pubsub_database import _directory_mode, _shm_size, _write_tls_setup_script, connect, \
     get_container_settings, ModuleCtx as DatabaseCtx, PubSubDatabase, PubSubDBMode
@@ -71,6 +72,10 @@ class ModuleCtx:
     # The name of the directory on a disk of the host in which the instances keep their data
     Host_Data_Dir_Name = 'ha-postgresql'
 
+    # The prefix of the containers of LazyFS over the data of an instance, and the suffix of the directory of its files
+    LazyFS_Container_Prefix = 'zato-ha-test-lazyfs-postgresql-'
+    LazyFS_Dir_Suffix = '-lazyfs'
+
     # How long an instance may take to accept connections or to stream, and how long a promotion may take, in seconds
     Ready_Timeout = 120
     Promote_Timeout = 60
@@ -110,6 +115,10 @@ class PostgreSQLCluster(Backend):
         self.instances:'dict[str, Instance]' = {}
         self.container_names:'strlist' = []
         self.ips:'strlist' = []
+
+        # LazyFS over the data of each instance that a test cuts the power of, by the name of the instance
+        self.lazyfs_names:'strlist' = []
+        self.mounts:'dict[str, LazyFSMount]' = {}
 
         # The instances sync their commits to a disk, as instances of a production system do
         self.host_data_dir = get_disk_dir(ModuleCtx.Host_Data_Dir_Name)
@@ -202,9 +211,26 @@ class PostgreSQLCluster(Backend):
 
 # ################################################################################################################################
 
+    def _prepare_data_dir(self, instance:'Instance') -> 'None':
+        """ Creates the empty data directory of an instance, with LazyFS over it if a test cuts the power of the instance.
+        """
+        os.makedirs(instance.data_dir)
+        os.chmod(instance.data_dir, 0o700)
+
+        if instance.name in self.lazyfs_names:
+            container_name = ModuleCtx.LazyFS_Container_Prefix + instance.name
+            work_dir = instance.data_dir + ModuleCtx.LazyFS_Dir_Suffix
+
+            mount = LazyFSMount(container_name, self.host_data_dir, work_dir, instance.data_dir)
+            mount.mount()
+
+            self.mounts[instance.name] = mount
+
+# ################################################################################################################################
+
     def _start_primary(self, tls_script:'str', replication_script:'str') -> 'None':
         instance = self.instances[self.primary_name]
-        os.makedirs(instance.data_dir)
+        self._prepare_data_dir(instance)
 
         command = ['run', '-d']
         command.extend(self._network_args(instance))
@@ -238,8 +264,7 @@ class PostgreSQLCluster(Backend):
     def _start_standby(self, instance:'Instance') -> 'None':
         """ Builds a standby from a base backup of the primary and starts it streaming from the primary.
         """
-        os.makedirs(instance.data_dir)
-        os.chmod(instance.data_dir, 0o700)
+        self._prepare_data_dir(instance)
 
         conninfo = self._get_conninfo(instance)
         data_dir = ModuleCtx.Container_Data_Dir
@@ -268,9 +293,12 @@ class PostgreSQLCluster(Backend):
 
 # ################################################################################################################################
 
-    def start(self) -> 'None':
-        """ Starts the primary, both standbys streaming from it, and makes each commit wait for the first of them.
+    def start(self, is_synchronous:'bool', lazyfs_names:'strlist') -> 'None':
+        """ Starts the primary and both standbys streaming from it, the instances of the given names on LazyFS,
+        and if requested makes each commit wait for the first of the standbys.
         """
+        self.lazyfs_names = lazyfs_names
+
         tls_script, replication_script = self._write_files()
         self._start_primary(tls_script, replication_script)
 
@@ -281,16 +309,23 @@ class PostgreSQLCluster(Backend):
         self._wait_until_streaming(ModuleCtx.Standby_Names[1], 'async')
 
         # The initialization of the primary committed before any standby existed, so commits wait from here on.
-        standby_names = "'" + ModuleCtx.Synchronous_Standby_Names + "'"
+        if is_synchronous:
+            self.set_synchronous_standby_names(ModuleCtx.Synchronous_Standby_Names)
+            self._wait_until_streaming(ModuleCtx.Standby_Names[0], 'sync')
 
+        logger.info('PostgreSQL ready with primary %s at %s, synchronous: %s', self.primary_name, self.ip, is_synchronous)
+
+# ################################################################################################################################
+
+    def set_synchronous_standby_names(self, standby_names:'str') -> 'None':
+        """ Sets the standbys that each commit on the primary waits for, an empty value making every standby asynchronous.
+        """
         self._run_on_primary([
-            f'alter system set synchronous_standby_names = {standby_names}',
+            f"alter system set synchronous_standby_names = '{standby_names}'",
             'select pg_reload_conf()',
         ])
 
-        self._wait_until_streaming(ModuleCtx.Standby_Names[0], 'sync')
-
-        logger.info('PostgreSQL ready with primary %s at %s', self.primary_name, self.ip)
+        logger.info('PostgreSQL synchronous_standby_names set to `%s`', standby_names)
 
 # ################################################################################################################################
 
@@ -380,6 +415,31 @@ class PostgreSQLCluster(Backend):
 
 # ################################################################################################################################
 
+    def cut_power(self, names:'strlist') -> 'None':
+        """ Ends the instances of the given names in one command and discards every write to their data
+        that was not synced, the way a loss of power to their hosts would.
+        """
+        container_names:'strlist' = []
+
+        for name in names:
+            container_names.append(self.instances[name].container_name)
+
+        _ = docker('kill', '--signal', 'KILL', *container_names)
+
+        for name in names:
+            self.mounts[name].discard_unsynced()
+
+# ################################################################################################################################
+
+    def restart(self, name:'str') -> 'None':
+        """ Starts an ended instance again with the data it has on disk.
+        """
+        instance = self.instances[name]
+        _ = docker('start', instance.container_name)
+        self._wait_until_ready(instance)
+
+# ################################################################################################################################
+
     def disconnect(self, name:'str') -> 'None':
         """ Removes an instance from the network, after which it reaches neither the primary nor the nodes.
         """
@@ -441,6 +501,11 @@ class PostgreSQLCluster(Backend):
     def remove(self) -> 'None':
         for container_name in self.container_names:
             remove_container(container_name)
+
+        for mount in self.mounts.values():
+            mount.unmount()
+
+        self.mounts.clear()
 
         shutil.rmtree(self.host_data_dir, ignore_errors=True)
 

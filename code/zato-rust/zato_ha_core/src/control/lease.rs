@@ -14,6 +14,7 @@
 use std::time::Instant;
 
 use super::{Control, ControlError};
+use crate::postgresql::ProbeError;
 use crate::record::RefereeRecord;
 use crate::state::Role;
 
@@ -38,7 +39,8 @@ impl Control {
         }
     }
 
-    /// Returns whether the probe of the database succeeds, logging only a change of the outcome.
+    /// Returns whether the probe of the database succeeds, logging only a change of the outcome,
+    /// and isolates the node while the database answers and is not durable.
     fn database_reachable(&mut self) -> bool {
         // The replicated storage mode has no shared database and never watches a lease.
         let Some(probe) = &self.probe else {
@@ -46,14 +48,41 @@ impl Control {
         };
         let outcome = probe.probe();
         let reachable = outcome.is_ok();
-        if reachable != self.database_reachable {
+
+        // An isolated node stops its Zato server, so that no commit is acknowledged on a database that may lose it,
+        // and the node serves again once the database is durable.
+        let isolation_changed = match &outcome {
+            Ok(()) => self.set_isolated(false),
+            Err(ProbeError::NotDurable(_)) => self.set_isolated(true),
+
+            // A database that does not answer tells nothing of its durability, so the last answer still applies.
+            Err(ProbeError::Unreachable(_)) => false,
+        };
+
+        if reachable != self.database_reachable || isolation_changed {
             match outcome {
-                Ok(()) => tracing::info!("The database is reachable again"),
+                Ok(()) => tracing::info!("The database is reachable and durable"),
+                Err(ProbeError::NotDurable(reason)) => {
+                    tracing::error!("The database is not durable, the Zato server stops: {reason}");
+                }
                 Err(error) => tracing::warn!("The database is not reachable: {error}"),
             }
         }
         self.database_reachable = reachable;
         reachable
+    }
+
+    /// Sets whether the node is isolated, waking the supervisor of the Zato server on a change,
+    /// and returns whether it changed.
+    fn set_isolated(&self, isolated: bool) -> bool {
+        let mut state = self.shared.state.lock();
+        let changed = state.isolated != isolated;
+        state.isolated = isolated;
+        drop(state);
+        if changed {
+            self.shared.changed.notify_all();
+        }
+        changed
     }
 
     /// Rewrites the record of the active node, which raises its version, on the condition that the version is the one
@@ -239,12 +268,18 @@ mod tests {
     struct MemoryProbe {
         /// Whether every probe fails.
         unreachable: Mutex<bool>,
+
+        /// Whether every probe finds the database not durable.
+        not_durable: Mutex<bool>,
     }
 
     impl DatabaseProbe for Arc<MemoryProbe> {
         fn probe(&self) -> Result<(), ProbeError> {
             if *self.unreachable.lock() {
-                return Err(ProbeError("unreachable".to_owned()));
+                return Err(ProbeError::Unreachable("unreachable".to_owned()));
+            }
+            if *self.not_durable.lock() {
+                return Err(ProbeError::NotDurable("synchronous_standby_names is empty".to_owned()));
             }
             Ok(())
         }
@@ -327,6 +362,11 @@ mod tests {
         fn set_database_unreachable(&self, unreachable: bool) {
             *self.probe.unreachable.lock() = unreachable;
         }
+
+        /// Makes every probe of the database find it not durable, or durable.
+        fn set_database_not_durable(&self, not_durable: bool) {
+            *self.probe.not_durable.lock() = not_durable;
+        }
     }
 
     #[test]
@@ -393,6 +433,51 @@ mod tests {
         node.set_database_unreachable(false);
         node.control.renew_lease().unwrap();
         assert_eq!(node.record().version, version(FIRST_VERSION + 2));
+    }
+
+    #[test]
+    fn an_active_node_on_a_database_that_is_not_durable_stops_serving() {
+        let mut node = TestNode::in_role(Role::ActiveSolo, NODE_A);
+        node.control.renew_lease().unwrap();
+        assert!(!node.is_isolated());
+
+        // The node stops its Zato server at the first probe that finds the database not durable ..
+        node.set_database_not_durable(true);
+        node.control.renew_lease().unwrap();
+        assert!(node.is_isolated());
+        assert_eq!(node.record().version, version(FIRST_VERSION));
+
+        // .. stays stopped while the database does not answer ..
+        node.set_database_unreachable(true);
+        node.control.renew_lease().unwrap();
+        assert!(node.is_isolated());
+        node.set_database_unreachable(false);
+
+        // .. and serves again once the database is durable.
+        node.set_database_not_durable(false);
+        node.control.renew_lease().unwrap();
+        assert!(!node.is_isolated());
+        assert_eq!(node.record().version, version(FIRST_VERSION + 1));
+        assert_eq!(node.role(), (Role::ActiveSolo, FIRST_GENERATION));
+    }
+
+    #[test]
+    fn an_unreachable_database_does_not_isolate_the_active_node() {
+        let mut node = TestNode::in_role(Role::ActiveSolo, NODE_A);
+        node.set_database_unreachable(true);
+        node.control.renew_lease().unwrap();
+        assert!(!node.is_isolated());
+    }
+
+    #[test]
+    fn a_standby_on_a_database_that_is_not_durable_does_not_take_over() {
+        let mut node = TestNode::in_role(Role::StandbyInSync, NODE_B);
+        node.set_database_not_durable(true);
+        node.control.watch_lease().unwrap();
+        thread::sleep(PAST_TIMERS);
+        node.control.watch_lease().unwrap();
+        assert_eq!(node.role(), (Role::StandbyInSync, FIRST_GENERATION));
+        assert_eq!(node.record().value, RefereeRecord::solo(FIRST_GENERATION, NODE_B));
     }
 
     #[test]

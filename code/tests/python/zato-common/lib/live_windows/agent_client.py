@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import json
-from time import monotonic, sleep
+from time import monotonic, sleep, time_ns
 
 # Zato
 from live_windows.settings import Control, Paths
@@ -66,7 +66,7 @@ class AgentClient:
 # ################################################################################################################################
 
     def send(self, kind:'str', run:'str', fields:'anydict | None'=None) -> 'None':
-        """ Writes one command into the commands directory, under a name that keeps the commands in the order they were sent.
+        """ Writes one command into the commands directory.
         """
         self.command_sequence += 1
 
@@ -78,8 +78,11 @@ class AgentClient:
         if fields:
             command.update(fields)
 
+        # The time comes first, so that commands from several senders are run in the order they were sent
+        sent_at = time_ns()
+
         document = json.dumps(command)
-        path = f'{Control.Commands_Dir}\\{self.command_sequence:08d}-{kind}.json'
+        path = f'{Control.Commands_Dir}\\{sent_at}-{self.command_sequence:06d}-{kind}.json'
 
         self.client.write_text(Control.Share, path, document)
 
@@ -109,6 +112,14 @@ class AgentClient:
         self.events.extend(out)
 
         return out
+
+# ################################################################################################################################
+
+    def skip_existing(self) -> 'None':
+        """ Moves past every event appended so far, so that only the events that follow are read.
+        """
+        _ = self.read_events()
+        self.events.clear()
 
 # ################################################################################################################################
 

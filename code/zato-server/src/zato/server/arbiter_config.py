@@ -53,7 +53,7 @@ class ModuleCtx:
     Grace_Period = HA_Stop_Grace - HA_Stop_Margin
 
     # How long of the grace period a draining worker waits for the requests in progress, and how long it then waits
-    # for each subscriber to pause between two batches, which leaves the rest for its buffered audit events
+    # for each subscriber to pause between two batches
     Request_Drain_Period  = 4.0
     Delivery_Pause_Period = 2.0
 

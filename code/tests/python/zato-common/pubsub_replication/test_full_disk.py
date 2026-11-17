@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import shutil
-import subprocess
 import tempfile
 from time import monotonic
 
@@ -24,23 +23,28 @@ from zato.common.test.pubsub_replication import ReplicatedDatabase
 # local
 from checks import check_counts_equal_rows, check_delivery
 from environment import get_replication_mode
+from tools import build_fsfault
 from workload import stop_running_workloads, Workload
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Where the tablespace of the pub/sub tables is mounted in the container, and how large it is.
+# Where the tablespace of the pub/sub tables is mounted in the container.
 _tablespace_dir = '/pubsub_ts'
-_tablespace_size = '128m'
 
-# How much of the tablespace the ballast file takes, leaving the rest for the traffic.
-_ballast_size = '96M'
-_ballast_path = f'{_tablespace_dir}/ballast'
+# Where the library of the file system faults and its control file are mounted in the container.
+_container_fsfault_path = '/zato-fault/fsfault.so'
+_container_control_dir = '/zato-fault-control'
+_control_name = 'postgresql'
+
+# While the storage is full, every write and every allocation of space in the tablespace fails with ENOSPC,
+# and the syncs of what was written before proceed, as on a file system that has no space left.
+_full_control = f'prefix={_tablespace_dir}\nerror_percent=100\nerrno=ENOSPC\ncalls=write\n'
 
 # How large each payload is, in characters.
 _padding_size = 65_536
 
-# How long the traffic may take to fill the tablespace, how long the tablespace stays full,
+# How long the traffic may take to run into the full storage, how long the storage stays full,
 # how long the traffic runs once the space is available again and how long the backlog may take to drain, in seconds.
 _fill_timeout = 300
 _full_seconds = 10
@@ -50,24 +54,17 @@ _drain_timeout = 300
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _docker_exec(container_name:'str', command:'list[str]') -> 'None':
-    _ = subprocess.run(['docker', 'exec', container_name, *command], check=True, capture_output=True)
-
-# ################################################################################################################################
-
-def _run_full_disk(database:'ReplicatedDatabase') -> 'None':
-
-    container_name = database.primary.container_name
-
-    # Most of the storage is taken before the traffic starts ..
-    _docker_exec(container_name, ['fallocate', '-l', _ballast_size, _ballast_path])
+def _run_full_disk(database:'ReplicatedDatabase', control_path:'str') -> 'None':
 
     workload = Workload('full-disk', _padding_size)
     workload.backend.take_over()
     workload.subscribe()
     workload.start()
 
-    # .. the traffic fills the rest ..
+    # The storage runs out of space while the traffic runs ..
+    with open(control_path, 'w') as control_file:
+        _ = control_file.write(_full_control)
+
     deadline = monotonic() + _fill_timeout
 
     while workload.publisher_state.errors == 0:
@@ -83,7 +80,7 @@ def _run_full_disk(database:'ReplicatedDatabase') -> 'None':
             acknowledged_while_full += 1
 
     # .. space becomes available again ..
-    _docker_exec(container_name, ['rm', _ballast_path])
+    os.remove(control_path)
     restore_time = monotonic()
 
     sleep(_traffic_after_seconds)
@@ -118,13 +115,31 @@ def test_full_disk() -> 'None':
     and are repeated, nothing acknowledged is lost, and processing resumes once space is available again.
     """
     mode = get_replication_mode()
-    tmpfs = f'{_tablespace_dir}:rw,size={_tablespace_size},uid={os.getuid()},gid={os.getgid()},mode=0700'
-
-    primary = start_pubsub_database('full-disk', mode, extra_docker_args=['--tmpfs', tmpfs])
     work_dir = tempfile.mkdtemp(prefix='zato_pubsub_full_disk_', dir=get_runtime_dir())
 
+    # The tablespace is a directory on the disk of this host, which PostgreSQL requires to be private to its user ..
+    tablespace_host_dir = os.path.join(work_dir, 'tablespace')
+    os.makedirs(tablespace_host_dir, mode=0o700)
+
+    # .. and the processes of the container preload the library of the file system faults.
+    control_dir = os.path.join(work_dir, 'fsfault-control')
+    os.makedirs(control_dir)
+    control_path = os.path.join(control_dir, _control_name)
+
+    fsfault_path = build_fsfault()
+
+    docker_args = [
+        '-v', f'{tablespace_host_dir}:{_tablespace_dir}:rw',
+        '-v', f'{fsfault_path}:{_container_fsfault_path}:ro',
+        '-v', f'{control_dir}:{_container_control_dir}:ro',
+        '-e', f'LD_PRELOAD={_container_fsfault_path}',
+        '-e', f'ZATO_FSFAULT_CONTROL={_container_control_dir}/{_control_name}',
+    ]
+
+    primary = start_pubsub_database('full-disk', mode, extra_docker_args=docker_args)
+
     try:
-        database = ReplicatedDatabase(mode=mode, is_sync=False, primary=primary)
+        database = ReplicatedDatabase(mode=mode, is_sync=True, primary=primary)
 
         # The pub/sub tables are created in the tablespace on the size-limited storage.
         connection = connect(primary)
@@ -139,7 +154,7 @@ def test_full_disk() -> 'None':
 
         with pubsub_db_env(env):
             try:
-                _run_full_disk(database)
+                _run_full_disk(database, control_path)
             finally:
                 stop_running_workloads()
 

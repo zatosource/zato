@@ -288,8 +288,8 @@ class WorkerRuntime:
 # ################################################################################################################################
 
     def drain(self) -> 'None':
-        """ Stops accepting connections, waits for the requests in progress, pauses every subscriber between two of its
-        batches and writes the buffered audit events, all within the grace period of the arbiter.
+        """ Stops accepting connections, waits for the requests in progress and pauses every subscriber between two of its
+        batches, all within the grace period of the arbiter. Every audit event was committed by the call that wrote it.
         """
         if self.is_draining:
             return

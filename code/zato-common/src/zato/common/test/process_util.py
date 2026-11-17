@@ -15,7 +15,7 @@ import subprocess
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, intdict, intlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,6 +54,72 @@ def kill_process_tree(process:'any_') -> 'None':
         os.killpg(process.pid, signal.SIGKILL)
     except ProcessLookupError:
         pass
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _get_parent_pids() -> 'intdict':
+    """ Returns the parent of each process of the system, by process ID.
+    """
+    out:'intdict' = {}
+
+    for name in os.listdir('/proc'):
+
+        if not name.isdigit():
+            continue
+
+        try:
+            with open(f'/proc/{name}/stat') as stat_file:
+                stat = stat_file.read()
+        except FileNotFoundError:
+            continue
+
+        # The process name is in parentheses and may contain spaces, the parent follows the state after it.
+        _, _, remainder = stat.rpartition(')')
+        fields = remainder.split()
+
+        pid = int(name)
+        parent_pid = int(fields[1])
+
+        out[pid] = parent_pid
+
+    return out
+
+# ################################################################################################################################
+
+def get_process_tree_pids(root_pid:'int') -> 'intlist':
+    """ Returns a process and every process that descends from it.
+    """
+    parents = _get_parent_pids()
+
+    out:'intlist' = [root_pid]
+
+    for pid in parents:
+        ancestor = parents[pid]
+
+        while ancestor in parents:
+            if ancestor == root_pid:
+                out.append(pid)
+                break
+            ancestor = parents[ancestor]
+
+    return out
+
+# ################################################################################################################################
+
+def kill_process_tree_at_once(process:'any_') -> 'None':
+    """ Kills a subprocess and every process that descends from it with SIGKILL, without a chance to exit cleanly,
+    as a host that lost its power stops them, and waits until the subprocess has exited.
+    """
+    pids = get_process_tree_pids(process.pid)
+
+    for pid in pids:
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
+    _ = process.wait(timeout=_Kill_Timeout)
 
 # ################################################################################################################################
 # ################################################################################################################################

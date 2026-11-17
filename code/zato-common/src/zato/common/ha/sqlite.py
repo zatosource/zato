@@ -17,6 +17,7 @@ import sqlite3
 # Zato
 from zato.common.ha.barrier import wait_for_replication
 from zato.common.ha.common import is_active_standby, is_shared_storage
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,6 +36,10 @@ class ModuleCtx:
     # The number of pages after which a commit checkpoints the log, which is never for a replicated database
     Autocheckpoint_Disabled = 0
 
+    # The keyword that a query begins with, which changes neither rows nor the schema
+    Query_Prefix = 'select'
+    Query_Prefix_Length = len(Query_Prefix)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -47,32 +52,35 @@ class ReplicatedCursor(sqlite3.Cursor):
 
     def execute(self, sql:'str', parameters:'any_'=()) -> 'ReplicatedCursor':
         _ = super().execute(sql, parameters)
-        self._sync_outside_transaction()
+
+        # A query changes no schema, so its version is not read after each of them
+        is_query = sql.lstrip()[:ModuleCtx.Query_Prefix_Length].lower() == ModuleCtx.Query_Prefix
+        self._sync_outside_transaction(needs_schema_version=not is_query)
+
         return self
 
     def executemany(self, sql:'str', seq_of_parameters:'any_') -> 'ReplicatedCursor':
         _ = super().executemany(sql, seq_of_parameters)
-        self._sync_outside_transaction()
+        self._sync_outside_transaction(needs_schema_version=True)
         return self
 
     def executescript(self, sql_script:'str') -> 'ReplicatedCursor':
         _ = super().executescript(sql_script)
-        self._sync_outside_transaction()
+        self._sync_outside_transaction(needs_schema_version=True)
         return self
 
-    def _sync_outside_transaction(self) -> 'None':
+    def _sync_outside_transaction(self, *, needs_schema_version:'bool') -> 'None':
 
         # A statement in a transaction is replicated when the transaction commits
         if not self.connection.in_transaction:
-            self.connection.sync_changes(needs_schema_version=False)
+            self.connection.sync_changes(needs_schema_version=needs_schema_version)
 
 # ################################################################################################################################
 
 class ReplicatedConnection(sqlite3.Connection):
     """ A connection whose changes, of rows and of the schema alike, return once the standby has stored them.
-    A commit, a rollback and a close request the barrier whenever the number of changed rows or the version
-    of the schema differs from its value at the previous barrier, and so does a statement that commits on its own,
-    outside a transaction, whenever it changed any row.
+    A commit, a rollback, a close and a statement that commits on its own, outside a transaction, request the barrier
+    whenever the number of changed rows or the version of the schema differs from its value at the previous barrier.
     """
 
     def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
@@ -84,6 +92,22 @@ class ReplicatedConnection(sqlite3.Connection):
 
     def cursor(self, factory:'any_'=ReplicatedCursor) -> 'ReplicatedCursor':  # type: ignore[override]
         out = super().cursor(factory)
+        out = cast_('ReplicatedCursor', out)
+        return out
+
+    # The statements that the connection runs itself go through a cursor of its own type,
+    # because the base class builds a plain cursor for them
+
+    def execute(self, sql:'str', parameters:'any_'=()) -> 'ReplicatedCursor':  # type: ignore[override]
+        out = self.cursor().execute(sql, parameters)
+        return out
+
+    def executemany(self, sql:'str', seq_of_parameters:'any_') -> 'ReplicatedCursor':  # type: ignore[override]
+        out = self.cursor().executemany(sql, seq_of_parameters)
+        return out
+
+    def executescript(self, sql_script:'str') -> 'ReplicatedCursor':  # type: ignore[override]
+        out = self.cursor().executescript(sql_script)
         return out
 
     def _get_schema_version(self) -> 'int':

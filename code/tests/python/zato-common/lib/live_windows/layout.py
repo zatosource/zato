@@ -62,6 +62,21 @@ class Hub:
 
     Apps = (Plant, Logistics, Catalog) + Branches
 
+    # The applications that the files of each application are routed to, the same table as in the routing service
+    Routes = {
+        Plant: (Logistics,),
+        Logistics: (Plant,),
+        Catalog: Branches,
+        'branch01': (Logistics,),
+        'branch02': (Logistics,),
+        'branch03': (Logistics,),
+        'branch04': (Logistics,),
+        'branch05': (Logistics,),
+        'branch06': (Logistics,),
+        'branch07': (Logistics,),
+        'branch08': (Logistics,),
+    }
+
     # The folders of each application
     Outbox = 'outbox'
     Inbox  = 'inbox'

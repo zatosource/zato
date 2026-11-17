@@ -18,7 +18,7 @@ from sqlalchemy import text
 # Zato
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.connection import build_connect_args_from_values, build_engine_url_from_values, \
-    DatabaseDurabilityError
+    DatabaseDurabilityError, Provider_Failover_Roles
 from zato.common.db_env.database import dispose_database_engine, get_database_engine, get_database_values
 from zato.common.db_env.engine import new_zato_engine
 from zato.common.test.durability.forbidden import get_server_refusal_arguments, ModuleCtx as ForbiddenModuleCtx
@@ -209,6 +209,29 @@ def test_asynchronous_standby_refused() -> 'None':
         with pubsub_db_env(replicated.env):
             with pytest.raises(DatabaseDurabilityError, match=ForbiddenModuleCtx.Synchronous_Standby_Names):
                 _ = get_database_engine()
+    finally:
+        dispose_database_engine()
+        stop_replicated_database(replicated)
+
+# ################################################################################################################################
+
+@pytest.mark.parametrize('role', Provider_Failover_Roles)
+def test_asynchronous_standby_of_provider_failover_accepted(role:'str') -> 'None':
+    """ A primary with a streaming standby that is not synchronous is accepted on a managed service whose provider
+    performs the failover, which the role that the provider creates on each of its servers identifies.
+    """
+    replicated = start_replicated_database('durability-provider', PubSubDBMode.PostgreSQL, is_sync=False)
+
+    try:
+        connection = connect(replicated.primary, is_admin=True)
+        connection.autocommit = True
+        cursor = connection.cursor()
+        cursor.execute(f'create role {role}')
+        connection.close()
+
+        with pubsub_db_env(replicated.env):
+            engine = get_database_engine()
+            assert _get_session_level(engine) == ModuleCtx.Level_On
     finally:
         dispose_database_engine()
         stop_replicated_database(replicated)

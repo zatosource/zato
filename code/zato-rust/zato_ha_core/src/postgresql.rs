@@ -7,6 +7,9 @@
 //!
 //! A probe reads the row of `zato_active` that the generation guard of the Zato server keeps, which establishes
 //! that the database is reachable from the pod, including before the Zato server first created the table.
+//! It then verifies that a commit on the database is durable once acknowledged - the server flushes its write-ahead
+//! log, writes full pages after a checkpoint, and as a primary with streaming standbys waits for at least one of them,
+//! unless the provider of a managed service performs the failover.
 //! Each probe runs within [`REQUEST_TIMEOUT`] on a runtime of the probe,
 //! and a probe that fails or does not complete in time ends the session, so that the next probe connects again.
 
@@ -37,13 +40,47 @@ const APPLICATION_NAME: &str = "zato-ha-node";
 /// Reads the row of the generation guard, which fails if the database is not reachable.
 const PROBE_STATEMENT: &str = "SELECT 1 FROM zato_active WHERE id = 1";
 
+/// How `PostgreSQL` shows a setting that is turned on.
+const SETTING_ON: &str = "on";
+
+/// Whether the server flushes its write-ahead log to disk.
+const SHOW_FSYNC: &str = "SHOW fsync";
+
+/// Whether the server writes full pages after a checkpoint, without which a torn page cannot be recovered.
+const SHOW_FULL_PAGE_WRITES: &str = "SHOW full_page_writes";
+
+/// The standbys that a commit waits for.
+const SHOW_SYNCHRONOUS_STANDBY_NAMES: &str = "SHOW synchronous_standby_names";
+
+/// The standbys that stream the write-ahead log of the server, without the logical replication connections,
+/// which receive changes that are already durable.
+const STANDBY_COUNT_STATEMENT: &str = "SELECT count(*) FROM pg_stat_replication AS replication \
+    WHERE NOT EXISTS (SELECT 1 FROM pg_replication_slots AS slot \
+    WHERE slot.active_pid = replication.pid AND slot.slot_type = 'logical')";
+
+/// Whether the server has a role that Amazon RDS, Aurora or Azure Database for `PostgreSQL` creates on it.
+///
+/// On these services the provider performs every automatic failover, and only to a standby that it replicates
+/// synchronously, at the storage layer or through `synchronous_standby_names` that it manages, while
+/// the read replicas that stream asynchronously are never a target of an automatic failover.
+const PROVIDER_FAILOVER_STATEMENT: &str = "SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname IN ('rds_superuser', 'azure_pg_admin'))";
+
 /// The error of a probe that did not succeed.
 #[derive(Debug)]
-pub struct ProbeError(pub String);
+pub enum ProbeError {
+    /// The database did not answer.
+    Unreachable(String),
+
+    /// The database answered, and a commit on it could be acknowledged before it is durable.
+    NotDurable(String),
+}
 
 impl std::fmt::Display for ProbeError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(formatter, "Database probe error: {}", self.0)
+        match self {
+            Self::Unreachable(reason) => write!(formatter, "Database probe error: {reason}"),
+            Self::NotDurable(reason) => write!(formatter, "Database not durable: {reason}"),
+        }
     }
 }
 
@@ -125,7 +162,7 @@ where
 
 /// Returns an error of a TLS setting.
 fn tls_error(context: &str, error: impl std::fmt::Display) -> ProbeError {
-    ProbeError(format!("PostgreSQL TLS, {context}: {error}"))
+    ProbeError::Unreachable(format!("PostgreSQL TLS, {context}: {error}"))
 }
 
 /// Returns the certificates that the certificate of `PostgreSQL` is verified against.
@@ -199,7 +236,7 @@ impl PostgreSqlProbe {
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
-            .map_err(|error| ProbeError(format!("PostgreSQL runtime: {error}")))?;
+            .map_err(|error| ProbeError::Unreachable(format!("PostgreSQL runtime: {error}")))?;
         Ok(Self {
             settings: settings.clone(),
             connector,
@@ -213,7 +250,7 @@ impl PostgreSqlProbe {
         let password = match &self.settings.password {
             PostgreSqlPassword::Value(value) => value.clone(),
             PostgreSqlPassword::File(path) => std::fs::read_to_string(path)
-                .map_err(|error| ProbeError(format!("{}: {error}", path.display())))?
+                .map_err(|error| ProbeError::Unreachable(format!("{}: {error}", path.display())))?
                 .trim()
                 .to_owned(),
         };
@@ -239,7 +276,7 @@ impl PostgreSqlProbe {
     /// Connects to the database.
     async fn connect(&self) -> Result<Session, ProbeError> {
         let config = self.connection_config()?;
-        let connect_error = |error: tokio_postgres::Error| ProbeError(format!("PostgreSQL connection: {error}"));
+        let connect_error = |error: tokio_postgres::Error| ProbeError::Unreachable(format!("PostgreSQL connection: {error}"));
 
         // The connection exchanges the messages of the client in a task of its own, and an error that ends it
         // is reported by the next request on the client.
@@ -271,7 +308,7 @@ impl PostgreSqlProbe {
             };
             let value = operation(&session.client)
                 .await
-                .map_err(|error| ProbeError(format!("PostgreSQL {description}: {error}")))?;
+                .map_err(|error| ProbeError::Unreachable(format!("PostgreSQL {description}: {error}")))?;
             Ok::<_, ProbeError>((value, session))
         };
 
@@ -287,22 +324,64 @@ impl PostgreSqlProbe {
                 Ok(value)
             }
             Ok(Err(error)) => Err(error),
-            Err(_) => Err(ProbeError(format!(
+            Err(_) => Err(ProbeError::Unreachable(format!(
                 "PostgreSQL {description}: no answer within {REQUEST_TIMEOUT:?}"
             ))),
         }
     }
 }
 
+/// Reads one setting that `SHOW` returns.
+async fn show(client: &Client, statement: &str) -> Result<String, tokio_postgres::Error> {
+    let row = client.query_one(statement, &[]).await?;
+    row.try_get(0)
+}
+
+/// Returns why a commit on the database could be acknowledged before it is durable, or `None` if it could not.
+async fn durability_shortfall(client: &Client) -> Result<Option<String>, tokio_postgres::Error> {
+    let fsync = show(client, SHOW_FSYNC).await?;
+    if fsync != SETTING_ON {
+        return Ok(Some(format!("fsync is `{fsync}`, it must be `{SETTING_ON}`")));
+    }
+
+    let full_page_writes = show(client, SHOW_FULL_PAGE_WRITES).await?;
+    if full_page_writes != SETTING_ON {
+        return Ok(Some(format!("full_page_writes is `{full_page_writes}`, it must be `{SETTING_ON}`")));
+    }
+
+    let synchronous_standby_names = show(client, SHOW_SYNCHRONOUS_STANDBY_NAMES).await?;
+    let count_row = client.query_one(STANDBY_COUNT_STATEMENT, &[]).await?;
+    let standby_count: i64 = count_row.try_get(0)?;
+    let provider_row = client.query_one(PROVIDER_FAILOVER_STATEMENT, &[]).await?;
+    let has_provider_failover: bool = provider_row.try_get(0)?;
+
+    // A primary whose standbys all stream asynchronously acknowledges commits that a failover to any of them loses,
+    // unless the provider performs the failover, and only to a standby that it replicates synchronously.
+    if standby_count > 0 && !has_provider_failover && synchronous_standby_names.is_empty() {
+        return Ok(Some(format!(
+            "the primary has {standby_count} streaming standby(s) and an empty synchronous_standby_names, \
+            at least one standby must be synchronous"
+        )));
+    }
+
+    Ok(None)
+}
+
 impl DatabaseProbe for PostgreSqlProbe {
     fn probe(&self) -> Result<(), ProbeError> {
-        let _ = self.call("probe", async |client| match client.query_opt(PROBE_STATEMENT, &[]).await {
-            // The Zato server creates the generation guard when it first starts, after the node already probes,
-            // and a database that reports the table as missing answered the probe.
-            Err(error) if error.code() == Some(&SqlState::UNDEFINED_TABLE) => Ok(None),
-            outcome => outcome,
+        let shortfall = self.call("probe", async |client| {
+            match client.query_opt(PROBE_STATEMENT, &[]).await {
+                // The Zato server creates the generation guard when it first starts, after the node already probes,
+                // and a database that reports the table as missing answered the probe.
+                Err(error) if error.code() == Some(&SqlState::UNDEFINED_TABLE) => {}
+                Err(error) => return Err(error),
+                Ok(_) => {}
+            }
+            durability_shortfall(client).await
         })?;
-        Ok(())
+
+        // A database that answered and is not durable is reported apart from one that did not answer.
+        shortfall.map_or(Ok(()), |reason| Err(ProbeError::NotDurable(reason)))
     }
 }
 

@@ -17,5 +17,8 @@ import sys
 _here = os.path.dirname(__file__)
 sys.path.insert(0, _here)
 
+# The native fault libraries of the fault suite, behind the modules of this directory
+sys.path.append(os.path.abspath(os.path.join(_here, '..', 'pubsub_faults')))
+
 # ################################################################################################################################
 # ################################################################################################################################

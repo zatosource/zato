@@ -56,6 +56,9 @@ class ModuleCtx:
     # Each file that cannot be processed is quarantined after this many attempts
     Max_Attempts = 1
 
+    # The schedule that polls the outbox of the plant next to the regular one
+    Contending_Schedule = 'hub.plant.contending'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -111,7 +114,7 @@ def _schedule(
 
 # ################################################################################################################################
 
-def _schedules(start_date:'str') -> 'anylist':
+def _schedules(start_date:'str', has_contending_schedule:'bool') -> 'anylist':
     """ Returns every schedule of an exchange connection.
     """
     out:'anylist' = []
@@ -123,6 +126,14 @@ def _schedules(start_date:'str') -> 'anylist':
         folder = app_folder(app, Hub.Outbox)
         directory = remote_path(Shares.Exchange, folder)
         schedule = _schedule(name, directory, Services.Route, pattern, start_date)
+        out.append(schedule)
+
+    # .. a second schedule that polls the same outbox as the first one, which claims compete with ..
+    if has_contending_schedule:
+        folder = app_folder(Hub.Plant, Hub.Outbox)
+        directory = remote_path(Shares.Exchange, folder)
+        pattern = f'*.{Hub.Plant}'
+        schedule = _schedule(ModuleCtx.Contending_Schedule, directory, Services.Route, pattern, start_date)
         out.append(schedule)
 
     # .. the documents to distribute ..
@@ -177,6 +188,7 @@ def build_definitions(
     *,
     password:'str'=Accounts.Exchange_Password,
     is_landing_active:'bool'=False,
+    has_contending_schedule:'bool'=False,
     ) -> 'anydict':
     """ Returns the enmasse definitions through which Zato reaches one guest - the exchange connection with its schedules,
     the connection to the partner drop, which may be on another guest, and the job that writes to the landing zone.
@@ -184,7 +196,7 @@ def build_definitions(
     now = datetime.now(timezone.utc)
     start_date = now.isoformat()
 
-    schedules = _schedules(start_date)
+    schedules = _schedules(start_date, has_contending_schedule)
 
     exchange_name = exchange_connection_name(guest)
     partner_name = partner_connection_name(guest)
@@ -221,10 +233,17 @@ def build_yaml(
     *,
     password:'str'=Accounts.Exchange_Password,
     is_landing_active:'bool'=False,
+    has_contending_schedule:'bool'=False,
     ) -> 'str':
     """ Returns the definitions of build_definitions as the text of an enmasse file.
     """
-    definitions = build_definitions(guest, partner, password=password, is_landing_active=is_landing_active)
+    definitions = build_definitions(
+        guest,
+        partner,
+        password=password,
+        is_landing_active=is_landing_active,
+        has_contending_schedule=has_contending_schedule,
+    )
 
     out = yaml.safe_dump(definitions, sort_keys=False)
     return out

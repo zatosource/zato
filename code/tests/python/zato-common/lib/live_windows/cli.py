@@ -12,7 +12,7 @@ from pathlib import Path
 
 # Zato
 from live_windows.build import build_missing
-from live_windows.containers import running_guests, start_guests, stop_guests
+from live_windows.containers import acquire_guests, running_guests, stop_guests
 from live_windows.enmasse import build_yaml
 from live_windows.settings import Versions
 
@@ -31,7 +31,7 @@ def _build(arguments:'Namespace') -> 'None':
 # ################################################################################################################################
 
 def _start(arguments:'Namespace') -> 'None':
-    _ = start_guests(arguments.versions)
+    _ = acquire_guests(arguments.versions)
 
 # ################################################################################################################################
 

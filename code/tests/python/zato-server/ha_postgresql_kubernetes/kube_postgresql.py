@@ -27,7 +27,7 @@ from zato.common.test.pubsub_database import _write_tls_setup_script, connect, g
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strlist
+    from zato.common.typing_ import strlist, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -117,6 +117,32 @@ class KubePostgreSQL(KubeBackend):
 # ################################################################################################################################
 # ################################################################################################################################
 
+def get_manifest_placeholders(database:'PubSubDatabase') -> 'strstrdict':
+    """ Returns the values of the placeholders of the manifest of the instance, with the settings of the database
+    containers of the other suites as the arguments of the instance.
+    """
+    args = ['postgres']
+
+    for setting in get_container_settings(database, None):
+        args.append('-c')
+        args.append(setting)
+
+    out = {
+        'namespace': ClusterCtx.Namespace,
+        'postgresql_image': DatabaseCtx.PostgreSQL_Image,
+        'postgresql_args': json.dumps(args),
+        'postgresql_user': DatabaseCtx.Username,
+        'postgresql_db': DatabaseCtx.DB_Name,
+        'postgresql_port': str(ModuleCtx.Port),
+        'postgresql_node_port': str(ModuleCtx.Node_Port),
+        'postgresql_zone': ModuleCtx.Zone,
+        'postgresql_shm_size': ModuleCtx.Shm_Size,
+    }
+
+    return out
+
+# ################################################################################################################################
+
 def _start_postgresql(session:'KubeSession') -> 'KubePostgreSQL':
     """ Starts the instance with its certificate, issued by the authority whose CA the pods mount, and creates
     the Secret with the pub/sub database settings of the pods.
@@ -154,24 +180,7 @@ def _start_postgresql(session:'KubeSession') -> 'KubePostgreSQL':
     create_secret('postgresql-auth', {}, {'password': out.password})
 
     # .. with the settings of the database containers of the other suites ..
-    args = ['postgres']
-
-    for setting in get_container_settings(out.database, None):
-        args.append('-c')
-        args.append(setting)
-
-    placeholders = {
-        'namespace': namespace,
-        'postgresql_image': DatabaseCtx.PostgreSQL_Image,
-        'postgresql_args': json.dumps(args),
-        'postgresql_user': DatabaseCtx.Username,
-        'postgresql_db': DatabaseCtx.DB_Name,
-        'postgresql_port': str(ModuleCtx.Port),
-        'postgresql_node_port': str(ModuleCtx.Node_Port),
-        'postgresql_zone': ModuleCtx.Zone,
-        'postgresql_shm_size': ModuleCtx.Shm_Size,
-    }
-
+    placeholders = get_manifest_placeholders(out.database)
     apply_manifest(ModuleCtx.Manifest_Path, placeholders)
     wait_for_rollout('statefulset', ModuleCtx.StatefulSet_Name)
 

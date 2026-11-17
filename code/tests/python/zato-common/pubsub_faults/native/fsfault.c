@@ -10,7 +10,9 @@
  *   errno=EIO
  *   calls=sync
  *
- * The line calls=sync limits the delays and the failures to fsync and fdatasync, while the pwrite family proceeds.
+ * The line calls=sync limits the delays and the failures to fsync and fdatasync, while the writes proceed.
+ * The line calls=write limits them to the writes, the pwrite family and the allocations of space alike,
+ * while fsync and fdatasync proceed, as on a file system that has no space left.
  */
 
 #define _GNU_SOURCE
@@ -30,13 +32,17 @@
 #define LINE_SIZE 4200
 #define RELOAD_NS 100000000L
 
+#define CALLS_ALL 0
+#define CALLS_SYNC 1
+#define CALLS_WRITE 2
+
 static char control_path[PATH_SIZE];
 static char prefix[PATH_SIZE];
 static size_t prefix_len = 0;
 static long delay_us = 0;
 static long error_percent = 0;
 static int error_code = EIO;
-static int is_sync_only = 0;
+static int calls_mode = CALLS_ALL;
 static long long last_load_ns = 0;
 static unsigned long long random_state = 0;
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
@@ -46,6 +52,10 @@ static int (*real_fdatasync)(int) = NULL;
 static ssize_t (*real_pwrite)(int, const void *, size_t, off_t) = NULL;
 static ssize_t (*real_pwrite64)(int, const void *, size_t, off_t) = NULL;
 static ssize_t (*real_pwritev)(int, const struct iovec *, int, off_t) = NULL;
+static int (*real_posix_fallocate)(int, off_t, off_t) = NULL;
+static int (*real_posix_fallocate64)(int, off_t, off_t) = NULL;
+static int (*real_fallocate)(int, int, off_t, off_t) = NULL;
+static int (*real_fallocate64)(int, int, off_t, off_t) = NULL;
 
 static long long now_ns(void) {
     struct timespec value;
@@ -82,14 +92,14 @@ static void load_control(void) {
     if (!control) {
         delay_us = 0;
         error_percent = 0;
-        is_sync_only = 0;
+        calls_mode = CALLS_ALL;
         return;
     }
 
     long new_delay = 0;
     long new_percent = 0;
     int new_code = EIO;
-    int new_sync_only = 0;
+    int new_calls_mode = CALLS_ALL;
     char line[LINE_SIZE];
 
     while (fgets(line, sizeof(line), control)) {
@@ -107,7 +117,9 @@ static void load_control(void) {
         } else if (strcmp(line, "errno=EIO") == 0) {
             new_code = EIO;
         } else if (strcmp(line, "calls=sync") == 0) {
-            new_sync_only = 1;
+            new_calls_mode = CALLS_SYNC;
+        } else if (strcmp(line, "calls=write") == 0) {
+            new_calls_mode = CALLS_WRITE;
         }
     }
 
@@ -116,7 +128,7 @@ static void load_control(void) {
     delay_us = new_delay;
     error_percent = new_percent;
     error_code = new_code;
-    is_sync_only = new_sync_only;
+    calls_mode = new_calls_mode;
 }
 
 static int is_target(int fd) {
@@ -149,7 +161,7 @@ static unsigned long long next_random(void) {
 }
 
 /* Returns 0 when the call goes ahead, or the errno that it fails with. */
-static int apply_fault(int fd, int is_sync) {
+static int apply_fault(int fd, int call_kind) {
     long delay;
     long percent;
     int code;
@@ -160,7 +172,7 @@ static int apply_fault(int fd, int is_sync) {
     delay = delay_us;
     percent = error_percent;
     code = error_code;
-    if (is_sync_only && !is_sync) {
+    if (calls_mode != CALLS_ALL && calls_mode != call_kind) {
         delay = 0;
         percent = 0;
     }
@@ -187,35 +199,67 @@ static int apply_fault(int fd, int is_sync) {
 
 int fsync(int fd) {
     if (!real_fsync) real_fsync = dlsym(RTLD_NEXT, "fsync");
-    int code = apply_fault(fd, 1);
+    int code = apply_fault(fd, CALLS_SYNC);
     if (code) { errno = code; return -1; }
     return real_fsync(fd);
 }
 
 int fdatasync(int fd) {
     if (!real_fdatasync) real_fdatasync = dlsym(RTLD_NEXT, "fdatasync");
-    int code = apply_fault(fd, 1);
+    int code = apply_fault(fd, CALLS_SYNC);
     if (code) { errno = code; return -1; }
     return real_fdatasync(fd);
 }
 
 ssize_t pwrite(int fd, const void *buffer, size_t count, off_t offset) {
     if (!real_pwrite) real_pwrite = dlsym(RTLD_NEXT, "pwrite");
-    int code = apply_fault(fd, 0);
+    int code = apply_fault(fd, CALLS_WRITE);
     if (code) { errno = code; return -1; }
     return real_pwrite(fd, buffer, count, offset);
 }
 
 ssize_t pwrite64(int fd, const void *buffer, size_t count, off_t offset) {
     if (!real_pwrite64) real_pwrite64 = dlsym(RTLD_NEXT, "pwrite64");
-    int code = apply_fault(fd, 0);
+    int code = apply_fault(fd, CALLS_WRITE);
     if (code) { errno = code; return -1; }
     return real_pwrite64(fd, buffer, count, offset);
 }
 
 ssize_t pwritev(int fd, const struct iovec *vectors, int count, off_t offset) {
     if (!real_pwritev) real_pwritev = dlsym(RTLD_NEXT, "pwritev");
-    int code = apply_fault(fd, 0);
+    int code = apply_fault(fd, CALLS_WRITE);
     if (code) { errno = code; return -1; }
     return real_pwritev(fd, vectors, count, offset);
+}
+
+/* The allocations of space return the error code itself rather than setting errno, as their real counterparts do. */
+
+int posix_fallocate(int fd, off_t offset, off_t length) {
+    if (!real_posix_fallocate) real_posix_fallocate = dlsym(RTLD_NEXT, "posix_fallocate");
+    int code = apply_fault(fd, CALLS_WRITE);
+    if (code) { return code; }
+    return real_posix_fallocate(fd, offset, length);
+}
+
+int posix_fallocate64(int fd, off_t offset, off_t length) {
+    if (!real_posix_fallocate64) real_posix_fallocate64 = dlsym(RTLD_NEXT, "posix_fallocate64");
+    int code = apply_fault(fd, CALLS_WRITE);
+    if (code) { return code; }
+    return real_posix_fallocate64(fd, offset, length);
+}
+
+/* The Linux call reports its failure through errno. */
+
+int fallocate(int fd, int mode, off_t offset, off_t length) {
+    if (!real_fallocate) real_fallocate = dlsym(RTLD_NEXT, "fallocate");
+    int code = apply_fault(fd, CALLS_WRITE);
+    if (code) { errno = code; return -1; }
+    return real_fallocate(fd, mode, offset, length);
+}
+
+int fallocate64(int fd, int mode, off_t offset, off_t length) {
+    if (!real_fallocate64) real_fallocate64 = dlsym(RTLD_NEXT, "fallocate64");
+    int code = apply_fault(fd, CALLS_WRITE);
+    if (code) { errno = code; return -1; }
+    return real_fallocate64(fd, mode, offset, length);
 }

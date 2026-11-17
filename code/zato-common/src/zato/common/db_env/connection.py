@@ -82,6 +82,16 @@ where not exists (
 )
 """.strip()
 
+# The roles that Amazon RDS, Aurora and Azure Database for PostgreSQL create on each of their servers. On these services
+# the provider performs every automatic failover, and only to a standby that it replicates synchronously, at the storage
+# layer or through synchronous_standby_names that it manages, while the read replicas that stream asynchronously
+# are never a target of an automatic failover.
+Provider_Failover_Roles = ('rds_superuser', 'azure_pg_admin')
+
+_provider_failover_query = """
+select exists (select 1 from pg_roles where rolname in ({}))
+""".strip().format(', '.join(f"'{role}'" for role in Provider_Failover_Roles))
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -168,8 +178,8 @@ def _show(cursor:'any_', query:'str') -> 'any_':
 def verify_postgresql_server(dbapi_connection:'any_', connection_record:'any_') -> 'None':
     """ Refuses a PostgreSQL server on which a commit could be acknowledged before it is durable - one that does not
     flush its write-ahead log, one that does not write full pages after a checkpoint, and a primary with streaming
-    standbys none of which is synchronous. The check runs on each new connection, so the primary that a failover
-    of the database promotes is checked as well.
+    standbys none of which is synchronous, unless the provider of the server performs the failover. The check runs
+    on each new connection, so the primary that a failover of the database promotes is checked as well.
     """
     cursor = dbapi_connection.cursor()
 
@@ -177,6 +187,7 @@ def verify_postgresql_server(dbapi_connection:'any_', connection_record:'any_') 
     full_page_writes = _show(cursor, 'show full_page_writes')
     synchronous_standby_names = _show(cursor, 'show synchronous_standby_names')
     standby_count = _show(cursor, _standby_count_query)
+    has_provider_failover = _show(cursor, _provider_failover_query)
 
     cursor.close()
     dbapi_connection.commit()
@@ -188,7 +199,7 @@ def verify_postgresql_server(dbapi_connection:'any_', connection_record:'any_') 
         raise DatabaseDurabilityError(
             f'PostgreSQL server has full_page_writes `{full_page_writes}`, it must be `{_setting_on}`')
 
-    if standby_count:
+    if standby_count and not has_provider_failover:
         if not synchronous_standby_names:
             message = f'PostgreSQL primary has {standby_count} streaming standby(s) and an empty synchronous_standby_names'
             raise DatabaseDurabilityError(f'{message}, at least one standby must be synchronous')

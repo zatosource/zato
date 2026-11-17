@@ -12,6 +12,12 @@ $controlPath = 'C:\shares\control'
 $errorPath   = Join-Path $controlPath 'provision-error.txt'
 $markerPath  = Join-Path $controlPath 'provisioned.json'
 
+# The online activation is repeated until it succeeds, since it fails while the guest network is still starting
+$activationAttempts     = 20
+$activationRetrySeconds = 15
+$licenseLicensed        = 1
+$windowsApplicationID   = '55c92734-d682-4d71-983e-d6ec3f16059f'
+
 # The harness account and the control share come first, so that a failure in any later step
 # can be read by the build through the control share.
 $password = ConvertTo-SecureString $settings.harness_password -AsPlainText -Force
@@ -43,10 +49,23 @@ try {
     $null = New-ItemProperty -Force -Path $maintenance -Name 'MaintenanceDisabled' -Value 1 -PropertyType DWord
 
     # The evaluation license is activated online
-    $null = cscript.exe //NoLogo C:\Windows\System32\slmgr.vbs /ato
+    for ($attempt = 1; $attempt -le $activationAttempts; $attempt++) {
 
-    $license = Get-CimInstance -ClassName SoftwareLicensingProduct -Filter 'PartialProductKey IS NOT NULL' |
-        Where-Object { $_.ApplicationID -eq '55c92734-d682-4d71-983e-d6ec3f16059f' }
+        $activationOutput = cscript.exe //NoLogo C:\Windows\System32\slmgr.vbs /ato | Out-String
+
+        $license = Get-CimInstance -ClassName SoftwareLicensingProduct -Filter 'PartialProductKey IS NOT NULL' |
+            Where-Object { $_.ApplicationID -eq $windowsApplicationID }
+
+        if ($license.LicenseStatus -eq $licenseLicensed) {
+            break
+        }
+
+        Start-Sleep -Seconds $activationRetrySeconds
+    }
+
+    if ($license.LicenseStatus -ne $licenseLicensed) {
+        throw "Activation failed after $activationAttempts attempts, license status $($license.LicenseStatus) -> $activationOutput"
+    }
 
     # The bootstrap runs at each startup and starts the agent that the harness uploads
     $action    = New-ScheduledTaskAction -Execute 'powershell.exe' `

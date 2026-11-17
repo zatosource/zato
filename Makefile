@@ -12,7 +12,7 @@
 	test-soak test-soak-pubsub test-soak-scheduler-failover test-soak-ha-sqlite test-soak-ha-postgresql \
 	test-arbiter \
 	test-rate-limiting test-enmasse test-cli \
-	test-pubsub test-pubsub-perf test-pubsub-exactly-once test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
+	test-pubsub test-pubsub-perf test-pubsub-exactly-once test-durability test-durability-fast test-durability-static test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
 	test-mcp test-bearer test-graphql test-grpc \
 	test-edifact test-soap test-openapi test-api-portal-live \
@@ -21,7 +21,7 @@
 	test-hl7 test-ccda test-documents hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-export test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
-	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-sftp test-file-transfer test-smb-windows-build \
+	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-sftp test-file-transfer test-smb test-smb-windows-build \
 	test-rule-engine test-rule-engine-perf \
 	test-fabric-live fabric-cleanup fabric-tutorial fabric-loading-tables fabric-lookup-tables fabric-looking-up-data \
 	fabric-api-on-fabric-data fabric-scheduled-reports fabric-files fabric-sending-events fabric-receiving-events \
@@ -681,6 +681,7 @@ REST_OUTGOING_BENCH_DIR ?= $(HOME)/reports/rest-outgoing/bench
 
 test-rest-perf: ## Outgoing REST invocations measured through requests and through the Rust transport, side by side.
 	$(Zato_Log_Reset)
+	$(MAKE) test-durability-static $(Zato_Log)
 	cd $(REST_OUTGOING_BENCH_DIR) && $(ZATO_PY) compare_transports.py 2>&1 | tee -a /tmp/logs-$@.txt
 
 test-rest-channel: ## REST and SOAP channel invocation tests through a running server.
@@ -695,6 +696,7 @@ REST_CHANNEL_BENCH_DIR ?= $(HOME)/reports/rest-channel/bench
 
 test-rest-channel-perf: ## REST and SOAP channels measured as server CPU time per request.
 	$(Zato_Log_Reset)
+	$(MAKE) test-durability-static $(Zato_Log)
 	cd $(REST_CHANNEL_BENCH_DIR) && $(ZATO_PY) bench_rest_channel.py 2>&1 | tee -a /tmp/logs-$@.txt
 
 # fuzz_disabled
@@ -781,6 +783,7 @@ test-ha-core: rust-target-prune ## The Rust tests of the active-standby node - t
 	$(LOAD_CARGO_ENV) && cargo test --manifest-path $(ZATO_RUST)/zato_ha_core/Cargo.toml $(PYTEST_ARGS) $(Zato_Log)
 
 test-ha: ## Active-standby pair under the lease referee - the SQLite and the PostgreSQL targets, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+	$(MAKE) test-durability-fast
 	$(call Zato_Test_Walk,$(Zato_Test_HA),$(Zato_Test_HA_Resume_File))
 
 test-ha-sqlite: ## Active-standby pair on SQLite - the pair, Kubernetes and control-plane suites, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
@@ -834,6 +837,7 @@ Zato_Test_Resolver_Library := $(Zato_Test_Resolver_Dir)/resolver.so
 
 test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing delivery.
 	$(Zato_Log_Reset)
+	$(MAKE) test-durability-fast $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
 		$(CURDIR)/code/tests/python/zato-common/rabbitmq_/ \
@@ -907,6 +911,10 @@ test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing del
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_pubsub_backend_sqlite.py \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_store_sqlite.py \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_pubsub_backend_postgresql.py \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_store_postgresql.py \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_generation_postgresql.py \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_clock.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend \
 		-W "ignore:This process:DeprecationWarning" \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
@@ -936,6 +944,7 @@ Zato_Test_Soak_Resume_File := $(CURDIR)/code/tests/.test-soak-resume
 
 test-soak-pubsub: ## The pub/sub soak tests - the faults suite on PostgreSQL and the stability suite on every database mode.
 	$(Zato_Log_Reset)
+	$(MAKE) test-durability-static $(Zato_Log)
 	Zato_Test_PubSub_DB_Mode=postgresql ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub_faults/ $(Zato_Test_Soak_Only) \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_faults_soak -W ignore::DeprecationWarning \
@@ -949,6 +958,7 @@ test-soak-pubsub: ## The pub/sub soak tests - the faults suite on PostgreSQL and
 
 test-soak-scheduler-failover: ## The soak test of the active-passive scheduler failover.
 	$(Zato_Log_Reset)
+	$(MAKE) test-durability-static $(Zato_Log)
 	$(MAKE) scheduler-build $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/scheduler_failover/ $(Zato_Test_Soak_Only) \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_scheduler_failover_soak -W ignore::DeprecationWarning \
@@ -956,6 +966,7 @@ test-soak-scheduler-failover: ## The soak test of the active-passive scheduler f
 
 test-soak-ha-sqlite: ## The soak test of the active-standby pair on SQLite.
 	$(Zato_Log_Reset)
+	$(MAKE) test-durability-static $(Zato_Log)
 	$(MAKE) ha-node-build $(Zato_Log)
 	$(MAKE) scheduler-build $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/ha_sqlite/ $(Zato_Test_Soak_Only) \
@@ -964,6 +975,7 @@ test-soak-ha-sqlite: ## The soak test of the active-standby pair on SQLite.
 
 test-soak-ha-postgresql: ## The soak test of the active-standby pair on PostgreSQL.
 	$(Zato_Log_Reset)
+	$(MAKE) test-durability-static $(Zato_Log)
 	$(MAKE) ha-node-build $(Zato_Log)
 	$(MAKE) scheduler-build $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/ha_postgresql/ $(Zato_Test_Soak_Only) \
@@ -1047,6 +1059,7 @@ Zato_Test_PubSub_Perf_Step = \
 test-pubsub-perf: ## Pub/sub performance through a live server - concurrent publishers and subscribers, each subscriber with its own subscription, with exactly-once delivery, worker kills and rising concurrency, on SQLite and PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	@if [ -n "$(RESTART)" ]; then rm -f $(Zato_Test_PubSub_Perf_Resume_File); fi
 	$(Zato_Log_Reset)
+	$(MAKE) test-durability-static $(Zato_Log)
 	@resume=''; \
 	if [ -f $(Zato_Test_PubSub_Perf_Resume_File) ]; then \
 		resume=$$(cat $(Zato_Test_PubSub_Perf_Resume_File)); \
@@ -1110,6 +1123,73 @@ test-pubsub-exactly-once: ## Exactly-once delivery of pub/sub - the backend, a s
 	fi; \
 	$(foreach step,$(Zato_Test_Exactly_Once_Steps),$(call Zato_Test_Exactly_Once_Step,$(step))) \
 	rm -f $(Zato_Test_Exactly_Once_Resume_File)
+
+# The suites of durability - the static scans, the settings of every engine, the acknowledgment of each write,
+# a loss of power to a single server and to each pair.
+Zato_Test_Durability_Dir := $(CURDIR)/code/tests/python/zato-common/durability
+
+Zato_Test_Durability_Plain  := -m pytest -W ignore::DeprecationWarning
+Zato_Test_Durability_Gevent := -m gevent.monkey --module pytest -W "ignore:This process:DeprecationWarning"
+
+Zato_Test_Durability_Tests_static        := $(Zato_Test_Durability_Dir)/static/ \
+	$(CURDIR)/code/tests/python/zato-server/ha_postgresql_kubernetes/test_manifest_durability.py
+Zato_Test_Durability_Tests_engines       := $(Zato_Test_Durability_Dir)/engines/
+Zato_Test_Durability_Tests_writers       := $(Zato_Test_Durability_Dir)/writers/
+Zato_Test_Durability_Tests_power-loss    := $(Zato_Test_Durability_Dir)/power_loss/
+Zato_Test_Durability_Tests_ha-sqlite     := $(CURDIR)/code/tests/python/zato-server/ha_sqlite/test_durability.py
+Zato_Test_Durability_Tests_ha-postgresql := $(CURDIR)/code/tests/python/zato-server/ha_postgresql/test_durability.py
+
+Zato_Test_Durability_Runner_static        := $(Zato_Test_Durability_Plain)
+Zato_Test_Durability_Runner_engines       := $(Zato_Test_Durability_Plain)
+Zato_Test_Durability_Runner_writers       := $(Zato_Test_Durability_Gevent)
+Zato_Test_Durability_Runner_power-loss    := $(Zato_Test_Durability_Plain)
+Zato_Test_Durability_Runner_ha-sqlite     := $(Zato_Test_Durability_Plain)
+Zato_Test_Durability_Runner_ha-postgresql := $(Zato_Test_Durability_Plain)
+
+# The steps in the order they run, the step that the target is currently on, and the pytest option that resumes
+# each step from the test that failed or was interrupted, or starts it over under RESTART.
+Zato_Test_Durability_Steps       := static engines writers power-loss ha-sqlite ha-postgresql
+Zato_Test_Durability_Fast_Steps  := static engines
+Zato_Test_Durability_Resume_File := $(CURDIR)/code/tests/.test-durability-resume
+Zato_Test_Durability_Stepwise     = $(if $(RESTART),--sw-reset,--sw)
+
+# Runs the step $(1) without resuming, for the targets that run a step before their own suites.
+Zato_Test_Durability_Run_Once = \
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) $(Zato_Test_Durability_Runner_$(1)) $(Zato_Test_Durability_Tests_$(1)) \
+		-v -s --tb=short -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_durability_$(1) \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?;
+
+# Runs the step $(1), unless the walk is still looking for the step it resumes from.
+Zato_Test_Durability_Step = \
+	if [ -z "$$resume" ] || [ "$$resume" = "$(1)" ]; then \
+		resume=''; \
+		echo "$(1)" > $(Zato_Test_Durability_Resume_File); \
+		echo ">>> $(1)" $(Zato_Log); \
+		ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) $(Zato_Test_Durability_Runner_$(1)) $(Zato_Test_Durability_Tests_$(1)) \
+			-v -s --tb=short -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_durability_$(1) \
+			$(Zato_Test_Durability_Stepwise) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
+	fi;
+
+test-durability: ## Durability - static scans, engine settings, write acknowledgments, loss of power to a single server and to each pair, resuming from the step that last failed or was interrupted. RESTART=1 to start from scratch.
+	@if [ -n "$(RESTART)" ]; then rm -f $(Zato_Test_Durability_Resume_File); fi
+	$(Zato_Log_Reset)
+	$(MAKE) ha-node-build $(Zato_Log)
+	$(MAKE) scheduler-build $(Zato_Log)
+	@resume=''; \
+	if [ -f $(Zato_Test_Durability_Resume_File) ]; then \
+		resume=$$(cat $(Zato_Test_Durability_Resume_File)); \
+		echo ">>> Resuming from $$resume" $(Zato_Log); \
+	fi; \
+	$(foreach step,$(Zato_Test_Durability_Steps),$(call Zato_Test_Durability_Step,$(step))) \
+	rm -f $(Zato_Test_Durability_Resume_File)
+
+test-durability-fast: ## The static scans and the engine settings of durability, which test-pubsub and test-ha run first.
+	$(Zato_Log_Reset)
+	@$(foreach step,$(Zato_Test_Durability_Fast_Steps),$(call Zato_Test_Durability_Run_Once,$(step)))
+
+test-durability-static: ## The static scans of durability, which every performance and soak target runs before its suites.
+	$(Zato_Log_Reset)
+	@$(call Zato_Test_Durability_Run_Once,static)
 
 # discord_disabled - these enmasse suites run in test-discord only
 Zato_Test_Enmasse_Disabled := \
@@ -1711,10 +1791,41 @@ test-sftp: ## SFTP tests - the outconn and scheduler suites against live OpenSSH
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sftp_scheduler -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-smb-windows-build: ## Windows Server 2022 and 2025 guests for the live SMB tests - builds the prepared disks that are missing or out of date.
-	cd $(CURDIR)/code/tests/python/zato-common/lib && $(ZATO_PY) -u -m live_windows.cli build
+Zato_SMB_Windows_CLI   = PYTHONPATH=$(CURDIR)/code/tests/python/zato-common/lib $(ZATO_PY) -u -m live_windows.cli
+Zato_SMB_Windows_Tests = $(CURDIR)/code/tests/python/zato-server/smb_windows_live
 
-test-file-transfer: test-sftp ## File transfer demo tests - the SFTP suites first, then the demo config set, the local SFTP, FTP, FTPS and SMB servers, a live server polling all of them, and the Dashboard card.
+test-smb-windows-build: ## Windows Server 2022 and 2025 guests for the live SMB tests - builds the prepared disks that are missing or out of date.
+	$(Zato_SMB_Windows_CLI) build
+
+test-smb: ## Live SMB tests against Windows Server 2022 and 2025 guests - the offline checks, the file exchange flows, reliability, the Dashboard and failover, in that order.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/live_windows_offline/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_smb_windows_offline -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	trap '$(Zato_SMB_Windows_CLI) stop' EXIT; \
+	$(Zato_SMB_Windows_CLI) start $(Zato_Log) && \
+	Zato_Test_SMB_Windows=1 ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(Zato_SMB_Windows_Tests)/test_connectivity.py \
+		$(Zato_SMB_Windows_Tests)/test_exchange_hub.py \
+		$(Zato_SMB_Windows_Tests)/test_write_modes.py \
+		$(Zato_SMB_Windows_Tests)/test_documents.py \
+		$(Zato_SMB_Windows_Tests)/test_labels.py \
+		$(Zato_SMB_Windows_Tests)/test_landing.py \
+		$(Zato_SMB_Windows_Tests)/test_bidirectional.py \
+		$(Zato_SMB_Windows_Tests)/test_reliability.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_smb_windows -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) && \
+	Zato_Test_SMB_Windows=1 ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/smb_windows/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_smb_windows -o log_cli_level=WARNING \
+		-W ignore::DeprecationWarning $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) && \
+	Zato_Test_SMB_Windows=1 ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(Zato_SMB_Windows_Tests)/test_failover.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_smb_windows_failover -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+test-file-transfer: test-sftp test-smb ## File transfer demo tests - the SFTP suites first, then the demo config set, the local SFTP, FTP, FTPS and SMB servers, a live server polling all of them, and the Dashboard card.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/demo_config/test_demo_config.py \
@@ -1796,6 +1907,7 @@ test-rule-engine: ## Rule engine tests - grammar, matching, SQL, dashboard views
 
 test-rule-engine-perf: ## Rule engine SQL backend performance tests.
 	$(Zato_Log_Reset)
+	$(MAKE) test-durability-static $(Zato_Log)
 	basetemp="$${TMPDIR:-/tmp}/zato-rule-engine-perf-$$USER"; \
 	trap 'rm -rf "$$basetemp"' EXIT INT TERM; \
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -1917,7 +2029,7 @@ Zato_Test_Fuzz := test-rest-fuzz test-server-fuzz
 
 Zato_Test_All := \
 	$(Zato_Test_Static) $(Zato_Test_Offline) $(Zato_Test_Toolchain) \
-	$(Zato_Test_Live) $(Zato_Test_Browser) $(Zato_Test_Heavy) test-soak
+	$(Zato_Test_Live) test-durability $(Zato_Test_Browser) $(Zato_Test_Heavy) test-soak
 
 # Real functionality only - no static checks, no fuzzing and no mutation testing
 Zato_Test_No_Static := $(filter-out $(Zato_Test_Static) $(Zato_Test_Fuzz),$(Zato_Test_All))

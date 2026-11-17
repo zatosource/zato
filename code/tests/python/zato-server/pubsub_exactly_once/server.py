@@ -16,6 +16,7 @@ import time
 from zato.common.test.conftest_base_pubsub import find_free_port, start_server_process, wait_for_server
 from zato.common.test.exactly_once.config import TestConfig
 from zato.common.test.exactly_once.control import release
+from zato.common.test.process_util import get_process_tree_pids
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -23,7 +24,7 @@ from zato.common.typing_ import cast_
 
 if 0:
     from subprocess import Popen
-    from zato.common.typing_ import intdict, intlist
+    from zato.common.typing_ import intlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,53 +61,12 @@ def _get_server_process() -> 'Popen[bytes]':
 
 # ################################################################################################################################
 
-def _get_parent_pids() -> 'intdict':
-    """ Returns the parent of each process of the system, by process ID.
-    """
-    out:'intdict' = {}
-
-    for name in os.listdir('/proc'):
-
-        if not name.isdigit():
-            continue
-
-        try:
-            with open(f'/proc/{name}/stat') as stat_file:
-                stat = stat_file.read()
-        except FileNotFoundError:
-            continue
-
-        # The process name is in parentheses and may contain spaces, the parent follows the state after it.
-        _, _, remainder = stat.rpartition(')')
-        fields = remainder.split()
-
-        pid = int(name)
-        parent_pid = int(fields[1])
-
-        out[pid] = parent_pid
-
-    return out
-
-# ################################################################################################################################
-
 def get_server_pids() -> 'intlist':
     """ Returns the processes of the server of the session, which descend from the process that started it.
     """
     server_process = _get_server_process()
-    root_pid = server_process.pid
-    parents = _get_parent_pids()
 
-    out:'intlist' = [root_pid]
-
-    for pid in parents:
-        ancestor = parents[pid]
-
-        while ancestor in parents:
-            if ancestor == root_pid:
-                out.append(pid)
-                break
-            ancestor = parents[ancestor]
-
+    out = get_process_tree_pids(server_process.pid)
     return out
 
 # ################################################################################################################################

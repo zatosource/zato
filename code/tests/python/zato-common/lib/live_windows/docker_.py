@@ -13,6 +13,27 @@ from threading import Thread
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from pathlib import Path
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def remove_directory(path:'Path', image:'str') -> 'None':
+    """ Removes a directory that holds files a container created as root, through a short-lived container of the same image.
+    """
+    command = [
+        'docker', 'run', '--rm',
+        '--entrypoint', 'rm',
+        '-v', f'{path.parent}:/parent',
+        image,
+        '-rf', f'/parent/{path.name}',
+    ]
+
+    _ = subprocess.run(command, capture_output=True, check=True)
+
+# ################################################################################################################################
+
 def remove_container(name:'str') -> 'None':
     """ Removes a container, whether it runs or not, and does nothing if there is no such container.
     """
@@ -28,6 +49,18 @@ def container_is_running(name:'str') -> 'bool':
 
     out = state == 'true'
     return out
+
+# ################################################################################################################################
+
+def pause_container(name:'str') -> 'None':
+    """ Freezes every process of a container, the guest included, until it is unpaused.
+    """
+    _ = subprocess.run(['docker', 'pause', name], capture_output=True, check=True)
+
+# ################################################################################################################################
+
+def unpause_container(name:'str') -> 'None':
+    _ = subprocess.run(['docker', 'unpause', name], capture_output=True, check=True)
 
 # ################################################################################################################################
 

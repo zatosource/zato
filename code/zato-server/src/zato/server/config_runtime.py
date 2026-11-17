@@ -274,7 +274,7 @@ class ConfigRuntime:
 # ################################################################################################################################
 
     def drain(self) -> 'None':
-        """ Waits for the change in progress and writes the buffered audit events, within the grace period of the arbiter.
+        """ Waits for the change in progress to complete, within the grace period of the arbiter.
         """
         if self.is_draining:
             return

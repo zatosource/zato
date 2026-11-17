@@ -17,6 +17,18 @@ const POSTGRESQL_IMAGE: &str = "postgres:16";
 /// The port of `PostgreSQL` inside the container.
 const POSTGRESQL_PORT: &str = "5432/tcp";
 
+/// The command of the container, followed by the settings of a test.
+const POSTGRESQL_COMMAND: &str = "postgres";
+
+/// The option that precedes each setting on the command line of `PostgreSQL`.
+const SETTING_OPTION: &str = "-c";
+
+/// The settings that make a commit durable once it is acknowledged, each of which a test turns off in turn.
+const DURABILITY_SETTINGS: [&str; 2] = ["fsync", "full_page_writes"];
+
+/// The value that turns a durability setting off.
+const SETTING_OFF: &str = "off";
+
 /// The password of the test container.
 const PASSWORD: &str = "Test password";
 
@@ -48,11 +60,17 @@ struct PostgreSqlContainer {
 impl PostgreSqlContainer {
     /// Starts the container and waits until it accepts connections.
     fn start() -> Self {
-        let name = format!("zato-ha-probe-test-{}", std::process::id());
+        Self::start_with("default", &[])
+    }
+
+    /// Starts the container under a name with `label`, with each of `settings` passed to `PostgreSQL`,
+    /// and waits until it accepts connections.
+    fn start_with(label: &str, settings: &[String]) -> Self {
+        let name = format!("zato-ha-probe-test-{label}-{}", std::process::id());
         let publish = format!("{LOOPBACK}::5432");
         let password = format!("POSTGRES_PASSWORD={PASSWORD}");
         let user = format!("POSTGRES_USER={USERNAME}");
-        docker(&[
+        let mut args = vec![
             "run",
             "--detach",
             "--rm",
@@ -65,7 +83,13 @@ impl PostgreSqlContainer {
             "--env",
             &user,
             POSTGRESQL_IMAGE,
-        ]);
+            POSTGRESQL_COMMAND,
+        ];
+        for setting in settings {
+            args.push(SETTING_OPTION);
+            args.push(setting);
+        }
+        docker(&args);
         let mapping = docker(&["port", &name, POSTGRESQL_PORT]);
         let port = mapping.lines().next().unwrap().trim().rsplit(':').next().unwrap().parse().unwrap();
         let container = Self { name, port };
@@ -150,6 +174,23 @@ fn the_probe_succeeds_only_while_the_database_answers() {
     assert!(started.elapsed() < REQUEST_TIMEOUT + STARTUP_POLL);
     docker(&["unpause", &container.name]);
     probe.probe().unwrap();
+}
+
+#[test]
+fn a_database_with_a_durability_setting_turned_off_is_not_durable() {
+    for setting in DURABILITY_SETTINGS {
+        // The assignment is built from its parts, so that no source spells out a relaxed setting.
+        let assignment = format!("{setting}={SETTING_OFF}");
+        let label = setting.replace('_', "-");
+        let container = PostgreSqlContainer::start_with(&label, &[assignment]);
+        let probe = PostgreSqlProbe::new(&container.settings()).unwrap();
+
+        let error = probe.probe().unwrap_err();
+        assert!(
+            matches!(&error, ProbeError::NotDurable(reason) if reason.contains(setting)),
+            "setting `{setting}` gave {error}"
+        );
+    }
 }
 
 #[test]

@@ -27,7 +27,7 @@ if 0:
     from ha_env import HAEnvironment, HASession
     from nodes import Node, NodeHook, Timers
     from topology import Lease
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, strlist
 
     Lease = Lease
 
@@ -57,9 +57,17 @@ def prepare_node(node:'Node', lease:'Lease', cluster:'PostgreSQLCluster', timers
 
 # ################################################################################################################################
 
-def build_environment(session:'HASession', test_name:'str', timers:'Timers', hooks:'list[NodeHook]') -> 'HAEnvironment':
-    """ Starts a new PostgreSQL cluster, both nodes from the environments of the session and HAProxy,
-    under a referee without leases, without waiting for the pair.
+def build_environment(
+    session:'HASession',
+    test_name:'str',
+    timers:'Timers',
+    hooks:'list[NodeHook]',
+    is_synchronous:'bool',
+    lazyfs_names:'strlist',
+) -> 'HAEnvironment':
+    """ Starts a new PostgreSQL cluster, synchronous or not and with the instances of the given names on LazyFS,
+    both nodes from the environments of the session and HAProxy, under a referee without leases,
+    without waiting for the pair.
     """
     authority = Authority(os.path.join(session.run_dir, 'authority'))
 
@@ -69,7 +77,7 @@ def build_environment(session:'HASession', test_name:'str', timers:'Timers', hoo
 
     # .. and with a database without data.
     cluster = PostgreSQLCluster(session.run_dir)
-    cluster.start()
+    cluster.start(is_synchronous, lazyfs_names)
 
     node_list = new_nodes(session)
 
@@ -86,7 +94,20 @@ def ready_pair(session:'HASession', test_name:'str', timers:'Timers', hooks:'lis
     """ A pair on PostgreSQL with the given timers and node hooks that is ready, removed when the test completes.
     """
     clear_receivers(session)
-    env = build_environment(session, test_name, timers, hooks)
+    env = build_environment(session, test_name, timers, hooks, True, [])
+
+    with until_removed(env) as out:
+        yield out
+
+# ################################################################################################################################
+
+@contextmanager
+def ready_pair_on_lazyfs(session:'HASession', test_name:'str', timers:'Timers', lazyfs_names:'strlist') -> 'any_':
+    """ A pair on PostgreSQL whose instances of the given names keep their data on LazyFS, ready,
+    removed when the test completes.
+    """
+    clear_receivers(session)
+    env = build_environment(session, test_name, timers, [], True, lazyfs_names)
 
     with until_removed(env) as out:
         yield out

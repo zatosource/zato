@@ -80,6 +80,40 @@ fn unknown_referee_is_refused() {
     ));
 }
 
+/// Modes that name an asynchronous, relaxed or unknown way of running a pair, each of which the node refuses.
+const REFUSED_MODES: [&str; 9] = [
+    "",
+    "async",
+    "asynchronous",
+    "active-standby-async",
+    "active-active",
+    "relaxed",
+    "solo",
+    "ACTIVE-STANDBY",
+    " active-standby",
+];
+
+#[test]
+fn every_mode_other_than_active_standby_is_refused() {
+    for mode in REFUSED_MODES {
+        let mut variables = minimal();
+        variables.0.insert(ENV_MODE.to_owned(), mode.to_owned());
+        let result = NodeConfig::from_source(&variables);
+        assert!(
+            matches!(result, Err(ConfigError::Invalid { name: ENV_MODE, .. })),
+            "mode `{mode}` was not refused"
+        );
+    }
+}
+
+#[test]
+fn a_missing_mode_is_refused() {
+    let mut variables = minimal();
+    variables.0.remove(ENV_MODE);
+    let error = NodeConfig::from_source(&variables).unwrap_err();
+    assert!(matches!(error, ConfigError::Missing(ENV_MODE)));
+}
+
 #[test]
 fn takeover_must_exceed_mark_out() {
     let mut variables = minimal();

@@ -650,6 +650,28 @@ def replace_container(database:'PubSubDatabase', image:'str'='', extra_settings:
 
 # ################################################################################################################################
 
+def stop_container(database:'PubSubDatabase') -> 'None':
+    """ Stops the container of a database gracefully, with its data left in place.
+    """
+    _ = subprocess.run(['docker', 'stop', database.container_name], check=True, capture_output=True)
+
+# ################################################################################################################################
+
+def kill_container(database:'PubSubDatabase') -> 'None':
+    """ Kills the container of a database with SIGKILL, with its data left in place.
+    """
+    _ = subprocess.run(['docker', 'kill', '--signal', 'KILL', database.container_name], check=True, capture_output=True)
+
+# ################################################################################################################################
+
+def start_container(database:'PubSubDatabase') -> 'None':
+    """ Starts the stopped container of a database again, on the same data, and waits until it accepts connections.
+    """
+    _ = subprocess.run(['docker', 'start', database.container_name], check=True, capture_output=True)
+    _wait_until_ready(database)
+
+# ################################################################################################################################
+
 @contextmanager
 def pubsub_db_env(env:'strstrdict') -> 'Iterator[None]':
     """ Points the Zato_Database_* variables at one database for the duration of a test.

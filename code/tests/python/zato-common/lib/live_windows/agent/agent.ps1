@@ -474,6 +474,19 @@ function Step-ServiceWait($Task) {
     }
 }
 
+function Step-UnblockWait($Task) {
+
+    $command = $Task.command
+
+    if ((Get-Date) -lt $Task.release_at) {
+        return
+    }
+
+    Remove-NetFirewallRule -DisplayName $BlockRuleName
+    $Tasks.Remove($command.task)
+    Write-AgentEvent ([ordered]@{ kind = 'fault-ended'; run = $command.run; fault = 'block-port' })
+}
+
 function Invoke-Fault($Command) {
 
     switch ($Command.kind) {
@@ -481,6 +494,13 @@ function Invoke-Fault($Command) {
         'block-port' {
             $null = New-NetFirewallRule -DisplayName $BlockRuleName -Direction Inbound -Protocol TCP `
                 -LocalPort 445 -Action Block
+
+            # The block also applies to the harness, which therefore cannot send the command that lifts it
+            $Tasks[$Command.task] = @{
+                kind       = 'unblock-wait'
+                command    = $Command
+                release_at = (Get-Date).AddMilliseconds($Command.duration_ms)
+            }
         }
 
         'unblock-port' {
@@ -543,6 +563,7 @@ $StepHandlers = @{
     'consume'      = { param($Task) Step-Consumer $Task }
     'observe'      = { param($Task) Step-Observer $Task }
     'service-wait' = { param($Task) Step-ServiceWait $Task }
+    'unblock-wait' = { param($Task) Step-UnblockWait $Task }
 }
 
 function Read-Commands {

@@ -225,7 +225,9 @@ def start_guest(version:'str') -> 'GuestInfo':
 
 # ################################################################################################################################
 
-def _write_state(guests:'guestlist') -> 'None':
+def write_state(guests:'guestlist') -> 'None':
+    """ Records the guests that run, so that the next test session reuses them.
+    """
     state:'anydict' = {}
 
     for guest in guests:
@@ -239,7 +241,7 @@ def _write_state(guests:'guestlist') -> 'None':
 # ################################################################################################################################
 
 def start_guests(versions:'strlist') -> 'guestlist':
-    """ Builds the prepared disks that are missing, then boots every guest in parallel and records them in the state file.
+    """ Builds the prepared disks that are missing, then boots every guest in parallel.
     """
     build_missing(versions)
 
@@ -266,8 +268,6 @@ def start_guests(versions:'strlist') -> 'guestlist':
         stop_guests(versions)
         raise Exception(f'Guests failed to start -> {errors}')
 
-    _write_state(out)
-
     return out
 
 # ################################################################################################################################
@@ -292,14 +292,47 @@ def running_guests() -> 'guestlist':
 
 # ################################################################################################################################
 
+def acquire_guests(versions:'strlist') -> 'tuple[guestlist, strlist]':
+    """ Returns the guests of the given versions, reusing those that already run and booting the others,
+    together with the versions that it booted.
+    """
+    out:'guestlist' = []
+    started_versions:'strlist' = []
+    running_versions:'strlist' = []
+
+    for guest in running_guests():
+        if guest.version in versions:
+            out.append(guest)
+            running_versions.append(guest.version)
+            print(f'{guest.prefix} Reusing {guest.name}, SMB on port {guest.port}', flush=True)
+
+    for version in versions:
+        if version not in running_versions:
+            started_versions.append(version)
+
+    if started_versions:
+        started = start_guests(started_versions)
+        out.extend(started)
+
+    write_state(out)
+
+    return out, started_versions
+
+# ################################################################################################################################
+
 def stop_guests(versions:'strlist') -> 'None':
-    """ Removes the containers of the guests, which discards everything written to them, and the state file.
+    """ Removes the containers of the guests, which discards everything written to them, and their entries in the state file.
     """
     for version in versions:
         name = container_name(version)
         remove_container(name)
 
-    Paths.State_Path.unlink(missing_ok=True)
+    remaining = running_guests()
+
+    if remaining:
+        write_state(remaining)
+    else:
+        Paths.State_Path.unlink(missing_ok=True)
 
 # ################################################################################################################################
 # ################################################################################################################################
