@@ -17,9 +17,10 @@ from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.file_transfer_run import Run_Status_Failed
 from zato.common.monitoring.health import EndpointMetrics
 from zato.common.util.api import utcnow
+from zato.common.test.direct_sql.seed import seed_event
 
 # Local
-from alerting_seeds import backdate, seed_outcome, Channel_Name, Other_Channel_Name, Server_Name
+from alerting_seeds import seed_outcome, Channel_Name, Other_Channel_Name, Server_Name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,9 +34,9 @@ class TestPerSourceWindows:
 
         # A file transfer error older than the default window but within
         # the file transfer type's own longer one
-        event_id = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Message_Sent, 'sftp.backups',
+        event_time = now - timedelta(seconds=400)
+        _ = seed_event(audit_log, event_time, AuditSource.File_Outgoing, AuditEvent.Message_Sent, 'sftp.backups',
             cid='window-1', outcome=AuditOutcome.Error)
-        backdate(event_id, now - timedelta(seconds=400))
 
         facts = collect_facts(engine, {}, AuditSource.MLLP_Channel, now,
             window_seconds=300, window_seconds_by_source={AuditSource.File_Outgoing: {Measure_Error_Rate: 600}})
@@ -52,9 +53,10 @@ class TestPerSourceWindows:
         engine = get_database_engine()
         now = utcnow()
 
-        event_id = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Message_Sent, 'sftp.default-window',
+        event_time = now - timedelta(seconds=400)
+
+        _ = seed_event(audit_log, event_time, AuditSource.File_Outgoing, AuditEvent.Message_Sent, 'sftp.default-window',
             cid='window-2', outcome=AuditOutcome.Error)
-        backdate(event_id, now - timedelta(seconds=400))
 
         # No per-source windows at all, so every source is measured over the one default
         facts = collect_facts(engine, {}, AuditSource.MLLP_Channel, now, window_seconds=300)
@@ -73,9 +75,9 @@ class TestPerSourceWindows:
 
         # A failed health check older than the default window but within the hour - a check's ping is
         # measured through its response, the way the connection's own traffic is
-        event_id = audit_log.insert(AuditSource.REST_Outgoing_Health, AuditEvent.Response_Received, 'crm.health',
+        event_time = now - timedelta(seconds=1800)
+        _ = seed_event(audit_log, event_time, AuditSource.REST_Outgoing_Health, AuditEvent.Response_Received, 'crm.health',
             cid='window-3', outcome=AuditOutcome.Error)
-        backdate(event_id, now - timedelta(seconds=1800))
 
         facts = collect_facts(engine, {}, AuditSource.MLLP_Channel, now, window_seconds=300)
 
@@ -93,9 +95,9 @@ class TestPerSourceWindows:
 
         # A failed run half an hour back
         run_data = dumps({'schedule': 'sched.window', 'failed': 2})
-        event_id = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Run_Completed, 'sftp.runs',
+        event_time = now - timedelta(seconds=1800)
+        _ = seed_event(audit_log, event_time, AuditSource.File_Outgoing, AuditEvent.Run_Completed, 'sftp.runs',
             cid='window-4', outcome=AuditOutcome.Error, status=Run_Status_Failed, data=run_data)
-        backdate(event_id, now - timedelta(seconds=1800))
 
         # Over a day it counts ..
         facts = collect_file_transfer_facts(engine, now, {}, None, 86400)
@@ -122,9 +124,9 @@ class TestPerSourceWindows:
         # A failed run half an hour back for two schedules
         for schedule_name, cid in [('sched.own-window', 'window-5'), ('sched.type-window', 'window-6')]:
             run_data = dumps({'schedule': schedule_name, 'failed': 1})
-            event_id = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Run_Completed, 'sftp.runs',
+            event_time = now - timedelta(seconds=1800)
+            _ = seed_event(audit_log, event_time, AuditSource.File_Outgoing, AuditEvent.Run_Completed, 'sftp.runs',
                 cid=cid, outcome=AuditOutcome.Error, status=Run_Status_Failed, data=run_data)
-            backdate(event_id, now - timedelta(seconds=1800))
 
         # The type counts over ten minutes, one schedule over a day of its own
         facts = collect_file_transfer_facts(engine, now, {}, None, 600, {'sched.own-window': 86400})
@@ -149,9 +151,9 @@ class TestPerSourceWindows:
 
         # A failure twenty minutes back for two connections
         for object_name, cid in [('sftp.own-window', 'window-7'), ('sftp.type-window', 'window-8')]:
-            event_id = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Message_Sent, object_name,
+            event_time = now - timedelta(seconds=1200)
+            _ = seed_event(audit_log, event_time, AuditSource.File_Outgoing, AuditEvent.Message_Sent, object_name,
                 cid=cid, outcome=AuditOutcome.Error)
-            backdate(event_id, now - timedelta(seconds=1200))
 
         # The source is measured over ten minutes, one connection over an hour of its own
         window_seconds_by_object = {AuditSource.File_Outgoing: {'sftp.own-window': {Measure_Error_Rate: 3600}}}

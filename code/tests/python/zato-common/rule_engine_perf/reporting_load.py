@@ -14,7 +14,7 @@ from typing import NamedTuple
 from humanize import intcomma
 
 # Local
-from common import Floors, Measurement, PerfDatabase, Rollup_Day_Count, Rollup_Rule_Count, Seeded_Decision_Count
+from common import Floors, Measurement, Rollup_Day_Count, Rollup_Rule_Count, Seeded_Decision_Count
 from zato.common.rule_engine.sql import DecisionFilter, RuleSQLBackend
 from seeding import delete_all_rows, seed_reporting_decisions, seed_rollups
 from traffic import Admin_Rule_Ids, create_rulesets
@@ -74,7 +74,6 @@ def _known_rollup_rule_ids() -> 'strlist':
 
 def run_reporting_scenario(
     backend:'RuleSQLBackend',
-    database:'PerfDatabase',
     floors:'Floors',
     ) -> 'tuple[measurement_list, ReportingState]':
     """ The dashboard paths over the million-row log - every aggregate, the drill-down and the
@@ -83,11 +82,12 @@ def run_reporting_scenario(
     print(f'Reporting: seeding {intcomma(Seeded_Decision_Count)} decision rows', flush=True)
 
     # Start from empty tables, then bulk-seed the measured volume ..
-    delete_all_rows(database)
+    engine = backend.session_factory.engine
+    delete_all_rows(engine)
     ruleset_ids = create_rulesets(backend)
 
-    decision_seconds = seed_reporting_decisions(database, ruleset_ids)
-    rollup_seconds = seed_rollups(database, ruleset_ids)
+    decision_seconds = seed_reporting_decisions(engine, ruleset_ids)
+    rollup_seconds = seed_rollups(engine, ruleset_ids)
     rollup_count = intcomma(Rollup_Rule_Count * Rollup_Day_Count)
     print(f'Reporting: decisions seeded in {decision_seconds:.2f}s, {rollup_count} rollup rows in {rollup_seconds:.2f}s', flush=True)
 

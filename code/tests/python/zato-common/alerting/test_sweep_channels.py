@@ -9,9 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import timedelta
 
-# SQLAlchemy
-from sqlalchemy import update
-
 # Zato
 from zato.common.alerting.engine import AlertDefaults, AlertTransports
 from zato.common.alerting.object_config import alert_type_channels, encode_email_connection, Email_Conn_Type_IMAP, \
@@ -19,11 +16,12 @@ from zato.common.alerting.object_config import alert_type_channels, encode_email
 from zato.common.alerting.seed.rules_common import channels_rules
 from zato.common.alerting.sweep import run_sweep
 from zato.common.api import Alerting
-from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.rule_engine.loading import load_documents
 from zato.common.rule_engine.parser import parse_data_details
 from zato.common.util.api import utcnow
+from zato.common.test.direct_sql.seed import SeedAuditLog
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -119,28 +117,22 @@ def _load_channel_rules() -> 'rule_engine_rule_list':
 
 def _seed_call(audit_log:'AuditLog', engine:'Engine', now:'datetime', cid:'str', status:'str', *,
     object_name:'str'=_channel_name, seconds_back:'int'=0, source:'str'=AuditSource.REST_Channel) -> 'None':
-    """ Stores the request and response pair one call of a channel leaves behind, moved back in time if asked to.
+    """ Stores the request and response pair one call of a channel leaves behind, dated in the past if asked to.
     """
+    # A call in the past is seeded with its event time from the start
+    if seconds_back:
+        audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=seconds_back))
+
     if status.startswith('2'):
         outcome = AuditOutcome.OK
     else:
         outcome = AuditOutcome.Error
 
-    request_id = audit_log.insert(source, AuditEvent.Request_Received, object_name, cid=cid,
+    _ = audit_log.insert(source, AuditEvent.Request_Received, object_name, cid=cid,
         outcome=AuditOutcome.OK, ext_client_id=_caller)
 
-    response_id = audit_log.insert(source, AuditEvent.Response_Sent, object_name, cid=cid,
+    _ = audit_log.insert(source, AuditEvent.Response_Sent, object_name, cid=cid,
         outcome=outcome, status=status, ext_client_id=_caller, duration_ms=20)
-
-    if seconds_back:
-        event_time = now - timedelta(seconds=seconds_back)
-
-        statement = update(event_table)
-        statement = statement.where(event_table.c.id.in_([request_id, response_id]))
-        statement = statement.values(event_time=event_time)
-
-        with engine.begin() as connection:
-            _ = connection.execute(statement)
 
 # ################################################################################################################################
 

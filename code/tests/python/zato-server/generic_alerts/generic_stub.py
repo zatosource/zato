@@ -23,6 +23,7 @@ from zato.common.odb.model import GenericConn, Job, Service
 from zato.common.util.sql import parse_instance_opaque_attr
 from zato.server.service.internal.generic.connection import Create
 from zato.server.service.internal.generic.get_list import GetList
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -327,7 +328,7 @@ def add_job(session_factory:'any_', job_id:'int', name:'str') -> 'None':
     session = session_factory()
     service = session.query(Service).filter(Service.name==Service_Name).one()
     job = Job(job_id, name, True, SCHEDULER.JOB_TYPE.INTERVAL_BASED, datetime(2026, 1, 1), '', service=service)
-    session.add(job)
+    seed_config_objects(session, [job])
     session.commit()
     session.close()
 

@@ -23,6 +23,7 @@ from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditS
 from zato.common.audit_log.common import MCPAttr
 from zato.common.odb.model import GenericConn, GenericObject, HTTPBasicAuth
 from zato.common.typing_ import cast_
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # Test helpers
 from explain_helpers import _llm_conn_name, _server_name, _LLMFacade, LLMTestHandler, \
@@ -89,14 +90,14 @@ def _seed_gateway(session_maker:'any_', *, groups_as_names:'bool'=False) -> 'Non
 
     for caller_id, caller_name in zip(_caller_ids, _caller_names):
         security = HTTPBasicAuth(caller_id, caller_name, True, caller_name, 'MCP agents', 'secret')
-        session.add(security)
+        seed_config_objects(session, [security])
 
     group = cast_('any_', GenericObject())
     group.id = _group_id
     group.name = _group_name
     group.type_ = Groups.Type.Group_Parent
     group.subtype = Groups.Type.API_Clients
-    session.add(group)
+    seed_config_objects(session, [group])
 
     # A member is stored as `<sec type>-<security id>-<group id>`
     for caller_id in _caller_ids:
@@ -105,7 +106,7 @@ def _seed_gateway(session_maker:'any_', *, groups_as_names:'bool'=False) -> 'Non
         member.type_ = Groups.Type.Group_Member
         member.subtype = Groups.Type.API_Clients
         member.parent_object_id = _group_id
-        session.add(member)
+        seed_config_objects(session, [member])
 
     if groups_as_names:
         security_groups = [_group_name]
@@ -138,7 +139,7 @@ def _seed_gateway(session_maker:'any_', *, groups_as_names:'bool'=False) -> 'Non
     row.pool_size = 1
     row.opaque1 = json.dumps(opaque)
 
-    session.add(row)
+    seed_config_objects(session, [row])
     session.commit()
     session.close()
 

@@ -10,19 +10,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from datetime import timedelta
 from json import dumps
 
-# SQLAlchemy
-from sqlalchemy import update
-
 # Zato
 from zato.common.alerting.collectors.common import Probe_Source_Test_Transfer
 from zato.common.alerting.collectors.evidence import collect_baseline, collect_deliveries, collect_failed_events, \
     collect_measure_rows, collect_quarantined, collect_test_transfers, collect_troubled_runs, collect_verify_failed, \
     measure_to_evidence
-from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.file_transfer_run import Run_Status_Clean, Run_Status_Failed, Run_Status_Interrupted, \
     Run_Status_List_Failed
 from zato.common.util.api import utcnow
+from zato.common.test.direct_sql.seed import SeedAuditLog
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,16 +43,6 @@ _other_schedule_name = 'other.invoices.in'
 _window_seconds = 3600
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _backdate(event_id:'int', event_time:'datetime') -> 'None':
-    engine = get_database_engine()
-
-    statement = update(event_table).where(event_table.c.id == event_id).values(event_time=event_time)
-
-    with engine.begin() as connection:
-        _ = connection.execute(statement)
-
 # ################################################################################################################################
 
 def _fact(object_name:'str'=_conn_name, source:'str'=AuditSource.File_Outgoing, window_seconds:'int'=_window_seconds) -> 'dict':
@@ -109,8 +97,8 @@ class TestFailedEvents:
         _ = _seed_transfer(audit_log, 'err-1', AuditOutcome.Error, data='Permission denied', endpoint='/outbox/INV-1.xml')
         _ = _seed_transfer(audit_log, 'err-other', AuditOutcome.Error, object_name=_other_conn_name, data='Other')
 
-        old_id = _seed_transfer(audit_log, 'err-old', AuditOutcome.Error, data='Too old')
-        _backdate(old_id, now - timedelta(seconds=_window_seconds + 60))
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=_window_seconds + 60))
+        _ = _seed_transfer(seed_audit_log, 'err-old', AuditOutcome.Error, data='Too old')
 
         _ = _seed_transfer(audit_log, 'err-2', AuditOutcome.Error, data='Connection reset', endpoint='/outbox/INV-2.xml')
 
@@ -142,8 +130,8 @@ class TestFailedEvents:
 
         _ = _seed_transfer(audit_log, 'err-1', AuditOutcome.Error, data='Now')
 
-        old_id = _seed_transfer(audit_log, 'err-old', AuditOutcome.Error, data='Weeks ago')
-        _backdate(old_id, now - timedelta(days=30))
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(days=30))
+        _ = _seed_transfer(seed_audit_log, 'err-old', AuditOutcome.Error, data='Weeks ago')
 
         rows = collect_failed_events(engine, _fact(window_seconds=0), now)
 
@@ -166,8 +154,8 @@ class TestTroubledRuns:
         _ = _seed_run(audit_log, 'run-list-failed', _schedule_name, AuditOutcome.OK, Run_Status_List_Failed)
         _ = _seed_run(audit_log, 'run-other', _other_schedule_name, AuditOutcome.Error, Run_Status_Failed)
 
-        old_id = _seed_run(audit_log, 'run-old', _schedule_name, AuditOutcome.Error, Run_Status_Failed)
-        _backdate(old_id, now - timedelta(seconds=_window_seconds + 60))
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=_window_seconds + 60))
+        _ = _seed_run(seed_audit_log, 'run-old', _schedule_name, AuditOutcome.Error, Run_Status_Failed)
 
         rows = collect_troubled_runs(engine, _fact(_schedule_name), now)
 
@@ -192,8 +180,8 @@ class TestDeliveries:
         _ = _seed_delivery(audit_log, 'del-other', _other_schedule_name)
         _ = _seed_delivery(audit_log, 'del-2', _schedule_name)
 
-        old_id = _seed_delivery(audit_log, 'del-old', _schedule_name)
-        _backdate(old_id, now - timedelta(seconds=_window_seconds + 60))
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=_window_seconds + 60))
+        _ = _seed_delivery(seed_audit_log, 'del-old', _schedule_name)
 
         rows = collect_deliveries(engine, _fact(_schedule_name), now)
 

@@ -14,17 +14,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import timedelta
 
-# SQLAlchemy
-from sqlalchemy import update
-
 # Zato
 from zato.common.alerting.collectors import channel_sources, collect_error_rate_facts, collect_facts, \
     collect_outgoing_status_facts, outgoing_sources, Measure_Connection_Failures, Measure_Status_Codes, \
     Window_Seconds_By_Measure_Key
-from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import TransportStatus
 from zato.common.util.api import utcnow
+from zato.common.test.direct_sql.seed import SeedAuditLog
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,20 +47,6 @@ _other_conn_name = 'billing.api'
 _window_seconds = 3600
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _backdate(event_id:'int', event_time:'datetime') -> 'None':
-    """ Moves one stored event back in time.
-    """
-    engine = get_database_engine()
-
-    statement = update(event_table)
-    statement = statement.where(event_table.c.id == event_id)
-    statement = statement.values(event_time=event_time)
-
-    with engine.begin() as connection:
-        _ = connection.execute(statement)
-
 # ################################################################################################################################
 
 def _seed_call(audit_log:'AuditLog', cid:'str', status:'str', *, object_name:'str'=_conn_name,
@@ -158,8 +142,8 @@ class TestOutgoingStatusFacts:
         engine = get_database_engine()
         now = utcnow()
 
-        old_id = _seed_call(audit_log, 'old-1', '503 Service Unavailable')
-        _backdate(old_id, now - timedelta(seconds=_window_seconds + 60))
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=_window_seconds + 60))
+        _ = _seed_call(seed_audit_log, 'old-1', '503 Service Unavailable')
 
         _ = _seed_call(audit_log, 'new-1', '503 Service Unavailable')
 

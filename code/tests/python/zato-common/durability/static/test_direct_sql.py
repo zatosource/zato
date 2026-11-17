@@ -48,6 +48,36 @@ class ModuleCtx:
     # The methods that build a statement which changes the rows of a table
     Table_Write_Methods = frozenset({'insert', 'update', 'delete'})
 
+    # The methods of an ORM session that write the objects they are given
+    Session_Write_Methods = frozenset({
+        'add',
+        'add_all',
+        'merge',
+        'delete',
+        'bulk_save_objects',
+        'bulk_insert_mappings',
+        'bulk_update_mappings',
+    })
+
+    # The methods of an ORM query that change the rows it selects
+    Query_Write_Methods = frozenset({'update', 'delete'})
+
+    # The functions that build a statement which changes the rows of the table they are given
+    Write_Functions = frozenset({
+        'sqlalchemy.insert',
+        'sqlalchemy.update',
+        'sqlalchemy.delete',
+        'sqlalchemy.sql.insert',
+        'sqlalchemy.sql.update',
+        'sqlalchemy.sql.delete',
+        'sqlalchemy.sql.expression.insert',
+        'sqlalchemy.sql.expression.update',
+        'sqlalchemy.sql.expression.delete',
+        'sqlalchemy.dialects.mysql.insert',
+        'sqlalchemy.dialects.postgresql.insert',
+        'sqlalchemy.dialects.sqlite.insert',
+    })
+
     # The methods that run a statement
     Execute_Methods = frozenset({'execute', 'executemany', 'executescript', 'exec_driver_sql'})
 
@@ -55,7 +85,7 @@ class ModuleCtx:
     Write_Statement = re.compile(r'^\s*(insert|update|delete|replace|create|drop|alter|truncate|copy)\b', re.IGNORECASE)
 
     # The statements that administer the database server of a test container, which change no table of a database
-    Server_Statement = re.compile(r'^\s*(create|drop|alter)\s+(role|user|extension|tablespace|database)\b', re.IGNORECASE)
+    Server_Statement = re.compile(r'^\s*(create|drop|alter)\s+(role|user|extension|tablespace|database|system)\b', re.IGNORECASE)
 
     # The functions that turn a literal into a statement
     Text_Functions = frozenset({'text', 'sqlalchemy.text', 'sqlalchemy.sql.text', 'sqlalchemy.sql.expression.text'})
@@ -108,6 +138,32 @@ def _is_write_statement(node:'ast.expr', aliases:'strdict') -> 'bool':
 
 # ################################################################################################################################
 
+def _is_session(node:'ast.expr') -> 'bool':
+    """ Whether an expression names an ORM session, as a session of config.db or of the Zato database is named in the tests.
+    """
+    if isinstance(node, ast.Name):
+        out = node.id == 'session' or node.id.endswith('_session')
+    elif isinstance(node, ast.Attribute):
+        out = node.attr in ('session', '_session')
+    else:
+        out = False
+
+    return out
+
+# ################################################################################################################################
+
+def _is_query(node:'ast.expr') -> 'bool':
+    """ Whether an expression is a chain of calls that starts with the query of an ORM session.
+    """
+    while isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+        if node.func.attr == 'query':
+            return True
+        node = node.func.value
+
+    return False
+
+# ################################################################################################################################
+
 def _get_direct_writes(tree:'ast.Module', aliases:'strdict') -> 'list[int]':
     """ Returns the line of each statement that changes rows or the schema which a module builds or runs itself.
     """
@@ -117,14 +173,27 @@ def _get_direct_writes(tree:'ast.Module', aliases:'strdict') -> 'list[int]':
         if not isinstance(node, ast.Call):
             continue
 
+        # A function of SQLAlchemy that builds the write of a table ..
+        if get_dotted_name(node.func, aliases) in ModuleCtx.Write_Functions:
+            out.append(node.lineno)
+            continue
+
         if not isinstance(node.func, ast.Attribute):
             continue
 
         method = node.func.attr
         receiver = ast.unparse(node.func.value).lower()
 
-        # A table's own insert, update or delete ..
+        # .. a table's own insert, update or delete ..
         if method in ModuleCtx.Table_Write_Methods and not node.args and 'table' in receiver:
+            out.append(node.lineno)
+
+        # .. an object that an ORM session writes ..
+        elif method in ModuleCtx.Session_Write_Methods and _is_session(node.func.value):
+            out.append(node.lineno)
+
+        # .. the rows that an ORM query changes ..
+        elif method in ModuleCtx.Query_Write_Methods and _is_query(node.func.value):
             out.append(node.lineno)
 
         # .. or a literal statement that a connection or a cursor runs.

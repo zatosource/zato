@@ -33,6 +33,7 @@ from zato.common.odb.model import Base, ChannelAMQP, GenericConn, GenericObject,
     IntervalBasedJob, Job, OutgoingAMQP, OutgoingOdoo, PubSubPermission, PubSubSubscription, PubSubTopic, SecurityBase, \
     Service, SMTP, SQLConnectionPool
 from zato.common.test.config_database import config_database_engine
+from zato.common.test.direct_sql.seed import seed_config_objects, seed_config_row
 from zato.common.typing_ import cast_
 from zato.common.util.sql import parse_instance_opaque_attr
 
@@ -119,9 +120,9 @@ def session(tmp_path:'Path') -> 'any_':
 
         session.info[Session_Key_Crypto_Manager] = ServerCryptoManager.from_secret_key(ServerCryptoManager.generate_key())
 
-        session.add(Service(None, _service_name, True, 'enmasse.should_delete.Service', False))
-        session.add(Service(None, HTTP_SOAP.HealthCheck.Dispatch_Service, True,
-            'zato.server.service.internal.connection.HealthCheckRun', True))
+        seed_config_objects(session, [Service(None, _service_name, True, 'enmasse.should_delete.Service', False)])
+        seed_config_objects(session, [Service(None, HTTP_SOAP.HealthCheck.Dispatch_Service, True,
+            'zato.server.service.internal.connection.HealthCheckRun', True)])
 
         session.commit()
 
@@ -144,19 +145,16 @@ def importer() -> 'any_':
 
 def _add_security(session:'any_', name:'str') -> 'any_':
     row = HTTPBasicAuth(None, name, True, 'user', 'realm', 'password')
-    session.add(row)
+    seed_config_objects(session, [row])
     session.commit()
     return row
 
 # ################################################################################################################################
 
 def _insert(session:'any_', table:'any_', **values:'any_') -> 'any_':
-    """ Inserts one row through the table directly - for the models whose constructors do not accept every column.
+    """ Seeds one row of the table - for the models whose constructors do not accept every column.
     """
-    result = session.execute(table.insert().values(**values))
-    session.commit()
-
-    out = result.inserted_primary_key[0]
+    out = seed_config_row(session, table, values)
     return out
 
 # ################################################################################################################################
@@ -209,7 +207,7 @@ def _insert_model(section:'str', session:'any_', name:'str') -> 'any_':
     else:
         row = PubSubTopic(name=name, is_active=True)
 
-    session.add(row)
+    seed_config_objects(session, [row])
     session.commit()
 
     out = row.id
@@ -263,7 +261,7 @@ def _create_object(section:'str', session:'any_', name:'str'=_object_name) -> 'a
     else:
         row = _add_security_keyed(section, session)
 
-    session.add(row)
+    seed_config_objects(session, [row])
     session.commit()
 
     out = row.id
@@ -407,7 +405,7 @@ class TestResolutionAndServices:
 
         first = PubSubPermission(pattern='orders.*', access_type='publisher', sec_base_id=security.id)
         second = PubSubPermission(pattern='invoices.*', access_type='subscriber', sec_base_id=security.id)
-        session.add_all([first, second])
+        seed_config_objects(session, [first, second])
         session.commit()
 
         _ = importer.sync_from_yaml({'pubsub_permission': [_marked_item('pubsub_permission')]}, session)

@@ -84,13 +84,16 @@ class ModuleCtx:
         Mechanism.Takeover,
     })
 
-    # The statements of a seed, which creates and removes seed rows and its scratch tables, and never changes a row
+    # The statements of a seed, which creates and removes seed rows and its scratch tables, refreshes the statistics
+    # of the tables it filled, and never changes a row
     Seed_Statements = frozenset({
         'insert',
         'copy',
         'delete',
+        'truncate',
         'create',
         'drop',
+        'vacuum',
     })
 
 # ################################################################################################################################

@@ -14,14 +14,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import timedelta
 
-# SQLAlchemy
-from sqlalchemy import update
-
 # Zato
 from zato.common.alerting.collectors import collect_ack_code_facts, collect_consecutive_failure_facts, \
     collect_error_rate_facts, collect_facts, collect_latency_facts, collect_mllp_connection_failure_facts, \
     Default_Consecutive_Depth, Measure_Ack_Codes, Measure_Connection_Failures, Window_Seconds_By_Measure_Key
-from zato.common.audit_log.api import event_table, AuditLog, AuditSource
+from zato.common.audit_log.api import AuditLog, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.destination.audit import record_hop
 from zato.common.destination.constants import DestinationType
@@ -29,6 +26,7 @@ from zato.common.destination.model import new_entry
 from zato.common.hl7.audit import audit_ack_received, audit_message_sent, ACKStatus
 from zato.common.hl7.mllp.ack import validate_ack
 from zato.common.util.api import utcnow
+from zato.common.test.direct_sql.seed import SeedAuditLog
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -66,20 +64,6 @@ _message_text = 'MSH|^~\\&|ZATO|ZATO|LAB|LAB_SYSTEM|20260914||ORU^R01|MSG-1|P|2.
 _reject_text = 'Unknown patient'
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _backdate(event_id:'int', event_time:'datetime') -> 'None':
-    """ Moves one stored event back in time.
-    """
-    engine = get_database_engine()
-
-    statement = update(event_table)
-    statement = statement.where(event_table.c.id == event_id)
-    statement = statement.values(event_time=event_time)
-
-    with engine.begin() as connection:
-        _ = connection.execute(statement)
-
 # ################################################################################################################################
 
 def _seed_message(
@@ -208,10 +192,10 @@ class TestAckCodes:
         engine = get_database_engine()
         now = utcnow()
 
-        old_id = _seed_message(audit_log, 'old-1', 'AR')
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=_window_seconds * 2))
+        _ = _seed_message(seed_audit_log, 'old-1', 'AR')
         _ = _seed_message(audit_log, 'new-1', 'AE')
 
-        _backdate(old_id, now - timedelta(seconds=_window_seconds * 2))
 
         fact = _fact_of(collect_ack_code_facts(engine, _window_seconds, now), _conn_name)
 
@@ -285,10 +269,10 @@ class TestConnectionFailures:
         engine = get_database_engine()
         now = utcnow()
 
-        old_id = _seed_message(audit_log, 'old-1', ACKStatus.Timeout)
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=_window_seconds * 2))
+        _ = _seed_message(seed_audit_log, 'old-1', ACKStatus.Timeout)
         _ = _seed_message(audit_log, 'new-1', ACKStatus.Timeout)
 
-        _backdate(old_id, now - timedelta(seconds=_window_seconds * 2))
 
         fact = _fact_of(collect_mllp_connection_failure_facts(engine, _window_seconds, now), _conn_name)
 
@@ -431,16 +415,14 @@ class TestCollectFacts:
         engine = get_database_engine()
         now = utcnow()
 
-        old_ack_id = _seed_message(audit_log, 'win-1', 'AR')
-        old_timeout_id = _seed_message(audit_log, 'win-2', ACKStatus.Timeout)
-        _ = _seed_message(audit_log, 'win-3', 'AE')
-        _ = _seed_message(audit_log, 'win-4', ACKStatus.Timeout)
-
         # The older reject and timeout are half an hour old - outside ten-minute windows of their own,
         # inside the hour of everything else
-        for event_id in (old_ack_id, old_timeout_id):
-            _backdate(event_id - 1, now - timedelta(seconds=1800))
-            _backdate(event_id, now - timedelta(seconds=1800))
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=1800))
+        _ = _seed_message(seed_audit_log, 'win-1', 'AR')
+        _ = _seed_message(seed_audit_log, 'win-2', ACKStatus.Timeout)
+
+        _ = _seed_message(audit_log, 'win-3', 'AE')
+        _ = _seed_message(audit_log, 'win-4', ACKStatus.Timeout)
 
         windows = {Measure_Ack_Codes: 600, Measure_Connection_Failures: 600}
         facts = collect_facts(engine, {}, AuditSource.MLLP_Outgoing, now, window_seconds=_window_seconds,

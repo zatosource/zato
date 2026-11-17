@@ -20,6 +20,7 @@ from zato.common.api import GENERIC, HTTP_SOAP
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.odb.model import GenericConn, HTTPBasicAuth
 from zato.common.typing_ import cast_
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # Test helpers
 from explain_helpers import _llm_conn_name, _server_name, _LLMFacade, LLMTestHandler, \
@@ -73,7 +74,7 @@ def _seed_connection(session_maker:'any_') -> 'None':
     session = session_maker()
 
     security = HTTPBasicAuth(None, _security_name, True, 'ehr', 'Zato', 'never-shown')
-    session.add(security)
+    seed_config_objects(session, [security])
     session.flush()
 
     opaque = {
@@ -99,7 +100,7 @@ def _seed_connection(session_maker:'any_') -> 'None':
     row.pool_size = 10
     row.opaque1 = json.dumps(opaque)
 
-    session.add(row)
+    seed_config_objects(session, [row])
     session.commit()
     session.close()
 

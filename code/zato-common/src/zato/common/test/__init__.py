@@ -44,6 +44,7 @@ from zato.input_output import IOProcessor
 
 # Python 2/3 compatibility
 from zato.common.py23_.past.builtins import basestring, cmp, xrange
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -623,7 +624,7 @@ class ODBTestCase(TestCase):
 
         session = self.session_wrapper._session
 
-        session.add(item)
+        seed_config_objects(session, [item])
         session.commit()
 
         session = self.session_wrapper._session

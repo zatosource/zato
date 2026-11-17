@@ -15,6 +15,7 @@ from sqlalchemy import text
 # Zato
 from zato.common.db_env.engine import call_database
 from zato.common.pubsub.sql.schema import message_table, topic_sub_table
+from zato.common.rule_engine.sql.schema import rule_version_table
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -71,6 +72,19 @@ def restore_previous_generation(engine:'Engine') -> 'None':
     of the generation leaves behind.
     """
     _ = call_database(engine, _execute, engine, ModuleCtx.Previous_Generation)
+
+# ################################################################################################################################
+
+def tamper_rule_version(engine:'Engine', definition_id:'int', version:'int', document:'str') -> 'None':
+    """ Replaces the stored document of one version of a rule definition without the store, which is what a change
+    made to the database outside of Zato leaves behind.
+    """
+    statement = rule_version_table.update()
+    statement = statement.where(rule_version_table.c.definition_id == definition_id)
+    statement = statement.where(rule_version_table.c.version == version)
+    statement = statement.values(document=document)
+
+    _ = call_database(engine, _execute, engine, statement)
 
 # ################################################################################################################################
 # ################################################################################################################################

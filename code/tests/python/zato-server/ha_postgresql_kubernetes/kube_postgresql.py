@@ -20,6 +20,7 @@ import time
 from kube_cluster import apply_manifest, load_image, ModuleCtx as ClusterCtx, wait_for_rollout
 from kube_env import create_cluster_session, create_secret, KubeBackend, KubeSession, ModuleCtx as EnvCtx
 from zato.common.crypto.api import CryptoManager
+from zato.common.test.direct_sql.reset import recreate_public_schema
 from zato.common.test.pubsub_database import _write_tls_setup_script, connect, get_container_settings, \
     ModuleCtx as DatabaseCtx, PubSubDatabase, PubSubDBMode
 
@@ -109,9 +110,8 @@ class KubePostgreSQL(KubeBackend):
         """
         connection = connect(self.database, is_admin=True)
         connection.autocommit = True
-        cursor = connection.cursor()
-        cursor.execute('drop schema public cascade')
-        cursor.execute('create schema public')
+
+        recreate_public_schema(connection)
         connection.close()
 
 # ################################################################################################################################

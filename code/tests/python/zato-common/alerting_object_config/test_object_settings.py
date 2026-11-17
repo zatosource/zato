@@ -31,6 +31,7 @@ from zato.common.json_internal import dumps
 from zato.common.odb.model import GenericConn, HTTPSOAP
 from zato.common.test.config_database import config_database_engine
 from zato.common.typing_ import cast_
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -117,7 +118,7 @@ def _add_connection(session:'SASession', name:'str', conn_type:'str', opaque:'st
     item.is_outconn = True
     item.opaque1 = dumps(opaque)
 
-    session.add(item)
+    seed_config_objects(session, [item])
     session.commit()
 
 # ################################################################################################################################
@@ -141,7 +142,7 @@ def _add_http_soap(
     item.soap_action = ''
     item.opaque1 = dumps(opaque)
 
-    session.add(item)
+    seed_config_objects(session, [item])
     session.commit()
 
 # ################################################################################################################################

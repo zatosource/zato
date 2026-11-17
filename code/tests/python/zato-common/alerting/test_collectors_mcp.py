@@ -15,9 +15,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import timedelta
 
-# SQLAlchemy
-from sqlalchemy import update
-
 # Zato
 from zato.common.alerting.collectors import collect_auth_failure_facts, collect_consecutive_failure_facts, \
     collect_error_rate_facts, collect_facts, collect_latency_facts, Measure_Invalid_Calls, Measure_Repeat_Calls, \
@@ -30,6 +27,7 @@ from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import MCPAttr
 from zato.common.json_internal import dumps
 from zato.common.util.api import utcnow
+from zato.common.test.direct_sql.seed import SeedAuditLog
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -66,20 +64,6 @@ _window_seconds = 3600
 _method_tools_call = 'tools/call'
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _backdate(event_id:'int', event_time:'datetime') -> 'None':
-    """ Moves one stored event back in time.
-    """
-    engine = get_database_engine()
-
-    statement = update(event_table)
-    statement = statement.where(event_table.c.id == event_id)
-    statement = statement.values(event_time=event_time)
-
-    with engine.begin() as connection:
-        _ = connection.execute(statement)
-
 # ################################################################################################################################
 
 def _newest_event_id() -> 'int':
@@ -203,8 +187,8 @@ class TestInvalidCalls:
         now = utcnow()
 
         _ = _seed_invalid_call(audit_log, Error_Code_Method_Not_Found)
-        old_id = _seed_invalid_call(audit_log, Error_Code_Method_Not_Found)
-        _backdate(old_id, now - timedelta(seconds=_window_seconds + 60))
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=_window_seconds + 60))
+        _ = _seed_invalid_call(seed_audit_log, Error_Code_Method_Not_Found)
 
         fact = _fact_of(collect_invalid_call_facts(engine, _window_seconds, now), _gateway_name)
 
@@ -334,8 +318,8 @@ class TestVolume:
         now = utcnow()
 
         _ = _seed_tool_call(audit_log, size=1000)
-        old_id = _seed_tool_call(audit_log, size=90000)
-        _backdate(old_id, now - timedelta(seconds=_window_seconds + 60))
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=_window_seconds + 60))
+        _ = _seed_tool_call(seed_audit_log, size=90000)
 
         fact = _fact_of(collect_volume_facts(engine, _window_seconds, now), _gateway_name)
 
@@ -409,8 +393,8 @@ class TestRepeatCalls:
 
         _ = _seed_tool_call(audit_log)
         _ = _seed_tool_call(audit_log)
-        old_id = _seed_tool_call(audit_log)
-        _backdate(old_id, now - timedelta(seconds=_window_seconds + 60))
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=_window_seconds + 60))
+        _ = _seed_tool_call(seed_audit_log)
 
         fact = _fact_of(collect_repeat_call_facts(engine, _window_seconds, now), _gateway_name)
 

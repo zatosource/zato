@@ -117,16 +117,28 @@ Audit_Tables_Not_Guarded = ('alert',)
 
 # The functions of the package of direct writes of the tests, each with the one purpose it serves.
 Direct_SQL_Purposes = (
-    ('code/zato-common/src/zato/common/test/direct_sql/fault.py', 'interrupt_topic_rename',     'Fault injection'),
-    ('code/zato-common/src/zato/common/test/direct_sql/fault.py', 'remove_topic_subscriptions', 'Fault injection'),
+    ('code/zato-common/src/zato/common/test/direct_sql/fault.py', 'interrupt_topic_rename',      'Fault injection'),
+    ('code/zato-common/src/zato/common/test/direct_sql/fault.py', 'remove_topic_subscriptions',  'Fault injection'),
     ('code/zato-common/src/zato/common/test/direct_sql/fault.py', 'restore_previous_generation', 'Fault injection'),
-    ('code/zato-common/src/zato/common/test/direct_sql/reset.py', 'reset_tables',               'Resetting tables between tests'),
-    ('code/zato-common/src/zato/common/test/direct_sql/reset.py', 'reset_table_rows',           'Resetting tables between tests'),
-    ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'run_seed',                   'Seeding test data in bulk'),
-    ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_rows',                  'Seeding test data in bulk'),
-    ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_row',                   'Seeding test data in bulk'),
-    ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_audit_events',          'Seeding test data in bulk'),
-    ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_autocommit_connection', 'Seeding test data in bulk'),
+    ('code/zato-common/src/zato/common/test/direct_sql/fault.py', 'tamper_rule_version',         'Fault injection'),
+    ('code/zato-common/src/zato/common/test/direct_sql/reset.py', 'reset_tables',                'Resetting tables between tests'),
+    ('code/zato-common/src/zato/common/test/direct_sql/reset.py', 'reset_table_rows',            'Resetting tables between tests'),
+    ('code/zato-common/src/zato/common/test/direct_sql/reset.py', 'truncate_tables',             'Resetting tables between tests'),
+    ('code/zato-common/src/zato/common/test/direct_sql/reset.py', 'recreate_tables',             'Resetting tables between tests'),
+    ('code/zato-common/src/zato/common/test/direct_sql/reset.py', 'delete_shared_objects',       'Resetting tables between tests'),
+    ('code/zato-common/src/zato/common/test/direct_sql/reset.py', 'recreate_public_schema',      'Resetting tables between tests'),
+    ('code/zato-common/src/zato/common/test/direct_sql/reset.py', 'delete_config_job',           'Resetting tables between tests'),
+    ('code/zato-common/src/zato/common/test/direct_sql/reset.py', 'delete_generic_connections',  'Resetting tables between tests'),
+    ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'run_seed',                    'Seeding test data in bulk'),
+    ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_rows',                   'Seeding test data in bulk'),
+    ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_row',                    'Seeding test data in bulk'),
+    ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_bulk',                   'Seeding test data in bulk'),
+    ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'refresh_statistics',          'Seeding test data in bulk'),
+    ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_config_row',             'Seeding test data in bulk'),
+    ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_config_objects',         'Seeding test data in bulk'),
+    ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_audit_events',           'Seeding test data in bulk'),
+    ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_event',                  'Seeding test data in bulk'),
+    ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_autocommit_connection',  'Seeding test data in bulk'),
 )
 
 # The tests of the write path itself, which run its mechanisms and write outside of them on purpose.

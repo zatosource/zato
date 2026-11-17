@@ -21,6 +21,7 @@ from zato.common.odb.model import GenericConn, GenericConnClient, GenericConnSec
     SecurityBase, Service
 from zato.common.test.config_database import config_database_engine
 from zato.server.service.internal.generic import connection as connection_module
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # The test doubles live next to the tests and are imported flat
 sys.path.insert(0, os.path.dirname(__file__))
@@ -74,7 +75,7 @@ def session_factory(tmp_path:'Path') -> 'any_':
         factory = sessionmaker(bind=engine)
 
         session = factory()
-        session.add(Service(None, Service_Name, True, 'zato.server.service.internal.connection.HealthCheckRun', True))
+        seed_config_objects(session, [Service(None, Service_Name, True, 'zato.server.service.internal.connection.HealthCheckRun', True)])
         session.commit()
         session.close()
 

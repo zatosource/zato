@@ -38,6 +38,8 @@ from zato.common.rule_engine.sql import RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
 from zato.common.test.config_database import config_database_engine
+from zato.common.test.direct_sql.reset import delete_config_job
+from zato.common.test.direct_sql.seed import seed_config_objects
 from zato.common.test.zato_database import file_database_engine
 from zato.common.typing_ import cast_
 from zato.common.util.scheduler import ensure_alerting_job_exists
@@ -172,7 +174,7 @@ def odb_session(tmp_path:'Path') -> 'any_':
         llm.is_internal = False
         llm.is_channel = False
         llm.is_outconn = True
-        session.add(llm)
+        seed_config_objects(session, [llm])
 
         session.commit()
 
@@ -393,10 +395,7 @@ class TestAlertNotificationsImport:
     ) -> 'None':
 
         # An environment that never started has no sweep job yet - the server creates it on its first start
-        job = odb_session.query(Job).filter(Job.name==Alerting.Job_Name).one()
-        odb_session.query(IntervalBasedJob).filter(IntervalBasedJob.job_id==job.id).delete()
-        odb_session.delete(job)
-        odb_session.commit()
+        delete_config_job(odb_session, Alerting.Job_Name)
 
         changed = alert_config_importer.sync_alert_notifications(yaml_config['alert_notifications'], odb_session)
         assert changed is True

@@ -37,6 +37,7 @@ from zato.common.odb.model import GenericConn, GenericConnDef, GenericObject, HT
     SMTP
 from zato.common.test.config_database import config_database_engine
 from zato.common.typing_ import cast_
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -146,7 +147,7 @@ def session(tmp_path:'Path') -> 'any_':
         smtp.is_debug = False
         smtp.mode = EMAIL.SMTP.MODE.STARTTLS
         smtp.ping_address = 'ping@example.com'
-        session.add(smtp)
+        seed_config_objects(session, [smtp])
 
         explainer = cast_('any_', GenericConn())
         explainer.name = _explainer_name
@@ -157,7 +158,7 @@ def session(tmp_path:'Path') -> 'any_':
         explainer.is_outconn = True
         explainer.address = 'http://ollama.internal:11434/v1'
         explainer.opaque1 = '{"model": "llama3.1"}'
-        session.add(explainer)
+        seed_config_objects(session, [explainer])
 
         session.commit()
 

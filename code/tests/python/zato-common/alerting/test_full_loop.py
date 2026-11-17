@@ -40,7 +40,7 @@ import pytest
 import requests
 
 # SQLAlchemy
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.engine import Engine
 
 # typing-extensions
@@ -59,6 +59,7 @@ from zato.common.rule_engine.sql import RuleSQLBackend
 from zato.common.test.zato_database import file_database_engine
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key
 from zato.common.util.api import utcnow
+from zato.common.test.direct_sql.seed import seed_event
 
 # Test helpers
 from chat_simulators import find_free_port
@@ -672,15 +673,9 @@ class TestFullLoop:
         schedule_name = 'Daily results'
 
         # The schedule's newest arrival, ten minutes back on a five-minute window
-        event_id = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Delivered, 'sftp.backups',
+        event_time = now - timedelta(seconds=600)
+        _ = seed_event(audit_log, event_time, AuditSource.File_Outgoing, AuditEvent.Delivered, 'sftp.backups',
             cid='loop-arrival-1', outcome=AuditOutcome.OK, attrs={'schedule': schedule_name})
-
-        statement = update(event_table)
-        statement = statement.where(event_table.c.id == event_id)
-        statement = statement.values(event_time=now - timedelta(seconds=600))
-
-        with engine.begin() as connection:
-            _ = connection.execute(statement)
 
         rules = load_alert_rules(backend)
 

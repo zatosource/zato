@@ -19,6 +19,7 @@ from sqlalchemy.orm import sessionmaker
 # Zato
 from zato.common.odb.model import HTTPSOAP, SecurityBase, Service
 from zato.common.test.config_database import config_database_engine
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # The test doubles live next to the tests and are imported flat
 sys.path.insert(0, os.path.dirname(__file__))
@@ -52,7 +53,7 @@ def session_factory(tmp_path:'Path') -> 'any_':
         factory = sessionmaker(bind=engine)
 
         session = factory()
-        session.add(Service(None, Service_Name, True, 'orders.OrdersGet', False))
+        seed_config_objects(session, [Service(None, Service_Name, True, 'orders.OrdersGet', False)])
         session.commit()
         session.close()
 

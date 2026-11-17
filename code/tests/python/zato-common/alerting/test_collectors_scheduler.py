@@ -15,9 +15,10 @@ from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditS
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.scheduler import Attr_Delay_Ms
 from zato.common.util.api import utcnow
+from zato.common.test.direct_sql.seed import SeedAuditLog, seed_event
 
 # Local
-from alerting_seeds import backdate, Server_Name, Window_Seconds
+from alerting_seeds import Server_Name, Window_Seconds
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -48,9 +49,9 @@ class TestSchedulerFacts:
         now = utcnow()
 
         # A job that last ran twenty minutes ago, on a five-minute interval
-        event_id = audit_log.insert(AuditSource.Scheduler, AuditEvent.Job_Executed, 'billing.sync',
+        event_time = now - timedelta(seconds=1200)
+        _ = seed_event(audit_log, event_time, AuditSource.Scheduler, AuditEvent.Job_Executed, 'billing.sync',
             cid='overdue-1', outcome=AuditOutcome.OK)
-        backdate(event_id, now - timedelta(seconds=1200))
 
         facts = collect_scheduler_facts(engine, Window_Seconds, now, {'billing.sync': 300})
 
@@ -64,9 +65,10 @@ class TestSchedulerFacts:
         engine = get_database_engine()
         now = utcnow()
 
-        event_id = audit_log.insert(AuditSource.Scheduler, AuditEvent.Job_Executed, 'one.time.job',
+        event_time = now - timedelta(seconds=1200)
+
+        _ = seed_event(audit_log, event_time, AuditSource.Scheduler, AuditEvent.Job_Executed, 'one.time.job',
             cid='onetime-1', outcome=AuditOutcome.OK)
-        backdate(event_id, now - timedelta(seconds=1200))
 
         facts = collect_scheduler_facts(engine, Window_Seconds, now, {})
 
@@ -106,11 +108,11 @@ class TestFileTransferArrivalFacts:
         now = utcnow()
 
         # An older arrival and a newer one - only the newer one sets the measure
-        older_id = self._seed_arrival(audit_log, 'arrival-1')
-        newer_id = self._seed_arrival(audit_log, 'arrival-2')
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=1200))
+        _ = self._seed_arrival(seed_audit_log, 'arrival-1')
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=600))
+        _ = self._seed_arrival(seed_audit_log, 'arrival-2')
 
-        backdate(older_id, now - timedelta(seconds=1200))
-        backdate(newer_id, now - timedelta(seconds=600))
 
         # A five-minute window, so the newest arrival is twice as old as expected
         facts = collect_file_transfer_facts(engine, now, {self._schedule_name: 300})
@@ -130,8 +132,8 @@ class TestFileTransferArrivalFacts:
         engine = get_database_engine()
         now = utcnow()
 
-        event_id = self._seed_arrival(audit_log, 'arrival-no-window-1')
-        backdate(event_id, now - timedelta(seconds=3600))
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=3600))
+        _ = self._seed_arrival(seed_audit_log, 'arrival-no-window-1')
 
         # No window on record for this schedule, so it is never measured
         facts = collect_file_transfer_facts(engine, now, {self._other_schedule_name: 300})
@@ -157,11 +159,11 @@ class TestFileTransferArrivalFacts:
         now = utcnow()
 
         # Two schedules whose newest arrivals are equally old ..
-        first_id = self._seed_arrival(audit_log, 'arrival-own-1')
-        second_id = self._seed_arrival(audit_log, 'arrival-own-2', schedule=self._other_schedule_name)
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=600))
+        _ = self._seed_arrival(seed_audit_log, 'arrival-own-1')
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=600))
+        _ = self._seed_arrival(seed_audit_log, 'arrival-own-2', schedule=self._other_schedule_name)
 
-        backdate(first_id, now - timedelta(seconds=600))
-        backdate(second_id, now - timedelta(seconds=600))
 
         # .. but whose windows differ, so their ratios differ too
         arrival_windows = {
@@ -183,8 +185,8 @@ class TestFileTransferArrivalFacts:
         engine = get_database_engine()
         now = utcnow()
 
-        event_id = self._seed_arrival(audit_log, 'arrival-flow-1')
-        backdate(event_id, now - timedelta(seconds=900))
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=900))
+        _ = self._seed_arrival(seed_audit_log, 'arrival-flow-1')
 
         facts = collect_facts(engine, {}, AuditSource.MLLP_Channel, now,
             window_seconds_by_source={AuditSource.File_Outgoing: {Measure_File_Runs: 86400}},

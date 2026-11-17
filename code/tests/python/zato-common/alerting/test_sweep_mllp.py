@@ -14,9 +14,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import timedelta
 
-# SQLAlchemy
-from sqlalchemy import update
-
 # Zato
 from zato.common.alerting.engine import AlertDefaults, AlertTransports
 from zato.common.alerting.object_config import alert_type_mllp_channel, get_defaults as get_object_defaults, \
@@ -25,12 +22,13 @@ from zato.common.alerting.seed.rules_common import channels_rules
 from zato.common.alerting.seed.rules_mllp import mllp_channel_rules
 from zato.common.alerting.sweep import run_sweep
 from zato.common.api import Alerting
-from zato.common.audit_log.api import event_table, AuditLog, AuditSource
+from zato.common.audit_log.api import AuditLog, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.hl7.audit import audit_ack_sent, audit_message_received
 from zato.common.rule_engine.loading import load_documents
 from zato.common.rule_engine.parser import parse_data_details
 from zato.common.util.api import utcnow
+from zato.common.test.direct_sql.seed import SeedAuditLog
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -136,24 +134,18 @@ def _load_rules() -> 'rule_engine_rule_list':
 def _seed_message(audit_log:'AuditLog', engine:'Engine', now:'datetime', cid:'str', ack_code:'str', *,
     object_name:'str'=_channel_name, seconds_back:'int'=0, duration_ms:'int'=20) -> 'None':
     """ Stores the message received and the acknowledgment sent that one message of a channel leaves behind,
-    moved back in time if asked to.
+    dated in the past if asked to.
     """
+    # A call in the past is seeded with its event time from the start
+    if seconds_back:
+        audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=seconds_back))
+
     attrs = {'msg_type': 'ADT^A01', 'mrn': '123', 'facility': _facility, 'ack_status': ''}
 
-    message_id = audit_message_received(audit_log, object_name, _message_text, cid=cid, msg_id=cid, attrs=attrs)
+    _ = audit_message_received(audit_log, object_name, _message_text, cid=cid, msg_id=cid, attrs=attrs)
 
-    ack_id = audit_ack_sent(audit_log, object_name, ack_code, _ack_text.format(code=ack_code), cid=cid, msg_id=cid,
+    _ = audit_ack_sent(audit_log, object_name, ack_code, _ack_text.format(code=ack_code), cid=cid, msg_id=cid,
         facility=_facility, duration_ms=duration_ms)
-
-    if seconds_back:
-        event_time = now - timedelta(seconds=seconds_back)
-
-        statement = update(event_table)
-        statement = statement.where(event_table.c.id.in_([message_id, ack_id]))
-        statement = statement.values(event_time=event_time)
-
-        with engine.begin() as connection:
-            _ = connection.execute(statement)
 
 # ################################################################################################################################
 

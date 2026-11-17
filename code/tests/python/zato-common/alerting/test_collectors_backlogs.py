@@ -15,9 +15,10 @@ from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditS
 from zato.common.db_env.database import get_database_engine
 from zato.common.monitoring.health import EndpointMetrics
 from zato.common.util.api import utcnow
+from zato.common.test.direct_sql.seed import seed_event
 
 # Local
-from alerting_seeds import backdate, Channel_Name, Other_Channel_Name, Server_Name
+from alerting_seeds import Channel_Name, Other_Channel_Name, Server_Name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,9 +31,9 @@ class TestOutstandingFacts:
         now = utcnow()
 
         # One message sent ten minutes ago, never acknowledged
-        event_id = audit_log.insert(AuditSource.MLLP_Outgoing, AuditEvent.Message_Sent, Channel_Name,
+        event_time = now - timedelta(seconds=600)
+        _ = seed_event(audit_log, event_time, AuditSource.MLLP_Outgoing, AuditEvent.Message_Sent, Channel_Name,
             cid='facts-mf-1', msg_id='MSG-facts-mf-1', outcome=AuditOutcome.OK)
-        backdate(event_id, now - timedelta(seconds=600))
 
         facts = collect_outstanding_facts(engine, AuditEvent.Message_Sent, AuditEvent.Ack_Received, now)
 

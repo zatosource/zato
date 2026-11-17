@@ -11,16 +11,13 @@ import os
 from contextlib import contextmanager
 from datetime import timedelta
 
-# SQLAlchemy
-from sqlalchemy import update
-
 # Zato
 from common import audit_log_env, delete_all_events
-from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource, event_table
-from zato.common.db_env.database import get_database_engine
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.reports import Range_Day
 from zato.common.audit_log.usage import get_object_options, get_usage, normalize_sources, usage_csv, Usage_Sources
 from zato.common.hl7.audit import audit_ack_sent
+from zato.common.test.direct_sql.seed import seed_event
 from zato.common.util.api import utcnow
 from zato.common.db_env.database_env import DatabaseEnv
 
@@ -203,18 +200,12 @@ class TestGetUsage:
             # A reprocessed message is recorded after the traffic it came from, so it lands
             # with a higher id than the exchanges it happened before ..
             audit_log = AuditLog(_server_name)
-            event_id = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Ack_Sent, _mllp_channel,
-                cid='cid-mllp-2', ext_client_id=_mllp_facility, outcome=AuditOutcome.OK)
 
             now = utcnow()
             older = now - timedelta(hours=1)
 
-            statement = update(event_table).where(event_table.c.id == event_id).values(event_time=older)
-
-            engine = get_database_engine()
-
-            with engine.begin() as connection:
-                _ = connection.execute(statement)
+            _ = seed_event(audit_log, older, AuditSource.MLLP_Channel, AuditEvent.Ack_Sent, _mllp_channel,
+                cid='cid-mllp-2', ext_client_id=_mllp_facility, outcome=AuditOutcome.OK)
 
             # .. and it is the older of the row's two calls, not the newer one.
             rows = get_usage(now, Range_Day, [AuditSource.MLLP_Channel], [_mllp_channel])

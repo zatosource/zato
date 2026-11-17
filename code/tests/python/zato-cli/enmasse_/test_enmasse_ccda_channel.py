@@ -24,6 +24,7 @@ from zato.cli.enmasse.importers.channel_rest import ChannelImporter
 from zato.common.api import DATA_FORMAT, HL7
 from zato.common.odb.model import GenericObject, HTTPSOAP, SecurityBase, Service
 from zato.common.test.config_database import config_database_engine
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,7 +80,7 @@ def session(tmp_path:'Path') -> 'any_':
         session_factory = sessionmaker(bind=engine)
         session = session_factory()
 
-        session.add(Service(None, _service_name, True, 'enmasse.ccda.Service', False))
+        seed_config_objects(session, [Service(None, _service_name, True, 'enmasse.ccda.Service', False)])
         session.commit()
 
         yield session

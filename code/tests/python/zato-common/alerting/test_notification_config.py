@@ -23,6 +23,7 @@ from zato.common.odb.model import IntervalBasedJob, Job, Service
 from zato.common.test.config_database import config_database_engine
 from zato.common.typing_ import cast_
 from zato.common.util.scheduler import ensure_alerting_job_exists
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -142,7 +143,7 @@ class TestSetNotificationConfig:
         # The extra already carries a key that is not ours to touch
         job = _get_sweep_job(odb_session)
         job.extra = json.dumps({'unrelated': 'stays'})
-        odb_session.add(job)
+        seed_config_objects(odb_session, [job])
         odb_session.commit()
 
         _ = set_notification_config(odb_session, _values)

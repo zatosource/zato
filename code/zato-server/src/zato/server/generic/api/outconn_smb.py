@@ -15,6 +15,7 @@ from traceback import format_exc
 # smbprotocol
 import smbclient
 from smbprotocol.exceptions import SMBOSError
+from smbprotocol.header import NtStatus
 
 # Zato
 from zato.common.api import SMB
@@ -259,15 +260,24 @@ class SMBClient:
         from_unc_path = self.to_unc(from_path)
         to_unc_path = self.to_unc(to_path)
 
-        # A rename always overwrites its target, which is why the target is created first if it does not exist yet -
-        # this is needed because some SMB server implementations report a missing target with a status code
-        # that the client library does not recognize, whereas an existing target is handled correctly everywhere ..
-        if not self.exists(to_path):
-            with smbclient.open_file(to_unc_path, mode='xb', **self.conn_kwargs):
-                pass
+        # A rename always overwrites its target, and the source takes its place in a single operation,
+        # which means that a reader of the target directory never finds an incomplete file under the target name ..
+        try:
+            smbclient.replace(from_unc_path, to_unc_path, **self.conn_kwargs)
 
-        # .. and now the source can replace the target.
-        smbclient.replace(from_unc_path, to_unc_path, **self.conn_kwargs)
+        except SMBOSError as e:
+
+            # .. some SMB server implementations report a missing target with a status code that the client library
+            # .. does not recognize, whereas an existing target is handled correctly everywhere,
+            # .. which is why for these servers the target is created first ..
+            if e.ntstatus == NtStatus.STATUS_NO_SUCH_FILE:
+                with smbclient.open_file(to_unc_path, mode='xb', **self.conn_kwargs):
+                    pass
+                smbclient.replace(from_unc_path, to_unc_path, **self.conn_kwargs)
+
+            # .. and any other status is an error of its own.
+            else:
+                raise
 
 # ################################################################################################################################
 # ################################################################################################################################

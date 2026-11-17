@@ -39,6 +39,7 @@ from zato.server.connection.email.imap import GenericIMAPConnection
 from zato.server.connection.sftp import SFTPConnection
 from zato.server.generic.api.outconn_llm import OutconnLLMWrapper
 from zato.server.generic.api.outconn_sftp import SFTPClient
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # Test helpers
 from live_config import IMAP_Password, LiveServer
@@ -349,7 +350,7 @@ def _seed_sftp_connection(session_maker:'any_', sftp_server:'any_') -> 'None':
     row.opaque1 = json.dumps(opaque)
 
     session = session_maker()
-    session.add(row)
+    seed_config_objects(session, [row])
     session.commit()
     session.close()
 

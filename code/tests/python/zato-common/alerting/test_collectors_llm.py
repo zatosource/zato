@@ -14,9 +14,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import timedelta
 
-# SQLAlchemy
-from sqlalchemy import update
-
 # Zato
 from zato.common.alerting.collectors import collect_facts, collect_llm_completion_facts, collect_llm_token_facts, \
     collect_outgoing_status_facts, Measure_Refusals, Measure_Tokens, Measure_Truncations, Window_Seconds_By_Measure_Key
@@ -25,6 +22,7 @@ from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.calls import record_remote_call
 from zato.common.audit_log.common import LLMAttr, LLMFinish, TransportStatus
 from zato.common.util.api import utcnow
+from zato.common.test.direct_sql.seed import SeedAuditLog
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,20 +55,6 @@ _status_ok = '200 OK'
 _status_rate_limited = '429 Too Many Requests'
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _backdate(event_id:'int', event_time:'datetime') -> 'None':
-    """ Moves one stored event back in time.
-    """
-    engine = get_database_engine()
-
-    statement = update(event_table)
-    statement = statement.where(event_table.c.id == event_id)
-    statement = statement.values(event_time=event_time)
-
-    with engine.begin() as connection:
-        _ = connection.execute(statement)
-
 # ################################################################################################################################
 
 def _seed_completion(
@@ -160,8 +144,8 @@ class TestTokens:
         now = utcnow()
 
         _ = _seed_completion(audit_log)
-        old_id = _seed_completion(audit_log, input_tokens=5000, output_tokens=5000)
-        _backdate(old_id, now - timedelta(seconds=_window_seconds + 60))
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=_window_seconds + 60))
+        _ = _seed_completion(seed_audit_log, input_tokens=5000, output_tokens=5000)
 
         fact = _fact_of(collect_llm_token_facts(engine, _window_seconds, now), _conn_name)
 
@@ -257,8 +241,8 @@ class TestCompletions:
         now = utcnow()
 
         _ = _seed_completion(audit_log, finish_reason=LLMFinish.Length)
-        old_id = _seed_completion(audit_log, finish_reason=LLMFinish.Length)
-        _backdate(old_id, now - timedelta(seconds=_window_seconds + 60))
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=_window_seconds + 60))
+        _ = _seed_completion(seed_audit_log, finish_reason=LLMFinish.Length)
 
         fact = _fact_of(collect_llm_completion_facts(engine, _window_seconds, now), _conn_name)
 

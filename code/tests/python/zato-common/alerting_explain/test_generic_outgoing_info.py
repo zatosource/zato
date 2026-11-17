@@ -25,6 +25,7 @@ from zato.common.api import GENERIC, HTTP_SOAP
 from zato.common.odb.model import GenericConn, SecurityBase
 from zato.common.test.config_database import config_database_engine
 from zato.common.typing_ import cast_
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -90,7 +91,7 @@ def _seed_connection(session_maker:'any_', type_:'str', opaque:'anydict') -> 'No
     row.pool_size = 5
     row.opaque1 = json.dumps(opaque)
 
-    session.add(row)
+    seed_config_objects(session, [row])
     session.commit()
     session.close()
 

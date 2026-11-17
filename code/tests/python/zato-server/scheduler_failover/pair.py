@@ -14,7 +14,6 @@ import logging
 import os
 import re
 import shutil
-import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -37,7 +36,9 @@ from failover import build_server_env, ContainerServer, create_container, docker
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.conftest_base_pubsub import find_free_port, patch_server_conf, render_template, \
     run_quickstart_and_enmasse, SessionState
-from zato.common.test.pubsub_database import connect, is_postgresql_mode
+from zato.common.db_env.database import get_database_engine
+from zato.common.test.direct_sql.reset import delete_shared_objects
+from zato.common.test.pubsub_database import is_postgresql_mode, pubsub_db_env
 from zato.common.test.receiver import WebhookReceiver
 
 # ################################################################################################################################
@@ -64,10 +65,8 @@ class ModuleCtx:
     Runtime_Image = 'zato-test-runtime:latest'
     Redis_Binary = '/usr/bin/redis-server'
 
-    # The service that each job invokes, the module it is in and its row in the configuration database.
-    Service_Name = 'test.scheduler.failover.record-run'
+    # The module of the service that each job invokes.
     Service_File_Name = 'zato_test_scheduler_run_log.py'
-    Service_Impl_Name = 'zato_test_scheduler_run_log.RecordRun'
 
     # The enmasse file with the jobs and the one with the pub/sub objects of the workload.
     Scheduler_Template = 'scheduler_failover/_enmasse_template.yaml'
@@ -228,26 +227,15 @@ def _patch_redis_port(server_directory:'str', port:'int') -> 'None':
 
 # ################################################################################################################################
 
-def add_service_row(quickstart_directory:'str') -> 'None':
-    """ Adds the service of the jobs to the configuration database, because the import of a job requires its service.
-    The server matches the row with the service from the pickup directory by its name.
+def _deploy_services(server:'SchedulerServer') -> 'None':
+    """ Starts the server once, before it has any jobs, which deploys the services of its pickup directory
+    into its configuration database, and stops it again, so that the jobs that invoke the services can be imported.
     """
-    odb_path = os.path.join(quickstart_directory, 'config.db')
-    connection = sqlite3.connect(odb_path)
+    run_container(server.server)
+    _ = wait_until_up(server.server)
 
-    try:
-        cursor = connection.cursor()
-        _ = cursor.execute('select max(id) from service')
-        service_id = cursor.fetchone()[0] + 1
-
-        _ = cursor.execute(
-            'insert into service (id, name, is_active, impl_name, is_internal, slow_threshold, opaque1) ' + \
-            'values (?, ?, 1, ?, 0, 99999, ?)',
-            (service_id, ModuleCtx.Service_Name, ModuleCtx.Service_Impl_Name, 'null'))
-
-        connection.commit()
-    finally:
-        connection.close()
+    _ = docker('stop', '--time', ModuleCtx.Stop_Timeout_Seconds, server.server.container_name)
+    remove_container(server.server)
 
 # ################################################################################################################################
 
@@ -294,14 +282,10 @@ def _new_server(
 
     quickstart_directory = os.path.dirname(server_directory)
 
-    # The service of the jobs is deployed from the pickup directory as the server starts,
-    # and its row exists before the jobs that invoke it are imported ..
+    # The service of the jobs is deployed from the pickup directory as the server starts ..
     pickup_dir = os.path.join(server_directory, 'pickup', 'incoming', 'services')
     service_path = os.path.join(os.path.dirname(__file__), ModuleCtx.Service_File_Name)
     _ = shutil.copy(service_path, pickup_dir)
-
-    add_service_row(quickstart_directory)
-    import_jobs(quickstart_directory, server_directory, rendered_yaml, {})
 
     # .. the server has its own Redis ..
     redis_port = find_free_port()
@@ -358,6 +342,10 @@ def _new_server(
         out.database_proxy = database_proxy
         out.http_proxy = http_proxy
 
+    # .. the server starts once to deploy the service, and the jobs that invoke it are imported after that.
+    _deploy_services(out)
+    import_jobs(quickstart_directory, server_directory, rendered_yaml, {})
+
     return out
 
 # ################################################################################################################################
@@ -365,18 +353,9 @@ def _new_server(
 def _clear_run_state(database:'PubSubDatabase') -> 'None':
     """ Deletes the run state that an earlier pair in the same database left behind.
     """
-    connection = connect(database)
-
-    try:
-        cursor = connection.cursor()
-        cursor.execute("select to_regclass('zato_shared_object')")
-        table = cursor.fetchall()[0][0]
-
-        if table:
-            cursor.execute('delete from zato_shared_object where object_type = %s', (ModuleCtx.Run_State_Object_Type,))
-            connection.commit()
-    finally:
-        connection.close()
+    with pubsub_db_env(database.env):
+        engine = get_database_engine()
+        delete_shared_objects(engine, ModuleCtx.Run_State_Object_Type)
 
 # ################################################################################################################################
 

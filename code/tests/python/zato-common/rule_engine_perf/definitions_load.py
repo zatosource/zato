@@ -13,7 +13,7 @@ from time import monotonic
 from humanize import intcomma
 
 # Local
-from common import Floors, Measurement, PerfDatabase, Seeded_Definition_Count
+from common import Floors, Measurement, Seeded_Definition_Count
 from zato.common.rule_engine.sql import RuleSQLBackend
 from seeding import delete_all_rows, Seed_Definition_Base, Seed_Versions_Per_Definition, seed_definitions
 from traffic import Author, create_rulesets
@@ -38,16 +38,17 @@ List_Limit = 5_000
 # ################################################################################################################################
 # ################################################################################################################################
 
-def run_definitions_scenario(backend:'RuleSQLBackend', database:'PerfDatabase', floors:'Floors') -> 'measurement_list':
+def run_definitions_scenario(backend:'RuleSQLBackend', floors:'Floors') -> 'measurement_list':
     """ The editor paths over thousands of definitions - listing, content search, live resolution
     and one optimistic edit-and-publish cycle in the middle of the crowd, each under its ceiling.
     """
     print(f'Definitions: {intcomma(Seeded_Definition_Count)} definitions with versions and events', flush=True)
 
     # Start from empty tables, create the two parents, then bulk-seed the crowd around them ..
-    delete_all_rows(database)
+    engine = backend.session_factory.engine
+    delete_all_rows(engine)
     ruleset_ids = create_rulesets(backend)
-    seed_seconds = seed_definitions(database, ruleset_ids)
+    seed_seconds = seed_definitions(engine, ruleset_ids)
     print(f'Definitions: seeded in {seed_seconds:.2f}s', flush=True)
 
     ceiling = floors.max_definition_query_seconds

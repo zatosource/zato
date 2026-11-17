@@ -29,6 +29,7 @@ from zato.common.api import EMAIL, GENERIC
 from zato.common.odb.model import GenericConn, GenericConnDef, HTTPSOAP, IMAP, SecurityBase, Service, SMTP
 from zato.common.test.config_database import config_database_engine
 from zato.common.typing_ import cast_
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -148,7 +149,7 @@ def session(tmp_path:'Path') -> 'any_':
         session = session_factory()
 
         service = Service(None, _service_name, True, 'enmasse.alerts.Service', False)
-        session.add(service)
+        seed_config_objects(session, [service])
 
         smtp = cast_('any_', SMTP())
         smtp.name = _smtp_name
@@ -159,13 +160,13 @@ def session(tmp_path:'Path') -> 'any_':
         smtp.is_debug = False
         smtp.mode = EMAIL.SMTP.MODE.STARTTLS
         smtp.ping_address = 'ping@example.com'
-        session.add(smtp)
+        seed_config_objects(session, [smtp])
 
         imap_m365 = _new_imap(_imap_m365_name, EMAIL.IMAP.ServerType.Microsoft365)
-        session.add(imap_m365)
+        seed_config_objects(session, [imap_m365])
 
         imap_generic = _new_imap(_imap_generic_name, EMAIL.IMAP.ServerType.Generic)
-        session.add(imap_generic)
+        seed_config_objects(session, [imap_generic])
 
         llm = cast_('any_', GenericConn())
         llm.name = _llm_name
@@ -174,7 +175,7 @@ def session(tmp_path:'Path') -> 'any_':
         llm.is_internal = False
         llm.is_channel = False
         llm.is_outconn = True
-        session.add(llm)
+        seed_config_objects(session, [llm])
 
         session.commit()
 

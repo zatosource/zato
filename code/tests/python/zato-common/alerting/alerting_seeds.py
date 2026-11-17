@@ -10,19 +10,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # under a name of its own rather than in the conftest, because a bare `conftest` import resolves to whichever
 # suite's conftest was put on the path first when several suites run in one process.
 
-# SQLAlchemy
-from sqlalchemy import update
-
 # Zato
-from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
-from zato.common.db_env.database import get_database_engine
+from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
+from zato.common.test.direct_sql.seed import seed_event
+from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from datetime import datetime
-    datetime = datetime
+    from zato.common.audit_log.api import AuditLog
+    AuditLog = AuditLog
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,25 +41,10 @@ Window_Seconds = 3600
 # ################################################################################################################################
 # ################################################################################################################################
 
-def backdate(event_id:'int', event_time:'datetime') -> 'None':
-    """ Moves one stored event back in time - the collectors compare event times,
-    and the tests need events older than their deadlines.
-    """
-    engine = get_database_engine()
-
-    statement = update(event_table)
-    statement = statement.where(event_table.c.id == event_id)
-    statement = statement.values(event_time=event_time)
-
-    with engine.begin() as connection:
-        _ = connection.execute(statement)
-
-# ################################################################################################################################
-
 def seed_outcome(audit_log:'AuditLog', cid:'str', outcome:'str', *, object_name:'str'=Channel_Name) -> 'None':
     """ Stores one inbound acknowledgment event with the given outcome.
     """
-    _ = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Ack_Sent, object_name, cid=cid, outcome=outcome)
+    _ = seed_event(audit_log, utcnow(), AuditSource.MLLP_Channel, AuditEvent.Ack_Sent, object_name, cid=cid, outcome=outcome)
 
 # ################################################################################################################################
 
@@ -70,8 +53,10 @@ def seed_exchange(audit_log:'AuditLog', source:'str', cid:'str', outcome:'str') 
     wrapper writes it - the request half always goes out fine, the response half carries
     what actually happened.
     """
-    _ = audit_log.insert(source, AuditEvent.Request_Sent, Connection_Name, cid=cid, outcome=AuditOutcome.OK)
-    _ = audit_log.insert(source, AuditEvent.Response_Received, Connection_Name, cid=cid, outcome=outcome)
+    event_time = utcnow()
+
+    _ = seed_event(audit_log, event_time, source, AuditEvent.Request_Sent, Connection_Name, cid=cid, outcome=AuditOutcome.OK)
+    _ = seed_event(audit_log, event_time, source, AuditEvent.Response_Received, Connection_Name, cid=cid, outcome=outcome)
 
 # ################################################################################################################################
 # ################################################################################################################################

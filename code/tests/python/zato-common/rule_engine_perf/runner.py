@@ -68,19 +68,19 @@ def run_complete_perf(database:'PerfDatabase') -> 'None':
         measurements:'measurement_list' = []
 
         # .. the headline sustained ingest through the live writer ..
-        ingest_measurements = run_ingest_scenario(backend, database, floors)
+        ingest_measurements = run_ingest_scenario(backend, floors)
         measurements.extend(ingest_measurements)
 
         # .. the synchronous batch path ..
-        batch_measurements = run_batch_scenario(backend, database, floors)
+        batch_measurements = run_batch_scenario(backend, floors)
         measurements.extend(batch_measurements)
 
         # .. the editor paths over thousands of definitions ..
-        definition_measurements = run_definitions_scenario(backend, database, floors)
+        definition_measurements = run_definitions_scenario(backend, floors)
         measurements.extend(definition_measurements)
 
         # .. the dashboard paths over the million-row log ..
-        reporting_measurements, state = run_reporting_scenario(backend, database, floors)
+        reporting_measurements, state = run_reporting_scenario(backend, floors)
         measurements.extend(reporting_measurements)
 
         # .. and the retention sweep over that same still-seeded log.

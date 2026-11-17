@@ -35,6 +35,7 @@ from zato.common.api import EMAIL, GENERIC
 from zato.common.odb.model import GenericConn, GenericConnDef, GenericObject, SecurityBase, Service, SMTP
 from zato.common.test.config_database import config_database_engine
 from zato.common.typing_ import cast_
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -123,7 +124,7 @@ def session(tmp_path:'Path') -> 'any_':
         smtp.is_debug = False
         smtp.mode = EMAIL.SMTP.MODE.STARTTLS
         smtp.ping_address = 'ping@example.com'
-        session.add(smtp)
+        seed_config_objects(session, [smtp])
 
         llm = cast_('any_', GenericConn())
         llm.name = _llm_name
@@ -132,7 +133,7 @@ def session(tmp_path:'Path') -> 'any_':
         llm.is_internal = False
         llm.is_channel = False
         llm.is_outconn = True
-        session.add(llm)
+        seed_config_objects(session, [llm])
 
         session.commit()
 

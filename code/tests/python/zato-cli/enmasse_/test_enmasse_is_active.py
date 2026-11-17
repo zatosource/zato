@@ -32,6 +32,7 @@ from zato.common.crypto.api import ServerCryptoManager
 from zato.common.odb.model import GenericConn, GenericConnDef, GenericObject, HTTPSOAP, IntervalBasedJob, Job, \
     SecurityBase, Service, SMTP
 from zato.common.test.config_database import config_database_engine
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -100,9 +101,9 @@ def session(tmp_path:'Path') -> 'any_':
         # The LLM definition carries an API key the importer encrypts through the session's crypto manager
         session.info[Session_Key_Crypto_Manager] = ServerCryptoManager.from_secret_key(ServerCryptoManager.generate_key())
 
-        session.add(Service(None, _service_name, True, 'enmasse.is_active.Service', False))
-        session.add(Service(None, HTTP_SOAP.HealthCheck.Dispatch_Service, True,
-            'zato.server.service.internal.connection.HealthCheckRun', True))
+        seed_config_objects(session, [Service(None, _service_name, True, 'enmasse.is_active.Service', False)])
+        seed_config_objects(session, [Service(None, HTTP_SOAP.HealthCheck.Dispatch_Service, True,
+            'zato.server.service.internal.connection.HealthCheckRun', True)])
 
         session.commit()
 

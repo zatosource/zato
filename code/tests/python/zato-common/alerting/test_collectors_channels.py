@@ -9,16 +9,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import timedelta
 
-# SQLAlchemy
-from sqlalchemy import update
-
 # Zato
 from zato.common.alerting.collectors import collect_channel_silence_facts, collect_channel_status_facts, \
     collect_error_rate_facts, collect_facts, collect_latency_facts, Measure_Auth_Failures, Measure_Client_Errors, \
     Measure_Error_Rate, Measure_Latency, Measure_Server_Errors, Window_Seconds_By_Measure_Key
-from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.util.api import utcnow
+from zato.common.test.direct_sql.seed import SeedAuditLog
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -48,20 +46,6 @@ _caller_b = 'partner-b'
 _window_seconds = 3600
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _backdate(event_id:'int', event_time:'datetime') -> 'None':
-    """ Moves one stored event back in time.
-    """
-    engine = get_database_engine()
-
-    statement = update(event_table)
-    statement = statement.where(event_table.c.id == event_id)
-    statement = statement.values(event_time=event_time)
-
-    with engine.begin() as connection:
-        _ = connection.execute(statement)
-
 # ################################################################################################################################
 
 def _seed_call(
@@ -251,8 +235,8 @@ class TestStatusClasses:
         engine = get_database_engine()
         now = utcnow()
 
-        old_id = _seed_call(audit_log, 'old-1', '500')
-        _backdate(old_id, now - timedelta(seconds=_window_seconds + 60))
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=_window_seconds + 60))
+        _ = _seed_call(seed_audit_log, 'old-1', '500')
 
         _ = _seed_call(audit_log, 'new-1', '500')
 
@@ -279,12 +263,10 @@ class TestSilence:
         engine = get_database_engine()
         now = utcnow()
 
-        request_id = _seed_call(audit_log, 'sil-1', '200')
-        _ = _seed_call(audit_log, 'sil-2', '200', object_name=_other_channel_name)
-
         # The newest request of the channel is a quarter of an hour old
-        _backdate(request_id - 1, now - timedelta(seconds=900))
-        _backdate(request_id, now - timedelta(seconds=900))
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=900))
+        _ = _seed_call(seed_audit_log, 'sil-1', '200')
+        _ = _seed_call(audit_log, 'sil-2', '200', object_name=_other_channel_name)
 
         facts = collect_channel_silence_facts(engine, now, {_channel_name})
 
@@ -380,10 +362,10 @@ class TestCollectFacts:
         now = utcnow()
 
         # Two rejections half an hour ago and one failure a minute ago
-        old_1 = _seed_call(audit_log, 'own-1', '401')
-        old_2 = _seed_call(audit_log, 'own-2', '401')
-        _backdate(old_1, now - timedelta(seconds=1800))
-        _backdate(old_2, now - timedelta(seconds=1800))
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=1800))
+        _ = _seed_call(seed_audit_log, 'own-1', '401')
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=1800))
+        _ = _seed_call(seed_audit_log, 'own-2', '401')
 
         _ = _seed_call(audit_log, 'own-3', '500')
         _ = _seed_call(audit_log, 'own-4', '200')
@@ -417,8 +399,8 @@ class TestCollectFacts:
         engine = get_database_engine()
         now = utcnow()
 
-        old = _seed_call(audit_log, 'src-1', '500')
-        _backdate(old, now - timedelta(seconds=1800))
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=1800))
+        _ = _seed_call(seed_audit_log, 'src-1', '500')
         _ = _seed_call(audit_log, 'src-2', '200')
 
         window_seconds_by_source = {
@@ -472,11 +454,9 @@ class TestSoapChannel:
         engine = get_database_engine()
         now = utcnow()
 
-        request_id = _seed_call(audit_log, 'soap-sil-1', '200', source=AuditSource.SOAP_Channel)
-
         # The newest request of the channel is a quarter of an hour old
-        _backdate(request_id - 1, now - timedelta(seconds=900))
-        _backdate(request_id, now - timedelta(seconds=900))
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=900))
+        _ = _seed_call(seed_audit_log, 'soap-sil-1', '200', source=AuditSource.SOAP_Channel)
 
         facts = collect_channel_silence_facts(engine, now, {_channel_name})
 

@@ -15,9 +15,10 @@ from zato.common.alerting.collectors import collect_auth_failure_facts, collect_
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.util.api import utcnow
+from zato.common.test.direct_sql.seed import seed_event
 
 # Local
-from alerting_seeds import backdate, seed_exchange, seed_outcome, Channel_Name, Connection_Name, Other_Channel_Name, Server_Name, \
+from alerting_seeds import seed_exchange, seed_outcome, Channel_Name, Connection_Name, Other_Channel_Name, Server_Name, \
     Window_Seconds
 
 # ################################################################################################################################
@@ -119,9 +120,9 @@ class TestErrorRateFacts:
         now = utcnow()
 
         # One error, moved outside the window
-        event_id = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Ack_Sent, Channel_Name,
+        event_time = now - timedelta(seconds=Window_Seconds + 60)
+        _ = seed_event(audit_log, event_time, AuditSource.MLLP_Channel, AuditEvent.Ack_Sent, Channel_Name,
             cid='facts-old-1', outcome=AuditOutcome.Error)
-        backdate(event_id, now - timedelta(seconds=Window_Seconds + 60))
 
         facts = collect_error_rate_facts(engine, Window_Seconds, now)
 
@@ -483,9 +484,10 @@ class TestLatencyFacts:
         engine = get_database_engine()
         now = utcnow()
 
-        event_id = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Response_Received, Channel_Name,
+        event_time = now - timedelta(seconds=Window_Seconds + 60)
+
+        _ = seed_event(audit_log, event_time, AuditSource.REST_Outgoing, AuditEvent.Response_Received, Channel_Name,
             cid='lat-old-1', outcome=AuditOutcome.OK, duration_ms=9000)
-        backdate(event_id, now - timedelta(seconds=Window_Seconds + 60))
 
         facts = collect_latency_facts(engine, Window_Seconds, now)
 

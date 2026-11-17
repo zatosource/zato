@@ -24,6 +24,7 @@ from zato.common.api import CONNECTION, HTTP_SOAP, URL_TYPE
 from zato.common.audit_log.api import AuditSource
 from zato.common.odb.model import HTTPSOAP, SecurityBase
 from zato.common.test.config_database import config_database_engine
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -94,7 +95,7 @@ def _seed_connection(session_maker:'any_', transport:'str', opaque:'anydict', *,
     row.security = None
     row.opaque1 = json.dumps(opaque)
 
-    session.add(row)
+    seed_config_objects(session, [row])
     session.commit()
     session.close()
 

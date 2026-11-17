@@ -25,6 +25,7 @@ from zato.common.api import FileTransfer, GENERIC
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.odb.model import GenericConn
 from zato.common.typing_ import cast_
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # Test helpers
 from explain_helpers import _conn_name, _error_data, _explanation_text, _llm_conn_name, _server_name, _LLMFacade, \
@@ -97,7 +98,7 @@ def _seed_sftp_connection(session_maker:'any_', *, test_transfers:'bool'=False) 
     row.opaque1 = json.dumps(opaque)
 
     session = session_maker()
-    session.add(row)
+    seed_config_objects(session, [row])
     session.commit()
     session.close()
 

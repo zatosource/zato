@@ -15,8 +15,7 @@ from time import monotonic
 from humanize import intcomma
 
 # Local
-from common import Floors, Ingest_Decision_Count, Ingest_Submitter_Count, Measurement, \
-    percentile, PerfDatabase
+from common import Floors, Ingest_Decision_Count, Ingest_Submitter_Count, Measurement, percentile
 from zato.common.rule_engine.sql import CapturePolicy, RuleSQLBackend
 from seeding import count_decision_rows, delete_all_rows
 from traffic import build_decision, create_rulesets
@@ -137,7 +136,7 @@ def _rollup_totals(backend:'RuleSQLBackend', ruleset_id:'int') -> 'fired_count_d
 
 # ################################################################################################################################
 
-def run_ingest_scenario(backend:'RuleSQLBackend', database:'PerfDatabase', floors:'Floors') -> 'measurement_list':
+def run_ingest_scenario(backend:'RuleSQLBackend', floors:'Floors') -> 'measurement_list':
     """ The headline: concurrent submitters push the measured decisions through the group commit
     of the writer, the rate must clear the decisions-per-second floor, and afterwards every decision is
     durably present with rollups exact to the generated traffic - zero silent loss under concurrency.
@@ -145,7 +144,8 @@ def run_ingest_scenario(backend:'RuleSQLBackend', database:'PerfDatabase', floor
     print(f'Ingest: {intcomma(Ingest_Decision_Count)} decisions, {Ingest_Submitter_Count} submitters', flush=True)
 
     # Start from empty tables with freshly created rulesets ..
-    delete_all_rows(database)
+    engine = backend.session_factory.engine
+    delete_all_rows(engine)
     ruleset_ids = create_rulesets(backend)
 
     # .. the writer runs with a production capture dial ..

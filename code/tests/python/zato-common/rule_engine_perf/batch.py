@@ -14,7 +14,7 @@ from time import monotonic
 from humanize import intcomma
 
 # Local
-from common import Batch_Count, Batch_Size, Floors, Measurement, PerfDatabase
+from common import Batch_Count, Batch_Size, Floors, Measurement
 from zato.common.rule_engine.sql import CapturePolicy, RuleSQLBackend
 from seeding import count_decision_rows, delete_all_rows
 from traffic import build_decision, create_rulesets
@@ -41,7 +41,7 @@ Batch_Success_Capture_Percent = 10
 # ################################################################################################################################
 # ################################################################################################################################
 
-def run_batch_scenario(backend:'RuleSQLBackend', database:'PerfDatabase', floors:'Floors') -> 'measurement_list':
+def run_batch_scenario(backend:'RuleSQLBackend', floors:'Floors') -> 'measurement_list':
     """ The synchronous path - one caller inserting realistic batches through insert_batch,
     without the background writer, must clear the same decisions-per-second claim.
     """
@@ -49,7 +49,8 @@ def run_batch_scenario(backend:'RuleSQLBackend', database:'PerfDatabase', floors
     print(f'Batch: {Batch_Count} batches of {Batch_Size} decisions', flush=True)
 
     # Start from empty tables with freshly created rulesets ..
-    delete_all_rows(database)
+    engine = backend.session_factory.engine
+    delete_all_rows(engine)
     ruleset_ids = create_rulesets(backend)
     capture_policy = CapturePolicy(success_percent=Batch_Success_Capture_Percent, store_fired_rule_ids=True)
 

@@ -20,6 +20,7 @@ $HeartbeatEveryMs  = 500
 $WindowsEventsEveryMs = 1000
 $WriteAttempts     = 50
 $WriteRetryMs      = 20
+$HeartbeatWidth    = 128
 $BlockRuleName     = 'zato-test-block-smb'
 
 $WindowsEventLogs = @(
@@ -61,9 +62,6 @@ function Write-Shared([string]$Path, [byte[]]$Bytes, [IO.FileMode]$Mode) {
         try {
             $stream = New-Object IO.FileStream($Path, $Mode, [IO.FileAccess]::Write, [IO.FileShare]::ReadWrite)
             try {
-                if ($Mode -eq [IO.FileMode]::OpenOrCreate) {
-                    $stream.SetLength(0)
-                }
                 $stream.Write($Bytes, 0, $Bytes.Length)
             }
             finally {
@@ -102,7 +100,10 @@ function Write-Heartbeat {
     $script:HeartbeatSeq++
     $document = [ordered]@{ seq = $script:HeartbeatSeq; time = (Get-NowIso); tasks = $Tasks.Count } |
         ConvertTo-Json -Compress
-    $bytes = $Utf8.GetBytes($document)
+
+    # Each heartbeat has the same length and overwrites the previous one in place, without truncating the file,
+    # so that the harness always reads one complete heartbeat
+    $bytes = $Utf8.GetBytes($document.PadRight($HeartbeatWidth))
     Write-Shared $HeartbeatPath $bytes ([IO.FileMode]::OpenOrCreate)
 }
 
@@ -531,18 +532,31 @@ function Invoke-Fault($Command) {
 
 # ################################################################################################################################
 
+function Remove-Task([string]$Key) {
+    $task = $Tasks[$Key]
+    if ($task.ContainsKey('pending')) {
+        if ($task.pending) {
+            $task.pending.stream.Dispose()
+        }
+    }
+    $Tasks.Remove($Key)
+}
+
 function Stop-Run($Command) {
 
     foreach ($key in @($Tasks.Keys)) {
-        $task = $Tasks[$key]
-        if ($task.command.run -eq $Command.run) {
-            if ($task.ContainsKey('pending')) {
-                if ($task.pending) {
-                    $task.pending.stream.Dispose()
-                }
-            }
-            $Tasks.Remove($key)
+        if ($Tasks[$key].command.run -eq $Command.run) {
+            Remove-Task $key
         }
+    }
+
+    Write-AgentEvent ([ordered]@{ kind = 'run-stopped'; run = $Command.run })
+}
+
+function Stop-AllRuns($Command) {
+
+    foreach ($key in @($Tasks.Keys)) {
+        Remove-Task $key
     }
 
     Write-AgentEvent ([ordered]@{ kind = 'run-stopped'; run = $Command.run })
@@ -560,6 +574,7 @@ $CommandHandlers = @{
     'remove-share'        = { param($Command) Invoke-Fault $Command }
     'restore-share'       = { param($Command) Invoke-Fault $Command }
     'stop'                = { param($Command) Stop-Run $Command }
+    'stop-all'            = { param($Command) Stop-AllRuns $Command }
     'ping'                = { param($Command) Write-AgentEvent ([ordered]@{ kind = 'pong'; run = $Command.run }) }
 }
 

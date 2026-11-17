@@ -36,6 +36,7 @@ from zato.cli.enmasse.importers.es import ElasticSearchImporter
 from zato.cli.enmasse.util.secrets import decrypt_secret
 from zato.common.api import ES, GENERIC
 from zato.common.odb.model import GenericConn
+from zato.common.test.direct_sql.reset import delete_generic_connections
 from zato.common.typing_ import cast_
 from zato.common.util.sql import parse_instance_opaque_attr
 from zato.server.generic.api.outconn_es import OutconnESWrapper
@@ -152,9 +153,7 @@ class TestEnmasseElasticSearchFromYAML(TestCase):
         if self.session:
 
             # Remove the connections created by the test so each test starts from a clean slate
-            _ = self.session.query(GenericConn).filter(GenericConn.name.like('enmasse.es.%')).delete(
-                synchronize_session=False)
-            self.session.commit()
+            delete_generic_connections(self.session, 'enmasse.es.%')
 
             self.session.close()
         os.unlink(self.temp_file.name)

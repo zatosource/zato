@@ -50,6 +50,9 @@ class ModuleCtx:
     Sequence_Block = 2000
     Sequence_Blocks = 500
 
+    # The run under which a session stops the tasks that earlier sessions left running on a guest
+    Takeover_Run = 'session-takeover'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -279,6 +282,13 @@ class GuestHandle:
 
 # ################################################################################################################################
 
+    def stop_all(self, run:'str') -> 'None':
+        """ Stops every producer, consumer and observer, whichever run started it.
+        """
+        self._run('stop-all', run, {})
+
+# ################################################################################################################################
+
     def close(self) -> 'None':
         """ Drops the connections of both clients, which open new ones on their next call.
         """
@@ -320,7 +330,12 @@ def open_guests(versions:'strlist') -> 'tuple[handledict, strlist]':
     guests, started_versions = acquire_guests(versions)
 
     for info in guests:
-        out[info.version] = GuestHandle(info)
+        handle = GuestHandle(info)
+
+        # A reused guest may still run the tasks of a session that was interrupted before it stopped them
+        handle.stop_all(ModuleCtx.Takeover_Run)
+
+        out[info.version] = handle
 
     return out, started_versions
 

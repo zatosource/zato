@@ -31,6 +31,7 @@ from zato.cli.enmasse.util.delivery import Channel_Delivery_Defaults
 from zato.common.api import HTTP_SOAP
 from zato.common.odb.model import GenericConn, GenericConnDef, GenericObject, HTTPSOAP, SecurityBase, Service, SMTP
 from zato.common.test.config_database import config_database_engine
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -105,7 +106,7 @@ def session(tmp_path:'Path') -> 'any_':
         session = session_factory()
 
         service = Service(None, _service_name, True, 'enmasse.channel.delivery.Service', False)
-        session.add(service)
+        seed_config_objects(session, [service])
 
         session.commit()
 

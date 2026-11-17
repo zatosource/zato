@@ -13,17 +13,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import timedelta
 
-# SQLAlchemy
-from sqlalchemy import update
-
 # Zato
 from zato.common.alerting.collectors import collect_ack_code_facts, collect_channel_silence_facts, \
     collect_consecutive_failure_facts, collect_error_rate_facts, collect_facts, collect_latency_facts, Measure_Ack_Codes, \
     Window_Seconds_By_Measure_Key
-from zato.common.audit_log.api import event_table, AuditLog, AuditSource
+from zato.common.audit_log.api import AuditLog, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.hl7.audit import audit_ack_sent, audit_message_received
 from zato.common.util.api import utcnow
+from zato.common.test.direct_sql.seed import SeedAuditLog
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,20 +53,6 @@ _message_text = 'MSH|^~\\&|ADT|GENERAL_HOSPITAL|ZATO|ZATO|20260914||ADT^A01|MSG-
 _ack_text = 'MSH|^~\\&|ZATO|ZATO|ADT|GENERAL_HOSPITAL|20260914||ACK^A01|ACK-1|P|2.5\rMSA|{code}|MSG-1'
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _backdate(event_id:'int', event_time:'datetime') -> 'None':
-    """ Moves one stored event back in time.
-    """
-    engine = get_database_engine()
-
-    statement = update(event_table)
-    statement = statement.where(event_table.c.id == event_id)
-    statement = statement.values(event_time=event_time)
-
-    with engine.begin() as connection:
-        _ = connection.execute(statement)
-
 # ################################################################################################################################
 
 def _seed_message(
@@ -175,10 +159,10 @@ class TestAckCodes:
         engine = get_database_engine()
         now = utcnow()
 
-        old_id = _seed_message(audit_log, 'old-1', 'AR')
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=_window_seconds * 2))
+        _ = _seed_message(seed_audit_log, 'old-1', 'AR')
         _ = _seed_message(audit_log, 'new-1', 'AE')
 
-        _backdate(old_id, now - timedelta(seconds=_window_seconds * 2))
 
         fact = _fact_of(collect_ack_code_facts(engine, _window_seconds, now), _channel_name)
 
@@ -242,11 +226,9 @@ class TestSilence:
         engine = get_database_engine()
         now = utcnow()
 
-        ack_id = _seed_message(audit_log, 'sil-1', 'AA')
-
-        # The message came in a quarter of an hour ago, its ack right after it
-        _backdate(ack_id - 1, now - timedelta(seconds=900))
-        _backdate(ack_id, now - timedelta(seconds=899))
+        # The message and its ack came a quarter of an hour ago
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=900))
+        _ = _seed_message(seed_audit_log, 'sil-1', 'AA')
 
         facts = collect_channel_silence_facts(engine, now, {_channel_name})
 
@@ -302,12 +284,10 @@ class TestCollectFacts:
         engine = get_database_engine()
         now = utcnow()
 
-        old_id = _seed_message(audit_log, 'win-1', 'AR')
-        _ = _seed_message(audit_log, 'win-2', 'AE')
-
         # The older reject is half an hour old - outside a ten-minute acks window, inside the hour of everything else
-        _backdate(old_id - 1, now - timedelta(seconds=1800))
-        _backdate(old_id, now - timedelta(seconds=1800))
+        seed_audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=1800))
+        _ = _seed_message(seed_audit_log, 'win-1', 'AR')
+        _ = _seed_message(audit_log, 'win-2', 'AE')
 
         facts = collect_facts(engine, {}, AuditSource.MLLP_Channel, now, window_seconds=_window_seconds,
             window_seconds_by_source={AuditSource.MLLP_Channel: {Measure_Ack_Codes: 600}})

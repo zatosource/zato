@@ -29,6 +29,7 @@ from zato.common.typing_ import cast_
 from zato.server.scheduler_.client import ModuleCtx as ClientCtx, SchedulerClient
 from zato.server.scheduler_.run_state import ModuleCtx as RunStateCtx, SchedulerRunState
 from zato.server.service.internal.scheduler import _create_edit, _SchedulerAdmin, Delete
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -164,7 +165,7 @@ class _Environment:
             service.is_active = True
             service.impl_name = ModuleCtx.Service_Impl_Name
             service.is_internal = False
-            session.add(service)
+            seed_config_objects(session, [service])
             session.commit()
 
     def add_job(self, name:'str') -> 'int':
@@ -179,7 +180,7 @@ class _Environment:
             job.job_type = SCHEDULER.JOB_TYPE.INTERVAL_BASED
             job.start_date = datetime.fromisoformat(ModuleCtx.Start_Date)
             job.service = service
-            session.add(job)
+            seed_config_objects(session, [job])
             session.commit()
 
             out = cast_('int', job.id)

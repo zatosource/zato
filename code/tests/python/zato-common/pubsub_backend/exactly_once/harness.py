@@ -14,22 +14,20 @@ from sqlalchemy import select
 
 # Zato
 from common import delete_all_rows, get_delivery_rows, get_message_rows
-from zato.common.db_env.engine import call_database
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
 from zato.common.pubsub.sql.config import get_pull_lease_seconds
+from zato.common.pubsub.sql.pending import new_pending_lease
 from zato.common.pubsub.sql.publication import build_publication
-from zato.common.pubsub.sql.pull import lease_messages
 from zato.common.pubsub.sql.schema import delivery_table, message_table
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.engine import Engine
     from zato.common.pubsub.sql.publication import BuiltPublication
-    from zato.common.typing_ import anylist, intdict, strintdict, strlist, strnone
+    from zato.common.typing_ import strintdict, strlist, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -93,30 +91,21 @@ def get_lease_ms() -> 'int':
 
 # ################################################################################################################################
 
-def _lease_in_transaction(engine:'Engine', now_ms:'int', max_messages:'int', leased_until_ms:'int') -> 'tuple[anylist, intdict]':
-    """ Leases the deliverable messages of the input subscriber in a transaction of its own.
-    """
-    with engine.begin() as connection:
-        out = lease_messages(connection, Input_Sub_Key, max_messages, _lease_max_len, now_ms, leased_until_ms)
-
-    return out
-
-# ################################################################################################################################
-
 def lease(backend:'SQLPubSubBackend', now_ms:'int', max_messages:'int'=_lease_max_messages) -> 'strintdict':
     """ Leases the deliverable messages of the input subscriber as of the given time,
     and returns the delivery attempt of each, by its message ID.
     """
-    engine = backend.engine
     lease_ms = get_lease_ms()
     leased_until_ms = now_ms + lease_ms
 
-    rows, attempts = call_database(engine, _lease_in_transaction, engine, now_ms, max_messages, leased_until_ms)
+    # The lease is written through the writer of the backend, as the pull of a client is
+    pending = new_pending_lease(Input_Sub_Key, max_messages, _lease_max_len, now_ms, leased_until_ms, backend._on_leased)
+    backend._writer.lease(pending)
 
     out:'strintdict' = {}
 
-    for row in rows:
-        out[row.msg_id] = attempts[row.id]
+    for row in pending.rows:
+        out[row.msg_id] = pending.attempts[row.id]
 
     return out
 

@@ -21,6 +21,7 @@ from zato.common.alerting.object_config import storage_name
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.common import TransportStatus
 from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # Test helpers
 from explain_helpers import _llm_conn_name, _server_name, _LLMFacade, LLMTestHandler, \
@@ -94,7 +95,7 @@ def _seed_connection(
 
     if with_security:
         security = HTTPBasicAuth(None, _security_name, True, 'crm', 'Zato', 'never-shown')
-        session.add(security)
+        seed_config_objects(session, [security])
     else:
         security = None
 
@@ -122,7 +123,7 @@ def _seed_connection(
     row.security = security
     row.opaque1 = json.dumps(opaque)
 
-    session.add(row)
+    seed_config_objects(session, [row])
     session.commit()
     session.close()
 

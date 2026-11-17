@@ -18,7 +18,9 @@ from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.connection import set_sqlite_pragmas
 from zato.common.db_env.database import get_database_engine
 from zato.common.db_env.database_env import DatabaseEnv
-from zato.common.pubsub.sql.schema import metadata
+from zato.common.pubsub.sql.schema import active_table, delivery_table, message_table, metadata, topic_sub_table
+from zato.common.test.direct_sql.reset import recreate_tables, truncate_tables
+from zato.common.test.direct_sql.seed import refresh_statistics, seed_bulk, BulkLoad
 from zato.common.test.pubsub_database import get_db_mode, is_managed_mode
 from zato.common.util.time_ import datetime_to_ms, utcnow
 
@@ -26,7 +28,10 @@ from zato.common.util.time_ import datetime_to_ms, utcnow
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy import Table
     from zato.common.typing_ import any_, anylist, anytuple, strlist
+
+    tablelist = list[Table]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,21 +52,18 @@ _payload_crc32 = crc32(_payload.encode('utf8'))
 # The priority every seeded message carries - the default one.
 _priority = 5
 
-# The table of the generation, whose row the seeding keeps.
-_active_table_name = 'zato_active'
-
-# How the text format of COPY represents NULL.
-_copy_null = '\\N'
-
 # The columns of pubsub_message in seeding order - the id comes first and is assigned
 # explicitly so delivery rows can reference messages without any join.
-_message_columns = ('id, msg_id, topic_name, payload, payload_encrypted, data_class, data_size, data_preview,'
-    ' priority, expiration, pub_time_iso, recv_time_iso, expiration_time_iso, pub_time_ms, expiration_ms,'
-    ' publisher, cid, correl_id, in_reply_to, ext_client_id, payload_crc32')
+_message_columns = ('id', 'msg_id', 'topic_name', 'payload', 'payload_encrypted', 'data_class', 'data_size',
+    'data_preview', 'priority', 'expiration', 'pub_time_iso', 'recv_time_iso', 'expiration_time_iso', 'pub_time_ms',
+    'expiration_ms', 'publisher', 'cid', 'correl_id', 'in_reply_to', 'ext_client_id', 'payload_crc32')
 
 # The columns of pubsub_delivery in seeding order - the id column is omitted
 # because nothing references it, so the engine assigns it itself.
-_delivery_columns = 'message_id, sub_key, topic_name, priority, expiration_ms'
+_delivery_columns = ('message_id', 'sub_key', 'topic_name', 'priority', 'expiration_ms')
+
+# The columns of pubsub_topic_sub in seeding order.
+_sub_columns = ('sub_key', 'topic_name')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -94,102 +96,79 @@ def connect_native() -> 'anytuple':
 
 # ################################################################################################################################
 
-def _clear_all_tables(cursor:'any_') -> 'None':
-    """ Empties all pub/sub tables by dropping them and creating them anew, together with the triggers
-    of the count tables. SQLite deletes the rows of a table that has triggers one by one, which for
-    the backlogs of the mass scenarios takes minutes, whereas dropping a table releases its pages at once.
-    PostgreSQL truncates the tables instead, which keeps the objects the open connections refer to.
+def _get_seeded_tables() -> 'tablelist':
+    """ Every pub/sub table except the table of the generation, whose row the seeding keeps.
     """
-    if _is_postgresql():
-        table_names:'strlist' = []
-        for table in metadata.sorted_tables:
-            if table.name != _active_table_name:
-                table_names.append(table.name)
-        _ = cursor.execute(f'truncate table {", ".join(table_names)} restart identity')
-        return
+    out:'tablelist' = []
 
     for table in reversed(metadata.sorted_tables):
-        _ = cursor.execute(f'drop table if exists {table.name}')
+        if table is not active_table:
+            out.append(table)
 
-    engine = get_database_engine()
-    metadata.create_all(engine)
-
-# ################################################################################################################################
-
-def _copy_line(row:'anytuple') -> 'str':
-    """ Turns one row into a line of the text format of COPY. The seeded values contain no tabs, newlines
-    or backslashes, so only NULL needs a representation of its own.
-    """
-    values:'strlist' = []
-
-    for value in row:
-        if value is None:
-            values.append(_copy_null)
-        else:
-            values.append(str(value))
-
-    out = '\t'.join(values) + '\n'
     return out
 
 # ################################################################################################################################
 
-def _load_rows(cursor:'any_', table:'str', columns:'str', rows:'any_') -> 'None':
-    """ Inserts rows through SQLite's executemany path or with COPY on PostgreSQL.
+def _clear_all_tables() -> 'None':
+    """ Empties all pub/sub tables. SQLite deletes the rows of a table that has triggers one by one, which for
+    the backlogs of the mass scenarios takes minutes, so the tables are dropped and created anew, together with
+    the triggers of the count tables. PostgreSQL truncates the tables instead, which keeps the objects the open
+    connections refer to.
     """
+    engine = get_database_engine()
+
     if _is_postgresql():
-        lines = map(_copy_line, rows)
-        _ = cursor.execute(f'copy {table} ({columns}) from stdin', stream=lines)
-        return
-
-    placeholder_count = columns.count(',') + 1
-    placeholders = ', '.join(['?'] * placeholder_count)
-    cursor.executemany(f'insert into {table} ({columns}) values ({placeholders})', rows)
+        tables = _get_seeded_tables()
+        truncate_tables(engine, tables)
+    else:
+        recreate_tables(engine, metadata)
 
 # ################################################################################################################################
 
-def _finish_load(cursor:'any_') -> 'None':
-    """ On PostgreSQL, moves the sequence of the message keys past the keys that the seeding assigned itself,
-    and updates the statistics of the tables, so that the planner sees the seeded rows at once.
+def _load(message_rows:'any_', delivery_rows:'any_', sub_rows:'anylist') -> 'None':
+    """ Seeds the messages, their deliveries and the subscriptions in one transaction over the fastest path
+    of the database and refreshes the statistics of the tables, so that the planner sees the seeded rows at once.
     """
-    if not _is_postgresql():
-        return
+    engine = get_database_engine()
 
-    _ = cursor.execute(
-        "select setval(pg_get_serial_sequence('pubsub_message', 'id'), (select max(id) from pubsub_message))")
+    loads = [
+        BulkLoad(message_table, _message_columns, message_rows, True),
+        BulkLoad(delivery_table, _delivery_columns, delivery_rows, False),
+        BulkLoad(topic_sub_table, _sub_columns, iter(sub_rows), False),
+    ]
 
-    for table in metadata.sorted_tables:
-        _ = cursor.execute(f'analyze {table.name}')
+    seed_bulk(engine, loads)
+
+    tables = _get_seeded_tables()
+    refresh_statistics(engine, tables)
 
 # ################################################################################################################################
 
-def _write_checkpoint(connection:'any_') -> 'None':
+def _write_checkpoint() -> 'None':
     """ Writes the seeded pages to the database in a checkpoint of its own, so that the checkpoint of the seeding
     does not run over the scenario that follows it and slow its WAL flushes. On SQLite, the checkpoint also truncates
     the WAL file of the seeding. A managed database runs its own checkpoints and its role holds no privilege to request one.
     """
-    if not _is_postgresql():
-        _ = connection.execute('pragma wal_checkpoint(truncate)')
+    if _is_postgresql() and is_managed_mode(get_db_mode()):
         return
 
-    if is_managed_mode(get_db_mode()):
-        return
-
+    connection, _ignored = connect_native()
     cursor = connection.cursor()
-    _ = cursor.execute('checkpoint')
+
+    if _is_postgresql():
+        _ = cursor.execute('checkpoint')
+    else:
+        _ = cursor.execute('pragma wal_checkpoint(truncate)')
+
     connection.commit()
+    connection.close()
 
 # ################################################################################################################################
 
 def delete_all_rows() -> 'None':
-    """ Empties all the pub/sub tables through the native driver.
+    """ Empties all the pub/sub tables.
     """
-    connection, _ignored = connect_native()
-    cursor = connection.cursor()
-
-    _clear_all_tables(cursor)
-
-    connection.commit()
-    connection.close()
+    _clear_all_tables()
 
 # ################################################################################################################################
 
@@ -222,11 +201,8 @@ def seed_backlog(
     """
     start = monotonic()
 
-    connection, placeholder = connect_native()
-    cursor = connection.cursor()
-
     # Every run seeds from scratch.
-    _clear_all_tables(cursor)
+    _clear_all_tables()
 
     now = utcnow()
     now_iso = now.isoformat()
@@ -252,7 +228,7 @@ def seed_backlog(
                 msg_id = f'zpsm.perf.{topic_index:04d}.{number}'
                 pub_time_ms = now_ms - number * _pub_time_step_ms
 
-                yield (message_id, msg_id, topic_name, _payload, 0, None, len(_payload), _payload,
+                yield (message_id, msg_id, topic_name, _payload, False, None, len(_payload), _payload,
                     _priority, _seconds_per_year, now_iso, now_iso, expiration_iso, pub_time_ms,
                     expiration_ms, sub_key, None, None, None, None, _payload_crc32)
 
@@ -279,10 +255,7 @@ def seed_backlog(
                 if deep_sub_key and topic_index < deep_topic_count:
                     yield (message_id, deep_sub_key, topic_name, _priority, expiration_ms)
 
-    _load_rows(cursor, 'pubsub_message', _message_columns, iter_messages())
-    _load_rows(cursor, 'pubsub_delivery', _delivery_columns, iter_deliveries())
-
-    # The subscriptions themselves - a few thousand rows at most, executemany is enough.
+    # The subscriptions themselves - a few thousand rows at most.
     sub_rows:'anylist' = []
 
     for topic_index in range(topic_count):
@@ -298,13 +271,8 @@ def seed_backlog(
         if deep_sub_key and topic_index < deep_topic_count:
             sub_rows.append((deep_sub_key, topic_name))
 
-    cursor.executemany(
-        f'insert into pubsub_topic_sub (sub_key, topic_name) values ({placeholder}, {placeholder})', sub_rows)
-
-    _finish_load(cursor)
-    connection.commit()
-    _write_checkpoint(connection)
-    connection.close()
+    _load(iter_messages(), iter_deliveries(), sub_rows)
+    _write_checkpoint()
 
     out = monotonic() - start
     return out
@@ -337,11 +305,8 @@ def seed_aged_queue(
 
     start = monotonic()
 
-    connection, placeholder = connect_native()
-    cursor = connection.cursor()
-
     # Every run seeds from scratch.
-    _clear_all_tables(cursor)
+    _clear_all_tables()
 
     # The timestamps say these messages have been sitting here for months,
     # yet their expiration is still far away ..
@@ -365,7 +330,7 @@ def seed_aged_queue(
             msg_id = f'zpsm.aged.{number}'
             pub_time_ms = aged_ms - number
 
-            yield (message_id, msg_id, topic_name, payload, 0, None, len(_payload), _payload,
+            yield (message_id, msg_id, topic_name, payload, False, None, len(_payload), _payload,
                 _priority, _seconds_per_year, aged_iso, aged_iso, expiration_iso, pub_time_ms,
                 expiration_ms, None, None, None, None, None, _payload_crc32)
 
@@ -378,22 +343,14 @@ def seed_aged_queue(
             for sub_key in delivery_sub_keys:
                 yield (message_id, sub_key, topic_name, _priority, expiration_ms)
 
-    _load_rows(cursor, 'pubsub_message', _message_columns, iter_messages())
-    _load_rows(cursor, 'pubsub_delivery', _delivery_columns, iter_deliveries())
-
     # Every peer stays subscribed for the traffic yet to come.
     sub_rows:'anylist' = []
 
     for sub_key in sub_keys:
         sub_rows.append((sub_key, topic_name))
 
-    cursor.executemany(
-        f'insert into pubsub_topic_sub (sub_key, topic_name) values ({placeholder}, {placeholder})', sub_rows)
-
-    _finish_load(cursor)
-    connection.commit()
-    _write_checkpoint(connection)
-    connection.close()
+    _load(iter_messages(), iter_deliveries(), sub_rows)
+    _write_checkpoint()
 
     out = monotonic() - start
     return out

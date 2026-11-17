@@ -14,21 +14,19 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import timedelta
 
-# SQLAlchemy
-from sqlalchemy import update
-
 # Zato
 from zato.common.alerting.engine import AlertDefaults, AlertTransports
 from zato.common.alerting.object_config import alert_type_mcp, get_defaults as get_object_defaults
 from zato.common.alerting.seed.rules_mcp import mcp_rules
 from zato.common.alerting.sweep import run_sweep
-from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import MCPAttr
 from zato.common.json_internal import dumps
 from zato.common.rule_engine.loading import load_documents
 from zato.common.rule_engine.parser import parse_data_details
 from zato.common.util.api import utcnow
+from zato.common.test.direct_sql.seed import SeedAuditLog
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -125,28 +123,15 @@ def _load_rules() -> 'rule_engine_rule_list':
 
 # ################################################################################################################################
 
-def _backdate(engine:'Engine', now:'datetime', seconds_back:'int') -> 'None':
-    """ Moves the newest stored row back in time.
-    """
-    with engine.connect() as connection:
-        event_id = connection.execute(event_table.select().order_by(event_table.c.id.desc()).limit(1)).fetchone()[0]
-
-    event_time = now - timedelta(seconds=seconds_back)
-
-    statement = update(event_table)
-    statement = statement.where(event_table.c.id == event_id)
-    statement = statement.values(event_time=event_time)
-
-    with engine.begin() as connection:
-        _ = connection.execute(statement)
-
-# ################################################################################################################################
-
 def _seed_tool_call(audit_log:'AuditLog', engine:'Engine', now:'datetime', *, object_name:'str'=_gateway_name,
     is_ok:'bool'=True, size:'int'=1000, duration_ms:'int'=100, error_code:'int | None'=None, seconds_back:'int'=0,
     session_id:'str'=_session_id) -> 'None':
-    """ Stores the one row a tool call leaves behind, with the attributes the gateway writes, moved back in time if asked to.
+    """ Stores the one row a tool call leaves behind, with the attributes the gateway writes, dated in the past if asked to.
     """
+    # A call in the past is seeded with its event time from the start
+    if seconds_back:
+        audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=seconds_back))
+
     attrs:'stranydict' = {MCPAttr.Method: 'tools/call', MCPAttr.Request_Size: 200}
     data:'stranydict' = {'method': 'tools/call'}
 
@@ -163,9 +148,6 @@ def _seed_tool_call(audit_log:'AuditLog', engine:'Engine', now:'datetime', *, ob
     _ = audit_log.insert(AuditSource.MCP, AuditEvent.MCP_Tools_Call, object_name, ext_client_id=_sec_def_name,
         endpoint=_tool_name, sub_key=session_id, size=size, outcome=outcome, duration_ms=duration_ms,
         data=dumps(data), attrs=attrs)
-
-    if seconds_back:
-        _backdate(engine, now, seconds_back)
 
 # ################################################################################################################################
 

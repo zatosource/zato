@@ -9,9 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import timedelta
 
-# SQLAlchemy
-from sqlalchemy import update
-
 # Zato
 from zato.common.alerting.collectors import new_fact
 from zato.common.alerting.config_map import Explain_With_LLM_Key
@@ -21,13 +18,14 @@ from zato.common.alerting.object_config import alert_type_file_transfer, encode_
     get_defaults as get_object_defaults, LLM_Connection_Config_Key
 from zato.common.alerting.sweep import build_fact_message, build_finding_link, read_outcome, run_sweep
 from zato.common.api import Alerting
-from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import get_source_label
 from zato.common.monitoring.health import EndpointMetrics
 from zato.common.rule_engine.loading import load_documents
 from zato.common.rule_engine.parser import parse_data_details
 from zato.common.util.api import utcnow
+from zato.common.test.direct_sql.seed import SeedAuditLog, seed_event
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -555,15 +553,9 @@ class TestRunSweep:
         schedule_name = 'Daily results'
 
         # The newest arrival of the schedule, ten minutes back on a five-minute window
-        event_id = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Delivered, 'sftp.backups',
+        event_time = now - timedelta(seconds=600)
+        _ = seed_event(audit_log, event_time, AuditSource.File_Outgoing, AuditEvent.Delivered, 'sftp.backups',
             cid='sweep-arrival-1', outcome=AuditOutcome.OK, attrs={'schedule': schedule_name})
-
-        statement = update(event_table)
-        statement = statement.where(event_table.c.id == event_id)
-        statement = statement.values(event_time=now - timedelta(seconds=600))
-
-        with engine.begin() as connection:
-            _ = connection.execute(statement)
 
         rules = _load_rules(_arrival_rules_text)
 
@@ -592,15 +584,9 @@ class TestRunSweep:
         engine = get_database_engine()
         now = utcnow()
 
-        event_id = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Message_Sent, 'sftp.window',
+        event_time = now - timedelta(seconds=7200)
+        _ = seed_event(audit_log, event_time, AuditSource.File_Outgoing, AuditEvent.Message_Sent, 'sftp.window',
             cid='sweep-window-1', outcome=AuditOutcome.Error)
-
-        statement = update(event_table)
-        statement = statement.where(event_table.c.id == event_id)
-        statement = statement.values(event_time=now - timedelta(seconds=7200))
-
-        with engine.begin() as connection:
-            _ = connection.execute(statement)
 
         defaults = AlertDefaults()
         defaults.email_to = _addresses
@@ -647,18 +633,14 @@ _settings_llm_name = 'ops.llm'
 
 def _seed_transfer_failure(audit_log:'AuditLog', engine:'Engine', now:'datetime', object_name:'str', *, cid:'str',
     seconds_back:'int'=0) -> 'None':
-    """ Stores one failed file transfer, moved back in time if asked to.
+    """ Stores one failed file transfer, dated in the past if asked to.
     """
-    event_id = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Message_Sent, object_name, cid=cid,
-        outcome=AuditOutcome.Error)
-
+    # A failure in the past is seeded with its event time from the start
     if seconds_back:
-        statement = update(event_table)
-        statement = statement.where(event_table.c.id == event_id)
-        statement = statement.values(event_time=now - timedelta(seconds=seconds_back))
+        audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=seconds_back))
 
-        with engine.begin() as connection:
-            _ = connection.execute(statement)
+    _ = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Message_Sent, object_name, cid=cid,
+        outcome=AuditOutcome.Error)
 
 # ################################################################################################################################
 

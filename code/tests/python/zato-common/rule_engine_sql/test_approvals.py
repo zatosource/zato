@@ -9,9 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # pytest
 import pytest
 
-# SQLAlchemy
-from sqlalchemy import update
-
 # Local
 from zato.common.rule_engine.sql import ApprovalContentMismatchError, ApprovalRequiredError, InvalidStoreInputError, \
     RuleDefinitionRecord, RuleSQLBackend, SelfApprovalNotAllowedError
@@ -19,7 +16,7 @@ from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Event
     Event_Type_Approval_Gate_On, Event_Type_Approval_Requested, Event_Type_Self_Approval, Event_Type_Version_Approved
 from zato.common.rule_engine.sql.data import anydict, strset
 from zato.common.rule_engine.sql.document import content_hash
-from zato.common.rule_engine.sql.schema import rule_version_table
+from zato.common.test.direct_sql.fault import tamper_rule_version
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -218,19 +215,7 @@ def test_tampered_content_is_rejected_at_publish_time(backend:'RuleSQLBackend') 
 
     # .. simulate tampering by rewriting the stored snapshot behind the store's back ..
     tampered_document = '{"rules":[]}'
-    session = backend.session_factory()
-
-    try:
-        with session.begin():
-            statement = update(rule_version_table)
-            definition_condition = rule_version_table.c.definition_id == definition.id
-            version_condition = rule_version_table.c.version == 1
-            statement = statement.where(definition_condition)
-            statement = statement.where(version_condition)
-            statement = statement.values(document=tampered_document)
-            _ = session.execute(statement)
-    finally:
-        session.close()
+    tamper_rule_version(backend.session_factory.engine, definition.id, 1, tampered_document)
 
     # .. verify the status API reports the mismatch ..
     status = backend.approvals.get_status(definition.id, 1)

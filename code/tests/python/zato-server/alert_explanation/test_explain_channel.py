@@ -19,6 +19,7 @@ from zato.common.alerting.model import AlertAction
 from zato.common.alerting.object_config import storage_name
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, Service
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # Test helpers
 from explain_helpers import _explanation_text, _llm_conn_name, _server_name, _LLMFacade, LLMTestHandler, \
@@ -74,13 +75,13 @@ def _seed_channel(
     service = session.query(Service).filter(Service.name==_channel_service_name).first()
     if service is None:
         service = Service(None, _channel_service_name, True, 'orders.OrdersGet', False)
-        session.add(service)
+        seed_config_objects(session, [service])
 
     if with_security:
         security = session.query(HTTPBasicAuth).filter(HTTPBasicAuth.name==_channel_security_name).first()
         if security is None:
             security = HTTPBasicAuth(None, _channel_security_name, True, 'partner', 'Zato', 'never-shown')
-            session.add(security)
+            seed_config_objects(session, [security])
     else:
         security = None
 
@@ -103,7 +104,7 @@ def _seed_channel(
     else:
         row.soap_action = ''
 
-    session.add(row)
+    seed_config_objects(session, [row])
     session.commit()
     session.close()
 

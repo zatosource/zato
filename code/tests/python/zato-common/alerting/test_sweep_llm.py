@@ -14,22 +14,20 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import timedelta
 
-# SQLAlchemy
-from sqlalchemy import update
-
 # Zato
 from zato.common.alerting.engine import AlertDefaults, AlertTransports
 from zato.common.alerting.object_config import alert_type_llm, get_defaults as get_object_defaults, LLM_Connection_Config_Key
 from zato.common.alerting.seed.rules_llm import llm_rules
 from zato.common.alerting.sweep import run_sweep
 from zato.common.api import Alerting
-from zato.common.audit_log.api import event_table, AuditLog, AuditSource
+from zato.common.audit_log.api import AuditLog, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.calls import record_remote_call
 from zato.common.audit_log.common import LLMAttr, LLMFinish, TransportStatus
 from zato.common.rule_engine.loading import load_documents
 from zato.common.rule_engine.parser import parse_data_details
 from zato.common.util.api import utcnow
+from zato.common.test.direct_sql.seed import SeedAuditLog
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -134,28 +132,15 @@ def _load_rules() -> 'rule_engine_rule_list':
 
 # ################################################################################################################################
 
-def _backdate(engine:'Engine', now:'datetime', seconds_back:'int') -> 'None':
-    """ Moves the newest stored row back in time.
-    """
-    with engine.connect() as connection:
-        event_id = connection.execute(event_table.select().order_by(event_table.c.id.desc()).limit(1)).fetchone()[0]
-
-    event_time = now - timedelta(seconds=seconds_back)
-
-    statement = update(event_table)
-    statement = statement.where(event_table.c.id == event_id)
-    statement = statement.values(event_time=event_time)
-
-    with engine.begin() as connection:
-        _ = connection.execute(statement)
-
-# ################################################################################################################################
-
 def _seed_completion(audit_log:'AuditLog', engine:'Engine', now:'datetime', *, object_name:'str'=_conn_name,
     finish_reason:'str'=LLMFinish.Stop, seconds_back:'int'=0) -> 'None':
     """ Stores the one OK row a completion that came back leaves behind, with the model, the finish reason and the
-    token counts as its attrs, moved back in time if asked to.
+    token counts as its attrs, dated in the past if asked to.
     """
+    # A call in the past is seeded with its event time from the start
+    if seconds_back:
+        audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=seconds_back))
+
     attrs = {
         LLMAttr.Model: _model,
         LLMAttr.Finish_Reason: finish_reason,
@@ -166,22 +151,20 @@ def _seed_completion(audit_log:'AuditLog', engine:'Engine', now:'datetime', *, o
     record_remote_call(audit_log, AuditSource.LLM, object_name, is_ok=True, duration_ms=1200, status=_status_ok,
         endpoint=_address, attrs=attrs)
 
-    if seconds_back:
-        _backdate(engine, now, seconds_back)
-
 # ################################################################################################################################
 
 def _seed_failure(audit_log:'AuditLog', engine:'Engine', now:'datetime', status:'str', *, object_name:'str'=_conn_name,
     seconds_back:'int'=0) -> 'None':
     """ Stores the one Error row a call that failed leaves behind, under the provider's status line or the transport status.
     """
+    # A call in the past is seeded with its event time from the start
+    if seconds_back:
+        audit_log = SeedAuditLog(audit_log.server_name, now - timedelta(seconds=seconds_back))
+
     attrs = {LLMAttr.Model: _model}
 
     record_remote_call(audit_log, AuditSource.LLM, object_name, is_ok=False, duration_ms=300, status=status,
         endpoint=_address, attrs=attrs)
-
-    if seconds_back:
-        _backdate(engine, now, seconds_back)
 
 # ################################################################################################################################
 

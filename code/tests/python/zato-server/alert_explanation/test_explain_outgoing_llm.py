@@ -22,6 +22,7 @@ from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditS
 from zato.common.audit_log.common import LLMAttr, LLMFinish
 from zato.common.odb.model import GenericConn
 from zato.common.typing_ import cast_
+from zato.common.test.direct_sql.seed import seed_config_objects
 
 # Test helpers
 from explain_helpers import _llm_conn_name, _server_name, _LLMFacade, LLMTestHandler, \
@@ -91,7 +92,7 @@ def _seed_connection(session_maker:'any_') -> 'None':
     row.pool_size = 4
     row.opaque1 = json.dumps(opaque)
 
-    session.add(row)
+    seed_config_objects(session, [row])
     session.commit()
     session.close()
 
