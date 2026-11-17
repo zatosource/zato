@@ -923,36 +923,35 @@ test-queue-delivery-channel-soap: ## The queue of SOAP channels - enmasse with a
 
 test-queue-delivery: test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp test-queue-delivery-channel-rest test-queue-delivery-channel-soap ## Queue delivery of every kind of outgoing connection and of REST and SOAP channels.
 
-test-pubsub-perf: ## Every pub/sub performance test - SQL, AMQP, system-level load and mass recovery.
+# The live performance suite of pub/sub, run against a server on each pub/sub database in turn.
+Zato_Test_PubSub_Perf_Dir         := $(CURDIR)/code/tests/python/zato-server/pubsub_perf
+Zato_Test_PubSub_Perf_Tests       := $(Zato_Test_PubSub_Perf_Dir)/test_capacity.py $(Zato_Test_PubSub_Perf_Dir)/test_concurrency.py
+Zato_Test_PubSub_Perf_Steps       := sqlite postgresql
+Zato_Test_PubSub_Perf_Resume_File := $(CURDIR)/code/tests/.test-pubsub-perf-resume
+Zato_Test_PubSub_Perf_Stepwise     = $(if $(RESTART),--sw-reset,--sw)
+
+# Runs the suite on the pub/sub database $(1), unless the walk is still looking for the step it resumes from.
+Zato_Test_PubSub_Perf_Step = \
+	if [ -z "$$resume" ] || [ "$$resume" = "$(1)" ]; then \
+		resume=''; \
+		echo "$(1)" > $(Zato_Test_PubSub_Perf_Resume_File); \
+		echo ">>> $(1)" $(Zato_Log); \
+		Zato_Test_PubSub_DB_Mode=$(1) ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest -W ignore::DeprecationWarning \
+			$(Zato_Test_PubSub_Perf_Tests) -v -s --tb=short \
+			-o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_perf_$(1) \
+			$(Zato_Test_PubSub_Perf_Stepwise) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
+	fi;
+
+test-pubsub-perf: ## Pub/sub performance through a live server - concurrent publishers and subscribers, each subscriber with its own subscription, with exactly-once delivery, worker kills and rising concurrency, on SQLite and PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+	@if [ -n "$(RESTART)" ]; then rm -f $(Zato_Test_PubSub_Perf_Resume_File); fi
 	$(Zato_Log_Reset)
-	basetemp="$${TMPDIR:-/tmp}/zato-pubsub-backend-perf-$$USER"; \
-	trap 'rm -rf "$$basetemp"' EXIT INT TERM; \
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/test_pubsub_backend_perf_sqlite.py \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend_perf \
-		-o log_cli=false \
-		-W "ignore:This process:DeprecationWarning" \
-		--basetemp="$$basetemp" \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_system_perf/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_system_perf \
-		-W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_amqp_perf/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend_amqp_perf \
-		-o log_cli=false \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	basetemp="$${TMPDIR:-/tmp}/zato-pubsub-backend-perf-$$USER"; \
-	trap 'rm -rf "$$basetemp"' EXIT INT TERM; \
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_perf/test_pubsub_backend_perf_mass_sqlite.py \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend_perf \
-		-o log_cli=false \
-		-W "ignore:This process:DeprecationWarning" \
-		--basetemp="$$basetemp" \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	@resume=''; \
+	if [ -f $(Zato_Test_PubSub_Perf_Resume_File) ]; then \
+		resume=$$(cat $(Zato_Test_PubSub_Perf_Resume_File)); \
+		echo ">>> Resuming from $$resume" $(Zato_Log); \
+	fi; \
+	$(foreach step,$(Zato_Test_PubSub_Perf_Steps),$(call Zato_Test_PubSub_Perf_Step,$(step))) \
+	rm -f $(Zato_Test_PubSub_Perf_Resume_File)
 
 # The live suites of exactly-once delivery.
 Zato_Test_Exactly_Once_Dir      := $(CURDIR)/code/tests/python/zato-server/pubsub_exactly_once
