@@ -93,8 +93,9 @@ class DashboardSuite:
         for handle in self.handles.values():
             handle.close()
 
-        if self.started_versions:
-            stop_guests(self.started_versions)
+        # No guest is left running once the session ends
+        guest_versions = list(self.handles)
+        stop_guests(guest_versions)
 
 # ################################################################################################################################
 # ################################################################################################################################

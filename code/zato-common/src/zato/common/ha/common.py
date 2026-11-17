@@ -43,6 +43,11 @@ class ModuleCtx:
     # The name of the node that started the server
     Env_Node_Name = 'Zato_HA_Node_Name'
 
+    # The timers of the node, in seconds, each of which the node takes from its own defaults unless it is given one
+    Env_Heartbeat_Time = 'Zato_HA_Heartbeat_Time'
+    Env_Mark_Out_Time  = 'Zato_HA_Mark_Out_Time'
+    Env_Takeover_Time  = 'Zato_HA_Takeover_Time'
+
     # The value of the mode variable that turns the active-standby mode on
     Mode_Active_Standby = 'active-standby'
 

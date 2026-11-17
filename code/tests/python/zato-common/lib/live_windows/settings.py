@@ -26,11 +26,27 @@ class Image:
 
 class Versions:
 
-    # The Windows Server releases the guests run
-    Server_2025 = '2025'
-    Server_2022 = '2022'
+    # The guests, each a Windows Server release installed in one language
+    Server_2025          = '2025'
+    Server_2022          = '2022'
+    Server_2019          = '2019'
+    Server_2025_Japanese = '2025ja'
 
-    All = Server_2025, Server_2022
+    All = Server_2025, Server_2022, Server_2019, Server_2025_Japanese
+
+class Language:
+
+    # The installation languages, in the form the container image accepts them
+    English  = 'en'
+    Japanese = 'ja'
+
+# The Windows Server release and the installation language of each guest
+Media = {
+    Versions.Server_2025:          ('2025', Language.English),
+    Versions.Server_2022:          ('2022', Language.English),
+    Versions.Server_2019:          ('2019', Language.English),
+    Versions.Server_2025_Japanese: ('2025', Language.Japanese),
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -155,9 +171,17 @@ def computer_name(version:'str') -> 'str':
 # ################################################################################################################################
 
 def iso_name(version:'str') -> 'str':
-    """ Returns the name under which the container stores the installation media of one Windows version.
+    """ Returns the name under which the container stores the installation media of one guest,
+    e.g. win2025-eval.iso or win2025-eval_ja.iso.
     """
-    out = f'win{version}-eval.iso'
+    release, language = Media[version]
+
+    out = f'win{release}-eval'
+
+    if language != Language.English:
+        out = f'{out}_{language}'
+
+    out = f'{out}.iso'
     return out
 
 # ################################################################################################################################

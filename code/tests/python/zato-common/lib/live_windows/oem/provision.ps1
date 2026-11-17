@@ -38,8 +38,9 @@ try {
     # The guest network is classified as private
     Get-NetConnectionProfile | Set-NetConnectionProfile -NetworkCategory Private
 
-    # Failed logons are written to the Security log, from which the agent forwards them
-    $null = auditpol /set /subcategory:"Logon" /failure:enable
+    # Failed logons are written to the Security log, from which the agent forwards them.
+    # The subcategory is given by its GUID, since its name differs in each installation language.
+    $null = auditpol /set /subcategory:"{0CCE9215-69AE-11D9-BED3-505054503030}" /failure:enable
 
     # No updates are installed and no maintenance runs while tests use the guest
     $updatePolicy = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU'

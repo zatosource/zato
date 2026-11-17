@@ -19,7 +19,7 @@ from live_windows.agent_client import AgentClient
 from live_windows.build import build_missing
 from live_windows.docker_ import container_is_running, follow_logs, published_port, remove_container
 from live_windows.layout import layout_command
-from live_windows.settings import Accounts, container_name, Guest, Image, Paths, storage_dir
+from live_windows.settings import Accounts, container_name, Guest, Image, Media, Paths, storage_dir
 from live_windows.share_client import ShareClient
 
 # ################################################################################################################################
@@ -60,7 +60,7 @@ class GuestInfo:
 
     @property
     def prefix(self) -> 'str':
-        out = f'[WIN{self.version}]'
+        out = f'[WIN{self.version.upper()}]'
         return out
 
     def harness_client(self) -> 'ShareClient':
@@ -108,6 +108,7 @@ def _run_container(version:'str') -> 'None':
     """
     name = container_name(version)
     storage = storage_dir(version)
+    release, language = Media[version]
 
     command:'strlist' = [
         'docker', 'run', '-d', '--rm',
@@ -116,7 +117,8 @@ def _run_container(version:'str') -> 'None':
         '--device', '/dev/net/tun',
         '--cap-add', 'NET_ADMIN',
         '--stop-timeout', '10',
-        '-e', f'VERSION={version}',
+        '-e', f'VERSION={release}',
+        '-e', f'LANGUAGE={language}',
         '-e', f'DISK_SIZE={Guest.Disk_Size}',
         '-e', f'RAM_SIZE={Guest.RAM_Size}',
         '-e', f'CPU_CORES={Guest.CPU_Cores}',

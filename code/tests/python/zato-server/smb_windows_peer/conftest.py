@@ -71,8 +71,9 @@ def smb_suite() -> 'iterator_':
     finally:
         suite.close()
 
-        if started_versions:
-            stop_guests(started_versions)
+        # No guest is left running once the session ends
+        guest_versions = list(handles)
+        stop_guests(guest_versions)
 
 # ################################################################################################################################
 

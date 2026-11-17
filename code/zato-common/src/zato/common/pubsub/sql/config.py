@@ -39,25 +39,25 @@ class ModuleCtx:
 # ################################################################################################################################
 
 # How long the messages of a pull wait for their acknowledgement, in seconds.
-_default_pull_lease_seconds = 30
+Default_Pull_Lease_Seconds = 30
 
 # How many fully delivered messages one topic may retain for browsing and statistics.
-_default_delivered_max_messages = 1_000_000
+Default_Delivered_Max_Messages = 1_000_000
 
 # How many days a fully delivered message is retained for browsing and statistics.
-_default_delivered_max_days = 7
+Default_Delivered_Max_Days = 7
 
 # How many rows one bulk delete or update statement may touch.
 _default_batch_size = 5_000
 
 # How many messages the publications and acknowledgements of one group commit refer to at most.
-_default_commit_max_messages = 500
+Default_Commit_Max_Messages = 500
 
 # How many group commits may be in progress at once on PostgreSQL. SQLite has a single writer.
-_default_commits_in_flight = 2
+Default_Commits_In_Flight = 2
 
 # How many group commits of publications may be in progress on PostgreSQL in addition to the ones above.
-_urgent_commits_in_flight = 1
+Urgent_Commits_In_Flight = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -68,7 +68,7 @@ def get_delivered_max_messages() -> 'int':
     if value := os.environ.get(ModuleCtx.Env_Delivered_Max_Messages, ''):
         out = int(value)
     else:
-        out = _default_delivered_max_messages
+        out = Default_Delivered_Max_Messages
 
     return out
 
@@ -80,7 +80,7 @@ def get_delivered_max_days() -> 'int':
     if value := os.environ.get(ModuleCtx.Env_Delivered_Max_Days, ''):
         out = int(value)
     else:
-        out = _default_delivered_max_days
+        out = Default_Delivered_Max_Days
 
     return out
 
@@ -104,7 +104,7 @@ def get_commit_max_messages() -> 'int':
     if value := os.environ.get(ModuleCtx.Env_Commit_Max_Messages, ''):
         out = int(value)
     else:
-        out = _default_commit_max_messages
+        out = Default_Commit_Max_Messages
 
     return out
 
@@ -116,7 +116,7 @@ def get_pull_lease_seconds() -> 'int':
     if value := os.environ.get(ModuleCtx.Env_Pull_Lease_Seconds, ''):
         out = int(value)
     else:
-        out = _default_pull_lease_seconds
+        out = Default_Pull_Lease_Seconds
 
     return out
 
@@ -132,7 +132,7 @@ def get_commits_in_flight() -> 'int':
     elif value := os.environ.get(ModuleCtx.Env_Commits_In_Flight, ''):
         out = int(value)
     else:
-        out = _default_commits_in_flight
+        out = Default_Commits_In_Flight
 
     return out
 
@@ -147,7 +147,7 @@ def get_urgent_commits_in_flight() -> 'int':
     if db_type == Type_SQLite:
         out = 0
     else:
-        out = _urgent_commits_in_flight
+        out = Urgent_Commits_In_Flight
 
     return out
 

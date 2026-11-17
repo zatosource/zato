@@ -20,8 +20,8 @@ from time import monotonic, sleep
 # Zato
 from live_windows.build_progress import describe
 from live_windows.docker_ import container_is_running, follow_logs, published_port, remove_container, remove_directory
-from live_windows.settings import Accounts, computer_name, Control, container_name, Guest, Image, iso_name, Paths, \
-    storage_dir
+from live_windows.settings import Accounts, computer_name, Control, container_name, Guest, Image, iso_name, Media, \
+    Paths, storage_dir
 from live_windows.share_client import ShareClient
 
 # ################################################################################################################################
@@ -161,6 +161,7 @@ def _run_container(version:'str', oem_dir:'Path') -> 'None':
     host = computer_name(version)
     storage = storage_dir(version)
     iso_path = Paths.ISO_Dir / iso_name(version)
+    release, language = Media[version]
 
     command:'strlist' = [
         'docker', 'run', '-d',
@@ -169,7 +170,8 @@ def _run_container(version:'str', oem_dir:'Path') -> 'None':
         '--device', '/dev/net/tun',
         '--cap-add', 'NET_ADMIN',
         '--stop-timeout', str(Image.Stop_Timeout),
-        '-e', f'VERSION={version}',
+        '-e', f'VERSION={release}',
+        '-e', f'LANGUAGE={language}',
         '-e', f'EDITION={Guest.Edition}',
         '-e', f'DISK_SIZE={Guest.Disk_Size}',
         '-e', f'RAM_SIZE={Guest.RAM_Size}',

@@ -1135,6 +1135,7 @@ Zato_Test_Durability_Tests_static        := $(Zato_Test_Durability_Dir)/static/ 
 	$(CURDIR)/code/tests/python/zato-server/ha_postgresql_kubernetes/test_manifest_durability.py
 Zato_Test_Durability_Tests_engines       := $(Zato_Test_Durability_Dir)/engines/
 Zato_Test_Durability_Tests_writers       := $(Zato_Test_Durability_Dir)/writers/
+Zato_Test_Durability_Tests_perf-gate     := $(Zato_Test_Durability_Dir)/perf_gate/
 Zato_Test_Durability_Tests_power-loss    := $(Zato_Test_Durability_Dir)/power_loss/
 Zato_Test_Durability_Tests_ha-sqlite     := $(CURDIR)/code/tests/python/zato-server/ha_sqlite/test_durability.py
 Zato_Test_Durability_Tests_ha-postgresql := $(CURDIR)/code/tests/python/zato-server/ha_postgresql/test_durability.py
@@ -1142,13 +1143,14 @@ Zato_Test_Durability_Tests_ha-postgresql := $(CURDIR)/code/tests/python/zato-ser
 Zato_Test_Durability_Runner_static        := $(Zato_Test_Durability_Plain)
 Zato_Test_Durability_Runner_engines       := $(Zato_Test_Durability_Plain)
 Zato_Test_Durability_Runner_writers       := $(Zato_Test_Durability_Gevent)
+Zato_Test_Durability_Runner_perf-gate     := $(Zato_Test_Durability_Plain)
 Zato_Test_Durability_Runner_power-loss    := $(Zato_Test_Durability_Plain)
 Zato_Test_Durability_Runner_ha-sqlite     := $(Zato_Test_Durability_Plain)
 Zato_Test_Durability_Runner_ha-postgresql := $(Zato_Test_Durability_Plain)
 
 # The steps in the order they run, the step that the target is currently on, and the pytest option that resumes
 # each step from the test that failed or was interrupted, or starts it over under RESTART.
-Zato_Test_Durability_Steps       := static engines writers power-loss ha-sqlite ha-postgresql
+Zato_Test_Durability_Steps       := static engines writers perf-gate power-loss ha-sqlite ha-postgresql
 Zato_Test_Durability_Fast_Steps  := static engines
 Zato_Test_Durability_Resume_File := $(CURDIR)/code/tests/.test-durability-resume
 Zato_Test_Durability_Stepwise     = $(if $(RESTART),--sw-reset,--sw)
@@ -1170,7 +1172,7 @@ Zato_Test_Durability_Step = \
 			$(Zato_Test_Durability_Stepwise) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
 	fi;
 
-test-durability: ## Durability - static scans, engine settings, write acknowledgments, loss of power to a single server and to each pair, resuming from the step that last failed or was interrupted. RESTART=1 to start from scratch.
+test-durability: ## Durability - static scans, engine settings, write acknowledgments, the settings gate of performance figures, loss of power to a single server and to each pair, resuming from the step that last failed or was interrupted. RESTART=1 to start from scratch.
 	@if [ -n "$(RESTART)" ]; then rm -f $(Zato_Test_Durability_Resume_File); fi
 	$(Zato_Log_Reset)
 	$(MAKE) ha-node-build $(Zato_Log)
@@ -1794,10 +1796,10 @@ test-sftp: ## SFTP tests - the outconn and scheduler suites against live OpenSSH
 Zato_SMB_Windows_CLI   = PYTHONPATH=$(CURDIR)/code/tests/python/zato-common/lib $(ZATO_PY) -u -m live_windows.cli
 Zato_SMB_Windows_Tests = $(CURDIR)/code/tests/python/zato-server/smb_windows_live
 
-test-smb-windows-build: ## Windows Server 2022 and 2025 guests for the live SMB tests - builds the prepared disks that are missing or out of date.
+test-smb-windows-build: ## Windows Server 2025, 2022 and 2019 guests and a Japanese Windows Server 2025 guest for the live SMB tests - builds the prepared disks that are missing or out of date.
 	$(Zato_SMB_Windows_CLI) build
 
-test-smb: ## Live SMB tests against Windows Server 2022 and 2025 guests - the offline checks, the file exchange flows, reliability, the Dashboard and failover, in that order.
+test-smb: ## Live SMB tests against Windows Server 2025, 2022 and 2019 guests and a Japanese Windows Server 2025 guest - the offline checks, the file exchange flows, reliability, the Dashboard and failover, in that order.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/live_windows_offline/ \

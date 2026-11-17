@@ -331,11 +331,12 @@ class PushDelivery:
                 break
 
             msg_id = message['msg_id']
-            sequence_id = message['sequence_id']
+            delivery_attempt = message['delivery_attempt']
 
             # .. and each message is acked as soon as it is concluded, counting out only what the ack removed,
-            # .. so a delivery stopped in the middle of a batch leaves no concluded message behind.
-            fully_delivered_count = self.backend.ack_messages(sub_key, [msg_id], [sequence_id])
+            # .. so a delivery stopped in the middle of a batch leaves no concluded message behind,
+            # .. and only with the attempt that this server recorded, so that a message handed out again stays.
+            fully_delivered_count = self.backend.ack_delivered(sub_key, msg_id, delivery_attempt)
             self.server.config_manager.outgoing_queue_depth.lower(sub_key, fully_delivered_count)
 
 # ################################################################################################################################

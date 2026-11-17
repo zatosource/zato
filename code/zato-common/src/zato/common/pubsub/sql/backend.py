@@ -19,6 +19,7 @@ from sqlalchemy import and_, select
 # Zato
 from zato.common.api import PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource, is_audit_log_enabled
+from zato.common.db_env.common import Type_SQLite
 from zato.common.db_env.engine import call_database, execute_write
 from zato.common.pubsub.delivery_scope import get_delivery_scope
 from zato.common.pubsub.sql.admin import SQLAdminAPI
@@ -196,6 +197,33 @@ class SQLPubSubBackend(SQLAdminAPI):
 
         logger.info('ack_with_publications -> sub_key:%s, acked:%d, fully_delivered:%d, publications:%d',
             sub_key, len(msg_ids), ack.fully_delivered_count, len(publications))
+
+# ################################################################################################################################
+
+    def ack_delivered(self, sub_key:'str', msg_id:'str', delivery_attempt:'int') -> 'int':
+        """ Acknowledges one pushed message of an outgoing connection's queue under the fence, with the delivery attempt
+        that this server recorded for it. On PostgreSQL, a message that another server has handed out again since
+        raises PubSubAckConflict and stays in the queue, while on SQLite, which only one server uses and which counts
+        the attempts in memory, any attempt is accepted. A message concluded already is removed by nothing.
+        Returns how many messages became fully delivered.
+        """
+        if self.engine.dialect.name == Type_SQLite:
+            expected_attempts = None
+        else:
+            expected_attempts = [delivery_attempt]
+
+        ack = new_fenced_ack(sub_key, [msg_id], expected_attempts)
+        atomic = new_pending_atomic([], ack, False)
+
+        self._writer.ack_atomic(atomic)
+        self._log_concluded(ack)
+
+        out = ack.fully_delivered_count
+
+        logger.info('ack_delivered -> sub_key:%s, msg_id:%s, attempt:%d, removed:%d, fully_delivered:%d',
+            sub_key, msg_id, delivery_attempt, ack.removed_count, out)
+
+        return out
 
 # ################################################################################################################################
 

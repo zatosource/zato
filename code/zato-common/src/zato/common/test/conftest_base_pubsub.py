@@ -27,7 +27,9 @@ import pytest
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.api import PubSub
+from zato.common.db_env.database import database_config
 from zato.common.db_env.database_env import DatabaseEnv
+from zato.common.db_env.fence import ModuleCtx as FenceCtx
 from zato.common.test.pubsub_database import get_db_mode, is_postgresql_mode, start_pubsub_database, \
     stop_pubsub_database
 
@@ -52,6 +54,30 @@ _ping_poll_interval   = 0.5
 
 # What the arbiter logs the first time that the worker is ready
 _worker_ready_pattern = re.compile(r'zato\.server\.arbiter:\d+ - Worker is ready')
+
+# The variables of the operating system that a server process needs, the only ones that it receives
+# from the environment of the test process apart from those that select the Zato database
+_system_env_names = ('HOME', 'LANG', 'LC_ALL', 'LOGNAME', 'PATH', 'TMPDIR', 'TZ', 'USER')
+
+# The variables that select the Zato database and the file of the generation of the active server, which the session
+# sets for the test process and the server alike. The size of the pool is not one of them, it reaches the server
+# only through the explicit variables of the server.
+_database_env_names = (
+    database_config.env_type,
+    database_config.env_path,
+    database_config.env_host,
+    database_config.env_port,
+    database_config.env_username,
+    database_config.env_password,
+    database_config.env_password_file,
+    database_config.env_name,
+    database_config.env_ssl,
+    database_config.env_ssl_ca_file,
+    database_config.env_ssl_cert_file,
+    database_config.env_ssl_key_file,
+    database_config.env_ssl_verify,
+    FenceCtx.Env_Generation_File,
+)
 
 # The logs that are copied out of an environment before it is torn down
 _server_log_file_name        = 'server.log'
@@ -207,6 +233,26 @@ def render_template(template_path:'str', placeholders:'anydict') -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def get_server_environment(server_port:'int', broker_port:'int', extra_server_env:'strstrdict') -> 'strstrdict':
+    """ Builds the environment of a server process from an explicit mapping - the variables of the operating system,
+    those that select the Zato database, the ports of the server and the variables that the caller gives,
+    so that no other variable of the environment of the test process reaches the server.
+    """
+    out:'strstrdict' = {}
+
+    for name in _system_env_names + _database_env_names:
+        if name in os.environ:
+            out[name] = os.environ[name]
+
+    out['Zato_Config_Bind_Port'] = str(server_port)
+    out['Zato_Broker_HTTP_Port'] = str(broker_port)
+
+    out.update(extra_server_env)
+
+    return out
+
+# ################################################################################################################################
+
 def start_server_process(
     state:'SessionState',
     logger:'logging.Logger',
@@ -220,14 +266,7 @@ def start_server_process(
     """ Starts the Zato server process, streams stdout, and waits for it to be ready.
     Returns the popen timestamp.
     """
-    server_environment = os.environ.copy()
-    server_environment['Zato_Config_Bind_Port'] = str(server_port)
-    server_environment['Zato_Broker_HTTP_Port'] = str(broker_port)
-    _ = server_environment.pop('COVERAGE_PROCESS_START', None)
-
-    # .. apply any extra env vars ..
-    for env_key, env_value in extra_server_env.items():
-        server_environment[env_key] = env_value
+    server_environment = get_server_environment(server_port, broker_port, extra_server_env)
 
     patch_server_conf(server_directory, server_port, patch_server_conf_bind)
 
@@ -461,11 +500,15 @@ def create_zato_server_fixture(
         generation_file_path = os.path.join(server_directory, 'database-generation')
         os.environ['Zato_Database_Generation_File'] = generation_file_path
 
+        # .. the server receives the variables of the suite and those of its database explicitly ..
+        server_env = dict(extra_server_env)
+
         if is_postgresql_mode(db_mode):
             pubsub_database = start_pubsub_database('live', db_mode)
             state.pubsub_database = pubsub_database
             _ = atexit.register(stop_pubsub_database, pubsub_database)
             os.environ.update(pubsub_database.env)
+            server_env.update(pubsub_database.env)
             logger.info('Zato database: %s (%s)', pubsub_database.container_name, db_mode)
         else:
             pubsub_database = None
@@ -494,7 +537,7 @@ def create_zato_server_fixture(
             server_directory=server_directory,
             server_port=server_port,
             broker_port=broker_port,
-            extra_server_env=extra_server_env,
+            extra_server_env=server_env,
             patch_server_conf_bind=patch_server_conf_bind,
         )
 

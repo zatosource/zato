@@ -66,14 +66,18 @@ _user_timeout_ms = 60_000
 _idle_in_transaction_timeout_ms = 60_000
 
 # The commit levels of PostgreSQL under which a commit may return before its record is flushed to disk.
-_relaxed_commit_levels = ('off', 'local', 'remote_write')
+Relaxed_Commit_Levels = ('off', 'local', 'remote_write')
 
 # How PostgreSQL shows a setting that is turned on.
-_setting_on = 'on'
+Setting_On = 'on'
+
+# The journal mode and the level of synchronization that every SQLite connection of Zato runs with.
+SQLite_Journal_Mode = 'wal'
+SQLite_Synchronous = 'full'
 
 # The standbys that stream the write-ahead log of the server, without the logical replication connections,
 # which receive changes that are already durable.
-_standby_count_query = """
+Standby_Count_Query = """
 select count(*) from pg_stat_replication as replication
 where not exists (
     select 1 from pg_replication_slots as slot
@@ -157,7 +161,7 @@ def set_postgresql_session(dbapi_connection:'any_', connection_record:'any_') ->
     row = cursor.fetchone()
     configured_level = row[0]
 
-    if configured_level in _relaxed_commit_levels:
+    if configured_level in Relaxed_Commit_Levels:
         _ = cursor.execute('set synchronous_commit = on')
 
     _ = cursor.execute(f"set idle_in_transaction_session_timeout = '{_idle_in_transaction_timeout_ms}ms'")
@@ -186,18 +190,18 @@ def verify_postgresql_server(dbapi_connection:'any_', connection_record:'any_') 
     fsync = _show(cursor, 'show fsync')
     full_page_writes = _show(cursor, 'show full_page_writes')
     synchronous_standby_names = _show(cursor, 'show synchronous_standby_names')
-    standby_count = _show(cursor, _standby_count_query)
+    standby_count = _show(cursor, Standby_Count_Query)
     has_provider_failover = _show(cursor, _provider_failover_query)
 
     cursor.close()
     dbapi_connection.commit()
 
-    if fsync != _setting_on:
-        raise DatabaseDurabilityError(f'PostgreSQL server has fsync `{fsync}`, it must be `{_setting_on}`')
+    if fsync != Setting_On:
+        raise DatabaseDurabilityError(f'PostgreSQL server has fsync `{fsync}`, it must be `{Setting_On}`')
 
-    if full_page_writes != _setting_on:
+    if full_page_writes != Setting_On:
         raise DatabaseDurabilityError(
-            f'PostgreSQL server has full_page_writes `{full_page_writes}`, it must be `{_setting_on}`')
+            f'PostgreSQL server has full_page_writes `{full_page_writes}`, it must be `{Setting_On}`')
 
     if standby_count and not has_provider_failover:
         if not synchronous_standby_names:

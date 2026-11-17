@@ -34,7 +34,7 @@ Env_Retention_Days = 'Zato_Audit_Log_Retention_Days'
 Env_Retention_Days_Prefix = 'Zato_Audit_Log_Retention_Days_'
 
 # How many days of events are kept when the environment does not say otherwise
-_default_retention_days = 30
+Default_Retention_Days = 30
 
 # How many days a health check's own events are kept for. A check running every ten seconds writes
 # more rows in a day than most connections carry in a month, and a ping that answered a week ago
@@ -58,7 +58,7 @@ Export_Payload_Flag = 'is_audit_export_payload_active'
 Env_Commit_Max_Events = 'Zato_Audit_Log_Commit_Max_Events'
 
 # How many events one group commit writes at most when the environment does not say otherwise
-_default_commit_max_events = 500
+Default_Commit_Max_Events = 500
 
 # ################################################################################################################################
 
@@ -68,7 +68,7 @@ def get_commit_max_events() -> 'int':
     if value := os.environ.get(Env_Commit_Max_Events, ''):
         out = int(value)
     else:
-        out = _default_commit_max_events
+        out = Default_Commit_Max_Events
 
     return out
 
@@ -292,7 +292,7 @@ def get_retention_days(source:'str' = '') -> 'int':
         out = int(value)
         return out
 
-    out = _default_retention_days
+    out = Default_Retention_Days
     return out
 
 # ################################################################################################################################

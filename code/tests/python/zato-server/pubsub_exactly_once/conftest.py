@@ -56,7 +56,7 @@ def _build_config(
     # The control files of the relay are shared by the server and the test process ..
     control_dir = tempfile.mkdtemp(prefix='zato_pubsub_exactly_once_control_')
     create_control_dir(control_dir)
-    os.environ[Env_Dir] = control_dir
+    _extra_server_env[Env_Dir] = control_dir
     state.test_data_directory = control_dir
 
     # .. and the test process reads the lease that the server uses.

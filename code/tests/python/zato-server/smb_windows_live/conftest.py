@@ -89,16 +89,15 @@ class _GuestStart:
             raise self.error
 
     def stop(self) -> 'None':
-        """ Closes the connections to the guests, and removes the guests this session booted.
-        Guests that were already running are left running for the sessions that follow.
+        """ Closes the connections to the guests and removes every guest, so that none is left running once the session ends.
         """
         self.thread.join()
 
         for handle in self.handles.values():
             handle.close()
 
-        if self.started_versions:
-            stop_guests(self.started_versions)
+        guest_versions = list(self.handles)
+        stop_guests(guest_versions)
 
 # ################################################################################################################################
 # ################################################################################################################################
