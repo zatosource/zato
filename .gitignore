@@ -4,6 +4,7 @@
 .hypothesis
 .vscode
 .zato-sftp-dev
+/links/
 code/.installed.cfg
 code/.lock
 code/.Python
