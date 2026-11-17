@@ -12,12 +12,10 @@ import shutil
 from uuid import uuid4
 
 # Zato
-from zato.common.common_db.schema import shared_object_table
-from zato.common.db_env.engine import execute_write
+from zato.common.common_db.store import SharedObjectStore
 from zato.common.test.durability.barrier import replicated_environment
 from zato.common.test.durability.disk import get_disk_dir
 from zato.common.test.zato_database import file_database_engine
-from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,20 +43,16 @@ def test_barrier_on_schema_and_row() -> 'None':
 
         before = barrier.request_count
 
-        with file_database_engine(directory) as engine:
+        with file_database_engine(directory):
 
             assert barrier.request_count > before, 'The creation of the schema returned before the barrier'
 
-            insert = shared_object_table.insert().values(
-                object_type=ModuleCtx.Object_Type,
-                name=uuid4().hex,
-                data='{}',
-                version=1,
-                last_updated=utcnow(),
-            )
+            store = SharedObjectStore()
 
             before = barrier.request_count
-            _ = execute_write(engine, insert)
+            is_written = store.compare_and_set(ModuleCtx.Object_Type, uuid4().hex, {}, None)
+
+            assert is_written
             assert barrier.request_count > before, 'The change of the row returned before the barrier'
 
 # ################################################################################################################################

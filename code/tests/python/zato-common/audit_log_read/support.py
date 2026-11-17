@@ -14,9 +14,10 @@ from random import Random
 from uuid import uuid4
 
 # SQLAlchemy
-from sqlalchemy import create_engine, MetaData, select
+from sqlalchemy import MetaData, select
 
 # Zato
+from live_sql.containers import create_postgresql_database, drop_postgresql_database
 from live_sql.env import database_env
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, AuditEvent, \
     AuditOutcome, AuditSource, metadata as audit_metadata
@@ -100,12 +101,9 @@ _rows_per_statement = 500
 _read_tables = ('event_count', 'event_open')
 _ordered_indexes = ('idx_event_time', 'idx_event_source_time', 'idx_event_outcome_time')
 
-# The SQLite file of a database of the previous version, the prefix of the name of a PostgreSQL one,
-# and the database that a PostgreSQL one is created and dropped from
+# The SQLite file of a database of the previous version and the prefix of the name of a PostgreSQL one
 _previous_sqlite_file = 'previous-version.db'
 _previous_postgresql_prefix = 'zato_previous_'
-_postgresql_admin_db = 'postgres'
-_autocommit = 'AUTOCOMMIT'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -438,29 +436,6 @@ def _previous_metadata() -> 'MetaData':
 
 # ################################################################################################################################
 
-def _postgresql_admin_url(details:'stranydict') -> 'str':
-    username = details['username']
-    password = details['password']
-    port = details['port']
-
-    out = f'postgresql+pg8000://{username}:{password}@localhost:{port}/{_postgresql_admin_db}'
-    return out
-
-# ################################################################################################################################
-
-def _run_postgresql_admin(details:'stranydict', statement:'str') -> 'None':
-    """ Runs a statement that creates or drops a database of the test container, outside of a transaction.
-    """
-    admin_url = _postgresql_admin_url(details)
-    engine = create_engine(admin_url, isolation_level=_autocommit)
-
-    with engine.connect() as connection:
-        _ = connection.exec_driver_sql(statement)
-
-    engine.dispose()
-
-# ################################################################################################################################
-
 @contextmanager
 def previous_version_database(request:'FixtureRequest', backend:'str', directory:'str') -> 'Iterator[Engine]':
     """ Points the Zato database at an empty database of its own, creates in it the audit log of the version
@@ -471,7 +446,7 @@ def previous_version_database(request:'FixtureRequest', backend:'str', directory
         server = request.getfixturevalue('postgresql_server')
         details = dict(server.details)
         details['name'] = _previous_postgresql_prefix + uuid4().hex
-        _run_postgresql_admin(details, f'create database {details["name"]}')
+        create_postgresql_database(server, details['name'])
     else:
         details = {'type': DatabaseEnv.Type_SQLite, 'path': os.path.join(directory, _previous_sqlite_file)}
 
@@ -488,7 +463,8 @@ def previous_version_database(request:'FixtureRequest', backend:'str', directory
             dispose_database_engine()
 
     if backend == Backend_PostgreSQL:
-        _run_postgresql_admin(details, f'drop database {details["name"]}')
+        server = request.getfixturevalue('postgresql_server')
+        drop_postgresql_database(server, details['name'])
 
 # ################################################################################################################################
 

@@ -70,6 +70,11 @@ class ModuleCtx:
     Ping_Query        = 'select 1'
     Ping_Query_Oracle = 'SELECT 1 FROM dual'
 
+    # The system database of the PostgreSQL image, from which the other databases are created and removed,
+    # outside of a transaction
+    PostgreSQL_Admin_DB   = 'postgres'
+    PostgreSQL_Autocommit = 'AUTOCOMMIT'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -153,6 +158,38 @@ def _wait_until_ready_mssql(port:'int', password:'str') -> 'None':
     """
     check = partial(_ping_mssql, port, password)
     wait_until(check, f'MS SQL on port {port}')
+
+# ################################################################################################################################
+
+def _run_postgresql_admin(server:'DatabaseServer', statement:'str') -> 'None':
+    """ Runs a statement of the system database of a PostgreSQL container, outside of a transaction.
+    """
+    details = server.details
+    username = details['username']
+    password = details['password']
+    port = details['port']
+
+    engine_url = f'postgresql+pg8000://{username}:{password}@localhost:{port}/{ModuleCtx.PostgreSQL_Admin_DB}'
+    engine = create_engine(engine_url, isolation_level=ModuleCtx.PostgreSQL_Autocommit, poolclass=NullPool)
+
+    with engine.connect() as connection:
+        _ = connection.exec_driver_sql(statement)
+
+    engine.dispose()
+
+# ################################################################################################################################
+
+def create_postgresql_database(server:'DatabaseServer', db_name:'str') -> 'None':
+    """ Creates an empty database in a PostgreSQL container, owned by the user of the container.
+    """
+    _run_postgresql_admin(server, f'create database {db_name}')
+
+# ################################################################################################################################
+
+def drop_postgresql_database(server:'DatabaseServer', db_name:'str') -> 'None':
+    """ Removes a database of a PostgreSQL container together with everything in it.
+    """
+    _run_postgresql_admin(server, f'drop database {db_name}')
 
 # ################################################################################################################################
 
