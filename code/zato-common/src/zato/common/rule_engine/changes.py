@@ -33,12 +33,9 @@ class ModuleCtx:
 
 # What kind of write one change message announces - consumers only ever evict on them,
 # so an unknown kind from a newer producer still evicts correctly.
-Change_Definition_Created  = 'definition-created'
-Change_Definition_Renamed  = 'definition-renamed'
-Change_Definition_Archived = 'definition-archived'
-Change_Version_Created     = 'version-created'
-Change_Version_Published   = 'version-published'
-Change_Version_Restored    = 'version-restored'
+Change_Definition_Created = 'definition-created'
+Change_Version_Created    = 'version-created'
+Change_Version_Published  = 'version-published'
 
 # ################################################################################################################################
 # ################################################################################################################################

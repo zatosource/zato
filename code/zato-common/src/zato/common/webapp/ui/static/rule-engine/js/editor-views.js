@@ -188,7 +188,6 @@ editorView.scheduleDocumentParse = function(input) {
             self.renderProblems();
             self.recordHistory();
             self.refreshChangeState();
-            editorLive.update();
         }, data.reportError);
     }, editorModel.config.checkDelayMilliseconds);
 };

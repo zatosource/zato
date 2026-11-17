@@ -212,7 +212,7 @@ class TestDefinitionDocuments(unittest.TestCase):
     def test_every_type_is_validated(self) -> 'None':
         """ No type reaches the store on a browser's word - each one refuses an empty document.
         """
-        for object_type in ('ruleset', 'sentence-rule', 'decision-table', 'vocabulary', 'test-set'):
+        for object_type in ('ruleset', 'vocabulary'):
             errors = validate_definition_document(object_type, {})
             self.assertTrue(errors, object_type)
 
@@ -224,17 +224,6 @@ class TestDefinitionDocuments(unittest.TestCase):
         errors = validate_definition_document('bicycle', {})
         self.assertEqual(len(errors), 1)
         self.assertIn('Unknown rule definition type', errors[0]['message'])
-
-# ################################################################################################################################
-
-    def test_a_document_of_another_shape_is_reported(self) -> 'None':
-        """ A document its own validation cannot read comes back as a finding, not as an exception.
-        """
-        table = {'name': 'Loans', 'conditions': ['not a row'], 'actions': [], 'columns': []}
-
-        errors = validate_definition_document('decision-table', table)
-        self.assertEqual(len(errors), 1)
-        self.assertIn('cannot be read as a decision-table', errors[0]['message'])
 
 # ################################################################################################################################
 # ################################################################################################################################

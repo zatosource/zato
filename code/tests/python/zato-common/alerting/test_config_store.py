@@ -239,12 +239,11 @@ class TestApplyTypeConfig:
 
 # ################################################################################################################################
 
-    def test_a_missing_ruleset_is_its_own_error(self, backend:'RuleSQLBackend') -> 'None':
+    def test_a_missing_ruleset_is_its_own_error(self, rule_database_engine:'Engine') -> 'None':
 
         # A store without the ruleset answers with the error the view turns
         # into a bad request, not with a silent no-op
-        definition = get_type_definition(backend, _rest_type)
-        backend.definitions.archive(definition_id=definition.id, actor=_actor)
+        backend = RuleSQLBackend.from_engine(rule_database_engine)
 
         with pytest.raises(NoSuchRulesetError):
             _ = apply_type_config(backend, _rest_type, actor=_actor, values={'error_rate': 20})

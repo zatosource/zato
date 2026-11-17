@@ -21,19 +21,6 @@
     overflow: auto;
     padding: 10px 0 16px;
 }
-.ruleset-browser .rulesets-side {
-    width: 380px;
-    min-width: 0;
-    flex-shrink: 0;
-    overflow: auto;
-    background: var(--chrome);
-    padding: 14px 18px;
-}
-
-/* Wide enough to grab without hunting for it. */
-.ruleset-browser #rulesets-side-resizer {
-    width: 6px;
-}
 
 /* ---------------------------------------------------------- */
 /* Rulesets home - rows                                       */
@@ -66,10 +53,6 @@
     font-weight: 600;
 }
 
-/* The row spaces everything in it by its own gap, so the button brings no margin of its own */
-.ruleset-browser .rulesets-row-name .button-action {
-    margin-left: 0;
-}
 .ruleset-browser .rulesets-open-link {
     display: inline-flex;
     align-items: center;
@@ -89,46 +72,6 @@
 .ruleset-browser .rulesets-caret:hover {
     color: var(--link-hover);
 }
-.ruleset-browser .rulesets-row-description {
-    margin-top: 2px;
-    font-size: 12px;
-    color: var(--text4);
-}
-
-.ruleset-browser .rulesets-star {
-    display: inline-flex;
-    color: var(--text5);
-    cursor: pointer;
-}
-.ruleset-browser .rulesets-star-on {
-    color: var(--amber);
-}
-.ruleset-browser .rulesets-star-on svg {
-    fill: currentColor;
-}
-
-.ruleset-browser .rulesets-publish-line {
-    padding: 5px 14px;
-    font-size: 12.5px;
-    color: var(--text3);
-    line-height: 1.45;
-    max-width: 440px;
-}
-.ruleset-browser .rulesets-publish-warning {
-    color: var(--amber);
-}
-
-.ruleset-browser .rulesets-rename {
-    margin-left: 9px;
-}
-.ruleset-browser .rulesets-rename-line {
-    padding: 5px 14px;
-    font-size: 12.5px;
-    color: var(--text3);
-    line-height: 1.45;
-    max-width: 440px;
-}
-
 .ruleset-browser .rulesets-empty {
     padding: 18px 24px;
     font-size: 12.5px;
@@ -146,20 +89,11 @@
 /* Rulesets home - the rules of an expanded set                */
 /* ---------------------------------------------------------- */
 
-/* The dashed spine sits under the caret of the row it belongs to - 24px of row padding,
-   13px of star, 8px of gap, half of the 12px caret. */
+/* The dashed spine sits under the caret of the row it belongs to. */
 .ruleset-browser .rulesets-rules {
     margin: 0 24px 12px 51px;
     padding-left: 20px;
     border-left: 1px dashed var(--border);
-}
-.ruleset-browser .rulesets-rules-head {
-    padding: 7px 0 5px;
-    font-size: 10.5px;
-    font-weight: 700;
-    color: var(--text4);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
 }
 .ruleset-browser .rulesets-rules-empty {
     padding: 8px 0;
@@ -268,16 +202,7 @@
     text-overflow: ellipsis;
 }
 
-/* The condition and action counts, one grid column each */
-.ruleset-browser .rulesets-rule-shape {
-    font-size: 10px;
-    color: var(--text2);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    white-space: nowrap;
-}
-
-/* The rule's active state, shown when the host asks for it, is worn by the row
+/* The rule's active state is worn by the row
    itself - an inactive rule's name and description are dimmed, while its ordinal
    stays as readable as every other rule's */
 .ruleset-browser .rulesets-rule-off .rulesets-rule-name {
@@ -338,25 +263,9 @@
 }
 
 /* ---------------------------------------------------------- */
-/* Rulesets home - full-text matches                          */
+/* Rulesets home - query matches                              */
 /* ---------------------------------------------------------- */
 
-.ruleset-browser .rulesets-match {
-    margin-top: 5px;
-    padding: 4px 10px;
-    background: var(--panel-raised);
-    border-radius: var(--radius-2);
-    font-size: 12px;
-    color: var(--text3);
-    max-width: 640px;
-}
-.ruleset-browser .rulesets-match-where {
-    margin-left: 9px;
-    font-size: 10px;
-    color: var(--text5);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
 .ruleset-browser .rulesets-match-overflow {
     margin-top: 4px;
     font-size: 11.5px;
@@ -368,130 +277,4 @@
     color: var(--text);
     border-radius: var(--radius-1);
     padding: 0 1px;
-}
-
-/* ---------------------------------------------------------- */
-/* Rulesets home - term cross-references                      */
-/* ---------------------------------------------------------- */
-
-.ruleset-browser .rulesets-term-strip {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 2px 24px 8px;
-    padding: 7px 12px;
-    background: var(--panel-raised);
-    border-radius: var(--radius-3);
-}
-.ruleset-browser .rulesets-term-strip-label {
-    font-size: 11px;
-    color: var(--text5);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-.ruleset-browser .rulesets-term-link {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 7px;
-    font-size: 11.5px;
-    font-family: var(--mono);
-    color: var(--blue);
-    text-decoration: none;
-    background: var(--panel-raised);
-    border-radius: var(--radius-2);
-    padding: 3px 10px;
-}
-.ruleset-browser .rulesets-term-link:hover {
-    background-image: var(--hover-veil);
-    color: var(--text);
-}
-.ruleset-browser .rulesets-term-count {
-    font-size: 10px;
-    font-family: var(--font);
-    color: var(--text5);
-}
-.ruleset-browser .rulesets-term-deprecated {
-    font-size: 9.5px;
-    font-family: var(--font);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--amber);
-}
-.ruleset-browser .rulesets-term-overflow {
-    font-size: 11.5px;
-    color: var(--text5);
-    font-style: italic;
-}
-.ruleset-browser .rulesets-preview-terms {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-/* ---------------------------------------------------------- */
-/* Rulesets home - side pane                                  */
-/* ---------------------------------------------------------- */
-
-.ruleset-browser .rulesets-feed-entry {
-    margin-bottom: 12px;
-}
-.ruleset-browser .rulesets-feed-head {
-    font-size: 11.5px;
-    color: var(--text4);
-}
-.ruleset-browser .rulesets-feed-ruleset {
-    color: var(--blue);
-    font-weight: 600;
-}
-.ruleset-browser .rulesets-feed-what {
-    margin-top: 2px;
-    font-size: 12.5px;
-    color: var(--text3);
-}
-
-.ruleset-browser .rulesets-preview-description {
-    margin-bottom: 8px;
-    font-size: 12.5px;
-    color: var(--text3);
-}
-.ruleset-browser .rulesets-preview-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-.ruleset-browser .rulesets-preview-link {
-    font-size: 12px;
-    color: var(--text2);
-    text-decoration: none;
-    background: var(--panel-raised);
-    border-radius: var(--radius-2);
-    padding: 4px 11px;
-}
-.ruleset-browser .rulesets-preview-link:hover {
-    background-image: var(--hover-veil);
-    color: var(--text);
-}
-
-.ruleset-browser .rulesets-preview-rule {
-    display: block;
-    margin-top: 4px;
-    padding: 4px 10px;
-    background: var(--panel-raised);
-    border-radius: var(--radius-2);
-    font-family: var(--mono);
-    font-size: 11.5px;
-    color: var(--text2);
-    text-decoration: none;
-}
-.ruleset-browser .rulesets-preview-rule:hover {
-    background-image: var(--hover-veil);
-    color: var(--text);
-}
-.ruleset-browser .rulesets-preview-note {
-    font-size: 11.5px;
-    color: var(--text5);
-    font-style: italic;
-    margin: 6px 0;
 }

@@ -401,10 +401,6 @@ editorView.openRule = function(ruleKey) {
     this.render();
 };
 
-editorView.openTests = function() {
-    window.location.href = editorModel.config.testsUrl + '?ruleset=' + editorModel.definitionId;
-};
-
 // ////////////////////////////////////////////////////////////////////////
 
 // Each rule walks its own history - the stacks hold JSON snapshots of the
@@ -519,7 +515,6 @@ editorView.dispatch = function(event, target) {
     if (action === 'apply-fix') { this.applyFix(itemIndex); }
     if (action === 'set-view') { this.setView(target.getAttribute('data-view')); }
     if (action === 'open-rule-menu') { this.openRuleMenu(synthetic); }
-    if (action === 'open-tests') { this.openTests(); }
     if (action === 'save') { this.save(target); }
 };
 

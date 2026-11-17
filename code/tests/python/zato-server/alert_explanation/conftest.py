@@ -11,9 +11,8 @@ import os
 import sys
 from shutil import copytree
 
-# The chat and Graph simulators are shared with the rule engine jobs suite, the SMTP receiver
-# with the zato-common suites, and the explain helpers live next to this file.
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'zato-common', 'rule_engine_jobs', 'lib')))
+# The chat and Graph simulators and the SMTP receiver are shared with the zato-common suites,
+# and the explain helpers live next to this file.
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'zato-common', 'lib')))
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 

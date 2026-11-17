@@ -10,11 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import sys
 
-# The Graph simulator lives with the rule engine jobs suite and the environment
-# helpers are shared with the zato-common audit log suite.
+# The Graph simulator and the environment helpers are shared with the zato-common suites.
 _tests_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-sys.path.insert(0, os.path.join(_tests_dir, 'zato-common', 'rule_engine_jobs', 'lib'))
 sys.path.insert(0, os.path.join(_tests_dir, 'zato-common', 'lib'))
 
 # ################################################################################################################################

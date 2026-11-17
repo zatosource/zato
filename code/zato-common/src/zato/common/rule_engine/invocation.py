@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import NamedTuple
 
 # Zato
-from zato.common.rule_engine.ingestion import DecisionRecorder
+from zato.common.rule_engine.ingestion import evaluate_decision
 from zato.common.rule_engine.loading import documents_from_version, load_documents
 from zato.common.rule_engine.semantics import validate_data
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Definition_Type_Vocabulary
@@ -25,7 +25,7 @@ from zato.common.rule_engine.vocabulary import build_attribute_index
 
 if 0:
     from zato.common.rule_engine.loading import LoadedRules
-    from zato.common.rule_engine.sql import DecisionBatchWriter, RuleDefinitionRecord, RuleSQLBackend
+    from zato.common.rule_engine.sql import RuleDefinitionRecord, RuleSQLBackend
     from zato.common.typing_ import anydict, dictlist, strlist
 
 # ################################################################################################################################
@@ -293,14 +293,9 @@ class RulesetInvoker:
     Version snapshots are immutable so once compiled they are kept for the invoker's lifetime.
     """
 
-    def __init__(
-        self,
-        backend:'RuleSQLBackend',
-        writer:'DecisionBatchWriter',
-        ) -> 'None':
+    def __init__(self, backend:'RuleSQLBackend') -> 'None':
 
         self.backend = backend
-        self.writer = writer
 
         # One entry per ruleset name, including names that resolved to nothing,
         # so unknown names cannot force a database read per request.
@@ -429,13 +424,11 @@ class RulesetInvoker:
         name:'str',
         data:'anydict',
         version:'int | None' = None,
-        caller:'str | None' = None,
         ) -> 'InvocationResult':
-        """ Evaluates one input against a published ruleset and logs the complete decision.
+        """ Evaluates one input against a published ruleset.
 
-        Without an explicit version the live one runs, so a publish in the dashboard changes
-        what this method runs the moment its announcement arrives. The optional caller is the
-        name of the authenticated system this evaluation runs for and it lands in the decision log.
+        Without an explicit version the live one runs, so a publish in Dashboard changes
+        what this method runs the moment its announcement arrives.
         """
 
         # Our response to produce
@@ -492,12 +485,8 @@ class RulesetInvoker:
                 out.errors = errors
                 return out
 
-        # .. evaluate the input and commit the complete decision through the writer ..
-        recorder = DecisionRecorder(self.writer, ruleset_id=definition.id, rules_version=version)
-        decision = recorder.record(entry.loaded, data, caller)
-
-        # .. and return the outcome together with the id the decision log carries.
-        out.decision = decision
+        # .. and evaluate the input.
+        out.decision = evaluate_decision(entry.loaded, data)
         return out
 
 # ################################################################################################################################

@@ -89,7 +89,7 @@ def _make_tls_certificate() -> 'tuple':
     )
 
     # .. write them out to a temporary directory ..
-    certificate_directory = tempfile.mkdtemp(prefix='zato_rule_engine_jobs_tls_')
+    certificate_directory = tempfile.mkdtemp(prefix='zato_teams_simulator_tls_')
 
     certificate_path = Path(certificate_directory) / 'server.crt'
     private_key_path = Path(certificate_directory) / 'server.key'

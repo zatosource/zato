@@ -388,8 +388,6 @@ def _seed_ruleset(backend:'RuleSQLBackend', ruleset_name:'str', zrules_contents:
         document=document,
     )
 
-    documents = document[Documents_Key]
-    _ = backend.references.rebuild(definition_id=ruleset.id, documents=documents)
     _ = backend.versions.publish(definition_id=ruleset.id, version=ruleset.current_version)
 
     return True
@@ -440,10 +438,6 @@ def _store_upgrade(backend:'RuleSQLBackend', definition:'RuleDefinitionRecord', 
         author=System_Actor,
         comment=_upgrade_comment,
     )
-
-    # A ruleset's reference index follows its rules
-    if definition.object_type == Definition_Type_Ruleset:
-        _ = backend.references.rebuild(definition_id=definition.id, documents=document[Documents_Key])
 
     _ = backend.versions.publish(definition_id=definition.id, version=version.version)
 

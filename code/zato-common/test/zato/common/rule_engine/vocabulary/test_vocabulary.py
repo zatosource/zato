@@ -11,8 +11,7 @@ import unittest
 from copy import deepcopy
 
 # Zato
-from zato.common.rule_engine.vocabulary import ErrorCode, default_phrase, default_set_phrase, get_attribute, picker_paths, \
-    term_words, validate_vocabulary
+from zato.common.rule_engine.vocabulary import ErrorCode, get_attribute, validate_vocabulary
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,35 +50,6 @@ def _get_vocabulary() -> 'anydict':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestPhrases(unittest.TestCase):
-    """ Tests the derivation of default phrases from term names.
-    """
-
-    def test_term_words(self) -> 'None':
-        """ Camel case and underscores both split into lowercase words.
-        """
-        self.assertEqual(term_words('creditScore'), 'credit score')
-        self.assertEqual(term_words('years_as_customer'), 'years as customer')
-        self.assertEqual(term_words('amount'), 'amount')
-
-# ################################################################################################################################
-
-    def test_default_phrase(self) -> 'None':
-        """ A sensible readable phrase exists by default, derived from the term name.
-        """
-        self.assertEqual(default_phrase('loan', 'amount'), 'the loan amount')
-        self.assertEqual(default_phrase('customer', 'creditScore'), 'the customer credit score')
-
-# ################################################################################################################################
-
-    def test_default_set_phrase(self) -> 'None':
-        """ The action phrase wraps the default phrase.
-        """
-        self.assertEqual(default_set_phrase('loan', 'rate'), 'set the loan rate to')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class TestLookups(unittest.TestCase):
     """ Tests attribute lookup and picker behavior.
     """
@@ -96,17 +66,6 @@ class TestLookups(unittest.TestCase):
             self.assertEqual(attribute['type'], 'number range')
 
         self.assertIsNone(get_attribute(vocabulary, 'customer.height'))
-
-# ################################################################################################################################
-
-    def test_picker_paths_exclude_deprecated(self) -> 'None':
-        """ Deprecated terms keep old rules running but never appear in a picker again.
-        """
-        vocabulary = _get_vocabulary()
-        paths = picker_paths(vocabulary)
-
-        self.assertIn('customer.creditScore', paths)
-        self.assertNotIn('customer.segment', paths)
 
 # ################################################################################################################################
 # ################################################################################################################################

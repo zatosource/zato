@@ -6,7 +6,7 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Zato - import all components and re-export them
+# Zato
 from zato.common.rule_engine.models import Ruleset, MatchResult, Rule, rule_from_document
 from zato.common.rule_engine.cache import CachedRule
 from zato.common.rule_engine.evaluation import first_matching_rule
@@ -18,18 +18,9 @@ from zato.common.rule_engine.evaluation import first_matching_rule
 from logging import getLogger
 from pathlib import Path
 from threading import RLock
-from time import time
 
 # Zato
 from zato.common.rule_engine.parser import parse_file
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# For flake8
-Ruleset = Ruleset
-MatchResult = MatchResult
-Rule = Rule
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,13 +44,13 @@ class RulesManager:
         self._all_rules = {}
         self._rulesets = {}
         self._lock = RLock()
-        self.cached_rules = {}  # type: dict_[str, CachedRule]
-        self.performance_stats = {
-            'total_evaluations': 0,
-            'cache_hits': 0,
-            'cache_misses': 0,
-            'total_time': 0.0
-        }  # type: dict_[str, int | float]
+        self.cached_rules:'dict_[str, CachedRule]' = {}
+
+    def get_rule(self, full_name:'str') -> 'Rule':
+        """ Returns one loaded rule by its full name.
+        """
+        out = self._all_rules[full_name]
+        return out
 
     def __getitem__(self, name:'str') -> 'Rule | Ruleset':
         return getattr(self, name)
@@ -88,9 +79,6 @@ class RulesManager:
         This is the explicit-list question, not the ruleset answer - a caller who wants what a
         whole ruleset decides asks `Ruleset.match`, which merges every rule that fires instead.
         """
-        # Track performance
-        start_time = time()
-
         # Determine which rules to check
         rule_names = [rules] if isinstance(rules, str) else rules
 
@@ -106,55 +94,7 @@ class RulesManager:
             cached_rules.append(cached_rule)
 
         out = first_matching_rule(cached_rules, data)
-
-        # The statistics follow the rule that answered, and there is none when nothing matched.
-        if out:
-            matched_rule = self.cached_rules[out.full_name]
-        else:
-            matched_rule = None
-
-        self._update_stats(matched_rule, start_time)
         return out
-
-    def _update_stats(self, cached_rule:'CachedRule | None', start_time:'float') -> 'None':
-        """ Update performance statistics.
-        """
-        self.performance_stats['total_evaluations'] += 1
-
-        if cached_rule:
-            self.performance_stats['cache_hits'] += cached_rule.cache_hits
-            self.performance_stats['cache_misses'] += cached_rule.cache_misses
-
-        self.performance_stats['total_time'] += time() - start_time
-
-    def get_performance_stats(self) -> 'dict_[str, int | float]':
-        """ Get performance statistics.
-        """
-        stats = self.performance_stats.copy()
-
-        # Calculate derived metrics
-        total_conditions = stats['cache_hits'] + stats['cache_misses']
-        if total_conditions > 0:
-            stats['cache_hit_ratio'] = stats['cache_hits'] / total_conditions
-        else:
-            stats['cache_hit_ratio'] = 0.0
-
-        if stats['total_evaluations'] > 0:
-            stats['avg_evaluation_time'] = stats['total_time'] / stats['total_evaluations']
-        else:
-            stats['avg_evaluation_time'] = 0.0
-
-        return stats
-
-    def reset_performance_stats(self) -> 'None':
-        """ Reset performance statistics.
-        """
-        self.performance_stats = {
-            'total_evaluations': 0,
-            'cache_hits': 0,
-            'cache_misses': 0,
-            'total_time': 0.0
-        }
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -228,26 +168,6 @@ class RulesManager:
 
             # .. and tell the caller what we loaded.
             return result
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-    def load_rules_from_directory(self, root_dir:'str | Path') -> 'strlist':
-
-        # Our response to produce
-        out = []
-
-        # Go through all the matching files ..
-        for elem in Path(root_dir).glob('*.zrules'):
-
-            # .. read them all in.
-            result = self.load_rules_from_file(elem)
-
-            # .. append it for later use ..
-            out.extend(result)
-
-        # .. and return the list of what was loaded to our caller.
-        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

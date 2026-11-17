@@ -30,7 +30,6 @@
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/editor-checks.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/editor-render.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/editor-views.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/editor-live.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/editor-drag.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/editor-actions.js"></script>
 <script nonce="{{ CSP_NONCE }}">
@@ -98,7 +97,6 @@ $(document).ready(function() {
         newRuleName: '{{ new_rule_name|escapejs }}',
         newRuleDocs: '{{ new_rule_docs|escapejs }}',
         newRuleActive: {{ new_rule_active|yesno:'true,false' }},
-        showLivePanel: false,
         viewButtonActiveClass: 'dashboard-tab-active',
         viewURLKey: 'view',
         ruleURLKey: 'rule',

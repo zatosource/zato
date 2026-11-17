@@ -185,7 +185,7 @@ def load_alert_rules(backend:'RuleSQLBackend') -> 'rule_engine_rule_list':
 
         # Rule full names embed the ruleset name, so rules from many rulesets never collide
         for full_name in loaded.rule_names:
-            rule = loaded.manager[full_name]
+            rule = loaded.manager.get_rule(full_name)
             out.append(rule)
 
     return out

@@ -109,31 +109,26 @@ def test_flatten_for_validation() -> 'None':
 
 # ################################################################################################################################
 
-def test_live_invocation_lands_with_caller(backend:'RuleSQLBackend') -> 'None':
-    """ Invoking a published ruleset runs its live version and logs the caller with the decision.
+def test_live_invocation(backend:'RuleSQLBackend') -> 'None':
+    """ Invoking a published ruleset runs its live version.
     """
     definition = create_ruleset(backend)
     publish(backend, definition.id)
 
     invoker = new_invoker(backend)
 
-    result = invoker.invoke('payments.discounts', {'credit_score': 720}, caller='crm.prod')
+    result = invoker.invoke('payments.discounts', {'credit_score': 720})
 
     # The invocation completed and reports what ran ..
     assert result.status == InvocationStatus.OK
     assert result.ruleset == 'payments.discounts'
     assert result.version == 1
 
-    # .. the decision names its outcome and outputs ..
+    # .. and the decision names its outcome and outputs.
     decision = result.decision
     assert decision is not None
     assert decision['outcome'] == Outcome.Matched
     assert decision['actual'] == {'rate': 2.9, 'approved': True}
-
-    # .. and the stored row carries the calling system's name.
-    stored = backend.decisions.get(decision['decision_id'])
-    assert stored.caller == 'crm.prod'
-    assert stored.rules_version == 1
 
 # ################################################################################################################################
 
@@ -218,28 +213,23 @@ def test_vocabulary_validates_input_at_the_boundary(backend:'RuleSQLBackend') ->
 
 # ################################################################################################################################
 
-def test_evaluation_error_is_a_logged_decision(backend:'RuleSQLBackend') -> 'None':
-    """ Without a vocabulary, an input the rules cannot evaluate lands as an error decision.
+def test_evaluation_error_is_an_error_decision(backend:'RuleSQLBackend') -> 'None':
+    """ Without a vocabulary, an input the rules cannot evaluate comes back as an error decision.
     """
     definition = create_ruleset(backend)
     publish(backend, definition.id)
 
     invoker = new_invoker(backend)
 
-    result = invoker.invoke('payments.discounts', {'amount': 50}, caller='crm.prod')
+    result = invoker.invoke('payments.discounts', {'amount': 50})
 
-    # The evaluation completed as an error decision ..
+    # The evaluation completed as an error decision that names the missing input.
     assert result.status == InvocationStatus.OK
 
     decision = result.decision
     assert decision is not None
     assert decision['outcome'] == Outcome.Error
     assert 'credit_score' in decision['error']
-
-    # .. and the log holds it under the same id, caller included.
-    stored = backend.decisions.get(decision['decision_id'])
-    assert stored.is_error is True
-    assert stored.caller == 'crm.prod'
 
 # ################################################################################################################################
 # ################################################################################################################################

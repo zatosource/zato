@@ -16,8 +16,7 @@ from sqlalchemy.schema import CreateIndex, CreateTable
 from typing_extensions import TypeAlias
 
 # Local
-from zato.common.rule_engine.sql.schema import metadata, rule_decision_table, rule_definition_table, rule_event_table, \
-    rule_version_table
+from zato.common.rule_engine.sql.schema import metadata, rule_definition_table, rule_version_table
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -49,44 +48,25 @@ def test_schema_has_exactly_the_planned_tables() -> 'None':
     # Read the complete metadata table set ..
     table_names:'table_name_set' = set(metadata.tables)
 
-    # .. and verify that it contains exactly the planned write patterns - the four
-    # .. core ones, the where-used index, the per-actor workspace stores,
-    # .. the notification stores and the publish approval gate.
+    # .. and verify that it contains exactly the definitions and their immutable versions.
     expected = {
         'rule_definition',
         'rule_version',
-        'rule_event',
-        'rule_decision',
-        'rule_reference',
-        'rule_follow',
-        'rule_view',
-        'rule_recent',
-        'rule_chat_config',
-        'rule_notify_destination',
-        'rule_job_cursor',
-        'rule_approval',
-        'rule_approval_config',
     }
     assert table_names == expected
 
 # ################################################################################################################################
 
-def test_documents_and_stories_are_text_not_database_json() -> 'None':
+def test_documents_are_text_not_database_json() -> 'None':
     """ Every opaque document stays portable TEXT interpreted only by application code.
     """
-    # Inspect every opaque document and story column ..
+    # Inspect every opaque document column ..
     definition_document_type = rule_definition_table.c.document.type
     version_document_type = rule_version_table.c.document.type
-    event_payload_type = rule_event_table.c.payload.type
-    decision_payload_type = rule_decision_table.c.payload.type
-    fired_rule_ids_type = rule_decision_table.c.fired_rule_ids.type
 
     # .. and verify that each one is plain SQL TEXT.
     assert isinstance(definition_document_type, Text)
     assert isinstance(version_document_type, Text)
-    assert isinstance(event_payload_type, Text)
-    assert isinstance(decision_payload_type, Text)
-    assert isinstance(fired_rule_ids_type, Text)
 
 # ################################################################################################################################
 

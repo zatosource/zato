@@ -255,16 +255,7 @@ var editorView = {
 
     emptyHtml: function() {
         if (editorModel.definitionId === null) {
-            if (editorModel.config.rulesetsUrl !== '') {
-                return '<div class="editor-view-note">No ruleset yet, see <a href="' +
-                    editorModel.config.rulesetsUrl + '">rulesets</a>.</div>';
-            }
             return '<div class="editor-view-note">No ruleset yet.</div>';
-        }
-
-        if (editorModel.config.tablesUrl !== '') {
-            return '<div class="editor-view-note">No rules yet, see ' +
-                '<a href="' + editorModel.config.tablesUrl + '">the decision tables</a>.</div>';
         }
 
         var out = '<div class="editor-view-note">No rules yet.</div>';
@@ -401,7 +392,6 @@ var editorView = {
                 var built = editorModel.buildProblems();
                 self.problems = built.problems.concat(editorModel.serverProblems());
                 self.renderProblems();
-                editorLive.update();
             }, data.reportError);
         }, editorModel.config.checkDelayMilliseconds);
     },

@@ -198,17 +198,7 @@ class TestSave:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestListingAndPreview:
-
-    def test_the_definitions_come_back_as_rows(self, backend:'RuleSQLBackend') -> 'None':
-        ensure_alerting_definitions(backend)
-
-        result, _ = webapi.list_definitions(backend, object_type=Definition_Type_Ruleset)
-        names = [item['name'] for item in result['items']]
-
-        assert _ruleset_name in names
-
-# ################################################################################################################################
+class TestPreview:
 
     def test_a_preview_carries_the_document_and_its_rendered_form(self, backend:'RuleSQLBackend') -> 'None':
         ensure_alerting_definitions(backend)

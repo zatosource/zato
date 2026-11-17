@@ -7,8 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.rule_engine.changes import Change_Definition_Archived, Change_Definition_Created, \
-    Change_Version_Created, Change_Version_Published, Change_Version_Restored
+from zato.common.rule_engine.changes import Change_Definition_Created, Change_Version_Created, Change_Version_Published
 from zato.common.rule_engine.ingestion import Outcome
 from zato.common.rule_engine.invocation import InvocationStatus
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Definition_Type_Vocabulary, Documents_Key
@@ -141,31 +140,11 @@ def test_every_write_announces_itself(backend:'RuleSQLBackend') -> 'None':
         (Change_Version_Created, definition.id, 'payments.discounts', Definition_Type_Ruleset),
     ]
 
-    # .. a publish announces itself ..
+    # .. and so does a publish.
     publisher.published.clear()
     publish(backend, definition.id, version=2)
     assert publisher.published == [
         (Change_Version_Published, definition.id, 'payments.discounts', Definition_Type_Ruleset),
-    ]
-
-    # .. a restore announces itself ..
-    publisher.published.clear()
-    _ = backend.versions.restore(
-        definition_id=definition.id,
-        source_version=1,
-        expected_current_version=2,
-        actor=author,
-        comment='Back to the strict bar',
-    )
-    assert publisher.published == [
-        (Change_Version_Restored, definition.id, 'payments.discounts', Definition_Type_Ruleset),
-    ]
-
-    # .. and so does an archival.
-    publisher.published.clear()
-    backend.definitions.archive(definition_id=definition.id, actor=author)
-    assert publisher.published == [
-        (Change_Definition_Archived, definition.id, 'payments.discounts', Definition_Type_Ruleset),
     ]
 
 # ################################################################################################################################

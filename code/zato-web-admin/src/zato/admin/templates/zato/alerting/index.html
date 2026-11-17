@@ -25,7 +25,6 @@
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/rulesets-model.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/rulesets-render.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/rulesets-actions.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/rulesets-menu.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/shared-ui/rule-engine/js/rulesets-filter.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/alerting.js"></script>
 <script nonce="{{ CSP_NONCE }}">
@@ -54,32 +53,12 @@ $(document).ready(function() {
         openUrls: {
             editor: '{% url "alert-rules-editor" %}',
         },
-        showFollows: false,
-        showFeed: false,
-        showViews: false,
-        showPublish: false,
-        showRename: false,
-        showRowMenu: false,
-        showProblems: false,
-        showSuggestions: false,
-        showCount: false,
-        showMatchLines: false,
-        filterRulesInPanel: true,
-        matchRulesetNames: false,
-        openOnDoubleClick: false,
         queryURLKey: 'q',
-        showSidePane: false,
-        showRuleState: true,
-        showRuleShape: false,
         rulesetLabels: {'{{ ruleset_name }}': 'Default monitoring rules'},
-        facets: [],
         csrfToken: $.cookie('csrftoken'),
         newLabel: 'Create a new monitoring rule',
         onNew: function() { alerting.openCreate(); },
         autoExpandId: definitionId === 0 ? null : definitionId,
-        lockExpanded: true,
-        showRulesHead: false,
-        showRulesetInRulesHead: false,
         ruleActionClass: 'zato-link-face',
         ruleActions: [
             {label: 'Activate', isShown: function(rule) { return !rule.isActive; },
@@ -110,12 +89,10 @@ $(document).ready(function() {
 
             <div class="rule-engine-ui ruleset-browser main-column" data-theme="zato-light" id="ruleset-browser">
                 <div class="command-bar">
-                    <span class="search-clear-anchor" id="rulesets-field">
+                    <span class="search-clear-anchor">
                         <input class="alerting-filter-input" id="rulesets-search" type="text" autocomplete="off"
                             spellcheck="false" placeholder="Filter rules">
-                        <span id="rulesets-count"></span>
                         <button class="search-clear" id="rulesets-clear" data-action="clear-all"></button>
-                        <div class="command-suggest" id="rulesets-suggest"></div>
                     </span>
                     <span class="command-bar-pipe">|</span>
                     <button class="button-ghost" data-action="new">Create a new monitoring rule</button>

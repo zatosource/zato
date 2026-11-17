@@ -28,9 +28,7 @@ from pathlib import Path
 from typing import Generator
 from urllib.parse import quote
 
-# The port helper is shared with the rule engine jobs suite
-# and the SMTP receiver with the other zato-common suites.
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'rule_engine_jobs', 'lib')))
+# The port helper and the SMTP receiver are shared with the other zato-common suites.
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
 
 # pytest

@@ -132,9 +132,7 @@ def new_invoker(backend:'RuleSQLBackend') -> 'RulesetInvoker':
     """ Builds an invoker over the test backend - its caches are correct until `apply_change` evicts,
     exactly as the change stream listener does on a server.
     """
-    writer = backend.decision_writer()
-
-    out = RulesetInvoker(backend, writer)
+    out = RulesetInvoker(backend)
     return out
 
 # ################################################################################################################################

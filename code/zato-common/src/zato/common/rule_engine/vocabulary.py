@@ -17,7 +17,7 @@ from zato.common.rule_engine.errors import Severity
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anytuple, dictlist, generator_, strlist
+    from zato.common.typing_ import anydict, anytuple, dictlist, generator_
     anytuple_gen = generator_[anytuple, None, None]
 
 # ################################################################################################################################
@@ -67,24 +67,8 @@ class ErrorCode:
     # Codes reported when validating input data against a vocabulary.
     Unknown_Field = 'unknown_field'
 
-    # Codes reported when validating KPI definitions.
-    Bad_Kpi = 'bad_kpi'
-
-    # Codes reported when validating a test set.
-    Bad_Test_Set       = 'bad_test_set'
-    Bad_Scenario       = 'bad_scenario'
-    Duplicate_Scenario = 'duplicate_scenario'
-
     # Codes reported when validating a stored document structurally.
     Bad_Document = 'bad_document'
-
-    # Codes reported when validating a decision table.
-    Bad_Row          = 'bad_row'
-    Duplicate_Row    = 'duplicate_row'
-    Bad_Column       = 'bad_column'
-    Duplicate_Column = 'duplicate_column'
-    Bad_Cell         = 'bad_cell'
-    Bad_Statement    = 'bad_statement'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -120,9 +104,6 @@ Comparators_By_Type = {
     TermType.Yes_No:       {Comparator.Is, Comparator.Is_Not, Comparator.Is_True, Comparator.Is_False},
 }
 
-# Splits camel-case boundaries when a phrase is derived from a term name.
-_camel_boundary = re.compile(r'([a-z0-9])([A-Z])')
-
 # Entity and attribute names have to be plain identifiers.
 _name_pattern = re.compile(r'^[A-Za-z_]\w*$')
 
@@ -148,38 +129,6 @@ def new_error(
         'message': message,
         'severity': severity,
     }
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def term_words(name:'str') -> 'str':
-    """ Turns a term name into its space-separated lowercase words, splitting camel case and underscores.
-    """
-    spaced = _camel_boundary.sub(r'\1 \2', name)
-    spaced = spaced.replace('_', ' ')
-
-    out = spaced.lower()
-    return out
-
-# ################################################################################################################################
-
-def default_phrase(entity_name:'str', attribute_name:'str') -> 'str':
-    """ Derives the readable phrase a term wears by default - sensible phrasing exists without any up-front work.
-    """
-    words = term_words(attribute_name)
-
-    out = f'the {entity_name} {words}'
-    return out
-
-# ################################################################################################################################
-
-def default_set_phrase(entity_name:'str', attribute_name:'str') -> 'str':
-    """ Derives the default phrase for setting a term's value in an action.
-    """
-    phrase = default_phrase(entity_name, attribute_name)
-
-    out = f'set {phrase} to'
     return out
 
 # ################################################################################################################################
@@ -220,18 +169,6 @@ def build_attribute_index(vocabulary:'anydict') -> 'anydict':
     out = {}
     for path, attribute in iter_attributes(vocabulary):
         out[path] = attribute
-
-    return out
-
-# ################################################################################################################################
-
-def picker_paths(vocabulary:'anydict') -> 'strlist':
-    """ Returns the paths every picker offers - deprecated terms keep old rules running but never appear again.
-    """
-    out = []
-    for path, attribute in iter_attributes(vocabulary):
-        if attribute['status'] != Status_Deprecated:
-            out.append(path)
 
     return out
 

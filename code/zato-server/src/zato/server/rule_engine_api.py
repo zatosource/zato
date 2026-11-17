@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-import os
 from threading import RLock
 from time import monotonic
 from traceback import format_exc
@@ -25,9 +24,6 @@ from zato.common.db_env.database import get_database_engine
 from zato.common.rule_engine.changes import ModuleCtx as ChangesCtx
 from zato.common.rule_engine.invocation import RulesetInvoker
 from zato.common.rule_engine.sql import RuleSQLBackend
-from zato.common.rule_engine.sql.constants import Env_Success_Capture_Percent
-from zato.common.rule_engine.sql.decisions import CapturePolicy
-from zato.common.rule_engine.sql.errors import InvalidStoreInputError
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -54,7 +50,7 @@ _listener_error_log_interval = 60.0
 # ################################################################################################################################
 
 # The one backend and invoker of this process, shared by every request - the invoker owns
-# the decision writer and the RAM caches the change listener keeps correct.
+# the RAM caches the change listener keeps correct.
 _backend:'RuleSQLBackend | None' = None
 _invoker:'RulesetInvoker | None' = None
 _lock = RLock()
@@ -89,28 +85,6 @@ def get_backend() -> 'RuleSQLBackend':
 
 # ################################################################################################################################
 
-def _build_capture_policy() -> 'CapturePolicy':
-    """ Builds the capture policy this process writes decisions under.
-    """
-    # Only a deployment that set the variable departs from full capture, and an unusable
-    # value is refused at startup rather than quietly logging less than the operator asked for.
-    configured = os.environ.get(Env_Success_Capture_Percent)
-
-    if configured is None:
-        out = CapturePolicy()
-        return out
-
-    try:
-        success_percent = int(configured)
-    except ValueError:
-        message = f'{Env_Success_Capture_Percent} has to be a whole percentage, got {configured!r}'
-        raise InvalidStoreInputError(message) from None
-
-    out = CapturePolicy(success_percent=success_percent)
-    return out
-
-# ################################################################################################################################
-
 def get_invoker() -> 'RulesetInvoker':
     """ Returns the process-wide invoker, building it on the first request.
     """
@@ -119,12 +93,7 @@ def get_invoker() -> 'RulesetInvoker':
     with _lock:
         if _invoker is None:
             backend = get_backend()
-
-            # A request that produces a decision returns only once the decision is committed.
-            capture_policy = _build_capture_policy()
-            writer = backend.decision_writer(capture_policy=capture_policy)
-
-            _invoker = RulesetInvoker(backend, writer)
+            _invoker = RulesetInvoker(backend)
 
     out = _invoker
     return out

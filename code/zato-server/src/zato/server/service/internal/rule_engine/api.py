@@ -61,8 +61,7 @@ class RuleEngineAPIInvoke(AdminService):
 
     The channel it serves ends in `/{ruleset}`, so one URL space covers every published ruleset -
     `POST /api/rules/payments.discounts` runs the live version and appending `/versions/3` pins one.
-    Which rulesets a caller may run is decided by the object's grants, and every evaluation lands
-    in the decision log together with the calling system's name.
+    Which rulesets a caller may run is decided by the object's grants.
     """
 
     name = 'zato.rule-engine.api.invoke'
@@ -111,22 +110,20 @@ class RuleEngineAPIInvoke(AdminService):
 
             return
 
-        # .. a completed evaluation always carries the decision the log now holds.
+        # .. a completed evaluation always carries its decision.
         decision = result.decision
         assert decision is not None
 
         body = {
             'ruleset':     result.ruleset,
             'version':     result.version,
-            'decision_id': decision['decision_id'],
             'outcome':     decision['outcome'],
             'outputs':     decision['actual'],
             'messages':    decision['fired'],
             'duration_ms': decision['duration_ms'],
         }
 
-        # An input the rules could not evaluate is the caller's error - the decision
-        # is in the log either way, under the same decision id the response carries.
+        # An input the rules could not evaluate is the caller's error.
         if decision['outcome'] == Outcome.Error:
             body['error'] = decision['error']
             self._set_response(BAD_REQUEST, body)
@@ -207,9 +204,9 @@ class RuleEngineAPIInvoke(AdminService):
             self._set_error(BAD_REQUEST, parsed.name, _message_needs_json_object)
             return
 
-        # .. run the ruleset, logging the decision under the calling system's name ..
+        # .. run the ruleset ..
         invoker = get_invoker()
-        result = invoker.invoke(parsed.name, data, parsed.version, caller=channel_security.name)
+        result = invoker.invoke(parsed.name, data, parsed.version)
 
         # .. and turn the outcome into the response.
         self._set_result(result)

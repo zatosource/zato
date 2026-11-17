@@ -19,84 +19,13 @@ Definition_Types = (
 
 # ################################################################################################################################
 
-Event_Type_Definition_Created   = 'definition.created'
-Event_Type_Definition_Renamed   = 'definition.renamed'
-Event_Type_Definition_Updated   = 'definition.updated'
-Event_Type_Definition_Archived  = 'definition.archived'
-Event_Type_Version_Created      = 'version.created'
-Event_Type_Version_Published    = 'version.published'
-Event_Type_Version_Restored     = 'version.restored'
-Event_Type_Review_Commented     = 'review.commented'
-Event_Type_State_Changed        = 'state.changed'
-Event_Type_Follow_Changed       = 'follow.changed'
-Event_Type_Test_Run             = 'test.run'
-Event_Type_Rule_Fired_Daily     = 'rule.fired.daily'
-Event_Type_Advisory_Run         = 'advisory.run'
-Event_Type_Decisions_Spiked     = 'decisions.spiked'
-Event_Type_Version_Approved     = 'version.approved'
-Event_Type_Approval_Requested   = 'approval.requested'
-Event_Type_Approval_Gate_On     = 'approval.gate.enabled'
-Event_Type_Approval_Gate_Off    = 'approval.gate.disabled'
-Event_Type_Self_Approval        = 'approval.self.changed'
-
-# ################################################################################################################################
-
 System_Actor    = 'zato.rule-engine'
 Root_Parent_Key = 0
 
 # The key under which a stored ruleset document keeps its canonical rule documents.
 Documents_Key = 'documents'
 
-# ################################################################################################################################
-
-Default_Retention_Chunk_Size    = 500
-Default_Success_Capture_Percent = 100
-
-# How many decisions one group commit of the decision log writes at most.
-Default_Commit_Max_Decisions = 500
-
-Minimum_Capture_Percent = 0
-Maximum_Capture_Percent = 100
-
-# The publish approval gate is off by default, so an unconfigured ruleset publishes exactly as before ..
-Default_Approval_Gate_Enabled = False
-
-# .. and while the gate is on, the author of a version may not approve their own work unless this is turned on.
-Default_Allow_Self_Approval = False
-
-Default_Feed_Limit   = 100
-Default_Recent_Limit = 20
 Default_Search_Limit = 100
-
-# ################################################################################################################################
-
-Hour_Bucket_Format = '%Y-%m-%dT%H'
-Day_Bucket_Format  = '%Y-%m-%d'
-
-# ################################################################################################################################
-
-# The chat platforms that notifications can be delivered to.
-Chat_Kind_Teams = 'teams'
-Chat_Kind_Slack = 'slack'
-
-Chat_Kinds = (
-    Chat_Kind_Teams,
-    Chat_Kind_Slack,
-)
-
-# What a destination's last delivery attempt ended with.
-Delivery_Status_Delivered = 'delivered'
-Delivery_Status_Error     = 'error'
-
-# The named feed cursor that advisory suite runs read version events through.
-Job_Cursor_Advisory = 'advisory-runs'
-
-# ################################################################################################################################
-
-# What percentage of successful decisions keep their full story. Errors always keep theirs, so
-# lowering this trades the stories of routine successes for write volume and disk. Deployments
-# logging enough decisions for that to matter set this rather than editing the default.
-Env_Success_Capture_Percent = 'Zato_Rule_Engine_Success_Capture_Percent'
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -24,8 +24,7 @@ var editorModel = {
         // the list stays quiet
         potentialDelayMilliseconds: 200,
 
-        // The class the active view button carries - the host's markup decides the look,
-        // the dashboard's yellow toggles use `toggled`, web-admin's tabs use `dashboard-tab-active`
+        // The class the active view button carries - the host's markup decides the look
         viewButtonActiveClass: 'toggled',
 
         // Turns the document view's canonical text into highlighted HTML - a host passes
@@ -67,11 +66,7 @@ var editorModel = {
         // them into the document
         newRuleDocs: '',
         newRuleActive: true,
-        showLivePanel: false,
         navigateToRule: null,
-        rulesetsUrl: '',
-        tablesUrl: '',
-        testsUrl: '',
     },
 
     definitionId: null,
@@ -83,7 +78,6 @@ var editorModel = {
     vocabularyId: null,
     completionTerms: {},
 
-    testSet: null,
 
     serverDocuments: null,
     serverErrors: [],
@@ -270,7 +264,7 @@ var editorModel = {
         data.get(this.config.urls.vocabularies, function(payload) {
             if (payload.items.length === 0) {
                 self.adoptRuleTerms();
-                self.loadTestSet(onDone);
+                onDone();
                 return;
             }
 
@@ -285,30 +279,8 @@ var editorModel = {
                         self.completionTerms[term.path] = term;
                     });
                     self.adoptRuleTerms();
-                    self.loadTestSet(onDone);
+                    onDone();
                 }, data.reportError);
-            }, data.reportError);
-        }, data.reportError);
-    },
-
-    loadTestSet: function(onDone) {
-        var self = this;
-
-        // Test sets only feed the live outcomes panel, which the host may not show at all
-        if (!this.config.showLivePanel) {
-            onDone();
-            return;
-        }
-
-        data.get(this.config.urls.testSets, function(payload) {
-            if (payload.items.length === 0) {
-                onDone();
-                return;
-            }
-
-            data.get(self.config.urls.preview(payload.items[0].id), function(preview) {
-                self.testSet = preview.document;
-                onDone();
             }, data.reportError);
         }, data.reportError);
     },

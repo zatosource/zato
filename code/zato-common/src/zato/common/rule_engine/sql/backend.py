@@ -10,19 +10,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from typing_extensions import TypeAlias
 
 # Local
-from .approvals import ApprovalStore
 from .database import create_session_factory, SessionFactory
-from .decisions import CapturePolicy, DecisionStore
 from .definitions import DefinitionStore
-from .events import EventStore
-from .follows import FollowStore
-from .notifications import NotificationStore
-from .reference_index import ReferenceIndex
-from .reporting import RuleReporting
 from .search import ContentSearch
 from .versions import VersionStore
-from .views import ViewStore
-from .writer import DecisionBatchWriter, DecisionWriterConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,7 +34,7 @@ backend_type:TypeAlias = type['RuleSQLBackend']
 # ################################################################################################################################
 
 class RuleSQLBackend:
-    """ Complete pure-SQL entry point for rule definitions, history, activity and decision persistence.
+    """ Pure-SQL entry point for rule definitions, their versions and content search.
     """
 
     def __init__(self, session_factory:'SessionFactory') -> 'None':
@@ -51,17 +42,9 @@ class RuleSQLBackend:
         self.session_factory = session_factory
 
         # .. and expose each write pattern through its focused repository.
-        self.definitions   = DefinitionStore(session_factory)
-        self.versions      = VersionStore(session_factory)
-        self.events        = EventStore(session_factory)
-        self.decisions     = DecisionStore(session_factory)
-        self.reporting     = RuleReporting(session_factory)
-        self.references    = ReferenceIndex(session_factory)
-        self.follows       = FollowStore(session_factory)
-        self.views         = ViewStore(session_factory)
-        self.search        = ContentSearch(session_factory)
-        self.notifications = NotificationStore(session_factory)
-        self.approvals     = ApprovalStore(session_factory)
+        self.definitions = DefinitionStore(session_factory)
+        self.versions    = VersionStore(session_factory)
+        self.search      = ContentSearch(session_factory)
 
 # ################################################################################################################################
 
@@ -80,32 +63,10 @@ class RuleSQLBackend:
 
     def set_change_publisher(self, change_publisher:'ChangePublisher') -> 'None':
         """ Makes every committed write of the mutating stores announce itself on the change stream.
-        The dashboard installs this once at startup, so server caches learn of each change the moment it lands.
+        Dashboard installs this once at startup, so server caches learn of each change the moment it lands.
         """
         self.definitions.change_publisher = change_publisher
         self.versions.change_publisher = change_publisher
-
-# ################################################################################################################################
-
-    def decision_writer(
-        self,
-        *,
-        capture_policy:'CapturePolicy | None' = None,
-        config:'DecisionWriterConfig | None' = None,
-        ) -> 'DecisionBatchWriter':
-        """ Creates a decision writer over this backend's session factory, whose callers return once their decisions commit.
-        """
-        # Construct the configured capture policy or its module-level defaults ..
-        if capture_policy is None:
-            capture_policy = CapturePolicy()
-
-        # .. construct the configured commit size or its module-level default ..
-        if config is None:
-            config = DecisionWriterConfig()
-
-        # .. and return a writer that shares this backend's database.
-        out = DecisionBatchWriter(self.session_factory, capture_policy, config)
-        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

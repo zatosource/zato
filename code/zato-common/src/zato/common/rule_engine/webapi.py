@@ -208,13 +208,8 @@ def save_document(backend:'RuleSQLBackend', body:'anydict', actor:'str') -> 'tup
             author=actor,
             comment=comment,
         )
-        definition_id = created.id
         result = {'definition_id': created.id, 'version': created.current_version}
         note = f'{object_type} `{name}` created as {created.id}, version {created.current_version}'
-
-    # The where-used index follows every save whose document carries rule documents.
-    if Documents_Key in document:
-        _ = backend.references.rebuild(definition_id=definition_id, documents=document[Documents_Key])
 
     return result, note
 

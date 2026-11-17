@@ -6,10 +6,6 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from copy import deepcopy
-from typing import NamedTuple
-
 # Zato
 from zato.common.rule_engine.document import Default_Prefix, NodeKind
 
@@ -28,15 +24,6 @@ class Role:
     Subject = 'subject'
     Value   = 'value'
     Target  = 'target'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class RenameResult(NamedTuple):
-    """ A document rewritten by a rename, along with how many places changed.
-    """
-    document: 'anydict'
-    change_count: 'int'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -104,158 +91,6 @@ def referenced_terms(document:'anydict') -> 'strlist':
         terms.add(usage['term'])
 
     out = sorted(terms)
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def where_used(term:'str', documents:'anydict') -> 'dictlist':
-    """ Returns every usage of a term across the given documents, keyed by rule and place.
-    """
-    out = []
-
-    for document in documents.values():
-        for usage in extract_references(document):
-            if usage['term'] == term:
-                entry = {'rule': document['full_name'], 'block': usage['block'], 'role': usage['role']}
-                out.append(entry)
-
-    return out
-
-# ################################################################################################################################
-
-def can_delete(term:'str', documents:'anydict') -> 'bool':
-    """ Returns True only when no document references the term - deletion is blocked while anything still uses it.
-    """
-    usages = where_used(term, documents)
-
-    out = not usages
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _rename_in_node(node:'anydict', old_term:'str', new_term:'str') -> 'int':
-    """ Renames references inside one value node, returning how many places changed.
-    """
-    kind = node['kind']
-    out = 0
-
-    # A matching reference is renamed in place ..
-    if kind == NodeKind.Reference:
-        if node['term'] == old_term:
-            node['term'] = new_term
-            out = 1
-
-    # .. and a list renames item by item.
-    elif kind == NodeKind.List:
-        for item in node['items']:
-            out += _rename_in_node(item, old_term, new_term)
-
-    return out
-
-# ################################################################################################################################
-
-def rename_term(document:'anydict', old_term:'str', new_term:'str') -> 'RenameResult':
-    """ Returns a copy of the document with every use of a term renamed, along with the change count.
-
-    The input document is never modified - the rewrite happens on a deep copy.
-    """
-    rewritten = deepcopy(document)
-    count = 0
-
-    # Conditions rename their subjects and the references inside their values ..
-    for condition in rewritten['conditions']:
-        if condition['subject'] == old_term:
-            condition['subject'] = new_term
-            count += 1
-        for node in condition['values']:
-            count += _rename_in_node(node, old_term, new_term)
-
-    # .. and actions rename their targets and the references inside their values.
-    for block in ('then', 'else'):
-        for action in rewritten[block]:
-            if action['target'] == old_term:
-                action['target'] = new_term
-                count += 1
-            count += _rename_in_node(action['value'], old_term, new_term)
-
-    out = RenameResult(rewritten, count)
-    return out
-
-# ################################################################################################################################
-
-def preview_rename(old_term:'str', new_term:'str', documents:'anydict') -> 'dictlist':
-    """ Returns the impact a rename would have - per rule, how many places would change - without changing anything.
-    """
-    out = []
-
-    for document in documents.values():
-        result = rename_term(document, old_term, new_term)
-        if result.change_count:
-            entry = {'rule': document['full_name'], 'change_count': result.change_count}
-            out.append(entry)
-
-    return out
-
-# ################################################################################################################################
-
-def apply_rename(old_term:'str', new_term:'str', documents:'anydict') -> 'anydict':
-    """ Rewrites every document that references a term, returning only the rewritten ones keyed by full name.
-    """
-    out = {}
-
-    for full_name, document in documents.items():
-        result = rename_term(document, old_term, new_term)
-        if result.change_count:
-            out[full_name] = result.document
-
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def rename_ruleset(document:'anydict', new_ruleset_name:'str') -> 'anydict':
-    """ Returns a copy of one rule document belonging to a renamed ruleset.
-
-    A rule's full name is its ruleset's name and its own together, so a ruleset rename changes
-    both keys of every rule it holds. The input document is never modified.
-    """
-    rewritten = deepcopy(document)
-
-    rewritten['ruleset_name'] = new_ruleset_name
-    rewritten['full_name'] = new_ruleset_name + '_' + rewritten['name']
-
-    return rewritten
-
-# ################################################################################################################################
-
-def preview_ruleset_rename(new_ruleset_name:'str', documents:'anydict') -> 'dictlist':
-    """ Returns what a ruleset rename would do to every rule name - without changing anything.
-
-    Every rule of the ruleset is listed, because a ruleset rename renames all of them, which is
-    the difference from a term rename, where only the referencing rules change.
-    """
-    out = []
-
-    for document in documents.values():
-        rewritten = rename_ruleset(document, new_ruleset_name)
-        entry = {'rule': document['full_name'], 'new_rule': rewritten['full_name']}
-        out.append(entry)
-
-    return out
-
-# ################################################################################################################################
-
-def apply_ruleset_rename(new_ruleset_name:'str', documents:'anydict') -> 'anydict':
-    """ Rewrites every rule of a renamed ruleset, keyed by the full name each one now has.
-    """
-    out = {}
-
-    for document in documents.values():
-        rewritten = rename_ruleset(document, new_ruleset_name)
-        out[rewritten['full_name']] = rewritten
-
     return out
 
 # ################################################################################################################################

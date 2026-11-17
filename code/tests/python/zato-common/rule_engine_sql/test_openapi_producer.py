@@ -7,12 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.rule_engine.openapi import example_from_vocabulary, nest_flat_input, vocabulary_to_schema
+from zato.common.rule_engine.openapi import example_from_vocabulary, vocabulary_to_schema
 from zato.common.rule_engine.parser import parse_data_details
 from zato.common.rule_engine.sql import RuleSQLBackend
-from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Definition_Type_Test_Set, \
-    Definition_Type_Vocabulary, Documents_Key
-from zato.server.api_portal.rule_engine import _ruleset_operation, _scenario_example
+from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Definition_Type_Vocabulary, Documents_Key
+from zato.server.api_portal.rule_engine import _ruleset_operation
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -134,30 +133,9 @@ def test_example_from_vocabulary_is_legal_and_skips_deprecated_terms() -> 'None'
 
 # ################################################################################################################################
 
-def test_nest_flat_input_builds_the_shape_the_api_accepts() -> 'None':
-    """ Flat dotted scenario input becomes the nested JSON callers actually send.
-    """
-    flat = {
-        'channel': 'web',
-        'customer.creditScore': 720,
-        'customer.address.city': 'Prague',
-    }
-    nested = nest_flat_input(flat)
-
-    expected = {
-        'channel': 'web',
-        'customer': {
-            'creditScore': 720,
-            'address': {'city': 'Prague'},
-        },
-    }
-    assert nested == expected
-
-# ################################################################################################################################
-
-def test_ruleset_operation_documents_the_vocabulary_and_the_scenario(backend:'RuleSQLBackend') -> 'None':
+def test_ruleset_operation_documents_the_vocabulary(backend:'RuleSQLBackend') -> 'None':
     """ A published ruleset's operation carries the vocabulary-typed request schema
-    and its first test scenario, nested, as the example.
+    and an example synthesized from the vocabulary.
     """
     vocabulary = backend.definitions.create(
         name='Loan approval',
@@ -177,21 +155,6 @@ def test_ruleset_operation_documents_the_vocabulary_and_the_scenario(backend:'Ru
     )
     _ = backend.versions.publish(definition_id=definition.id, version=1)
 
-    suite_document = {
-        'name': 'Loan suite',
-        'scenarios': [
-            {'name': 'High score gets the rate', 'input': {'customer.creditScore': 720}, 'expected': {'loan.rate': 2.9}},
-        ],
-    }
-    _ = backend.definitions.create(
-        name='Loan suite',
-        object_type=Definition_Type_Test_Set,
-        document=suite_document,
-        author=_author,
-        comment='Create the suite',
-        parent_id=definition.id,
-    )
-
     # The live definition record carries the live pointer the operation builder needs.
     published = backend.definitions.list_published_rulesets()
     assert len(published) == 1
@@ -209,31 +172,14 @@ def test_ruleset_operation_documents_the_vocabulary_and_the_scenario(backend:'Ru
     assert score['minimum'] == 300
     assert score['maximum'] == 850
 
-    # .. the example is the test scenario's input, nested the way callers send it ..
+    # .. the example is the one the vocabulary synthesizes ..
     example = operation['requestBody']['content']['application/json']['example']
-    assert example == {'customer': {'creditScore': 720}}
+    assert example == example_from_vocabulary(_vocabulary_document())
 
     # .. and the operation is tagged and returns the shared decision envelope.
     assert operation['tags'] == ['Rule engine']
     response_ref = operation['responses']['200']['content']['application/json']['schema']['$ref']
     assert response_ref == '#/components/schemas/RuleEngineDecision'
-
-# ################################################################################################################################
-
-def test_scenario_example_is_none_without_suites(backend:'RuleSQLBackend') -> 'None':
-    """ A ruleset with no test suites has no scenario to show.
-    """
-    document = {Documents_Key: _documents(_rules_text)}
-    definition = backend.definitions.create(
-        name='payments.discounts',
-        object_type=Definition_Type_Ruleset,
-        document=document,
-        author=_author,
-        comment='Create the ruleset',
-    )
-
-    example = _scenario_example(backend, definition.id)
-    assert example is None
 
 # ################################################################################################################################
 # ################################################################################################################################
