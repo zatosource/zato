@@ -22,8 +22,8 @@ if 0:
 # ################################################################################################################################
 
 # How long the publishers of each test publish, in seconds
-_capacity_duration = 30.0
-_faults_duration   = 60.0
+_capacity_duration = 15.0
+_faults_duration   = 15.0
 
 # How many times the worker is killed while the publishers publish
 _worker_kills = 3

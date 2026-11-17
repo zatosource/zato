@@ -264,11 +264,11 @@ class AuditLog:
             write_batch=self._write_batch,
         )
 
-        # .. and synchronous writes of concurrent callers share their commits.
+        # .. and synchronous writes of concurrent callers share their commits, each caller submitting a list of events.
         commit_max_events = get_commit_max_events()
 
         self._commit_queue = CommitQueue(
-            write_batch=self._write_batch,
+            write_batch=self._write_event_lists,
             max_weight=commit_max_events,
         )
 
@@ -341,7 +341,7 @@ class AuditLog:
 
         # .. write it now if batching is off, or if the caller needs the id for the events it links to this one ..
         elif self.flush_max_size <= 1 or needs_id:
-            self._commit_queue.write(pending, weight=_commit_event_weight, is_urgent=False)
+            self._commit_queue.write([pending], weight=_commit_event_weight, is_urgent=False)
 
             out = pending.event_id
             return out
@@ -468,7 +468,7 @@ class AuditLog:
             return
 
         if self.flush_max_size <= 1:
-            _ = self._write_batch(batch)
+            self.write_pending(batch)
         else:
             for pending in batch:
                 self._buffer.add(pending)
@@ -476,9 +476,24 @@ class AuditLog:
 # ################################################################################################################################
 
     def write_pending(self, batch:'pending_event_list') -> 'None':
-        """ Writes the events that a push delivery batch collected, in one transaction.
+        """ Writes events that one operation collected, in one transaction shared with the synchronous writes
+        of concurrent callers.
         """
-        _ = self._write_batch(batch)
+        weight = len(batch) * _commit_event_weight
+        self._commit_queue.write(batch, weight=weight, is_urgent=False)
+
+# ################################################################################################################################
+
+    def _write_event_lists(self, event_lists:'anylist') -> 'intnone':
+        """ Writes the lists of events of the callers of one group commit in a single transaction.
+        """
+        batch:'pending_event_list' = []
+
+        for event_list in event_lists:
+            batch.extend(event_list)
+
+        out = self._write_batch(batch)
+        return out
 
 # ################################################################################################################################
 
