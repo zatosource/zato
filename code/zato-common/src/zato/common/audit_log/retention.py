@@ -19,6 +19,7 @@ from sqlalchemy import or_, select, update
 # Zato
 from zato.common.audit_log.common import AuditOutcome, event_attr_table, event_body_table, event_link_table, \
     event_table, get_retention_days, get_source_env_suffix
+from zato.common.db_env.write_path import Mechanism, write_path
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -532,15 +533,16 @@ def run_retention(engine:'Engine', now:'datetime') -> 'None':
         if source not in sources:
             sources.append(source)
 
-    for source in sources:
+    with write_path(Mechanism.Maintenance):
+        for source in sources:
 
-        # A source with a retention of its own runs it ..
-        if source_retention := _source_retention_registry.get(source):
-            source_retention(engine, now, source)
+            # A source with a retention of its own runs it ..
+            if source_retention := _source_retention_registry.get(source):
+                source_retention(engine, now, source)
 
-        # .. and any other source has its events deleted the generic way.
-        else:
-            _run_source_retention(engine, archiver, source, now)
+            # .. and any other source has its events deleted the generic way.
+            else:
+                _run_source_retention(engine, archiver, source, now)
 
 # ################################################################################################################################
 # ################################################################################################################################

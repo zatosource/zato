@@ -23,8 +23,9 @@ from zato.common.audit_log.attr_rows import build_attr_rows
 from zato.common.audit_log.bulk_insert import insert_pending_events
 from zato.common.audit_log.classification import derive_classification
 from zato.common.audit_log.common import AuditBody, AuditClassification, AuditEvent, AuditLink, AuditOutcome, AuditSource, \
-    Env_Retention_Days, Env_Retention_Days_Prefix, event_attr_table, event_body_table, event_link_table, event_table, \
-    get_retention_days, get_source_env_suffix, metadata, Status_Outstanding
+    Env_Commit_Max_Events, Env_Retention_Days, Env_Retention_Days_Prefix, event_attr_table, event_body_table, \
+    event_link_table, event_table, get_commit_max_events, get_retention_days, get_source_env_suffix, metadata, \
+    Status_Outstanding
 from zato.common.audit_log.export.api import get_audit_export
 from zato.common.audit_log.pending import PendingEvent
 from zato.common.audit_log.retention import Env_Archive_Dir, Env_Content_Retention_Days, \
@@ -35,7 +36,8 @@ from zato.common.audit_log.sqlite_writes import dispose_stale_sqlite_engine
 from zato.common.config_db import Default_Enabled, Env_Audit_Log_Enabled
 from zato.common.db_env.commit_queue import CommitQueue
 from zato.common.db_env.database import dispose_database_engine, get_database_engine
-from zato.common.db_env.engine import call_database, execute_write
+from zato.common.audit_log.writes import write_audit
+from zato.common.db_env.engine import call_database
 from zato.common.pubsub.delivery_scope import get_delivery_scope
 from zato.common.util.api import as_bool, utcnow
 
@@ -44,13 +46,14 @@ from zato.common.util.api import as_bool, utcnow
 
 if 0:
     from datetime import datetime
-    from sqlalchemy.engine import Engine
+    from sqlalchemy.engine import Connection, Engine
     from zato.common.audit_log.pending import pending_event_list
     from zato.common.typing_ import anylist, anylistnone, intlist, intlistnone, intnone, stranydict, strdictnone
 
     # Dummy assignments to satisfy type checkers
     anylist = anylist
     anylistnone = anylistnone
+    Connection = Connection
     datetime = datetime
     Engine = Engine
     intlist = intlist
@@ -75,27 +78,17 @@ __all__ = [
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The environment variable overriding how many events one group commit writes at most
-Env_Commit_Max_Events = 'Zato_Audit_Log_Commit_Max_Events'
-
-# How many events one group commit writes at most when the environment does not say otherwise
-_default_commit_max_events = 500
-
 # How much of a group commit's capacity each event takes - the capacity is counted in events
 _commit_event_weight = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_commit_max_events() -> 'int':
-    """ Returns how many events one group commit writes at most.
+def _insert_links(connection:'Connection', rows:'anylist') -> 'None':
+    """ Inserts the lineage links of an event in the transaction of the connection.
     """
-    if value := os.environ.get(Env_Commit_Max_Events, ''):
-        out = int(value)
-    else:
-        out = _default_commit_max_events
-
-    return out
+    insert_statement = event_link_table.insert()
+    _ = connection.execute(insert_statement, rows)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -407,8 +400,7 @@ class AuditLog:
                 'link_type': link_type,
             })
 
-        insert_statement = event_link_table.insert()
-        _ = execute_write(self.engine, insert_statement, rows)
+        _ = write_audit(self.engine, _insert_links, rows)
 
 # ################################################################################################################################
 

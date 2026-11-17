@@ -54,6 +54,24 @@ Attr_Value_Max_Len = _short_column_len
 # an object's payloads leave the process with the OTLP export. Off unless set.
 Export_Payload_Flag = 'is_audit_export_payload_active'
 
+# The environment variable overriding how many events one group commit writes at most
+Env_Commit_Max_Events = 'Zato_Audit_Log_Commit_Max_Events'
+
+# How many events one group commit writes at most when the environment does not say otherwise
+_default_commit_max_events = 500
+
+# ################################################################################################################################
+
+def get_commit_max_events() -> 'int':
+    """ Returns how many events one group commit writes at most.
+    """
+    if value := os.environ.get(Env_Commit_Max_Events, ''):
+        out = int(value)
+    else:
+        out = _default_commit_max_events
+
+    return out
+
 # ################################################################################################################################
 
 class AuditSource:

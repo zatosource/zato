@@ -22,6 +22,7 @@ from sqlalchemy.exc import DBAPIError
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.errors import is_transient
 from zato.common.db_env.outage import OutageTracker
+from zato.common.db_env.write_path import Mechanism, write_path
 from zato.common.pubsub.sql.clock import get_database_clock
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.config import get_batch_size, get_delivered_max_days, get_delivered_max_messages, \
@@ -465,10 +466,11 @@ class PubSubCleanup:
         retention by age and by per-topic cap, then the count rows that the deletions left at zero.
         Returns the per-sweep deletion counts.
         """
-        expired = self._sweep_expired()
-        aged = self._sweep_aged_traces()
-        over_cap = self._sweep_over_cap_traces()
-        empty_counts = self._sweep_empty_counts()
+        with write_path(Mechanism.Maintenance):
+            expired = self._sweep_expired()
+            aged = self._sweep_aged_traces()
+            over_cap = self._sweep_over_cap_traces()
+            empty_counts = self._sweep_empty_counts()
 
         out = {
             'expired': expired,

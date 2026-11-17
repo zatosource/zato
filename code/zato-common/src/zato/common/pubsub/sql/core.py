@@ -15,23 +15,18 @@ from time import monotonic
 from gevent import sleep
 from gevent.event import Event
 
-# SQLAlchemy
-from sqlalchemy import bindparam
-
 # Zato
 from zato.common.api import HTTP_SOAP
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.export.api import get_audit_export
 from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
-from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.ha.common import get_generation, get_node_name, is_active_standby
 from zato.common.pubsub.sql.clock import get_engine_clock
 from zato.common.db_env.database import get_database_engine, get_database_type
 from zato.common.pubsub.sql.generation import follow_takeover, get_fork_takeover, take_over, Takeover_Object_Name
 from zato.common.pubsub.sql.payload_cache import Max_Payload_Cache_Size, PayloadCache, PayloadEpoch
-from zato.common.pubsub.sql.schema import delivery_table
 from zato.common.pubsub.sql.payloads import drop_payloads
-from zato.common.pubsub.sql.pending import new_pending_ack
+from zato.common.pubsub.sql.pending import new_pending_ack, new_pending_attempts
 from zato.common.pubsub.sql.writes import PubSubWriter
 from zato.common.typing_ import cast_
 from zato.common.util.memory_trim import start_memory_trimmer
@@ -73,21 +68,6 @@ _retry = HTTP_SOAP.Retry
 # How long back-to-back SQLite calls may hold the event loop before the backend
 # yields it, in seconds - see _yield_after_write.
 _yield_interval_seconds = 0.005
-
-# What records one push attempt of a delivery row and returns its number.
-_record_attempt_statement = delivery_table.update()
-_record_attempt_statement = _record_attempt_statement.where(delivery_table.c.id == bindparam('attempt_delivery_id'))
-_record_attempt_statement = _record_attempt_statement.values(attempt=delivery_table.c.attempt + 1)
-_record_attempt_statement = _record_attempt_statement.returning(delivery_table.c.attempt)
-
-# What records one push attempt of each delivery row of a batch and returns their numbers.
-_record_attempts_statement = delivery_table.update()
-_record_attempts_statement = _record_attempts_statement.where(
-    delivery_table.c.id.in_(bindparam('attempt_delivery_ids', expanding=True)))
-_record_attempts_statement = _record_attempts_statement.values(attempt=delivery_table.c.attempt + 1)
-_record_attempts_statement = _record_attempts_statement.returning(delivery_table.c.id, delivery_table.c.attempt)
-_record_attempts_statement_plain = PlainStatement(_record_attempts_statement)
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -472,34 +452,20 @@ class SQLBackendCore:
 
     def record_attempt(self, message:'anydict') -> 'bool':
         """ Records the next push attempt of a fetched message before its request is sent and stores its number
-        in the message. On PostgreSQL, the attempt is committed in a transaction of its own, which confirms
+        in the message. On PostgreSQL, the attempt is committed through the writer, in a commit that confirms
         the generation of this server first, so a server that was replaced sends nothing. On SQLite, which only
         one server uses, the attempts are counted in memory. Returns False when the message has left
         the subscriber's queue in the meantime.
         """
-        engine = self.engine
+        delivery_ids = self.record_attempts([message])
 
-        if engine.dialect.name == Type_SQLite:
-            message['delivery_attempt'] += 1
-            return True
-
-        parameters = {'attempt_delivery_id': message['delivery_id']}
-
-        with engine.begin() as connection:
-            attempt = connection.execute(_record_attempt_statement, parameters).scalar()
-
-        if attempt is None:
-            out = False
-        else:
-            message['delivery_attempt'] = attempt
-            out = True
-
+        out = message['delivery_id'] in delivery_ids
         return out
 
 # ################################################################################################################################
 
     def record_attempts(self, messages:'anylist') -> 'intset':
-        """ Records the next push attempt of each message of a batch, in one transaction on PostgreSQL,
+        """ Records the next push attempt of each message of a batch, in one commit of the writer on PostgreSQL,
         under the same terms as record_attempt. Returns the delivery IDs of the messages still in the subscriber's queue.
         """
         engine = self.engine
@@ -516,14 +482,14 @@ class SQLBackendCore:
         for message in messages:
             message_by_delivery_id[message['delivery_id']] = message
 
-        parameters = {'attempt_delivery_ids': list(message_by_delivery_id)}
+        delivery_ids = list(message_by_delivery_id)
 
-        with engine.begin() as connection:
-            rows = _record_attempts_statement_plain.execute(connection, parameters).all()
+        pending = new_pending_attempts(delivery_ids)
+        self._writer.record_attempts(pending)
 
-        for row in rows:
-            message_by_delivery_id[row.id]['delivery_attempt'] = row.attempt
-            out.add(row.id)
+        for delivery_id, attempt in pending.attempts.items():
+            message_by_delivery_id[delivery_id]['delivery_attempt'] = attempt
+            out.add(delivery_id)
 
         return out
 

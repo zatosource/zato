@@ -11,6 +11,7 @@ from threading import Lock
 
 # Zato
 from zato.common.db_env.commit_ticket import CommitTicket
+from zato.common.db_env.write_path import Mechanism, write_path
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -155,7 +156,8 @@ class CommitQueue:
 
         # Write all the items of the batch ..
         try:
-            _ = self.write_batch(batch)
+            with write_path(Mechanism.Group_Commit):
+                _ = self.write_batch(batch)
 
         # .. if the commit fails, each of its callers receives the exception ..
         except BaseException as e:

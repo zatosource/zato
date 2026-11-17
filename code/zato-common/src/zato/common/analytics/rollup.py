@@ -25,6 +25,7 @@ from zato.common.analytics.api import get_analytics_engine, get_error_source, ge
 from zato.common.audit_log.api import event_table, AuditEvent, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.db_env.common import hour_period, Type_PostgreSQL
+from zato.common.db_env.write_path import Mechanism, write_path
 from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
@@ -346,7 +347,7 @@ def run_rollup() -> 'RollupResult':
 
     analytics_engine = get_analytics_engine()
 
-    with analytics_engine.begin() as connection:
+    with write_path(Mechanism.Maintenance), analytics_engine.begin() as connection:
 
         # Find out where the previous run finished ..
         last_event_id = _get_watermark(connection)

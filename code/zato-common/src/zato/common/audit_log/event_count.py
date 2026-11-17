@@ -17,6 +17,7 @@ from sqlalchemy.schema import CreateIndex
 
 # Zato
 from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
+from zato.common.db_env.write_path import Mechanism, write_path
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -306,7 +307,7 @@ def compact_event_counts(engine:'Engine', count_table:'Table', compacted_up_to:'
     statement = statement.where(period_column.in_(compactable))
     statement = statement.returning(period_column, *key_columns, count_column)
 
-    with engine.begin() as connection:
+    with write_path(Mechanism.Maintenance), engine.begin() as connection:
 
         result = connection.execute(statement)
         sums = _sum_counts(result)

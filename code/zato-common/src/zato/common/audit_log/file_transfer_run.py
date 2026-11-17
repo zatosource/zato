@@ -22,7 +22,7 @@ from zato.common.audit_log.api import event_attr_table, event_body_table, event_
     AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.export.api import get_audit_export
-from zato.common.db_env.engine import execute_write
+from zato.common.audit_log.writes import execute_audit_write
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -206,7 +206,7 @@ def update_run_event(
     statement = statement.values(**values)
 
     engine = get_database_engine()
-    _ = execute_write(engine, statement)
+    _ = execute_audit_write(engine, statement)
 
     # The collector sees the updated run as another record of the same event
     if export := get_audit_export():
@@ -261,7 +261,7 @@ def _write_body(event_id:'int', kind:'str', event_time:'datetime', data:'str') -
     statement = statement.values(event_id=event_id, kind=kind, event_time=event_time, data=data)
 
     engine = get_database_engine()
-    _ = execute_write(engine, statement)
+    _ = execute_audit_write(engine, statement)
 
 # ################################################################################################################################
 

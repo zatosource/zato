@@ -36,6 +36,7 @@ from zato.common.audit_log.api import event_attr_table, event_body_table, event_
 from zato.common.audit_log.common import alert_table, event_dedup_table
 from zato.common.audit_log.config_audit import record_config_change, record_view_event
 from zato.common.audit_log.dedup import build_dedup_key
+from zato.common.audit_log.writes import write_audit
 from zato.common.hl7.audit import audit_ack_received, audit_ack_sent, audit_batch_received, audit_message_received, \
     audit_message_sent, get_audit_attrs, ACKStatus
 from zato.common.hl7.feed import generate_feed_items, rewrite_msh_field, FeedConfig, MSH3_Index, MSH4_Index, MSH10_Index
@@ -493,10 +494,9 @@ def _delete_demo_rows(connection:'Connection') -> 'None':
 # ################################################################################################################################
 
 def purge_demo_data(engine:'Engine') -> 'None':
-    """ Removes everything a previous seed run wrote, in one transaction.
+    """ Removes everything a previous seed run wrote, in one commit of the audit log.
     """
-    with engine.begin() as connection:
-        _delete_demo_rows(connection)
+    _ = write_audit(engine, _delete_demo_rows)
 
 # ################################################################################################################################
 
@@ -1385,6 +1385,38 @@ def _write_fhir_traffic(
 
 # ################################################################################################################################
 
+def _write_seed(
+    connection:'Connection',
+    audit_log:'_BulkAuditLog',
+    out:'SeedResult',
+    now:'datetime',
+    resubmit_sources:'anylist',
+    alert_rows:'dictlist',
+    planned_views:'anylist',
+    rng:'Random',
+    ) -> 'None':
+    """ Replaces a previous seed run's data set with the collected one, in the transaction of the connection.
+    """
+    _delete_demo_rows(connection)
+
+    id_map = audit_log.write_collected(connection)
+
+    dedup_rows = _build_dedup_rows(now, resubmit_sources, id_map, rng)
+    _ = connection.execute(event_dedup_table.insert(), dedup_rows)
+    out.dedup_count = len(dedup_rows)
+
+    if alert_rows:
+        _ = connection.execute(alert_table.insert(), alert_rows)
+
+    # Each view-access record embeds the viewed event's real database id,
+    # which the id map already knows within this same transaction
+    if planned_views:
+        out.view_count = _write_view_events(audit_log, planned_views, id_map)
+        _ = audit_log.write_collected(connection)
+        out.config_event_count += out.view_count
+
+# ################################################################################################################################
+
 def seed_demo_data(
     engine:'Engine',
     *,
@@ -1444,27 +1476,9 @@ def seed_demo_data(
     # database ids of the viewed events are known
     planned_views = _plan_views(resubmit_sources, failed_candidates, ok_candidates, now, rng)
 
-    # Everything lands in the database at once - a rerun replaces the previous
+    # Everything lands in the database at once, in a commit of the audit log - a rerun replaces the previous
     # data set inside the same transaction, so a failed import changes nothing
-    with engine.begin() as connection:
-
-        _delete_demo_rows(connection)
-
-        id_map = audit_log.write_collected(connection)
-
-        dedup_rows = _build_dedup_rows(now, resubmit_sources, id_map, rng)
-        _ = connection.execute(event_dedup_table.insert(), dedup_rows)
-        out.dedup_count = len(dedup_rows)
-
-        if alert_rows:
-            _ = connection.execute(alert_table.insert(), alert_rows)
-
-        # Each view-access record embeds the viewed event's real database id,
-        # which the id map already knows within this same transaction
-        if planned_views:
-            out.view_count = _write_view_events(audit_log, planned_views, id_map)
-            _ = audit_log.write_collected(connection)
-            out.config_event_count += out.view_count
+    _ = write_audit(engine, _write_seed, audit_log, out, now, resubmit_sources, alert_rows, planned_views, rng)
 
     # The final count is what the database actually holds
     statement = select(func.count()).select_from(event_table).where(event_table.c.cid.like(Cid_Prefix + '%'))

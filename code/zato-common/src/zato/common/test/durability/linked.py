@@ -35,7 +35,6 @@ class ModuleCtx:
 
     # The names that a registry module defines
     Environment_Variables      = 'Environment_Variables'
-    Write_Sites                = 'Write_Sites'
     Direct_SQL_Purposes        = 'Direct_SQL_Purposes'
     Performance_Roots          = 'Performance_Roots'
     Memory_Database_Exemptions = 'Memory_Database_Exemptions'

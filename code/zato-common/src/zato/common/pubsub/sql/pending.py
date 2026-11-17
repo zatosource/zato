@@ -13,13 +13,14 @@ from dataclasses import dataclass
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anylist, callable_, intdict, intlistnone, strlist
+    from zato.common.typing_ import anydict, anylist, callable_, intdict, intlist, intlistnone, strlist
 
     # Dummy assignments to satisfy type checkers
     anydict = anydict
     anylist = anylist
     callable_ = callable_
     intdict = intdict
+    intlist = intlist
     intlistnone = intlistnone
     strlist = strlist
 
@@ -31,6 +32,7 @@ pending_publication_list = list['PendingPublication']
 pending_ack_list         = list['PendingAck']
 pending_atomic_list      = list['PendingAtomic']
 pending_lease_list       = list['PendingLease']
+pending_attempts_list    = list['PendingAttempts']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -132,6 +134,23 @@ class PendingLease:
     exception: 'BaseException | None'
 
 # ################################################################################################################################
+
+@dataclass(init=False)
+class PendingAttempts:
+    """ The next push attempt of each delivery of a batch, with the attempt number of each delivery
+    that is still in its subscriber's queue once it is written.
+    """
+
+    # The deliveries whose attempts are recorded
+    delivery_ids: 'intlist'
+
+    # The attempt number of each delivery still in its subscriber's queue, by delivery ID
+    attempts: 'intdict'
+
+    # Why the attempts could not be written, while the other items of its commit could
+    exception: 'BaseException | None'
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def new_pending_publication(message_values:'anydict') -> 'PendingPublication':
@@ -219,7 +238,19 @@ def new_pending_lease(
 
 # ################################################################################################################################
 
-def reset_item(item:'PendingPublication | PendingAck | PendingAtomic | PendingLease') -> 'None':
+def new_pending_attempts(delivery_ids:'intlist') -> 'PendingAttempts':
+    """ Returns the push attempts of a batch of deliveries that are yet to be written.
+    """
+    out = PendingAttempts()
+    out.delivery_ids = delivery_ids
+    out.attempts = {}
+    out.exception = None
+
+    return out
+
+# ################################################################################################################################
+
+def reset_item(item:'PendingPublication | PendingAck | PendingAtomic | PendingLease | PendingAttempts') -> 'None':
     """ Clears what a commit that was rolled back stored in one of its items.
     """
     if isinstance(item, PendingPublication):
@@ -237,6 +268,10 @@ def reset_item(item:'PendingPublication | PendingAck | PendingAtomic | PendingLe
         for pending in item.publications:
             reset_item(pending)
         reset_item(item.ack)
+        item.exception = None
+
+    elif isinstance(item, PendingAttempts):
+        item.attempts = {}
         item.exception = None
 
     else:

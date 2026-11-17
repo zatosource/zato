@@ -29,7 +29,7 @@ from zato.common.pubsub.sql.audit_events import collect_audit_events
 from zato.common.pubsub.sql.config import get_commit_max_messages, get_commits_in_flight, get_urgent_commits_in_flight
 from zato.common.pubsub.sql.fenced_ack import check_fenced, delete_fenced, PubSubAckConflict
 from zato.common.pubsub.sql.payloads import drop_payloads, get_chunks, get_message_ids
-from zato.common.pubsub.sql.pending import PendingAck, PendingAtomic, PendingPublication, reset_item
+from zato.common.pubsub.sql.pending import PendingAck, PendingAtomic, PendingAttempts, PendingPublication, reset_item
 from zato.common.pubsub.sql.pull import lease_messages
 from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
 from zato.common.typing_ import cast_
@@ -40,8 +40,8 @@ from zato.common.typing_ import cast_
 if 0:
     from sqlalchemy.engine import Connection, Engine
     from zato.common.audit_log.api import AuditLog
-    from zato.common.pubsub.sql.pending import PendingLease, pending_ack_list, pending_atomic_list, pending_lease_list, \
-        pending_publication_list
+    from zato.common.pubsub.sql.pending import PendingLease, pending_ack_list, pending_atomic_list, pending_attempts_list, \
+        pending_lease_list, pending_publication_list
     from zato.common.typing_ import any_, anydict, anylist, intlist, strlist
 
     # Dummy assignments to satisfy type checkers
@@ -53,6 +53,7 @@ if 0:
     PendingLease = PendingLease
     pending_ack_list = pending_ack_list
     pending_atomic_list = pending_atomic_list
+    pending_attempts_list = pending_attempts_list
     pending_lease_list = pending_lease_list
     pending_publication_list = pending_publication_list
 
@@ -120,6 +121,14 @@ _ack_deliveries_query_plain = PlainStatement(_ack_deliveries_query.where(and_(
 # A concurrent commit on PostgreSQL may have removed some of the rows first, so the statement returns those it removed.
 _delivery_delete = delivery_table.delete().where(delivery_table.c.id.in_(bindparam('ack_delivery_ids', expanding=True)))
 _delivery_delete_plain = PlainStatement(_delivery_delete.returning(delivery_table.c.id))
+
+# What records the next push attempt of each delivery row of a batch and returns the numbers of the rows that remain.
+_record_attempts_statement = delivery_table.update()
+_record_attempts_statement = _record_attempts_statement.where(
+    delivery_table.c.id.in_(bindparam('attempt_delivery_ids', expanding=True)))
+_record_attempts_statement = _record_attempts_statement.values(attempt=delivery_table.c.attempt + 1)
+_record_attempts_statement = _record_attempts_statement.returning(delivery_table.c.id, delivery_table.c.attempt)
+_record_attempts_statement_plain = PlainStatement(_record_attempts_statement)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -191,6 +200,17 @@ class PubSubWriter:
         """ Leases a subscriber's deliverable messages to one pulling client.
         """
         self._commit_queue.write(pending, weight=pending.max_messages, is_urgent=False)
+
+        if pending.exception:
+            raise pending.exception
+
+# ################################################################################################################################
+
+    def record_attempts(self, pending:'PendingAttempts') -> 'None':
+        """ Records the next push attempt of each delivery of a batch before its requests are sent.
+        """
+        weight = len(pending.delivery_ids)
+        self._commit_queue.write(pending, weight=weight, is_urgent=False)
 
         if pending.exception:
             raise pending.exception
@@ -279,12 +299,13 @@ class PubSubWriter:
 
     def _write_transaction(self, engine:'Engine', batch:'anylist') -> 'anylist':
         """ Writes the publications of a batch first, its acknowledgements next, its fenced acknowledgements
-        with their publications after them, its pulls and the audit events of all of them last, in one transaction.
-        Returns the audit events written.
+        with their publications after them, its push attempts, its pulls and the audit events of all of them last,
+        in one transaction. Returns the audit events written.
         """
         publications:'pending_publication_list' = []
         acks:'pending_ack_list' = []
         atomics:'pending_atomic_list' = []
+        attempts_list:'pending_attempts_list' = []
         leases:'pending_lease_list' = []
 
         for item in batch:
@@ -294,6 +315,8 @@ class PubSubWriter:
                 acks.append(item)
             elif isinstance(item, PendingAtomic):
                 atomics.append(item)
+            elif isinstance(item, PendingAttempts):
+                attempts_list.append(item)
             else:
                 leases.append(item)
 
@@ -311,6 +334,12 @@ class PubSubWriter:
             # Each fenced acknowledgement commits with its publications or not at all, without failing the others ..
             for atomic in atomics:
                 self._write_atomic(connection, atomic, ack_by_message_id)
+
+            # .. a push attempt is recorded only for a delivery that this transaction has not acknowledged ..
+            for attempts in attempts_list:
+                parameters = {'attempt_delivery_ids': attempts.delivery_ids}
+                for row in _record_attempts_statement_plain.execute(connection, parameters):
+                    attempts.attempts[row.id] = row.attempt
 
             # .. a pull leases nothing that this transaction has acknowledged already ..
             for lease in leases:

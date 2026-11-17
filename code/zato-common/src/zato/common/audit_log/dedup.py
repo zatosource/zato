@@ -19,21 +19,34 @@ from hashlib import sha256
 
 # SQLAlchemy
 from sqlalchemy import delete, select, update
-from sqlalchemy.exc import DBAPIError
+from sqlalchemy.dialects.postgresql import insert as postgresql_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 # Zato
 from zato.common.audit_log.common import event_dedup_table
-from zato.common.db_env.engine import execute_write
+from zato.common.audit_log.writes import execute_audit_write, write_audit
+from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.engine import Engine
-    from zato.common.typing_ import dictlist
+    from sqlalchemy.engine import Connection, Engine
+    from zato.common.typing_ import dictlist, stranydict
+    Connection = Connection
     dictlist = dictlist
     Engine = Engine
+    stranydict = stranydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The insert of each database, which skips a row whose key exists already
+_dialect_inserts = {
+    Type_SQLite: sqlite_insert,
+    Type_PostgreSQL: postgresql_insert,
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,41 +83,25 @@ def acquire_dedup_key(engine:'Engine', dedup_key:'str', cid:'str', action:'str',
         'completed_at': None,
     }
 
-    # The unique index makes the claim atomic - a concurrent duplicate loses here.
-    # The catch is wide because drivers disagree on the class of a unique violation -
-    # pg8000 rewraps its IntegrityError as OperationalError - so what happened
-    # is confirmed by looking the key up, not by trusting the exception type.
-    insert_statement = event_dedup_table.insert()
-    insert_statement = insert_statement.values(**values)
-
-    try:
-        _ = execute_write(engine, insert_statement)
-
-    except DBAPIError:
-
-        # The key was already there, so a duplicate lost the race here ..
-        if _key_exists(engine, dedup_key):
-            return False
-
-        # .. and anything else is a real database error the caller has to see.
-        else:
-            raise
-
-    return True
+    out = write_audit(engine, _claim_key, values)
+    return out
 
 # ################################################################################################################################
 
-def _key_exists(engine:'Engine', dedup_key:'str') -> 'bool':
-    """ Returns True when one dedup key is already claimed.
+def _claim_key(connection:'Connection', values:'stranydict') -> 'bool':
+    """ Inserts the row of a dedup key in the transaction of the connection and returns whether it was inserted.
+    The unique index makes the claim atomic - a concurrent duplicate inserts nothing, without failing the transaction
+    that it shares with other writes.
     """
-    statement = select(event_dedup_table.c.id)
-    statement = statement.where(event_dedup_table.c.dedup_key == dedup_key)
+    insert = _dialect_inserts[connection.dialect.name]
 
-    with engine.connect() as connection:
-        result = connection.execute(statement)
-        row = result.first()
+    insert_statement = insert(event_dedup_table)
+    insert_statement = insert_statement.values(**values)
+    insert_statement = insert_statement.on_conflict_do_nothing(index_elements=[event_dedup_table.c.dedup_key])
 
-    out = row is not None
+    result = connection.execute(insert_statement)
+
+    out = result.rowcount > 0
     return out
 
 # ################################################################################################################################
@@ -118,7 +115,7 @@ def complete_dedup_key(engine:'Engine', dedup_key:'str', outcome:'str') -> 'None
 
     statement = statement.values(outcome=outcome, completed_at=now)
 
-    _ = execute_write(engine, statement)
+    _ = execute_audit_write(engine, statement)
 
 # ################################################################################################################################
 
@@ -129,7 +126,7 @@ def release_dedup_key(engine:'Engine', dedup_key:'str') -> 'None':
     statement = delete(event_dedup_table)
     statement = statement.where(event_dedup_table.c.dedup_key == dedup_key)
 
-    _ = execute_write(engine, statement)
+    _ = execute_audit_write(engine, statement)
 
 # ################################################################################################################################
 

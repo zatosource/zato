@@ -32,6 +32,7 @@ from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditS
 from zato.common.audit_log.bulk_insert import insert_pending_events
 from zato.common.crypto.api import CryptoManager
 from zato.common.db_env.outage import call_until_available
+from zato.common.db_env.write_path import Mechanism, write_path
 from zato.common.pubsub.sql.config import get_generation_file_path
 from zato.common.pubsub.sql.replaced import raise_replaced
 from zato.common.typing_ import cast_
@@ -284,7 +285,7 @@ class _GenerationRaiser:
 
     def run(self) -> 'None':
         try:
-            with self.engine.begin() as connection:
+            with write_path(Mechanism.Takeover), self.engine.begin() as connection:
                 self.backend_pid = connection.execute(_backend_pid_query).scalar_one()
                 self.has_pid = True
 

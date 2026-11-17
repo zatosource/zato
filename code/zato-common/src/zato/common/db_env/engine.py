@@ -34,6 +34,7 @@ from zato.common.db_env.pg8000_copy import install as install_pg8000_copy
 from zato.common.db_env.pg8000_wire import install as install_pg8000_wire
 from zato.common.db_env.process_queue import ProcessQueue
 from zato.common.db_env.sqlite_checkpoint import set_background_checkpoint_limit, WALCheckpointer
+from zato.common.db_env.write_path import check_write_path, get_write_path, Mechanism, run_in_write_path, write_path
 from zato.common.ha.sqlite import holds_log_for_node, ReplicatedConnection, set_replicated_pragmas
 from zato.common.worker_slot import is_config_owner
 
@@ -184,6 +185,9 @@ def _new_sqlite_file_engine(
 
     sa_event.listen(engine, 'connect', set_sqlite_pragmas)
 
+    # .. every write runs within one of the mechanisms of the Zato database ..
+    sa_event.listen(engine, 'before_cursor_execute', check_write_path)
+
     # .. and a file whose WAL is checkpointed in the background lets its commits append to a longer log.
     if needs_background_checkpoint:
         sa_event.listen(engine, 'connect', set_background_checkpoint_limit)
@@ -204,8 +208,9 @@ def _create_sqlite_schema(db_path:'str', engine:'Engine', metadata_tuple:'anytup
     with open(lock_path, 'a') as lock_file:
         fcntl.flock(lock_file, fcntl.LOCK_EX)
 
-        for metadata in metadata_tuple:
-            metadata.create_all(engine)
+        with write_path(Mechanism.Schema):
+            for metadata in metadata_tuple:
+                metadata.create_all(engine)
 
 # ################################################################################################################################
 
@@ -275,15 +280,16 @@ def create_schemas(engine:'Engine', metadata_tuple:'anytuple') -> 'None':
     """ Creates the tables of each schema that do not exist yet. On PostgreSQL, the processes that start at the same time,
     e.g. a server and its cleanup process, create them one after another.
     """
-    if engine.dialect.name == Type_PostgreSQL:
-        with engine.begin() as connection:
-            _ = connection.execute(text('select pg_advisory_xact_lock(:key)'), {'key': _schema_lock_key})
+    with write_path(Mechanism.Schema):
+        if engine.dialect.name == Type_PostgreSQL:
+            with engine.begin() as connection:
+                _ = connection.execute(text('select pg_advisory_xact_lock(:key)'), {'key': _schema_lock_key})
 
+                for metadata in metadata_tuple:
+                    metadata.create_all(connection)
+        else:
             for metadata in metadata_tuple:
-                metadata.create_all(connection)
-    else:
-        for metadata in metadata_tuple:
-            metadata.create_all(engine)
+                metadata.create_all(engine)
 
 # ################################################################################################################################
 
@@ -356,6 +362,9 @@ def _new_env_engine(config:'EnvDBConfig') -> '_EnvEngine':
         engine_kwargs['max_overflow'] = _network_max_overflow
 
     engine = create_engine(engine_url, connect_args=connect_args, **engine_kwargs)
+
+    # .. every write runs within one of the mechanisms of the Zato database ..
+    sa_event.listen(engine, 'before_cursor_execute', check_write_path)
 
     # .. PostgreSQL needs each socket to send its segments without delay ..
     if db_type == Type_PostgreSQL:
@@ -584,8 +593,16 @@ def _get_process_queue(write_key:'str') -> 'ProcessQueue | None':
 # ################################################################################################################################
 
 def call_database(engine:'Engine', func:'callable_', *args:'any_') -> 'any_':
-    """ Runs one blocking database call, in the thread pool of the gevent hub if the engine needs it.
+    """ Runs one blocking database call, in the thread pool of the gevent hub if the engine needs it, as the work
+    of the mechanism of its caller or as a serialized write if its caller runs within none.
     """
+    mechanism = get_write_path()
+
+    if mechanism is None:
+        mechanism = Mechanism.Serialized_Write
+
+    call_args = (mechanism, func, args)
+
     if needs_thread_pool(engine):
 
         write_key = _get_write_key(engine)
@@ -600,11 +617,11 @@ def call_database(engine:'Engine', func:'callable_', *args:'any_') -> 'any_':
 
         # The thread that waits for the turn of this process blocks in the pool, while the greenlet of the caller is suspended
         if process_queue := _get_process_queue(write_key):
-            out = threadpool.apply(process_queue.run_under_lock, (write_lock, func, args))
+            out = threadpool.apply(process_queue.run_under_lock, (write_lock, run_in_write_path, call_args))
         else:
-            out = threadpool.apply(_call_under_lock, (write_lock, func, args))
+            out = threadpool.apply(_call_under_lock, (write_lock, run_in_write_path, call_args))
     else:
-        out = func(*args)
+        out = run_in_write_path(*call_args)
 
     return out
 

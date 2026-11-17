@@ -25,7 +25,7 @@ from zato.common.audit_log.api import AuditEvent, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import event_attr_table, event_body_table, event_table
 from zato.common.audit_log.export.api import get_audit_export
-from zato.common.db_env.engine import call_database, execute_write
+from zato.common.audit_log.writes import execute_audit_write, write_audit
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -33,13 +33,14 @@ from zato.common.util.api import utcnow
 
 if 0:
     from datetime import datetime
-    from sqlalchemy.engine import Engine
+    from sqlalchemy.engine import Connection, Engine
     from zato.common.audit_log.api import AuditLog
     from zato.common.typing_ import any_, intlistnone, intnone
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
     AuditLog = AuditLog
+    Connection = Connection
     datetime = datetime
     Engine = Engine
     intlistnone = intlistnone
@@ -167,7 +168,7 @@ def record_job_complete(event_id:'int', *, outcome:'str', duration_ms:'int', err
     update_statement = update_statement.where(event_table.c.id == event_id)
     update_statement = update_statement.values(outcome=outcome, duration_ms=duration_ms, data=error)
 
-    _ = execute_write(engine, update_statement)
+    _ = execute_audit_write(engine, update_statement)
 
     # The run closes with its own system entry, mirroring the one it opened with.
     duration_human = format_duration_ms(duration_ms)
@@ -201,7 +202,7 @@ def record_job_timeout(job_id:'int', current_run:'int', *, elapsed_ms:'int', err
         event_table.c.id.desc()).limit(1)
 
     # .. mark it as timed out in place ..
-    event_id = call_database(engine, _mark_run_timed_out, engine, event_query, elapsed_ms, error)
+    event_id = write_audit(engine, _mark_run_timed_out, event_query, elapsed_ms, error)
 
     # .. unless it was never recorded, which means the audit log was off when it started.
     if event_id is None:
@@ -216,22 +217,20 @@ def record_job_timeout(job_id:'int', current_run:'int', *, elapsed_ms:'int', err
 
 # ################################################################################################################################
 
-def _mark_run_timed_out(engine:'Engine', event_query:'any_', elapsed_ms:'int', error:'str') -> 'intnone':
-    """ Marks the run that the query finds as timed out in place and returns its event id,
-    or None when the run was never recorded.
+def _mark_run_timed_out(connection:'Connection', event_query:'any_', elapsed_ms:'int', error:'str') -> 'intnone':
+    """ Marks the run that the query finds as timed out in place, in the transaction of the connection,
+    and returns its event id, or None when the run was never recorded.
     """
-    with engine.begin() as connection:
-        out = connection.execute(event_query).scalar()
+    out = connection.execute(event_query).scalar()
 
-        if out is None:
-            return None
+    if out is None:
+        return None
 
-        update_statement = event_table.update()
-        update_statement = update_statement.where(event_table.c.id == out)
-        update_statement = update_statement.values(
-            outcome=SCHEDULER.OUTCOME.TIMEOUT, duration_ms=elapsed_ms, data=error)
+    update_statement = event_table.update()
+    update_statement = update_statement.where(event_table.c.id == out)
+    update_statement = update_statement.values(outcome=SCHEDULER.OUTCOME.TIMEOUT, duration_ms=elapsed_ms, data=error)
 
-        _ = connection.execute(update_statement)
+    _ = connection.execute(update_statement)
 
     return out
 
@@ -264,7 +263,7 @@ def append_job_log_entry(event_id:'int', timestamp:'datetime', level:'str', mess
     insert_statement = event_body_table.insert()
     insert_statement = insert_statement.values(event_id=event_id, kind=kind, event_time=timestamp, data=body_json)
 
-    _ = execute_write(engine, insert_statement)
+    _ = execute_audit_write(engine, insert_statement)
 
 # ################################################################################################################################
 # ################################################################################################################################
