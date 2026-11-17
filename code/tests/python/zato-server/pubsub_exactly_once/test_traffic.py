@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 import random
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -15,7 +16,7 @@ from threading import Event
 
 # Zato
 from pubsub_exactly_once.harness import get_engine, new_keys
-from pubsub_exactly_once.load_report import Latencies, LoadReport, Milliseconds_Per_Second
+from pubsub_exactly_once.traffic_report import Latencies, Milliseconds_Per_Second, TrafficReport
 from pubsub_exactly_once.rest import ack, drain, get_correl_ids, post_json, publish
 from pubsub_exactly_once.server import kill_worker
 from zato.common.test.exactly_once.config import TestConfig
@@ -32,13 +33,16 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How many messages each load test publishes
-_message_count = 20_000
+# How many messages each steady traffic test publishes, unless the environment variable names another count
+_message_count_env = 'Zato_Test_PubSub_Traffic_Message_Count'
+_default_message_count = '20000'
+_message_count_text = os.environ.get(_message_count_env, _default_message_count)
+_message_count = int(_message_count_text)
 
 # How many input messages of the relay are published per second
 _publication_rate = 100
 
-# How many times the worker is killed while the relay is under load
+# How many times the worker is killed while the relay receives steady traffic
 _worker_kills = 3
 
 # How many clients compete for the messages of one queue
@@ -58,8 +62,8 @@ _lease_margin = 0.5
 _retry_seconds = 0.2
 _poll_seconds  = 1.0
 
-# How long a load test may take to settle once everything was published, in seconds
-_load_timeout = 600.0
+# How long a steady traffic test may take to settle once everything was published, in seconds
+_settle_timeout = 600.0
 
 # The topics of the cycle of a pull client
 _orders_topic   = 'orders'
@@ -119,7 +123,7 @@ def _publish_until_stored(username:'str', password:'str', topic_name:'str', key:
 # ################################################################################################################################
 
 class _OutputReader:
-    """ A pull client of the output topic of the relay that reads throughout a load test and never fails itself.
+    """ A pull client of the output topic of the relay that reads throughout a steady traffic test and never fails itself.
     """
 
     def __init__(self, prefix:'str') -> 'None':
@@ -326,7 +330,7 @@ def _wait_for_received(reader:'_OutputReader', count:'int') -> 'None':
     """ Waits until the reader received the given number of outputs, and then for one more lease,
     in which a repeated output would arrive.
     """
-    deadline = time.monotonic() + _load_timeout
+    deadline = time.monotonic() + _settle_timeout
 
     while len(reader.received) < count:
         assert time.monotonic() < deadline, f'Received {len(reader.received)} of {count} outputs'
@@ -377,7 +381,7 @@ def _report_continuous_publication(
     repeated_count = invocation_count - len(keys)
     longest_pause_ms = _get_longest_pause(reader.received_times) * Milliseconds_Per_Second
 
-    report = LoadReport('test_crashes_under_continuous_publication')
+    report = TrafficReport('test_crashes_under_continuous_publication')
 
     report.add_rate('Publication', len(keys), timing['published'] - start, 'msg')
     report.add_rate('Relay outputs committed', len(keys), timing['committed'] - start, 'msg')
@@ -418,7 +422,7 @@ def _report_competing_consumers(keys:'strlist', timing:'anydict', consumers:'lis
         late_batch_count += consumer.late_batch_count
         consumed_count += consumer.consumed_count
 
-    report = LoadReport('test_competing_consumers_with_lease_expiry')
+    report = TrafficReport('test_competing_consumers_with_lease_expiry')
 
     report.add_rate('Publication', len(keys), timing['published'] - start, 'msg')
     report.add_rate('Orders consumed with their invoices', len(keys), consumed_seconds, 'msg')
@@ -440,7 +444,7 @@ def _wait_for_invoices(prefix:'str', count:'int') -> 'None':
     """ Waits until no order remains in the queue and the given number of invoices exists.
     """
     engine = get_engine()
-    deadline = time.monotonic() + _load_timeout
+    deadline = time.monotonic() + _settle_timeout
 
     while True:
         pending_count = count_topic_deliveries(engine, _orders_topic)
@@ -501,7 +505,7 @@ def test_crashes_under_continuous_publication(zato_server:'any_') -> 'None':
 
             # .. the relay commits each output once and in order ..
             engine = get_engine()
-            check = wait_for_outputs(engine, keys, prefix, _load_timeout)
+            check = wait_for_outputs(engine, keys, prefix, _settle_timeout)
             timing['committed'] = time.monotonic()
 
             assert_exactly_once(check, keys)

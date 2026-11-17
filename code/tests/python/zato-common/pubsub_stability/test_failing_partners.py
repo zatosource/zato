@@ -25,6 +25,7 @@ from zato.common.audit_log.api import AuditLog, get_audit_engine
 from zato.common.audit_log.common import AuditEvent
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.test.pubsub_database import pubsub_db_env
+from zato.common.test.rest_push import RESTPushStore
 from zato.server.base.parallel.delivery import PushDelivery
 
 # ################################################################################################################################
@@ -180,10 +181,12 @@ class _Partners:
 # ################################################################################################################################
 
 class _StubConfigManager:
-    """ Holds the push subscriptions the way the configuration manager of a server does.
+    """ Holds the push subscriptions and the outgoing REST connections the way the configuration manager of a server does.
     """
     def __init__(self) -> 'None':
         self._push_subs:'anydict' = {}
+        self.rest_push_store = RESTPushStore()
+        self.config_store = self.rest_push_store.config_store
 
 class _StubServer:
     """ Stands in for the server whose push delivery the suite runs.
@@ -342,10 +345,15 @@ def _run_partners() -> 'None':
 
         backend.subscribe(sub_key, topic_name)
 
+        host = f'http://127.0.0.1:{server.server_port}'
+        url_path = f'/{name}'
+        endpoint_id = stub_server.config_manager.rest_push_store.add_endpoint(name, host, url_path)
+
         stub_server.config_manager._push_subs[sub_key] = [{
+            'sub_key': sub_key,
             'topic_name': topic_name,
             'push_type': PubSub.Push_Type.REST,
-            'rest_push_url': f'http://127.0.0.1:{server.server_port}/{name}',
+            'rest_push_endpoint_id': endpoint_id,
         }]
 
         push_delivery.start_sub_key(sub_key)

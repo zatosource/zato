@@ -15,7 +15,7 @@ from typing import NamedTuple
 from sqlalchemy import func, select
 
 # Zato
-from pubsub_exactly_once.load_report import LoadReport
+from pubsub_exactly_once.traffic_report import TrafficReport
 from zato.common.pubsub.sql.schema import message_table
 from zato.common.test.pubsub_database import get_db_mode
 
@@ -152,7 +152,7 @@ class Progress:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class PerfReport(LoadReport):
+class PerfReport(TrafficReport):
     """ The results of one performance test on the pub/sub database of the run.
     """
 

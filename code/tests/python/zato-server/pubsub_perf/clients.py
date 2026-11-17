@@ -11,7 +11,7 @@ import time
 from http.client import CONFLICT, INTERNAL_SERVER_ERROR, OK
 
 # Zato
-from pubsub_exactly_once.load_report import Latencies
+from pubsub_exactly_once.traffic_report import Latencies
 from pubsub_exactly_once.rest import post_json
 from pubsub_perf.config import PerfConfig, Receipts_Topic
 

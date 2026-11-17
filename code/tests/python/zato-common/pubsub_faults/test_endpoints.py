@@ -29,6 +29,7 @@ from zato.common.audit_log.api import AuditLog, get_audit_engine
 from zato.common.audit_log.common import AuditEvent
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.test.pubsub_database import pubsub_db_env
+from zato.common.test.rest_push import RESTPushStore
 from zato.server.base.parallel.delivery import PushDelivery
 
 # ################################################################################################################################
@@ -81,6 +82,9 @@ _accepted_at_once = [_healthy, 'link-latency', 'link-bandwidth', 'link-slicer']
 # The endpoints whose messages are given up once their retries run out.
 _given_up = [Behavior_Silent, Behavior_TLS_Stall, 'link-black-hole', 'link-reset', 'link-cut']
 
+# The path that every endpoint is pushed to on its host
+_url_path = '/'
+
 _healthy_interval_seconds = 0.05
 _healthy_p99_limit_seconds = 1.0
 
@@ -94,10 +98,12 @@ _failed_events_query = text('select msg_id from event where event_type = :event_
 # ################################################################################################################################
 
 class _StubConfigManager:
-    """ Holds the push subscriptions the way the configuration manager of a server does.
+    """ Holds the push subscriptions and the outgoing REST connections the way the configuration manager of a server does.
     """
     def __init__(self) -> 'None':
         self._push_subs:'anydict' = {}
+        self.rest_push_store = RESTPushStore()
+        self.config_store = self.rest_push_store.config_store
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -133,7 +139,7 @@ class _Run:
         self.toxiproxy = toxiproxy
 
         self.endpoints:'strendpointdict' = {}
-        self.urls:'strstrdict' = {}
+        self.hosts:'strstrdict' = {}
         self.message_counts:'strintdict' = {}
         self.retry_settings:'anydict' = {}
         self.publish_times:'strfloatdict' = {}
@@ -159,7 +165,7 @@ class _Run:
             self._add(name, endpoint, message_count, retry_settings)
 
             scheme = 'https' if behavior == Behavior_TLS_Stall else 'http'
-            self.urls[name] = f'{scheme}://127.0.0.1:{endpoint.port}/'
+            self.hosts[name] = f'{scheme}://127.0.0.1:{endpoint.port}'
 
         # .. apart from those behind a proxy, which receive what passes through their toxic.
         for name, toxic_type, attributes, message_count, retry_settings in _toxic_endpoints:
@@ -168,7 +174,7 @@ class _Run:
 
             listen_port = self.toxiproxy.add_proxy(name, endpoint.port)
             self.toxiproxy.add_toxic(name, toxic_type, attributes, Stream_Upstream)
-            self.urls[name] = f'http://127.0.0.1:{listen_port}/'
+            self.hosts[name] = f'http://127.0.0.1:{listen_port}'
 
 # ################################################################################################################################
 
@@ -339,10 +345,14 @@ def _run_endpoints(toxiproxy:'Toxiproxy') -> 'None':
 
         backend.subscribe(sub_key, topic_name)
 
+        host = run.hosts[name]
+        endpoint_id = stub_server.config_manager.rest_push_store.add_endpoint(name, host, _url_path)
+
         stub_server.config_manager._push_subs[sub_key] = [{
+            'sub_key': sub_key,
             'topic_name': topic_name,
             'push_type': PubSub.Push_Type.REST,
-            'rest_push_url': run.urls[name],
+            'rest_push_endpoint_id': endpoint_id,
         }]
 
         push_delivery.start_sub_key(sub_key)

@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The measurements of the load tests of exactly-once delivery - rates, transactions per second and latency percentiles,
+# The measurements of the steady traffic tests of exactly-once delivery - rates, transactions per second and latency percentiles,
 # logged under one logger so that the results of a run can be read from its log.
 
 # stdlib
@@ -19,7 +19,7 @@ from zato.common.test.pubsub_database import get_db_mode
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = logging.getLogger('zato.test.pubsub_exactly_once.load_report')
+logger = logging.getLogger('zato.test.pubsub_exactly_once.traffic_report')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -66,8 +66,8 @@ class Latencies:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class LoadReport:
-    """ The results of one load test on the pub/sub database of the run.
+class TrafficReport:
+    """ The results of one steady traffic test on the pub/sub database of the run.
     """
 
     def __init__(self, test_name:'str') -> 'None':
@@ -100,7 +100,7 @@ class LoadReport:
         db_mode = get_db_mode()
 
         for line in self.lines:
-            logger.info('Load result %s on %s: %s', self.test_name, db_mode, line)
+            logger.info('Traffic result %s on %s: %s', self.test_name, db_mode, line)
 
 # ################################################################################################################################
 # ################################################################################################################################
