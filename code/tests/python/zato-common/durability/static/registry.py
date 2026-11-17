@@ -78,3 +78,39 @@ Environment_Variables = (
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+# The functions that run a mechanism of the write path, each by its module, its qualified name and the member of Mechanism
+# that it marks its work with, or an empty name for the function that marks it with the mechanism of its caller.
+Mechanism_Functions = (
+    ('zato.common.db_env.commit_queue',     'CommitQueue._commit',          'Group_Commit'),
+    ('zato.common.db_env.engine',           'call_database',                ''),
+    ('zato.common.db_env.engine',           '_create_sqlite_schema',        'Schema'),
+    ('zato.common.db_env.engine',           'create_schemas',               'Schema'),
+    ('zato.common.pubsub.sql.cleanup',      'PubSubCleanup.sweep_once',     'Maintenance'),
+    ('zato.common.audit_log.retention',     'run_retention',                'Maintenance'),
+    ('zato.common.audit_log.event_count',   'compact_event_counts',         'Maintenance'),
+    ('zato.common.analytics.rollup',        'run_rollup',                   'Maintenance'),
+    ('zato.common.pubsub.sql.generation',   '_GenerationRaiser.run',        'Takeover'),
+    ('zato.common.demo.seed',               'seed_demo_data',               'Seed'),
+    ('zato.common.demo.seed',               'purge_demo_data',              'Seed'),
+)
+
+# The module that defines the write path, with the names through which a function marks its work as that of a mechanism
+Write_Path_Module = 'zato.common.db_env.write_path'
+Write_Path_Markers = (
+    'zato.common.db_env.write_path.write_path',
+    'zato.common.db_env.write_path.run_in_write_path',
+)
+
+# The prefix of the full name of a member of Mechanism
+Mechanism_Prefix = 'zato.common.db_env.write_path.Mechanism.'
+
+# The tables of the audit log that its own writes alone may change, which are every table of its schema but the alerts,
+# which the alerting store writes through a serialized write
+Audit_Log_Schema_Path = 'code/zato-common/src/zato/common/audit_log/common.py'
+Write_Path_Path = 'code/zato-common/src/zato/common/db_env/write_path.py'
+Audit_Tables_Name = 'Audit_Tables'
+Audit_Tables_Not_Guarded = ('alert',)
+
+# ################################################################################################################################
+# ################################################################################################################################

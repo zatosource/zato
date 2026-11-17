@@ -24,6 +24,7 @@ from runner import get_count_mismatches
 from zato.common.api import PubSub
 from zato.common.crypto.api import CryptoManager
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
 
 # ################################################################################################################################
@@ -333,7 +334,7 @@ def test_data_shapes(stability_env:'strstrdict') -> 'None':
     """ Documents of 10 MB at the 20 MB budget, binary content, 10,000 topics, fan-out to 1,000 subscribers,
     and mixed priorities and expirations, each received intact and in order, with the counts equal to the rows.
     """
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
     backend.take_over()
 
     _run_large_documents_flow(backend)

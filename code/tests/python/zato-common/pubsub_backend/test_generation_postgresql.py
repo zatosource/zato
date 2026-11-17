@@ -15,6 +15,7 @@ import pytest
 
 # Zato
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
 from zato.common.pubsub.sql.generation import read_generation_file, write_generation_file
 from zato.common.pubsub.sql.replaced import PubSubReplaced
@@ -145,7 +146,7 @@ def _take_over_as_node(database:'PubSubDatabase', ha_generation:'int', pool_size
     # The backend resolves its engine on first access, which happens here while the variables select the engine
     # that its guard is installed on.
     with pubsub_db_env(env):
-        out = SQLPubSubBackend()
+        out = SQLPubSubBackend(audit_log=new_test_audit_log())
         out.take_over()
         _ = out.engine
 
@@ -184,7 +185,7 @@ def test_replaced_backend_and_cleanup(pubsub_database:'PubSubDatabase') -> 'None
     with pubsub_db_env(env):
 
         # The backend takes over the database and records its generation ..
-        backend = SQLPubSubBackend()
+        backend = SQLPubSubBackend(audit_log=new_test_audit_log())
         backend.take_over()
 
         guard = backend.generation_guard
@@ -238,7 +239,7 @@ def test_generation_reached_again_by_another_server(pubsub_database:'PubSubDatab
     with pubsub_db_env(env):
 
         # The backend takes over the database and publishes a message ..
-        backend = SQLPubSubBackend()
+        backend = SQLPubSubBackend(audit_log=new_test_audit_log())
         backend.take_over()
 
         guard = backend.generation_guard

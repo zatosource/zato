@@ -22,6 +22,7 @@ from cleanup import set_expired
 from common import delete_all_rows, get_message_rows
 from zato.common.db_env.errors import get_sqlstate, is_transient, SQLState
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.schema import delivery_table, message_table
@@ -279,7 +280,7 @@ def run_cleanup_postgresql_scenario() -> 'None':
     """ The cleanup process on PostgreSQL under row locks held by other transactions, a terminated connection,
     a deadlock and a database that cannot be reached.
     """
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
 
     _run_locked_rows_flow(backend)
     _run_terminated_connection_flow(backend)

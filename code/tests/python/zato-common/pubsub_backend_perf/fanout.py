@@ -21,6 +21,7 @@ from load import consume_until_done
 from perf import Min_Fanout_Delivery_Rate_Per_Second
 from seeding import delete_all_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -84,7 +85,7 @@ def run_fanout_scenario() -> 'None':
 
     delete_all_rows()
 
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
 
     # Every topic broadcasts to its own group of subscribers ..
     topic_names:'strlist' = []

@@ -16,6 +16,7 @@ from sqlalchemy import text
 
 # Zato
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.db_env.database import get_database_engine
 from zato.common.test.pubsub_database import connect, get_container_settings, ModuleCtx
 from zato.common.test.pubsub_profile import Managed_Profiles
@@ -99,7 +100,7 @@ def _run_workload() -> 'None':
     """ Takes over the database, publishes, pulls and acknowledges, and runs one sweep of the cleanup process,
     so that every kind of statement of pub/sub is recorded.
     """
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
     backend.take_over()
 
     sub_key = 'zpsk.managed.privileges'

@@ -15,6 +15,7 @@ from gevent.pool import Pool
 
 # Zato
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
 from zato.common.pubsub.sql.config import ModuleCtx as ConfigCtx
 from zato.common.test.pubsub_database import pubsub_db_env
@@ -158,7 +159,7 @@ def test_failover_during_clear_queue() -> 'None':
     """
     with replicated_environment('clear') as database, pubsub_db_env({ConfigCtx.Env_Batch_Size: _batch_size}):
 
-        backend = SQLPubSubBackend()
+        backend = SQLPubSubBackend(audit_log=new_test_audit_log())
         backend.subscribe(_sub_key, _topic_name)
         _fill_queue(backend, 86_400)
 
@@ -180,7 +181,7 @@ def test_failover_during_delete_topic() -> 'None':
     """
     with replicated_environment('delete') as database, pubsub_db_env({ConfigCtx.Env_Batch_Size: _batch_size}):
 
-        backend = SQLPubSubBackend()
+        backend = SQLPubSubBackend(audit_log=new_test_audit_log())
         backend.subscribe(_sub_key, _topic_name)
         _fill_queue(backend, 86_400)
 
@@ -202,7 +203,7 @@ def test_failover_during_retention_sweep() -> 'None':
     """
     with replicated_environment('sweep') as database, pubsub_db_env({ConfigCtx.Env_Batch_Size: _batch_size}):
 
-        backend = SQLPubSubBackend()
+        backend = SQLPubSubBackend(audit_log=new_test_audit_log())
         backend.subscribe(_sub_key, _topic_name)
         _fill_queue(backend, 1)
 

@@ -23,6 +23,7 @@ from gevent.lock import RLock
 from production_documents import get_production_documents
 from zato.common.api import PubSub
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.typing_ import cast_
 from zato.server.base.parallel.delivery import PushDelivery
 
@@ -136,7 +137,7 @@ class Traffic:
 
     def __init__(self, profile:'TrafficProfile') -> 'None':
         self.profile = profile
-        self.backend = SQLPubSubBackend()
+        self.backend = SQLPubSubBackend(audit_log=new_test_audit_log())
         self.documents = _weight_documents(get_production_documents())
 
         self.rate = profile.publish_rate

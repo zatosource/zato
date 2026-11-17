@@ -21,6 +21,7 @@ from cleanup import set_expired
 from common import delete_all_rows, get_message_rows
 from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,7 +61,7 @@ def run_cleanup_lock_scenario() -> 'None':
     """
     delete_all_rows()
 
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
     backend.subscribe(_sub_key, _topic_name)
 
     expired_msg_ids:'strlist' = []

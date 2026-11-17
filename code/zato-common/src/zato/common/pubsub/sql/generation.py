@@ -33,6 +33,7 @@ from zato.common.audit_log.bulk_insert import insert_pending_events
 from zato.common.crypto.api import CryptoManager
 from zato.common.db_env.outage import call_until_available
 from zato.common.db_env.write_path import Mechanism, write_path
+from zato.common.ha.common import get_node_generation
 from zato.common.pubsub.sql.config import get_generation_file_path
 from zato.common.pubsub.sql.replaced import raise_replaced
 from zato.common.typing_ import cast_
@@ -90,9 +91,6 @@ _set_query = text('UPDATE zato_active SET generation = :generation, owner = :own
 
 # The object of the audit event that records a takeover of the Zato database.
 Takeover_Object_Name = 'pubsub-database'
-
-# The environment variable through which an active-standby node passes the generation of its referee record.
-_ha_generation_env = 'Zato_HA_Generation'
 
 # The lines of the generation file - the generation, then the owner.
 _generation_file_line_count = 2
@@ -428,18 +426,6 @@ def _connect_and_raise_generation(
 
 # ################################################################################################################################
 
-def _get_ha_generation() -> 'intnone':
-    """ Returns the generation that an active-standby node passed to this server, or None without a node.
-    """
-    if ha_generation := os.environ.get(_ha_generation_env):
-        out = int(ha_generation)
-    else:
-        out = None
-
-    return out
-
-# ################################################################################################################################
-
 def take_over(get_engine:'callable_', server_name:'strnone') -> 'GenerationGuard':
     """ Makes this server the active one - raises the generation, or sets the generation of its active-standby node,
     and writes an owner unique to this server, waiting for the database to become available if it is not, records both
@@ -448,7 +434,7 @@ def take_over(get_engine:'callable_', server_name:'strnone') -> 'GenerationGuard
     A server with a name records the takeover in the audit log in the transaction that raises the generation.
     """
     owner = CryptoManager.generate_hex_string()
-    ha_generation = _get_ha_generation()
+    ha_generation = get_node_generation()
 
     engine, raiser = call_until_available(
         'Pub/sub takeover', _connect_and_raise_generation, get_engine, owner, ha_generation, server_name)

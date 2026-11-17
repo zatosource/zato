@@ -22,6 +22,7 @@ from zato.common.pubsub.dlq import get_dlq_sub_key, get_dlq_topic_name
 from zato.common.pubsub.outgoing import deliver_envelope, get_outgoing_sub_key, get_outgoing_topic_name, Key_Data, \
     OutgoingPublisher, register_outgoing_conn_type
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.typing_ import cast_
 from zato.server.base.config_manager import ConfigManager
 from zato.server.base.config_manager.outgoing_queues import OutgoingNameMark, OutgoingQueueDepth
@@ -315,7 +316,7 @@ def _new_server() -> 'anytuple':
     """ A backend, a server and the delivery greenlets of one process, which is what a flow
     that models a restart builds a second time.
     """
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
     server = _StubServer(backend)
     delivery = PushDelivery(_as_server(server), backend)
 

@@ -16,6 +16,7 @@ from gevent import sleep
 from common import delete_all_rows, get_delivery_rows, get_message_rows
 from zato.common.api import DATA_FORMAT, PubSub
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 from zato.server.base.parallel.delivery import PushDelivery
 
 # ################################################################################################################################
@@ -141,7 +142,7 @@ def run_push_delivery_scenario() -> 'None':
     """
     delete_all_rows()
 
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
     server = _StubServer()
     delivery = PushDelivery(server, backend) # type: ignore[arg-type]
 

@@ -14,6 +14,7 @@ from time import sleep
 # Zato
 from common import delete_all_rows, get_delivery_rows, get_message_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.config import ModuleCtx
 
 # ################################################################################################################################
@@ -305,7 +306,7 @@ def run_lifecycle_scenario() -> 'None':
     """ The message lifecycle every backend must support - publish, fetch, acknowledge,
     expiration, fetch limits, the REST formatting and pull leases.
     """
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
 
     _run_publish_fetch_ack_flow(backend)
     _run_expiration_flow(backend)

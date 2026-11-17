@@ -12,6 +12,7 @@ import os
 # Zato
 from common import delete_all_rows, get_delivery_rows, get_message_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.config import ModuleCtx as PubSubDBCtx
 
 # ################################################################################################################################
@@ -243,7 +244,7 @@ def run_queues_scenario() -> 'None':
     """ Queue management every backend must support - subscriptions, unsubscribe cleanup,
     queue clearing, single-message operations and whole-topic operations.
     """
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
 
     _run_subscription_flow(backend)
     _run_unsubscribe_cleanup_flow(backend)

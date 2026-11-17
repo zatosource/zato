@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from common import delete_all_rows, get_message_rows
 from zato.common.api import HTTP_SOAP
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -59,7 +60,7 @@ def run_retry_settings_scenario() -> 'None':
     """
     delete_all_rows()
 
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
     backend.subscribe(_sub_key, _topic)
 
     # One message with settings and one without ..

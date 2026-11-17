@@ -75,8 +75,9 @@ def _new_backend(db_path:'str') -> 'any_':
     os.environ['Zato_Database_Path'] = db_path
 
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
+    from zato.common.test.audit_log_ import new_test_audit_log
 
-    out = SQLPubSubBackend()
+    out = SQLPubSubBackend(audit_log=new_test_audit_log())
     return out
 
 # ################################################################################################################################

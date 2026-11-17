@@ -20,6 +20,7 @@ from common import get_min_delivery_rate, get_min_publish_rate, set_progress_con
 from load import consume_until_done
 from seeding import delete_all_rows, seed_backlog
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -92,7 +93,7 @@ def run_publish_throughput_scenario() -> 'float':
 
     delete_all_rows()
 
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
 
     # Every topic has a subscriber so each publish writes a delivery row too ..
     topic_names:'strlist' = []
@@ -159,7 +160,7 @@ def run_delivery_throughput_scenario() -> 'float':
     )
     print(f'Seeded {intcomma(_delivery_topic_count * _delivery_backlog_per_subscriber)} backlog messages in {seed_seconds:.2f}s')
 
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
 
     # .. every topic has its own subscriber ..
     topic_names:'strlist' = []

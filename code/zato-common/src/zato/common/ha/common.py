@@ -18,6 +18,14 @@ from zato.common.defaults import default_env_base_dir
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import intnone
+
+    intnone = intnone
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ModuleCtx:
 
     # The mode of the environment, set to the active-standby mode on both hosts of a pair
@@ -87,6 +95,18 @@ def get_generation() -> 'int':
     generation = os.environ[ModuleCtx.Env_Generation]
 
     out = int(generation)
+    return out
+
+# ################################################################################################################################
+
+def get_node_generation() -> 'intnone':
+    """ Returns the referee generation under which a node started this server, or None for a server that no node started.
+    """
+    if generation := os.environ.get(ModuleCtx.Env_Generation):
+        out = int(generation)
+    else:
+        out = None
+
     return out
 
 # ################################################################################################################################

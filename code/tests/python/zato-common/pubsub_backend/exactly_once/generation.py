@@ -17,6 +17,7 @@ import pytest
 # Zato
 from exactly_once.harness import build, First_Output_Topic, get_lease_ms, Input_Sub_Key, lease, new_backend, publish_input
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.replaced import PubSubReplaced
 from zato.common.test.pubsub_database import connect, pubsub_db_env
 
@@ -191,7 +192,7 @@ def _take_over(env:'strstrdict') -> 'SQLPubSubBackend':
     selects the engine that its guard is installed on.
     """
     with pubsub_db_env(env):
-        out = SQLPubSubBackend()
+        out = SQLPubSubBackend(audit_log=new_test_audit_log())
         out.take_over()
         _ = out.engine
 

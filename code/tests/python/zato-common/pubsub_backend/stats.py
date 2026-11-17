@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from common import delete_all_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -195,7 +196,7 @@ def run_stats_scenario() -> 'None':
     """ The statistics and browsing every backend must support - queue depths,
     per-state totals, the publish timeline, distinct publishers and browsing.
     """
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
 
     _run_depths_and_counts_flow(backend)
     _run_timeline_and_publishers_flow(backend)

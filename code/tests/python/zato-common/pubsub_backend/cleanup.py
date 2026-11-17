@@ -12,6 +12,7 @@ import os
 # Zato
 from common import delete_all_rows, get_delivery_rows, get_message_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.config import ModuleCtx
@@ -120,7 +121,7 @@ def run_cleanup_scenario() -> 'None':
     """
     delete_all_rows()
 
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
     cleanup = PubSubCleanup()
 
     # Two subscribers so expiry can be checked against multi-subscriber deliveries.

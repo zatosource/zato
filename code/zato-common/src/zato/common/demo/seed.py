@@ -36,7 +36,8 @@ from zato.common.audit_log.api import event_attr_table, event_body_table, event_
 from zato.common.audit_log.common import alert_table, event_dedup_table
 from zato.common.audit_log.config_audit import record_config_change, record_view_event
 from zato.common.audit_log.dedup import build_dedup_key
-from zato.common.audit_log.writes import write_audit
+from zato.common.db_env.engine import call_database
+from zato.common.db_env.write_path import Mechanism, write_path
 from zato.common.hl7.audit import audit_ack_received, audit_ack_sent, audit_batch_received, audit_message_received, \
     audit_message_sent, get_audit_attrs, ACKStatus
 from zato.common.hl7.feed import generate_feed_items, rewrite_msh_field, FeedConfig, MSH3_Index, MSH4_Index, MSH10_Index
@@ -494,9 +495,18 @@ def _delete_demo_rows(connection:'Connection') -> 'None':
 # ################################################################################################################################
 
 def purge_demo_data(engine:'Engine') -> 'None':
-    """ Removes everything a previous seed run wrote, in one commit of the audit log.
+    """ Removes everything a previous seed run wrote, in one transaction.
     """
-    _ = write_audit(engine, _delete_demo_rows)
+    with write_path(Mechanism.Seed):
+        _ = call_database(engine, _purge_demo_rows, engine)
+
+# ################################################################################################################################
+
+def _purge_demo_rows(engine:'Engine') -> 'None':
+    """ Deletes everything a previous seed run wrote, in a transaction of its own.
+    """
+    with engine.begin() as connection:
+        _delete_demo_rows(connection)
 
 # ################################################################################################################################
 
@@ -1386,7 +1396,7 @@ def _write_fhir_traffic(
 # ################################################################################################################################
 
 def _write_seed(
-    connection:'Connection',
+    engine:'Engine',
     audit_log:'_BulkAuditLog',
     out:'SeedResult',
     now:'datetime',
@@ -1395,25 +1405,27 @@ def _write_seed(
     planned_views:'anylist',
     rng:'Random',
     ) -> 'None':
-    """ Replaces a previous seed run's data set with the collected one, in the transaction of the connection.
+    """ Replaces a previous seed run's data set with the collected one, in one transaction.
     """
-    _delete_demo_rows(connection)
+    with engine.begin() as connection:
 
-    id_map = audit_log.write_collected(connection)
+        _delete_demo_rows(connection)
 
-    dedup_rows = _build_dedup_rows(now, resubmit_sources, id_map, rng)
-    _ = connection.execute(event_dedup_table.insert(), dedup_rows)
-    out.dedup_count = len(dedup_rows)
+        id_map = audit_log.write_collected(connection)
 
-    if alert_rows:
-        _ = connection.execute(alert_table.insert(), alert_rows)
+        dedup_rows = _build_dedup_rows(now, resubmit_sources, id_map, rng)
+        _ = connection.execute(event_dedup_table.insert(), dedup_rows)
+        out.dedup_count = len(dedup_rows)
 
-    # Each view-access record embeds the viewed event's real database id,
-    # which the id map already knows within this same transaction
-    if planned_views:
-        out.view_count = _write_view_events(audit_log, planned_views, id_map)
-        _ = audit_log.write_collected(connection)
-        out.config_event_count += out.view_count
+        if alert_rows:
+            _ = connection.execute(alert_table.insert(), alert_rows)
+
+        # Each view-access record embeds the viewed event's real database id,
+        # which the id map already knows within this same transaction
+        if planned_views:
+            out.view_count = _write_view_events(audit_log, planned_views, id_map)
+            _ = audit_log.write_collected(connection)
+            out.config_event_count += out.view_count
 
 # ################################################################################################################################
 
@@ -1476,9 +1488,10 @@ def seed_demo_data(
     # database ids of the viewed events are known
     planned_views = _plan_views(resubmit_sources, failed_candidates, ok_candidates, now, rng)
 
-    # Everything lands in the database at once, in a commit of the audit log - a rerun replaces the previous
+    # Everything lands in the database at once, as a seed - a rerun replaces the previous
     # data set inside the same transaction, so a failed import changes nothing
-    _ = write_audit(engine, _write_seed, audit_log, out, now, resubmit_sources, alert_rows, planned_views, rng)
+    with write_path(Mechanism.Seed):
+        _ = call_database(engine, _write_seed, engine, audit_log, out, now, resubmit_sources, alert_rows, planned_views, rng)
 
     # The final count is what the database actually holds
     statement = select(func.count()).select_from(event_table).where(event_table.c.cid.like(Cid_Prefix + '%'))

@@ -12,6 +12,7 @@ import shutil
 
 # Zato
 from zato.common.test.durability.barrier import replicated_environment
+from zato.common.test.direct_sql.seed import seed_autocommit_connection
 from zato.common.test.durability.disk import get_disk_dir
 from zato.common.test.zato_database import file_database_engine
 
@@ -22,9 +23,6 @@ class ModuleCtx:
 
     # The directory of the database, whose path is short enough for the socket of the barrier
     Directory_Name = 'barrier-writes'
-
-    # The isolation level under which each statement commits on its own
-    Autocommit = 'AUTOCOMMIT'
 
     # The statements that change the schema and a row outside a transaction
     Create_Table = 'create table durability_barrier (value integer)'
@@ -42,22 +40,15 @@ def test_barrier_outside_transaction() -> 'None':
     os.makedirs(directory)
 
     with replicated_environment(directory) as barrier:
-        with file_database_engine(directory) as engine:
+        with file_database_engine(directory) as engine, seed_autocommit_connection(engine) as connection:
 
-            connection = engine.connect()
-            connection = connection.execution_options(isolation_level=ModuleCtx.Autocommit)
+            before = barrier.request_count
+            _ = connection.exec_driver_sql(ModuleCtx.Create_Table)
+            assert barrier.request_count > before, 'The change of the schema returned before the barrier'
 
-            try:
-                before = barrier.request_count
-                _ = connection.exec_driver_sql(ModuleCtx.Create_Table)
-                assert barrier.request_count > before, 'The change of the schema returned before the barrier'
-
-                before = barrier.request_count
-                _ = connection.exec_driver_sql(ModuleCtx.Insert_Row)
-                assert barrier.request_count > before, 'The change of the row returned before the barrier'
-
-            finally:
-                connection.close()
+            before = barrier.request_count
+            _ = connection.exec_driver_sql(ModuleCtx.Insert_Row)
+            assert barrier.request_count > before, 'The change of the row returned before the barrier'
 
 # ################################################################################################################################
 # ################################################################################################################################

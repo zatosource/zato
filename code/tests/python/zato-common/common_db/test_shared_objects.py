@@ -18,6 +18,7 @@ from zato.common.common_db.store import SharedObjectStore
 from zato.common.crypto.api import CryptoManager
 from zato.common.db_env.database import database_config, dispose_database_engine, get_database_engine
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.replaced import PubSubReplaced
 from zato.common.test.pubsub_database import connect, get_suite_modes, PubSubDBMode, \
     start_pubsub_database, stop_pubsub_database
@@ -197,7 +198,7 @@ def test_postgresql(monkeypatch:'pytest.MonkeyPatch', tmp_path:'pathlib.Path', p
     assert stored.data == {'slot': 'second'}
 
     # .. this server takes over the database, and the store, on the same engine, confirms its generation ..
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
     backend.take_over()
 
     guard = cast_('any_', backend.generation_guard)

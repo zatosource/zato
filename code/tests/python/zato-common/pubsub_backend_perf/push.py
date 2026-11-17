@@ -20,6 +20,7 @@ from common import get_min_delivery_rate, get_min_publish_rate, set_progress_con
 from seeding import count_rows, seed_backlog
 from zato.common.api import PubSub
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 from zato.server.base.parallel.delivery import PushDelivery
 
 # ################################################################################################################################
@@ -118,7 +119,7 @@ def run_push_delivery_scenario() -> 'None':
     )
     print(f'Seeded {intcomma(_topic_count * _backlog_per_subscriber)} backlog messages in {seed_seconds:.2f}s')
 
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
     server = _StubServer()
     delivery = PushDelivery(server, backend) # type: ignore[arg-type]
 

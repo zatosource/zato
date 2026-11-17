@@ -16,6 +16,7 @@ from sqlalchemy import select
 from common import delete_all_rows, get_delivery_rows, get_message_rows
 from zato.common.db_env.engine import call_database
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
 from zato.common.pubsub.sql.config import get_pull_lease_seconds
 from zato.common.pubsub.sql.publication import build_publication
@@ -72,7 +73,7 @@ def new_backend() -> 'SQLPubSubBackend':
     """
     delete_all_rows()
 
-    out = SQLPubSubBackend()
+    out = SQLPubSubBackend(audit_log=new_test_audit_log())
 
     out.subscribe(Input_Sub_Key, Input_Topic)
     out.subscribe(First_Output_Sub_Key, First_Output_Topic)

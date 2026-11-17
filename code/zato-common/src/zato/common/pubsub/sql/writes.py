@@ -32,7 +32,6 @@ from zato.common.pubsub.sql.payloads import drop_payloads, get_chunks, get_messa
 from zato.common.pubsub.sql.pending import PendingAck, PendingAtomic, PendingAttempts, PendingPublication, reset_item
 from zato.common.pubsub.sql.pull import lease_messages
 from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
-from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -142,9 +141,9 @@ class PubSubWriter:
     The audit events of the items commit in the transaction of the items.
     """
 
-    def __init__(self, audit_log:'AuditLog | None') -> 'None':
+    def __init__(self, audit_log:'AuditLog') -> 'None':
 
-        # The audit log is None in backend-only tests, in which case the items have no audit events.
+        # The audit log whose events commit in the transactions of the items
         self.audit_log = audit_log
 
         commit_max_messages = get_commit_max_messages()
@@ -223,8 +222,7 @@ class PubSubWriter:
         engine = get_database_engine()
 
         # The audit events of the batch commit in its transaction ..
-        if self.audit_log:
-            self.audit_log.prepare_commit()
+        self.audit_log.prepare_commit()
 
         try:
             audit_events = call_database(engine, self._write_items, engine, batch)
@@ -236,8 +234,7 @@ class PubSubWriter:
 
         # .. and what follows their commit runs once the batch is committed.
         if audit_events:
-            audit_log = cast_('AuditLog', self.audit_log)
-            audit_log.complete_commit(audit_events)
+            self.audit_log.complete_commit(audit_events)
 
 # ################################################################################################################################
 

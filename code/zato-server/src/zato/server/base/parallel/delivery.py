@@ -488,10 +488,6 @@ class PushDelivery:
     ) -> 'None':
         """ Writes the one audit event describing how a push delivery concluded.
         """
-        # The backend has no audit log in unit tests only.
-        if not self.backend.audit_log:
-            return
-
         # The topic's audit log may have been turned off explicitly.
         if message['topic_name'] in self.backend.audit_disabled_topics:
             return

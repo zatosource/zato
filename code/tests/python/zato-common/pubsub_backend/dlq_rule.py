@@ -21,6 +21,7 @@ from zato.common.pubsub.dlq import DLQ_Sub_Key_Prefixes, get_dlq_sub_key, get_dl
     Header_Rule_Rounds, Key_DLQ
 from zato.common.pubsub.outgoing import OutgoingPublisher, register_outgoing_conn_type
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.typing_ import cast_
 from zato.common.util.retry import RetryPolicy
 from zato.common.util.time_ import utcnow
@@ -145,7 +146,7 @@ class _DeliveringServer(_StubServer):
 def _new_server() -> '_DeliveringServer':
     """ A server with the delivery greenlets of one process.
     """
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
     server = _DeliveringServer(backend)
     delivery = PushDelivery(_as_server(server), backend)
 

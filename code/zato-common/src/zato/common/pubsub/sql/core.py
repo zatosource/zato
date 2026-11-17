@@ -80,12 +80,12 @@ class SQLBackendCore:
     def __init__(
         self,
         *,
-        audit_log:'AuditLog | None' = None,
+        audit_log:'AuditLog',
         crypto_manager:'CryptoManager | None' = None,
         encrypt_at_rest:'bool' = False,
         ) -> 'None':
 
-        # The audit log is injected by the server and is None in backend-only tests.
+        # The audit log that records the operations of the backend in their transactions
         self.audit_log = audit_log
 
         # Payloads are encrypted before insert and decrypted after select when configured.
@@ -161,14 +161,9 @@ class SQLBackendCore:
             if fork_guard := get_fork_takeover():
                 generation_guard = follow_takeover(self.engine, fork_guard)
 
-            # .. while a server with no arbiter raises it, recording the takeover if it has an audit log.
+            # .. while a server with no arbiter raises it, recording the takeover in its audit log.
             else:
-                if self.audit_log:
-                    server_name = self.audit_log.server_name
-                else:
-                    server_name = None
-
-                generation_guard = take_over(get_database_engine, server_name)
+                generation_guard = take_over(get_database_engine, self.audit_log.server_name)
 
             self.generation_guard = generation_guard
 
@@ -178,7 +173,7 @@ class SQLBackendCore:
                     export.emit_row(self.engine, takeover_event_id)
 
         elif is_active_standby():
-            if self.audit_log and is_first_start():
+            if is_first_start():
                 generation = get_generation()
                 node_name = get_node_name()
 

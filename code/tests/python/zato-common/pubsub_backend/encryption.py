@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from common import delete_all_rows, get_message_rows
 from zato.common.crypto.api import CryptoManager
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,7 +35,7 @@ def run_encryption_scenario() -> 'None':
     secret_key = CryptoManager.generate_key()
     crypto_manager = CryptoManager(secret_key=secret_key)
 
-    backend = SQLPubSubBackend(crypto_manager=crypto_manager, encrypt_at_rest=True)
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log(), crypto_manager=crypto_manager, encrypt_at_rest=True)
     backend.subscribe(_sub_key, _topic)
 
     result = backend.publish(_topic, _plaintext, correl_id='correlation-encryption-1')

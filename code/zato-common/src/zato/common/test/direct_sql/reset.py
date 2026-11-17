@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.db_env.engine import call_database
+from zato.common.db_env.write_path import Mechanism, write_path
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,8 +38,10 @@ def _delete_all_rows(engine:'Engine', metadata:'MetaData') -> 'None':
 
 def reset_tables(engine:'Engine', metadata:'MetaData') -> 'None':
     """ Deletes every row of every table of a schema in one transaction, in turn with the other writes to the database.
+    The rows are removed as a seed removes its own, which no other mechanism may do to the tables of the audit log.
     """
-    call_database(engine, _delete_all_rows, engine, metadata)
+    with write_path(Mechanism.Seed):
+        _ = call_database(engine, _delete_all_rows, engine, metadata)
 
 # ################################################################################################################################
 # ################################################################################################################################

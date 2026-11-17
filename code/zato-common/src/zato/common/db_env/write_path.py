@@ -8,8 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The write paths of the Zato database. Each mechanism that carries the guarantees of durability marks the work it runs,
 # and every engine of the Zato database refuses a statement that writes while no mechanism is marked, or a write
-# to the tables of the audit log that its mechanism is not allowed to make. A thread or a greenlet starts
-# with no mark of its own, so a write handed over to one is refused as well.
+# to the tables of the audit log that its mechanism is not allowed to make. A seed creates and removes rows only.
+# A thread or a greenlet starts with no mark of its own, so a write handed over to one is refused as well.
 
 # stdlib
 import re
@@ -46,6 +46,9 @@ class Mechanism:
     # The generation raise and its audit event
     Takeover = 'takeover'
 
+    # Test and demo data written in bulk before the system under test uses it
+    Seed = 'seed'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -79,6 +82,15 @@ class ModuleCtx:
         Mechanism.Maintenance,
         Mechanism.Schema,
         Mechanism.Takeover,
+    })
+
+    # The statements of a seed, which creates and removes seed rows and its scratch tables, and never changes a row
+    Seed_Statements = frozenset({
+        'insert',
+        'copy',
+        'delete',
+        'create',
+        'drop',
     })
 
 # ################################################################################################################################
@@ -139,13 +151,19 @@ def check_write_path(
     """ Refuses a statement that writes to the Zato database outside of every mechanism, or that writes
     to the tables of the audit log within a mechanism not allowed to, before it reaches the database.
     """
-    if not ModuleCtx.Write_Statement.match(statement):
+    if not (write_match := ModuleCtx.Write_Statement.match(statement)):
         return
 
     mechanism = _current_mechanism.get()
 
     if mechanism is None:
         raise WritePathViolation(f'Statement writes outside of every mechanism -> `{statement}`')
+
+    if mechanism == Mechanism.Seed:
+        keyword = write_match.group(1).lower()
+        if keyword not in ModuleCtx.Seed_Statements:
+            raise WritePathViolation(f'Seed changes rows with `{keyword}` -> `{statement}`')
+        return
 
     if mechanism in ModuleCtx.Audit_Mechanisms:
         return

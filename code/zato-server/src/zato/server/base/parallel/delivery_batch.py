@@ -13,10 +13,8 @@ from logging import getLogger
 
 # Zato
 from zato.common.api import DATA_FORMAT
-from zato.common.audit_log.api import AuditLog
 from zato.common.audit_log.service import Push_Delivery_Key
 from zato.common.pubsub.delivery_scope import close_delivery_scope, get_delivery_scope, open_delivery_scope
-from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -107,11 +105,9 @@ def _commit_batch(
     if msg_ids:
         backend.ack_with_publications(sub_key, msg_ids, scope.publications, scope.audit_events)
 
-    # .. while a batch that concluded no message has only its audit events to commit, which exist only if the backend
-    # .. has an audit log, as it does outside of unit tests.
+    # .. while a batch that concluded no message has only its audit events to commit.
     elif scope.audit_events:
-        audit_log = cast_(AuditLog, backend.audit_log)
-        audit_log.write_pending(scope.audit_events)
+        backend.audit_log.write_pending(scope.audit_events)
 
 # ################################################################################################################################
 

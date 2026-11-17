@@ -22,6 +22,7 @@ from sqlalchemy import text
 # Zato
 from profiles import get_all_profile_limits
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.db_env import connection as db_connection
 from zato.common.db_env.database import get_database_engine
 from zato.common.test.pubsub_database import connect, ModuleCtx
@@ -128,7 +129,7 @@ def test_idle_connections(managed_database:'ManagedDatabase') -> 'None':
     install_idle_limit(container_name, _idle_limit_seconds)
 
     # The server takes over the database, so that the cleanup process sweeps it ..
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
     backend.take_over()
 
     engine = get_database_engine()

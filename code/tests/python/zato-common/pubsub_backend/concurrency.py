@@ -17,6 +17,7 @@ from common import delete_all_rows, get_delivery_rows, get_message_rows
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.engine import _get_write_key, _sqlite_write_locks
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.pending import new_pending_ack
 from zato.common.pubsub.sql.writes import PubSubDuplicateMsgID, PubSubWriter
 from zato.common.typing_ import cast_
@@ -80,7 +81,7 @@ def _new_backend() -> 'tuple[SQLPubSubBackend, _RecordingWriter]':
 
     writer = _RecordingWriter()
 
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
     backend._writer = writer
 
     backend.subscribe(_sub_key_1, _topic)
@@ -427,7 +428,7 @@ def _run_concurrent_clear_flow() -> 'None':
     """
     delete_all_rows()
 
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
     backend.subscribe(_clear_sub_key, _clear_topic)
 
     # A backlog to clear, published through the writer, which is also what creates the in-process writer lock ..

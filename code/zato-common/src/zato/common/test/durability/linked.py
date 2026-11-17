@@ -38,6 +38,8 @@ class ModuleCtx:
     Direct_SQL_Purposes        = 'Direct_SQL_Purposes'
     Performance_Roots          = 'Performance_Roots'
     Memory_Database_Exemptions = 'Memory_Database_Exemptions'
+    Mechanism_Functions        = 'Mechanism_Functions'
+    Seed_Scratch_Tables        = 'Seed_Scratch_Tables'
 
 # ################################################################################################################################
 # ################################################################################################################################

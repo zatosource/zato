@@ -22,6 +22,7 @@ from perf import Min_Document_Delivery_Rate_Per_Second
 from load import consume_until_done
 from seeding import delete_all_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -92,7 +93,7 @@ def run_document_mix_scenario() -> 'None':
 
     delete_all_rows()
 
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
     documents = get_document_mix()
 
     # Each partner has a queue of its own ..

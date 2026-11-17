@@ -22,6 +22,7 @@ from gevent.lock import RLock
 from zato.common.api import PubSub
 from zato.common.crypto.api import CryptoManager
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
 from zato.common.typing_ import cast_
 from zato.server.base.parallel.delivery import PushDelivery
@@ -115,7 +116,7 @@ class Workload:
 
     def __init__(self, label:'str', padding_size:'int'=0) -> 'None':
         self.label = label
-        self.backend = SQLPubSubBackend()
+        self.backend = SQLPubSubBackend(audit_log=new_test_audit_log())
 
         # Each payload is its msg_id, followed by random padding when the test needs large payloads.
         if padding_size:

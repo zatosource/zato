@@ -20,6 +20,7 @@ from common import get_min_delivery_rate, get_min_publish_rate, set_progress_con
 from load import consume_until_done
 from seeding import seed_backlog
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -108,7 +109,7 @@ def run_backbone_scenario() -> 'None':
     backlog_deliveries = _topic_count * _backlog_per_topic * _subscribers_per_topic
     print(f'Seeded {intcomma(backlog_deliveries)} backlog deliveries in {seed_seconds:.2f}s')
 
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
 
     # .. every channel feeds its own few subscribers ..
     topic_names:'strlist' = []

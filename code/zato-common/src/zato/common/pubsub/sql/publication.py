@@ -211,7 +211,7 @@ def _is_audited(backend:'SQLPubSubBackend', built:'BuiltPublication') -> 'bool':
     """
     topic_name = built.pending.message_values['topic_name']
 
-    if backend.audit_log and is_audit_log_enabled():
+    if is_audit_log_enabled():
         out = topic_name not in backend.audit_disabled_topics
     else:
         out = False

@@ -244,8 +244,7 @@ def _new_dlq_audit_events(
 
     audit_log = server.pubsub_backend.audit_log
 
-    # The backend has no audit log in unit tests only
-    if not audit_log or not is_audit_log_enabled():
+    if not is_audit_log_enabled():
         return out
 
     # The envelope carries the publication time as an ISO 8601 string

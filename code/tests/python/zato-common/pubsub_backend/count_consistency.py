@@ -12,6 +12,7 @@ from sqlalchemy import select
 # Zato
 from common import delete_all_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.counts import Milliseconds_Per_Minute, No_Publisher
@@ -185,7 +186,7 @@ def run_count_consistency_scenario() -> 'None':
     """
     delete_all_rows()
 
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
     _assert_counts_match(backend, 'empty')
 
     backend.subscribe(_sub_key_1, _topic_1)

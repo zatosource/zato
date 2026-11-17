@@ -22,6 +22,7 @@ from common import set_progress_context
 from production_documents import get_production_documents
 from seeding import delete_all_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.test.audit_log_ import new_test_audit_log
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -124,7 +125,7 @@ def run_production_mix_scenario() -> 'None':
 
     delete_all_rows()
 
-    backend = SQLPubSubBackend()
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
     documents = get_production_documents()
 
     topic_names:'strlist' = []

@@ -539,7 +539,7 @@ class SQLPubSubBackend(SQLAdminAPI):
         """ Builds the messages of the rows that a pull leased and the audit events of their reception,
         in the transaction that leases them, so that a reception is recorded if and only if its lease is committed.
         """
-        is_audited = self.audit_log and is_audit_log_enabled()
+        is_audited = is_audit_log_enabled()
 
         for row in lease.rows:
 
