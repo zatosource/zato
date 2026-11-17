@@ -46,8 +46,9 @@ logger = logging.getLogger('zato.test.ha_sqlite_kubernetes.env')
 
 class ModuleCtx:
 
-    # The pods of the pair
+    # The pods of the pair and the container of each pod that runs the node
     Pod_Names = ['zato-ha-0', 'zato-ha-1']
+    Zato_Container = 'zato'
     StatefulSet_Name = 'zato-ha'
     Pod_Selector = 'app=zato-ha'
 
@@ -140,6 +141,12 @@ class KubeNode(Node):
         assert host_node, f'Pod {self.pod_name} is not scheduled'
 
         self.host_node = host_node
+
+    def signal_scheduler(self, signal_name:'str') -> 'None':
+        """ Sends a signal to the scheduler that the pod runs while it is active.
+        """
+        _ = kubectl('exec', self.pod_name, '-n', ClusterCtx.Namespace, '-c', ModuleCtx.Zato_Container, '--',
+            'pkill', f'-{signal_name}', '-f', NodesCtx.Scheduler_Binary)
 
 # ################################################################################################################################
 

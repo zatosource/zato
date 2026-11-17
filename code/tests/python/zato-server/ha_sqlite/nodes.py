@@ -332,6 +332,13 @@ class Node:
 
 # ################################################################################################################################
 
+    def signal_scheduler(self, signal_name:'str') -> 'None':
+        """ Sends a signal to the scheduler that the node runs while it is active.
+        """
+        _ = docker('exec', self.container_name, 'pkill', f'-{signal_name}', '-f', ModuleCtx.Scheduler_Binary)
+
+# ################################################################################################################################
+
     def resume(self) -> 'None':
         """ Starts the stopped container of the node again.
         """

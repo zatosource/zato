@@ -231,6 +231,43 @@ def get_repeated_slots(entries:'dictlist') -> 'strlist':
 
 # ################################################################################################################################
 
+def get_repeated_completed_slots(entries:'dictlist') -> 'strlist':
+    """ Returns each nominal slot of a job that more than one run completed for, or that more than one server began.
+    A run that its server stopped before the run ended has no end, and the same server runs that slot again
+    when the fire stream delivers its entry again, so such a run is not a repeat.
+    """
+    completed:'Counter[tuple[str, str]]' = Counter()
+    servers:'dict[tuple[str, str], set[str]]' = {}
+
+    for entry in entries:
+        if not entry['slot']:
+            continue
+
+        key = (entry['job'], entry['slot'])
+
+        if entry['phase'] == ModuleCtx.Phase_End:
+            completed[key] += 1
+        else:
+            slot_servers = servers.setdefault(key, set())
+            slot_servers.add(entry['server'])
+
+    out:'strlist' = []
+
+    for key, slot_servers in servers.items():
+        job, slot = key
+        count = completed[key]
+
+        if count > 1:
+            out.append(f'{job} {slot} completed x{count}')
+
+        if len(slot_servers) > 1:
+            server_names = sorted(slot_servers)
+            out.append(f'{job} {slot} began on {server_names}')
+
+    return out
+
+# ################################################################################################################################
+
 def get_starts_after(entries:'dictlist', server_label:'str', boundary:'float') -> 'dictlist':
     """ Returns the runs that a server began after the given time, with the tolerance of a takeover.
     """

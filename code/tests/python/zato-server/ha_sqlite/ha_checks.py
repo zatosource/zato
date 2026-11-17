@@ -21,7 +21,7 @@ from contextlib import contextmanager
 from tempfile import TemporaryDirectory
 
 # Zato
-from checks import get_repeated_slots, get_starts_after, get_state_mismatches, read_run_log
+from checks import get_repeated_completed_slots, get_starts_after, get_state_mismatches, read_run_log
 from pair import ModuleCtx as PairCtx
 from workload import get_count_mismatches, get_repeats_not_in_flight, read_rows as read_database_rows, Topic_Name, \
     wait_for_deliveries
@@ -68,6 +68,10 @@ class ModuleCtx:
 
     # The suffix of the log of a database file
     WAL_Suffix = '-wal'
+
+    # The signals that stop the scheduler of the active node while the copies are compared and that let it continue
+    Signal_Stop = 'STOP'
+    Signal_Continue = 'CONT'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -255,7 +259,7 @@ def read_active_run_states(env:'HAEnvironment', active:'Node') -> 'anydict':
 # ################################################################################################################################
 
 def check_scheduler(env:'HAEnvironment', active:'Node', unrun_claims:'int'=0) -> 'dictlist':
-    """ Checks that no slot ran twice on the two nodes together and that the run logs agree with the run state
+    """ Checks that no slot completed twice or began on both nodes and that the run logs agree with the run state
     of the active node, returning the entries of the run logs. The run state of each job may count the given number
     of claims that a server stopped before it ran them.
     """
@@ -264,7 +268,7 @@ def check_scheduler(env:'HAEnvironment', active:'Node', unrun_claims:'int'=0) ->
     while True:
         entries = read_run_log(cast_('any_', env))
 
-        repeated = get_repeated_slots(entries)
+        repeated = get_repeated_completed_slots(entries)
         assert not repeated, repeated
 
         states = read_active_run_states(env, active)
@@ -385,7 +389,12 @@ def check_copies(env:'HAEnvironment', active:'Node') -> 'None':
         return
 
     standby = env.get_other(active)
+
+    # The runs of the scheduler jobs write audit events every second, and reading both copies takes longer than that,
+    # so the scheduler of the active node is stopped until the copies are equal.
+    active.signal_scheduler(ModuleCtx.Signal_Stop)
     wait_for_equal_copies(active, standby)
+    active.signal_scheduler(ModuleCtx.Signal_Continue)
 
     problems = get_integrity_problems(env)
     assert not problems, problems

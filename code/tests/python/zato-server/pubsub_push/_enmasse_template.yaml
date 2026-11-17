@@ -134,6 +134,7 @@ pubsub_topic:
   - name: customer.deactivated
   - name: order.placed
   - name: order.shipped
+  - name: iam.session.expired
 
 pubsub_permission:
 
@@ -142,6 +143,8 @@ pubsub_permission:
       - iam.**
       - customer.**
       - order.**
+    sub:
+      - iam.session.expired
 
   - security: test.pubsub.puller
     sub:
@@ -264,3 +267,8 @@ pubsub_subscription:
       - customer.deactivated
       - order.placed
       - order.shipped
+
+  - security: test.pubsub.publisher
+    delivery_type: pull
+    topic_list:
+      - iam.session.expired

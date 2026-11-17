@@ -19,7 +19,7 @@ from ha_env import ready_pair
 from ha_tools import clear_cpu_limit, clear_memory_limit, degrade_link, limit_cpu, limit_memory, ModuleCtx as ToolsCtx, \
     PreloadHook, read_memory_current, restore_link
 from nodes import ModuleCtx as NodesCtx, Timers
-from workload import Topic_Name, Workload
+from workload import Workload
 from zato.common.test.client import PublishClient
 from zato.common.typing_ import cast_
 
@@ -52,6 +52,9 @@ class ModuleCtx:
     # How many messages expire before the sweep, and how long they live, in seconds
     Expiring_Count = 500
     Expiration_Seconds = 1
+
+    # The topic of those messages, whose only subscriber never pulls, so each message keeps its payload until it expires
+    Expiring_Topic_Name = 'iam.session.expired'
 
     # The query of the messages that a copy holds
     Message_Query = 'select msg_id from pubsub_message'
@@ -122,7 +125,8 @@ def test_slow_standby_and_lossy_link_during_sweep(ha_session:'HASession', reques
         expired_msg_ids:'set[str]' = set()
 
         for index in range(ModuleCtx.Expiring_Count):
-            published = client.publish(Topic_Name, {'expiring_index': index}, expiration=ModuleCtx.Expiration_Seconds)
+            published = client.publish(ModuleCtx.Expiring_Topic_Name, {'expiring_index': index},
+                expiration=ModuleCtx.Expiration_Seconds)
             expired_msg_ids.add(published['msg_id'])
 
         time.sleep(ModuleCtx.Expiration_Seconds * 2)
@@ -149,7 +153,7 @@ def test_slow_standby_and_lossy_link_during_sweep(ha_session:'HASession', reques
         for node in (active, standby):
             rows = read_rows(node.db_path(ChecksCtx.Database_File), ModuleCtx.Message_Query)
             remaining = expired_msg_ids.intersection(row[0] for row in rows)
-            assert not remaining, f'{len(remaining)} expired messages remain on {node.node_name}'
+            assert not remaining, f'{len(remaining)} expired messages remain on {node.node_name}:\n{result.stdout}{result.stderr}'
 
 # ################################################################################################################################
 
