@@ -7,6 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
+from exactly_once.batch import run_conflict_isolated_in_batch_scenario, run_lease_after_ack_in_batch_scenario, \
+    run_strict_duplicate_isolated_in_batch_scenario, run_two_leases_in_batch_scenario
 from exactly_once.copies import run_concurrent_copies_scenario
 from exactly_once.pull import run_ack_with_publications_scenario, run_concluded_with_other_publications_scenario, \
     run_concluded_with_same_publications_scenario, run_different_content_scenario, run_lease_ran_out_scenario, \
@@ -42,6 +44,10 @@ Scenarios = [
     run_lease_ran_out_scenario,
     run_concurrent_copies_scenario,
     run_deduplication_window_scenario,
+    run_conflict_isolated_in_batch_scenario,
+    run_strict_duplicate_isolated_in_batch_scenario,
+    run_lease_after_ack_in_batch_scenario,
+    run_two_leases_in_batch_scenario,
 ]
 
 # ################################################################################################################################

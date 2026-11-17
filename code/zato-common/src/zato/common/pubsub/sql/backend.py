@@ -34,6 +34,7 @@ from zato.server.metrics import zato_pubsub_messages_delivered_total
 # ################################################################################################################################
 
 if 0:
+    from zato.common.pubsub.sql.pending import PendingAck
     from zato.common.pubsub.sql.publication import built_publication_list
     from zato.common.typing_ import any_, anydict, anylist, intlist, intnone, strdict, strlist, strnone
 
@@ -159,6 +160,7 @@ class SQLPubSubBackend(SQLAdminAPI):
         atomic = new_pending_atomic(publications, ack, False)
 
         self._writer.ack_atomic(atomic)
+        self._log_concluded(ack)
 
         # A publication whose message ID already stands for different content is the only one not committed.
         for pending in publications:
@@ -170,6 +172,15 @@ class SQLPubSubBackend(SQLAdminAPI):
 
         logger.info('ack_with_publications -> sub_key:%s, acked:%d, fully_delivered:%d, publications:%d',
             sub_key, len(msg_ids), ack.fully_delivered_count, len(publications))
+
+# ################################################################################################################################
+
+    def _log_concluded(self, ack:'PendingAck') -> 'None':
+        """ Logs the messages of a committed fenced acknowledgement that an earlier delivery concluded.
+        """
+        if ack.concluded_msg_ids:
+            logger.info('Fenced acknowledgement of concluded messages -> sub_key:%s, msg_ids:%s',
+                ack.sub_key, ack.concluded_msg_ids)
 
 # ################################################################################################################################
 
@@ -201,6 +212,7 @@ class SQLPubSubBackend(SQLAdminAPI):
 
         atomic = new_pending_atomic(pending_publications, ack, True)
         self._writer.ack_atomic(atomic)
+        self._log_concluded(ack)
 
         # A publication that only repeated an existing message was completed when that message was committed.
         published:'strlist' = []

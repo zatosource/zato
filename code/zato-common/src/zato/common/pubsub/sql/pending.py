@@ -75,6 +75,9 @@ class PendingAck:
     is_fenced: 'bool'
     expected_attempts: 'intlistnone'
 
+    # The messages of a fenced acknowledgement that an earlier delivery concluded, which it removes nothing of
+    concluded_msg_ids: 'strlist'
+
 # ################################################################################################################################
 
 @dataclass(init=False)
@@ -143,6 +146,7 @@ def new_pending_ack(sub_key:'str', msg_ids:'strlist', sequence_ids:'intlistnone'
     out.exception = None
     out.is_fenced = False
     out.expected_attempts = None
+    out.concluded_msg_ids = []
 
     return out
 
@@ -208,6 +212,7 @@ def reset_item(item:'PendingPublication | PendingAck | PendingAtomic | PendingLe
         item.removed_count = 0
         item.fully_delivered_count = 0
         item.exception = None
+        item.concluded_msg_ids = []
 
     elif isinstance(item, PendingAtomic):
         for pending in item.publications:

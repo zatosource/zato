@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from logging import getLogger
 from typing import NamedTuple
 
 # SQLAlchemy
@@ -27,11 +26,6 @@ if 0:
 
     Connection = Connection
     PendingAck = PendingAck
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -139,7 +133,8 @@ def check_fenced(connection:'Connection', ack:'PendingAck', has_new_message:'boo
             message = f'Message `{first_absent}` was concluded by another delivery'
             raise PubSubAckConflict(message)
 
-        logger.info('Fenced acknowledgement of concluded messages -> sub_key:%s, msg_ids:%s', ack.sub_key, absent)
+        # The caller logs these after the commit, outside the thread that writes it
+        ack.concluded_msg_ids = absent
 
     out = FencedRows(delivery_ids, message_ids)
     return out

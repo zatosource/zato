@@ -53,6 +53,9 @@ _caller_count = 64
 # How many events each commit of the queue tests writes at most
 _max_events = 5
 
+# How many events each caller of the event list tests writes together
+_event_list_size = 3
+
 # How much of a commit's capacity an event of the queue tests takes, unless a test says otherwise
 _event_weight = 1
 
@@ -89,6 +92,23 @@ def _insert(audit_log:'AuditLog', index:'int') -> 'intnone':
     out = audit_log.insert(AuditSource.REST_Channel, AuditEvent.Message_Received, Object_Name,
         cid=f'cid-{index}', msg_id=f'msg-{index}', outcome=AuditOutcome.OK, data=f'Order {index} from John Smith',
         attrs={'order_id': f'ORD-{index:04d}'})
+
+    return out
+
+# ################################################################################################################################
+
+def _write_event_list(audit_log:'AuditLog', index:'int') -> 'pending_event_list':
+    """ Writes several events of one operation together, each with a cid of its own.
+    """
+    out:'pending_event_list' = []
+
+    for position in range(_event_list_size):
+        pending = audit_log.new_pending_event(AuditSource.REST_Channel, AuditEvent.Message_Received, Object_Name,
+            cid=f'cid-{index}-{position}', msg_id=f'msg-{index}-{position}', outcome=AuditOutcome.OK,
+            data=f'Order {index} from John Smith')
+        out.append(pending)
+
+    audit_log.write_pending(out)
 
     return out
 
@@ -184,6 +204,43 @@ def test_concurrent_callers_receive_their_own_ids(audit_backend:'str') -> 'None'
     for index, greenlet in enumerate(greenlets):
         event_id = greenlet.value
         assert cid_by_event_id[event_id] == f'cid-{index}'
+
+    # .. and the callers shared far fewer commits than there were of them.
+    assert recorder.commit_count < _caller_count // 4
+
+# ################################################################################################################################
+
+def test_concurrent_event_lists_share_commits(audit_backend:'str') -> 'None':
+    """ Concurrent callers that write several events each share commits with one another, and each event receives
+    the id of its own row.
+    """
+    audit_log = AuditLog(Server_Name)
+    engine = get_audit_engine()
+
+    # Warm up the engine so that its pool and the schema exist before the callers start
+    _ = _insert(audit_log, -1)
+
+    with record_statements(engine) as recorder:
+
+        greenlets:'anylist' = []
+
+        for index in range(_caller_count):
+            greenlet = spawn(_write_event_list, audit_log, index)
+            greenlets.append(greenlet)
+
+        _ = joinall(greenlets, raise_error=True)
+
+    # Each event received the id of the row with its own cid ..
+    cid_by_id:'anylist' = []
+
+    for row in read_rows(event_table):
+        cid_by_id.append((row['id'], row['cid']))
+
+    cid_by_event_id = dict(cid_by_id)
+
+    for greenlet in greenlets:
+        for pending in greenlet.value:
+            assert cid_by_event_id[pending.event_id] == pending.values['cid']
 
     # .. and the callers shared far fewer commits than there were of them.
     assert recorder.commit_count < _caller_count // 4
@@ -365,7 +422,7 @@ class TestCommitQueue:
         for index, pending in enumerate(pending_events):
             assert pending.event_id == index + 1
 
-    def test_urgent_events_go_first_in_batches_of_their_own(self) -> 'None':
+    def test_urgent_events_go_first_and_share_the_commit(self) -> 'None':
         writer = _QueueWriter()
         writer.release_event = Event()
 
@@ -386,13 +443,14 @@ class TestCommitQueue:
 
         sleep(0)
 
-        # .. and once the first commit completes, the urgent events go first in a commit that holds no other events,
-        # .. and each heavy one goes in a commit of its own, because two of them exceed the maximum weight.
+        # .. and once the first commit completes, the urgent events go first, in a commit that the first heavy event
+        # .. shares with them up to the maximum weight, and each of the other heavy ones goes in a commit of its own,
+        # .. because two of them exceed the maximum weight.
         writer.release_event.set()
         _ = joinall(greenlets, raise_error=True)
 
         assert writer.written_cids == ['cid-0', 'cid-4', 'cid-5', 'cid-1', 'cid-2', 'cid-3']
-        assert writer.batch_sizes == [1, 2, 1, 1, 1]
+        assert writer.batch_sizes == [1, 3, 1, 1]
 
     def test_urgent_lane_does_not_wait_for_other_commits(self) -> 'None':
         writer = _QueueWriter()
@@ -441,13 +499,14 @@ class TestCommitQueue:
 
         assert queue._take_batch(True) == [urgent]
 
-        # .. while without a reserved lane, the regular lane takes the urgent event first and the other one next.
+        # .. while without a reserved lane, the regular lane takes the urgent event first and the other one
+        # .. in the same commit.
         queue = CommitQueue(write_batch=writer.write_batch, max_weight=_max_events)
 
         queue._waiting.extend([other, urgent])
 
-        assert queue._take_batch(False) == [urgent]
-        assert queue._take_batch(False) == [other]
+        assert queue._take_batch(False) == [urgent, other]
+        assert queue._waiting == []
 
     def test_abandoned_waiter_is_not_written(self) -> 'None':
         writer = _QueueWriter()
