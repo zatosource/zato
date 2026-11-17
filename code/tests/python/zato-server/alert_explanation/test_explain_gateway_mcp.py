@@ -218,16 +218,16 @@ class TestGatewayMCP:
 
         _seed_invalid_calls()
 
-        session = _new_session()
-        _seed_gateway(session)
+        with _new_session() as session:
+            _seed_gateway(session)
 
-        prompt = _explain(session, repo_dir, llm_address, ['invalid_call_count'], {'invalid_call_count': 3})
-        assert prompt.startswith(_mcp_skill_title)
+            prompt = _explain(session, repo_dir, llm_address, ['invalid_call_count'], {'invalid_call_count': 3})
+            assert prompt.startswith(_mcp_skill_title)
 
-        explanation = _stored_explanation(session)
+            explanation = _stored_explanation(session)
 
-        assert explanation['source'] == AuditSource.MCP
-        assert explanation['is_parsed'] is True
+            assert explanation['source'] == AuditSource.MCP
+            assert explanation['is_parsed'] is True
 
 # ################################################################################################################################
 
@@ -236,36 +236,36 @@ class TestGatewayMCP:
 
         _seed_invalid_calls()
 
-        session = _new_session()
-        _seed_gateway(session)
+        with _new_session() as session:
+            _seed_gateway(session)
 
-        prompt = _explain(session, repo_dir, llm_address, ['invalid_call_count'], {'invalid_call_count': 3})
-        section = _object_section(prompt)
+            prompt = _explain(session, repo_dir, llm_address, ['invalid_call_count'], {'invalid_call_count': 3})
+            section = _object_section(prompt)
 
-        assert f'Name: {_gateway_name}' in section
-        assert 'Type: MCP gateway' in section
-        assert 'Active: yes' in section
-        assert f'Path: {_url_path}' in section
+            assert f'Name: {_gateway_name}' in section
+            assert 'Type: MCP gateway' in section
+            assert 'Active: yes' in section
+            assert f'Path: {_url_path}' in section
 
-        # The tools - the services by name, the connections by group, and how many in all
-        assert f'Services: {", ".join(_services)}' in section
-        assert f'Rest connections: {", ".join(_rest_connections)}' in section
-        assert f'Tools: {_tool_count}' in section
-        assert 'Skills: None' in section
+            # The tools - the services by name, the connections by group, and how many in all
+            assert f'Services: {", ".join(_services)}' in section
+            assert f'Rest connections: {", ".join(_rest_connections)}' in section
+            assert f'Tools: {_tool_count}' in section
+            assert 'Skills: None' in section
 
-        # The security definitions in the gateway's group, by name
-        assert f'Callers: {", ".join(_caller_names)}' in section
+            # The security definitions in the gateway's group, by name
+            assert f'Callers: {", ".join(_caller_names)}' in section
 
-        # How the gateway shapes responses
-        assert 'Input validation: on' in section
-        assert f'Size cap: {_max_response_size} tokens, mode {_size_cap_mode}' in section
-        assert 'Safeguards: null stripping' in section
-        assert 'Audit log: on' in section
+            # How the gateway shapes responses
+            assert 'Input validation: on' in section
+            assert f'Size cap: {_max_response_size} tokens, mode {_size_cap_mode}' in section
+            assert 'Safeguards: null stripping' in section
+            assert 'Audit log: on' in section
 
-        # The gateway's own thresholds are the ones that differ from the defaults
-        assert 'Alerts: on' in section
-        assert f'Repeated calls {_own_repeat_calls}' in section
-        assert f'Max tools {_own_max_tools}' in section
+            # The gateway's own thresholds are the ones that differ from the defaults
+            assert 'Alerts: on' in section
+            assert f'Repeated calls {_own_repeat_calls}' in section
+            assert f'Max tools {_own_max_tools}' in section
 
 # ################################################################################################################################
 
@@ -273,14 +273,14 @@ class TestGatewayMCP:
 
         _seed_invalid_calls()
 
-        session = _new_session()
-        _seed_gateway(session, groups_as_names=True)
+        with _new_session() as session:
+            _seed_gateway(session, groups_as_names=True)
 
-        prompt = _explain(session, repo_dir, llm_address, ['invalid_call_count'], {'invalid_call_count': 3})
-        section = _object_section(prompt)
+            prompt = _explain(session, repo_dir, llm_address, ['invalid_call_count'], {'invalid_call_count': 3})
+            section = _object_section(prompt)
 
-        # The group is stored under its name rather than its id, and the callers are found all the same
-        assert f'Callers: {", ".join(_caller_names)}' in section
+            # The group is stored under its name rather than its id, and the callers are found all the same
+            assert f'Callers: {", ".join(_caller_names)}' in section
 
 # ################################################################################################################################
 
@@ -288,24 +288,24 @@ class TestGatewayMCP:
 
         _seed_invalid_calls()
 
-        session = _new_session()
-        _seed_gateway(session)
+        with _new_session() as session:
+            _seed_gateway(session)
 
-        prompt = _explain(session, repo_dir, llm_address, ['invalid_call_count'], {'invalid_call_count': 3})
+            prompt = _explain(session, repo_dir, llm_address, ['invalid_call_count'], {'invalid_call_count': 3})
 
-        # The two calls of the unknown tool are one group named by the error text and its code, with the tool
-        # and the caller under it, the bad arguments another
-        assert f'{_unknown_tool_text} (error_code={_error_code_method_not_found})' in prompt
-        assert 'Count: 2' in prompt
-        assert f'Tool: {_unknown_tool}' in prompt
-        assert f'Caller: {_caller_names[0]}' in prompt
+            # The two calls of the unknown tool are one group named by the error text and its code, with the tool
+            # and the caller under it, the bad arguments another
+            assert f'{_unknown_tool_text} (error_code={_error_code_method_not_found})' in prompt
+            assert 'Count: 2' in prompt
+            assert f'Tool: {_unknown_tool}' in prompt
+            assert f'Caller: {_caller_names[0]}' in prompt
 
-        assert f'{_bad_arguments_text} (error_code={_error_code_invalid_params})' in prompt
-        assert f'Tool: {_services[0]}' in prompt
-        assert f'Caller: {_caller_names[1]}' in prompt
+            assert f'{_bad_arguments_text} (error_code={_error_code_invalid_params})' in prompt
+            assert f'Tool: {_services[0]}' in prompt
+            assert f'Caller: {_caller_names[1]}' in prompt
 
-        # The Failures section speaks of requests agents made
-        assert 'request an agent made' in prompt
+            # The Failures section speaks of requests agents made
+            assert 'request an agent made' in prompt
 
 # ################################################################################################################################
 
@@ -314,30 +314,30 @@ class TestGatewayMCP:
 
         _seed_repeated_calls()
 
-        session = _new_session()
-        _seed_gateway(session)
+        with _new_session() as session:
+            _seed_gateway(session)
 
-        fact_extra = {
-            'repeat_call_count': _loop_count,
-            'repeat_call_tool': _looped_tool,
-            'repeat_call_session': _looping_session,
-        }
-        prompt = _explain(session, repo_dir, llm_address, ['repeat_call_count'], fact_extra)
+            fact_extra = {
+                'repeat_call_count': _loop_count,
+                'repeat_call_tool': _looped_tool,
+                'repeat_call_session': _looping_session,
+            }
+            prompt = _explain(session, repo_dir, llm_address, ['repeat_call_count'], fact_extra)
 
-        # The Alert section names the session and the tool the fact carries ..
-        assert f'repeat_call_tool = {_looped_tool}' in prompt
-        assert f'repeat_call_session = {_looping_session}' in prompt
+            # The Alert section names the session and the tool the fact carries ..
+            assert f'repeat_call_tool = {_looped_tool}' in prompt
+            assert f'repeat_call_session = {_looping_session}' in prompt
 
-        # .. and the four calls of the looping session are the one group of the evidence, the tool and the caller under it
-        failures = prompt.split('## Failures')[1].split('## Baseline')[0]
+            # .. and the four calls of the looping session are the one group of the evidence, the tool and the caller under it
+            failures = prompt.split('## Failures')[1].split('## Baseline')[0]
 
-        assert f'Count: {_loop_count}' in failures
-        assert f'Tool: {_looped_tool}' in failures
-        assert f'Caller: {_caller_names[0]}' in failures
+            assert f'Count: {_loop_count}' in failures
+            assert f'Tool: {_looped_tool}' in failures
+            assert f'Caller: {_caller_names[0]}' in failures
 
-        # The other session's one call is not among them
-        assert _caller_names[1] not in failures
-        assert 'Count: 1' not in failures
+            # The other session's one call is not among them
+            assert _caller_names[1] not in failures
+            assert 'Count: 1' not in failures
 
 # ################################################################################################################################
 # ################################################################################################################################

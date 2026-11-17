@@ -194,6 +194,14 @@ def _read_links() -> 'anylist':
 
 # ################################################################################################################################
 
+def get_links() -> 'anylist':
+    """ Returns each link of this installation as stored in its link file.
+    """
+    out = _read_links()
+    return out
+
+# ################################################################################################################################
+
 def get_link_directories() -> 'strlist':
     """ Returns the directory of each linked repository, which holds its source roots and the files its targets use,
     e.g. for a container to mount at the same paths.

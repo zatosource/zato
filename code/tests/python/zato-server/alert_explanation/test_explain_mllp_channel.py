@@ -163,16 +163,16 @@ class TestMllpChannel:
 
         _seed_acks()
 
-        session = _new_session()
-        _seed_channel(session)
+        with _new_session() as session:
+            _seed_channel(session)
 
-        prompt = _explain(session, repo_dir, llm_address, 'ack_count')
-        assert prompt.startswith(_mllp_skill_title)
+            prompt = _explain(session, repo_dir, llm_address, 'ack_count')
+            assert prompt.startswith(_mllp_skill_title)
 
-        explanation = _stored_explanation(session)
+            explanation = _stored_explanation(session)
 
-        assert explanation['source'] == AuditSource.MLLP_Channel
-        assert explanation['is_parsed'] is True
+            assert explanation['source'] == AuditSource.MLLP_Channel
+            assert explanation['is_parsed'] is True
 
 # ################################################################################################################################
 
@@ -181,27 +181,27 @@ class TestMllpChannel:
 
         _seed_acks()
 
-        session = _new_session()
-        _seed_channel(session)
+        with _new_session() as session:
+            _seed_channel(session)
 
-        prompt = _explain(session, repo_dir, llm_address, 'ack_count')
-        section = _object_section(prompt)
+            prompt = _explain(session, repo_dir, llm_address, 'ack_count')
+            section = _object_section(prompt)
 
-        assert f'Name: {_channel_name}' in section
-        assert 'Type: MLLP channel' in section
-        assert 'Active: yes' in section
-        assert f'Match: MSH-3 = {_sending_app}' in section
-        assert 'Default channel: no' in section
-        assert f'Service: {_service_name}' in section
-        assert f'Destination: {_destination_name} - rest through {_destination_connection}' in section
-        assert 'Reply produced by: the service' in section
-        assert 'Delivery mode: same-time' in section
-        assert 'Audit log: on' in section
+            assert f'Name: {_channel_name}' in section
+            assert 'Type: MLLP channel' in section
+            assert 'Active: yes' in section
+            assert f'Match: MSH-3 = {_sending_app}' in section
+            assert 'Default channel: no' in section
+            assert f'Service: {_service_name}' in section
+            assert f'Destination: {_destination_name} - rest through {_destination_connection}' in section
+            assert 'Reply produced by: the service' in section
+            assert 'Delivery mode: same-time' in section
+            assert 'Audit log: on' in section
 
-        # The channel's own codes and threshold are the settings that differ from the defaults
-        assert 'Alerts: on' in section
-        assert f'Ack codes {_own_ack_codes}' in section
-        assert 'Acknowledgments 5' in section
+            # The channel's own codes and threshold are the settings that differ from the defaults
+            assert 'Alerts: on' in section
+            assert f'Ack codes {_own_ack_codes}' in section
+            assert 'Acknowledgments 5' in section
 
 # ################################################################################################################################
 
@@ -210,27 +210,27 @@ class TestMllpChannel:
 
         _seed_acks()
 
-        session = _new_session()
-        _seed_channel(session)
+        with _new_session() as session:
+            _seed_channel(session)
 
-        prompt = _explain(session, repo_dir, llm_address, 'ack_count')
+            prompt = _explain(session, repo_dir, llm_address, 'ack_count')
 
-        # The three rejects lead as one group named by the code and the ACK message, the error after them
-        reject_text = _ack_text.format(facility=_facility_a, code=_reject_code, reason=_reject_reason)
-        error_text = _ack_text.format(facility=_facility_a, code=_error_code, reason=_error_reason)
+            # The three rejects lead as one group named by the code and the ACK message, the error after them
+            reject_text = _ack_text.format(facility=_facility_a, code=_reject_code, reason=_reject_reason)
+            error_text = _ack_text.format(facility=_facility_a, code=_error_code, reason=_error_reason)
 
-        assert f'1. {_reject_code} - {reject_text}' in prompt
-        assert 'Count: 2' in prompt
-        assert f'{_error_code} - {error_text}' in prompt
-        assert _reject_reason in prompt
-        assert _error_reason in prompt
+            assert f'1. {_reject_code} - {reject_text}' in prompt
+            assert 'Count: 2' in prompt
+            assert f'{_error_code} - {error_text}' in prompt
+            assert _reject_reason in prompt
+            assert _error_reason in prompt
 
-        # The accepted message is nowhere among the failures
-        assert 'MSA|AA' not in prompt
+            # The accepted message is nowhere among the failures
+            assert 'MSA|AA' not in prompt
 
-        # The facilities the rejected messages came from are the callers
-        assert _facility_a in prompt
-        assert _facility_b in prompt
+            # The facilities the rejected messages came from are the callers
+            assert _facility_a in prompt
+            assert _facility_b in prompt
 
 # ################################################################################################################################
 # ################################################################################################################################

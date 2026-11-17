@@ -1,0 +1,80 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# The registries of the static checks of durability for the code of this installation. The repositories linked
+# to the installation add their own entries of the same shapes through their registry modules.
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ModuleCtx:
+
+    # The module that builds every engine and every connection of a database of Zato
+    Engine_Factory_Module = 'zato.common.db_env.engine'
+
+    # The module in which SQLite pragmas and PostgreSQL session settings that concern durability are set
+    Setting_Module_Path = 'code/zato-common/src/zato/common/db_env/connection.py'
+
+    # The Rust functions that open the SQLite file of the active-standby node, each by its file and its name
+    Rust_Setting_Functions = (
+        ('code/zato-rust/zato_ha_core/src/active.rs', 'open_connection'),
+        ('code/zato-rust/zato_ha_core/src/copy.rs', 'open_for_checkpoint'),
+    )
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The functions that connect to the databases of the customers, each by its module and its qualified name,
+# and the calls that construct an engine or a connection, each by its full dotted name.
+Customer_Engine_Sites = (
+    ('zato.common.odb.api', 'SQLConnectionPool._create_engine'),
+    ('zato.server.connection.cloud.microsoft_fabric.sql', 'SQLPool._connect'),
+    ('zato.server.generic.api.outconn_mongodb', 'OutconnMongoDBWrapper._init_impl'),
+)
+
+Engine_Constructors = (
+    'sqlalchemy.create_engine',
+    'sqlalchemy.engine.create_engine',
+    'sqlalchemy.ext.asyncio.create_async_engine',
+    'sqlite3.connect',
+    'sqlite3.dbapi2.connect',
+    'pg8000.connect',
+    'pg8000.dbapi.connect',
+    'pg8000.native.Connection',
+    'psycopg2.connect',
+    'psycopg.connect',
+    'asyncpg.connect',
+    'pymysql.connect',
+    'MySQLdb.connect',
+    'mysql.connector.connect',
+    'mssql_python.connect',
+    'pyodbc.connect',
+    'pymssql.connect',
+    'oracledb.connect',
+    'cx_Oracle.connect',
+    'pymongo.MongoClient',
+)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The words in the name of an environment variable that may change when or how a write becomes durable.
+Environment_Variable_Keywords = ('Flush', 'Buffer', 'Async', 'Batch', 'Delay', 'Synchronous', 'Durab')
+
+# Each environment variable of production code whose name contains one of the words, with what it controls,
+# none of which acknowledges a write before its commit.
+Environment_Variables = (
+    ('Zato_Audit_Log_Export_Batch_Size',        'How many committed events one OTLP export request carries'),
+    ('Zato_Audit_Log_Export_Max_Batch_Size',    'The upper limit of the OTLP export batch size'),
+    ('Zato_Audit_Log_Export_Flush_Interval_Ms', 'How often committed events are exported over OTLP'),
+    ('Zato_HL7_MLLP_Read_Buffer_Size',          'The size of the socket read buffer of an MLLP listener'),
+    ('Zato_PubSub_Batch_Size',                  'How many rows one bulk statement of pub/sub touches'),
+)
+
+# ################################################################################################################################
+# ################################################################################################################################

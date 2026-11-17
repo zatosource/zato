@@ -14,7 +14,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # SQLAlchemy
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Zato
@@ -30,16 +29,19 @@ from zato.cli.enmasse.importers.outgoing_soap import OutgoingSOAPImporter
 from zato.cli.enmasse.util.secrets import Session_Key_Crypto_Manager
 from zato.common.api import HTTP_SOAP
 from zato.common.crypto.api import ServerCryptoManager
-from zato.common.odb.model import Base, GenericConn, GenericConnDef, GenericObject, HTTPSOAP, IntervalBasedJob, Job, \
+from zato.common.odb.model import GenericConn, GenericConnDef, GenericObject, HTTPSOAP, IntervalBasedJob, Job, \
     SecurityBase, Service, SMTP
+from zato.common.test.config_database import config_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from pathlib import Path
     from zato.common.typing_ import any_, anydict
     any_ = any_
     anydict = anydict
+    Path = Path
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,12 +77,10 @@ _types = {
 # ################################################################################################################################
 
 @pytest.fixture
-def session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database holding the service the channels invoke
+def session(tmp_path:'Path') -> 'any_':
+    """ A real ODB session over a SQLite database file holding the service the channels invoke
     and the service a health check job dispatches to, carrying the crypto manager the importers encrypt secrets with.
     """
-    engine = create_engine('sqlite://')
-
     tables = [
         GenericConnDef.__table__,
         GenericConn.__table__,
@@ -92,24 +92,23 @@ def session() -> 'any_':
         Job.__table__,
         IntervalBasedJob.__table__,
     ]
-    Base.metadata.create_all(engine, tables=tables)
 
-    session_factory = sessionmaker(bind=engine)
-    session = session_factory()
+    with config_database_engine(tmp_path, tables) as engine:
+        session_factory = sessionmaker(bind=engine)
+        session = session_factory()
 
-    # The LLM definition carries an API key the importer encrypts through the session's crypto manager
-    session.info[Session_Key_Crypto_Manager] = ServerCryptoManager.from_secret_key(ServerCryptoManager.generate_key())
+        # The LLM definition carries an API key the importer encrypts through the session's crypto manager
+        session.info[Session_Key_Crypto_Manager] = ServerCryptoManager.from_secret_key(ServerCryptoManager.generate_key())
 
-    session.add(Service(None, _service_name, True, 'enmasse.is_active.Service', False))
-    session.add(Service(None, HTTP_SOAP.HealthCheck.Dispatch_Service, True,
-        'zato.server.service.internal.connection.HealthCheckRun', True))
+        session.add(Service(None, _service_name, True, 'enmasse.is_active.Service', False))
+        session.add(Service(None, HTTP_SOAP.HealthCheck.Dispatch_Service, True,
+            'zato.server.service.internal.connection.HealthCheckRun', True))
 
-    session.commit()
+        session.commit()
 
-    yield session
+        yield session
 
-    session.close()
-    engine.dispose()
+        session.close()
 
 # ################################################################################################################################
 

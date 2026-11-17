@@ -524,10 +524,8 @@ class ZatoCommand:
 
     def _get_engine(self, args):
 
-        # SQLAlchemy
-        import sqlalchemy
-
         # Zato
+        from zato.common.db_env.engine import new_zato_engine
         from zato.common.util.api import get_engine_url
 
         if not getattr(args, 'odb_path', None):
@@ -535,7 +533,7 @@ class ZatoCommand:
 
         engine_url = get_engine_url({'engine': args.odb_type, 'sqlite_path': args.odb_path})
 
-        return sqlalchemy.create_engine(engine_url)
+        return new_zato_engine(engine_url)
 
 # ################################################################################################################################
 

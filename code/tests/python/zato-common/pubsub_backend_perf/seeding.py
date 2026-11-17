@@ -15,6 +15,7 @@ from zlib import crc32
 
 # Zato
 from zato.common.db_env.common import Type_PostgreSQL
+from zato.common.db_env.connection import set_sqlite_pragmas
 from zato.common.db_env.database import get_database_engine
 from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.pubsub.sql.schema import metadata
@@ -86,7 +87,7 @@ def connect_native() -> 'anytuple':
     else:
         db_path = os.environ[DatabaseEnv.Env_Path]
         connection = sqlite3.connect(db_path)
-        _ = connection.execute('pragma synchronous=off')
+        set_sqlite_pragmas(connection, None)
         out = (connection, '?')
 
     return out

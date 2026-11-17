@@ -13,6 +13,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import fcntl
 import os
+import sqlite3
 from typing import NamedTuple
 
 # gevent
@@ -27,7 +28,8 @@ from sqlalchemy.pool import QueuePool
 # Zato
 from zato.common.db_env.common import get_env_values, Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.connection import build_connect_args_from_values, build_engine_url_from_values, \
-    set_postgresql_keepalive, set_postgresql_no_delay, set_postgresql_session, set_sqlite_pragmas
+    DatabaseDurabilityError, set_postgresql_keepalive, set_postgresql_no_delay, set_postgresql_session, \
+    set_sqlite_pragmas, verify_postgresql_server
 from zato.common.db_env.pg8000_copy import install as install_pg8000_copy
 from zato.common.db_env.pg8000_wire import install as install_pg8000_wire
 from zato.common.db_env.process_queue import ProcessQueue
@@ -360,6 +362,7 @@ def _new_env_engine(config:'EnvDBConfig') -> '_EnvEngine':
         sa_event.listen(engine, 'connect', set_postgresql_no_delay)
         sa_event.listen(engine, 'connect', set_postgresql_keepalive)
         sa_event.listen(engine, 'connect', set_postgresql_session)
+        sa_event.listen(engine, 'connect', verify_postgresql_server)
 
         # .. a password kept in a file is read again for each new connection, which lets it be rotated ..
         if password_file := values['password_file']:
@@ -421,6 +424,39 @@ def new_unshared_env_engine(config:'EnvDBConfig') -> 'Engine':
     env_engine = _new_env_engine(config)
 
     out = env_engine.engine
+    return out
+
+# ################################################################################################################################
+
+def new_zato_engine(engine_url:'any_', **engine_kwargs:'any_') -> 'Engine':
+    """ Returns an engine of a database of Zato that the Zato_Database_* variables do not configure, such as config.db,
+    settings.db or a database of the Dashboard, with the same settings of durability on each of its connections
+    as the engines of the Zato database.
+    """
+    out = create_engine(engine_url, **engine_kwargs)
+    db_type = out.dialect.name
+
+    if db_type == Type_SQLite:
+        sa_event.listen(out, 'connect', set_sqlite_pragmas)
+
+    elif db_type == Type_PostgreSQL:
+        sa_event.listen(out, 'connect', set_postgresql_session)
+        sa_event.listen(out, 'connect', verify_postgresql_server)
+
+    else:
+        raise DatabaseDurabilityError(f'Unsupported database type `{db_type}` of a database of Zato')
+
+    return out
+
+# ################################################################################################################################
+
+def connect_sqlite_file(db_path:'str') -> 'sqlite3.Connection':
+    """ Returns a connection of the sqlite3 module to a SQLite file of Zato, with the settings of durability
+    that each connection of the engine factory has.
+    """
+    out = sqlite3.connect(db_path)
+    set_sqlite_pragmas(out, None)
+
     return out
 
 # ################################################################################################################################

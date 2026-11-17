@@ -28,7 +28,8 @@ from zato.common.alerting.collectors import new_fact
 from zato.common.alerting.seed import ensure_alerting_definitions
 from zato.common.alerting.sweep import load_alert_rules, Fact_Entity
 from zato.common.audit_log.api import AuditSource
-from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
+from zato.common.rule_engine.sql import RuleSQLBackend
+from zato.common.test.zato_database import file_database_engine
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
 
@@ -89,16 +90,8 @@ _channel_rule_measures = {
 def rule_database_engine(tmp_path:'Path') -> 'engine_generator':
     """ Creates one isolated test-managed rule engine database.
     """
-    database_path = tmp_path / 'rule-engine.sqlite'
-    database_url = f'sqlite:///{database_path}'
-    connection_options = {'check_same_thread': False}
-    engine = create_database_engine(database_url, connect_args=connection_options)
-
-    create_schema(engine)
-
-    yield engine
-
-    engine.dispose()
+    with file_database_engine(tmp_path) as engine:
+        yield engine
 
 # ################################################################################################################################
 

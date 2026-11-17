@@ -151,16 +151,16 @@ class TestOutgoingFhir:
 
         _seed_outcomes()
 
-        session = _new_session()
-        _seed_connection(session)
+        with _new_session() as session:
+            _seed_connection(session)
 
-        prompt = _explain(session, repo_dir, llm_address, AuditSource.FHIR, 'outcome_count')
-        assert prompt.startswith(_fhir_skill_title)
+            prompt = _explain(session, repo_dir, llm_address, AuditSource.FHIR, 'outcome_count')
+            assert prompt.startswith(_fhir_skill_title)
 
-        explanation = _stored_explanation(session)
+            explanation = _stored_explanation(session)
 
-        assert explanation['source'] == AuditSource.FHIR
-        assert explanation['is_parsed'] is True
+            assert explanation['source'] == AuditSource.FHIR
+            assert explanation['is_parsed'] is True
 
 # ################################################################################################################################
 
@@ -168,17 +168,17 @@ class TestOutgoingFhir:
 
         _seed_outcomes(AuditSource.FHIR_Health, _ping_endpoint)
 
-        session = _new_session()
-        _seed_connection(session)
+        with _new_session() as session:
+            _seed_connection(session)
 
-        prompt = _explain(session, repo_dir, llm_address, AuditSource.FHIR_Health, 'consecutive_failures')
-        section = _object_section(prompt)
+            prompt = _explain(session, repo_dir, llm_address, AuditSource.FHIR_Health, 'consecutive_failures')
+            section = _object_section(prompt)
 
-        assert prompt.startswith(_fhir_skill_title)
-        assert 'Type: FHIR' in section
+            assert prompt.startswith(_fhir_skill_title)
+            assert 'Type: FHIR' in section
 
-        explanation = _stored_explanation(session)
-        assert explanation['source'] == AuditSource.FHIR_Health
+            explanation = _stored_explanation(session)
+            assert explanation['source'] == AuditSource.FHIR_Health
 
 # ################################################################################################################################
 
@@ -187,24 +187,24 @@ class TestOutgoingFhir:
 
         _seed_outcomes()
 
-        session = _new_session()
-        _seed_connection(session)
+        with _new_session() as session:
+            _seed_connection(session)
 
-        prompt = _explain(session, repo_dir, llm_address, AuditSource.FHIR, 'outcome_count')
-        section = _object_section(prompt)
+            prompt = _explain(session, repo_dir, llm_address, AuditSource.FHIR, 'outcome_count')
+            section = _object_section(prompt)
 
-        assert f'Name: {_conn_name}' in section
-        assert 'Type: FHIR' in section
-        assert 'Active: yes' in section
-        assert f'Address: {_conn_address}' in section
-        assert 'Pool size: 10' in section
-        assert f'Security: {_security_name} (Basic Auth)' in section
-        assert 'Audit log: on' in section
-        assert 'Health check: every 5 minutes' in section
+            assert f'Name: {_conn_name}' in section
+            assert 'Type: FHIR' in section
+            assert 'Active: yes' in section
+            assert f'Address: {_conn_address}' in section
+            assert 'Pool size: 10' in section
+            assert f'Security: {_security_name} (Basic Auth)' in section
+            assert 'Audit log: on' in section
+            assert 'Health check: every 5 minutes' in section
 
-        # The connection's own codes and threshold are the settings that differ from the defaults
-        assert f'Outcome codes {_own_outcome_codes}' in section
-        assert 'Alerts: on' in section
+            # The connection's own codes and threshold are the settings that differ from the defaults
+            assert f'Outcome codes {_own_outcome_codes}' in section
+            assert 'Alerts: on' in section
 
 # ################################################################################################################################
 
@@ -212,18 +212,18 @@ class TestOutgoingFhir:
 
         _seed_outcomes()
 
-        session = _new_session()
-        _seed_connection(session)
+        with _new_session() as session:
+            _seed_connection(session)
 
-        prompt = _explain(session, repo_dir, llm_address, AuditSource.FHIR, 'outcome_count')
+            prompt = _explain(session, repo_dir, llm_address, AuditSource.FHIR, 'outcome_count')
 
-        # The three outcomes lead as one group named by the status and the issue code, the bare 503 by its status alone
-        assert f'1. {_outcome_status} - {_outcome_code} - {_outcome_text}' in prompt
-        assert 'Count: 3' in prompt
-        assert f'2. {_proxy_status} - {_proxy_text}' in prompt
+            # The three outcomes lead as one group named by the status and the issue code, the bare 503 by its status alone
+            assert f'1. {_outcome_status} - {_outcome_code} - {_outcome_text}' in prompt
+            assert 'Count: 3' in prompt
+            assert f'2. {_proxy_status} - {_proxy_text}' in prompt
 
-        # The outcome's own diagnostics reach the reader
-        assert _outcome_diagnostics in prompt
+            # The outcome's own diagnostics reach the reader
+            assert _outcome_diagnostics in prompt
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -19,7 +19,6 @@ from json import dumps, loads
 import pytest
 
 # SQLAlchemy
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Zato
@@ -33,6 +32,7 @@ from zato.common.crypto.api import ServerCryptoManager
 from zato.common.odb.model import Base, ChannelAMQP, GenericConn, GenericObject, HTTPBasicAuth, HTTPSOAP, IMAP, \
     IntervalBasedJob, Job, OutgoingAMQP, OutgoingOdoo, PubSubPermission, PubSubSubscription, PubSubTopic, SecurityBase, \
     Service, SMTP, SQLConnectionPool
+from zato.common.test.config_database import config_database_engine
 from zato.common.typing_ import cast_
 from zato.common.util.sql import parse_instance_opaque_attr
 
@@ -40,6 +40,7 @@ from zato.common.util.sql import parse_instance_opaque_attr
 # ################################################################################################################################
 
 if 0:
+    from pathlib import Path
     from zato.common.typing_ import any_, anydict, anylist, callable_, stranydict, strlist
 
 # ################################################################################################################################
@@ -106,28 +107,27 @@ class _RecordingClient:
 # ################################################################################################################################
 
 @pytest.fixture
-def session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database with the whole schema and the service
+def session(tmp_path:'Path') -> 'any_':
+    """ A real ODB session over a SQLite database file with the whole schema and the service
     the channels and jobs point to.
     """
-    engine = create_engine('sqlite://')
-    Base.metadata.create_all(engine)
+    tables = Base.metadata.sorted_tables
 
-    session_factory = sessionmaker(bind=engine)
-    session = session_factory()
+    with config_database_engine(tmp_path, tables) as engine:
+        session_factory = sessionmaker(bind=engine)
+        session = session_factory()
 
-    session.info[Session_Key_Crypto_Manager] = ServerCryptoManager.from_secret_key(ServerCryptoManager.generate_key())
+        session.info[Session_Key_Crypto_Manager] = ServerCryptoManager.from_secret_key(ServerCryptoManager.generate_key())
 
-    session.add(Service(None, _service_name, True, 'enmasse.should_delete.Service', False))
-    session.add(Service(None, HTTP_SOAP.HealthCheck.Dispatch_Service, True,
-        'zato.server.service.internal.connection.HealthCheckRun', True))
+        session.add(Service(None, _service_name, True, 'enmasse.should_delete.Service', False))
+        session.add(Service(None, HTTP_SOAP.HealthCheck.Dispatch_Service, True,
+            'zato.server.service.internal.connection.HealthCheckRun', True))
 
-    session.commit()
+        session.commit()
 
-    yield session
+        yield session
 
-    session.close()
-    engine.dispose()
+        session.close()
 
 # ################################################################################################################################
 

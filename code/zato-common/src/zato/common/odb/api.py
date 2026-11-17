@@ -37,6 +37,7 @@ from zato.common.audit_log.calls import record_remote_call
 from zato.common.audit_log.common import Export_Payload_Flag
 from zato.common.audit_log.sql import all_levels as all_sql_audit_levels, record_sql_execution, Config_Audit_Log, \
      Level_Off as SQL_Audit_Off
+from zato.common.db_env.engine import new_zato_engine
 from zato.common.exception import Inactive
 from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
 from zato.common.odb import query
@@ -699,6 +700,11 @@ class SQLConnectionPool:
         if self._is_unittest_engine(engine_url):
             return self._create_unittest_engine(engine_url, config)
 
+        # The configuration database is a database of Zato, with the settings of durability of the engine factory ..
+        elif self.name == ZATO_ODB_POOL_NAME:
+            return new_zato_engine(engine_url, **extra)
+
+        # .. whereas an outgoing connection reaches a database of a customer, which is configured by its owner.
         elif self._is_sa_engine(engine_url):
             return create_engine(engine_url, **extra)
 

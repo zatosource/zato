@@ -16,7 +16,6 @@ import pytest
 import yaml
 
 # SQLAlchemy
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Zato
@@ -27,16 +26,19 @@ from zato.cli.enmasse.importers.sftp import SFTPImporter
 from zato.cli.enmasse.importers.smb import SMBImporter
 from zato.common.alerting.object_config import Alerts_Key, storage_name
 from zato.common.api import EMAIL, GENERIC
-from zato.common.odb.model import Base, GenericConn, GenericConnDef, HTTPSOAP, IMAP, SecurityBase, Service, SMTP
+from zato.common.odb.model import GenericConn, GenericConnDef, HTTPSOAP, IMAP, SecurityBase, Service, SMTP
+from zato.common.test.config_database import config_database_engine
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from pathlib import Path
     from zato.common.typing_ import any_, anydict, stranydict
     any_ = any_
     anydict = anydict
+    Path = Path
     stranydict = stranydict
 
 # ################################################################################################################################
@@ -127,12 +129,10 @@ def yaml_config() -> 'stranydict':
 # ################################################################################################################################
 
 @pytest.fixture
-def session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database holding the generic
+def session(tmp_path:'Path') -> 'any_':
+    """ A real ODB session over a SQLite database file holding the generic
     connection tables and the three email connections the alerts mappings may name.
     """
-    engine = create_engine('sqlite://')
-
     tables = [
         GenericConnDef.__table__,
         GenericConn.__table__,
@@ -142,46 +142,45 @@ def session() -> 'any_':
         SecurityBase.__table__,
         HTTPSOAP.__table__,
     ]
-    Base.metadata.create_all(engine, tables=tables)
 
-    session_factory = sessionmaker(bind=engine)
-    session = session_factory()
+    with config_database_engine(tmp_path, tables) as engine:
+        session_factory = sessionmaker(bind=engine)
+        session = session_factory()
 
-    service = Service(None, _service_name, True, 'enmasse.alerts.Service', False)
-    session.add(service)
+        service = Service(None, _service_name, True, 'enmasse.alerts.Service', False)
+        session.add(service)
 
-    smtp = cast_('any_', SMTP())
-    smtp.name = _smtp_name
-    smtp.is_active = True
-    smtp.host = 'smtp.example.com'
-    smtp.port = 587
-    smtp.timeout = 30
-    smtp.is_debug = False
-    smtp.mode = EMAIL.SMTP.MODE.STARTTLS
-    smtp.ping_address = 'ping@example.com'
-    session.add(smtp)
+        smtp = cast_('any_', SMTP())
+        smtp.name = _smtp_name
+        smtp.is_active = True
+        smtp.host = 'smtp.example.com'
+        smtp.port = 587
+        smtp.timeout = 30
+        smtp.is_debug = False
+        smtp.mode = EMAIL.SMTP.MODE.STARTTLS
+        smtp.ping_address = 'ping@example.com'
+        session.add(smtp)
 
-    imap_m365 = _new_imap(_imap_m365_name, EMAIL.IMAP.ServerType.Microsoft365)
-    session.add(imap_m365)
+        imap_m365 = _new_imap(_imap_m365_name, EMAIL.IMAP.ServerType.Microsoft365)
+        session.add(imap_m365)
 
-    imap_generic = _new_imap(_imap_generic_name, EMAIL.IMAP.ServerType.Generic)
-    session.add(imap_generic)
+        imap_generic = _new_imap(_imap_generic_name, EMAIL.IMAP.ServerType.Generic)
+        session.add(imap_generic)
 
-    llm = cast_('any_', GenericConn())
-    llm.name = _llm_name
-    llm.type_ = GENERIC.CONNECTION.TYPE.OUTCONN_LLM
-    llm.is_active = True
-    llm.is_internal = False
-    llm.is_channel = False
-    llm.is_outconn = True
-    session.add(llm)
+        llm = cast_('any_', GenericConn())
+        llm.name = _llm_name
+        llm.type_ = GENERIC.CONNECTION.TYPE.OUTCONN_LLM
+        llm.is_active = True
+        llm.is_internal = False
+        llm.is_channel = False
+        llm.is_outconn = True
+        session.add(llm)
 
-    session.commit()
+        session.commit()
 
-    yield session
+        yield session
 
-    session.close()
-    engine.dispose()
+        session.close()
 
 # ################################################################################################################################
 

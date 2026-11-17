@@ -55,7 +55,8 @@ from zato.common.alerting.seed import build_ruleset_document, ensure_alerting_de
 from zato.common.alerting.sweep import load_alert_rules, run_sweep
 from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
-from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
+from zato.common.rule_engine.sql import RuleSQLBackend
+from zato.common.test.zato_database import file_database_engine
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key
 from zato.common.util.api import utcnow
 
@@ -254,16 +255,8 @@ def build_transports(smtp_port:'int', recorder:'_ServiceRecorder') -> 'AlertTran
 def rule_database_engine(tmp_path:'Path') -> 'engine_generator':
     """ Creates one isolated test-managed rule engine database.
     """
-    database_path = tmp_path / 'rule-engine.sqlite'
-    database_url = f'sqlite:///{database_path}'
-    connection_options = {'check_same_thread': False}
-    engine = create_database_engine(database_url, connect_args=connection_options)
-
-    create_schema(engine)
-
-    yield engine
-
-    engine.dispose()
+    with file_database_engine(tmp_path) as engine:
+        yield engine
 
 # ################################################################################################################################
 

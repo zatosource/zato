@@ -15,16 +15,18 @@ import json
 import logging
 import smtplib
 import threading
+from contextlib import contextmanager
 from email.mime.text import MIMEText
 from http.client import OK
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 
 # requests
 import requests
 
 # SQLAlchemy
-from sqlalchemy import create_engine, select
+from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 # urllib3
@@ -38,7 +40,8 @@ from zato.common.api import SMTPMessage
 from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.crypto.api import CryptoManager
-from zato.common.odb.model import Base, GenericConn, GenericObject, HTTPBasicAuth, HTTPSOAP, SecurityBase, Service
+from zato.common.odb.model import GenericConn, GenericObject, HTTPBasicAuth, HTTPSOAP, SecurityBase, Service
+from zato.common.test.config_database import config_database_engine
 from zato.server.service.internal.alerting import Explain
 
 # Test helpers
@@ -47,8 +50,10 @@ from zato.server.service.internal.alerting import Explain
 # ################################################################################################################################
 
 if 0:
+    from collections.abc import Iterator
     from zato.common.typing_ import any_, anydict, anylist, stranydict, strlistnone
     any_ = any_
+    sessionmakergen = Iterator[sessionmaker]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -269,11 +274,11 @@ class _EmailAPI:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def new_session() -> 'any_':
-    """ A sessionmaker over a fresh in-memory database with the tables the explain service reads.
+@contextmanager
+def new_session() -> 'sessionmakergen':
+    """ A sessionmaker over a fresh SQLite database file in a temporary directory
+    with the tables the explain service reads.
     """
-    engine = create_engine('sqlite://')
-
     tables = [
         Service.__table__,
         SecurityBase.__table__,
@@ -282,10 +287,11 @@ def new_session() -> 'any_':
         GenericConn.__table__,
         HTTPSOAP.__table__,
     ]
-    Base.metadata.create_all(engine, tables=tables)
 
-    out = sessionmaker(bind=engine)
-    return out
+    with TemporaryDirectory() as directory:
+        with config_database_engine(directory, tables) as engine:
+            out = sessionmaker(bind=engine)
+            yield out
 
 # ################################################################################################################################
 

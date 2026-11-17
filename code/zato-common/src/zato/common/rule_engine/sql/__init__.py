@@ -7,10 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from .backend import RuleSQLBackend as RuleSQLBackend
-from .database import create_database_engine as create_database_engine
-from .database import create_schema as create_schema
 from .database import create_session_factory as create_session_factory
-from .database import drop_schema as drop_schema
 from .data import ApprovalStatus as ApprovalStatus
 from .data import CountPoint as CountPoint
 from .data import DecisionFilter as DecisionFilter

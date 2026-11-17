@@ -31,7 +31,8 @@ from zato.common.alerting.sweep import load_alert_rules, run_sweep, Fact_Entity
 from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
-from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
+from zato.common.rule_engine.sql import RuleSQLBackend
+from zato.common.test.zato_database import file_database_engine
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Definition_Type_Vocabulary, Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
 from zato.common.util.api import utcnow
@@ -74,16 +75,8 @@ _test_transfer_full_name = 'alerts_file_transfer_Test_Transfer_Failing'
 def rule_database_engine(tmp_path:'Path') -> 'engine_generator':
     """ Creates one isolated test-managed rule engine database.
     """
-    database_path = tmp_path / 'rule-engine.sqlite'
-    database_url = f'sqlite:///{database_path}'
-    connection_options = {'check_same_thread': False}
-    engine = create_database_engine(database_url, connect_args=connection_options)
-
-    create_schema(engine)
-
-    yield engine
-
-    engine.dispose()
+    with file_database_engine(tmp_path) as engine:
+        yield engine
 
 # ################################################################################################################################
 

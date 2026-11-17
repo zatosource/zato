@@ -150,19 +150,19 @@ class TestRestChannel:
 
         _seed_channel_failures()
 
-        session = _new_session()
-        _seed_channel(session)
+        with _new_session() as session:
+            _seed_channel(session)
 
-        prompt = _explain_channel(session, repo_dir, llm_address, AuditSource.REST_Channel)
-        assert prompt.startswith(_channel_skill_title)
+            prompt = _explain_channel(session, repo_dir, llm_address, AuditSource.REST_Channel)
+            assert prompt.startswith(_channel_skill_title)
 
-        # The channel's skill allows no remediation, so the reply's resubmit is dropped and the rest is kept
-        explanation = _stored_explanation(session)
+            # The channel's skill allows no remediation, so the reply's resubmit is dropped and the rest is kept
+            explanation = _stored_explanation(session)
 
-        assert explanation['source'] == AuditSource.REST_Channel
-        assert explanation['explanation'] == _explanation_text
-        assert explanation['is_parsed'] is True
-        assert explanation['remediation'] is None
+            assert explanation['source'] == AuditSource.REST_Channel
+            assert explanation['explanation'] == _explanation_text
+            assert explanation['is_parsed'] is True
+            assert explanation['remediation'] is None
 
 # ################################################################################################################################
 
@@ -170,35 +170,35 @@ class TestRestChannel:
 
         _seed_channel_failures()
 
-        session = _new_session()
-        _seed_channel(session)
+        with _new_session() as session:
+            _seed_channel(session)
 
-        prompt = _explain_channel(session, repo_dir, llm_address, AuditSource.REST_Channel)
-        section = _object_section(prompt)
+            prompt = _explain_channel(session, repo_dir, llm_address, AuditSource.REST_Channel)
+            section = _object_section(prompt)
 
-        assert f'Name: {_channel_name}' in section
-        assert 'Transport: REST' in section
-        assert 'Active: yes' in section
-        assert 'URL path: /orders' in section
-        assert 'Method: POST' in section
-        assert f'Service: {_channel_service_name}' in section
-        assert f'Security: {_channel_security_name} (Basic Auth)' in section
-        assert 'Data format: json' in section
-        assert 'Audit log: on' in section
-        assert 'Alerts: on' in section
-        assert 'Alert settings of its own: Auth failures 3' in section
+            assert f'Name: {_channel_name}' in section
+            assert 'Transport: REST' in section
+            assert 'Active: yes' in section
+            assert 'URL path: /orders' in section
+            assert 'Method: POST' in section
+            assert f'Service: {_channel_service_name}' in section
+            assert f'Security: {_channel_security_name} (Basic Auth)' in section
+            assert 'Data format: json' in section
+            assert 'Audit log: on' in section
+            assert 'Alerts: on' in section
+            assert 'Alert settings of its own: Auth failures 3' in section
 
-        # A REST channel has no SOAP lines
-        assert 'SOAP action' not in section
-        assert 'SOAP version' not in section
+            # A REST channel has no SOAP lines
+            assert 'SOAP action' not in section
+            assert 'SOAP version' not in section
 
-        assert 'never-shown' not in prompt
+            assert 'never-shown' not in prompt
 
-        # The failures name the callers and the service, the baseline counts the responses
-        assert '1. 401 Unauthorized - Invalid credentials' in prompt
-        assert f'Service: {_channel_service_name}' in prompt
-        assert f'Caller: {_channel_security_name}' in prompt
-        assert 'OK events in the window: 0' in prompt
+            # The failures name the callers and the service, the baseline counts the responses
+            assert '1. 401 Unauthorized - Invalid credentials' in prompt
+            assert f'Service: {_channel_service_name}' in prompt
+            assert f'Caller: {_channel_security_name}' in prompt
+            assert 'OK events in the window: 0' in prompt
 
 # ################################################################################################################################
 
@@ -206,20 +206,20 @@ class TestRestChannel:
 
         _seed_channel_failures()
 
-        session = _new_session()
-        _seed_channel(session, with_security=False)
+        with _new_session() as session:
+            _seed_channel(session, with_security=False)
 
-        # The channel's own settings are the defaults
-        with session() as s:
-            row = s.query(HTTPSOAP).filter(HTTPSOAP.name==_channel_name).one()
-            row.opaque1 = json.dumps({storage_name('is_active'): True})
-            s.commit()
+            # The channel's own settings are the defaults
+            with session() as s:
+                row = s.query(HTTPSOAP).filter(HTTPSOAP.name==_channel_name).one()
+                row.opaque1 = json.dumps({storage_name('is_active'): True})
+                s.commit()
 
-        prompt = _explain_channel(session, repo_dir, llm_address, AuditSource.REST_Channel)
-        section = _object_section(prompt)
+            prompt = _explain_channel(session, repo_dir, llm_address, AuditSource.REST_Channel)
+            section = _object_section(prompt)
 
-        assert 'Security: None' in section
-        assert 'Alert settings of its own: none, the defaults apply' in section
+            assert 'Security: None' in section
+            assert 'Alert settings of its own: none, the defaults apply' in section
 
 # ################################################################################################################################
 
@@ -227,12 +227,11 @@ class TestRestChannel:
 
         _seed_channel_failures()
 
-        session = _new_session()
+        with _new_session() as session:
+            prompt = _explain_channel(session, repo_dir, llm_address, AuditSource.REST_Channel)
+            section = _object_section(prompt)
 
-        prompt = _explain_channel(session, repo_dir, llm_address, AuditSource.REST_Channel)
-        section = _object_section(prompt)
-
-        assert section.strip() == f'{Heading_Object}\n\nName: {_channel_name}'
+            assert section.strip() == f'{Heading_Object}\n\nName: {_channel_name}'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -243,18 +242,18 @@ class TestSoapChannel:
 
         _seed_channel_failures(AuditSource.SOAP_Channel, _soap_fault_string)
 
-        session = _new_session()
-        _seed_channel(session, transport='soap', url_path=_soap_url_path)
+        with _new_session() as session:
+            _seed_channel(session, transport='soap', url_path=_soap_url_path)
 
-        prompt = _explain_channel(session, repo_dir, llm_address, AuditSource.SOAP_Channel)
-        assert prompt.startswith(_channel_skill_title)
+            prompt = _explain_channel(session, repo_dir, llm_address, AuditSource.SOAP_Channel)
+            assert prompt.startswith(_channel_skill_title)
 
-        explanation = _stored_explanation(session)
+            explanation = _stored_explanation(session)
 
-        assert explanation['source'] == AuditSource.SOAP_Channel
-        assert explanation['explanation'] == _explanation_text
-        assert explanation['is_parsed'] is True
-        assert explanation['remediation'] is None
+            assert explanation['source'] == AuditSource.SOAP_Channel
+            assert explanation['explanation'] == _explanation_text
+            assert explanation['is_parsed'] is True
+            assert explanation['remediation'] is None
 
 # ################################################################################################################################
 
@@ -262,27 +261,27 @@ class TestSoapChannel:
 
         _seed_channel_failures(AuditSource.SOAP_Channel, _soap_fault_string)
 
-        session = _new_session()
-        _seed_channel(session, transport='soap', url_path=_soap_url_path)
+        with _new_session() as session:
+            _seed_channel(session, transport='soap', url_path=_soap_url_path)
 
-        prompt = _explain_channel(session, repo_dir, llm_address, AuditSource.SOAP_Channel)
-        section = _object_section(prompt)
+            prompt = _explain_channel(session, repo_dir, llm_address, AuditSource.SOAP_Channel)
+            section = _object_section(prompt)
 
-        assert f'Name: {_channel_name}' in section
-        assert 'Transport: SOAP' in section
-        assert f'URL path: {_soap_url_path}' in section
-        assert f'SOAP action: {_soap_action}' in section
-        assert f'SOAP version: {_soap_version}' in section
-        assert 'Method: POST' in section
-        assert f'Service: {_channel_service_name}' in section
-        assert f'Security: {_channel_security_name} (Basic Auth)' in section
-        assert 'Alert settings of its own: Auth failures 3' in section
+            assert f'Name: {_channel_name}' in section
+            assert 'Transport: SOAP' in section
+            assert f'URL path: {_soap_url_path}' in section
+            assert f'SOAP action: {_soap_action}' in section
+            assert f'SOAP version: {_soap_version}' in section
+            assert 'Method: POST' in section
+            assert f'Service: {_channel_service_name}' in section
+            assert f'Security: {_channel_security_name} (Basic Auth)' in section
+            assert 'Alert settings of its own: Auth failures 3' in section
 
-        # The SOAP lines sit between the path and the method
-        assert section.index('URL path:') < section.index('SOAP action:') < section.index('SOAP version:') < section.index('Method:')
+            # The SOAP lines sit between the path and the method
+            assert section.index('URL path:') < section.index('SOAP action:') < section.index('SOAP version:') < section.index('Method:')
 
-        # The fault string is the error text of the failures
-        assert f'1. 401 Unauthorized - {_soap_fault_string}' in prompt
+            # The fault string is the error text of the failures
+            assert f'1. 401 Unauthorized - {_soap_fault_string}' in prompt
 
 # ################################################################################################################################
 
@@ -294,17 +293,17 @@ class TestSoapChannel:
 
         _seed_channel_failures(AuditSource.SOAP_Channel, _soap_fault_string)
 
-        session = _new_session()
-        _seed_channel(session)
-        _seed_channel(session, transport='soap', url_path=_soap_url_path)
+        with _new_session() as session:
+            _seed_channel(session)
+            _seed_channel(session, transport='soap', url_path=_soap_url_path)
 
-        prompt = _explain_channel(session, repo_dir, llm_address, AuditSource.SOAP_Channel)
-        section = _object_section(prompt)
+            prompt = _explain_channel(session, repo_dir, llm_address, AuditSource.SOAP_Channel)
+            section = _object_section(prompt)
 
-        # The SOAP channel's row, not the REST channel's one of the same name
-        assert 'Transport: SOAP' in section
-        assert f'URL path: {_soap_url_path}' in section
-        assert 'URL path: /orders' not in section
+            # The SOAP channel's row, not the REST channel's one of the same name
+            assert 'Transport: SOAP' in section
+            assert f'URL path: {_soap_url_path}' in section
+            assert 'URL path: /orders' not in section
 
 # ################################################################################################################################
 # ################################################################################################################################

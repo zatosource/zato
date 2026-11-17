@@ -59,6 +59,10 @@ def add_link(manifest_path:'str') -> 'None':
         'extensions': manifest['extensions'],
     }
 
+    # .. a repository may name the module with its registries for the static checks of the installation ..
+    if registries := manifest.get('registries'):
+        link['registries'] = registries
+
     # .. the link is stored under the name of the repository ..
     os.makedirs(ModuleCtx.Links_Dir, exist_ok=True)
 

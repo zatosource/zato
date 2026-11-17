@@ -149,16 +149,16 @@ class TestMllpOutgoing:
 
         _seed_acks()
 
-        session = _new_session()
-        _seed_connection(session)
+        with _new_session() as session:
+            _seed_connection(session)
 
-        prompt = _explain(session, repo_dir, llm_address, 'ack_count')
-        assert prompt.startswith(_mllp_skill_title)
+            prompt = _explain(session, repo_dir, llm_address, 'ack_count')
+            assert prompt.startswith(_mllp_skill_title)
 
-        explanation = _stored_explanation(session)
+            explanation = _stored_explanation(session)
 
-        assert explanation['source'] == AuditSource.MLLP_Outgoing
-        assert explanation['is_parsed'] is True
+            assert explanation['source'] == AuditSource.MLLP_Outgoing
+            assert explanation['is_parsed'] is True
 
 # ################################################################################################################################
 
@@ -167,29 +167,29 @@ class TestMllpOutgoing:
 
         _seed_acks()
 
-        session = _new_session()
-        _seed_connection(session)
+        with _new_session() as session:
+            _seed_connection(session)
 
-        prompt = _explain(session, repo_dir, llm_address, 'ack_count')
-        section = _object_section(prompt)
+            prompt = _explain(session, repo_dir, llm_address, 'ack_count')
+            section = _object_section(prompt)
 
-        assert f'Name: {_conn_name}' in section
-        assert 'Type: MLLP outgoing connection' in section
-        assert 'Active: yes' in section
-        assert f'Address: {_address}' in section
-        assert 'TLS: on' in section
-        assert 'Connections kept open: 4' in section
-        assert 'Ack wait: 5s' in section
-        assert 'Retries: 7, waiting from 2s, up to 120s in total' in section
-        assert 'Use queue: on' in section
-        assert 'Use DLQ: on' in section
-        assert 'Sending pauses: at 50% failures in 60s, for 90s' in section
-        assert 'Audit log: on' in section
+            assert f'Name: {_conn_name}' in section
+            assert 'Type: MLLP outgoing connection' in section
+            assert 'Active: yes' in section
+            assert f'Address: {_address}' in section
+            assert 'TLS: on' in section
+            assert 'Connections kept open: 4' in section
+            assert 'Ack wait: 5s' in section
+            assert 'Retries: 7, waiting from 2s, up to 120s in total' in section
+            assert 'Use queue: on' in section
+            assert 'Use DLQ: on' in section
+            assert 'Sending pauses: at 50% failures in 60s, for 90s' in section
+            assert 'Audit log: on' in section
 
-        # The connection's own codes and failures are the settings that differ from the defaults
-        assert 'Alerts: on' in section
-        assert f'Ack codes {_own_ack_codes}' in section
-        assert f'Connection failures {_own_connection_failures}' in section
+            # The connection's own codes and failures are the settings that differ from the defaults
+            assert 'Alerts: on' in section
+            assert f'Ack codes {_own_ack_codes}' in section
+            assert f'Connection failures {_own_connection_failures}' in section
 
 # ################################################################################################################################
 
@@ -198,24 +198,24 @@ class TestMllpOutgoing:
 
         _seed_acks()
 
-        session = _new_session()
-        _seed_connection(session)
+        with _new_session() as session:
+            _seed_connection(session)
 
-        prompt = _explain(session, repo_dir, llm_address, 'ack_count')
+            prompt = _explain(session, repo_dir, llm_address, 'ack_count')
 
-        # The three rejects lead as one group named by the acknowledgment's text and code, the error and the timeout after them
-        assert f'1. {_reject_reason} - {_reject_code}' in prompt
-        assert 'Count: 3' in prompt
-        assert f'{_error_reason} - {_error_code}' in prompt
+            # The three rejects lead as one group named by the acknowledgment's text and code, the error and the timeout after them
+            assert f'1. {_reject_reason} - {_reject_code}' in prompt
+            assert 'Count: 3' in prompt
+            assert f'{_error_reason} - {_error_code}' in prompt
 
-        # A message no acknowledgment came back for says nothing in its status - its ack status is what it reads as
-        assert f'. {ACKStatus.Timeout}\n' in prompt
+            # A message no acknowledgment came back for says nothing in its status - its ack status is what it reads as
+            assert f'. {ACKStatus.Timeout}\n' in prompt
 
-        # The accepted message is nowhere among the failures
-        assert 'AA' not in prompt.split('Failures')[1].split('Baseline')[0]
+            # The accepted message is nowhere among the failures
+            assert 'AA' not in prompt.split('Failures')[1].split('Baseline')[0]
 
-        # The endpoint the messages went to is named
-        assert _address in prompt
+            # The endpoint the messages went to is named
+            assert _address in prompt
 
 # ################################################################################################################################
 # ################################################################################################################################

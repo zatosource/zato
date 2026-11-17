@@ -60,7 +60,8 @@ setup_test_environment()
 
 # These imports only work once the application is up
 from django.contrib.auth.models import User
-from zato.common.rule_engine.sql import create_schema, drop_schema
+from zato.common.rule_engine.sql.schema import metadata as rule_engine_metadata
+from zato.common.test.direct_sql.reset import reset_tables
 from zato.rule_engine_dashboard.app.storage import get_backend, get_engine
 
 # ################################################################################################################################
@@ -90,8 +91,7 @@ def clean_rule_tables() -> 'any_':
     yield
 
     engine = get_engine()
-    drop_schema(engine)
-    create_schema(engine)
+    reset_tables(engine, rule_engine_metadata)
 
 # ################################################################################################################################
 

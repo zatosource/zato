@@ -27,7 +27,8 @@ import pytest
 
 # Zato
 from zato.common.db_env.database_env import DatabaseEnv
-from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
+from zato.common.rule_engine.sql import RuleSQLBackend
+from zato.common.test.zato_database import file_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,19 +44,8 @@ if 0:
 def database_engine(tmp_path:'any_') -> 'any_':
     """ A file-backed SQLite rule engine database, one per test.
     """
-    # Build a file-backed database usable across threads ..
-    database_path = tmp_path / 'rule-engine.sqlite'
-    database_url = f'sqlite:///{database_path}'
-    connection_options = {'check_same_thread': False}
-    engine = create_database_engine(database_url, connect_args=connection_options)
-
-    # .. create only the rule-engine tables ..
-    create_schema(engine)
-
-    yield engine
-
-    # .. and release every pooled connection afterwards.
-    engine.dispose()
+    with file_database_engine(tmp_path) as engine:
+        yield engine
 
 # ################################################################################################################################
 

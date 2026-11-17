@@ -64,6 +64,8 @@ fn open_connection(path: &Path) -> Result<Connection, Error> {
     let _: String = connection
         .query_row("pragma journal_mode=wal", [], |row| row.get(0))
         .map_err(Error::other)?;
+    // A checkpoint of this connection syncs the database file before it truncates the log, whatever the compiled default.
+    connection.pragma_update(None, "synchronous", "full").map_err(Error::other)?;
     connection.pragma_update(None, "wal_autocheckpoint", 0).map_err(Error::other)?;
     Ok(connection)
 }
@@ -1461,5 +1463,19 @@ mod tests {
         };
         assert_eq!((role, generation), (Role::Fenced, 3));
         assert_eq!(barrier::wait(&shared), BarrierOutcome::Replaced);
+    }
+
+    #[test]
+    fn the_connections_of_the_node_sync_every_write() {
+        let database_dir = tempfile::tempdir().unwrap();
+        let database_path = database_dir.path().join(DATABASE_FILE_NAME);
+
+        let connection = open_connection(&database_path).unwrap();
+        let journal_mode: String = connection.query_row("pragma journal_mode", [], |row| row.get(0)).unwrap();
+        let synchronous: i64 = connection.query_row("pragma synchronous", [], |row| row.get(0)).unwrap();
+
+        // The value 2 is how SQLite reports the level `full`.
+        assert_eq!(journal_mode, "wal");
+        assert_eq!(synchronous, 2);
     }
 }

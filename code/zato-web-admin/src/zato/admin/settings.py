@@ -15,9 +15,11 @@ import os
 from zato.common.lets_encrypt.config import get_dashboard_host_names
 from zato.common.util.open_ import open_r
 
+# Django
+from django.db.backends.signals import connection_created
+
 # SQLAlchemy
 from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy import create_engine
 
 # YAML
 import yaml
@@ -48,6 +50,8 @@ ZATO_PASSWORD = os.environ.get('Zato_Django_Password') or os.environ.get('Zato_P
 # Zato
 from zato.common.api import TRACE1
 from zato.common.crypto.api import CryptoManager
+from zato.common.db_env.connection import set_django_connection
+from zato.common.db_env.engine import new_zato_engine
 from zato.common.settings_db import SettingsDB
 from zato.common.util.eval_ import as_bool
 # Star import is how these settings are pulled into Django's settings module.
@@ -260,6 +264,9 @@ LOGIN_REDIRECT_URL = '/'
 # The values below, e.g. db_type and DATABASES, are injected by the 'zato start' command,
 # which reads them from the web-admin.conf file.
 
+# Each connection of Django to the database of the Dashboard has the settings of durability of the engine factory
+connection_created.connect(set_django_connection)
+
 if DATABASES:
 
     db_data = DATABASES['default']
@@ -273,13 +280,13 @@ if DATABASES:
     # SQLAlchemy setup for web admin's database.
     SASession = scoped_session(sessionmaker())
 
-    engine = create_engine(f'sqlite:///{DATABASE_NAME}')
+    engine = new_zato_engine(f'sqlite:///{DATABASE_NAME}')
     SASession.configure(bind=engine)
 
     # Settings DB
     _settings_db_path = os.path.join(config_dir, 'config', 'repo', 'settings.db')
     _settings_db_session = scoped_session(sessionmaker())
-    _settings_db_engine = create_engine(f'sqlite:///{_settings_db_path}')
+    _settings_db_engine = new_zato_engine(f'sqlite:///{_settings_db_path}')
     _settings_db_session.configure(bind=_settings_db_engine)
 
     settings_db = SettingsDB(_settings_db_path, _settings_db_session)

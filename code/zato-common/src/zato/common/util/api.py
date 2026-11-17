@@ -70,7 +70,6 @@ from OpenSSL import crypto
 import pytz
 
 # SQLAlchemy
-import sqlalchemy as sa
 from sqlalchemy import orm
 
 # Texttable
@@ -1156,7 +1155,14 @@ class StaticConfig(Bunch):
 # ################################################################################################################################
 
 def get_engine(args:'any_') -> 'any_':
-    return sa.create_engine(get_engine_url(args))
+
+    # Zato
+    from zato.common.db_env.engine import new_zato_engine
+
+    engine_url = get_engine_url(args)
+
+    out = new_zato_engine(engine_url)
+    return out
 
 # ################################################################################################################################
 

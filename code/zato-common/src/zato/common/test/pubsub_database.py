@@ -25,6 +25,7 @@ import pg8000.dbapi
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.test.durability.disk import get_disk_dir, verify_disk_dir
 from zato.common.test.pubsub_bouncer import Bouncer_Port, start_bouncer
 from zato.common.test.pubsub_certs import Chain_Plain, generate_certificates
 from zato.common.test.pubsub_network import add_round_trip_time
@@ -79,8 +80,8 @@ class ModuleCtx:
     # The environment variable naming the directory under which the runtime data of the tests is kept
     Env_Runtime_Dir = 'Zato_Test_Runtime_Dir'
 
-    # Where the runtime data is kept unless the environment says otherwise
-    Default_Runtime_Dir = '/tmp/zato-pubsub-test'
+    # The name of the directory on a disk in which the runtime data is kept unless the environment names another one
+    Runtime_Dir_Name = 'pubsub-test'
 
     # The image of the PostgreSQL containers
     PostgreSQL_Image = 'postgres:16'
@@ -216,14 +217,15 @@ def get_suite_modes(default_modes:'strlist') -> 'strlist':
 # ################################################################################################################################
 
 def get_runtime_dir() -> 'str':
-    """ Returns the directory under which the runtime data of the tests is kept, creating it if needed.
+    """ Returns the directory under which the runtime data of the tests is kept, creating it if needed. The data
+    includes the files of the databases of the tests, so the directory is on a file system that reaches a disk.
     """
     if runtime_dir := os.environ.get(ModuleCtx.Env_Runtime_Dir, ''):
         out = runtime_dir
+        os.makedirs(out, exist_ok=True)
+        verify_disk_dir(out)
     else:
-        out = ModuleCtx.Default_Runtime_Dir
-
-    os.makedirs(out, exist_ok=True)
+        out = get_disk_dir(ModuleCtx.Runtime_Dir_Name)
 
     return out
 

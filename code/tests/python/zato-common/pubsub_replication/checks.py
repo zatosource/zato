@@ -131,8 +131,7 @@ def check_delivery(database:'ReplicatedDatabase', workload:'Workload', restore_t
     # Every acknowledged publication that the database did not lose exists on the primary, once, since msg_id is unique ..
     lost = acknowledged - stored
 
-    # .. a message was handed out to the partner twice only if the partner's acknowledgement of it failed,
-    # .. or, with asynchronous replication, if the standby never received the acknowledgement ..
+    # .. a message was handed out to the partner twice only if the partner's acknowledgement of it failed ..
     pulled_counts = Counter(workload.pulled)
     duplicate_pulls:'strlist' = []
 
@@ -142,8 +141,7 @@ def check_delivery(database:'ReplicatedDatabase', workload:'Workload', restore_t
 
     unexpected_duplicates = set(duplicate_pulls) - workload.failed_ack_msg_ids
 
-    if database.is_sync:
-        assert not unexpected_duplicates, f'Pulled more than once: {sorted(unexpected_duplicates)[:10]}'
+    assert not unexpected_duplicates, f'Pulled more than once: {sorted(unexpected_duplicates)[:10]}'
 
     # .. every pull publication reached the partner, including those of pulls whose response was lost ..
     not_pulled = workload.acknowledged_on(Pull_Topic) - lost - set(workload.pulled)

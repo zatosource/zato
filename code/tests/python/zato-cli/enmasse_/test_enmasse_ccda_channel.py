@@ -14,7 +14,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # SQLAlchemy
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Zato
@@ -23,12 +22,14 @@ from zato.cli.enmasse.exporters.channel_rest import ChannelExporter
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.channel_rest import ChannelImporter
 from zato.common.api import DATA_FORMAT, HL7
-from zato.common.odb.model import Base, GenericObject, HTTPSOAP, SecurityBase, Service
+from zato.common.odb.model import GenericObject, HTTPSOAP, SecurityBase, Service
+from zato.common.test.config_database import config_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from pathlib import Path
     from zato.common.typing_ import any_, anydict, anylist
 
 # ################################################################################################################################
@@ -64,29 +65,26 @@ _definitions:'anylist' = [
 # ################################################################################################################################
 
 @pytest.fixture
-def session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database holding the service the channels invoke.
+def session(tmp_path:'Path') -> 'any_':
+    """ A real ODB session over a SQLite database file holding the service the channels invoke.
     """
-    engine = create_engine('sqlite://')
-
     tables = [
         GenericObject.__table__,
         Service.__table__,
         SecurityBase.__table__,
         HTTPSOAP.__table__,
     ]
-    Base.metadata.create_all(engine, tables=tables)
 
-    session_factory = sessionmaker(bind=engine)
-    session = session_factory()
+    with config_database_engine(tmp_path, tables) as engine:
+        session_factory = sessionmaker(bind=engine)
+        session = session_factory()
 
-    session.add(Service(None, _service_name, True, 'enmasse.ccda.Service', False))
-    session.commit()
+        session.add(Service(None, _service_name, True, 'enmasse.ccda.Service', False))
+        session.commit()
 
-    yield session
+        yield session
 
-    session.close()
-    engine.dispose()
+        session.close()
 
 # ################################################################################################################################
 

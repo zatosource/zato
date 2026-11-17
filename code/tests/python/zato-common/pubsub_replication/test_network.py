@@ -92,7 +92,7 @@ def test_network_fault(fault_name:'str') -> 'None':
     """
     label = f'network.{fault_name}'
 
-    with replicated_environment(fault_name.replace('_', '-'), True) as database:
+    with replicated_environment(fault_name.replace('_', '-')) as database:
 
         workload = Workload(label)
         workload.backend.take_over()

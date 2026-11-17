@@ -20,6 +20,7 @@ import time
 # Zato
 from topology import Backend, docker, ModuleCtx as TopologyCtx, remove_container
 from zato.common.crypto.api import CryptoManager
+from zato.common.test.durability.disk import get_disk_dir
 from zato.common.test.pubsub_certs import generate_certificates
 from zato.common.test.pubsub_database import _directory_mode, _shm_size, _write_tls_setup_script, connect, \
     get_container_settings, ModuleCtx as DatabaseCtx, PubSubDatabase, PubSubDBMode
@@ -67,9 +68,8 @@ class ModuleCtx:
     # Where each container keeps its data
     Container_Data_Dir = '/var/lib/postgresql/data'
 
-    # Where the instances keep their data on the host, in memory, so that the syncs of three instances on one disk
-    # do not delay each other and the syncs of the nodes, as instances on hosts of their own do not
-    Host_Data_Dir = '/dev/shm/zato-ha-test-postgresql'
+    # The name of the directory on a disk of the host in which the instances keep their data
+    Host_Data_Dir_Name = 'ha-postgresql'
 
     # How long an instance may take to accept connections or to stream, and how long a promotion may take, in seconds
     Ready_Timeout = 120
@@ -111,8 +111,11 @@ class PostgreSQLCluster(Backend):
         self.container_names:'strlist' = []
         self.ips:'strlist' = []
 
+        # The instances sync their commits to a disk, as instances of a production system do
+        self.host_data_dir = get_disk_dir(ModuleCtx.Host_Data_Dir_Name)
+
         for name in ModuleCtx.Instance_IPs:
-            instance = Instance(name, ModuleCtx.Host_Data_Dir)
+            instance = Instance(name, self.host_data_dir)
             self.instances[name] = instance
             self.container_names.append(instance.container_name)
             self.ips.append(instance.ip)
@@ -152,7 +155,7 @@ class PostgreSQLCluster(Backend):
         """ Writes the certificates and the init scripts of the primary, returning the paths of both scripts.
         """
         shutil.rmtree(self.directory, ignore_errors=True)
-        shutil.rmtree(ModuleCtx.Host_Data_Dir, ignore_errors=True)
+        shutil.rmtree(self.host_data_dir, ignore_errors=True)
         os.makedirs(self.certs_dir)
         os.chmod(self.directory, _directory_mode)
         os.chmod(self.certs_dir, _directory_mode)
@@ -282,7 +285,6 @@ class PostgreSQLCluster(Backend):
 
         self._run_on_primary([
             f'alter system set synchronous_standby_names = {standby_names}',
-            "alter system set synchronous_commit = 'on'",
             'select pg_reload_conf()',
         ])
 
@@ -440,7 +442,7 @@ class PostgreSQLCluster(Backend):
         for container_name in self.container_names:
             remove_container(container_name)
 
-        shutil.rmtree(ModuleCtx.Host_Data_Dir, ignore_errors=True)
+        shutil.rmtree(self.host_data_dir, ignore_errors=True)
 
 # ################################################################################################################################
 # ################################################################################################################################

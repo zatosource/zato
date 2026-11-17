@@ -26,9 +26,10 @@ from zato.common.alerting.config_store import apply_type_config, get_type_defini
 from zato.common.alerting.seed import ensure_alerting_definitions
 from zato.common.api import Alerting
 from zato.common.odb.model import Base, IntervalBasedJob, Job, Service
-from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
+from zato.common.rule_engine.sql import RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
+from zato.common.test.zato_database import file_database_engine
 from zato.common.util.scheduler import ensure_test_transfer_job_exists, set_job_active
 
 # ################################################################################################################################
@@ -82,21 +83,15 @@ def odb_session() -> 'any_':
 # ################################################################################################################################
 
 @pytest.fixture
-def backend(tmp_path:'Path') -> 'RuleSQLBackend':
+def backend(tmp_path:'Path') -> 'any_':
     """ Returns the complete rule backend over an isolated test database, with
     the default alerting definitions already seeded and live.
     """
-    database_path = tmp_path / 'rule-engine.sqlite'
-    database_url = f'sqlite:///{database_path}'
-    connection_options = {'check_same_thread': False}
-    engine = create_database_engine(database_url, connect_args=connection_options)
+    with file_database_engine(tmp_path) as engine:
+        out = RuleSQLBackend.from_engine(engine)
+        ensure_alerting_definitions(out)
 
-    create_schema(engine)
-
-    out = RuleSQLBackend.from_engine(engine)
-    ensure_alerting_definitions(out)
-
-    return out
+        yield out
 
 # ################################################################################################################################
 # ################################################################################################################################

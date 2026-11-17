@@ -202,16 +202,16 @@ class TestOutgoingRest:
 
         _seed_failures()
 
-        session = _new_session()
-        _seed_connection(session)
+        with _new_session() as session:
+            _seed_connection(session)
 
-        prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.REST_Outgoing, 'status_code_count')
-        assert prompt.startswith(_outgoing_skill_title)
+            prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.REST_Outgoing, 'status_code_count')
+            assert prompt.startswith(_outgoing_skill_title)
 
-        explanation = _stored_explanation(session)
+            explanation = _stored_explanation(session)
 
-        assert explanation['source'] == AuditSource.REST_Outgoing
-        assert explanation['is_parsed'] is True
+            assert explanation['source'] == AuditSource.REST_Outgoing
+            assert explanation['is_parsed'] is True
 
 # ################################################################################################################################
 
@@ -219,30 +219,30 @@ class TestOutgoingRest:
 
         _seed_failures()
 
-        session = _new_session()
-        _seed_connection(session)
+        with _new_session() as session:
+            _seed_connection(session)
 
-        prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.REST_Outgoing, 'status_code_count')
-        section = _object_section(prompt)
+            prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.REST_Outgoing, 'status_code_count')
+            section = _object_section(prompt)
 
-        assert f'Name: {_conn_name}' in section
-        assert 'Active: yes' in section
-        assert f'Address: {_conn_host}{_conn_url_path}' in section
-        assert 'Method: POST' in section
-        assert 'Ping method: GET' in section
-        assert 'Timeout: 15 s' in section
-        assert 'Pool size: 20' in section
-        assert 'TLS validation: on' in section
-        assert f'Security: {_security_name} (Basic Auth)' in section
-        assert 'Data format: json' in section
-        assert 'Retries: 2' in section
-        assert 'Audit log: on' in section
-        assert 'Alerts: on' in section
+            assert f'Name: {_conn_name}' in section
+            assert 'Active: yes' in section
+            assert f'Address: {_conn_host}{_conn_url_path}' in section
+            assert 'Method: POST' in section
+            assert 'Ping method: GET' in section
+            assert 'Timeout: 15 s' in section
+            assert 'Pool size: 20' in section
+            assert 'TLS validation: on' in section
+            assert f'Security: {_security_name} (Basic Auth)' in section
+            assert 'Data format: json' in section
+            assert 'Retries: 2' in section
+            assert 'Audit log: on' in section
+            assert 'Alerts: on' in section
 
-        # The connection's own codes and threshold are the settings that differ from the defaults
-        assert f'Alert settings of its own: Status codes {_own_status_codes}, Responses 5' in section
+            # The connection's own codes and threshold are the settings that differ from the defaults
+            assert f'Alert settings of its own: Status codes {_own_status_codes}, Responses 5' in section
 
-        assert 'never-shown' not in prompt
+            assert 'never-shown' not in prompt
 
 # ################################################################################################################################
 
@@ -250,18 +250,18 @@ class TestOutgoingRest:
 
         _seed_failures()
 
-        session = _new_session()
-        _seed_connection(session)
+        with _new_session() as session:
+            _seed_connection(session)
 
-        prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.REST_Outgoing, 'connection_failure_count')
+            prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.REST_Outgoing, 'connection_failure_count')
 
-        # The newest failure leads - the timeout, with its transport status first, then the two rejections
-        assert f'1. {TransportStatus.Timeout} - {_timeout_text}' in prompt
-        assert f'2. {_rejected_status} - {_rejected_text}' in prompt
-        assert 'Count: 2' in prompt
+            # The newest failure leads - the timeout, with its transport status first, then the two rejections
+            assert f'1. {TransportStatus.Timeout} - {_timeout_text}' in prompt
+            assert f'2. {_rejected_status} - {_rejected_text}' in prompt
+            assert 'Count: 2' in prompt
 
-        # The response halves alone count for the baseline
-        assert 'OK events in the window: 0' in prompt
+            # The response halves alone count for the baseline
+            assert 'OK events in the window: 0' in prompt
 
 # ################################################################################################################################
 
@@ -269,17 +269,17 @@ class TestOutgoingRest:
 
         _seed_failures()
 
-        session = _new_session()
-        _seed_connection(session, with_security=False, opaque={storage_name('is_active'): True})
+        with _new_session() as session:
+            _seed_connection(session, with_security=False, opaque={storage_name('is_active'): True})
 
-        prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.REST_Outgoing, 'status_code_count')
-        section = _object_section(prompt)
+            prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.REST_Outgoing, 'status_code_count')
+            section = _object_section(prompt)
 
-        assert 'Security: None' in section
-        assert 'TLS validation: on' in section
-        assert 'Audit log: on' in section
-        assert 'Retries' not in section
-        assert 'Alert settings of its own: none, the defaults apply' in section
+            assert 'Security: None' in section
+            assert 'TLS validation: on' in section
+            assert 'Audit log: on' in section
+            assert 'Retries' not in section
+            assert 'Alert settings of its own: none, the defaults apply' in section
 
 # ################################################################################################################################
 
@@ -287,16 +287,16 @@ class TestOutgoingRest:
 
         _seed_failures(AuditSource.REST_Outgoing_Health)
 
-        session = _new_session()
-        _seed_connection(session)
+        with _new_session() as session:
+            _seed_connection(session)
 
-        prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.REST_Outgoing_Health, 'consecutive_failures')
-        section = _object_section(prompt)
+            prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.REST_Outgoing_Health, 'consecutive_failures')
+            section = _object_section(prompt)
 
-        # The check's skill is the connection's, and so is its Object
-        assert prompt.startswith(_outgoing_skill_title)
-        assert f'Address: {_conn_host}{_conn_url_path}' in section
-        assert 'Alerts: on' in section
+            # The check's skill is the connection's, and so is its Object
+            assert prompt.startswith(_outgoing_skill_title)
+            assert f'Address: {_conn_host}{_conn_url_path}' in section
+            assert 'Alerts: on' in section
 
 # ################################################################################################################################
 
@@ -304,12 +304,11 @@ class TestOutgoingRest:
 
         _seed_failures()
 
-        session = _new_session()
+        with _new_session() as session:
+            prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.REST_Outgoing, 'status_code_count')
+            section = _object_section(prompt)
 
-        prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.REST_Outgoing, 'status_code_count')
-        section = _object_section(prompt)
-
-        assert section.strip() == f'{Heading_Object}\n\nName: {_conn_name}'
+            assert section.strip() == f'{Heading_Object}\n\nName: {_conn_name}'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -320,16 +319,16 @@ class TestOutgoingSoap:
 
         _seed_faults()
 
-        session = _new_session()
-        _seed_connection(session, is_soap=True)
+        with _new_session() as session:
+            _seed_connection(session, is_soap=True)
 
-        prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.SOAP_Outgoing, 'fault_count', _soap_conn_name)
-        assert prompt.startswith(_soap_skill_title)
+            prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.SOAP_Outgoing, 'fault_count', _soap_conn_name)
+            assert prompt.startswith(_soap_skill_title)
 
-        explanation = _stored_explanation(session)
+            explanation = _stored_explanation(session)
 
-        assert explanation['source'] == AuditSource.SOAP_Outgoing
-        assert explanation['is_parsed'] is True
+            assert explanation['source'] == AuditSource.SOAP_Outgoing
+            assert explanation['is_parsed'] is True
 
 # ################################################################################################################################
 
@@ -337,15 +336,15 @@ class TestOutgoingSoap:
 
         _seed_faults(AuditSource.SOAP_Outgoing_Health)
 
-        session = _new_session()
-        _seed_connection(session, is_soap=True)
+        with _new_session() as session:
+            _seed_connection(session, is_soap=True)
 
-        prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.SOAP_Outgoing_Health, 'consecutive_failures',
-            _soap_conn_name)
-        section = _object_section(prompt)
+            prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.SOAP_Outgoing_Health, 'consecutive_failures',
+                _soap_conn_name)
+            section = _object_section(prompt)
 
-        assert prompt.startswith(_soap_skill_title)
-        assert 'Transport: SOAP' in section
+            assert prompt.startswith(_soap_skill_title)
+            assert 'Transport: SOAP' in section
 
 # ################################################################################################################################
 
@@ -353,19 +352,19 @@ class TestOutgoingSoap:
 
         _seed_faults()
 
-        session = _new_session()
-        _seed_connection(session, is_soap=True)
+        with _new_session() as session:
+            _seed_connection(session, is_soap=True)
 
-        prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.SOAP_Outgoing, 'fault_count', _soap_conn_name)
-        section = _object_section(prompt)
+            prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.SOAP_Outgoing, 'fault_count', _soap_conn_name)
+            section = _object_section(prompt)
 
-        assert 'Transport: SOAP' in section
-        assert f'SOAP action: {_soap_action}' in section
-        assert f'SOAP version: {_soap_version}' in section
+            assert 'Transport: SOAP' in section
+            assert f'SOAP action: {_soap_action}' in section
+            assert f'SOAP version: {_soap_version}' in section
 
-        # The connection's own codes of both kinds are the settings that differ from the defaults
-        assert f'Status codes {_own_status_codes}' in section
-        assert f'Fault codes {_own_fault_codes}' in section
+            # The connection's own codes of both kinds are the settings that differ from the defaults
+            assert f'Status codes {_own_status_codes}' in section
+            assert f'Fault codes {_own_fault_codes}' in section
 
 # ################################################################################################################################
 
@@ -373,18 +372,18 @@ class TestOutgoingSoap:
 
         _seed_faults()
 
-        session = _new_session()
-        _seed_connection(session, is_soap=True)
+        with _new_session() as session:
+            _seed_connection(session, is_soap=True)
 
-        prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.SOAP_Outgoing, 'fault_count', _soap_conn_name)
+            prompt = _explain_outgoing(session, repo_dir, llm_address, AuditSource.SOAP_Outgoing, 'fault_count', _soap_conn_name)
 
-        # The three faults lead as one group named by the status and the fault code, the bare 503 by its status alone
-        assert f'1. {_fault_status} - {_fault_code} - {_fault_text}' in prompt
-        assert 'Count: 3' in prompt
-        assert '2. 503 Service Unavailable - <html>Service Unavailable</html>' in prompt
+            # The three faults lead as one group named by the status and the fault code, the bare 503 by its status alone
+            assert f'1. {_fault_status} - {_fault_code} - {_fault_text}' in prompt
+            assert 'Count: 3' in prompt
+            assert '2. 503 Service Unavailable - <html>Service Unavailable</html>' in prompt
 
-        # The fault's own words reach the reader
-        assert 'An error has occurred' in prompt
+            # The fault's own words reach the reader
+            assert 'An error has occurred' in prompt
 
 # ################################################################################################################################
 # ################################################################################################################################

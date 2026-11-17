@@ -22,7 +22,6 @@ import pytest
 import yaml
 
 # SQLAlchemy
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Zato
@@ -33,7 +32,8 @@ from zato.cli.enmasse.importers.llm import LLMImporter
 from zato.cli.enmasse.util import FileWriter
 from zato.common.alerting.object_config import Alerts_Key, storage_name
 from zato.common.api import EMAIL, GENERIC
-from zato.common.odb.model import Base, GenericConn, GenericConnDef, GenericObject, SecurityBase, SMTP
+from zato.common.odb.model import GenericConn, GenericConnDef, GenericObject, SecurityBase, SMTP
+from zato.common.test.config_database import config_database_engine
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -113,12 +113,10 @@ def yaml_config() -> 'stranydict':
 # ################################################################################################################################
 
 @pytest.fixture
-def session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database holding the SMTP and LLM connections
+def session(tmp_path:'Path') -> 'any_':
+    """ A real ODB session over a SQLite database file holding the SMTP and LLM connections
     the alerts mappings name.
     """
-    engine = create_engine('sqlite://')
-
     tables = [
         GenericConnDef.__table__,
         GenericConn.__table__,
@@ -126,39 +124,38 @@ def session() -> 'any_':
         SMTP.__table__,
         SecurityBase.__table__,
     ]
-    Base.metadata.create_all(engine, tables=tables)
 
-    session_factory = sessionmaker(bind=engine)
-    session = session_factory()
+    with config_database_engine(tmp_path, tables) as engine:
+        session_factory = sessionmaker(bind=engine)
+        session = session_factory()
 
-    smtp = cast_('any_', SMTP())
-    smtp.name = _smtp_name
-    smtp.is_active = True
-    smtp.host = 'smtp.example.com'
-    smtp.port = 587
-    smtp.timeout = 30
-    smtp.is_debug = False
-    smtp.mode = EMAIL.SMTP.MODE.STARTTLS
-    smtp.ping_address = 'ping@example.com'
-    session.add(smtp)
+        smtp = cast_('any_', SMTP())
+        smtp.name = _smtp_name
+        smtp.is_active = True
+        smtp.host = 'smtp.example.com'
+        smtp.port = 587
+        smtp.timeout = 30
+        smtp.is_debug = False
+        smtp.mode = EMAIL.SMTP.MODE.STARTTLS
+        smtp.ping_address = 'ping@example.com'
+        session.add(smtp)
 
-    explainer = cast_('any_', GenericConn())
-    explainer.name = _explainer_name
-    explainer.type_ = _llm_type
-    explainer.is_active = True
-    explainer.is_internal = False
-    explainer.is_channel = False
-    explainer.is_outconn = True
-    explainer.address = 'http://ollama.internal:11434/v1'
-    explainer.opaque1 = '{"model": "llama3.1"}'
-    session.add(explainer)
+        explainer = cast_('any_', GenericConn())
+        explainer.name = _explainer_name
+        explainer.type_ = _llm_type
+        explainer.is_active = True
+        explainer.is_internal = False
+        explainer.is_channel = False
+        explainer.is_outconn = True
+        explainer.address = 'http://ollama.internal:11434/v1'
+        explainer.opaque1 = '{"model": "llama3.1"}'
+        session.add(explainer)
 
-    session.commit()
+        session.commit()
 
-    yield session
+        yield session
 
-    session.close()
-    engine.dispose()
+        session.close()
 
 # ################################################################################################################################
 

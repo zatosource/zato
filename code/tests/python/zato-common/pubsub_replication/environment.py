@@ -55,12 +55,12 @@ def get_replication_mode() -> 'str':
 # ################################################################################################################################
 
 @contextmanager
-def replicated_environment(label:'str', is_sync:'bool') -> 'Iterator[ReplicatedDatabase]':
-    """ A primary, its standby and the proxy, with the Zato_Database_* variables pointing at the proxy,
+def replicated_environment(label:'str') -> 'Iterator[ReplicatedDatabase]':
+    """ A primary, its synchronous standby and the proxy, with the Zato_Database_* variables pointing at the proxy,
     the generation file and the audit log of the test in a directory of their own.
     """
     mode = get_replication_mode()
-    database = start_replicated_database(label, mode, is_sync)
+    database = start_replicated_database(label, mode, is_sync=True)
     work_dir = tempfile.mkdtemp(prefix=f'zato_pubsub_replication_{label}_', dir=get_runtime_dir())
 
     env = dict(database.env)

@@ -40,12 +40,12 @@ _drain_timeout = 120
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _run_failover(label:'str', is_sync:'bool') -> 'None':
-    """ Promotes the standby under traffic and checks every acknowledged publication and every delivery.
+def test_failover_synchronous() -> 'None':
+    """ With synchronous replication, no acknowledged publication is lost when the primary is lost.
     """
-    with replicated_environment(label, is_sync) as database:
+    with replicated_environment('sync') as database:
 
-        workload = Workload(label)
+        workload = Workload('sync')
         workload.backend.take_over()
 
         guard = workload.backend.generation_guard
@@ -68,10 +68,11 @@ def _run_failover(label:'str', is_sync:'bool') -> 'None':
         sleep(_traffic_after_seconds)
         workload.stop_publishing()
 
-        # .. only the asynchronous mode may have lost acknowledged publications ..
+        # .. no acknowledged publication may be missing from the promoted standby ..
         lost = set(workload.acknowledged) - stored_msg_ids(database)
+        assert not lost, f'Lost: {sorted(lost)[:10]}'
 
-        # .. and every other publication reaches its subscriber.
+        # .. and every publication reaches its subscriber.
         workload.wait_until_delivered(_drain_timeout, lost)
         workload.stop()
 
@@ -79,11 +80,7 @@ def _run_failover(label:'str', is_sync:'bool') -> 'None':
         measurements['acknowledged_before_kill'] = acknowledged_before
         measurements['promote_seconds'] = round(promote_seconds, 3)
 
-        print(f'\nFailover {label} sync={is_sync} -> {measurements}')
-
-        # .. with synchronous replication, nothing acknowledged is lost ..
-        if is_sync:
-            assert measurements['lost'] == 0, measurements
+        assert measurements['lost'] == 0, measurements
 
         check_counts_equal_rows(database, workload)
 
@@ -99,21 +96,6 @@ def _run_failover(label:'str', is_sync:'bool') -> 'None':
 
         assert workload.backend.is_replaced
         guard.uninstall(workload.backend.engine)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def test_failover_synchronous() -> 'None':
-    """ With synchronous replication, no acknowledged publication is lost when the primary is lost.
-    """
-    _run_failover('sync', True)
-
-# ################################################################################################################################
-
-def test_failover_asynchronous() -> 'None':
-    """ With asynchronous replication, the run measures how many acknowledged publications are lost.
-    """
-    _run_failover('async', False)
 
 # ################################################################################################################################
 # ################################################################################################################################

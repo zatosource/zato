@@ -8,10 +8,10 @@ This file is a proprietary product, not an open-source one.
 
 import os
 import logging
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Zato
+from zato.common.db_env.engine import new_zato_engine
 from zato.common.defaults import default_env_base_dir
 from zato.common.odb.model import APIKeySecurity, GenericObject, HTTPBasicAuth, HTTPSOAP
 
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 _SQLITE_PATH = os.path.join(default_env_base_dir, 'config.db')
-_ENGINE = create_engine(f'sqlite:///{_SQLITE_PATH}')
+_ENGINE = new_zato_engine(f'sqlite:///{_SQLITE_PATH}')
 Session = sessionmaker(bind=_ENGINE)
 
 # ################################################################################################################################

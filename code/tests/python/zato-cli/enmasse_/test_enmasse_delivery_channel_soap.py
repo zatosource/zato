@@ -18,7 +18,6 @@ import pytest
 import yaml
 
 # SQLAlchemy
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Zato
@@ -28,7 +27,8 @@ from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.channel_soap import ChannelSOAPImporter
 from zato.cli.enmasse.util import channel_delivery_needs_update, FileWriter
 from zato.common.api import HTTP_SOAP
-from zato.common.odb.model import Base, GenericConn, GenericConnDef, GenericObject, HTTPSOAP, SecurityBase, Service, SMTP
+from zato.common.odb.model import GenericConn, GenericConnDef, GenericObject, HTTPSOAP, SecurityBase, Service, SMTP
+from zato.common.test.config_database import config_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -117,11 +117,9 @@ def yaml_config() -> 'stranydict':
 # ################################################################################################################################
 
 @pytest.fixture
-def session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database holding the service the channels invoke.
+def session(tmp_path:'Path') -> 'any_':
+    """ A real ODB session over a SQLite database file holding the service the channels invoke.
     """
-    engine = create_engine('sqlite://')
-
     tables = [
         GenericConnDef.__table__,
         GenericConn.__table__,
@@ -131,20 +129,19 @@ def session() -> 'any_':
         SecurityBase.__table__,
         HTTPSOAP.__table__,
     ]
-    Base.metadata.create_all(engine, tables=tables)
 
-    session_factory = sessionmaker(bind=engine)
-    session = session_factory()
+    with config_database_engine(tmp_path, tables) as engine:
+        session_factory = sessionmaker(bind=engine)
+        session = session_factory()
 
-    service = Service(None, _service_name, True, 'enmasse.delivery.channel.soap.Service', False)
-    session.add(service)
+        service = Service(None, _service_name, True, 'enmasse.delivery.channel.soap.Service', False)
+        session.add(service)
 
-    session.commit()
+        session.commit()
 
-    yield session
+        yield session
 
-    session.close()
-    engine.dispose()
+        session.close()
 
 # ################################################################################################################################
 

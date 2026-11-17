@@ -17,8 +17,11 @@ import os
 from logging import getLogger
 
 # SQLAlchemy
-from sqlalchemy import Column, create_engine, Integer, Sequence, String, Text, UniqueConstraint
+from sqlalchemy import Column, Integer, Sequence, String, Text, UniqueConstraint
 from sqlalchemy.orm import declarative_base
+
+# Zato
+from zato.common.db_env.engine import new_zato_engine
 
 # ################################################################################################################################
 
@@ -66,7 +69,8 @@ class SettingsDB:
             self.create_db()
 
     def get_engine(self):
-        return create_engine('sqlite:///{}'.format(self.db_path))
+        out = new_zato_engine(f'sqlite:///{self.db_path}')
+        return out
 
     def create_db(self):
         Base.metadata.create_all(self.get_engine())

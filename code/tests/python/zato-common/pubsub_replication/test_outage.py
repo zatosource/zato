@@ -67,7 +67,7 @@ def test_database_outage(outage_seconds:'int', caplog:'LogCaptureFixture') -> 'N
     label = f'outage{outage_seconds}'
     caplog.set_level(logging.INFO, logger=_outage_logger_name)
 
-    with replicated_environment(label, True) as database:
+    with replicated_environment(label) as database:
 
         workload = Workload(label)
         workload.backend.take_over()

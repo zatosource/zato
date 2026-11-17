@@ -157,16 +157,16 @@ class TestOutgoingLLM:
 
         _seed_failures()
 
-        session = _new_session()
-        _seed_connection(session)
+        with _new_session() as session:
+            _seed_connection(session)
 
-        prompt = _explain(session, repo_dir, llm_address, 'status_count')
-        assert prompt.startswith(_llm_skill_title)
+            prompt = _explain(session, repo_dir, llm_address, 'status_count')
+            assert prompt.startswith(_llm_skill_title)
 
-        explanation = _stored_explanation(session)
+            explanation = _stored_explanation(session)
 
-        assert explanation['source'] == AuditSource.LLM
-        assert explanation['is_parsed'] is True
+            assert explanation['source'] == AuditSource.LLM
+            assert explanation['is_parsed'] is True
 
 # ################################################################################################################################
 
@@ -175,24 +175,24 @@ class TestOutgoingLLM:
 
         _seed_failures()
 
-        session = _new_session()
-        _seed_connection(session)
+        with _new_session() as session:
+            _seed_connection(session)
 
-        prompt = _explain(session, repo_dir, llm_address, 'status_count')
-        section = _object_section(prompt)
+            prompt = _explain(session, repo_dir, llm_address, 'status_count')
+            section = _object_section(prompt)
 
-        assert f'Name: {_conn_name}' in section
-        assert 'Type: LLM' in section
-        assert 'Active: yes' in section
-        assert f'Address: {_conn_address}' in section
-        assert f'Model: {_conn_model}' in section
-        assert 'Pool size: 4' in section
-        assert f'Timeout: {_timeout}' in section
-        assert f'Max tokens: {_max_tokens}' in section
+            assert f'Name: {_conn_name}' in section
+            assert 'Type: LLM' in section
+            assert 'Active: yes' in section
+            assert f'Address: {_conn_address}' in section
+            assert f'Model: {_conn_model}' in section
+            assert 'Pool size: 4' in section
+            assert f'Timeout: {_timeout}' in section
+            assert f'Max tokens: {_max_tokens}' in section
 
-        # The connection's own budget is the one setting that differs from the defaults
-        assert f'Token budget {_own_token_budget}' in section
-        assert 'Alerts: on' in section
+            # The connection's own budget is the one setting that differs from the defaults
+            assert f'Token budget {_own_token_budget}' in section
+            assert 'Alerts: on' in section
 
 # ################################################################################################################################
 
@@ -201,18 +201,18 @@ class TestOutgoingLLM:
 
         _seed_failures()
 
-        session = _new_session()
-        _seed_connection(session)
+        with _new_session() as session:
+            _seed_connection(session)
 
-        prompt = _explain(session, repo_dir, llm_address, 'status_count')
+            prompt = _explain(session, repo_dir, llm_address, 'status_count')
 
-        # The three rate limits lead as one group named by the status and the model, the bare 503 after them
-        assert f'1. {_rate_limited_status} - {LLMAttr.Model}={_conn_model}' in prompt
-        assert 'Count: 3' in prompt
-        assert f'2. {_proxy_status} - {LLMAttr.Model}={_conn_model}' in prompt
+            # The three rate limits lead as one group named by the status and the model, the bare 503 after them
+            assert f'1. {_rate_limited_status} - {LLMAttr.Model}={_conn_model}' in prompt
+            assert 'Count: 3' in prompt
+            assert f'2. {_proxy_status} - {LLMAttr.Model}={_conn_model}' in prompt
 
-        # The Failures section speaks of calls to the provider
-        assert 'call' in prompt
+            # The Failures section speaks of calls to the provider
+            assert 'call' in prompt
 
 # ################################################################################################################################
 
@@ -221,20 +221,20 @@ class TestOutgoingLLM:
 
         _seed_completions()
 
-        session = _new_session()
-        _seed_connection(session)
+        with _new_session() as session:
+            _seed_connection(session)
 
-        prompt = _explain(session, repo_dir, llm_address, 'truncation_count')
+            prompt = _explain(session, repo_dir, llm_address, 'truncation_count')
 
-        # The two completions cut short are one group - a 200 row with the model, the finish reason and the cost ..
-        expected_text = f'{_status_ok} - {LLMAttr.Model}={_conn_model}, {LLMAttr.Finish_Reason}={LLMFinish.Length}, ' + \
-            f'{LLMAttr.Input_Tokens}={_input_tokens}, {LLMAttr.Output_Tokens}={_output_tokens}'
+            # The two completions cut short are one group - a 200 row with the model, the finish reason and the cost ..
+            expected_text = f'{_status_ok} - {LLMAttr.Model}={_conn_model}, {LLMAttr.Finish_Reason}={LLMFinish.Length}, ' + \
+                f'{LLMAttr.Input_Tokens}={_input_tokens}, {LLMAttr.Output_Tokens}={_output_tokens}'
 
-        assert f'1. {expected_text}' in prompt
-        assert 'Count: 2' in prompt
+            assert f'1. {expected_text}' in prompt
+            assert 'Count: 2' in prompt
 
-        # .. and the one that stopped on its own is not among the failures
-        assert f'{LLMAttr.Finish_Reason}={LLMFinish.Stop}' not in prompt
+            # .. and the one that stopped on its own is not among the failures
+            assert f'{LLMAttr.Finish_Reason}={LLMFinish.Stop}' not in prompt
 
 # ################################################################################################################################
 # ################################################################################################################################

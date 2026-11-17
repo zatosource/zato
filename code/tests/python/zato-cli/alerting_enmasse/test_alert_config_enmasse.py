@@ -17,7 +17,6 @@ import pytest
 import yaml
 
 # SQLAlchemy
-from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 
@@ -34,10 +33,12 @@ from zato.common.alerting.config_store import get_type_definition
 from zato.common.alerting.notification_config import parse_extra, read_notification_config
 from zato.common.alerting.sweep import load_alert_rules
 from zato.common.api import Alerting, GENERIC
-from zato.common.odb.model import Base, GenericConn, GenericConnDef, IntervalBasedJob, Job, Service
-from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
+from zato.common.odb.model import GenericConn, GenericConnDef, IntervalBasedJob, Job, Service
+from zato.common.rule_engine.sql import RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
+from zato.common.test.config_database import config_database_engine
+from zato.common.test.zato_database import file_database_engine
 from zato.common.typing_ import cast_
 from zato.common.util.scheduler import ensure_alerting_job_exists
 
@@ -132,16 +133,8 @@ def yaml_config() -> 'stranydict':
 def rule_database_engine(tmp_path:'Path') -> 'engine_generator':
     """ Creates one isolated test-managed rule engine database.
     """
-    database_path = tmp_path / 'rule-engine.sqlite'
-    database_url = f'sqlite:///{database_path}'
-    connection_options = {'check_same_thread': False}
-    engine = create_database_engine(database_url, connect_args=connection_options)
-
-    create_schema(engine)
-
-    yield engine
-
-    engine.dispose()
+    with file_database_engine(tmp_path) as engine:
+        yield engine
 
 # ################################################################################################################################
 
@@ -156,12 +149,10 @@ def backend(rule_database_engine:'Engine') -> 'RuleSQLBackend':
 # ################################################################################################################################
 
 @pytest.fixture
-def odb_session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database holding
+def odb_session(tmp_path:'Path') -> 'any_':
+    """ A real ODB session over a SQLite database file holding
     the scheduler tables and the alerting sweep job.
     """
-    engine = create_engine('sqlite://')
-
     tables = [
         Service.__table__,
         Job.__table__,
@@ -169,29 +160,28 @@ def odb_session() -> 'any_':
         GenericConnDef.__table__,
         GenericConn.__table__,
     ]
-    Base.metadata.create_all(engine, tables=tables)
 
-    session_factory = sessionmaker(bind=engine)
-    session = session_factory()
+    with config_database_engine(tmp_path, tables) as engine:
+        session_factory = sessionmaker(bind=engine)
+        session = session_factory()
 
-    llm = cast_('any_', GenericConn())
-    llm.name = _llm_name
-    llm.type_ = GENERIC.CONNECTION.TYPE.OUTCONN_LLM
-    llm.is_active = True
-    llm.is_internal = False
-    llm.is_channel = False
-    llm.is_outconn = True
-    session.add(llm)
+        llm = cast_('any_', GenericConn())
+        llm.name = _llm_name
+        llm.type_ = GENERIC.CONNECTION.TYPE.OUTCONN_LLM
+        llm.is_active = True
+        llm.is_internal = False
+        llm.is_channel = False
+        llm.is_outconn = True
+        session.add(llm)
 
-    session.commit()
+        session.commit()
 
-    _ = ensure_alerting_job_exists(session)
-    session.commit()
+        _ = ensure_alerting_job_exists(session)
+        session.commit()
 
-    yield session
+        yield session
 
-    session.close()
-    engine.dispose()
+        session.close()
 
 # ################################################################################################################################
 

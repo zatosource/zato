@@ -114,18 +114,17 @@ class TestWhichConnection:
             _object_llm_conn_name: {'is_active': True},
         }
 
-        session = _new_session()
+        with _new_session() as session:
+            service = _new_service(
+                _new_payload(AlertAction.Email_Digest, {LLM_Connection_Config_Key: _object_llm_conn_name}),
+                session,
+                repo_dir,
+                llm=_LLMFacade(llm_connections, llm_address),
+            )
 
-        service = _new_service(
-            _new_payload(AlertAction.Email_Digest, {LLM_Connection_Config_Key: _object_llm_conn_name}),
-            session,
-            repo_dir,
-            llm=_LLMFacade(llm_connections, llm_address),
-        )
+            service.handle()
 
-        service.handle()
-
-        assert service.llm.invoked_names == [_object_llm_conn_name]
+            assert service.llm.invoked_names == [_object_llm_conn_name]
 
 # ################################################################################################################################
 
@@ -133,18 +132,17 @@ class TestWhichConnection:
 
         _seed_error_events()
 
-        session = _new_session()
+        with _new_session() as session:
+            service = _new_service(
+                _new_payload(AlertAction.Email_Digest, {}),
+                session,
+                repo_dir,
+                llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
+            )
 
-        service = _new_service(
-            _new_payload(AlertAction.Email_Digest, {}),
-            session,
-            repo_dir,
-            llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
-        )
+            service.handle()
 
-        service.handle()
-
-        assert service.llm.invoked_names == [_llm_conn_name]
+            assert service.llm.invoked_names == [_llm_conn_name]
 
 # ################################################################################################################################
 
@@ -152,23 +150,23 @@ class TestWhichConnection:
 
         _seed_error_events()
 
-        session = _new_session()
-        payload = _new_payload(AlertAction.Email_Digest, {})
-        payload['defaults']['llm_connection'] = ''
+        with _new_session() as session:
+            payload = _new_payload(AlertAction.Email_Digest, {})
+            payload['defaults']['llm_connection'] = ''
 
-        service = _new_service(payload, session, repo_dir, llm=_LLMFacade({}, llm_address))
+            service = _new_service(payload, session, repo_dir, llm=_LLMFacade({}, llm_address))
 
-        service.handle()
+            service.handle()
 
-        assert service.llm.invoked_names == []
+            assert service.llm.invoked_names == []
 
-        explanation = _stored_explanation(session)
+            explanation = _stored_explanation(session)
 
-        assert explanation['explanation'] == ''
-        assert explanation['is_parsed'] is False
+            assert explanation['explanation'] == ''
+            assert explanation['is_parsed'] is False
 
-        # The evidence was still collected, so a person can read it
-        assert _error_data in explanation['evidence']
+            # The evidence was still collected, so a person can read it
+            assert _error_data in explanation['evidence']
 
 # ################################################################################################################################
 
@@ -176,19 +174,18 @@ class TestWhichConnection:
 
         _seed_error_events()
 
-        session = _new_session()
+        with _new_session() as session:
+            service = _new_service(
+                _new_payload(AlertAction.Email_Digest, {LLM_Connection_Config_Key: 'no.such.llm'}),
+                session,
+                repo_dir,
+                llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
+            )
 
-        service = _new_service(
-            _new_payload(AlertAction.Email_Digest, {LLM_Connection_Config_Key: 'no.such.llm'}),
-            session,
-            repo_dir,
-            llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
-        )
+            service.handle()
 
-        service.handle()
-
-        # The object named a connection, so the default does not answer for it
-        assert service.llm.invoked_names == []
+            # The object named a connection, so the default does not answer for it
+            assert service.llm.invoked_names == []
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -199,22 +196,21 @@ class TestWhichSkill:
 
         _seed_error_events(AuditSource.REST_Outgoing_Health)
 
-        session = _new_session()
+        with _new_session() as session:
+            service = _new_service(
+                _new_payload(AlertAction.Email_Digest, {}, AuditSource.REST_Outgoing_Health, measures=['health_state']),
+                session,
+                repo_dir,
+                llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
+            )
 
-        service = _new_service(
-            _new_payload(AlertAction.Email_Digest, {}, AuditSource.REST_Outgoing_Health, measures=['health_state']),
-            session,
-            repo_dir,
-            llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
-        )
+            service.handle()
 
-        service.handle()
+            assert len(LLMTestHandler.prompts) == 1
+            assert LLMTestHandler.prompts[0].startswith('# REST outgoing connection explanation')
 
-        assert len(LLMTestHandler.prompts) == 1
-        assert LLMTestHandler.prompts[0].startswith('# REST outgoing connection explanation')
-
-        explanation = _stored_explanation(session)
-        assert explanation['source'] == AuditSource.REST_Outgoing_Health
+            explanation = _stored_explanation(session)
+            assert explanation['source'] == AuditSource.REST_Outgoing_Health
 
 # ################################################################################################################################
 
@@ -225,27 +221,27 @@ class TestWhichSkill:
         _ = audit_log.insert(Probe_Source_Test_Transfer, AuditEvent.Run_Completed, _sftp_conn_name, cid='probe-1',
             outcome=AuditOutcome.Error, data='Permission denied')
 
-        session = _new_session()
-        _seed_sftp_connection(session, test_transfers=True)
+        with _new_session() as session:
+            _seed_sftp_connection(session, test_transfers=True)
 
-        service = _new_service(
-            _new_payload(AlertAction.Email_Digest, {}, Probe_Source_Test_Transfer, object_name=_sftp_conn_name,
-                measures=['test_transfer_failed']),
-            session,
-            repo_dir,
-            llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
-        )
+            service = _new_service(
+                _new_payload(AlertAction.Email_Digest, {}, Probe_Source_Test_Transfer, object_name=_sftp_conn_name,
+                    measures=['test_transfer_failed']),
+                session,
+                repo_dir,
+                llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
+            )
 
-        service.handle()
+            service.handle()
 
-        assert len(LLMTestHandler.prompts) == 1
+            assert len(LLMTestHandler.prompts) == 1
 
-        prompt = LLMTestHandler.prompts[0]
-        assert prompt.startswith('# File transfer connection explanation')
+            prompt = LLMTestHandler.prompts[0]
+            assert prompt.startswith('# File transfer connection explanation')
 
-        # The probe row is the failure and the newest probe result is in the baseline
-        assert '1. Permission denied' in prompt
-        assert 'Test transfer result: error at' in prompt
+            # The probe row is the failure and the newest probe result is in the baseline
+            assert '1. Permission denied' in prompt
+            assert 'Test transfer result: error at' in prompt
 
 # ################################################################################################################################
 
@@ -258,25 +254,24 @@ class TestWhichSkill:
         with open(skill_path, 'w') as f:
             _ = f.write(_restart_skill)
 
-        session = _new_session()
+        with _new_session() as session:
+            service = _new_service(
+                _new_payload(AlertAction.Email_Digest, {}),
+                session,
+                repo_dir,
+                llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
+            )
 
-        service = _new_service(
-            _new_payload(AlertAction.Email_Digest, {}),
-            session,
-            repo_dir,
-            llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
-        )
+            service.handle()
 
-        service.handle()
+            assert LLMTestHandler.prompts[0].startswith('# Restart skill')
 
-        assert LLMTestHandler.prompts[0].startswith('# Restart skill')
+            # The shipped skill allows resubmit, this one does not - the reply's remediation is dropped
+            explanation = _stored_explanation(session)
 
-        # The shipped skill allows resubmit, this one does not - the reply's remediation is dropped
-        explanation = _stored_explanation(session)
-
-        assert explanation['explanation'] == _explanation_text
-        assert explanation['is_parsed'] is True
-        assert explanation['remediation'] is None
+            assert explanation['explanation'] == _explanation_text
+            assert explanation['is_parsed'] is True
+            assert explanation['remediation'] is None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -287,32 +282,32 @@ class TestObjectSection:
 
         _seed_error_events(AuditSource.File_Outgoing, _sftp_conn_name)
 
-        session = _new_session()
-        _seed_sftp_connection(session)
+        with _new_session() as session:
+            _seed_sftp_connection(session)
 
-        service = _new_service(
-            _new_payload(AlertAction.Email_Digest, {}, AuditSource.File_Outgoing, object_name=_sftp_conn_name),
-            session,
-            repo_dir,
-            llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
-        )
+            service = _new_service(
+                _new_payload(AlertAction.Email_Digest, {}, AuditSource.File_Outgoing, object_name=_sftp_conn_name),
+                session,
+                repo_dir,
+                llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
+            )
 
-        service.handle()
+            service.handle()
 
-        section = _object_section(LLMTestHandler.prompts[0])
+            section = _object_section(LLMTestHandler.prompts[0])
 
-        assert f'Name: {_sftp_conn_name}' in section
-        assert 'Type: SFTP' in section
-        assert 'Active: yes' in section
-        assert 'Host: sftp.acme.example.com:22' in section
-        assert 'Username: zato' in section
-        assert 'Authentication: private key (/opt/zato/keys/acme_id_rsa), host key checking off' in section
-        assert f'Schedule: {_schedule_name} - watches /outbox/invoices, delivers to acme.invoices.handler, ' + \
-            'every 15 minutes, active' in section
-        assert 'Test transfers: off' in section
+            assert f'Name: {_sftp_conn_name}' in section
+            assert 'Type: SFTP' in section
+            assert 'Active: yes' in section
+            assert 'Host: sftp.acme.example.com:22' in section
+            assert 'Username: zato' in section
+            assert 'Authentication: private key (/opt/zato/keys/acme_id_rsa), host key checking off' in section
+            assert f'Schedule: {_schedule_name} - watches /outbox/invoices, delivers to acme.invoices.handler, ' + \
+                'every 15 minutes, active' in section
+            assert 'Test transfers: off' in section
 
-        assert 'never-shown' not in LLMTestHandler.prompts[0]
-        assert 'Schedule:' not in section.split('\n')[2]
+            assert 'never-shown' not in LLMTestHandler.prompts[0]
+            assert 'Schedule:' not in section.split('\n')[2]
 
 # ################################################################################################################################
 
@@ -329,30 +324,30 @@ class TestObjectSection:
         _ = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Run_Completed, _sftp_conn_name, cid='run-1',
             outcome=AuditOutcome.Error, status='failed', data=run_data)
 
-        session = _new_session()
-        _seed_sftp_connection(session, test_transfers=True)
+        with _new_session() as session:
+            _seed_sftp_connection(session, test_transfers=True)
 
-        service = _new_service(
-            _new_payload(AlertAction.Email_Digest, {}, AuditSource.File_Outgoing, object_name=_schedule_name,
-                measures=['runs_failed_in_window']),
-            session,
-            repo_dir,
-            llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
-        )
+            service = _new_service(
+                _new_payload(AlertAction.Email_Digest, {}, AuditSource.File_Outgoing, object_name=_schedule_name,
+                    measures=['runs_failed_in_window']),
+                session,
+                repo_dir,
+                llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
+            )
 
-        service.handle()
+            service.handle()
 
-        prompt = LLMTestHandler.prompts[0]
-        section = _object_section(prompt)
+            prompt = LLMTestHandler.prompts[0]
+            section = _object_section(prompt)
 
-        assert section.split('\n')[2] == f'Schedule: {_schedule_name}, of the SFTP connection {_sftp_conn_name}'
-        assert f'Name: {_sftp_conn_name}' in section
-        assert 'Test transfers: on' in section
+            assert section.split('\n')[2] == f'Schedule: {_schedule_name}, of the SFTP connection {_sftp_conn_name}'
+            assert f'Name: {_sftp_conn_name}' in section
+            assert 'Test transfers: on' in section
 
-        # The failed run is the failure, the connection's success is the baseline
-        assert run_data in prompt
-        assert 'OK events in the window: 1' in prompt
-        assert 'Test transfer result: none on record yet' in prompt
+            # The failed run is the failure, the connection's success is the baseline
+            assert run_data in prompt
+            assert 'OK events in the window: 1' in prompt
+            assert 'Test transfer result: none on record yet' in prompt
 
 # ################################################################################################################################
 
@@ -360,20 +355,19 @@ class TestObjectSection:
 
         _seed_error_events(AuditSource.Scheduler)
 
-        session = _new_session()
+        with _new_session() as session:
+            service = _new_service(
+                _new_payload(AlertAction.Email_Digest, {}, AuditSource.Scheduler),
+                session,
+                repo_dir,
+                llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
+            )
 
-        service = _new_service(
-            _new_payload(AlertAction.Email_Digest, {}, AuditSource.Scheduler),
-            session,
-            repo_dir,
-            llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
-        )
+            service.handle()
 
-        service.handle()
+            section = _object_section(LLMTestHandler.prompts[0])
 
-        section = _object_section(LLMTestHandler.prompts[0])
-
-        assert section.strip() == f'{Heading_Object}\n\nName: {_conn_name}'
+            assert section.strip() == f'{Heading_Object}\n\nName: {_conn_name}'
 
 # ################################################################################################################################
 
@@ -381,22 +375,21 @@ class TestObjectSection:
 
         _seed_error_events()
 
-        session = _new_session()
+        with _new_session() as session:
+            service = _new_service(
+                _new_payload(AlertAction.Email_Digest, {}),
+                session,
+                repo_dir,
+                llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
+            )
 
-        service = _new_service(
-            _new_payload(AlertAction.Email_Digest, {}),
-            session,
-            repo_dir,
-            llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
-        )
+            service.handle()
 
-        service.handle()
+            section = _object_section(LLMTestHandler.prompts[0])
 
-        section = _object_section(LLMTestHandler.prompts[0])
-
-        # No outgoing REST connection of the name is stored, so its name is all the Object section has to say
-        assert f'Name: {_conn_name}' in section
-        assert 'Address' not in section
+            # No outgoing REST connection of the name is stored, so its name is all the Object section has to say
+            assert f'Name: {_conn_name}' in section
+            assert 'Address' not in section
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -407,30 +400,29 @@ class TestStoredExplanation:
 
         _seed_error_events()
 
-        session = _new_session()
+        with _new_session() as session:
+            service = _new_service(
+                _new_payload(AlertAction.Email_Digest, {}),
+                session,
+                repo_dir,
+                llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
+            )
 
-        service = _new_service(
-            _new_payload(AlertAction.Email_Digest, {}),
-            session,
-            repo_dir,
-            llm=_LLMFacade({_llm_conn_name: {'is_active': True}}, llm_address),
-        )
+            service.handle()
 
-        service.handle()
+            explanation = _stored_explanation(session)
 
-        explanation = _stored_explanation(session)
+            document = explanation['evidence']
 
-        document = explanation['evidence']
+            assert document == LLMTestHandler.prompts[0][-len(document):]
 
-        assert document == LLMTestHandler.prompts[0][-len(document):]
+            for heading in (Heading_Alert, Heading_Object, Heading_Failures, Heading_Baseline):
+                assert heading in document
 
-        for heading in (Heading_Alert, Heading_Object, Heading_Failures, Heading_Baseline):
-            assert heading in document
-
-        assert 'Measure: error_rate = 1, threshold error_rate_threshold = 0.5' in document
-        assert explanation['remediation'] == {'action': 'resubmit'}
-        assert explanation['confidence'] == 'high'
-        assert explanation['created_iso'] != ''
+            assert 'Measure: error_rate = 1, threshold error_rate_threshold = 0.5' in document
+            assert explanation['remediation'] == {'action': 'resubmit'}
+            assert explanation['confidence'] == 'high'
+            assert explanation['created_iso'] != ''
 
 # ################################################################################################################################
 # ################################################################################################################################

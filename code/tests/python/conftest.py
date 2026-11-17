@@ -7,8 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import importlib.util
 import os
 import sys
+import tempfile
 import threading
 from collections import Counter
 
@@ -50,6 +52,23 @@ class ModuleCtx:
     # The marker of the tests that run after every other test of their run
     Soak_Marker = 'soak'
 
+    # The directory on a disk under which the databases of the tests are kept, as zato.common.test.durability.disk
+    # defines it, and the directory in it with the temporary directories of a run
+    Env_Disk_Dir = 'Zato_Test_Disk_Dir'
+    Default_Disk_Dir = os.path.join(os.path.expanduser('~'), '.cache', 'zato-test')
+    Temporary_Dir_Name = 'tmp'
+
+    # The module that tells whether a directory is on a file system held in memory
+    Filesystem_Module_Name = 'zato_test_filesystem'
+    Filesystem_Module_Path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..',
+        'zato-common', 'src', 'zato', 'common', 'db_env', 'filesystem.py')
+
+    # The variable that names the root of the temporary directories of pytest
+    Env_Pytest_Temporary_Root = 'PYTEST_DEBUG_TEMPROOT'
+
+    # The variable that names the temporary directory of the processes that the tests start
+    Env_Temporary_Dir = 'TMPDIR'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -71,11 +90,53 @@ def _stop_process_wide_threads() -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _use_disk_temporary_dir(config:'pytest.Config') -> 'None':
+    """ Places the temporary directories of the run, those of pytest, of the tempfile module and of the processes
+    that the tests start, on a file system that reaches a disk, so that every database a test keeps in one of them
+    syncs its commits as a database of a production system does.
+    """
+
+    # The module that reads the mount table is loaded from its file, without the packages above it,
+    # which import modules that the suites patching gevent must import only after the patch ..
+    spec = importlib.util.spec_from_file_location(ModuleCtx.Filesystem_Module_Name, ModuleCtx.Filesystem_Module_Path)
+    filesystem = importlib.util.module_from_spec(spec) # type: ignore
+    sys.modules[ModuleCtx.Filesystem_Module_Name] = filesystem
+    spec.loader.exec_module(filesystem) # type: ignore
+
+    # .. the base directory is the one that the databases of the tests use ..
+    base_dir = os.environ.get(ModuleCtx.Env_Disk_Dir)
+
+    if base_dir is None:
+        base_dir = ModuleCtx.Default_Disk_Dir
+
+    temporary_dir = os.path.join(base_dir, ModuleCtx.Temporary_Dir_Name)
+    os.makedirs(temporary_dir, exist_ok=True)
+
+    # .. a base directory given on the command line is used as it is ..
+    if basetemp := config.option.basetemp:
+        os.makedirs(basetemp, exist_ok=True)
+        directories = [temporary_dir, basetemp]
+    else:
+        directories = [temporary_dir]
+
+    # .. provided that it is on a disk, as the temporary directory is.
+    for directory in directories:
+        if filesystem.is_memory_filesystem(directory):
+            raise pytest.UsageError(f'Directory `{directory}` is on a file system held in memory')
+
+    os.environ[ModuleCtx.Env_Pytest_Temporary_Root] = temporary_dir
+    os.environ[ModuleCtx.Env_Temporary_Dir] = temporary_dir
+    tempfile.tempdir = temporary_dir
+
+# ################################################################################################################################
+
 def pytest_configure(config:'pytest.Config') -> 'None':
-    """ Loads the plugin that reports each failure the moment it occurs.
+    """ Loads the plugin that reports each failure the moment it occurs and places the temporary directories on a disk.
     """
     sys.path.append(ModuleCtx.Test_Lib_Dir)
     config.pluginmanager.import_plugin(ModuleCtx.Failure_Reports_Plugin)
+
+    _use_disk_temporary_dir(config)
 
 # ################################################################################################################################
 # ################################################################################################################################

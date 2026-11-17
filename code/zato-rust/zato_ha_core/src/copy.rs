@@ -62,12 +62,20 @@ fn checkpoint_completely(connection: &Connection) -> Result<(), Error> {
     Ok(())
 }
 
+/// Opens the copy of the Zato database for a checkpoint of its log.
+fn open_for_checkpoint(db_path: &Path) -> Result<Connection, Error> {
+    let connection = Connection::open(db_path).map_err(Error::other)?;
+    connection.pragma_update(None, "journal_mode", "wal").map_err(Error::other)?;
+    // The checkpoint syncs the database file before it truncates the log, whatever the compiled default.
+    connection.pragma_update(None, "synchronous", "full").map_err(Error::other)?;
+    Ok(connection)
+}
+
 /// Checkpoints the log of a database into its file with `SQLite` and removes the log.
 pub fn checkpoint_into_database(db_path: &Path) -> Result<(), Error> {
     // A stale index would describe frames of an earlier log, so SQLite rebuilds it from the log.
     remove_if_exists(&wal::shm_path(db_path))?;
-    let connection = Connection::open(db_path).map_err(Error::other)?;
-    connection.pragma_update(None, "journal_mode", "wal").map_err(Error::other)?;
+    let connection = open_for_checkpoint(db_path)?;
     checkpoint_completely(&connection)?;
     connection.close().map_err(|(_, error)| Error::other(error))?;
     remove_if_exists(&wal::wal_path(db_path))?;
@@ -359,5 +367,19 @@ mod tests {
         // Once the reader is done, the same checkpoint completes.
         reader.execute_batch("commit;").unwrap();
         checkpoint_completely(&checkpointer).unwrap();
+    }
+
+    #[test]
+    fn the_checkpoint_connection_syncs_every_write() {
+        let copy_dir = tempfile::tempdir().unwrap();
+        let copy_path = copy_dir.path().join("zato.db");
+
+        let connection = open_for_checkpoint(&copy_path).unwrap();
+        let journal_mode: String = connection.query_row("pragma journal_mode", [], |row| row.get(0)).unwrap();
+        let synchronous: i64 = connection.query_row("pragma synchronous", [], |row| row.get(0)).unwrap();
+
+        // The value 2 is how SQLite reports the level `full`.
+        assert_eq!(journal_mode, "wal");
+        assert_eq!(synchronous, 2);
     }
 }

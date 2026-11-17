@@ -20,7 +20,8 @@ from sqlalchemy.engine import Engine
 from typing_extensions import TypeAlias
 
 # Zato
-from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
+from zato.common.rule_engine.sql import RuleSQLBackend
+from zato.common.test.zato_database import file_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,16 +35,8 @@ engine_generator:TypeAlias = Generator[Engine, None, None]
 def database_engine(tmp_path:'Path') -> 'engine_generator':
     """ Creates one isolated test-managed SQL database.
     """
-    database_path = tmp_path / 'rule-engine.sqlite'
-    database_url = f'sqlite:///{database_path}'
-    connection_options = {'check_same_thread': False}
-    engine = create_database_engine(database_url, connect_args=connection_options)
-
-    create_schema(engine)
-
-    yield engine
-
-    engine.dispose()
+    with file_database_engine(tmp_path) as engine:
+        yield engine
 
 # ################################################################################################################################
 

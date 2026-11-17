@@ -156,7 +156,7 @@ def _check_counts(backend:'SQLPubSubBackend', database:'ReplicatedDatabase') -> 
 def test_failover_during_clear_queue() -> 'None':
     """ Clearing a queue that the failover interrupts is repeated on the new primary and leaves no partial state.
     """
-    with replicated_environment('clear', True) as database, pubsub_db_env({ConfigCtx.Env_Batch_Size: _batch_size}):
+    with replicated_environment('clear') as database, pubsub_db_env({ConfigCtx.Env_Batch_Size: _batch_size}):
 
         backend = SQLPubSubBackend()
         backend.subscribe(_sub_key, _topic_name)
@@ -178,7 +178,7 @@ def test_failover_during_clear_queue() -> 'None':
 def test_failover_during_delete_topic() -> 'None':
     """ Deleting a topic that the failover interrupts is repeated on the new primary and leaves nothing of the topic.
     """
-    with replicated_environment('delete', True) as database, pubsub_db_env({ConfigCtx.Env_Batch_Size: _batch_size}):
+    with replicated_environment('delete') as database, pubsub_db_env({ConfigCtx.Env_Batch_Size: _batch_size}):
 
         backend = SQLPubSubBackend()
         backend.subscribe(_sub_key, _topic_name)
@@ -200,7 +200,7 @@ def test_failover_during_delete_topic() -> 'None':
 def test_failover_during_retention_sweep() -> 'None':
     """ A retention sweep that the failover interrupts continues on the new primary until nothing expired is left.
     """
-    with replicated_environment('sweep', True) as database, pubsub_db_env({ConfigCtx.Env_Batch_Size: _batch_size}):
+    with replicated_environment('sweep') as database, pubsub_db_env({ConfigCtx.Env_Batch_Size: _batch_size}):
 
         backend = SQLPubSubBackend()
         backend.subscribe(_sub_key, _topic_name)

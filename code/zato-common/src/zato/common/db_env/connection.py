@@ -65,6 +65,30 @@ _user_timeout_ms = 60_000
 # How long a PostgreSQL session may hold a transaction open without activity, in milliseconds.
 _idle_in_transaction_timeout_ms = 60_000
 
+# The commit levels of PostgreSQL under which a commit may return before its record is flushed to disk.
+_relaxed_commit_levels = ('off', 'local', 'remote_write')
+
+# How PostgreSQL shows a setting that is turned on.
+_setting_on = 'on'
+
+# The standbys that stream the write-ahead log of the server, without the logical replication connections,
+# which receive changes that are already durable.
+_standby_count_query = """
+select count(*) from pg_stat_replication as replication
+where not exists (
+    select 1 from pg_replication_slots as slot
+    where slot.active_pid = replication.pid
+    and slot.slot_type = 'logical'
+)
+""".strip()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DatabaseDurabilityError(Exception):
+    """ Raised when a database is configured in a way under which a commit could be acknowledged before it is durable.
+    """
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -114,13 +138,76 @@ def set_postgresql_keepalive(dbapi_connection:'any_', connection_record:'any_') 
 def set_postgresql_session(dbapi_connection:'any_', connection_record:'any_') -> 'None':
     """ Ends a session that holds a transaction open without activity, so that a client which stopped
     responding in the middle of a transaction does not keep its row locks indefinitely. Each commit of the session
-    returns only once its write-ahead log record is flushed to disk, whatever the configuration of the server.
+    returns only once its write-ahead log record is flushed to disk. A level that the server configures and that waits
+    for more than the local flush, such as remote_apply, is kept as it is.
     """
     cursor = dbapi_connection.cursor()
-    _ = cursor.execute('set synchronous_commit = on')
+
+    _ = cursor.execute('show synchronous_commit')
+    row = cursor.fetchone()
+    configured_level = row[0]
+
+    if configured_level in _relaxed_commit_levels:
+        _ = cursor.execute('set synchronous_commit = on')
+
     _ = cursor.execute(f"set idle_in_transaction_session_timeout = '{_idle_in_transaction_timeout_ms}ms'")
     cursor.close()
     dbapi_connection.commit()
+
+# ################################################################################################################################
+
+def _show(cursor:'any_', query:'str') -> 'any_':
+    _ = cursor.execute(query)
+    row = cursor.fetchone()
+
+    out = row[0]
+    return out
+
+# ################################################################################################################################
+
+def verify_postgresql_server(dbapi_connection:'any_', connection_record:'any_') -> 'None':
+    """ Refuses a PostgreSQL server on which a commit could be acknowledged before it is durable - one that does not
+    flush its write-ahead log, one that does not write full pages after a checkpoint, and a primary with streaming
+    standbys none of which is synchronous. The check runs on each new connection, so the primary that a failover
+    of the database promotes is checked as well.
+    """
+    cursor = dbapi_connection.cursor()
+
+    fsync = _show(cursor, 'show fsync')
+    full_page_writes = _show(cursor, 'show full_page_writes')
+    synchronous_standby_names = _show(cursor, 'show synchronous_standby_names')
+    standby_count = _show(cursor, _standby_count_query)
+
+    cursor.close()
+    dbapi_connection.commit()
+
+    if fsync != _setting_on:
+        raise DatabaseDurabilityError(f'PostgreSQL server has fsync `{fsync}`, it must be `{_setting_on}`')
+
+    if full_page_writes != _setting_on:
+        raise DatabaseDurabilityError(
+            f'PostgreSQL server has full_page_writes `{full_page_writes}`, it must be `{_setting_on}`')
+
+    if standby_count:
+        if not synchronous_standby_names:
+            raise DatabaseDurabilityError(f'PostgreSQL primary has {standby_count} streaming standby(s) '
+                'and an empty synchronous_standby_names, at least one standby must be synchronous')
+
+# ################################################################################################################################
+
+def set_django_connection(sender:'any_', connection:'any_', **kwargs:'any_') -> 'None':
+    """ Gives each connection that Django opens to a database of Zato the same settings of durability
+    as the connections of the engine factory.
+    """
+    if connection.vendor == Type_SQLite:
+        set_sqlite_pragmas(connection.connection, None)
+
+    elif connection.vendor == Type_PostgreSQL:
+        set_postgresql_session(connection.connection, None)
+        verify_postgresql_server(connection.connection, None)
+
+    else:
+        raise DatabaseDurabilityError(f'Unsupported database vendor `{connection.vendor}`')
 
 # ################################################################################################################################
 

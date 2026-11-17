@@ -52,13 +52,14 @@ class CheckConfig(ManageCommand):
         """ Opens the ODB file and runs a query against it.
         """
         # SQLAlchemy
-        from sqlalchemy import create_engine, text
+        from sqlalchemy import text
 
         # Zato
+        from zato.common.db_env.engine import new_zato_engine
         from zato.common.util.api import get_engine_url
 
         engine_url = get_engine_url({'engine': engine, 'sqlite_path': sqlite_path})
-        sql_engine = create_engine(engine_url)
+        sql_engine = new_zato_engine(engine_url)
 
         with sql_engine.connect() as connection:
             _ = connection.execute(text('SELECT 1'))

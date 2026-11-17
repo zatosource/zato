@@ -324,26 +324,23 @@ def proxy_command(database:'ReplicatedDatabase', command:'str') -> 'int':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _make_synchronous(database:'ReplicatedDatabase') -> 'None':
-    """ Makes each commit on the primary wait until the standby has the WAL of its transaction.
+def _require_synchronous_standby(database:'ReplicatedDatabase') -> 'None':
+    """ Makes each commit on the primary wait until the standby has the WAL of its transaction,
+    including the commits issued before the standby streams, which wait until it does.
     """
     _run_on_primary(database, [
         f"alter system set synchronous_standby_names = '{_standby_name}'",
-        "alter system set synchronous_commit = 'on'",
         'select pg_reload_conf()',
     ])
-    _wait_until_streaming(database, 'sync')
 
 # ################################################################################################################################
 
-def _make_asynchronous(database:'ReplicatedDatabase') -> 'None':
-    """ Lets the commits on a promoted primary return while it has no standby, the way a managed service
-    continues on a single server until it builds a new standby.
+def _make_synchronous(database:'ReplicatedDatabase') -> 'None':
+    """ Makes each commit on the primary wait until the standby has the WAL of its transaction
+    and waits until the standby confirms commits synchronously.
     """
-    _run_on_primary(database, [
-        'alter system reset synchronous_standby_names',
-        'select pg_reload_conf()',
-    ])
+    _require_synchronous_standby(database)
+    _wait_until_streaming(database, 'sync')
 
 # ################################################################################################################################
 
@@ -565,9 +562,12 @@ def switch_primary(database:'ReplicatedDatabase') -> 'float':
 
     promote_seconds = time.monotonic() - start
 
-    # .. the new primary commits on its own until it has a standby again ..
+    # .. the new primary has had no standby since its promotion, and from here on its commits wait for one ..
     if database.is_sync:
-        _make_asynchronous(database)
+        _require_synchronous_standby(database)
+        expected_state = 'sync'
+    else:
+        expected_state = 'async'
 
     # .. which is built from a base backup of it in place of the server that ended.
     if database.is_promoted:
@@ -575,10 +575,7 @@ def switch_primary(database:'ReplicatedDatabase') -> 'float':
     else:
         _rebuild_standby(database)
 
-    _wait_until_streaming(database, 'async')
-
-    if database.is_sync:
-        _make_synchronous(database)
+    _wait_until_streaming(database, expected_state)
 
     return promote_seconds
 
