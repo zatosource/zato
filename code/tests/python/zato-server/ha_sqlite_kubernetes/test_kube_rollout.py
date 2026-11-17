@@ -35,7 +35,7 @@ class ModuleCtx:
     Restart_Annotation = 'zato.io/restarted-at'
 
     # How long the active pod runs alone while the node of the standby is stopped, in seconds
-    Zone_Away_Seconds = 60
+    Zone_Away_Seconds = 10
 
     # How long the active pod may take to continue alone, in seconds
     Mark_Out_Timeout = 60

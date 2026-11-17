@@ -49,7 +49,7 @@ class ModuleCtx:
     Mark_Out_Timeout = 60
 
     # How long the traffic reaches the new active pod before the fault is removed, in seconds
-    Traffic_Seconds = 15
+    Traffic_Seconds = 5
 
     # The roles of a pod that serves requests and of an active pod without its standby
     Active_Roles:'strlist' = list(NodesCtx.Active_Roles)

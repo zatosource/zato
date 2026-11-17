@@ -42,9 +42,13 @@ _bytes_per_megabyte = 1_000_000
 # The period of cpu.max, in microseconds.
 _cpu_period_usec = 100_000
 
-# How long a fault that restarts the database or fails it over lasts beyond its downtime, in seconds,
-# so that the traffic runs against the database once it is back before the recovery begins.
+# How long a fault that restarts the database or fails it over lasts at least, in seconds - beyond its downtime
+# in the case of a failover, so that the traffic runs against the database once it is back before the recovery begins.
 _restart_margin_seconds = 60
+
+# How long a rotation of the credential lasts beyond its second rotation, in seconds, so that the pool
+# opens connections with the second password before the recovery begins.
+_rotation_margin_seconds = 10
 
 # The kinds of maintenance events.
 Maintenance_Reboot    = 'reboot'
@@ -53,8 +57,8 @@ Maintenance_Parameter = 'static-parameter'
 
 # How long each kind of maintenance event leaves the endpoint without a database, in seconds.
 _maintenance_downtime = {
-    Maintenance_Reboot: 60,
-    Maintenance_Upgrade: 90,
+    Maintenance_Reboot: 40,
+    Maintenance_Upgrade: 40,
     Maintenance_Parameter: 30,
 }
 
@@ -153,7 +157,7 @@ class MaintenanceFault(Fault):
         self.database = database
         self.kind = kind
         self.downtime_seconds = _maintenance_downtime[kind]
-        self.min_duration = self.downtime_seconds + _restart_margin_seconds
+        self.min_duration = _restart_margin_seconds
 
 # ################################################################################################################################
 
@@ -223,7 +227,7 @@ class CredentialRotationFault(Fault):
         self.database = database
         self.password_path = password_path
         self.interval_seconds = interval_seconds
-        self.min_duration = interval_seconds * 2
+        self.min_duration = interval_seconds * 2 + _rotation_margin_seconds
         self.rotations = 0
         self._greenlet:'any_' = None
 

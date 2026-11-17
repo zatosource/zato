@@ -41,16 +41,16 @@ logger = logging.getLogger('zato.test.ha_sqlite.split_brain')
 
 class ModuleCtx:
 
-    # The mark-out and takeover times of each attempt, in seconds, the takeover always the longer one
+    # The mark-out and takeover times of each attempt, in seconds, the takeover the longer one by less than
+    # the time a write to the referee takes, so that both nodes act at nearly the same moment
     Timer_Settings = [
         (3.0, 3.05),
-        (3.0, 3.2),
-        (2.0, 2.01),
     ]
 
-    # How long the traffic runs before the partition and how long the partition lasts, in seconds
-    Traffic_Seconds = 10
-    Partition_Seconds = 90
+    # How long the traffic runs before the partition and how long the partition lasts, which exceeds both timers
+    # with a margin for the write of the referee and the start of the server, in seconds
+    Traffic_Seconds = 5
+    Partition_Seconds = 20
 
     # How long the node that remains may take to serve requests again, in seconds
     Settle_Timeout = 120

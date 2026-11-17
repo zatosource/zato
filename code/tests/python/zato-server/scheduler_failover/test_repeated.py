@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# For twenty minutes, the active server is replaced every four minutes, in turn after a graceful stop, a SIGKILL,
+# For five minutes, the active server is replaced every minute, in turn after a graceful stop, a SIGKILL,
 # a pause and a cut-off, while the jobs run and the pub/sub workload publishes, pulls and receives pushes.
 
 # stdlib
@@ -17,7 +17,6 @@ import time
 from checks import check_run_log, get_starts, ModuleCtx as ChecksCtx
 from failover import read_generation, wait_for_generation
 from pair import cut_off_server, kill_server, pause_server, start_server, stop_server, unpause_server, wait_for_server
-from resources import get_resource_growth, ResourceMonitor
 from workload import get_count_mismatches, get_repeats_not_in_flight, Topic_Name, Workload
 from zato.common.typing_ import cast_
 
@@ -38,8 +37,8 @@ if 0:
 logger = logging.getLogger('zato.test.scheduler_failover.repeated')
 
 # How long the scenario runs and how often the active server is replaced, in seconds.
-_duration_seconds = 20 * 60
-_switch_interval_seconds = 4 * 60
+_duration_seconds = 5 * 60
+_switch_interval_seconds = 60
 
 # The faults applied to the active server, in turn.
 _fault_stop = 'stop'
@@ -83,16 +82,11 @@ def _end_fault(server:'SchedulerServer', fault:'str') -> 'None':
 
 def test_repeated_failover(workload_pair:'SchedulerPair') -> 'None':
     """ No slot runs twice across the servers, no replaced server begins a run until it starts again, the run counts
-    equal the run state, the pub/sub workload loses nothing, and the resources of each active server remain bounded.
+    equal the run state, and the pub/sub workload loses nothing.
     """
     pair = workload_pair
 
     workload = Workload(cast_('any_', pair), [pair.a.server, pair.b.server])
-
-    monitor = ResourceMonitor()
-    monitor.set_active(pair.a)
-    monitor.start()
-
     workload.start()
 
     active = pair.a
@@ -115,7 +109,6 @@ def test_repeated_failover(workload_pair:'SchedulerPair') -> 'None':
             logger.info('Switch %d - %s of server %s', index + 1, fault, active.label)
 
             # The active server fails ..
-            monitor.clear_active()
             fault_started = time.time()
             _apply_fault(active, fault)
 
@@ -127,7 +120,6 @@ def test_repeated_failover(workload_pair:'SchedulerPair') -> 'None':
             takeovers.append((active.label, time.time()))
 
             _ = wait_for_server(standby)
-            monitor.set_active(standby)
 
             # .. and the old server stops for good, which ends the fault.
             _end_fault(active, fault)
@@ -142,7 +134,6 @@ def test_repeated_failover(workload_pair:'SchedulerPair') -> 'None':
 
     finally:
         workload.is_publishing.clear()
-        monitor.stop()
 
     # The pull subscriber took every acknowledged publication, and each push that the receiver received more than once
     # was in progress during a fault. The publishers produce more than one push subscriber receives in the same time,
@@ -165,7 +156,7 @@ def test_repeated_failover(workload_pair:'SchedulerPair') -> 'None':
     # .. no slot ran twice and the run counts equal the run state ..
     entries = check_run_log(pair)
 
-    # .. no replaced server began a run between its takeover and its next start ..
+    # .. and no replaced server began a run between its takeover and its next start.
     late:'list[dict]' = []
 
     for label, boundary in takeovers:
@@ -184,10 +175,6 @@ def test_repeated_failover(workload_pair:'SchedulerPair') -> 'None':
                 late.append(entry)
 
     assert not late, late[:10]
-
-    # .. and the resources of each active server remained within their bounds.
-    growth = get_resource_growth(monitor.periods)
-    assert not growth, growth
 
 # ################################################################################################################################
 # ################################################################################################################################

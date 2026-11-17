@@ -44,10 +44,10 @@ logger = logging.getLogger('zato.test.ha_postgresql.outage')
 class ModuleCtx:
 
     # How long the database or the API server is unavailable, in seconds
-    Outage_Seconds = [10, 120]
+    Outage_Seconds = [15]
 
     # How long the traffic runs before the outage and after it, in seconds
-    Traffic_Seconds = 10
+    Traffic_Seconds = 5
 
     # How long the pair may take to serve again once the database returns, in seconds
     Return_Timeout = 120

@@ -18,7 +18,7 @@ from gevent import sleep, spawn
 
 # Zato
 from faults import Fault, Total_Loss
-from run import FaultRun
+from run import FaultPhases, FaultRun
 from runner import get_count_mismatches, get_duration
 from zato.common.test.pubsub_replication import kill_primary, promote_standby, switch_primary
 
@@ -40,8 +40,17 @@ _detection_seconds = 2
 _resume_timeout_seconds = 300
 _resume_poll_seconds = 0.1
 
-# How often failover and failback alternate, in seconds, unless Zato_Test_Failover_Interval_Seconds says otherwise.
-_failover_interval_seconds = 600
+# How often failover and failback alternate, in seconds, unless Zato_Test_Failover_Interval_Seconds says otherwise,
+# which places a failover and a failback within the fault phase of the soak phases below.
+_failover_interval_seconds = 40
+
+# The phases of a soak run unless the Zato_Test_Fault_* variables say otherwise.
+_soak_phases = FaultPhases(
+    baseline_seconds=60,
+    fault_seconds=120,
+    recovery_seconds=120,
+    checked_seconds=120,
+)
 
 # How often the loop of the switches checks whether it is to stop, in seconds.
 _switch_poll_seconds = 1
@@ -159,7 +168,7 @@ def test_failover_during_soak(failover_database:'ReplicatedDatabase') -> 'None':
     """ Item 14.7 - the primary is lost during the production traffic of a soak and the standby is promoted.
     The phases come from the Zato_Test_Fault_* variables, which a soak sets to its hours.
     """
-    run = FaultRun('')
+    run = FaultRun('', _soak_phases)
 
     fault = PromotionFault('failover-during-soak', failover_database, run.traffic)
 
@@ -174,14 +183,14 @@ def test_failover_during_soak(failover_database:'ReplicatedDatabase') -> 'None':
 # ################################################################################################################################
 
 def test_repeated_failover(failover_database:'ReplicatedDatabase') -> 'None':
-    """ Item 14.8 - failover and failback alternate every ten minutes during the production traffic of a soak,
-    whose length the Zato_Test_Fault_Seconds variable sets.
+    """ Item 14.8 - failover and failback alternate at the interval that the Zato_Test_Failover_Interval_Seconds
+    variable sets during the production traffic of a soak, whose length the Zato_Test_Fault_Seconds variable sets.
     """
     interval_seconds = get_duration('Zato_Test_Failover_Interval_Seconds', _failover_interval_seconds)
 
     fault = RepeatedFailoverFault('repeated-failover', failover_database, interval_seconds)
 
-    run = FaultRun(fault.name)
+    run = FaultRun(fault.name, _soak_phases)
     run.run(fault, Total_Loss)
     run.check()
 

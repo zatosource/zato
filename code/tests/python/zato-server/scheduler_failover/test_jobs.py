@@ -41,10 +41,13 @@ _takeover_timeout_seconds = 180
 _repeats_before_switch = 5
 
 # How long the servers keep running after the last expected run, so that an extra run would be observed, in seconds.
-_settle_seconds = 10
+_settle_seconds = 5
 
-# How long before the one-time job of the gap is due server A stops, and how long after it server B starts, in seconds.
+# How long before the one-time job of the gap is due server A stops, in seconds.
 _gap_margin_seconds = 20
+
+# How long after the one-time job of the gap is due server B starts, in seconds.
+_gap_after_margin_seconds = 5
 
 # How recently a run of the long job must have begun for the takeover to take place while it is in progress, in seconds.
 _in_flight_window_seconds = 5
@@ -125,7 +128,7 @@ def test_one_time_jobs(pair:'SchedulerPair') -> 'None':
     stop_server(pair.a)
 
     # .. server B starts after it was due ..
-    _sleep_until(datetime.fromtimestamp(pair.gap_start.timestamp() + _gap_margin_seconds, timezone.utc))
+    _sleep_until(datetime.fromtimestamp(pair.gap_start.timestamp() + _gap_after_margin_seconds, timezone.utc))
 
     _ = _take_over(pair)
     _ = wait_for_starts(pair, ChecksCtx.Job_One_Time_Gap, 'b', 1, _runs_timeout_seconds)

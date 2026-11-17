@@ -38,7 +38,10 @@ logger = logging.getLogger('zato.test.ha_sqlite.ha_takeover')
 class ModuleCtx:
 
     # How long the traffic runs before the fault and after the takeover, in seconds
-    Traffic_Seconds = 15
+    Traffic_Seconds = 5
+
+    # STOP_GRACE of the supervisor of the node, after which it sends SIGKILL to the process group of the server, in seconds
+    Stop_Grace = 10
 
     # How long the standby may take to become active after the fault, in seconds
     Takeover_Timeout = 60
@@ -84,11 +87,20 @@ def take_over(env:'HAEnvironment', fault:'str', workload:'Workload') -> 'tuple[N
     # The traffic reaches the active node ..
     time.sleep(ModuleCtx.Traffic_Seconds)
 
-    # .. which fails, and its standby takes over ..
+    # .. which fails ..
     backend_ips = [ip for backend in env.backends for ip in backend.ips]
     addresses = get_isolation_addresses(new_active, env.referee.ip, backend_ips)
+
+    started = time.monotonic()
     fault_started = apply_fault(old_active, fault, addresses)
 
+    # .. a graceful stop drains the worker before the supervisor would send SIGKILL ..
+    if fault == FaultsCtx.Fault_Stop:
+        stop_duration = time.monotonic() - started
+        logger.info('Stop of %s took %.3fs', old_active.node_name, stop_duration)
+        assert stop_duration < ModuleCtx.Stop_Grace, f'Stop of {old_active.node_name} took {stop_duration:.3f}s'
+
+    # .. and its standby takes over ..
     _ = new_active.wait_for_role(ModuleCtx.Active_Roles, ModuleCtx.Takeover_Timeout)
     takeover_time = time.time()
 

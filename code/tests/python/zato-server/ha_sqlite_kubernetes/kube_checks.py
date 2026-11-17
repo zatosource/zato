@@ -37,7 +37,7 @@ logger = logging.getLogger('zato.test.ha_sqlite_kubernetes.checks')
 class ModuleCtx:
 
     # How long the traffic runs before a fault, in seconds
-    Traffic_Seconds = 15
+    Traffic_Seconds = 5
 
     # How long the pair may take to recover once a fault is removed, in seconds, which includes pods that start again
     Recovery_Timeout = 600

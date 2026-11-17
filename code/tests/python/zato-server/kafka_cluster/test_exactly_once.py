@@ -38,7 +38,7 @@ Broker_Request_Timeout = 30.0
 
 # The frozen instance is thawed this long after the send started - past the timeout above, so the attempt Kafka had
 # already stored has been reported as failed and the connection has sent again by then
-Thaw_After = Broker_Request_Timeout + 10.0
+Thaw_After = Broker_Request_Timeout + 5.0
 
 # How long one send may take - the whole episode, the second attempt included, has to fit in it
 Send_Timeout = 90

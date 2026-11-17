@@ -20,8 +20,9 @@ from gevent import sleep
 from sqlalchemy import text
 
 # Zato
-from profiles import get_profile_limits
+from profiles import get_all_profile_limits
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.db_env import connection as db_connection
 from zato.common.db_env.database import get_database_engine
 from zato.common.test.pubsub_database import connect, ModuleCtx
 from zato.common.test.pubsub_network import install_idle_limit, read_dropped_packets
@@ -36,8 +37,12 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# How long a connection may stay idle before the network drops it, in seconds - shorter than the limit of each
+# service and longer than the time after which a connection of pub/sub sends its first keepalive probe.
+_idle_limit_seconds = 60
+
 # How much longer than the idle limit the connections stay idle, in seconds.
-_idle_margin_seconds = 60
+_idle_margin_seconds = 20
 
 # How long the second sweep of the cleanup process may take to complete, and how often its log is read, in seconds.
 _sweep_timeout_seconds = 180
@@ -104,16 +109,23 @@ def _wait_for_sweeps(log_path:'str', count:'int') -> 'str':
 # ################################################################################################################################
 
 def test_idle_connections(managed_database:'ManagedDatabase') -> 'None':
-    """ The network forgets the connections that stay idle for longer than the limit
-    of the service and drops their packets without notifying either end. The pooled connections of a server
-    and of the cleanup process outlive the limit through their keepalives and are used again as they are,
-    whereas a connection without keepalives within the limit is cut off.
+    """ The network forgets the connections that stay idle for longer than its limit and drops their packets
+    without notifying either end. The pooled connections of a server and of the cleanup process outlive the limit
+    through their keepalives and are used again as they are, whereas a connection without keepalives within
+    the limit is cut off.
     """
-    limits = get_profile_limits()
-    idle_seconds = limits.idle_limit_seconds + _idle_margin_seconds
+    keepalive_idle_seconds = db_connection._keepalive_idle_seconds
+
+    # The keepalives that outlive the limit of the test outlive the limit of each service as well.
+    for limits in get_all_profile_limits():
+        assert keepalive_idle_seconds < limits.idle_limit_seconds, (keepalive_idle_seconds, limits.idle_limit_seconds)
+
+    assert keepalive_idle_seconds < _idle_limit_seconds, (keepalive_idle_seconds, _idle_limit_seconds)
+
+    idle_seconds = _idle_limit_seconds + _idle_margin_seconds
 
     container_name = managed_database.database.container_name
-    install_idle_limit(container_name, limits.idle_limit_seconds)
+    install_idle_limit(container_name, _idle_limit_seconds)
 
     # The server takes over the database, so that the cleanup process sweeps it ..
     backend = SQLPubSubBackend()

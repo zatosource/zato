@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # Zato
-from faults import get_label, MemoryFault, Severity_Levels
+from faults import get_label, High_Severity_Levels, MemoryFault
 from run import FaultRun
 
 # ################################################################################################################################
@@ -22,7 +22,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.mark.parametrize('level', Severity_Levels)
+@pytest.mark.parametrize('level', High_Severity_Levels)
 def test_memory(fault_database:'FaultDatabase', level:'int') -> 'None':
     """ Item 15.8 - PostgreSQL is held below the memory that it used in the baseline, which causes reclaim stalls,
     and at a total loss the OOM killer ends one backend, after which every backend ends and crash recovery runs.

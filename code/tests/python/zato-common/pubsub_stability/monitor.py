@@ -135,6 +135,7 @@ class MinuteReport:
     drive_flush: 'float' = 0.0
     cpu_percent: 'float' = 0.0
     is_exempt: 'bool' = False
+    allows_errors: 'bool' = False
     details: 'strlist' = field(default_factory=list)
     failures: 'strlist' = field(default_factory=list)
 
@@ -196,6 +197,10 @@ class Monitor:
 
         self._start = monotonic()
         self._minute_start = self._start
+
+        # When the current minute of the grid ends.
+        self._next_minute = self._start + Minute_Seconds
+
         self._process = psutil.Process()
         self._last_checkpoints = -1
         self._last_autovacuums = -1
@@ -262,7 +267,7 @@ class Monitor:
                 allowed = max(self.limits.min_dead_tuples, live * self.limits.max_dead_ratio)
                 if dead > allowed:
                     message = f'{table_name} has {dead} dead rows for {live} live ones'
-                    if self.allows_errors:
+                    if report.allows_errors:
                         report.details.append(message)
                     else:
                         report.failures.append(message)
@@ -284,7 +289,7 @@ class Monitor:
         """
         limits = self.limits
 
-        if self.is_minute_exempt:
+        if report.is_exempt:
             report.details.append('overload, rate and latency not checked')
 
         elif report.drive_flush >= limits.drive_stall_seconds:
@@ -298,7 +303,7 @@ class Monitor:
             if report.delivery_p99 > limits.delivery_p99_seconds:
                 report.failures.append(f'delivery p99 {report.delivery_p99:.3f}s above {limits.delivery_p99_seconds}s')
 
-        if self.checks_rate and not self.is_minute_exempt:
+        if self.checks_rate and not report.is_exempt:
             min_rate = self.traffic.rate * limits.min_rate_ratio
             if report.publish_rate < min_rate:
                 report.failures.append(f'publish rate {report.publish_rate:.1f}/s below {min_rate:.1f}/s')
@@ -311,7 +316,7 @@ class Monitor:
 
         if counters.errors:
             message = f'{counters.errors} error(s): {counters.error_messages}'
-            if self.allows_errors:
+            if report.allows_errors:
                 report.details.append(message)
             else:
                 report.failures.append(message)
@@ -365,22 +370,25 @@ class Monitor:
         self._max_gc_generation = 0
         self._max_drive_flush = 0.0
 
-        # The statistics of a database that a fault keeps unavailable are reported as missing ..
+        # The marks of the minute move to its report before the database is read, because a database that a fault
+        # keeps unavailable holds the read, and the marks that the suite sets in the meantime belong to the next minute ..
+        report.is_exempt = self.is_minute_exempt
+        report.allows_errors = self.allows_errors
+        self.is_minute_exempt = False
+        self.allows_errors = False
+
+        # .. the statistics of such a database are reported as missing ..
         try:
             self._read_database(report)
         except Exception as e:
             message = f'database statistics not read: {e.__class__.__name__}: {e}'[:300]
-            if self.allows_errors:
+            if report.allows_errors:
                 report.details.append(message)
             else:
                 report.failures.append(message)
 
         # .. and everything else is checked as usual.
         self._check(report, counters)
-
-        report.is_exempt = self.is_minute_exempt
-        self.is_minute_exempt = False
-        self.allows_errors = False
 
         free_gb = disk_usage(gettempdir()).free / _bytes_per_gb
 
@@ -480,14 +488,33 @@ class Monitor:
 # ################################################################################################################################
 
     def _run(self) -> 'None':
-        next_minute = monotonic() + Minute_Seconds
+        self._next_minute = monotonic() + Minute_Seconds
 
         while self.is_running:
-            sleep(max(next_minute - monotonic(), 0))
+            sleep(max(self._next_minute - monotonic(), 0))
             if not self.is_running:
                 break
+
+            # A minute that the suite ended early moved the grid, so the sleep continues to the end of the new minute.
+            if monotonic() < self._next_minute:
+                continue
+
             _ = self.record_minute()
-            next_minute += Minute_Seconds
+            self._next_minute += Minute_Seconds
+
+# ################################################################################################################################
+
+    def end_minute(self) -> 'None':
+        """ Ends the current minute now and starts the grid of the minutes again from this moment. A minute too short
+        to be reported continues as part of the next one, without the marks that the suite set for it.
+        """
+        if monotonic() - self._minute_start >= _min_final_interval_seconds:
+            _ = self.record_minute()
+        else:
+            self.is_minute_exempt = False
+            self.allows_errors = False
+
+        self._next_minute = monotonic() + Minute_Seconds
 
 # ################################################################################################################################
 

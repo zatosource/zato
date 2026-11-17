@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The long runs on the database both nodes share - one hour of takeovers every four minutes, each followed by a rejoin,
-# and one hour of steady traffic. Both runs publish paced traffic, report every minute, stop at the first minute
+# The long runs on the database both nodes share - one takeover with each fault of the takeover suite, each followed
+# by a rejoin, and one hour of steady traffic. Both runs publish paced traffic, report every minute, stop at the first minute
 # that exceeds a bound, and end with the checks of every run and the bounds of the resources.
 
 # stdlib
@@ -67,8 +67,8 @@ def _finish(
 # ################################################################################################################################
 
 def test_repeated_failover(ha_pair:'HAEnvironment') -> 'None':
-    """ The active node fails every four minutes for one hour with each fault of the takeover suite in turn,
-    and its standby takes over each time while the former active node joins again.
+    """ The active node fails once with each fault of the takeover suite in turn, and its standby takes over
+    each time while the former active node joins again.
     """
     env = ha_pair
     workload, publisher, reporter = start_traffic(env)

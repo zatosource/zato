@@ -51,7 +51,7 @@ class ModuleCtx:
     Job_One_Time_Gap = 'test.scheduler.one-time-gap'
 
     # How many times the job with a limited number of runs runs.
-    Repeats = 20
+    Repeats = 10
 
     # How long a run of the long job takes, in seconds.
     Long_Run_Seconds = 20

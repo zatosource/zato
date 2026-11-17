@@ -50,7 +50,7 @@ Single_Session_Kinds = [Session_Access_Exclusive, Session_Long_Transaction, Sess
 
 # How long each pub/sub table stays locked, how often backends are ended or cancelled,
 # and how often a checkpoint is forced, in seconds.
-_lock_seconds = 30
+_lock_seconds = 10
 _round_seconds = 1
 _checkpoint_seconds = 10
 

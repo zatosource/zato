@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # Zato
-from faults import get_label, Severity_Levels, Total_Loss
+from faults import get_label, Partial_And_Total_Levels, Total_Loss
 from run import FaultRun
 from sessions import Graded_Session_Kinds, SessionFault, Single_Session_Kinds
 
@@ -23,7 +23,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.mark.parametrize('level', Severity_Levels)
+@pytest.mark.parametrize('level', Partial_And_Total_Levels)
 @pytest.mark.parametrize('kind', Graded_Session_Kinds)
 def test_backends_ended(fault_database:'FaultDatabase', kind:'str', level:'int') -> 'None':
     """ Item 15.11 - in each round, a share of the backends of pub/sub is ended or has its statement cancelled.

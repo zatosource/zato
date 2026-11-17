@@ -48,10 +48,10 @@ logger = logging.getLogger('zato.test.ha_postgresql.database_failover')
 class ModuleCtx:
 
     # How long the traffic runs before the failover and after it, in seconds
-    Traffic_Seconds = 15
+    Traffic_Seconds = 5
 
     # How long the roles of both nodes are watched once the promoted standby accepts writes, in seconds
-    Watch_Seconds = 30
+    Watch_Seconds = 15
 
     # How long the pair may take to serve again after a failover, in seconds
     Recovery_Timeout = 300

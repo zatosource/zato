@@ -80,7 +80,7 @@ class ModuleCtx:
     Past_Start_Age_Seconds = 60
 
     # How long after the jobs are imported the one-time job of the gap is due, in seconds.
-    Gap_Start_Delay_Seconds = 300
+    Gap_Start_Delay_Seconds = 180
 
     # How long the quickstart and the enmasse commands may take, in seconds.
     Command_Timeout_Seconds = 300

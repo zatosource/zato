@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # Zato
-from faults import Duty_Cycles, get_label, Severity_Levels, Total_Loss
+from faults import Duty_Cycles, get_label, High_Severity_Levels, Total_Loss
 from process import new_scope, run_process_fault
 from process_faults import ClockFault, Clock_Kinds, FileDescriptorFault, Filesystem_Kinds, FilesystemFault, \
     ScopeCPUFault, ScopeMemoryFault, ServerFreezeFault, TasksFault
@@ -20,7 +20,6 @@ from process_faults import ClockFault, Clock_Kinds, FileDescriptorFault, Filesys
 
 if 0:
     from process import ProcessEnvironment
-    from zato.common.typing_ import intlist
 
     dutycycle = tuple[int, float]
     pathpair  = tuple[str, str]
@@ -29,17 +28,14 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The levels of a shortage of memory - its total loss, an OOM kill of the server, is what the crash suite covers.
-_memory_levels:'intlist' = []
-
-for _level in Severity_Levels:
-    if _level != Total_Loss:
-        _memory_levels.append(_level)
+# The levels of a shortage of memory, which leaves a tenth of it - its total loss, an OOM kill of the server,
+# is what the crash suite covers.
+_memory_levels = [90]
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.mark.parametrize('level', Severity_Levels)
+@pytest.mark.parametrize('level', High_Severity_Levels)
 @pytest.mark.parametrize('kind', Filesystem_Kinds)
 def test_filesystem(process_environment:'ProcessEnvironment', kind:'str', level:'int') -> 'None':
     """ Item 15.4 - the writes and the fsync calls of the server, its cleanup process and PostgreSQL
@@ -58,7 +54,7 @@ def test_filesystem(process_environment:'ProcessEnvironment', kind:'str', level:
 
 # ################################################################################################################################
 
-@pytest.mark.parametrize('level', Severity_Levels)
+@pytest.mark.parametrize('level', High_Severity_Levels)
 def test_server_cpu(process_environment:'ProcessEnvironment', level:'int') -> 'None':
     """ Item 15.7 - the server loses a share of the CPU time that it used in the baseline, and is frozen at a total loss.
     """

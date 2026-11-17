@@ -80,39 +80,36 @@ def _new_tier(name:'str', iops:'int', megabytes_per_second:'int', burst_iops:'in
 
 def _get_rds_limits() -> 'ProfileLimits':
     """ Amazon RDS on db.t3.small - a NAT gateway or a load balancer drops idle connections after 350 seconds,
-    gp3 provisions 3,000 IOPS and 125 MB/s, a gp2 volume of 100 GiB bursts to 3,000 IOPS and falls back to 300,
+    a gp2 volume of 100 GiB bursts to 3,000 IOPS and falls back to 300, which is the slowest of its storage tiers,
     two vCPUs earn credits for 20 percent each, and IAM authentication tokens expire after 15 minutes.
     """
     out = ProfileLimits()
     out.idle_limit_seconds = 350
     out.storage_tiers = [
-        _new_tier('gp3', 3000, 125),
         _new_tier('gp2-burst-exhausted', 300, 128, burst_iops=3000, burst_seconds=60),
     ]
     out.baseline_cpus = 0.4
-    out.failover_delays = [35, 60, 120]
+    out.failover_delays = [35, 120]
     out.round_trip_ms = [0.5, 2.0]
-    out.rotation_seconds = 60
+    out.rotation_seconds = 30
     return out
 
 # ################################################################################################################################
 
 def _get_azure_limits() -> 'ProfileLimits':
     """ Azure Database for PostgreSQL on Burstable B2s - the load balancer drops idle connections after 4 minutes,
-    Premium SSD P10 provisions 500 IOPS and 100 MB/s, P20 2,300 IOPS and 150 MB/s, Premium SSD v2 its baseline
-    of 3,000 IOPS and 125 MB/s, two vCores earn credits for 40 percent each, and Entra ID tokens expire after an hour.
+    Premium SSD P10 provisions 500 IOPS and 100 MB/s, which is the slowest of its storage tiers, two vCores earn
+    credits for 40 percent each, and Entra ID tokens expire after an hour.
     """
     out = ProfileLimits()
     out.idle_limit_seconds = 240
     out.storage_tiers = [
         _new_tier('premium-ssd-p10', 500, 100),
-        _new_tier('premium-ssd-p20', 2300, 150),
-        _new_tier('premium-ssd-v2', 3000, 125),
     ]
     out.baseline_cpus = 0.8
     out.failover_delays = [60, 120]
     out.round_trip_ms = [1.0, 2.0]
-    out.rotation_seconds = 60
+    out.rotation_seconds = 30
     return out
 
 # ################################################################################################################################
@@ -131,6 +128,14 @@ def get_profile_limits() -> 'ProfileLimits':
     assert is_managed_mode(mode), f'The managed suites run in a managed mode and the mode is `{mode}`'
 
     out = _limits[mode]
+    return out
+
+# ################################################################################################################################
+
+def get_all_profile_limits() -> 'list[ProfileLimits]':
+    """ Returns the limits of every managed mode.
+    """
+    out = list(_limits.values())
     return out
 
 # ################################################################################################################################

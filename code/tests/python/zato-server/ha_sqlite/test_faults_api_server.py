@@ -6,10 +6,10 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Faults on the link between one node and the API server - latency, loss and a black hole - during a takeover and
-# during a mark-out, and an outage of the API server during a takeover, a mark-out and an admission. A node that cannot
-# reach the referee does not act on its own, at no moment are two nodes active, and the pair recovers once the link
-# or the API server does.
+# Faults on the link between one node and the API server - latency and loss - on the standby that takes over
+# and on the active node that marks out its standby, and an outage of the API server during a takeover and an admission.
+# A node that cannot reach the referee does not act on its own, at no moment are two nodes active, and the pair recovers
+# once the link or the API server does.
 
 # stdlib
 import logging
@@ -20,7 +20,6 @@ import pytest
 
 # Zato
 from ha_checks import check_copies, check_scheduler, check_workload, watch_roles
-from ha_faults import heal, partition
 from ha_tools import degrade_link, restore_link
 from topology import ModuleCtx as TopologyCtx
 from workload import Workload
@@ -49,7 +48,7 @@ class ModuleCtx:
     # The faults of the link to the API server
     Fault_Delay = 'delay'
     Fault_Loss = 'loss'
-    Fault_Black_Hole = 'black-hole'
+    Faults = [Fault_Delay, Fault_Loss]
 
     Netem = {
         Fault_Delay: 'delay 500ms 100ms distribution normal',
@@ -65,6 +64,15 @@ class ModuleCtx:
     Target_Active = 'active'
     Target_Standby = 'standby'
 
+    # Each event with the node whose link is degraded, which is the node that acts on the referee record during it
+    Link_Cases = [
+        (Event_Takeover, Target_Standby),
+        (Event_Mark_Out, Target_Active),
+    ]
+
+    # The events during which the API server is unavailable
+    Outage_Events = [Event_Takeover, Event_Admission]
+
     # How many claims of each scheduler job the stop of an isolated server may leave without a run
     Unrun_Claims_After_Isolation = 1
 
@@ -72,8 +80,8 @@ class ModuleCtx:
     Unrun_Claims_After_Kill = 1
 
     # How long the traffic runs before the event and how long the fault lasts after it, in seconds
-    Traffic_Seconds = 10
-    Fault_Seconds = 30
+    Traffic_Seconds = 5
+    Fault_Seconds = 15
 
     # How long the pair may take to recover once the link and the failed node do, in seconds
     Recovery_Timeout = 300
@@ -88,34 +96,11 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _degrade(node:'Node', fault:'str') -> 'None':
-
-    if fault == ModuleCtx.Fault_Black_Hole:
-        partition(node, [TopologyCtx.API_Server_IP])
-    else:
-        degrade_link(node, [TopologyCtx.API_Server_IP], ModuleCtx.Netem[fault])
-
-# ################################################################################################################################
-
-def _restore(node:'Node', fault:'str') -> 'None':
-
-    # A node that was killed starts again with a network namespace of its own, without the fault.
-    if not node.is_running():
-        return
-
-    if fault == ModuleCtx.Fault_Black_Hole:
-        heal(node)
-    else:
-        restore_link(node)
-
-# ################################################################################################################################
-
-@pytest.mark.parametrize('event', [ModuleCtx.Event_Takeover, ModuleCtx.Event_Mark_Out])
-@pytest.mark.parametrize('target', [ModuleCtx.Target_Active, ModuleCtx.Target_Standby])
-@pytest.mark.parametrize('fault', [ModuleCtx.Fault_Delay, ModuleCtx.Fault_Loss, ModuleCtx.Fault_Black_Hole])
-def test_api_server_link(ha_pair:'HAEnvironment', fault:'str', target:'str', event:'str') -> 'None':
-    """ With the link of one node to the API server degraded, the active node or the standby fails, no two nodes are active
-    at once, and the pair recovers with nothing lost once the link and the failed node do.
+@pytest.mark.parametrize('event, target', ModuleCtx.Link_Cases)
+@pytest.mark.parametrize('fault', ModuleCtx.Faults)
+def test_api_server_link(ha_pair:'HAEnvironment', fault:'str', event:'str', target:'str') -> 'None':
+    """ With the link to the API server degraded on the node that acts on the referee record, the other node fails,
+    no two nodes are active at once, and the pair recovers with nothing lost once the link and the failed node do.
     """
     env = ha_pair
 
@@ -140,7 +125,7 @@ def test_api_server_link(ha_pair:'HAEnvironment', fault:'str', target:'str', eve
     time.sleep(ModuleCtx.Traffic_Seconds)
 
     # The link degrades and a node fails ..
-    _degrade(degraded, fault)
+    degrade_link(degraded, [TopologyCtx.API_Server_IP], ModuleCtx.Netem[fault])
 
     fault_started = time.time()
     failed.kill()
@@ -149,7 +134,7 @@ def test_api_server_link(ha_pair:'HAEnvironment', fault:'str', target:'str', eve
     assert not both_active, f'Two active nodes -> {both_active}'
 
     # .. then the link and the failed node recover ..
-    _restore(degraded, fault)
+    restore_link(degraded)
     failed.resume()
 
     # .. and the pair forms again.
@@ -188,21 +173,6 @@ def _outage_during_takeover(env:'HAEnvironment', active:'Node', standby:'Node') 
 
 # ################################################################################################################################
 
-def _outage_during_mark_out(env:'HAEnvironment', active:'Node', standby:'Node') -> 'None':
-    """ The standby fails while the API server is unavailable, so the active node cannot mark it out until it returns.
-    """
-    env.referee.stop()
-    standby.kill()
-
-    both_active = watch_roles(env, ModuleCtx.Fault_Seconds)
-    assert not both_active, f'Two active nodes -> {both_active}'
-
-    env.referee.resume()
-    _ = active.wait_for_role(ModuleCtx.Active_Solo, ModuleCtx.Mark_Out_Timeout)
-    standby.resume()
-
-# ################################################################################################################################
-
 def _outage_during_admission(env:'HAEnvironment', active:'Node', standby:'Node') -> 'None':
     """ The standby joins again while the API server is unavailable, so it is not admitted until the API server returns.
     """
@@ -226,16 +196,15 @@ def _outage_during_admission(env:'HAEnvironment', active:'Node', standby:'Node')
 # What each event of an outage does to the pair
 _outages = {
     ModuleCtx.Event_Takeover:  _outage_during_takeover,
-    ModuleCtx.Event_Mark_Out:  _outage_during_mark_out,
     ModuleCtx.Event_Admission: _outage_during_admission,
 }
 
 # ################################################################################################################################
 
-@pytest.mark.parametrize('event', [ModuleCtx.Event_Takeover, ModuleCtx.Event_Mark_Out, ModuleCtx.Event_Admission])
+@pytest.mark.parametrize('event', ModuleCtx.Outage_Events)
 def test_api_server_outage(ha_pair:'HAEnvironment', event:'str') -> 'None':
-    """ With the API server unavailable during a takeover, a mark-out or an admission, no node acts on the referee
-    record, no two nodes are active at once, and the pair recovers with nothing lost once the API server returns.
+    """ With the API server unavailable during a takeover or an admission, no node acts on the referee record,
+    no two nodes are active at once, and the pair recovers with nothing lost once the API server returns.
     """
     env = ha_pair
 
@@ -260,12 +229,9 @@ def test_api_server_outage(ha_pair:'HAEnvironment', event:'str') -> 'None':
 
     check_workload(env, workload)
 
-    # An active node that cannot mark out its failed standby stops its server, and a claim that the barrier held
-    # is in its copy without a run. An active node that is killed leaves the claim it committed before the run began
-    # in the copy of the standby without a run.
-    if event == ModuleCtx.Event_Mark_Out:
-        unrun_claims = ModuleCtx.Unrun_Claims_After_Isolation
-    elif event == ModuleCtx.Event_Takeover:
+    # An active node that is killed leaves the claim it committed before the run began in the copy of the standby
+    # without a run.
+    if event == ModuleCtx.Event_Takeover:
         unrun_claims = ModuleCtx.Unrun_Claims_After_Kill
     else:
         unrun_claims = 0

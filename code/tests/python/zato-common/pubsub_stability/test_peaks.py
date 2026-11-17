@@ -24,8 +24,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How long the suite runs, in seconds, unless Zato_Test_Peaks_Seconds says otherwise - three peaks.
-_peaks_seconds = 30 * 60
+# How long the suite runs, in seconds, unless Zato_Test_Peaks_Seconds says otherwise - two peaks.
+_peaks_seconds = 20 * 60
 
 # Each cycle is this long and its peak starts at this offset and lasts this long, in seconds.
 _cycle_seconds = 10 * 60

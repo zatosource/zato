@@ -200,18 +200,25 @@ def test_a_connection_keeps_sending_after_its_only_named_instance_is_stopped(
 
 # ################################################################################################################################
 
-@pytest.mark.parametrize('transport', Transports)
+@pytest.mark.parametrize('transport', [Plaintext])
 def test_a_connection_keeps_sending_while_every_instance_is_stopped_and_started_in_turn(
     kafka_suite:'ClusterSuite',
     names_by_transport:'dict[str, Names]',
     transport:'str',
     ) -> 'None':
-    """ A rolling restart of the whole cluster loses nothing and doubles nothing.
+    """ A rolling restart of the whole cluster loses nothing and doubles nothing. The restart is independent
+    of the transport, which the other tests of the connection cover.
     """
     names = names_by_transport[transport]
     cluster = kafka_suite.cluster
-    payloads:'anylist' = []
 
+    # The connection learns of every instance before the first one stops ..
+    before = kafka_suite.new_name(f'payload.rolling.before.{transport}')
+    _ = kafka_suite.send(names.outgoing, before)
+
+    payloads:'anylist' = [before]
+
+    # .. and each instance stops and starts again in turn.
     for instance in cluster.instances:
 
         cluster.stop_instance(instance.index)

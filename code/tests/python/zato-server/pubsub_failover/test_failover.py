@@ -56,7 +56,7 @@ _poll_seconds = 0.5
 
 # How long the database stays unavailable after the standby was started, and how long it may take
 # to accept connections once its container started again, in seconds.
-_outage_after_start_seconds = 30
+_outage_after_start_seconds = 15
 _database_ready_timeout_seconds = 120
 
 # How long a takeover may take beyond the startup of the server when a session blocks it, in seconds -

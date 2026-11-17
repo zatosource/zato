@@ -46,10 +46,14 @@ logger = logging.getLogger('zato.test.ha_postgresql.partition')
 class ModuleCtx:
 
     # How long the traffic runs before the partition, in seconds
-    Traffic_Seconds = 10
+    Traffic_Seconds = 5
 
-    # How long the partition lasts, many times the takeover time, in seconds
-    Partition_Seconds = 90
+    # How long the partition lasts, several times the takeover time, in seconds
+    Partition_Seconds = 20
+
+    # How long the roles of both nodes are watched once the former active node rejoined, which exceeds
+    # the takeover time, in seconds
+    Watch_Seconds = 12
 
     # How long the pair may take to form again once the former active node reaches the database, in seconds
     Recovery_Timeout = 300
@@ -153,7 +157,7 @@ def test_active_node_without_the_database(ha_pair:'HAEnvironment') -> 'None':
     serving = env.wait_for_pair(ModuleCtx.Recovery_Timeout)
     assert serving is standby, f'{serving.node_name} serves in place of {standby.node_name}'
 
-    both_active = watch_roles(env, ModuleCtx.Traffic_Seconds)
+    both_active = watch_roles(env, ModuleCtx.Watch_Seconds)
     assert not both_active, both_active
 
     publisher.stop()

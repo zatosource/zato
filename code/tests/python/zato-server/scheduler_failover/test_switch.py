@@ -19,7 +19,7 @@ import pytest
 # Zato
 from checks import check_run_log, get_catch_up_problems, get_starts, get_starts_after, Job_Intervals, \
     ModuleCtx as ChecksCtx, read_run_log, read_skip_counts, wait_for_starts
-from failover import read_generation, wait_for_generation
+from failover import get_container_state, read_generation, wait_for_generation
 from pair import cut_off_server, kill_server, pause_server, start_server, stop_server, unpause_server, wait_for_server
 from zato.common.api import SCHEDULER
 
@@ -27,10 +27,11 @@ from zato.common.api import SCHEDULER
 # ################################################################################################################################
 
 if 0:
-    from pair import SchedulerPair
+    from pair import SchedulerPair, SchedulerServer
     from zato.common.typing_ import callable_
 
     SchedulerPair = SchedulerPair
+    SchedulerServer = SchedulerServer
     callable_ = callable_
 
 # ################################################################################################################################
@@ -45,8 +46,11 @@ _takeover_timeout_seconds = 180
 # How many runs of the job of every second a server begins before the test continues.
 _warm_up_runs = 10
 
-# How long the replaced server keeps running after the takeover in the tests that let it, in seconds.
-_replaced_run_seconds = 10
+# How long a replaced server that keeps running after the takeover may take to stop all of its processes, in seconds.
+_replaced_stop_timeout_seconds = 60
+
+# How often the state of the container of a replaced server is read while a test waits for it to exit, in seconds.
+_poll_seconds = 0.5
 
 # The jobs whose missed slots are checked after a switch.
 _catch_up_jobs = [ChecksCtx.Job_Every_Second, ChecksCtx.Job_Jitter, ChecksCtx.Job_Long_Run]
@@ -93,6 +97,18 @@ def _take_over(pair:'SchedulerPair', generation:'int') -> 'float':
 
 # ################################################################################################################################
 
+def _wait_until_stopped(server:'SchedulerServer') -> 'None':
+    """ Waits until the container of a replaced server exits, because the arbiter of a server stops all of its processes
+    once one of them learns that another server raised the generation.
+    """
+    deadline = time.monotonic() + _replaced_stop_timeout_seconds
+
+    while get_container_state(server.server) != 'exited':
+        assert time.monotonic() < deadline, f'Server {server.label} still running after its replacement'
+        time.sleep(_poll_seconds)
+
+# ################################################################################################################################
+
 def _check_catch_up(pair:'SchedulerPair') -> 'None':
     entries = check_run_log(pair)
 
@@ -130,19 +146,17 @@ def test_stopped_server(pair:'SchedulerPair', stop_function:'callable_') -> 'Non
 # ################################################################################################################################
 
 def test_overlap(pair:'SchedulerPair') -> 'None':
-    """ Server B starts while server A still runs, server A begins no run after the takeover, and each of its
-    attempts is skipped as not active.
+    """ Server B starts while server A still runs, server A begins no run after the takeover, each of its
+    attempts is skipped as not active, and it stops once it learns of the takeover.
     """
     _wait_for_runs(pair, 'a', 1)
     generation = read_generation(pair.database)
 
-    # Server B takes over with server A running throughout ..
+    # Server B takes over with server A running until it learns of the takeover ..
     boundary = _take_over(pair, generation)
     _wait_for_runs(pair, 'b', 1)
 
-    time.sleep(_replaced_run_seconds)
-
-    stop_server(pair.a)
+    _wait_until_stopped(pair.a)
     stop_server(pair.b)
 
     # .. server A begins no run after the takeover and skips its slots instead ..
@@ -169,11 +183,10 @@ def test_frozen_server(pair:'SchedulerPair') -> 'None':
     boundary = _take_over(pair, generation)
     _wait_for_runs(pair, 'b', 1)
 
-    # .. server A resumes and runs for a while next to server B ..
+    # .. server A resumes next to server B until it learns of the takeover ..
     unpause_server(pair.a)
-    time.sleep(_replaced_run_seconds)
 
-    stop_server(pair.a)
+    _wait_until_stopped(pair.a)
     stop_server(pair.b)
 
     # .. and it begins no run after the takeover.
@@ -200,11 +213,10 @@ def test_cut_off_server(pair:'SchedulerPair') -> 'None':
     boundary = _take_over(pair, generation)
     _wait_for_runs(pair, 'b', 1)
 
-    # .. the links of server A are restored and it runs for a while next to server B ..
+    # .. the links of server A are restored and it runs next to server B until it learns of the takeover ..
     cut_off_server(pair.a, 'unblock')
-    time.sleep(_replaced_run_seconds)
 
-    stop_server(pair.a)
+    _wait_until_stopped(pair.a)
     stop_server(pair.b)
 
     # .. and it begins no run after the takeover.

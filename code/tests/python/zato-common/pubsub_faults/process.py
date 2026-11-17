@@ -22,6 +22,7 @@ from time import monotonic, time
 from expiration import Env_Clock_Anchor
 from process_faults import Clock_No_Offset, Scope
 from remote import FaultDriver, write_control_file
+from run import Default_Phases
 from runner import get_duration
 from tools import build_faketime, build_fsfault
 
@@ -43,14 +44,14 @@ _main_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'process_m
 
 # The variable of the duration of a fault and its default, in seconds.
 _fault_seconds_env = 'Zato_Test_Fault_Seconds'
-_default_fault_seconds = 120
+_default_fault_seconds = Default_Phases.fault_seconds
 
 # The phases of a run, which the server reads as well, in seconds.
 _phases:'phase_list' = [
-    ('Zato_Test_Fault_Baseline_Seconds', 60),
+    ('Zato_Test_Fault_Baseline_Seconds', Default_Phases.baseline_seconds),
     (_fault_seconds_env, _default_fault_seconds),
-    ('Zato_Test_Fault_Recovery_Seconds', 120),
-    ('Zato_Test_Fault_Checked_Seconds', 120),
+    ('Zato_Test_Fault_Recovery_Seconds', Default_Phases.recovery_seconds),
+    ('Zato_Test_Fault_Checked_Seconds', Default_Phases.checked_seconds),
     ('Zato_Test_Fault_Drain_Seconds', 900),
 ]
 

@@ -42,7 +42,7 @@ _max_len = PubSub.Message.Default_Max_Len
 _large_document_min_size = 9_000_000
 
 # How many of the large documents one partner receives.
-_large_document_count = 5
+_large_document_count = 3
 
 # How many topics the topic scenario uses, and how many callers publish to them at the same time.
 _topic_count = 10_000

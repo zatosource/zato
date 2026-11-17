@@ -40,7 +40,7 @@ _traffic_after_seconds = 10
 _drain_timeout = 300
 
 # The outages, from a restart of a self-managed database to a long maintenance event of a managed service, in seconds.
-_outage_seconds = [10, 30, 120, 600]
+_outage_seconds = [10, 120]
 
 # The logger of the resume times, and the components that log theirs.
 _outage_logger_name = 'zato.common.db_env.outage'

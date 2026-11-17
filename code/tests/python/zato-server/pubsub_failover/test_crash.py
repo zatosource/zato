@@ -36,7 +36,7 @@ logger = logging.getLogger('zato.test.pubsub_crash')
 # ################################################################################################################################
 
 # How long the clients publish before each kill and after the last restart, in seconds.
-_burst_seconds = 10
+_burst_seconds = 5
 
 # How many times the server is killed.
 _kill_count = 2

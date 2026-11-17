@@ -52,8 +52,8 @@ class ModuleCtx:
     Event_Admission = 'admission'
 
     # How long the traffic runs before the event and how long the roles are watched after it, in seconds
-    Traffic_Seconds = 10
-    Watch_Seconds = 30
+    Traffic_Seconds = 5
+    Watch_Seconds = 15
 
     # How long the active node may take to mark out the standby, including the election of a new etcd leader, in seconds
     Mark_Out_Timeout = 60

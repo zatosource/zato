@@ -58,8 +58,11 @@ class ModuleCtx:
     Baseline_Operations_Per_Second = 2000
 
     # How long the traffic runs before the faults and under each severity, in seconds
-    Traffic_Seconds = 10
-    Window_Seconds = 60
+    Traffic_Seconds = 5
+    Window_Seconds = 20
+
+    # How long the active node runs with no space on its disk, in seconds
+    Disk_Full_Seconds = 60
 
     # How long requests in flight when a fault begins may still be acknowledged, in seconds
     In_Flight_Grace = 2.0
@@ -286,7 +289,7 @@ def test_active_disk_full(ha_session:'HASession', request:'any_') -> 'None':
         preload.set_disk_fault(active, 0, 100, ToolsCtx.Errno_ENOSPC)
         started = time.time()
 
-        time.sleep(ModuleCtx.Window_Seconds)
+        time.sleep(ModuleCtx.Disk_Full_Seconds)
 
         acknowledged = publisher.get_acknowledged_between(started + ModuleCtx.In_Flight_Grace, time.time())
         assert not acknowledged, f'Acknowledged with no space on the disk -> {acknowledged}'

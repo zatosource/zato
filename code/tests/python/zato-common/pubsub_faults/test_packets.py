@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # Zato
-from faults import get_label, Packet_Kinds, PacketFault, Severity_Levels
+from faults import get_label, Packet_Kinds, Packet_Loss, PacketFault, Total_Loss
 from run import FaultRun
 
 # ################################################################################################################################
@@ -22,8 +22,21 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.mark.parametrize('level', Severity_Levels)
-@pytest.mark.parametrize('kind', Packet_Kinds)
+# The level at which each kind of packet fault runs.
+_partial_level = 50
+
+# Each kind at its partial level, and one total loss, whose netem parameters are the same for every kind.
+_cases:'list[tuple[str, int]]' = []
+
+for _kind in Packet_Kinds:
+    _cases.append((_kind, _partial_level))
+
+_cases.append((Packet_Loss, Total_Loss))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.mark.parametrize('kind, level', _cases)
 def test_packets(fault_database:'FaultDatabase', kind:'str', level:'int') -> 'None':
     """ Item 15.5 - the packets between pub/sub and PostgreSQL are lost, delayed with jitter, reordered,
     duplicated or corrupted, in both directions. In the TLS modes, a corrupted record ends its connection.

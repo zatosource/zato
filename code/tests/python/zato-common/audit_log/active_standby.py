@@ -53,7 +53,7 @@ _channel_name = 'audit.test.active-standby'
 _worker_path = os.path.join(os.path.dirname(__file__), 'active_standby_worker.py')
 
 # How long the background work of both servers runs at once
-_background_seconds = 30
+_background_seconds = 10
 
 # How many events of each age one round of writes adds while the background work runs
 _round_size = 50

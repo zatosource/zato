@@ -12,6 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from dataclasses import dataclass
 from time import monotonic
+from typing import NamedTuple
 
 # gevent
 from gevent import sleep, spawn
@@ -41,13 +42,26 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How long each phase of a run lasts, in seconds, unless the variables of the same names say otherwise -
-# the baseline, the fault, the recovery, during which the latency may still exceed its limits, and the minutes
-# after it, of which at least one is checked in full.
-_baseline_seconds = 60
-_fault_seconds = 120
-_recovery_seconds = 120
-_checked_seconds = 120
+class FaultPhases(NamedTuple):
+    """ How long each phase of a run lasts, in seconds - the baseline, the fault, the recovery, during which the latency
+    may still exceed its limits, and the minutes after it, of which at least one is checked in full.
+    """
+    baseline_seconds: 'int'
+    fault_seconds: 'int'
+    recovery_seconds: 'int'
+    checked_seconds: 'int'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The phases of a run unless the Zato_Test_Fault_* variables say otherwise. The fault lasts longer than the detection
+# of a dead connection, three pull leases, one cleanup sweep and the late pull of the expiration probe.
+Default_Phases = FaultPhases(
+    baseline_seconds=30,
+    fault_seconds=90,
+    recovery_seconds=120,
+    checked_seconds=60,
+)
 
 # How long the backlog may take to drain once the API clients stop, and how often it is checked, in seconds.
 _drain_seconds = 900
@@ -90,8 +104,9 @@ class FaultRun:
     """ Runs the traffic of one test through the phases of one fault and accounts for every publication.
     """
 
-    def __init__(self, label:'str') -> 'None':
+    def __init__(self, label:'str', phases:'FaultPhases'=Default_Phases) -> 'None':
         self.label = label
+        self.phases = phases
 
         self.traffic = Traffic(get_traffic_profile())
         self.traffic.tracks_deliveries = True
@@ -213,10 +228,12 @@ class FaultRun:
     def run(self, fault:'Fault', level:'int') -> 'None':
         """ Runs the phases of one fault at one severity level, removing the fault even if a phase fails.
         """
-        baseline_seconds = get_duration('Zato_Test_Fault_Baseline_Seconds', _baseline_seconds)
-        fault_seconds = get_duration('Zato_Test_Fault_Seconds', _fault_seconds)
-        recovery_seconds = get_duration('Zato_Test_Fault_Recovery_Seconds', _recovery_seconds)
-        checked_seconds = get_duration('Zato_Test_Fault_Checked_Seconds', _checked_seconds)
+        phases = self.phases
+
+        baseline_seconds = get_duration('Zato_Test_Fault_Baseline_Seconds', phases.baseline_seconds)
+        fault_seconds = get_duration('Zato_Test_Fault_Seconds', phases.fault_seconds)
+        recovery_seconds = get_duration('Zato_Test_Fault_Recovery_Seconds', phases.recovery_seconds)
+        checked_seconds = get_duration('Zato_Test_Fault_Checked_Seconds', phases.checked_seconds)
 
         fault_seconds = max(fault_seconds, fault.min_duration)
 
@@ -255,8 +272,10 @@ class FaultRun:
             finally:
                 fault.remove()
 
-            # .. the recovery, during which the latency may still exceed its limits ..
+            # .. the recovery, during which the latency may still exceed its limits, whose last minute ends with it,
+            # so that the minutes after it start on a grid of their own ..
             run_for(monitor, recovery_seconds, on_tick=self._mark_fault_minute)
+            monitor.end_minute()
             self.recovered_report_count = len(monitor.reports)
 
             # .. the minutes after it, checked in full ..

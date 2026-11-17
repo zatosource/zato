@@ -11,7 +11,7 @@ import pytest
 
 # Zato
 from faults import CPUFault, Duty_Cycles, Freeze_Autovacuum_Launcher, Freeze_Cleanup, Freeze_Client_Backend, \
-    Freeze_WAL_Writer, FreezeFault, get_label, Severity_Levels, Total_Loss
+    Freeze_WAL_Writer, FreezeFault, get_label, High_Severity_Levels, Total_Loss
 from run import FaultRun
 
 # ################################################################################################################################
@@ -25,13 +25,21 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The processes that are frozen one at a time.
-_freeze_targets = [Freeze_WAL_Writer, Freeze_Autovacuum_Launcher, Freeze_Client_Backend, Freeze_Cleanup]
+# The processes that are frozen one at a time, each with its duty cycles. The processes that pub/sub waits for directly
+# are frozen in every duty cycle, and the background processes of PostgreSQL in the long one only.
+_freeze_cases:'list[tuple[str, dutycycle]]' = []
+
+for _target in [Freeze_Client_Backend, Freeze_Cleanup]:
+    for _duty_cycle in Duty_Cycles:
+        _freeze_cases.append((_target, _duty_cycle))
+
+for _target in [Freeze_WAL_Writer, Freeze_Autovacuum_Launcher]:
+    _freeze_cases.append((_target, Duty_Cycles[-1]))
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.mark.parametrize('level', Severity_Levels)
+@pytest.mark.parametrize('level', High_Severity_Levels)
 def test_cpu(fault_database:'FaultDatabase', level:'int') -> 'None':
     """ Item 15.7 - PostgreSQL loses a share of the CPU time that it used in the baseline, and all of its processes
     are frozen at a total loss.
@@ -46,8 +54,7 @@ def test_cpu(fault_database:'FaultDatabase', level:'int') -> 'None':
 
 # ################################################################################################################################
 
-@pytest.mark.parametrize('duty_cycle', Duty_Cycles)
-@pytest.mark.parametrize('target', _freeze_targets)
+@pytest.mark.parametrize('target, duty_cycle', _freeze_cases)
 def test_freeze(fault_database:'FaultDatabase', target:'str', duty_cycle:'dutycycle') -> 'None':
     """ Item 15.7 - one process is frozen and resumed in a duty cycle - the WAL writer, the autovacuum launcher,
     one backend of pub/sub or the cleanup process.

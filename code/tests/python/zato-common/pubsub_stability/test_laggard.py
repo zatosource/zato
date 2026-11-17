@@ -34,7 +34,7 @@ if 0:
 _backlog_messages = 20_000_000
 
 # How long the partner stays away while the traffic continues, in seconds.
-_lag_seconds = 15 * 60
+_lag_seconds = 2 * 60
 
 # How long the backlog may take to drain once the partner is back, in seconds.
 _drain_seconds = 4 * 60 * 60
@@ -57,6 +57,9 @@ _cleanup_interval_seconds = 60
 
 # How often the depth of the queue of the partner is checked during the drain, in seconds.
 _depth_check_seconds = 30
+
+# How long the remaining traffic may take to drain once the publications stop, in seconds.
+_final_drain_seconds = 600
 
 # How many deliveries are left in the queue of the partner.
 _laggard_depth_query = text('select count(*) from pubsub_delivery where sub_key = :sub_key')
@@ -126,7 +129,7 @@ def test_laggard(stability_env:'strstrdict') -> 'None':
 
         traffic.stop_publishing()
         monitor.checks_rate = False
-        _ = traffic.wait_until_drained(_cleanup_interval_seconds * 10)
+        _ = traffic.wait_until_drained(_final_drain_seconds)
 
     finally:
         monitor.stop()

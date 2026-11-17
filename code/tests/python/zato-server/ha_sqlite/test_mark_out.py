@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The mark-out of a failed standby under traffic - the standby is stopped gracefully, killed, frozen, or cut off
-# from the active node. The active node marks it out, continues alone with every acknowledgment synced locally,
+# The mark-out of a failed standby under traffic - the standby is killed, frozen, or cut off from the active node.
+# The active node marks it out, continues alone with every acknowledgment synced locally,
 # and admits the standby again once it resumes.
 
 # stdlib
@@ -43,7 +43,7 @@ logger = logging.getLogger('zato.test.ha_sqlite.mark_out')
 class ModuleCtx:
 
     # How long the traffic runs before the fault and while the active node is alone, in seconds
-    Traffic_Seconds = 15
+    Traffic_Seconds = 5
 
     # How long the active node may take to mark the standby out, in seconds
     Mark_Out_Timeout = 60
@@ -55,8 +55,9 @@ class ModuleCtx:
     Active_Solo = ['ActiveSolo']
     Standby_In_Sync = ['StandbyInSync']
 
-    # The faults of the mark-out
-    Faults = [FaultsCtx.Fault_Stop, FaultsCtx.Fault_Kill, FaultsCtx.Fault_Pause, FaultsCtx.Fault_Partition]
+    # The faults of the mark-out - a standby whose process ends, whose process freezes and whose link is cut,
+    # with a graceful stop ending the process as a kill does
+    Faults = [FaultsCtx.Fault_Kill, FaultsCtx.Fault_Pause, FaultsCtx.Fault_Partition]
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -63,7 +63,7 @@ class ModuleCtx:
     Link_Caught_Up = 'CaughtUp'
 
     # How long the traffic runs before the rejoin, in seconds
-    Traffic_Seconds = 15
+    Traffic_Seconds = 5
 
     # How often the active node is asked for its report while the test waits for a phase, in seconds
     Phase_Poll_Interval = 0.02
@@ -86,7 +86,7 @@ class ModuleCtx:
     WAL_Suffix = '-wal'
 
     # How long the backup of the current database lasts over the slowed link, in seconds
-    Backup_Seconds = 60
+    Backup_Seconds = 15
 
     # The units of the rate of the slowed link
     Bits_Per_Byte = 8

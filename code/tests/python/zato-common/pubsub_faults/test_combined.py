@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from combined import BacklogDrainFault, CombinedFault, FailoverFault
 from container import Container
 from faults import CPUFault, DiskFault, MemoryFault, Packet_Delay, Packet_Loss, PacketFault
-from run import FaultRun
+from run import Default_Phases, FaultRun
 from runner import get_duration
 
 # ################################################################################################################################
@@ -65,7 +65,7 @@ def test_memory_during_drain(fault_database:'FaultDatabase') -> 'None':
     run = FaultRun('')
 
     memory = MemoryFault(fault_database.container)
-    backlog_seconds = get_duration('Zato_Test_Fault_Seconds', 120) / 2
+    backlog_seconds = get_duration('Zato_Test_Fault_Seconds', Default_Phases.fault_seconds) / 2
 
     fault = BacklogDrainFault('memory-50-during-drain', run.traffic, memory, _level, backlog_seconds)
 

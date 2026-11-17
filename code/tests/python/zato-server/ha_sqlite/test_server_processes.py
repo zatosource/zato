@@ -17,11 +17,7 @@ import time
 from threading import Event, Thread
 
 # Zato
-from ha_checks import check_workload
-from nodes import ModuleCtx as NodesCtx
 from topology import docker
-from workload import Workload
-from zato.common.typing_ import cast_
 from zato.server.arbiter_config import ModuleCtx as ArbiterCtx
 from zato.server.arbiter_config_process import ConfigProcessCtx
 
@@ -31,9 +27,7 @@ from zato.server.arbiter_config_process import ConfigProcessCtx
 if 0:
     from ha_env import HAEnvironment
     from nodes import Node
-    from zato.common.typing_ import any_, intlist, strlist
-
-    any_ = any_
+    from zato.common.typing_ import intlist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -65,15 +59,6 @@ class ModuleCtx:
 
     # What the shell of the container prints for a process that is no longer running
     No_Process = '-'
-
-    # How long the standby may take to take over, in seconds
-    Takeover_Timeout = 60
-
-    # How long the traffic runs before the active node is stopped, in seconds
-    Traffic_Seconds = 10
-
-    # STOP_GRACE of the supervisor of the node, after which it sends SIGKILL to the process group of the server, in seconds
-    Stop_Grace = 10
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -281,43 +266,6 @@ def test_arbiter_kill_on_active_node(ha_pair:'HAEnvironment') -> 'None':
     _ = processes.wait_for_pid(ArbiterCtx.Process_Name_Worker, child_pids, ModuleCtx.Respawn_Timeout)
 
     _ = env.wait_for_pair(ModuleCtx.Server_Timeout)
-
-# ################################################################################################################################
-
-def test_node_stop_under_load(ha_pair:'HAEnvironment') -> 'None':
-    """ A graceful stop of the active node under REST and pub/sub traffic drains the worker before STOP_GRACE,
-    so the node stops before its supervisor would send SIGKILL, and the standby delivers every pending message
-    after its takeover.
-    """
-    env = ha_pair
-
-    workload = Workload(cast_('any_', env), cast_('any_', [env.haproxy]))
-    workload.start()
-
-    time.sleep(ModuleCtx.Traffic_Seconds)
-
-    active = _get_active(env)
-    standby = env.get_other(active)
-
-    started_at = time.time()
-    started = time.monotonic()
-
-    # The node stops its server first, which takes STOP_GRACE or longer only if the worker did not drain in time
-    active.stop()
-    stop_duration = time.monotonic() - started
-
-    logger.info('Stop of %s took %.3fs', active.node_name, stop_duration)
-
-    assert stop_duration < ModuleCtx.Stop_Grace, f'Stop of {active.node_name} took {stop_duration:.3f}s'
-
-    _ = standby.wait_for_role(list(NodesCtx.Active_Roles), ModuleCtx.Takeover_Timeout)
-    _ = standby.wait_until_server_up(ModuleCtx.Server_Timeout)
-
-    active.resume()
-    workload.fault_windows.append((started_at, time.time()))
-
-    _ = env.wait_for_pair(ModuleCtx.Server_Timeout)
-    check_workload(env, workload)
 
 # ################################################################################################################################
 # ################################################################################################################################

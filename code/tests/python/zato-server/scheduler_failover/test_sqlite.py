@@ -33,7 +33,7 @@ _runs_timeout_seconds = 180
 _repeats_before_restart = 5
 
 # How long the server keeps running after the last expected run, so that an extra run would be observed, in seconds.
-_settle_seconds = 10
+_settle_seconds = 5
 
 # ################################################################################################################################
 # ################################################################################################################################

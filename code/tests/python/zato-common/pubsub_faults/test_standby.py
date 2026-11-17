@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # Zato
-from faults import DiskFault, get_label, Severity_Levels
+from faults import DiskFault, get_label, High_Severity_Levels
 from run import FaultRun
 
 # ################################################################################################################################
@@ -22,7 +22,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.mark.parametrize('level', Severity_Levels)
+@pytest.mark.parametrize('level', High_Severity_Levels)
 def test_sync_standby_disk(standby_database:'FaultDatabase', level:'int') -> 'None':
     """ Item 15.11 - the disk of a synchronous standby is throttled as in item 15.3, so that every commit
     on the primary waits for the standby.

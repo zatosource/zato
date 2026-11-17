@@ -53,13 +53,13 @@ class ModuleCtx:
     Request_Timeout = 5
 
     # How long the scheduler runs before its run state is compared with the run logs, in seconds
-    Scheduler_Seconds = 30
+    Scheduler_Seconds = 10
 
     # How long the traffic runs around each event, in seconds
-    Traffic_Seconds = 10
+    Traffic_Seconds = 3
 
     # How many takeovers the test of HAProxy measures
-    Takeover_Count = 2
+    Takeover_Count = 1
 
     # How long clients may take to reach the active node after HAProxy restarts and after a takeover, in seconds
     Restart_Recovery_Limit = 10

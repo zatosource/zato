@@ -14,7 +14,7 @@ import logging
 import time
 
 # Zato
-from ha_checks import check_copies, check_scheduler, check_workload
+from ha_checks import check_copies, check_scheduler, check_workload, ModuleCtx as ChecksCtx, read_rows
 from ha_env import ready_pair
 from ha_tools import clear_cpu_limit, clear_memory_limit, degrade_link, limit_cpu, limit_memory, ModuleCtx as ToolsCtx, \
     PreloadHook, read_memory_current, restore_link
@@ -43,15 +43,18 @@ logger = logging.getLogger('zato.test.ha_sqlite.faults_combined')
 class ModuleCtx:
 
     # How long the traffic runs before the faults, in seconds
-    Traffic_Seconds = 10
+    Traffic_Seconds = 5
 
     # The delay of each sync and write of the standby, in microseconds, and the loss on the replication link
     Standby_Delay_US = 20000
     Link_Loss = 'loss 10%'
 
     # How many messages expire before the sweep, and how long they live, in seconds
-    Expiring_Count = 2000
+    Expiring_Count = 500
     Expiration_Seconds = 1
+
+    # The query of the messages that a copy holds
+    Message_Query = 'select msg_id from pubsub_message'
 
     # The share of one CPU that the standby keeps during the takeover
     Starved_CPU_Share = 0.05
@@ -116,9 +119,11 @@ def test_slow_standby_and_lossy_link_during_sweep(ha_session:'HASession', reques
 
         # Messages that expire at once give the sweep rows to delete ..
         client = PublishClient(env.haproxy.base_url, env.publisher_username, env.publisher_password)
+        expired_msg_ids:'set[str]' = set()
 
         for index in range(ModuleCtx.Expiring_Count):
-            _ = client.publish(Topic_Name, {'expiring_index': index}, expiration=ModuleCtx.Expiration_Seconds)
+            published = client.publish(Topic_Name, {'expiring_index': index}, expiration=ModuleCtx.Expiration_Seconds)
+            expired_msg_ids.add(published['msg_id'])
 
         time.sleep(ModuleCtx.Expiration_Seconds * 2)
 
@@ -139,6 +144,12 @@ def test_slow_standby_and_lossy_link_during_sweep(ha_session:'HASession', reques
         assert result.returncode == 0, f'Sweep failed:\n{result.stdout}{result.stderr}'
 
         _finish(env, workload)
+
+        # The sweep removed every expired message from both copies.
+        for node in (active, standby):
+            rows = read_rows(node.db_path(ChecksCtx.Database_File), ModuleCtx.Message_Query)
+            remaining = expired_msg_ids.intersection(row[0] for row in rows)
+            assert not remaining, f'{len(remaining)} expired messages remain on {node.node_name}'
 
 # ################################################################################################################################
 

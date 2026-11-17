@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # Zato
-from faults import get_label, Severity_Levels
+from faults import get_label, Partial_And_Total_Levels
 from managed_faults import SNATFault
 from run import FaultRun
 from zato.common.test.pubsub_profile import Managed_Profiles
@@ -34,7 +34,7 @@ _syn_packets_per_connection = 7
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.mark.parametrize('level', Severity_Levels)
+@pytest.mark.parametrize('level', Partial_And_Total_Levels)
 def test_snat_exhaustion(managed_database:'ManagedDatabase', level:'int') -> 'None':
     """ A share of the new connections is refused or delayed while the existing connections continue,
     and the pools open at most the connections that they hold, rather than opening them in a loop.

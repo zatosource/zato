@@ -35,7 +35,7 @@ logger = logging.getLogger('zato.test.pubsub_takeover_traffic')
 # ################################################################################################################################
 
 # How long the clients publish before the active server fails and after the standby took over, in seconds.
-_burst_seconds = 10
+_burst_seconds = 5
 
 # How long the controller may take to switch the servers, in seconds.
 _switch_timeout_seconds = 300

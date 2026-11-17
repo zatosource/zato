@@ -53,12 +53,12 @@ _live_partner_sub_key = 'zpsk.stability.partner.0001'
 _live_push_sub_key = 'zpsk.stability.broadcast.0000'
 
 # How long the traffic runs before the administration starts and after it is over, in seconds.
-_warm_up_seconds = 3 * 60
+_warm_up_seconds = 60
 _cool_down_seconds = 3 * 60
 
 # How long a live queue is left to fill before it is cleared, and how long a delivery in progress
 # is given to complete once its queue was paused, in seconds.
-_fill_seconds = 60
+_fill_seconds = 15
 _settle_seconds = 5
 
 # How long the backlog of the traffic may take to drain after the API clients stop, in seconds.

@@ -41,11 +41,18 @@ logger = logging.getLogger('zato.test.ha_sqlite.lease')
 
 class ModuleCtx:
 
-    # How long the API server is unavailable, in seconds
-    Outage_Seconds = [10, 120]
+    # How long the API server is unavailable, which exceeds the takeover timer of the node, in seconds
+    Outage_Seconds = [15]
+
+    # How long the API server is unavailable after the standby fails, which exceeds the mark-out timer of the node
+    # many times over, in seconds
+    Standby_Lost_Seconds = 30
 
     # How long the traffic runs before the outage and after it, in seconds
-    Traffic_Seconds = 10
+    Traffic_Seconds = 5
+
+    # How long the API server is unavailable before the standby fails, in seconds
+    Outage_Before_Fault_Seconds = 3
 
     # How long after the standby fails the requests in flight may still return, in seconds
     In_Flight_Grace = 1.0
@@ -114,9 +121,6 @@ def test_the_record_follows_compare_and_set(ha_pair:'HAEnvironment') -> 'None':
     current = env.referee.read_record()
     assert current == after, (after, current)
 
-    standby.resume()
-    _ = standby.wait_for_role(ModuleCtx.Standby_In_Sync, ModuleCtx.Rejoin_Timeout)
-
 # ################################################################################################################################
 
 @pytest.mark.parametrize('outage_seconds', ModuleCtx.Outage_Seconds)
@@ -176,12 +180,12 @@ def test_standby_lost_during_outage(ha_pair:'HAEnvironment') -> 'None':
 
     # The API server becomes unavailable and the standby fails during the outage ..
     env.referee.stop()
-    time.sleep(ModuleCtx.Traffic_Seconds)
+    time.sleep(ModuleCtx.Outage_Before_Fault_Seconds)
 
     standby_failed = time.time()
     standby.kill()
 
-    time.sleep(ModuleCtx.Outage_Seconds[-1])
+    time.sleep(ModuleCtx.Standby_Lost_Seconds)
 
     # .. so nothing is acknowledged until the API server returns ..
     outage_ended = time.time()

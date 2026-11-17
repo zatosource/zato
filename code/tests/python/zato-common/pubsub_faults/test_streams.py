@@ -11,9 +11,9 @@ import pytest
 
 # Zato
 from conftest import Database_Proxy
-from faults import get_label, Severity_Levels
+from faults import get_label, Total_Loss
 from run import FaultRun
-from stream_faults import Stream_Kinds, StreamFault
+from stream_faults import Stream_Cut, Stream_Kinds, StreamFault
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -24,8 +24,21 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.mark.parametrize('level', Severity_Levels)
-@pytest.mark.parametrize('kind', Stream_Kinds)
+# The level at which each kind of stream fault runs.
+_partial_level = 50
+
+# Each kind at its partial level, and one total loss, whose black hole is the same for every kind.
+_cases:'list[tuple[str, int]]' = []
+
+for _kind in Stream_Kinds:
+    _cases.append((_kind, _partial_level))
+
+_cases.append((Stream_Cut, Total_Loss))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.mark.parametrize('kind, level', _cases)
 def test_database_link(stream_database:'Toxiproxy', kind:'str', level:'int') -> 'None':
     """ Item 15.6 - the connections from the server to PostgreSQL are delayed, limited, sliced, reset and cut,
     and held in a black hole at a total loss.

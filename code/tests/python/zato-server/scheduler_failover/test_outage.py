@@ -39,16 +39,12 @@ _runs_timeout_seconds = 180
 _runs_around_outage = 10
 
 # How long the database is unavailable in each test, in seconds.
-_outage_seconds = [10, 120]
+_outage_seconds = [70]
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.mark.parametrize('outage_seconds', _outage_seconds)
-def test_database_outage(pair:'SchedulerPair', outage_seconds:'int') -> 'None':
-    """ The shared database stops for a time, server A skips each slot due in the meantime as not active,
-    begins no run, and continues as the active server once the database returns.
-    """
+def _run_database_outage(pair:'SchedulerPair', outage_seconds:'int') -> 'None':
     database = pair.database
 
     _ = wait_for_starts(pair, ChecksCtx.Job_Every_Second, 'a', _runs_around_outage, _runs_timeout_seconds)
@@ -87,6 +83,24 @@ def test_database_outage(pair:'SchedulerPair', outage_seconds:'int') -> 'None':
 
     # .. and it is still the active server.
     assert read_generation(database) == generation
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.mark.parametrize('outage_seconds', _outage_seconds)
+def test_database_outage(pair:'SchedulerPair', outage_seconds:'int') -> 'None':
+    """ The shared database stops for a time, server A skips each slot due in the meantime as not active,
+    begins no run, and continues as the active server once the database returns.
+    """
+    _run_database_outage(pair, outage_seconds)
+
+# ################################################################################################################################
+
+@pytest.mark.parametrize('outage_seconds', _outage_seconds)
+def test_database_outage_over_tls(tls_pair:'SchedulerPair', outage_seconds:'int') -> 'None':
+    """ The same outage with server A connected to the shared database over TLS.
+    """
+    _run_database_outage(tls_pair, outage_seconds)
 
 # ################################################################################################################################
 # ################################################################################################################################

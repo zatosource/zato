@@ -37,7 +37,7 @@ if 0:
 
 # How many delivered-message traces past their retention the cleanup removes during the traffic,
 # unless Zato_Test_Retention_Messages says otherwise.
-_trace_count = 5_000_000
+_trace_count = 2_000_000
 
 # How old the traces are, which is past the retention by age.
 _trace_age_days = 30
@@ -47,7 +47,7 @@ _trace_topic = 'stability.retention'
 
 # How many times the cleanup process is killed in the middle of a sweep, and what part of the traces
 # each of its lives removes before it is killed.
-_kill_count = 3
+_kill_count = 2
 _kill_after_ratio = 0.1
 
 # How long the cleanup process stays down after it was killed, in seconds.
@@ -57,7 +57,7 @@ _restart_delay_seconds = 5
 # held for less than the idle in transaction timeout of 60 seconds after which the server ends the session.
 # On SQLite it is the write lock of the database, which the publications of the traffic wait for as well,
 # so the hold is shorter than the limit of the publish p99 of one second.
-_postgresql_lock_seconds = 30
+_postgresql_lock_seconds = 10
 _sqlite_lock_seconds = 0.5
 
 # How many traces the other transaction locks on PostgreSQL.

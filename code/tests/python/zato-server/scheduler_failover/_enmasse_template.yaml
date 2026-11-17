@@ -21,7 +21,7 @@ scheduler:
     service: test.scheduler.failover.record-run
     job_type: interval_based
     seconds: 2
-    repeats: 20
+    repeats: 10
     start_date: "{{grid_start}}"
     is_active: true
     extra: '{"job": "test.scheduler.repeats", "run_seconds": 0}'

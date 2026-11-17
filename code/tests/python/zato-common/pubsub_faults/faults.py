@@ -36,6 +36,13 @@ if 0:
 Total_Loss = 100
 Severity_Levels = [10, 20, 50, 90, Total_Loss]
 
+# The levels of a resource whose lighter shortages do not alter the behavior of pub/sub - a shortage that leaves
+# a tenth of the resource and its total loss.
+High_Severity_Levels = [90, Total_Loss]
+
+# The levels of a fault whose partial extent and total loss are each a behavior of their own.
+Partial_And_Total_Levels = [50, Total_Loss]
+
 # The smallest limits that io.max is set to, which a total loss of the disk uses as well.
 _min_bytes_per_second = 4096
 _min_operations_per_second = 1

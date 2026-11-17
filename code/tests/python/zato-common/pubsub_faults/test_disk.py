@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # Zato
-from faults import DiskFault, get_label, Severity_Levels
+from faults import DiskFault, get_label, High_Severity_Levels
 from run import FaultRun
 
 # ################################################################################################################################
@@ -22,7 +22,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.mark.parametrize('level', Severity_Levels)
+@pytest.mark.parametrize('level', High_Severity_Levels)
 def test_disk(fault_database:'FaultDatabase', level:'int') -> 'None':
     """ Item 15.3 - the disk of PostgreSQL loses a share of the bandwidth and of the operations per second
     that it used in the baseline, which slows down checkpoints, WAL writes and commits.

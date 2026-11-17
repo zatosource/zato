@@ -48,11 +48,14 @@ class ModuleCtx:
     Role_Standby = 'StandbyInSync'
     Link_Streaming = 'Streaming'
 
+    # The variable that selects the referee type, which a pair that uses the lease does not set
+    Referee_Type_Variable = 'Zato_HA_Referee_Type'
+
     # How many publications the test of the barrier checks one by one
-    Publication_Count = 200
+    Publication_Count = 50
 
     # How long the test of the barrier lets the scheduler run and the pushes arrive, in seconds
-    Observation_Seconds = 30
+    Observation_Seconds = 10
 
     # How often the receiver and the run logs are read during that time, in seconds
     Poll_Interval = 0.2
@@ -84,10 +87,14 @@ def _get_pair(env:'HAEnvironment') -> 'tuple[Node, Node]':
 
 def test_bootstrap(ha_pair:'HAEnvironment') -> 'None':
     """ One node is active with its standby in sync, both hold the generation of the referee, the referee names them,
-    the Zato server runs on the active node only and HAProxy reaches it.
+    the Zato server runs on the active node only and HAProxy reaches it. Nodes that do not set the referee type
+    use the lease as their referee.
     """
     env = ha_pair
     active, standby = _get_pair(env)
+
+    for node in env.node_list:
+        assert ModuleCtx.Referee_Type_Variable not in node.env, node.env
 
     active_report = active.read_role()
     standby_report = standby.read_role()

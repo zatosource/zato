@@ -30,7 +30,7 @@ from workload import stop_running_workloads, Workload
 # ################################################################################################################################
 
 # The largest file that the process may write while the storage is full, in bytes.
-_file_size_limit = 256 * 1024 * 1024
+_file_size_limit = 64 * 1024 * 1024
 
 # How large each payload is, in characters.
 _padding_size = 65_536

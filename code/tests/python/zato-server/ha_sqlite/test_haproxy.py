@@ -34,7 +34,7 @@ logger = logging.getLogger('zato.test.ha_sqlite.haproxy')
 class ModuleCtx:
 
     # How long the traffic runs around each event, in seconds
-    Traffic_Seconds = 10
+    Traffic_Seconds = 3
 
     # How many takeovers the test measures
     Takeover_Count = 2

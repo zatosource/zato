@@ -41,9 +41,13 @@ logger = logging.getLogger('zato.test.ha_sqlite.long_run')
 
 class ModuleCtx:
 
-    # How long each run lasts and how often the active node is replaced, in seconds
+    # How long the soak lasts, in seconds
     Duration_Seconds = 60 * 60
-    Switch_Interval_Seconds = 4 * 60
+
+    # How many times the repeated failover replaces the active node, once with each fault of the takeover suite,
+    # and how often, in seconds, which exceeds the takeover and the rejoin of a node in sync
+    Failover_Switch_Count = 4
+    Failover_Switch_Interval_Seconds = 120
 
     # How often a run checks whether it must stop, in seconds
     Check_Interval = 1.0
@@ -113,16 +117,17 @@ def stop_traffic(env:'HAEnvironment', publisher:'TimedPublisher', reporter:'Minu
 # ################################################################################################################################
 
 def run_repeated_failover(env:'HAEnvironment', workload:'Workload', reporter:'MinuteReporter') -> 'list[Replacement]':
-    """ Replaces the active node every four minutes for one hour with each fault of the takeover suite in turn,
-    and returns each replacement.
+    """ Replaces the active node at each switch interval with each fault of the takeover suite in turn,
+    lets the traffic run for one more interval after the last switch, and returns each replacement.
     """
     out:'list[Replacement]' = []
 
-    switch_count = ModuleCtx.Duration_Seconds // ModuleCtx.Switch_Interval_Seconds - 1
+    switch_count = ModuleCtx.Failover_Switch_Count
+    interval = ModuleCtx.Failover_Switch_Interval_Seconds
     started = time.monotonic()
 
     for index in range(switch_count):
-        wait_until(reporter, started + (index + 1) * ModuleCtx.Switch_Interval_Seconds)
+        wait_until(reporter, started + (index + 1) * interval)
 
         fault = TakeoverCtx.Faults[index % len(TakeoverCtx.Faults)]
 
@@ -142,7 +147,7 @@ def run_repeated_failover(env:'HAEnvironment', workload:'Workload', reporter:'Mi
 
         out.append(Replacement(old_active, takeover_time))
 
-    wait_until(reporter, started + ModuleCtx.Duration_Seconds)
+    wait_until(reporter, started + (switch_count + 1) * interval)
 
     return out
 

@@ -34,10 +34,10 @@ if 0:
 # ################################################################################################################################
 
 # How many messages each steady traffic test publishes, unless the environment variable names another count
+# for both of them
 _message_count_env = 'Zato_Test_PubSub_Traffic_Message_Count'
-_default_message_count = '20000'
-_message_count_text = os.environ.get(_message_count_env, _default_message_count)
-_message_count = int(_message_count_text)
+_continuous_publication_count = 6_000
+_competing_consumers_count = 2_000
 
 # How many input messages of the relay are published per second
 _publication_rate = 100
@@ -51,8 +51,8 @@ _consumer_count = 4
 # How many messages one pull of a competing client asks for
 _consumer_batch_size = 50
 
-# The share of the batches that a competing client acknowledges only after their lease ran out
-_late_batch_share = 0.1
+# Every how many batches a competing client acknowledges one only after its lease ran out, beginning with the first one
+_late_batch_interval = 10
 
 # How long beyond the lease a client waits, in seconds
 _lease_margin = 0.5
@@ -70,6 +70,18 @@ _orders_topic   = 'orders'
 _invoices_topic = 'invoices'
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _get_message_count(default_count:'int') -> 'int':
+    """ Returns how many messages a steady traffic test publishes.
+    """
+    if value := os.environ.get(_message_count_env, ''):
+        out = int(value)
+    else:
+        out = default_count
+
+    return out
+
 # ################################################################################################################################
 
 def _get_lease_seconds() -> 'float':
@@ -221,6 +233,7 @@ class _CompetingConsumer:
     """
 
     def __init__(self) -> 'None':
+        self.batch_count = 0
         self.conflict_count = 0
         self.late_batch_count = 0
         self.consumed_count = 0
@@ -286,9 +299,11 @@ class _CompetingConsumer:
             ack_payload = self._build_ack(messages)
 
             # A late batch is handed out to another client in the meantime ..
-            if random.random() < _late_batch_share:
+            if self.batch_count % _late_batch_interval == 0:
                 self.late_batch_count += 1
                 time.sleep(_get_lease_seconds() + _lease_margin)
+
+            self.batch_count += 1
 
             request_start = time.monotonic()
             ack_result = ack(TestConfig.orders_username, TestConfig.orders_password, ack_payload)
@@ -468,8 +483,10 @@ def test_crashes_under_continuous_publication(zato_server:'any_') -> 'None':
     """
     _ = drain(TestConfig.reader_username, TestConfig.reader_password)
 
-    prefix, keys = new_keys(_message_count)
-    duration = _message_count / _publication_rate
+    message_count = _get_message_count(_continuous_publication_count)
+
+    prefix, keys = new_keys(message_count)
+    duration = message_count / _publication_rate
     interval = 1 / _publication_rate
 
     stop = Event()
@@ -511,7 +528,7 @@ def test_crashes_under_continuous_publication(zato_server:'any_') -> 'None':
             assert_exactly_once(check, keys)
 
             # .. and the reader receives each of them once and in order.
-            _wait_for_received(reader, _message_count)
+            _wait_for_received(reader, message_count)
             timing['received'] = reader.received_times[-1]
 
         finally:
@@ -527,13 +544,15 @@ def test_crashes_under_continuous_publication(zato_server:'any_') -> 'None':
 
 def test_competing_consumers_with_lease_expiry(zato_server:'any_') -> 'None':
     """ Four clients consume the orders of one queue, each publishing one invoice per order in the transaction of its
-    acknowledgement and acknowledging a tenth of its batches only after their lease ran out. Every order is acknowledged,
+    acknowledgement and acknowledging every tenth of its batches only after their lease ran out. Every order is acknowledged,
     and each order has exactly one invoice.
     """
     _ = drain(TestConfig.orders_username, TestConfig.orders_password)
     _ = drain(TestConfig.verifier_username, TestConfig.verifier_password)
 
-    prefix, keys = new_keys(_message_count)
+    message_count = _get_message_count(_competing_consumers_count)
+
+    prefix, keys = new_keys(message_count)
 
     stop = Event()
     consumers:'list[_CompetingConsumer]' = []
@@ -562,7 +581,7 @@ def test_competing_consumers_with_lease_expiry(zato_server:'any_') -> 'None':
 
             timing['published'] = time.monotonic()
 
-            _wait_for_invoices(prefix, _message_count)
+            _wait_for_invoices(prefix, message_count)
             timing['consumed'] = time.monotonic()
 
         finally:

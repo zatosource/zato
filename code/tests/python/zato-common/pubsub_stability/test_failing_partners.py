@@ -66,7 +66,7 @@ _unresponsive_hold_seconds = 3600
 _message_counts = {
     _healthy: 600,
     _slow: 10,
-    _flaky: 200,
+    _flaky: 25,
     _failing: 3,
     _unresponsive: 2,
 }

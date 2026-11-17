@@ -13,7 +13,7 @@ from gevent import sleep, spawn
 from faults import Total_Loss
 from managed_faults import CPUCreditFault, IdleFault, StorageTierFault
 from profiles import get_profile_limits
-from run import FaultRun
+from run import FaultPhases, FaultRun
 from zato.common.test.pubsub_database import connect, ModuleCtx
 from zato.common.test.pubsub_profile import Managed_Profiles
 
@@ -38,6 +38,14 @@ _run_process_count = 2
 
 # How often the connections are counted, in seconds.
 _sample_seconds = 1
+
+# The phases of the run that counts the connections, which applies no fault, so its traffic is checked throughout.
+_connection_limits_phases = FaultPhases(
+    baseline_seconds=0,
+    fault_seconds=0,
+    recovery_seconds=0,
+    checked_seconds=120,
+)
 
 # The connections of the pub/sub role and all the client connections.
 _connections_query = """
@@ -165,7 +173,7 @@ def test_connection_limits(managed_database:'ManagedDatabase') -> 'None':
     fault = IdleFault('connection-limits')
 
     try:
-        run = FaultRun(fault.name)
+        run = FaultRun(fault.name, _connection_limits_phases)
         run.run(fault, Total_Loss)
     finally:
         sampler.stop()

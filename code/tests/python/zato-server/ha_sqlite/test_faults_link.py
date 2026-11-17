@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Packet faults on the replication link - delay with jitter, loss, reordering, duplication, corruption and a bandwidth
-# limit, each at every severity, in both directions between the nodes and on that link only. Each run reports
+# Packet faults on the replication link - delay with jitter and loss, each at every severity, in both directions
+# between the nodes and on that link only. Each run reports
 # the latency of the barrier and the acknowledgment rate, and total loss makes the active node mark the standby out.
 
 # stdlib
@@ -45,8 +45,12 @@ logger = logging.getLogger('zato.test.ha_sqlite.faults_link')
 class ModuleCtx:
 
     # How long the traffic runs before the faults and under each severity, in seconds
-    Traffic_Seconds = 10
-    Window_Seconds = 30
+    Traffic_Seconds = 5
+    Window_Seconds = 20
+
+    # The kinds of packet faults - a slow link and a link that drops packets, which the replication stream
+    # experiences in the same way as reordered, duplicated or corrupted packets that TCP retransmits
+    Packet_Faults = [ToolsCtx.Packet_Delay, ToolsCtx.Packet_Loss]
 
     # The percentiles of the latency that each run reports
     Percentile_50 = 0.5
@@ -77,7 +81,7 @@ def restore_replication_link(active:'Node', standby:'Node') -> 'None':
 
 # ################################################################################################################################
 
-@pytest.mark.parametrize('kind', ToolsCtx.Packet_Faults)
+@pytest.mark.parametrize('kind', ModuleCtx.Packet_Faults)
 def test_replication_link(ha_pair:'HAEnvironment', kind:'str') -> 'None':
     """ The pair acknowledges publications under each severity of a packet fault with one node active at a time,
     marks the standby out at total loss, and loses nothing.

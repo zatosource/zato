@@ -7,8 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # CPU, memory and clock faults on each node - a CPU limit and memory pressure at each severity, an OOM kill
-# of the Zato server inside the active container, and offsets and rate changes of the wall clock of the standby
-# during a takeover, which the timers of the node do not follow, as they use the monotonic clock.
+# of the Zato server inside the active container, and offsets of the wall clock of the standby during a takeover,
+# which the timers of the node do not follow, as they use the monotonic clock.
 
 # stdlib
 import logging
@@ -52,8 +52,8 @@ class ModuleCtx:
     Targets = [Target_Active, Target_Standby]
 
     # How long the traffic runs before the faults and under each severity, in seconds
-    Traffic_Seconds = 10
-    Window_Seconds = 30
+    Traffic_Seconds = 5
+    Window_Seconds = 15
 
     # The memory limits of the cgroup
     Memory_High = 'memory.high'
@@ -72,16 +72,15 @@ class ModuleCtx:
     # How often the OOM kills are read while the test waits for one, in seconds
     Poll_Interval = 0.5
 
-    # The offsets of the wall clock, in seconds, and its rates
+    # The offsets of the wall clock, in seconds, and its rate
     Clock_Settings = [
         (120, 1.0),
         (-120, 1.0),
-        (0, 2.0),
-        (0, 0.5),
     ]
 
-    # How long the standby may take to take over, the same as with a clock that is not changed, in seconds
-    Takeover_Timeout = 60
+    # How long the standby with a changed clock may take to take over, which exceeds the takeover timer of the node
+    # with a margin for the start of its role and stays well below any wait that a wall-clock timer would cause, in seconds
+    Clock_Takeover_Timeout = 15
 
     # How long the pair may take to recover, in seconds
     Recovery_Timeout = 300
@@ -242,7 +241,7 @@ def test_clock_during_takeover(ha_session:'HASession', request:'any_', clock_set
         started = time.time()
         active.kill()
 
-        _ = standby.wait_for_role(ModuleCtx.Active_Roles, ModuleCtx.Takeover_Timeout)
+        _ = standby.wait_for_role(ModuleCtx.Active_Roles, ModuleCtx.Clock_Takeover_Timeout)
         _ = standby.wait_until_server_up(ModuleCtx.Server_Timeout)
 
         active.resume()

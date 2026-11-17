@@ -33,8 +33,9 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The modes of the shared database that the suite runs in.
-_default_modes = [PubSubDBMode.PostgreSQL, PubSubDBMode.PostgreSQL_TLS]
+# The modes of the shared database that the suite runs in. The outage of the database, which breaks the connections
+# of a server, runs over TLS as well, through a fixture of its own.
+_default_modes = [PubSubDBMode.PostgreSQL]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,6 +58,32 @@ def pair(database:'PubSubDatabase') -> 'any_':
     """ Server A runs as the active server and server B waits as a stopped container.
     """
     out = build_pair(database, 2, False)
+
+    try:
+        yield out
+    finally:
+        remove_pair(out)
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='module')
+def tls_database() -> 'any_':
+    """ The shared database of the servers over TLS, one for each test module.
+    """
+    out = start_pubsub_database('scheduler', PubSubDBMode.PostgreSQL_TLS)
+
+    try:
+        yield out
+    finally:
+        stop_pubsub_database(out)
+
+# ################################################################################################################################
+
+@pytest.fixture
+def tls_pair(tls_database:'PubSubDatabase') -> 'any_':
+    """ Server A runs as the active server and server B waits as a stopped container, both connected over TLS.
+    """
+    out = build_pair(tls_database, 2, False)
 
     try:
         yield out

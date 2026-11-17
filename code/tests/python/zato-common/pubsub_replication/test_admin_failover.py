@@ -39,11 +39,11 @@ _topic_name = 'replication.admin'
 _sub_key = 'zpsk.replication.admin'
 
 # How many messages the queue holds before the operation starts, and how many publish at once while it is filled.
-_message_count = 30_000
+_message_count = 3_000
 _fill_concurrency = 50
 
 # How many rows one batch of an operation touches, small enough for the operation to span many transactions.
-_batch_size = '100'
+_batch_size = '10'
 
 # How long an operation may take, and how often its progress is checked, in seconds.
 _operation_timeout = 300
@@ -93,12 +93,15 @@ def _fail_over_during(database:'ReplicatedDatabase', operation:'Callable[[], any
     the standby and returns what the operation raised, if anything.
     """
     errors:'list[Exception]' = []
+    ended_at:'list[float]' = []
 
     def run() -> 'None':
         try:
             _ = operation()
         except Exception as e:
             errors.append(e)
+        finally:
+            ended_at.append(monotonic())
 
     greenlet = spawn(run)
 
@@ -112,11 +115,15 @@ def _fail_over_during(database:'ReplicatedDatabase', operation:'Callable[[], any
     assert not greenlet.ready(), 'The operation completed before the primary was lost'
 
     kill_primary(database)
+    killed_at = monotonic()
+
     _ = promote_standby(database)
 
-    # .. and the operation either ends with an error or completes on the new primary.
+    # .. and the operation either ends with an error or completes on the new primary,
+    # .. in either case only after the primary was lost, so the failover interrupted it.
     _ = greenlet.join(timeout=_operation_timeout)
     assert greenlet.ready(), 'The operation did not end after the failover'
+    assert ended_at[0] > killed_at, 'The operation completed before the primary was lost'
 
     return errors
 

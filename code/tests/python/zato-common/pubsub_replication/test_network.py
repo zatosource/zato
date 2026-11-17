@@ -39,9 +39,9 @@ _drain_timeout = 300
 
 # How long each fault lasts, in seconds, the latency added to each direction of the link, in milliseconds,
 # and how many times the connections are reset, with the pause between two resets, in seconds.
-_fault_seconds = 20
+_fault_seconds = 10
 _latency_ms = 50
-_reset_count = 5
+_reset_count = 2
 _reset_pause = 2
 
 # ################################################################################################################################

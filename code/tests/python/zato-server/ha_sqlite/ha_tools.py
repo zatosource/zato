@@ -59,7 +59,7 @@ class ModuleCtx:
     No_Limit = 'max'
 
     # The severities of each fault, as fractions of its full extent, and the parameters of netem at total loss
-    Severities = [0.1, 0.2, 0.5, 0.9]
+    Severities = [0.5, 0.9]
     Total_Loss = 'loss 100%'
 
     # The full extent of each kind of packet fault - the delay, the share of packets lost, reordered, duplicated

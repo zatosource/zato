@@ -31,10 +31,10 @@ from workload import stop_running_workloads, Workload
 
 # Where the tablespace of the pub/sub tables is mounted in the container, and how large it is.
 _tablespace_dir = '/pubsub_ts'
-_tablespace_size = '512m'
+_tablespace_size = '128m'
 
 # How much of the tablespace the ballast file takes, leaving the rest for the traffic.
-_ballast_size = '384M'
+_ballast_size = '96M'
 _ballast_path = f'{_tablespace_dir}/ballast'
 
 # How large each payload is, in characters.
