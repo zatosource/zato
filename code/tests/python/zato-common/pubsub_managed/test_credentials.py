@@ -10,6 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import secrets
 
+# pytest
+import pytest
+
 # Zato
 from faults import Total_Loss
 from managed_faults import CredentialRotationFault
@@ -21,6 +24,7 @@ from zato.common.test.pubsub_database import get_runtime_dir
 # ################################################################################################################################
 
 if 0:
+    from pubsub_rest.server import PubSubServer
     from zato.common.typing_ import callable_
 
 # ################################################################################################################################
@@ -35,7 +39,7 @@ _min_rotations = 2
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_credential_rotation(start_managed:'callable_') -> 'None':
+def test_credential_rotation(start_managed:'callable_', request:'pytest.FixtureRequest') -> 'None':
     """ The password of pub/sub changes during the traffic, the existing connections continue,
     and the new connections of the server and of the cleanup process authenticate with the current password
     without a restart.
@@ -53,8 +57,9 @@ def test_credential_rotation(start_managed:'callable_') -> 'None':
             _ = password_file.write(database.password)
 
         fault = CredentialRotationFault(database, password_path, limits.rotation_seconds)
+        server:'PubSubServer' = request.getfixturevalue('server')
 
-        run = FaultRun(fault.name)
+        run = FaultRun(server, fault.name)
         run.run(fault, Total_Loss)
         run.check()
 

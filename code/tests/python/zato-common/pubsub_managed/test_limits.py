@@ -21,6 +21,7 @@ from zato.common.test.pubsub_profile import Managed_Profiles
 # ################################################################################################################################
 
 if 0:
+    from pubsub_rest.server import PubSubServer
     from conftest import ManagedDatabase
     from profiles import StorageTier
     from zato.common.test.pubsub_database import PubSubDatabase
@@ -127,31 +128,31 @@ def _get_available_connections(database:'PubSubDatabase') -> 'int':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_storage_tier(managed_database:'ManagedDatabase', storage_tier:'StorageTier') -> 'None':
+def test_storage_tier(managed_database:'ManagedDatabase', server:'PubSubServer', storage_tier:'StorageTier') -> 'None':
     """ The storage of the database provides the operations per second and the bandwidth
     of a storage tier, including a burst that runs out during the traffic.
     """
     fault = StorageTierFault(managed_database.container, managed_database.device, storage_tier)
 
-    run = FaultRun(fault.name)
+    run = FaultRun(server, fault.name)
     run.run(fault, Total_Loss)
     run.check()
 
 # ################################################################################################################################
 
-def test_cpu_credits(managed_database:'ManagedDatabase') -> 'None':
+def test_cpu_credits(managed_database:'ManagedDatabase', server:'PubSubServer') -> 'None':
     """ A burstable instance class ran out of its CPU credits and is left with its baseline CPUs.
     """
     limits = get_profile_limits()
     fault = CPUCreditFault(managed_database.container, limits.baseline_cpus)
 
-    run = FaultRun(fault.name)
+    run = FaultRun(server, fault.name)
     run.run(fault, Total_Loss)
     run.check()
 
 # ################################################################################################################################
 
-def test_connection_limits(managed_database:'ManagedDatabase') -> 'None':
+def test_connection_limits(managed_database:'ManagedDatabase', server:'PubSubServer') -> 'None':
     """ The pools of both servers and of the cleanup process fit within the connections
     that a small instance class leaves to the clients, and the traffic opens no more connections than its pools hold.
     """
@@ -173,7 +174,7 @@ def test_connection_limits(managed_database:'ManagedDatabase') -> 'None':
     fault = IdleFault('connection-limits')
 
     try:
-        run = FaultRun(fault.name, _connection_limits_phases)
+        run = FaultRun(server, fault.name, _connection_limits_phases)
         run.run(fault, Total_Loss)
     finally:
         sampler.stop()

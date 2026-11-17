@@ -19,13 +19,7 @@ from contextlib import contextmanager, ExitStack
 
 _here = os.path.dirname(__file__)
 _faults_dir = os.path.abspath(os.path.join(_here, '..', 'pubsub_faults'))
-_stability_dir = os.path.abspath(os.path.join(_here, '..', 'pubsub_stability'))
-_perf_dir = os.path.abspath(os.path.join(_here, '..', 'pubsub_backend_perf'))
-_lib_dir = os.path.abspath(os.path.join(_here, '..', 'lib'))
 
-sys.path.insert(0, _lib_dir)
-sys.path.insert(0, _perf_dir)
-sys.path.insert(0, _stability_dir)
 sys.path.insert(0, _faults_dir)
 sys.path.insert(0, _here)
 
@@ -33,9 +27,12 @@ sys.path.insert(0, _here)
 import pytest
 
 # Zato
-from capture import limit_captured_logs
 from container import Container, get_disk_device
+from fault_server import get_fault_fixture_arguments, Server_Config
 from profiles import get_profile_limits
+from pubsub_rest.capture import limit_captured_logs
+from pubsub_rest.server import PubSubServer
+from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
 from zato.common.db_env.database import get_database_engine
 from zato.common.db_env.fence import ModuleCtx as FenceCtx
 from zato.common.pubsub.sql.config import ModuleCtx
@@ -64,6 +61,9 @@ _delivered_max_messages = '10000'
 
 # The parameters that each managed mode gives its own values to.
 _profile_parameters = ['storage_tier', 'failover_delay']
+
+# The server of each test.
+_server = PubSubServer('pubsub-managed')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -192,6 +192,17 @@ def failover_database() -> 'replicatedgen':
     finally:
         stop_replicated_database(replicated)
         shutil.rmtree(work_dir, ignore_errors=True)
+
+# ################################################################################################################################
+
+# The server of one test, against the database that the fixtures requested before it, or the test itself, select.
+zato_server = create_zato_server_fixture(**get_fault_fixture_arguments(_server, Server_Config))
+
+# ################################################################################################################################
+
+@pytest.fixture
+def server(zato_server:'None') -> 'PubSubServer':
+    return _server
 
 # ################################################################################################################################
 # ################################################################################################################################

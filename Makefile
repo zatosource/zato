@@ -895,7 +895,7 @@ test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing del
 	done
 	for mode in $(Zato_Test_PubSub_Stability_Modes); do \
 		Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
-			$(CURDIR)/code/tests/python/zato-common/pubsub_stability/ $(Zato_Test_Without_Soak) \
+			$(CURDIR)/code/tests/python/zato-server/pubsub_stability/ $(Zato_Test_Without_Soak) \
 			-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_stability_$$mode -W ignore::DeprecationWarning \
 			$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
 	done
@@ -947,7 +947,7 @@ test-soak-pubsub: ## The pub/sub soak tests - the stability suite on every datab
 	$(MAKE) test-durability-static $(Zato_Log)
 	for mode in $(Zato_Test_PubSub_Stability_Modes); do \
 		Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
-			$(CURDIR)/code/tests/python/zato-common/pubsub_stability/ $(Zato_Test_Soak_Only) \
+			$(CURDIR)/code/tests/python/zato-server/pubsub_stability/ $(Zato_Test_Soak_Only) \
 			-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_stability_soak_$$mode -W ignore::DeprecationWarning \
 			$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
 	done

@@ -19,6 +19,7 @@ from zato.common.test.pubsub_profile import Managed_Profiles
 # ################################################################################################################################
 
 if 0:
+    from pubsub_rest.server import PubSubServer
     from conftest import ManagedDatabase
 
 # ################################################################################################################################
@@ -35,7 +36,7 @@ _syn_packets_per_connection = 7
 # ################################################################################################################################
 
 @pytest.mark.parametrize('level', Partial_And_Total_Levels)
-def test_snat_exhaustion(managed_database:'ManagedDatabase', level:'int') -> 'None':
+def test_snat_exhaustion(managed_database:'ManagedDatabase', server:'PubSubServer', level:'int') -> 'None':
     """ A share of the new connections is refused or delayed while the existing connections continue,
     and the pools open at most the connections that they hold, rather than opening them in a loop.
     """
@@ -45,7 +46,7 @@ def test_snat_exhaustion(managed_database:'ManagedDatabase', level:'int') -> 'No
     fault = SNATFault(database.container_name)
     label = get_label(fault.name, level)
 
-    run = FaultRun(label)
+    run = FaultRun(server, label)
     run.run(fault, level)
     run.check()
 

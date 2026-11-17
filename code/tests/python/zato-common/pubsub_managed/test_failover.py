@@ -15,18 +15,19 @@ from run import FaultRun
 # ################################################################################################################################
 
 if 0:
+    from pubsub_rest.server import PubSubServer
     from zato.common.test.pubsub_replication import ReplicatedDatabase
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_failover(failover_database:'ReplicatedDatabase', failover_delay:'int') -> 'None':
+def test_failover(failover_database:'ReplicatedDatabase', server:'PubSubServer', failover_delay:'int') -> 'None':
     """ The primary ends at once, and after the time that the service takes to fail over,
     the endpoint name resolves to the promoted standby, whose synchronous replication kept every commit.
     """
     fault = DelayedFailoverFault(failover_database, failover_delay)
 
-    run = FaultRun(fault.name)
+    run = FaultRun(server, fault.name)
     run.run(fault, Total_Loss)
     run.check()
 
