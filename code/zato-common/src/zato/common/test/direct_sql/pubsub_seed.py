@@ -20,8 +20,8 @@ from zlib import crc32
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.schema import active_table, delivery_table, message_table, metadata, topic_sub_table
-from zato.common.test.direct_sql.reset import recreate_tables, truncate_tables
-from zato.common.test.direct_sql.seed import BulkLoad, refresh_statistics, seed_autocommit_connection, seed_bulk
+from zato.common.test.direct_sql.reset import reset_table_rows, truncate_tables
+from zato.common.test.direct_sql.seed import BulkLoad, ModuleCtx as SeedModuleCtx, refresh_statistics, seed_bulk
 from zato.common.test.pubsub_database import get_db_mode, is_managed_mode
 from zato.common.util.api import sub_key_from_definition
 from zato.common.util.time_ import datetime_to_ms, utcnow
@@ -111,15 +111,15 @@ def _get_seeded_tables() -> 'tablelist':
 # ################################################################################################################################
 
 def _clear_tables(engine:'Engine') -> 'None':
-    """ Empties the pub/sub tables, so that the identifiers of the seeded messages start at one. SQLite deletes the rows
-    of a table with triggers one by one, so its tables are created anew, together with the triggers of the count tables,
-    while PostgreSQL truncates them.
+    """ Empties the pub/sub tables, so that the identifiers of the seeded messages start at one. PostgreSQL truncates
+    the tables and SQLite deletes their rows.
     """
+    tables = _get_seeded_tables()
+
     if engine.dialect.name == Type_PostgreSQL:
-        tables = _get_seeded_tables()
         truncate_tables(engine, tables)
     else:
-        recreate_tables(engine, metadata)
+        reset_table_rows(engine, tables)
 
 # ################################################################################################################################
 
@@ -138,7 +138,9 @@ def _write_checkpoint(engine:'Engine') -> 'None':
     else:
         statement = ModuleCtx.Checkpoint_SQLite
 
-    with seed_autocommit_connection(engine) as connection:
+    # A checkpoint writes no rows, and PostgreSQL runs it outside of a transaction only
+    with engine.connect() as connection:
+        connection = connection.execution_options(isolation_level=SeedModuleCtx.Autocommit)
         _ = connection.exec_driver_sql(statement)
 
 # ################################################################################################################################

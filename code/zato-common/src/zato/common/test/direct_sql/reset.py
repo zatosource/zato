@@ -103,26 +103,6 @@ def truncate_tables(engine:'Engine', tables:'tablelist') -> 'None':
 
 # ################################################################################################################################
 
-def _recreate_tables(engine:'Engine', metadata:'MetaData') -> 'None':
-
-    with engine.begin() as connection:
-        for table in reversed(metadata.sorted_tables):
-            table.drop(connection, checkfirst=True)
-
-    metadata.create_all(engine)
-
-# ################################################################################################################################
-
-def recreate_tables(engine:'Engine', metadata:'MetaData') -> 'None':
-    """ Empties every table of a schema by dropping the tables and creating them anew, together with their triggers,
-    in turn with the other writes to the database. SQLite deletes the rows of a table that has triggers one at a time,
-    whereas dropping the table releases its pages at once.
-    """
-    with write_path(Mechanism.Seed):
-        _ = call_database(engine, _recreate_tables, engine, metadata)
-
-# ################################################################################################################################
-
 def _delete_shared_objects(engine:'Engine', object_type:'str') -> 'None':
 
     # A database that no server has started on yet has no table of shared objects

@@ -11,7 +11,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # and removes rows and its scratch tables, and never changes a row that a test or the system under test wrote.
 
 # stdlib
-from contextlib import contextmanager
 from typing import NamedTuple
 
 # Zato
@@ -277,21 +276,6 @@ def refresh_statistics(engine:'Engine', tables:'tablelist') -> 'None':
     """
     with write_path(Mechanism.Seed):
         _ = call_database(engine, _refresh_statistics, engine, tables)
-
-# ################################################################################################################################
-
-@contextmanager
-def seed_autocommit_connection(engine:'Engine') -> 'Iterator[Connection]':
-    """ Yields a connection on which each statement of a seed commits on its own, outside of a transaction.
-    """
-    with write_path(Mechanism.Seed):
-        connection = engine.connect()
-        connection = connection.execution_options(isolation_level=ModuleCtx.Autocommit)
-
-        try:
-            yield connection
-        finally:
-            connection.close()
 
 # ################################################################################################################################
 # ################################################################################################################################
