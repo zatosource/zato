@@ -16,7 +16,8 @@ from dataclasses import dataclass
 from functools import cache
 
 # Zato
-from zato.common.test.durability.python_ast import get_dotted_name, get_import_aliases, get_module_name, parse
+from zato.common.test.durability.python_ast import get_dotted_name, get_import_aliases, get_module_name, get_package_name, \
+     parse
 from zato.common.test.durability.sources import get_python_files
 
 # ################################################################################################################################
@@ -33,9 +34,10 @@ if 0:
 
 class ModuleCtx:
 
-    # The methods of an ORM session that write, and the words of a receiver that make it a session
+    # The methods of an ORM session that write, and the words with which the name of a session ends
     Session_Methods = ('add', 'add_all', 'merge', 'delete', 'bulk_insert_mappings', 'bulk_save_objects', 'bulk_update_mappings')
     Session_Words = ('session',)
+    Call_Suffix = '()'
 
     # The commit of a session, of a connection or of a transaction, and the words of a receiver that make it one of them
     Commit_Method = 'commit'
@@ -59,6 +61,10 @@ class ModuleCtx:
         'sqlite3.dbapi2.connect',
     )
 
+    # The serialized write function that runs one statement, with the position of the statement among its arguments
+    Execute_Write_Function = 'zato.common.db_env.engine.execute_write'
+    Execute_Write_Statement_Index = 1
+
     # The constructs of SQLAlchemy that build a write statement, by the last part of their names
     Construct_Names = ('insert', 'update', 'delete')
 
@@ -79,6 +85,9 @@ class ModuleCtx:
 
     # The name of the function that wraps a statement literal in SQLAlchemy
     Text_Function = 'text'
+
+    # What stands for an expression of an f-string, so that no table name is read from it
+    Placeholder = '{}'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -130,6 +139,17 @@ def _has_word(text:'str', words:'tuple[str, ...]') -> 'bool':
 
 # ################################################################################################################################
 
+def _ends_with_word(text:'str', words:'tuple[str, ...]') -> 'bool':
+    """ Returns whether the last attribute of a receiver, or the call that returns it, ends with one of the words.
+    """
+    text = text.removesuffix(ModuleCtx.Call_Suffix)
+    name = text.rsplit('.', 1)[-1]
+
+    out = name.endswith(words)
+    return out
+
+# ################################################################################################################################
+
 def _get_string(node:'ast.expr') -> 'str':
     """ Returns the text of a string literal or of the literal parts of an f-string, or an empty string for any other node.
     """
@@ -143,7 +163,7 @@ def _get_string(node:'ast.expr') -> 'str':
             if isinstance(value, ast.Constant):
                 parts.append(str(value.value))
             else:
-                parts.append('x')
+                parts.append(ModuleCtx.Placeholder)
         out = ''.join(parts)
         return out
 
@@ -173,9 +193,15 @@ def get_table_names() -> 'strdict':
     """
     out:'strdict' = {}
 
+    # Each name that a module imports, by its full dotted name in that module, with the full dotted name it refers to
+    imported_names:'strdict' = {}
+
     for source in get_python_files(is_production=True):
         module_name = get_module_name(source)
         tree = parse(source)
+
+        for local_name, full_name in get_import_aliases(tree, get_package_name(source)).items():
+            imported_names[f'{module_name}.{local_name}'] = full_name
 
         for node in tree.body:
 
@@ -200,6 +226,17 @@ def get_table_names() -> 'strdict':
                                     if table_name:
                                         out[f'{module_name}.{node.name}'] = table_name
 
+    # A module that imports a table from the module defining it may export it again, possibly through several modules
+    is_changed = True
+
+    while is_changed:
+        is_changed = False
+        for name, full_name in imported_names.items():
+            if name not in out:
+                if full_name in out:
+                    out[name] = out[full_name]
+                    is_changed = True
+
     return out
 
 # ################################################################################################################################
@@ -211,7 +248,7 @@ class _SiteCollector(ast.NodeVisitor):
     def __init__(self, source:'SourceFile', tree:'ast.Module') -> 'None':
         self.source = source
         self.module_name = get_module_name(source)
-        self.aliases = get_import_aliases(tree)
+        self.aliases = get_import_aliases(tree, get_package_name(source))
         self.table_names = get_table_names()
 
         self.scopes:'strlist' = []
@@ -316,6 +353,15 @@ class _SiteCollector(ast.NodeVisitor):
 
         if local_name in self.table_names:
             return self.table_names[local_name]
+
+        # A local name may hold a table that the module defines or imports
+        if isinstance(node, ast.Name):
+            for value in self._get_values(node):
+                if value is not node:
+                    if isinstance(value, (ast.Name, ast.Attribute)):
+                        out = self._get_table_name(value)
+                        if out:
+                            return out
 
         return ''
 
@@ -460,6 +506,15 @@ class _SiteCollector(ast.NodeVisitor):
             self._add(node, function_name, [])
             return
 
+        # .. the serialized write of one statement ..
+        if function_name == ModuleCtx.Execute_Write_Function:
+            statement = node.args[ModuleCtx.Execute_Write_Statement_Index]
+            tables_or_none = self._get_write_tables(statement)
+            if tables_or_none is None:
+                tables_or_none = []
+            self._add(node, function_name, tables_or_none)
+            return
+
         if not isinstance(func, ast.Attribute):
             return
 
@@ -477,7 +532,7 @@ class _SiteCollector(ast.NodeVisitor):
 
         # .. a method of a session ..
         elif method in ModuleCtx.Session_Methods:
-            if _has_word(receiver, ModuleCtx.Session_Words):
+            if _ends_with_word(receiver, ModuleCtx.Session_Words):
                 self._add(node, method, [])
 
         # .. a commit ..

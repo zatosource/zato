@@ -24,6 +24,12 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class ModuleCtx:
+    Package_Module_Suffix = '/__init__.py'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @dataclass(init=False)
 class CallSite:
 
@@ -47,10 +53,12 @@ call_site_list = list[CallSite]
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_import_aliases(tree:'ast.Module') -> 'strdict':
+def get_import_aliases(tree:'ast.Module', package_name:'str') -> 'strdict':
     """ Returns the full dotted name of each name that a module imports, by the name under which the module uses it.
+    A relative import is resolved against the package of the module.
     """
     out:'strdict' = {}
+    package_parts = package_name.split('.')
 
     for node in ast.walk(tree):
 
@@ -63,13 +71,23 @@ def get_import_aliases(tree:'ast.Module') -> 'strdict':
                     out[top_level_name] = top_level_name
 
         elif isinstance(node, ast.ImportFrom):
-            if node.module:
+
+            # Each dot of a relative import beyond the first one ascends one package
+            if node.level:
+                base_parts = package_parts[:len(package_parts) - node.level + 1]
+                if node.module:
+                    base_parts.append(node.module)
+                module = '.'.join(base_parts)
+            else:
+                module = node.module
+
+            if module:
                 for alias in node.names:
                     if alias.asname:
                         local_name = alias.asname
                     else:
                         local_name = alias.name
-                    out[local_name] = f'{node.module}.{alias.name}'
+                    out[local_name] = f'{module}.{alias.name}'
 
     return out
 
@@ -141,7 +159,7 @@ def get_calls(source:'SourceFile') -> 'call_site_list':
     """ Returns each call in a source file.
     """
     tree = parse(source)
-    aliases = get_import_aliases(tree)
+    aliases = get_import_aliases(tree, get_package_name(source))
 
     collector = _CallCollector(source, aliases)
     collector.visit(tree)
@@ -159,6 +177,19 @@ def get_module_name(source:'SourceFile') -> 'str':
     relative_path = relative_path.removesuffix('/__init__')
 
     out = relative_path.replace('/', '.')
+    return out
+
+# ################################################################################################################################
+
+def get_package_name(source:'SourceFile') -> 'str':
+    """ Returns the dotted name of the package that a production source file belongs to, against which its relative
+    imports are resolved - the module itself for the __init__ module of a package.
+    """
+    out = get_module_name(source)
+
+    if not source.path.endswith(ModuleCtx.Package_Module_Suffix):
+        out = out.rpartition('.')[0]
+
     return out
 
 # ################################################################################################################################
