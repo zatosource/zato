@@ -18,24 +18,21 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # the node was replaced before its server started and the server does no pub/sub work.
 
 # stdlib
-import os
 from logging import getLogger
 from threading import Thread
 from time import monotonic
-from typing import NamedTuple
 
 # SQLAlchemy
-from sqlalchemy import event, text
+from sqlalchemy import text
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource, is_audit_log_enabled
 from zato.common.audit_log.bulk_insert import insert_pending_events
 from zato.common.crypto.api import CryptoManager
+from zato.common.db_env.fence import GenerationGuard, write_generation_file
 from zato.common.db_env.outage import call_until_available
 from zato.common.db_env.write_path import Mechanism, write_path
 from zato.common.ha.common import get_node_generation
-from zato.common.pubsub.sql.config import get_generation_file_path
-from zato.common.pubsub.sql.replaced import raise_replaced
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -43,10 +40,9 @@ from zato.common.typing_ import cast_
 
 if 0:
     from sqlalchemy.engine import Connection, Engine
-    from zato.common.typing_ import any_, anylist, callable_, intnone, strnone
+    from zato.common.typing_ import anylist, callable_, intnone, strnone
 
     # Dummy assignments to satisfy type checkers
-    any_ = any_
     anylist = anylist
     callable_ = callable_
     intnone = intnone
@@ -68,19 +64,6 @@ _takeover_wait_seconds = 5
 # How often the sessions that hold up raising the generation are looked up again once the wait is over.
 _takeover_check_seconds = 1
 
-# The keys under which a pooled connection records how far its current transaction confirmed the generation.
-_state_key = 'zato_pubsub_generation_state'
-_state_checked = 'checked'
-_state_locked = 'locked'
-
-# The statements that a read begins with - everything else writes.
-_read_prefix = 'SELECT'
-_write_clause = 'FOR UPDATE'
-
-# What a transaction runs before its first read and before its first write.
-_check_query = 'SELECT 1 FROM zato_active WHERE id = 1 AND generation = %s AND owner = %s'
-_lock_query = 'SELECT 1 FROM zato_active WHERE id = 1 AND generation = %s AND owner = %s FOR SHARE'
-
 # What raises the generation.
 _raise_query = text('UPDATE zato_active SET generation = generation + 1, owner = :owner WHERE id = 1 ' + \
     'RETURNING generation')
@@ -92,21 +75,9 @@ _set_query = text('UPDATE zato_active SET generation = :generation, owner = :own
 # The object of the audit event that records a takeover of the Zato database.
 Takeover_Object_Name = 'pubsub-database'
 
-# The lines of the generation file - the generation, then the owner.
-_generation_file_line_count = 2
-
 # What ends the sessions that keep the generation from being raised.
 _backend_pid_query = text('SELECT pg_backend_pid()')
 _terminate_blockers_query = text('SELECT pid, pg_terminate_backend(pid) FROM unnest(pg_blocking_pids(:pid)) AS pid')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ActiveServer(NamedTuple):
-    """ The generation of the active server and the value unique to that server, as the generation file records them.
-    """
-    generation: int
-    owner: str
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -132,132 +103,6 @@ class _EngineRecorder:
         out = self.new_engine()
         self.engine = out
         return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _is_write(statement:'str') -> 'bool':
-    """ Whether a statement changes rows or locks them.
-    """
-    stripped = statement.lstrip()
-    prefix = stripped[:len(_read_prefix)]
-
-    if prefix.upper() != _read_prefix:
-        out = True
-    else:
-        out = _write_clause in statement
-
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class GenerationGuard:
-    """ Confirms the generation and the owner of this server in each transaction of one engine, before the first
-    statement of the transaction runs. A read confirms them once, and the first write of a transaction also locks
-    the row for share until the transaction ends.
-    """
-
-    def __init__(self, generation:'int', owner:'str') -> 'None':
-        self.generation = generation
-        self.owner = owner
-
-        # Once replaced, a server remains replaced, because generations only ever increase.
-        self.is_replaced = False
-
-        # The audit event that the takeover was recorded with, if it was recorded.
-        self.takeover_event_id:'intnone' = None
-
-# ################################################################################################################################
-
-    def install(self, engine:'Engine') -> 'None':
-        """ Attaches the guard to all the transactions of an engine.
-        """
-        event.listen(engine, 'before_cursor_execute', self.before_cursor_execute)
-        event.listen(engine, 'commit', self.on_transaction_end)
-        event.listen(engine, 'rollback', self.on_transaction_end)
-        event.listen(engine, 'checkout', self.on_checkout)
-
-# ################################################################################################################################
-
-    def uninstall(self, engine:'Engine') -> 'None':
-        """ Detaches the guard from an engine.
-        """
-        event.remove(engine, 'before_cursor_execute', self.before_cursor_execute)
-        event.remove(engine, 'commit', self.on_transaction_end)
-        event.remove(engine, 'rollback', self.on_transaction_end)
-        event.remove(engine, 'checkout', self.on_checkout)
-
-# ################################################################################################################################
-
-    def _raise_replaced(self) -> 'None':
-        message = f'This server was replaced by another one and its pub/sub generation {self.generation} is no longer current'
-        raise_replaced(message)
-
-# ################################################################################################################################
-
-    def before_cursor_execute(
-        self,
-        connection:'Connection',
-        cursor:'any_',
-        statement:'str',
-        parameters:'any_',
-        context:'any_',
-        executemany:'bool',
-    ) -> 'None':
-        """ Confirms the generation before the first read and before the first write of each transaction.
-        """
-        if self.is_replaced:
-            self._raise_replaced()
-
-        state = connection.info.get(_state_key)
-
-        # The transaction holds the lock already ..
-        if state == _state_locked:
-            return
-
-        is_write = _is_write(statement)
-
-        # .. or it confirmed the generation and is still only reading ..
-        if state == _state_checked and not is_write:
-            return
-
-        # .. otherwise, the generation is confirmed now, with the lock for a write.
-        if is_write:
-            query = _lock_query
-            new_state = _state_locked
-        else:
-            query = _check_query
-            new_state = _state_checked
-
-        cursor.execute(query, (self.generation, self.owner))
-        row = cursor.fetchone()
-
-        if row is None:
-            self.is_replaced = True
-            logger.warning('Pub/sub generation %s was replaced, this server stops its pub/sub work', self.generation)
-            self._raise_replaced()
-
-        connection.info[_state_key] = new_state
-
-# ################################################################################################################################
-
-    def on_transaction_end(self, connection:'Connection') -> 'None':
-        """ A transaction that ended releases its lock, so the next one confirms the generation again.
-        """
-        # A lost connection is replaced together with its info, and reading the info of the lost one
-        # would raise in place of the error that the connection was lost with.
-        if connection.invalidated:
-            return
-
-        _ = connection.info.pop(_state_key, None)
-
-# ################################################################################################################################
-
-    def on_checkout(self, dbapi_connection:'any_', connection_record:'any_', connection_proxy:'any_') -> 'None':
-        """ A connection taken out of the pool begins with no transaction.
-        """
-        _ = connection_record.info.pop(_state_key, None)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -378,35 +223,6 @@ def _raise_generation(engine:'Engine', owner:'str', ha_generation:'intnone', ser
         raise raiser.exception
 
     return raiser
-
-# ################################################################################################################################
-
-def write_generation_file(generation:'int', owner:'str') -> 'None':
-    """ Records the generation and the owner of this server for the cleanup process that the server's environment runs.
-    """
-    path = get_generation_file_path()
-    temp_path = f'{path}.tmp'
-
-    with open(temp_path, 'w') as generation_file:
-        _ = generation_file.write(f'{generation}\n{owner}')
-
-    os.replace(temp_path, path)
-
-# ################################################################################################################################
-
-def read_generation_file() -> 'ActiveServer':
-    """ Returns the generation and the owner that the server of this environment recorded.
-    """
-    path = get_generation_file_path()
-
-    with open(path) as generation_file:
-        value = generation_file.read()
-
-    generation, owner = value.split('\n', _generation_file_line_count - 1)
-    generation = int(generation)
-
-    out = ActiveServer(generation, owner)
-    return out
 
 # ################################################################################################################################
 
