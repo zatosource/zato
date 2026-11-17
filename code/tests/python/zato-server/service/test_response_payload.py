@@ -22,7 +22,6 @@ from zato.server.reqresp.payload import IOPayload
 from zato.server.reqresp.response import Response
 from zato.server.service import Service
 from zato.common.typing_ import cast_
-from zato.common.test.service_ import deploy_service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -187,7 +186,7 @@ class TestSetResponseData(unittest.TestCase):
     """
 
     def _make_service(self) -> 'Service':
-        out = deploy_service(Service, MagicMock())
+        out = Service.__new__(Service)
         out.response = Response()
         out.response.init(_test_cid, None, 'json')
         return out

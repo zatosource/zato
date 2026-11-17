@@ -562,6 +562,16 @@ function Stop-AllRuns($Command) {
     Write-AgentEvent ([ordered]@{ kind = 'run-stopped'; run = $Command.run })
 }
 
+function Clear-DataFiles($Command) {
+
+    # The files are removed and the directories of the layout are kept
+    foreach ($share in $ShareDefs.Values) {
+        Get-ChildItem -LiteralPath $share.path -File -Recurse | Remove-Item -Force
+    }
+
+    Write-AgentEvent ([ordered]@{ kind = 'data-cleared'; run = $Command.run })
+}
+
 $CommandHandlers = @{
     'apply-layout'        = { param($Command) Set-Layout $Command }
     'produce'             = { param($Command) Start-Producer $Command }
@@ -575,6 +585,7 @@ $CommandHandlers = @{
     'restore-share'       = { param($Command) Invoke-Fault $Command }
     'stop'                = { param($Command) Stop-Run $Command }
     'stop-all'            = { param($Command) Stop-AllRuns $Command }
+    'clear-data'          = { param($Command) Clear-DataFiles $Command }
     'ping'                = { param($Command) Write-AgentEvent ([ordered]@{ kind = 'pong'; run = $Command.run }) }
 }
 

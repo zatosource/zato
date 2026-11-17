@@ -9,15 +9,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # What the adapter tests build their services with - an adapter instance with the request, the response, the configuration
 # and the connection facades that its handle method reads, without the service store of a running server.
 
-# stdlib
-from unittest.mock import MagicMock
-
 # Zato
 from zato.common.api import DATA_FORMAT
 from zato.common.odata.client import ODataClient
 from zato.common.odata.common import ODataVersion
 from zato.server.reqresp.response import Response as ServiceResponse
-from zato.common.test.service_ import deploy_service
 
 # Test support
 from support import Test_CID
@@ -95,7 +91,7 @@ def new_adapter(
     if data is None:
         data = {}
 
-    out = deploy_service(adapter_class, MagicMock())
+    out = adapter_class.__new__(adapter_class)
 
     out.cid = Test_CID
     out.request = _RequestStub(data)

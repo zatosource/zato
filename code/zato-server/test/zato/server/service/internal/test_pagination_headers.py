@@ -12,7 +12,6 @@ from unittest.mock import MagicMock
 
 # Zato
 from zato.server.service.internal import AdminService, SearchTool
-from zato.common.test.service_ import deploy_service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -22,7 +21,7 @@ class TestAfterHandlePaginationHeaders(TestCase):
     def test_pagination_headers_set_when_search_tool_has_meta(self):
         """ Verify that after_handle() sets X-Zato-Page-* headers from _search_tool.output_meta.
         """
-        service = deploy_service(AdminService, MagicMock())
+        service = AdminService.__new__(AdminService)
         service.server = MagicMock()
         service.server.is_admin_enabled_for_info = False
         service.response = MagicMock()
@@ -55,7 +54,7 @@ class TestAfterHandlePaginationHeaders(TestCase):
     def test_no_headers_set_when_search_meta_empty(self):
         """ Verify that after_handle() does not set headers when search meta is empty.
         """
-        service = deploy_service(AdminService, MagicMock())
+        service = AdminService.__new__(AdminService)
         service.server = MagicMock()
         service.server.is_admin_enabled_for_info = False
         service.response = MagicMock()
@@ -71,7 +70,7 @@ class TestAfterHandlePaginationHeaders(TestCase):
     def test_no_headers_set_when_no_search_tool(self):
         """ Verify that after_handle() does nothing when there is no _search_tool.
         """
-        service = deploy_service(AdminService, MagicMock())
+        service = AdminService.__new__(AdminService)
         service.server = MagicMock()
         service.server.is_admin_enabled_for_info = False
         service.response = MagicMock()

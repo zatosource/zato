@@ -20,6 +20,7 @@ import pytest
 # Zato
 from zato.common.api import SEC_DEF_TYPE
 from zato.common.exception import BackendInvocationError
+from zato.common.util import http_retry
 
 # Test support
 from endpoint import CloseMode, EndpointResponse
@@ -187,13 +188,16 @@ def test_lines_with_retries(
     server:'ServerStub',
     path:'str',
     rest_log_path:'str',
+    monkeypatch:'pytest.MonkeyPatch',
     ) -> 'None':
     """ A retried call writes one request line and one response line for each response received.
     """
+    monkeypatch.setattr(http_retry, 'sleep', [].append)
+
     cid = _get_cid(path)
     endpoint.set_responses(path, [EndpointResponse(TOO_MANY_REQUESTS), EndpointResponse(body='After retry')])
 
-    connection = new_connection(server, endpoint.http_base, path, max_retries=1, retry_sleep_time=1)
+    connection = new_connection(server, endpoint.http_base, path, max_retries=1)
     _ = connection.get(cid)
 
     assert len(_get_request_lines(rest_log_path, cid)) == 1

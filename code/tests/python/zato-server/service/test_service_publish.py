@@ -12,7 +12,6 @@ from unittest.mock import MagicMock
 
 # Zato
 from zato.server.service import Service
-from zato.common.test.service_ import deploy_service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -25,7 +24,7 @@ class TestServicePublishKwargs(unittest.TestCase):
     def setUp(self) -> 'None':
 
         # Build a minimally wired Service instance ..
-        self.service = deploy_service(Service, MagicMock())
+        self.service = Service.__new__(Service)
         self.service.cid = 'test-cid-1'
 
         # .. mock pubsub.publish to capture what it receives, keeping a direct

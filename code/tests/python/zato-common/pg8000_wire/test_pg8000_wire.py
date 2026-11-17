@@ -166,21 +166,23 @@ class TestStatementCache:
 
         connection.close()
 
-    def test_eviction(self, engine:'Engine', monkeypatch:'MonkeyPatch') -> 'None':
-        monkeypatch.setattr(pg8000_wire, 'Max_Statements', 3)
+    def test_eviction(self, engine:'Engine') -> 'None':
+
+        # Two statements more than the cache holds
+        statement_count = pg8000_wire.Max_Statements + 2
 
         connection = engine.raw_connection()
         cursor = connection.cursor()
 
-        for idx in range(5):
+        for idx in range(statement_count):
             rows = _execute(cursor, f'select %s::int4 + {idx}', (1,))
             assert rows == [[1 + idx]]
 
         # The statements used least recently are closed on the server too.
         rows = _execute(cursor, 'select count(*) from pg_prepared_statements where name like %s', ('zato_%',))
 
-        assert rows == [[3]]
-        assert len(connection.driver_connection._zato_statements) == 3
+        assert rows == [[pg8000_wire.Max_Statements]]
+        assert len(connection.driver_connection._zato_statements) == pg8000_wire.Max_Statements
 
         connection.close()
 

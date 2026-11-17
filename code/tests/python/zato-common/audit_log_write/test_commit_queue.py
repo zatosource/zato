@@ -6,20 +6,20 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from threading import enumerate as enumerate_threads
+
 # gevent
 from gevent import joinall, sleep, spawn, Timeout
 from gevent.event import Event
-
-# pytest
-import pytest
 
 # SQLAlchemy
 from sqlalchemy import text
 
 # Zato
 from support import Backend_PostgreSQL, Object_Name, read_rows, record_statements, Server_Name
-from zato.common.audit_log import retention_runner
 from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.retention_runner import stop_retention_runner
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.pending import PendingEvent
 from zato.common.audit_log.search_index import PostgreSQL_Pending_List_Limit_KB
@@ -31,15 +31,11 @@ from zato.common.db_env.commit_ticket import CommitTicket
 # ################################################################################################################################
 
 if 0:
-    from datetime import datetime
     from sqlalchemy.engine import Engine
     from zato.common.audit_log.pending import pending_event_list
-    from zato.common.typing_ import any_, anylist, callable_, intlist, intnone
+    from zato.common.typing_ import anylist, intlist, intnone
 
-    any_ = any_
     anylist = anylist
-    callable_ = callable_
-    datetime = datetime
     Engine = Engine
     intlist = intlist
     intnone = intnone
@@ -71,6 +67,9 @@ _wait_timeout = 10
 
 # How many inserts make the writer request a retention run
 _retention_check_interval = 1000
+
+# The name of the thread that the retention runs in
+_retention_thread_name = 'audit-log-retention'
 
 # The message of the exception a failing commit raises
 _error_message = 'Test error message'
@@ -339,41 +338,28 @@ def test_search_indexes_are_merged(audit_backend:'str') -> 'None':
 
 # ################################################################################################################################
 
-def test_retention_runs_outside_the_write(audit_backend:'str', monkeypatch:'pytest.MonkeyPatch') -> 'None':
-    """ The insert that crosses the retention count returns while the retention it requested is still running.
+def test_retention_runs_outside_the_write(audit_backend:'str') -> 'None':
+    """ The insert that crosses the retention count hands the retention to the thread of the runner
+    and returns without running it in the write.
     """
-    started_event = Event()
-    release_event = Event()
-    finished_event = Event()
 
-    def run_retention(engine:'Engine', now:'datetime') -> 'None':
-        started_event.set()
-        _ = release_event.wait(_wait_timeout)
-        finished_event.set()
-
-    # The retention runs in the greenlet of the runner rather than in the thread pool of SQLite,
-    # so that it can wait for the events of this test.
-    def call_database(engine:'Engine', func:'callable_', *args:'any_') -> 'any_':
-        out = func(*args)
-        return out
-
-    monkeypatch.setattr(retention_runner, 'run_retention', run_retention)
-    monkeypatch.setattr(retention_runner, 'call_database', call_database)
+    # No run of an earlier test is still in progress
+    stop_retention_runner()
 
     audit_log = AuditLog(Server_Name)
 
     for index in range(_retention_check_interval):
         _ = _insert(audit_log, index)
 
-    # The insert that reached the interval returned before the retention completed ..
-    assert not finished_event.is_set()
+    # The insert that reached the interval started the thread of the runner ..
+    thread_names = [thread.name for thread in enumerate_threads()]
+    assert _retention_thread_name in thread_names
+
+    # .. the retention removed none of the events, none of which has expired ..
     assert len(read_rows(event_table)) == _retention_check_interval
 
-    # .. which runs in the background.
-    assert started_event.wait(_wait_timeout)
-
-    release_event.set()
-    assert finished_event.wait(_wait_timeout)
+    # .. and the runner completes the run in progress before it stops.
+    stop_retention_runner()
 
 # ################################################################################################################################
 # ################################################################################################################################

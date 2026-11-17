@@ -19,7 +19,6 @@ from zato.server.service.internal.security.rate_limiting import \
     BasicAuthRateLimitingGet, BasicAuthRateLimitingSave, BasicAuthRateLimitingClearCounters, \
     APIKeyRateLimitingGet, APIKeyRateLimitingSave, APIKeyRateLimitingClearCounters
 from zato.common.typing_ import cast_
-from zato.common.test.service_ import deploy_service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,9 +53,9 @@ def _make_rule(cidr_list:'any_', time_range:'any_'):
 # ################################################################################################################################
 
 def _make_get_service(class_:'any_', sec_def_id:'any_', existing_opaque:'any_' = None):
-    """ Deploys the service through the service store and sets the state that handle() uses.
+    """ Builds a bare object with just enough state for handle() to work.
     """
-    service = deploy_service(class_, MagicMock())
+    service = object.__new__(class_)
 
     service.request = MagicMock()
     service.request.input = {'id': str(sec_def_id)}
@@ -86,9 +85,9 @@ class _MockInput(dict):
 # ################################################################################################################################
 
 def _make_save_service(class_:'any_', sec_def_id:'any_', rules:'any_', existing_opaque:'any_' = None):
-    """ Deploys the service through the service store and sets the state that handle() uses.
+    """ Builds a bare object with just enough state for handle() to work.
     """
-    service = deploy_service(class_, MagicMock())
+    service = object.__new__(class_)
 
     service.request = MagicMock()
     service.request.input = _MockInput({
@@ -115,9 +114,9 @@ def _make_save_service(class_:'any_', sec_def_id:'any_', rules:'any_', existing_
 # ################################################################################################################################
 
 def _make_clear_service(class_:'any_', sec_def_id:'any_', rule_index:'any_'):
-    """ Deploys the service through the service store and sets the state that handle() uses.
+    """ Builds a bare object with just enough state for handle() to work.
     """
-    service = deploy_service(class_, MagicMock())
+    service = object.__new__(class_)
 
     service.request = MagicMock()
     service.request.input = {

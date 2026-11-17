@@ -53,6 +53,11 @@ class ModuleCtx:
     # The Windows logs whose every event fails a test - the logon failures
     Failure_Logs = 'Security',
 
+    # How long a test that provokes Windows events is still watched after it ends, so that the events it provoked last,
+    # which the agent forwards once a second, are matched against its own expectations and not against the next test's,
+    # in seconds
+    Windows_Events_Drain = 3
+
     # The kinds of agent events whose number is reported
     Counted_Kinds = 'produced', 'consumed', 'appeared', 'disappeared', 'marked-failed'
 
@@ -157,6 +162,9 @@ class Monitor:
 
         if elapsed > ModuleCtx.Test_Timeout:
             self._fail(f'The test took {elapsed:.1f}s, more than the limit of {ModuleCtx.Test_Timeout}s')
+
+        if self.expected_windows_events:
+            sleep(ModuleCtx.Windows_Events_Drain)
 
         self.stopping.set()
 

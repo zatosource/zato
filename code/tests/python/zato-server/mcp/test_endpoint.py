@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from http.client import FORBIDDEN, NOT_FOUND, OK, UNAUTHORIZED
 from unittest import TestCase
-from unittest.mock import MagicMock
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
@@ -24,7 +23,6 @@ from zato.server.connection.mcp.handler import _error_invalid_request, _mcp_prot
 from zato.server.generic.api.gateway_mcp import GatewayMCPWrapper
 from zato.server.service.internal.gateway import mcp as mcp_endpoint_module
 from zato.server.service.internal.gateway.mcp import MCPEndpoint
-from zato.common.test.service_ import deploy_service
 
 # Zato - test helpers
 from connection_stubs import StubConfigManager
@@ -303,10 +301,11 @@ class _MockEndpointServer:
 # ################################################################################################################################
 
 def _make_endpoint(gateway_name:'str', wrapper:'GatewayMCPWrapper', is_authenticated:'bool'=True) -> 'MCPEndpoint':
-    """ Deploys an MCPEndpoint through the service store and sets the attributes that handle() uses.
+    """ Builds an MCPEndpoint with only the attributes that handle() uses,
+    bypassing the full service initialization machinery.
     """
 
-    endpoint = deploy_service(MCPEndpoint, MagicMock())
+    endpoint = MCPEndpoint.__new__(MCPEndpoint)
 
     channel = _MockChannel(gateway_name, is_authenticated)
     endpoint.channel = cast_('any_', channel)

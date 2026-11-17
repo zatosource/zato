@@ -17,7 +17,6 @@ from zato.common.marshal_.io import DataClassIO
 from zato.common.typing_ import anydict, anylist, dict_field, list_field, optional
 from zato.server.reqresp.response import Response
 from zato.server.service import Service
-from zato.common.test.service_ import deploy_service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -256,7 +255,7 @@ class TestSetResponseDataWithModels(unittest.TestCase):
 
         io = DataClassIO(MagicMock(), IODeclaration)
 
-        out = deploy_service(Service, MagicMock())
+        out = Service.__new__(Service)
         out.response = Response()
         out.response.init(_test_cid, io, 'json', output_model_class)
         return out

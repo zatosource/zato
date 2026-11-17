@@ -15,8 +15,11 @@ from traceback import format_exc
 
 # smbprotocol
 import smbclient
+from smbclient._io import SMBFileTransaction, SMBRawIO, set_info
 from smbprotocol.exceptions import SMBOSError
+from smbprotocol.file_info import FileRenameInformation
 from smbprotocol.header import NtStatus
+from smbprotocol.open import CreateOptions, FilePipePrinterAccessMask
 
 # Zato
 from zato.common.api import SMB
@@ -63,6 +66,10 @@ outconn_smb_bool_config_keys = ('should_store_content',)
 
 # Config keys that must be strings but may arrive as integers from opaque storage
 outconn_smb_string_config_keys = ('host', 'username', 'verify_how')
+
+# How the source of a rename is shared with other handles - reading and writing, but not its deletion,
+# which is what a rename of the same file through another handle requires
+rename_share_access = 'rw'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -306,26 +313,32 @@ class SMBClient:
         from_unc_path = self.to_unc(from_path)
         to_unc_path = self.to_unc(to_path)
 
+        # The server receives the new name relative to the share, e.g. dir\file.txt ..
+        target_name = to_unc_path.lstrip('\\').split('\\', 2)[2]
+
+        # .. a rename always overwrites its target, and the source takes its place in a single operation,
+        # .. which means that a reader of the target directory never finds an incomplete file under the target name ..
+        rename_info = FileRenameInformation()
+        rename_info['replace_if_exists'] = True
+        rename_info['file_name'] = target_name
+
         with self._share_access(from_unc_path):
 
-            # A rename always overwrites its target, and the source takes its place in a single operation,
-            # which means that a reader of the target directory never finds an incomplete file under the target name ..
-            try:
-                smbclient.replace(from_unc_path, to_unc_path, **self.conn_kwargs)
+            # .. the source is opened for its deletion without sharing it, which means that of two concurrent renames
+            # .. of one file, e.g. by two consumers that claim it, only one opens the file and the other one fails ..
+            source = SMBRawIO(
+                from_unc_path,
+                mode='r',
+                share_access=rename_share_access,
+                desired_access=FilePipePrinterAccessMask.DELETE,
+                create_options=CreateOptions.FILE_OPEN_REPARSE_POINT,
+                **self.conn_kwargs,
+            )
 
-            except SMBOSError as e:
-
-                # .. some SMB server implementations report a missing target with a status code that the client library
-                # .. does not recognize, whereas an existing target is handled correctly everywhere,
-                # .. which is why for these servers the target is created first ..
-                if e.ntstatus == NtStatus.STATUS_NO_SUCH_FILE:
-                    with smbclient.open_file(to_unc_path, mode='xb', **self.conn_kwargs):
-                        pass
-                    smbclient.replace(from_unc_path, to_unc_path, **self.conn_kwargs)
-
-                # .. and any other status is an error of its own.
-                else:
-                    raise
+            # .. and the file is renamed through that handle.
+            with source:
+                with SMBFileTransaction(source) as transaction:
+                    set_info(transaction, rename_info)
 
 # ################################################################################################################################
 # ################################################################################################################################

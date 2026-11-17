@@ -113,9 +113,9 @@ def _make_config_dict(name:'any_', entries:'any_'):
 # ################################################################################################################################
 
 def _make_loader(manager:'any_'):
-    """ Builds a ConfigLoader whose _load_sec_def_rate_limiting reads the given manager.
+    """ Builds a minimal object that has _load_sec_def_rate_limiting bound.
     """
-    loader = cast_('any_', ConfigLoader())
+    loader = cast_('any_', object.__new__(ConfigLoader))
     loader.rate_limiting_manager = manager
     return loader
 

@@ -21,11 +21,12 @@ import pytest
 from zato.common.api import DATA_FORMAT, NotGiven
 from zato.common.exception import BackendInvocationError
 from zato.common.typing_ import list_
+from zato.common.util import http_retry
 
 # Test support
 from endpoint import CloseMode, EndpointResponse, Host
 from models import Customer
-from support import get_retry_sleeps, new_connection, Test_CID
+from support import new_connection, Test_CID
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -232,22 +233,24 @@ def test_retry_arguments(
     endpoint:'TestEndpoint',
     server:'ServerStub',
     path:'str',
-    caplog:'pytest.LogCaptureFixture',
+    monkeypatch:'pytest.MonkeyPatch',
     ) -> 'None':
     """ The retry arguments of the call win over the retry settings of the connection.
     """
+    sleeps:'list[int]' = []
+    monkeypatch.setattr(http_retry, 'sleep', sleeps.append)
 
     endpoint.set_responses(path, [
         EndpointResponse(close_mode=CloseMode.Reset_Before_Response),
         _json_response(_customer),
     ])
 
-    connection = new_connection(server, endpoint.http_base, path, retry_sleep_time=2)
+    connection = new_connection(server, endpoint.http_base, path)
 
-    data, _ = connection.rest_call(cid=Test_CID, callback=None, sec_def_name=NotGiven, max_retries=1, retry_sleep_time=1)
+    data, _ = connection.rest_call(cid=Test_CID, callback=None, sec_def_name=NotGiven, max_retries=1, retry_sleep_time=3)
 
     assert data == _customer
-    assert get_retry_sleeps(caplog) == [1]
+    assert sleeps == [3]
     assert len(endpoint.get_requests(path)) == 2
 
 # ################################################################################################################################

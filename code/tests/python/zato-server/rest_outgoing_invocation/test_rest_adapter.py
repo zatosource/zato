@@ -20,13 +20,14 @@ import pytest
 
 # Zato
 from zato.common.api import DATA_FORMAT, RESTAdapterResponse
+from zato.common.util import http_retry
 from zato.server.service import RESTAdapter
 
 # Test support
 from adapter_support import new_adapter
 from endpoint import CloseMode, EndpointResponse
 from models import Customer
-from support import get_retry_sleeps, new_connection, read_log_lines, Test_CID, Token_Path_Suffix
+from support import new_connection, read_log_lines, Test_CID, Token_Path_Suffix
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -372,15 +373,18 @@ def test_retry_attributes(
     endpoint:'TestEndpoint',
     server:'ServerStub',
     path:'str',
-    caplog:'pytest.LogCaptureFixture',
+    monkeypatch:'pytest.MonkeyPatch',
     ) -> 'None':
     """ The retry attributes of the adapter win over the retry settings of the connection.
     """
+    sleeps:'list[int]' = []
+    monkeypatch.setattr(http_retry, 'sleep', sleeps.append)
+
     class CustomerAdapter(RESTAdapter):
         conn_name = _conn_name
         max_retries = 2
         retry_sleep_time = 1
-        retry_backoff_multiplier = 2
+        retry_backoff_multiplier = 3
 
     endpoint.set_responses(path, [
         EndpointResponse(close_mode=CloseMode.Reset_Before_Response),
@@ -391,7 +395,7 @@ def test_retry_attributes(
     adapter = _run(CustomerAdapter, endpoint, server, path, max_retries=0)
 
     assert adapter.response.payload == _customer
-    assert get_retry_sleeps(caplog) == [1, 2]
+    assert sleeps == [1, 3]
     assert len(endpoint.get_requests(path)) == 3
 
 # ################################################################################################################################

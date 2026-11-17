@@ -50,7 +50,7 @@ class ModuleCtx:
     Sequence_Block = 2000
     Sequence_Blocks = 500
 
-    # The run under which a session stops the tasks that earlier sessions left running on a guest
+    # The run under which a session stops the tasks and removes the files that earlier sessions left on a guest
     Takeover_Run = 'session-takeover'
 
 # ################################################################################################################################
@@ -289,6 +289,13 @@ class GuestHandle:
 
 # ################################################################################################################################
 
+    def clear_data(self, run:'str') -> 'None':
+        """ Removes every file from the data shares and keeps their directories.
+        """
+        self._run('clear-data', run, {})
+
+# ################################################################################################################################
+
     def close(self) -> 'None':
         """ Drops the connections of both clients, which open new ones on their next call.
         """
@@ -332,8 +339,10 @@ def open_guests(versions:'strlist') -> 'tuple[handledict, strlist]':
     for info in guests:
         handle = GuestHandle(info)
 
-        # A reused guest may still run the tasks of a session that was interrupted before it stopped them
+        # A reused guest may still run the tasks of a session that was interrupted before it stopped them,
+        # and its shares may still hold the files of that session
         handle.stop_all(ModuleCtx.Takeover_Run)
+        handle.clear_data(ModuleCtx.Takeover_Run)
 
         out[info.version] = handle
 

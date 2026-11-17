@@ -17,7 +17,6 @@ from zato.common.exception import Inactive, ZatoException
 from zato.common.marshal_.api import Model
 from zato.common.util.logging_ import current_cid, current_service_name
 from zato.server.service import Service
-from zato.common.test.service_ import deploy_service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,7 +35,7 @@ class TestServiceInvoke(unittest.TestCase):
         """
 
         # Build the service under test ..
-        service = deploy_service(Service, MagicMock())
+        service = Service.__new__(Service)
         service.name = 'caller.service'
         service.impl_name = 'my.module.CallerService'
         service.cid = 'test-cid-123'
@@ -294,7 +293,7 @@ class TestUpdateHandleLoggingContext(unittest.TestCase):
     def _make_service(self) -> 'Service':
         """ Builds a minimally-wired Service instance whose _update_handle is mocked out.
         """
-        service = deploy_service(Service, MagicMock())
+        service = Service.__new__(Service)
         service.name = 'child.service'
 
         return service

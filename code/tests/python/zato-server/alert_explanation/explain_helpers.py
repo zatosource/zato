@@ -21,7 +21,6 @@ from http.client import OK
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
-from unittest.mock import MagicMock
 
 # requests
 import requests
@@ -44,7 +43,6 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.odb.model import GenericConn, GenericObject, HTTPBasicAuth, HTTPSOAP, SecurityBase, Service
 from zato.common.test.config_database import config_database_engine
 from zato.server.service.internal.alerting import Explain
-from zato.common.test.service_ import deploy_service
 
 # Test helpers
 
@@ -404,9 +402,9 @@ def new_service(
     if teams is None:
         teams = _TeamsFacade({}, '')
 
-    # The service is deployed through the service store and typed as any_ so the test doubles
+    # The service is built without __init__ and typed as any_ so the test doubles
     # can stand where the runtime collaborators would
-    service:'any_' = deploy_service(Explain, MagicMock())
+    service:'any_' = Explain.__new__(Explain)
 
     service.cid = _cid
     service.logger = logging.getLogger('test-alert-explanation')

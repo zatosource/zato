@@ -13,7 +13,6 @@ from unittest.mock import MagicMock
 
 # Zato
 from zato.server.service.internal.pubsub.rest import PubSubRESTService
-from zato.common.test.service_ import deploy_service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -77,7 +76,7 @@ def _make_service(
     """ A pub/sub REST service with the credential stores it reads filled in.
     """
     # The service machinery is of no interest here, only what authentication reads
-    out = deploy_service(PubSubRESTService, MagicMock())
+    out = object.__new__(PubSubRESTService)
 
     out.cid = _cid # type: ignore[misc]
 
