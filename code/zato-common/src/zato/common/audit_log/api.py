@@ -460,6 +460,21 @@ class AuditLog:
 
 # ################################################################################################################################
 
+    def write_events(self, batch:'pending_event_list') -> 'None':
+        """ Writes the events that one operation produced together - in one transaction when the writes are synchronous,
+        or into the buffer for its next flush otherwise - and nothing when the audit log is turned off.
+        """
+        if not is_audit_log_enabled():
+            return
+
+        if self.flush_max_size <= 1:
+            _ = self._write_batch(batch)
+        else:
+            for pending in batch:
+                self._buffer.add(pending)
+
+# ################################################################################################################################
+
     def write_pending(self, batch:'pending_event_list') -> 'None':
         """ Writes the events that a push delivery batch collected, in one transaction.
         """

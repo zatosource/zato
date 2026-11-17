@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from dataclasses import dataclass
 from logging import getLogger
 
 # SQLAlchemy
@@ -26,8 +25,10 @@ from zato.common.db_env.pg8000_copy import copy_rows
 from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.pubsub.sql.config import get_commit_max_messages, get_commits_in_flight, \
     get_pubsub_engine, get_urgent_commits_in_flight
-from zato.common.pubsub.sql.fenced_ack import delete_fenced
+from zato.common.pubsub.sql.fenced_ack import check_fenced, delete_fenced, PubSubAckConflict
 from zato.common.pubsub.sql.payloads import drop_payloads, get_chunks
+from zato.common.pubsub.sql.pending import PendingAck, PendingAtomic, PendingPublication, reset_item
+from zato.common.pubsub.sql.pull import lease_messages
 from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
 
 # ################################################################################################################################
@@ -35,14 +36,20 @@ from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_s
 
 if 0:
     from sqlalchemy.engine import Connection, Engine
-    from zato.common.typing_ import any_, anydict, anylist, intlist, intlistnone, strlist
+    from zato.common.pubsub.sql.pending import PendingLease, pending_ack_list, pending_atomic_list, pending_lease_list, \
+        pending_publication_list
+    from zato.common.typing_ import any_, anydict, anylist, intlist, strlist
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
     anydict = anydict
     Connection = Connection
     Engine = Engine
-    intlistnone = intlistnone
+    PendingLease = PendingLease
+    pending_ack_list = pending_ack_list
+    pending_atomic_list = pending_atomic_list
+    pending_lease_list = pending_lease_list
+    pending_publication_list = pending_publication_list
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,10 +58,6 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# Type aliases
-pending_publication_list = list['PendingPublication']
-pending_ack_list         = list['PendingAck']
 
 # A publication refers to one message.
 _publication_weight = 1
@@ -120,106 +123,6 @@ _delivery_delete_plain = PlainStatement(_delivery_delete.returning(delivery_tabl
 # ################################################################################################################################
 # ################################################################################################################################
 
-@dataclass(init=False)
-class PendingPublication:
-    """ One message to publish, with the subscribers it was published to once it is written.
-    """
-
-    # The values of the message row
-    message_values: 'anydict'
-
-    # The subscribers of the topic as of the commit that wrote the message
-    subscriber_keys: 'strlist'
-
-    # Why the message could not be written, while the other items of its commit could
-    exception: 'BaseException | None'
-
-    # Whether the message ID existed already with the same topic and payload, so that nothing was written
-    is_repeat: 'bool'
-
-# ################################################################################################################################
-
-@dataclass(init=False)
-class PendingAck:
-    """ The acknowledgement of messages by one subscriber, with what it removed once it is written.
-    """
-
-    # Who acknowledges the messages and which ones, by their public identifiers and, when known, by their primary keys
-    sub_key: 'str'
-    msg_ids: 'strlist'
-    sequence_ids: 'intlistnone'
-
-    # How many of the subscriber's delivery rows it removed and how many of the messages became fully delivered
-    removed_count: 'int'
-    fully_delivered_count: 'int'
-
-    # Why the acknowledgement could not be written, while the other items of its commit could
-    exception: 'BaseException | None'
-
-    # Whether the delivery rows are removed under the fence of fenced_ack.py, and with what delivery attempt
-    # of each message, in the order of the messages, or with any attempt, which is the case of a push batch
-    is_fenced: 'bool'
-    expected_attempts: 'intlistnone'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def new_pending_publication(message_values:'anydict') -> 'PendingPublication':
-    """ Returns a publication that is yet to be written.
-    """
-    out = PendingPublication()
-    out.message_values = message_values
-    out.subscriber_keys = []
-    out.exception = None
-    out.is_repeat = False
-
-    return out
-
-# ################################################################################################################################
-
-def new_pending_ack(sub_key:'str', msg_ids:'strlist', sequence_ids:'intlistnone') -> 'PendingAck':
-    """ Returns an acknowledgement that is yet to be written.
-    """
-    out = PendingAck()
-    out.sub_key = sub_key
-    out.msg_ids = msg_ids
-    out.sequence_ids = sequence_ids
-    out.removed_count = 0
-    out.fully_delivered_count = 0
-    out.exception = None
-    out.is_fenced = False
-    out.expected_attempts = None
-
-    return out
-
-# ################################################################################################################################
-
-def new_fenced_ack(sub_key:'str', msg_ids:'strlist', expected_attempts:'intlistnone') -> 'PendingAck':
-    """ Returns an acknowledgement that is yet to be written under the fence, with the delivery attempt of each message
-    that it expects, or None to accept any attempt.
-    """
-    out = new_pending_ack(sub_key, msg_ids, None)
-    out.is_fenced = True
-    out.expected_attempts = expected_attempts
-
-    return out
-
-# ################################################################################################################################
-
-def _reset_item(item:'PendingPublication | PendingAck') -> 'None':
-    """ Clears what a commit that was rolled back stored in one of its items.
-    """
-    if isinstance(item, PendingPublication):
-        item.subscriber_keys = []
-        item.exception = None
-        item.is_repeat = False
-    else:
-        item.removed_count = 0
-        item.fully_delivered_count = 0
-        item.exception = None
-
-# ################################################################################################################################
-
 def _get_message_ids(connection:'Connection', msg_ids:'strlist') -> 'anydict':
     """ Maps public message identifiers to their primary keys, read within the caller's transaction.
     """
@@ -235,10 +138,10 @@ def _get_message_ids(connection:'Connection', msg_ids:'strlist') -> 'anydict':
 # ################################################################################################################################
 
 class PubSubWriter:
-    """ Writes the publications and acknowledgements of concurrent callers in shared transactions,
+    """ Writes the publications, acknowledgements and pulls of concurrent callers in shared transactions,
     in the thread pool of the gevent hub on SQLite. Each caller waits until the transaction with its item is committed.
-    Publications are written in transactions of their own, ahead of acknowledgements, and the size of a transaction
-    is limited by the number of messages it refers to. On PostgreSQL, publications also have a commit reserved for them,
+    A transaction writes publications first, acknowledgements next and pulls last, and its size is limited
+    by the number of messages it refers to. On PostgreSQL, publications also have a commit reserved for them,
     so that a publisher does not wait for the acknowledgements of deep queues being committed.
     """
 
@@ -280,13 +183,25 @@ class PubSubWriter:
 
 # ################################################################################################################################
 
-    def write_atomic(self, items:'anylist', is_strict:'bool'=False) -> 'None':
-        """ Writes the items in one transaction that no other caller shares, which commits all of them or none.
-        With is_strict, a publication whose message ID stands for a different message rolls the transaction back
-        and its exception is raised, rather than the publication alone not being written.
+    def ack_atomic(self, pending:'PendingAtomic') -> 'None':
+        """ Writes a fenced acknowledgement with its publications, all of them or none, in a commit that may be shared
+        with other callers, none of whom shares the outcome of this item.
         """
-        engine = get_pubsub_engine()
-        call_database(engine, self._write_items, engine, items, True, is_strict)
+        weight = len(pending.ack.msg_ids) + len(pending.publications)
+        self._commit_queue.write(pending, weight=weight, is_urgent=False)
+
+        if pending.exception:
+            raise pending.exception
+
+# ################################################################################################################################
+
+    def lease(self, pending:'PendingLease') -> 'None':
+        """ Leases a subscriber's deliverable messages to one pulling client.
+        """
+        self._commit_queue.write(pending, weight=pending.max_messages, is_urgent=False)
+
+        if pending.exception:
+            raise pending.exception
 
 # ################################################################################################################################
 
@@ -305,23 +220,22 @@ class PubSubWriter:
 
 # ################################################################################################################################
 
-    def _write_items(self, engine:'Engine', batch:'anylist', is_atomic:'bool'=False, is_strict:'bool'=False) -> 'None':
+    def _write_items(self, engine:'Engine', batch:'anylist') -> 'None':
         """ Writes the items of a batch in one transaction, which PostgreSQL may roll back as a whole on a conflict
-        with concurrent transactions, in which case nothing of it was committed and it runs again. A fenced acknowledgement
-        that conflicts with another delivery raises an exception that is no DBAPIError, which is not run again.
+        with concurrent transactions, in which case nothing of it was committed and it runs again.
         """
         attempt = 0
 
         while True:
             try:
-                self._write_transaction(engine, batch, is_strict)
+                self._write_transaction(engine, batch)
                 break
 
             except DBAPIError as e:
 
-                # A value of one item that PostgreSQL rejects fails the whole commit, so each item of a batch that is not atomic
+                # A value of one item that PostgreSQL rejects fails the whole commit, so each item of the batch
                 # is written again in a transaction of its own and only the caller of the item at fault receives the error ..
-                if len(batch) > 1 and is_value_error(e) and not is_atomic:
+                if len(batch) > 1 and is_value_error(e):
                     logger.info('Pub/sub commit rejected a value, writing its %d items one by one -> %s', len(batch), e.orig)
                     self._write_items_one_by_one(engine, batch)
                     break
@@ -334,7 +248,7 @@ class PubSubWriter:
                 logger.info('Pub/sub commit rolled back on a conflict, running it again -> attempt:%d, %s', attempt, e.orig)
 
                 for item in batch:
-                    _reset_item(item)
+                    reset_item(item)
 
 # ################################################################################################################################
 
@@ -343,7 +257,7 @@ class PubSubWriter:
         of a value that PostgreSQL rejected in it.
         """
         for item in batch:
-            _reset_item(item)
+            reset_item(item)
 
             try:
                 self._write_items(engine, [item])
@@ -354,38 +268,134 @@ class PubSubWriter:
 
 # ################################################################################################################################
 
-    def _write_transaction(self, engine:'Engine', batch:'anylist', is_strict:'bool'=False) -> 'None':
-        """ Writes the publications of a batch first and its acknowledgements next, in one transaction.
+    def _write_transaction(self, engine:'Engine', batch:'anylist') -> 'None':
+        """ Writes the publications of a batch first, its acknowledgements next, its fenced acknowledgements
+        with their publications after them and its pulls last, in one transaction.
         """
         publications:'pending_publication_list' = []
         acks:'pending_ack_list' = []
-        fenced_acks:'pending_ack_list' = []
+        atomics:'pending_atomic_list' = []
+        leases:'pending_lease_list' = []
 
         for item in batch:
             if isinstance(item, PendingPublication):
                 publications.append(item)
-            elif item.is_fenced:
-                fenced_acks.append(item)
-            else:
+            elif isinstance(item, PendingAck):
                 acks.append(item)
+            elif isinstance(item, PendingAtomic):
+                atomics.append(item)
+            else:
+                leases.append(item)
 
         with engine.begin() as connection:
 
             if publications:
                 self._insert_publications(connection, publications)
 
-            # A publication that cannot be written fails the whole transaction of a strict caller ..
-            if is_strict:
-                for pending in publications:
-                    if pending.exception:
-                        raise pending.exception
-
             if acks:
                 self._delete_acks(connection, acks)
 
-            # .. and a fenced acknowledgement fails it when another delivery has its messages.
-            for ack in fenced_acks:
-                delete_fenced(connection, ack, publications)
+            # Each fenced acknowledgement commits with its publications or not at all, without failing the others ..
+            for atomic in atomics:
+                self._write_atomic(connection, atomic)
+
+            # .. and a pull leases nothing that this transaction has acknowledged already.
+            for lease in leases:
+                rows, attempts = lease_messages(
+                    connection, lease.sub_key, lease.max_messages, lease.max_len, lease.now_ms, lease.leased_until_ms)
+                lease.rows = rows
+                lease.attempts = attempts
+
+# ################################################################################################################################
+
+    def _write_atomic(self, connection:'Connection', atomic:'PendingAtomic') -> 'None':
+        """ Writes a fenced acknowledgement with its publications in the caller's transaction. Each reason for which
+        the item fails is checked before anything of it is written, so that an item that fails writes nothing,
+        and on PostgreSQL the item is also enclosed in a savepoint, against a concurrent commit that changes
+        what the checks read before the item is written.
+        """
+        is_postgresql = connection.dialect.name == Type_PostgreSQL
+
+        if is_postgresql:
+            savepoint = connection.begin_nested()
+        else:
+            savepoint = None
+
+        # The checks write nothing, so an item that fails them is only marked as failed ..
+        try:
+            has_new_message = self._check_atomic_publications(connection, atomic)
+            fenced_rows = check_fenced(connection, atomic.ack, has_new_message)
+
+        except (PubSubAckConflict, PubSubDuplicateMsgID) as e:
+            if savepoint:
+                savepoint.rollback()
+            atomic.exception = e
+            return
+
+        # .. whereas after the first write of an item, only a savepoint can undo it on its own.
+        try:
+            if atomic.publications:
+                self._insert_publications(connection, atomic.publications)
+
+            if atomic.is_strict:
+                for pending in atomic.publications:
+                    if pending.exception:
+                        raise pending.exception
+
+            delete_fenced(connection, atomic.ack, fenced_rows)
+
+        except (PubSubAckConflict, PubSubDuplicateMsgID) as e:
+            if not savepoint:
+                raise
+
+            savepoint.rollback()
+            reset_item(atomic)
+            atomic.exception = e
+            return
+
+        if savepoint:
+            savepoint.commit()
+
+# ################################################################################################################################
+
+    def _check_atomic_publications(self, connection:'Connection', atomic:'PendingAtomic') -> 'bool':
+        """ Fails a strict item with PubSubDuplicateMsgID if a publication's message ID stands for a different message,
+        either one that exists already or one published earlier in the same item. Returns whether any publication
+        is to insert a new message, as opposed to only repeating existing ones.
+        """
+        msg_ids:'strlist' = []
+
+        for pending in atomic.publications:
+            msg_ids.append(pending.message_values['msg_id'])
+
+        existing:'anydict' = {}
+
+        for chunk in get_chunks(msg_ids):
+            for row in connection.execute(_existing_messages_query, {'write_msg_ids': chunk}):
+                existing[row.msg_id] = (row.topic_name, row.payload_crc32)
+
+        out = False
+
+        for pending in atomic.publications:
+
+            message_values = pending.message_values
+            msg_id = message_values['msg_id']
+            content = (message_values['topic_name'], message_values['payload_crc32'])
+
+            # A message ID that nothing stands for yet inserts a new message ..
+            if msg_id not in existing:
+                existing[msg_id] = content
+                out = True
+                continue
+
+            # .. one that stands for the same content repeats it, and one that stands for different content
+            # .. fails a strict item, while otherwise the publication alone is not written.
+            if existing[msg_id] != content:
+                if atomic.is_strict:
+                    message = f'Message ID `{msg_id}` belongs to a different message that exists already'
+                    raise PubSubDuplicateMsgID(message)
+
+        return out
 
 # ################################################################################################################################
 

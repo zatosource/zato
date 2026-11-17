@@ -18,16 +18,15 @@ from sqlalchemy import and_, select
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
-from zato.common.db_env.engine import call_database
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.pubsub.delivery_scope import get_delivery_scope
 from zato.common.pubsub.sql.admin import SQLAdminAPI
 from zato.common.pubsub.sql.config import get_batch_size, get_pull_lease_seconds
-from zato.common.pubsub.sql.publication import build_publication, complete_publication
-from zato.common.pubsub.sql.pull import fetch_query, lease_messages, outgoing_fetch_query, payload_query
+from zato.common.pubsub.sql.publication import build_publication, complete_publication, complete_publications
+from zato.common.pubsub.sql.pull import fetch_query, has_lease_candidates, outgoing_fetch_query, payload_query
 from zato.common.pubsub.sql.schema import delivery_table, topic_sub_table
-from zato.common.pubsub.sql.writes import new_fenced_ack
-from zato.common.typing_ import list_, tuple_
+from zato.common.pubsub.sql.pending import new_fenced_ack, new_pending_atomic, new_pending_lease
+from zato.common.typing_ import cast_, list_, tuple_
 from zato.common.util.time_ import parse_utc
 from zato.server.metrics import zato_pubsub_messages_delivered_total
 
@@ -157,12 +156,9 @@ class SQLPubSubBackend(SQLAdminAPI):
         would store a new message, it raises PubSubAckConflict.
         """
         ack = new_fenced_ack(sub_key, msg_ids, None)
+        atomic = new_pending_atomic(publications, ack, False)
 
-        items:'anylist' = []
-        items.extend(publications)
-        items.append(ack)
-
-        self._writer.write_atomic(items)
+        self._writer.ack_atomic(atomic)
 
         # A publication whose message ID already stands for different content is the only one not committed.
         for pending in publications:
@@ -198,25 +194,27 @@ class SQLPubSubBackend(SQLAdminAPI):
 
         ack = new_fenced_ack(sub_key, msg_ids, expected_attempts)
 
-        items:'anylist' = []
+        pending_publications:'anylist' = []
 
         for built in publications:
-            items.append(built.pending)
+            pending_publications.append(built.pending)
 
-        items.append(ack)
-
-        self._writer.write_atomic(items, is_strict=True)
+        atomic = new_pending_atomic(pending_publications, ack, True)
+        self._writer.ack_atomic(atomic)
 
         # A publication that only repeated an existing message was completed when that message was committed.
         published:'strlist' = []
+        completed:'built_publication_list' = []
 
         for built in publications:
 
             if not built.pending.is_repeat:
-                complete_publication(self, built)
+                completed.append(built)
 
             msg_id = built.pending.message_values['msg_id']
             published.append(msg_id)
+
+        complete_publications(self, completed)
 
         logger.info('ack_pulled_with_publications -> sub_key:%s, consumed:%d, removed:%d, publications:%d',
             sub_key, len(consumed), ack.removed_count, len(publications))
@@ -457,19 +455,24 @@ class SQLPubSubBackend(SQLAdminAPI):
         so that concurrent pulls never receive the same message. The messages stay in the queue until the subscriber
         acknowledges them, and a pull after their lease runs out hands them out again.
         """
-        engine = self.engine
         now_ms = self._database_now_ms()
-        leased_until_ms = now_ms + get_pull_lease_seconds() * 1000
-
-        rows, attempts = call_database(engine, lease_messages, engine, sub_key, max_messages, max_len, now_ms, leased_until_ms)
-
         out:'anylist' = []
 
+        # A pull that would hand out nothing does not wait for a commit ..
+        if not has_lease_candidates(self.engine, sub_key, now_ms):
+            return out
+
+        # .. while any other one leases its messages in a commit that it may share with other writes.
+        leased_until_ms = now_ms + get_pull_lease_seconds() * 1000
+
+        lease = new_pending_lease(sub_key, max_messages, max_len, now_ms, leased_until_ms)
+        self._writer.lease(lease)
+
         # Each copy of a message carries the number of the pull that handed it out, which a repeated copy raises.
-        for row in rows:
+        for row in lease.rows:
             data = self._load_payload_from_row(row)
             message = self._build_message_from_row(row, data)
-            message['delivery_attempt'] = attempts[row.id]
+            message['delivery_attempt'] = lease.attempts[row.id]
             out.append(message)
 
         return out
@@ -494,6 +497,9 @@ class SQLPubSubBackend(SQLAdminAPI):
         now = clock.now()
 
         out:'anylist' = []
+
+        # The receptions of all the messages of the pull are recorded together
+        audit_events:'anylist' = []
 
         for message in messages:
 
@@ -553,7 +559,7 @@ class SQLPubSubBackend(SQLAdminAPI):
 
                     audit_pub_time = parse_utc(pub_time_iso)
 
-                    self.audit_log.insert(AuditSource.PubSub, AuditEvent.Received, message['topic_name'],
+                    audit_event = self.audit_log.new_pending_event(AuditSource.PubSub, AuditEvent.Received, message['topic_name'],
                         cid=message_cid,
                         msg_id=message['msg_id'],
                         pub_time=audit_pub_time,
@@ -564,10 +570,16 @@ class SQLPubSubBackend(SQLAdminAPI):
                         data=data_raw,
                         is_export_payload_active=self.is_topic_payload_exported(message['topic_name']),
                     )
+                    audit_events.append(audit_event)
 
             # .. update the delivery counter.
             counter = zato_pubsub_messages_delivered_total.labels(topic_name=message['topic_name'])
             _ = counter.inc()
+
+        # .. and the receptions are recorded in one write.
+        if audit_events:
+            audit_log = cast_(AuditLog, self.audit_log)
+            audit_log.write_events(audit_events)
 
         return out
 

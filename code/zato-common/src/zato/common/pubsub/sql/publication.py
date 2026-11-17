@@ -17,8 +17,8 @@ from zlib import crc32
 from zato.common.api import HTTP_SOAP, PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.marshal_.api import Model
-from zato.common.pubsub.sql.writes import new_pending_publication
-from zato.common.typing_ import list_
+from zato.common.pubsub.sql.pending import new_pending_publication
+from zato.common.typing_ import cast_, list_
 from zato.common.util.api import new_msg_id
 from zato.common.util.time_ import datetime_to_ms, parse_utc
 from zato.server.metrics import zato_pubsub_messages_published_total
@@ -27,10 +27,12 @@ from zato.server.metrics import zato_pubsub_messages_published_total
 # ################################################################################################################################
 
 if 0:
+    from zato.common.audit_log.api import AuditLog
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
-    from zato.common.pubsub.sql.writes import PendingPublication
-    from zato.common.typing_ import any_, anydict, intnone, strnone
+    from zato.common.pubsub.sql.pending import PendingPublication
+    from zato.common.typing_ import any_, anydict, anylist, intnone, strnone
 
+    AuditLog = AuditLog
     PendingPublication = PendingPublication
     SQLPubSubBackend = SQLPubSubBackend
 
@@ -180,9 +182,8 @@ def build_publication(
 
 # ################################################################################################################################
 
-def complete_publication(backend:'SQLPubSubBackend', built:'BuiltPublication') -> 'None':
-    """ Runs what follows the commit of a publication - wakes up its subscribers, records the publication
-    in the audit log, unless the audit log of its topic is off, and updates the publish counter.
+def _announce_publication(backend:'SQLPubSubBackend', built:'BuiltPublication') -> 'None':
+    """ Wakes up the subscribers of a committed publication and updates the publish counter.
     """
     message_values = built.pending.message_values
     subscriber_keys = built.pending.subscriber_keys
@@ -199,44 +200,104 @@ def complete_publication(backend:'SQLPubSubBackend', built:'BuiltPublication') -
     logger.info('Published message -> msg_id:%s, topic_name:%s, subscriber_count:%d',
         message_id, topic_name, subscriber_count)
 
-    # .. record the publish in the audit log, unless the topic's audit log is off ..
-    if backend.audit_log:
-        if topic_name not in backend.audit_disabled_topics:
-
-            # These are all optional on input so they are normalized to strings here.
-            cid = message_values['cid']
-            correl_id = message_values['correl_id']
-            ext_client_id = message_values['ext_client_id']
-            publisher = message_values['publisher']
-
-            if cid is None:
-                cid = ''
-            if correl_id is None:
-                correl_id = ''
-            if ext_client_id is None:
-                ext_client_id = ''
-            if publisher is None:
-                publisher = ''
-
-            audit_pub_time = parse_utc(message_values['pub_time_iso'])
-
-            backend.audit_log.insert(AuditSource.PubSub, AuditEvent.Published, topic_name,
-                cid=cid,
-                msg_id=message_id,
-                correl_id=correl_id,
-                ext_client_id=ext_client_id,
-                pub_time=audit_pub_time,
-                endpoint=publisher,
-                size=message_values['data_size'],
-                priority=message_values['priority'],
-                outcome=AuditOutcome.OK,
-                data=built.serialized_data,
-                is_export_payload_active=backend.is_topic_payload_exported(topic_name),
-            )
-
     # .. and update the publish counter.
     counter = zato_pubsub_messages_published_total.labels(topic_name=topic_name)
     _ = counter.inc()
+
+# ################################################################################################################################
+
+def _is_audited(backend:'SQLPubSubBackend', built:'BuiltPublication') -> 'bool':
+    """ Whether the audit log records a publication, which it does unless it is not in use or is off for its topic.
+    """
+    topic_name = built.pending.message_values['topic_name']
+
+    if backend.audit_log:
+        out = topic_name not in backend.audit_disabled_topics
+    else:
+        out = False
+
+    return out
+
+# ################################################################################################################################
+
+def _get_published_event_fields(backend:'SQLPubSubBackend', built:'BuiltPublication') -> 'anydict':
+    """ Returns the fields of the audit event of a committed publication.
+    """
+    message_values = built.pending.message_values
+    topic_name = message_values['topic_name']
+
+    # These are all optional on input so they are normalized to strings here.
+    cid = message_values['cid']
+    correl_id = message_values['correl_id']
+    ext_client_id = message_values['ext_client_id']
+    publisher = message_values['publisher']
+
+    if cid is None:
+        cid = ''
+    if correl_id is None:
+        correl_id = ''
+    if ext_client_id is None:
+        ext_client_id = ''
+    if publisher is None:
+        publisher = ''
+
+    audit_pub_time = parse_utc(message_values['pub_time_iso'])
+    is_export_payload_active = backend.is_topic_payload_exported(topic_name)
+
+    out:'anydict' = {
+        'cid': cid,
+        'msg_id': message_values['msg_id'],
+        'correl_id': correl_id,
+        'ext_client_id': ext_client_id,
+        'pub_time': audit_pub_time,
+        'endpoint': publisher,
+        'size': message_values['data_size'],
+        'priority': message_values['priority'],
+        'outcome': AuditOutcome.OK,
+        'data': built.serialized_data,
+        'is_export_payload_active': is_export_payload_active,
+    }
+
+    return out
+
+# ################################################################################################################################
+
+def complete_publication(backend:'SQLPubSubBackend', built:'BuiltPublication') -> 'None':
+    """ Runs what follows the commit of a publication - wakes up its subscribers, updates the publish counter
+    and records the publication in the audit log, unless the audit log of its topic is off.
+    """
+    _announce_publication(backend, built)
+
+    if _is_audited(backend, built):
+        audit_log = cast_('AuditLog', backend.audit_log)
+        topic_name = built.pending.message_values['topic_name']
+        fields = _get_published_event_fields(backend, built)
+
+        _ = audit_log.insert(AuditSource.PubSub, AuditEvent.Published, topic_name, **fields)
+
+# ################################################################################################################################
+
+def complete_publications(backend:'SQLPubSubBackend', built_list:'built_publication_list') -> 'None':
+    """ Runs what follows the commit of publications that one transaction committed together, as complete_publication
+    does for each of them, except that their audit events are recorded in one write.
+    """
+    audit_events:'anylist' = []
+
+    for built in built_list:
+
+        _announce_publication(backend, built)
+
+        if _is_audited(backend, built):
+            audit_log = cast_('AuditLog', backend.audit_log)
+            topic_name = built.pending.message_values['topic_name']
+            fields = _get_published_event_fields(backend, built)
+
+            audit_event = audit_log.new_pending_event(AuditSource.PubSub, AuditEvent.Published, topic_name, **fields)
+            audit_events.append(audit_event)
+
+    if audit_events:
+        audit_log = cast_('AuditLog', backend.audit_log)
+        audit_log.write_events(audit_events)
 
 # ################################################################################################################################
 # ################################################################################################################################

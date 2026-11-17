@@ -148,8 +148,6 @@ class Subscriber:
         self.received_keys:'strlist' = []
         self.received_times:'floatlist' = []
 
-        self.delivered_count = 0
-
 # ################################################################################################################################
 
     def _pull(self) -> 'anylist':
@@ -234,10 +232,8 @@ class Subscriber:
             if result.status_code == CONFLICT:
                 break
 
-            # .. and a committed one reports how many messages it removed from the queue.
+            # .. and a committed one is complete, with its receipts counted in the database.
             assert result.status_code == OK, result
-
-            self.delivered_count += result.body['ack_count']
 
             break
 
@@ -366,16 +362,6 @@ class SubscriberGroup:
         for subscriber in self.subscribers:
             future = executor.submit(subscriber.run, stop)
             out.append(future)
-
-        return out
-
-# ################################################################################################################################
-
-    def count_delivered(self) -> 'int':
-        out = 0
-
-        for subscriber in self.subscribers:
-            out += subscriber.delivered_count
 
         return out
 

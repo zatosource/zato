@@ -42,11 +42,12 @@ class CommitQueue:
     """ Writes the items of concurrent synchronous callers in shared transactions. A caller that arrives
     while fewer than the maximum number of commits are in progress commits its own item at once. Callers that arrive
     when all of them are in progress wait, and once a commit completes, one of the waiting callers commits
-    the items of the next batch. A batch holds urgent items only or other items only, each kind in the order
-    of arrival, for as long as the total weight of the batch is within the maximum per commit. Without a reservation,
-    the urgent items are taken first. A queue may reserve commits for urgent items in addition to the maximum,
-    and these commit urgent items only, so that an urgent item never waits for a commit of the other items
-    in progress. The regular commits of such a queue take the other items first.
+    the items of the next batch, each kind in the order of arrival, for as long as the total weight of the batch
+    is within the maximum per commit. Without a reservation, a batch takes the urgent items first and the other items
+    after them, so that both kinds share one commit. A queue may reserve commits for urgent items in addition
+    to the maximum, and these commit urgent items only, so that an urgent item never waits for a commit of the other
+    items in progress. The regular commits of such a queue take the other items only, or the urgent ones if no other
+    item is waiting.
     The writer of a batch stores in each item what its caller receives, and an exception
     from a commit reaches every caller whose item was part of it.
     """
@@ -187,9 +188,9 @@ class CommitQueue:
     def _take_batch(self, is_urgent_lane:'bool') -> 'commit_ticket_list':
         """ Takes the tickets of the next commit of a lane out of the waiting ones, until the next ticket would take
         the total weight above the maximum. The reserved lane takes urgent tickets only. Without a reserved lane,
-        the regular lane takes the urgent tickets if any are waiting and the others otherwise, and with one,
-        it takes the others if any are waiting and the urgent ones otherwise, so that urgent items arriving
-        without a pause do not hold back the others. The first ticket is always taken, whatever its weight.
+        the regular lane takes the urgent tickets first and the others after them, and with one, it takes the others
+        if any are waiting and the urgent ones otherwise, so that urgent items arriving without a pause do not
+        hold back the others. The first ticket is always taken, whatever its weight.
         """
         urgent:'commit_ticket_list' = []
         other:'commit_ticket_list' = []
@@ -204,10 +205,7 @@ class CommitQueue:
             candidates = urgent
 
         elif self.max_urgent_in_flight == 0:
-            if urgent:
-                candidates = urgent
-            else:
-                candidates = other
+            candidates = urgent + other
 
         elif other:
             candidates = other

@@ -17,7 +17,8 @@ from common import delete_all_rows, get_delivery_rows, get_message_rows
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.engine import _sqlite_write_locks
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
-from zato.common.pubsub.sql.writes import new_pending_ack, PubSubDuplicateMsgID, PubSubWriter
+from zato.common.pubsub.sql.pending import new_pending_ack
+from zato.common.pubsub.sql.writes import PubSubDuplicateMsgID, PubSubWriter
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -64,9 +65,9 @@ class _RecordingWriter(PubSubWriter):
         super().__init__()
         self.transaction_sizes:'intlist' = []
 
-    def _write_transaction(self, engine:'Engine', batch:'anylist', is_strict:'bool'=False) -> 'None':
+    def _write_transaction(self, engine:'Engine', batch:'anylist') -> 'None':
         self.transaction_sizes.append(len(batch))
-        super()._write_transaction(engine, batch, is_strict)
+        super()._write_transaction(engine, batch)
 
 # ################################################################################################################################
 # ################################################################################################################################

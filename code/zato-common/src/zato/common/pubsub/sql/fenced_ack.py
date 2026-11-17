@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
+from typing import NamedTuple
 
 # SQLAlchemy
 from sqlalchemy import and_, bindparam, select
@@ -21,7 +22,7 @@ from zato.common.pubsub.sql.schema import delivery_table, message_table
 
 if 0:
     from sqlalchemy.engine import Connection
-    from zato.common.pubsub.sql.writes import PendingAck, pending_publication_list
+    from zato.common.pubsub.sql.pending import PendingAck
     from zato.common.typing_ import anydict, intlist, strlist
 
     Connection = Connection
@@ -61,27 +62,20 @@ _fenced_delete = _fenced_delete.returning(delivery_table.c.id)
 # ################################################################################################################################
 # ################################################################################################################################
 
+class FencedRows(NamedTuple):
+    """ The delivery rows that a fenced acknowledgement removes and the messages that they belong to.
+    """
+    delivery_ids: 'intlist'
+    message_ids: 'intlist'
+
+# ################################################################################################################################
+
 class PubSubAckConflict(Exception):
     """ Raised to the caller of a fenced acknowledgement whose messages another delivery has handed out again
     or concluded, in which case nothing of its transaction is committed.
     """
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _has_new_message(publications:'pending_publication_list') -> 'bool':
-    """ Whether the transaction inserted at least one message, as opposed to only repeating existing ones.
-    """
-    for pending in publications:
-        if not pending.is_repeat:
-            if not pending.exception:
-                out = True
-                break
-    else:
-        out = False
-
-    return out
-
 # ################################################################################################################################
 
 def _read_rows(connection:'Connection', ack:'PendingAck') -> 'anydict':
@@ -103,12 +97,12 @@ def _read_rows(connection:'Connection', ack:'PendingAck') -> 'anydict':
 
 # ################################################################################################################################
 
-def delete_fenced(connection:'Connection', ack:'PendingAck', publications:'pending_publication_list') -> 'None':
-    """ Removes the delivery rows of a fenced acknowledgement in the caller's transaction, which has inserted
-    the publications before. A row with the expected attempt is removed, a row with another attempt was handed out
-    again and fails the transaction, and an absent row was concluded already, which fails the transaction
-    only if it inserted a new message, so that an acknowledgement repeated with the same publications
-    commits nothing and succeeds.
+def check_fenced(connection:'Connection', ack:'PendingAck', has_new_message:'bool') -> 'FencedRows':
+    """ Reads the delivery rows of a fenced acknowledgement in the caller's transaction, before anything of the acknowledgement
+    is written, and returns those that it is to remove. A row with the expected attempt is to be removed, a row with another
+    attempt was handed out again and raises PubSubAckConflict, and an absent row was concluded already, which raises it
+    only if the publications of the acknowledgement insert a new message, so that an acknowledgement repeated
+    with the same publications commits nothing and succeeds.
     """
     rows = _read_rows(connection, ack)
 
@@ -134,21 +128,30 @@ def delete_fenced(connection:'Connection', ack:'PendingAck', publications:'pendi
                     f'the acknowledgement is for attempt {expected_attempt}'
                 raise PubSubAckConflict(message)
 
-        # .. and any other message is removed from the queue, once even if the acknowledgement names it twice.
+        # .. and any other message is to be removed from the queue, once even if the acknowledgement names it twice.
         if row.id not in delivery_ids:
             delivery_ids.append(row.id)
             message_ids.append(row.message_id)
 
     if absent:
-        if _has_new_message(publications):
+        if has_new_message:
             first_absent = absent[0]
             message = f'Message `{first_absent}` was concluded by another delivery'
             raise PubSubAckConflict(message)
 
         logger.info('Fenced acknowledgement of concluded messages -> sub_key:%s, msg_ids:%s', ack.sub_key, absent)
 
+    out = FencedRows(delivery_ids, message_ids)
+    return out
+
+# ################################################################################################################################
+
+def delete_fenced(connection:'Connection', ack:'PendingAck', rows:'FencedRows') -> 'None':
+    """ Removes the delivery rows that check_fenced returned, in the caller's transaction.
+    """
+
     # The rows are removed in the order of their keys, so that concurrent transactions lock them in the same order ..
-    delivery_ids.sort()
+    delivery_ids = sorted(rows.delivery_ids)
 
     for chunk in get_chunks(delivery_ids):
         parameters = {'fenced_delivery_ids': chunk}
@@ -157,7 +160,7 @@ def delete_fenced(connection:'Connection', ack:'PendingAck', publications:'pendi
             ack.removed_count += 1
 
     # .. and the payloads of the messages that no subscriber needs anymore are dropped.
-    dropped = drop_payloads(connection, message_ids)
+    dropped = drop_payloads(connection, rows.message_ids)
     ack.fully_delivered_count = len(dropped)
 
 # ################################################################################################################################

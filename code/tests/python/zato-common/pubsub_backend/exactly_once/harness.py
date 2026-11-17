@@ -26,8 +26,9 @@ from zato.common.pubsub.sql.schema import delivery_table, message_table
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy.engine import Engine
     from zato.common.pubsub.sql.publication import BuiltPublication
-    from zato.common.typing_ import strintdict, strlist, strnone
+    from zato.common.typing_ import anylist, intdict, strintdict, strlist, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -91,6 +92,16 @@ def get_lease_ms() -> 'int':
 
 # ################################################################################################################################
 
+def _lease_in_transaction(engine:'Engine', now_ms:'int', max_messages:'int', leased_until_ms:'int') -> 'tuple[anylist, intdict]':
+    """ Leases the deliverable messages of the input subscriber in a transaction of its own.
+    """
+    with engine.begin() as connection:
+        out = lease_messages(connection, Input_Sub_Key, max_messages, _lease_max_len, now_ms, leased_until_ms)
+
+    return out
+
+# ################################################################################################################################
+
 def lease(backend:'SQLPubSubBackend', now_ms:'int', max_messages:'int'=_lease_max_messages) -> 'strintdict':
     """ Leases the deliverable messages of the input subscriber as of the given time,
     and returns the delivery attempt of each, by its message ID.
@@ -99,8 +110,7 @@ def lease(backend:'SQLPubSubBackend', now_ms:'int', max_messages:'int'=_lease_ma
     lease_ms = get_lease_ms()
     leased_until_ms = now_ms + lease_ms
 
-    rows, attempts = call_database(engine, lease_messages, engine, Input_Sub_Key, max_messages, _lease_max_len,
-        now_ms, leased_until_ms)
+    rows, attempts = call_database(engine, _lease_in_transaction, engine, now_ms, max_messages, leased_until_ms)
 
     out:'strintdict' = {}
 

@@ -87,7 +87,9 @@ class ScenarioRun:
 # ################################################################################################################################
 
     def count_delivered(self) -> 'int':
-        out = self.subscribers.count_delivered()
+        """ Returns how many deliveries the subscribers processed, by the receipts that they committed with them.
+        """
+        out = count_messages(self.engine, Receipts_Topic, self.prefix)
         return out
 
 # ################################################################################################################################
@@ -122,19 +124,13 @@ class ScenarioRun:
     def is_settled(self) -> 'bool':
         """ Whether each subscriber processed every published message and nothing waits in the queues.
         """
-        published = self.publishers.count_published()
-        expected = published * self.scenario.subscriber_count
-
-        if self.subscribers.count_delivered() < expected:
-            return False
-
-        if count_messages(self.engine, Receipts_Topic, self.prefix) < expected:
-            return False
-
         if self.count_waiting():
             return False
 
-        out = True
+        published = self.publishers.count_published()
+        expected = published * self.scenario.subscriber_count
+
+        out = self.count_delivered() >= expected
         return out
 
 # ################################################################################################################################
@@ -183,7 +179,7 @@ class ScenarioRun:
         """ Adds the business figures of the run.
         """
         published_count = self.publishers.count_published()
-        delivered_count = self.subscribers.count_delivered()
+        delivered_count = check.expected_count - check.lost_count
 
         published_seconds = timing.published_at - timing.start
         settled_seconds = timing.settled_at - timing.start
@@ -212,12 +208,6 @@ class ScenarioRun:
         assert check.unexpected_count == 0, f'{check.unexpected_count} receipts of messages never published'
 
         assert self.count_waiting() == 0
-
-        published = self.publishers.count_published()
-
-        for subscriber in self.subscribers.subscribers:
-            delivered = subscriber.delivered_count
-            assert delivered == published, f'{subscriber.name} removed {delivered} of {published} messages from its queue'
 
 # ################################################################################################################################
 # ################################################################################################################################

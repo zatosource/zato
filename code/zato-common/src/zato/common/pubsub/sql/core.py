@@ -30,7 +30,8 @@ from zato.common.pubsub.sql.generation import follow_takeover, get_fork_takeover
 from zato.common.pubsub.sql.payload_cache import Max_Payload_Cache_Size, PayloadCache, PayloadEpoch
 from zato.common.pubsub.sql.schema import delivery_table
 from zato.common.pubsub.sql.payloads import drop_payloads
-from zato.common.pubsub.sql.writes import new_pending_ack, PubSubWriter
+from zato.common.pubsub.sql.pending import new_pending_ack
+from zato.common.pubsub.sql.writes import PubSubWriter
 from zato.common.typing_ import cast_
 from zato.common.util.memory_trim import start_memory_trimmer
 from zato.common.util.time_ import datetime_to_ms
@@ -45,7 +46,7 @@ if 0:
     from zato.common.crypto.api import CryptoManager
     from zato.common.pubsub.sql.clock import DatabaseClock
     from zato.common.pubsub.sql.generation import GenerationGuard
-    from zato.common.pubsub.sql.writes import PendingAck
+    from zato.common.pubsub.sql.pending import PendingAck
     from zato.common.typing_ import any_, anydict, anylist, intlist, intlistnone, intset, strlist, strset
 
     # Dummy assignments to satisfy type checkers

@@ -22,11 +22,12 @@ from zato.common.pubsub.sql.schema import delivery_table, message_retry_columns,
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.engine import Engine
+    from sqlalchemy.engine import Connection, Engine
     from zato.common.typing_ import anydict, anylist, intdict, intlist
 
     # Dummy assignments to satisfy type checkers
     anylist = anylist
+    Connection = Connection
     Engine = Engine
 
 # ################################################################################################################################
@@ -110,6 +111,15 @@ _lease_candidates_query = _lease_candidates_query.order_by(*_order_by)
 _lease_candidates_query = _lease_candidates_query.limit(bindparam('lease_max_messages'))
 _lease_candidates_query = _lease_candidates_query.with_for_update(skip_locked=True, key_share=True, of=delivery_table)
 
+# Whether a pull would find anything to hand out, read before the pull waits for a commit to lease it in.
+_lease_probe_query = select(delivery_table.c.id)
+_lease_probe_query = _lease_probe_query.where(and_(
+    delivery_table.c.sub_key == bindparam('probe_sub_key'),
+    delivery_table.c.expiration_ms > bindparam('probe_now_ms'),
+    delivery_table.c.leased_until_ms < bindparam('probe_now_ms'),
+))
+_lease_probe_query = _lease_probe_query.limit(1)
+
 # .. then leases those within its size budget, learning which of them it leased itself - a row that another pull
 # .. leased in the meantime no longer matches ..
 _lease_update = delivery_table.update()
@@ -132,8 +142,25 @@ _leased_messages_query = _leased_messages_query.order_by(message_table.c.priorit
 # ################################################################################################################################
 # ################################################################################################################################
 
+def has_lease_candidates(engine:'Engine', sub_key:'str', now_ms:'int') -> 'bool':
+    """ Whether one subscriber has a deliverable row that no pull holds a lease on, read without a lock and without
+    a write, so that a pull that would hand out nothing does not wait for a commit.
+    """
+    parameters:'anydict' = {
+        'probe_sub_key': sub_key,
+        'probe_now_ms': now_ms,
+    }
+
+    with engine.connect() as connection:
+        row = connection.execute(_lease_probe_query, parameters).first()
+
+    out = row is not None
+    return out
+
+# ################################################################################################################################
+
 def lease_messages(
-    engine:'Engine',
+    connection:'Connection',
     sub_key:'str',
     max_messages:'int',
     max_len:'int',
@@ -141,9 +168,9 @@ def lease_messages(
     leased_until_ms:'int',
 ) -> 'tuple[anylist, intdict]':
     """ Leases up to max_messages deliverable rows of one subscriber, whose payloads add up to at most max_len,
-    until leased_until_ms, and returns the rows of their messages with the attempt number of each, by message ID.
-    The rows stay in the queue until the subscriber acknowledges them, so a pull whose response never reaches
-    the subscriber loses nothing.
+    until leased_until_ms, in the caller's transaction, and returns the rows of their messages with the attempt number
+    of each, by message ID. The rows stay in the queue until the subscriber acknowledges them, so a pull whose response
+    never reaches the subscriber loses nothing.
     """
     attempts:'intdict' = {}
     parameters:'anydict' = {
@@ -152,45 +179,43 @@ def lease_messages(
         'lease_max_messages': max_messages,
     }
 
-    with engine.begin() as connection:
+    # Lock the candidates ..
+    candidates = connection.execute(_lease_candidates_query, parameters).fetchall()
 
-        # Lock the candidates ..
-        candidates = connection.execute(_lease_candidates_query, parameters).fetchall()
+    if not candidates:
+        return [], attempts
 
-        if not candidates:
-            return [], attempts
+    # .. keep those within the size budget, except that a message larger than the budget
+    # .. is handed out alone rather than holding up the queue ..
+    delivery_ids:'intlist' = []
+    total_len = 0
 
-        # .. keep those within the size budget, except that a message larger than the budget
-        # .. is handed out alone rather than holding up the queue ..
-        delivery_ids:'intlist' = []
-        total_len = 0
+    for row in candidates:
 
-        for row in candidates:
+        if delivery_ids and total_len + row.data_size > max_len:
+            break
 
-            if delivery_ids and total_len + row.data_size > max_len:
-                break
+        total_len += row.data_size
+        delivery_ids.append(row.id)
 
-            total_len += row.data_size
-            delivery_ids.append(row.id)
+    # .. lease them, which only the first of two concurrent pulls succeeds in for any one row ..
+    lease_parameters:'anydict' = {
+        'lease_delivery_ids': delivery_ids,
+        'lease_now_ms': now_ms,
+        'lease_leased_until_ms': leased_until_ms,
+    }
 
-        # .. lease them, which only the first of two concurrent pulls succeeds in for any one row ..
-        lease_parameters:'anydict' = {
-            'lease_delivery_ids': delivery_ids,
-            'lease_now_ms': now_ms,
-            'lease_leased_until_ms': leased_until_ms,
-        }
+    message_ids:'intlist' = []
 
-        message_ids:'intlist' = []
+    for row in connection.execute(_lease_update, lease_parameters):
+        message_ids.append(row.message_id)
+        attempts[row.message_id] = row.attempt
 
-        for row in connection.execute(_lease_update, lease_parameters):
-            message_ids.append(row.message_id)
-            attempts[row.message_id] = row.attempt
+    if not message_ids:
+        return [], attempts
 
-        if not message_ids:
-            return [], attempts
-
-        # .. and read what is to be handed out.
-        rows = connection.execute(_leased_messages_query, {'lease_message_ids': message_ids}).fetchall()
+    # .. and read what is to be handed out.
+    rows = connection.execute(_leased_messages_query, {'lease_message_ids': message_ids}).fetchall()
 
     out = (rows, attempts)
     return out
