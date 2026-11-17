@@ -117,6 +117,7 @@ dictlist      = list_[anydict]
 dictnone      = optional[anydict]
 dictorlist    = union_[anydict, anylist]
 dtnone        = optional[datetime]
+floatlist     = list_[float]
 floatnone     = optional[float]
 generator_    = generator_
 intanydict    = dict_[int, any_]

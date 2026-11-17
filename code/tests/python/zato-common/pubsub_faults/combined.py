@@ -20,7 +20,7 @@ from zato.common.test.pubsub_replication import kill_primary, promote_standby
 # ################################################################################################################################
 
 if 0:
-    from traffic import Traffic
+    from pubsub_rest.traffic import Traffic
     from zato.common.test.pubsub_replication import ReplicatedDatabase
     from zato.common.typing_ import anylist
 

@@ -41,8 +41,11 @@ from zato.common.test.pubsub_database import get_db_mode, is_postgresql_mode, st
 # ################################################################################################################################
 
 if 0:
+    from typing import Literal
     from zato.common.test.pubsub_database import PubSubDatabase
-    from zato.common.typing_ import any_, anydict, callable_, intlist, strnone, strstrdict
+    from zato.common.typing_ import any_, anydict, callable_, intlist, strnone, strstrdict, strtuple
+
+    fixture_scope = Literal['session', 'package', 'module', 'class', 'function']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -318,6 +321,20 @@ def render_template(template_path:'str', placeholders:'anydict') -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def get_process_environment() -> 'strstrdict':
+    """ Builds the environment of a process of an installation, such as the cleanup process of pub/sub,
+    from the variables of the operating system and those that select the Zato database alone.
+    """
+    out:'strstrdict' = {}
+
+    for name in _system_env_names + _database_env_names:
+        if name in os.environ:
+            out[name] = os.environ[name]
+
+    return out
+
+# ################################################################################################################################
+
 def get_server_environment(
     server_port:'int',
     broker_port:'int',
@@ -328,11 +345,7 @@ def get_server_environment(
     those that select the Zato database, the ports of the server and the variables that the caller gives,
     so that no other variable of the environment of the test process reaches the server.
     """
-    out:'strstrdict' = {}
-
-    for name in _system_env_names + _database_env_names:
-        if name in os.environ:
-            out[name] = os.environ[name]
+    out = get_process_environment()
 
     out['Zato_Config_Bind_Port'] = str(server_port)
     out['Zato_Broker_HTTP_Port'] = str(broker_port)
@@ -353,16 +366,20 @@ def start_server_process(
     broker_port:'int',
     extra_server_env:'strstrdict',
     patch_server_conf_bind:'bool',
+    command_prefix:'strtuple' = (),
 ) -> 'float':
-    """ Starts the Zato server process, streams stdout, and waits for it to be ready.
+    """ Starts the Zato server process, streams stdout, and waits for it to be ready, with the command of the server
+    preceded by the given prefix, such as the command that places the server in a transient systemd scope.
     Returns the popen timestamp.
     """
     server_environment = get_server_environment(server_port, broker_port, state.mllp_port, extra_server_env)
 
     patch_server_conf(server_directory, server_port, patch_server_conf_bind)
 
+    command = [*command_prefix, zato_bin, 'start', server_directory, '--fg']
+
     state.server_process = subprocess.Popen(
-        [zato_bin, 'start', server_directory, '--fg'],
+        command,
         env=server_environment,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -547,15 +564,24 @@ def create_zato_server_fixture(
     extra_server_env:'strstrdict',
     patch_server_conf_bind:'bool',
     build_config_callback:'callable_',
+    scope:'fixture_scope' = 'session',
+    autouse:'bool' = True,
+    uses_environment_database:'bool' = False,
+    quickstart_parent_dir:'strnone' = None,
 ) -> 'any_':
-    """ Factory that returns a session-scoped pytest fixture for spinning up a Zato server.
+    """ Factory that returns a pytest fixture of the given scope that starts a Zato server.
 
-    The build_config_callback receives (state, logger, zato_bin, server_directory, server_port, invoke_password)
-    and must return (placeholders_dict, pre_server_callable_or_None).
-    The pre_server_callable, if not None, is called after enmasse import but before starting the server.
+    The build_config_callback receives (state, logger, zato_bin, server_port, invoke_password) and returns a dict
+    with 'placeholders' for the enmasse template and 'populate_callback', which is called with (host, server_port,
+    invoke_password, server_directory, zato_bin) once the server is ready. The dict may also hold 'enmasse_yaml',
+    the definition to import when there is no template, 'pre_server_callback', which is called with (server_directory)
+    once the database is selected and before the server starts, 'hot_deploy_sources', the service files of the pickup
+    directory, 'server_env', the variables added to the environment of the server, and 'server_command_prefix',
+    the command that the command of the server is started through.
 
-    After the server is ready, build_config_callback is called again via populate_callback
-    (set as an attribute on the returned fixture function).
+    With uses_environment_database, the server uses the Zato database that the environment of the test process
+    already selects, otherwise the fixture starts a database of its own. With quickstart_parent_dir, the environment
+    and its SQLite database are created under that directory.
     """
 
     logger = logging.getLogger(logger_name)
@@ -566,9 +592,9 @@ def create_zato_server_fixture(
     zato_base = os.environ['ZATO_TEST_BASE_DIR']
     zato_bin  = os.path.join(zato_base, 'code', 'bin', 'zato')
 
-    @pytest.fixture(scope='session', autouse=True)
+    @pytest.fixture(scope=scope, autouse=autouse)
     def zato_server() -> 'any_':
-        """ Session-scoped fixture that spins up a Zato quickstart environment.
+        """ Fixture that spins up a Zato quickstart environment.
         """
         start_time = time.monotonic()
 
@@ -588,10 +614,12 @@ def create_zato_server_fixture(
         placeholders = setup_result['placeholders']
         populate_callback = setup_result['populate_callback']
 
-        # .. render the enmasse template if one was provided ..
+        # .. render the enmasse template if one was provided, or take the definition that the callback built ..
         rendered_yaml = ''
         if template_path:
             rendered_yaml = render_template(template_path, placeholders)
+        elif 'enmasse_yaml' in setup_result:
+            rendered_yaml = setup_result['enmasse_yaml']
 
         # .. create quickstart and optionally import enmasse ..
         server_directory = run_quickstart_and_enmasse(
@@ -601,6 +629,7 @@ def create_zato_server_fixture(
             invoke_password=invoke_password,
             rendered_yaml=rendered_yaml,
             quickstart_prefix=quickstart_prefix,
+            quickstart_parent_dir=quickstart_parent_dir,
         )
 
         # .. point the Zato database at this environment's own file, or at a PostgreSQL container of this session,
@@ -615,7 +644,15 @@ def create_zato_server_fixture(
         # .. the server receives the variables of the suite and those of its database explicitly ..
         server_env = dict(extra_server_env)
 
-        if is_postgresql_mode(db_mode):
+        if 'server_env' in setup_result:
+            server_env.update(setup_result['server_env'])
+
+        # .. a database that the environment selects already is the one that the server uses ..
+        if uses_environment_database:
+            pubsub_database = None
+            logger.info('Zato database: %s', os.environ[DatabaseEnv.Env_Type])
+
+        elif is_postgresql_mode(db_mode):
             pubsub_database = start_pubsub_database('live', db_mode)
             state.pubsub_database = pubsub_database
             _ = atexit.register(stop_pubsub_database, pubsub_database)
@@ -629,6 +666,10 @@ def create_zato_server_fixture(
             os.environ[DatabaseEnv.Env_Path] = db_path
             logger.info('Zato database: %s', db_path)
 
+        # .. let the callback seed the database before the server uses it ..
+        if 'pre_server_callback' in setup_result:
+            setup_result['pre_server_callback'](server_directory=server_directory)
+
         # .. copy services into the pickup directory if needed ..
         hot_deploy_sources = setup_result.get('hot_deploy_sources', []) # type: ignore[union-attr]
 
@@ -638,6 +679,12 @@ def create_zato_server_fixture(
             destination = os.path.join(pickup_directory, file_name)
             _ = shutil.copy2(source_path, destination)
             logger.info('Copied %s to %s', source_path, destination)
+
+        # .. the command of the server may be started through another one ..
+        if 'server_command_prefix' in setup_result:
+            command_prefix = tuple(setup_result['server_command_prefix'])
+        else:
+            command_prefix = ()
 
         # .. start the server ..
         broker_port = find_free_port()
@@ -651,6 +698,7 @@ def create_zato_server_fixture(
             broker_port=broker_port,
             extra_server_env=server_env,
             patch_server_conf_bind=patch_server_conf_bind,
+            command_prefix=command_prefix,
         )
 
         logger.info('Total setup: %.1fs', time.monotonic() - start_time)
@@ -672,6 +720,7 @@ def create_zato_server_fixture(
 
         if pubsub_database:
             stop_pubsub_database(pubsub_database)
+            state.pubsub_database = None
 
     # .. attach state to the fixture function so conftest files can reference it ..
     zato_server._state = state # type: ignore[attr-defined]

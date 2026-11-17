@@ -56,12 +56,13 @@ class ModuleCtx:
     Product_Package = 'zato'
 
     # What a performance suite may import from the product - the server fixtures and their database, the resume protocol
-    # of the suites, seed_rows for the data seeded before the server starts, the public clients and the reporting module.
+    # of the suites, the seeding of the data seeded before the server starts, the public clients and the reporting module.
     Allowed_Modules = (
         'zato.common.test.conftest_base_pubsub',
         'zato.common.test.pubsub_database',
         'zato.common.test.resume',
         'zato.common.test.direct_sql.seed',
+        'zato.common.test.direct_sql.pubsub_seed',
         'zato.common.test.client',
         'zato.common.hl7.mllp.client',
         'zato.common.test.perf_report',

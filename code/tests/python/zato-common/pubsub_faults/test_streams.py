@@ -10,15 +10,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # Zato
-from conftest import Database_Proxy
 from faults import get_label, Total_Loss
 from run import FaultRun
 from stream_faults import Stream_Cut, Stream_Kinds, StreamFault
+from toxiproxy import Database_Proxy
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from pubsub_rest.server import PubSubServer
     from toxiproxy import Toxiproxy
 
 # ################################################################################################################################
@@ -39,7 +40,7 @@ _cases.append((Stream_Cut, Total_Loss))
 # ################################################################################################################################
 
 @pytest.mark.parametrize('kind, level', _cases)
-def test_database_link(stream_database:'Toxiproxy', kind:'str', level:'int') -> 'None':
+def test_database_link(stream_database:'Toxiproxy', server:'PubSubServer', kind:'str', level:'int') -> 'None':
     """ Item 15.6 - the connections from the server to PostgreSQL are delayed, limited, sliced, reset and cut,
     and held in a black hole at a total loss.
     """
@@ -47,7 +48,7 @@ def test_database_link(stream_database:'Toxiproxy', kind:'str', level:'int') -> 
 
     label = get_label(fault.name, level)
 
-    run = FaultRun(label)
+    run = FaultRun(server, label)
     run.run(fault, level)
     run.check()
 

@@ -17,13 +17,14 @@ from run import FaultRun
 # ################################################################################################################################
 
 if 0:
+    from pubsub_rest.server import PubSubServer
     from conftest import FaultDatabase
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @pytest.mark.parametrize('level', High_Severity_Levels)
-def test_disk(fault_database:'FaultDatabase', level:'int') -> 'None':
+def test_disk(fault_database:'FaultDatabase', server:'PubSubServer', level:'int') -> 'None':
     """ Item 15.3 - the disk of PostgreSQL loses a share of the bandwidth and of the operations per second
     that it used in the baseline, which slows down checkpoints, WAL writes and commits.
     """
@@ -31,7 +32,7 @@ def test_disk(fault_database:'FaultDatabase', level:'int') -> 'None':
 
     label = get_label(fault.name, level)
 
-    run = FaultRun(label)
+    run = FaultRun(server, label)
     run.run(fault, level)
     run.check()
 

@@ -17,13 +17,14 @@ from run import FaultRun
 # ################################################################################################################################
 
 if 0:
+    from pubsub_rest.server import PubSubServer
     from conftest import FaultDatabase
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @pytest.mark.parametrize('level', High_Severity_Levels)
-def test_sync_standby_disk(standby_database:'FaultDatabase', level:'int') -> 'None':
+def test_sync_standby_disk(standby_database:'FaultDatabase', server:'PubSubServer', level:'int') -> 'None':
     """ Item 15.11 - the disk of a synchronous standby is throttled as in item 15.3, so that every commit
     on the primary waits for the standby.
     """
@@ -32,7 +33,7 @@ def test_sync_standby_disk(standby_database:'FaultDatabase', level:'int') -> 'No
 
     label = get_label(fault.name, level)
 
-    run = FaultRun(label)
+    run = FaultRun(server, label)
     run.run(fault, level)
     run.check()
 

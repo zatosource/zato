@@ -139,6 +139,9 @@ Direct_SQL_Purposes = (
     ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_audit_events',           'Seeding test data in bulk'),
     ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_event',                  'Seeding test data in bulk'),
     ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_autocommit_connection',  'Seeding test data in bulk'),
+    ('code/zato-common/src/zato/common/test/direct_sql/pubsub_seed.py', 'get_seeded_sub_key',    'Seeding test data in bulk'),
+    ('code/zato-common/src/zato/common/test/direct_sql/pubsub_seed.py', 'seed_queues',           'Seeding test data in bulk'),
+    ('code/zato-common/src/zato/common/test/direct_sql/pubsub_seed.py', 'seed_traces',           'Seeding test data in bulk'),
 )
 
 # The faults that change the active server without a takeover, each standing for a failover to a replica

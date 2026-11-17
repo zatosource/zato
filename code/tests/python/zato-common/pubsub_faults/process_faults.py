@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The faults of a single process - one Zato server with its cleanup process in a transient systemd scope
+# The faults of a single server - one Zato server with its cleanup process in a transient systemd scope
 # of the user, whose CPU, memory, processes and file descriptors are limited, which is frozen in a duty cycle,
 # whose file system calls are delayed and failed, and whose clock is skewed.
 
@@ -22,13 +22,12 @@ from gevent import sleep, spawn
 
 # Zato
 from faults import Fault, Total_Loss
-from remote import write_control_file
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist, intlist, strlist
+    from zato.common.typing_ import anylist, callable_, intlist, strlist
 
     intpair  = tuple[int, int]
     pathpair = tuple[str, str]
@@ -83,6 +82,18 @@ _clock_jump_seconds = 20
 # ################################################################################################################################
 # ################################################################################################################################
 
+def write_control_file(path:'str', value:'str') -> 'None':
+    """ Replaces the contents of a file at once, so that its reader never sees a part of them.
+    """
+    temp_path = f'{path}.tmp'
+
+    with open(temp_path, 'w') as control_file:
+        _ = control_file.write(value)
+
+    os.replace(temp_path, path)
+
+# ################################################################################################################################
+
 def _remaining(level:'int') -> 'float':
     """ The share of a resource that is left at a severity level.
     """
@@ -90,18 +101,6 @@ def _remaining(level:'int') -> 'float':
     return out
 
 # ################################################################################################################################
-
-def _get_parent_pid(pid:'int') -> 'int':
-
-    with open(f'/proc/{pid}/stat') as stat_file:
-        stat = stat_file.read()
-
-    # The name of the process is in parentheses and may contain spaces, which is why the fields are read after it.
-    name_end = stat.rindex(')')
-    fields = stat[name_end + 2:].split()
-
-    out = int(fields[1])
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -185,6 +184,13 @@ class Scope:
 
 # ################################################################################################################################
 
+    def add_pid(self, pid:'int') -> 'None':
+        """ Moves a process that was started outside of the scope into it.
+        """
+        self.write('cgroup.procs', f'{pid}')
+
+# ################################################################################################################################
+
     def is_active(self) -> 'bool':
         command = ['systemctl', '--user', 'is-active', '--quiet', self.unit_name]
         result = subprocess.run(command, check=False)
@@ -251,35 +257,24 @@ class ScopeCPUFault(Fault):
 # ################################################################################################################################
 
 class ServerFreezeFault(Fault):
-    """ Item 15.7 - the server, without its cleanup process, is stopped with SIGSTOP and resumed with SIGCONT
-    in a duty cycle, for frozen_seconds in each period_seconds.
+    """ Item 15.7 - the processes of the server, without its cleanup process, are stopped with SIGSTOP and resumed
+    with SIGCONT in a duty cycle, for frozen_seconds in each period_seconds.
     """
 
-    def __init__(self, scope:'Scope', period_seconds:'float', frozen_seconds:'float') -> 'None':
-        self.scope = scope
+    def __init__(self, get_server_pids:'callable_', period_seconds:'float', frozen_seconds:'float') -> 'None':
+        self.get_server_pids = get_server_pids
         self.period_seconds = period_seconds
         self.frozen_seconds = frozen_seconds
         self.name = f'freeze-server-{frozen_seconds:g}s-every-{period_seconds:g}s'
 
-        self.pid = 0
+        self.pids:'intlist' = []
         self._greenlets:'anylist' = []
 
 # ################################################################################################################################
 
-    def _get_server_pid(self) -> 'int':
-        """ The server is the process of the scope whose parent is outside of it.
-        """
-        pids = self.scope.get_pids()
-
-        for pid in pids:
-            parent_pid = _get_parent_pid(pid)
-            if parent_pid not in pids:
-                out = pid
-                break
-        else:
-            raise Exception(f'No server process in {self.scope.unit}')
-
-        return out
+    def _signal(self, signal_number:'int') -> 'None':
+        for pid in self.pids:
+            os.kill(pid, signal_number)
 
 # ################################################################################################################################
 
@@ -287,15 +282,15 @@ class ServerFreezeFault(Fault):
         running_seconds = self.period_seconds - self.frozen_seconds
 
         while True:
-            os.kill(self.pid, signal.SIGSTOP)
+            self._signal(signal.SIGSTOP)
             sleep(self.frozen_seconds)
-            os.kill(self.pid, signal.SIGCONT)
+            self._signal(signal.SIGCONT)
             sleep(running_seconds)
 
 # ################################################################################################################################
 
     def apply(self, level:'int') -> 'None':
-        self.pid = self._get_server_pid()
+        self.pids = self.get_server_pids()
 
         greenlet = spawn(self._freeze)
         self._greenlets.append(greenlet)
@@ -304,15 +299,15 @@ class ServerFreezeFault(Fault):
 
     def remove(self) -> 'None':
 
-        if not self.pid:
+        if not self.pids:
             return
 
         for greenlet in self._greenlets:
             greenlet.kill()
 
         self._greenlets = []
-        os.kill(self.pid, signal.SIGCONT)
-        self.pid = 0
+        self._signal(signal.SIGCONT)
+        self.pids = []
 
 # ################################################################################################################################
 # ################################################################################################################################

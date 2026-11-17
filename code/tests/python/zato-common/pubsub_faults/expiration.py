@@ -7,41 +7,34 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Item 15.9 - messages published while the clock of the server is skewed expire neither early nor late.
-# The true time is what the test that started the server read from the clock of the host before the fault,
-# advanced by the monotonic clock of the host, which the fault does not change and which every process shares.
+# The true time is the clock of the test process, which the fault does not change.
 
 # stdlib
-import os
-from time import monotonic
+from time import monotonic, time
 
 # gevent
 from gevent import sleep, spawn
 
-# SQLAlchemy
-from sqlalchemy import select
-
 # Zato
-from zato.common.db_env.database import get_database_engine
-from zato.common.pubsub.sql.schema import message_table
+from pubsub_rest.transport import RESTClient
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.pubsub.sql.backend import SQLPubSubBackend
+    from pubsub_rest.definition import Definition
+    from pubsub_rest.server import PubSubServer
+    from pubsub_rest.transport import Credentials
     from zato.common.typing_ import any_, intlist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The variable through which the test passes the true time and the monotonic time it was read at.
-Env_Clock_Anchor = 'Zato_Test_Fault_Clock_Anchor'
-
-# The topics of the probe - one pulled before its messages expire and one pulled after they expire.
+# The topics of the probe - one pulled before its messages expire and one pulled after they expire -
+# each with a subscriber of the same name, and the publisher of both.
 _early_topic = 'faults.expiration.early'
 _late_topic = 'faults.expiration.late'
-_early_sub_key = 'zpsk.faults-expiration-early'
-_late_sub_key = 'zpsk.faults-expiration-late'
+_publisher = 'faults.expiration.publisher'
 
 # How many messages each topic receives and how long they live, in seconds.
 _message_count = 20
@@ -59,12 +52,8 @@ _tolerance_ms = 2000
 
 _ms_per_second = 1000
 
-# ################################################################################################################################
-# ################################################################################################################################
-
-def is_probe_enabled() -> 'bool':
-    out = Env_Clock_Anchor in os.environ
-    return out
+# The size budget of one pull, in bytes.
+_max_len = 5_000_000
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,12 +63,13 @@ class ExpirationProbe:
     and pulls the messages before and after they expire.
     """
 
-    def __init__(self, backend:'SQLPubSubBackend') -> 'None':
-        self.backend = backend
+    def __init__(self) -> 'None':
 
-        anchor_ms, anchor_monotonic = os.environ[Env_Clock_Anchor].split()
-        self.anchor_ms = int(anchor_ms)
-        self.anchor_monotonic = float(anchor_monotonic)
+        self.server:'PubSubServer | None' = None
+
+        self.publisher_credentials:'Credentials | None' = None
+        self.early_credentials:'Credentials | None' = None
+        self.late_credentials:'Credentials | None' = None
 
         # The differences between the stored and the true expirations, and how many messages each pull received.
         self.expiration_errors_ms:'intlist' = []
@@ -90,56 +80,69 @@ class ExpirationProbe:
 
 # ################################################################################################################################
 
-    def _get_true_ms(self) -> 'int':
-        elapsed = monotonic() - self.anchor_monotonic
-        elapsed_ms = int(elapsed * _ms_per_second)
+    def define(self, server:'PubSubServer', definition:'Definition') -> 'None':
+        """ Adds the topics, the publisher and the subscribers of the probe to the definition of the server.
+        """
+        self.publisher_credentials = definition.add_publisher(_publisher, [_early_topic, _late_topic])
+        self.early_credentials = definition.add_pull_subscriber(_early_topic, [_early_topic])
+        self.late_credentials = definition.add_pull_subscriber(_late_topic, [_late_topic])
 
-        out = self.anchor_ms + elapsed_ms
+        self.server = server
+
+# ################################################################################################################################
+
+    def _get_server(self) -> 'PubSubServer':
+        server = self.server
+        assert server is not None, 'The probe is not defined'
+        return server
+
+# ################################################################################################################################
+
+    def _new_client(self, credentials:'Credentials | None') -> 'RESTClient':
+        assert credentials is not None, 'The probe is not defined'
+
+        out = RESTClient(self._get_server().base_url, credentials)
         return out
 
 # ################################################################################################################################
 
-    def subscribe(self) -> 'None':
-        self.backend.subscribe(_early_sub_key, _early_topic)
-        self.backend.subscribe(_late_sub_key, _late_topic)
-
-# ################################################################################################################################
-
-    def _publish(self, topic_name:'str') -> 'strlist':
+    def _publish(self, client:'RESTClient', topic_name:'str') -> 'strlist':
         out:'strlist' = []
 
         for _ in range(_message_count):
-            result = self.backend.publish(topic_name, 'Expiration probe', expiration=_expiration_seconds)
-            out.append(result.msg_id)
+            response = client.publish(topic_name, {'data': 'Expiration probe', 'expiration': _expiration_seconds})
+            out.append(response['msg_id'])
 
         return out
 
 # ################################################################################################################################
 
     def _read_expiration_errors(self, msg_ids:'strlist', true_expiration_ms:'int') -> 'None':
-        query = select(message_table.c.expiration_ms)
-        query = query.where(message_table.c.msg_id.in_(msg_ids))
 
-        with get_database_engine().connect() as connection:
-            rows = connection.execute(query).fetchall()
+        expirations = self._get_server().get_expirations(msg_ids)
 
-        for row in rows:
-            error_ms = row.expiration_ms - true_expiration_ms
+        for expiration_ms in expirations.values():
+            error_ms = expiration_ms - true_expiration_ms
             self.expiration_errors_ms.append(error_ms)
 
 # ################################################################################################################################
 
-    def _pull(self, sub_key:'str') -> 'int':
+    def _pull(self, credentials:'Credentials | None') -> 'int':
+
+        client = self._new_client(credentials)
+
         max_messages = _message_count * 2
-        messages = self.backend.pull_messages(sub_key, max_messages=max_messages)
+        response = client.pull(max_messages, _max_len)
 
         msg_ids:'strlist' = []
 
-        for message in messages:
-            msg_ids.append(message['msg_id'])
+        for message in response['messages']:
+            msg_ids.append(message['meta']['msg_id'])
 
         if msg_ids:
-            _ = self.backend.ack_pulled(sub_key, msg_ids)
+            _ = client.ack(msg_ids)
+
+        client.close()
 
         out = len(msg_ids)
         return out
@@ -159,22 +162,26 @@ class ExpirationProbe:
         sleep(_publish_after_seconds)
 
         published_at = monotonic()
-        true_now_ms = self._get_true_ms()
+        true_now_ms = int(time() * _ms_per_second)
         true_expiration_ms = true_now_ms + _expiration_seconds * _ms_per_second
 
-        early_msg_ids = self._publish(_early_topic)
-        late_msg_ids = self._publish(_late_topic)
+        client = self._new_client(self.publisher_credentials)
+
+        early_msg_ids = self._publish(client, _early_topic)
+        late_msg_ids = self._publish(client, _late_topic)
         msg_ids = early_msg_ids + late_msg_ids
+
+        client.close()
 
         # .. their expirations are compared with the true one ..
         self._read_expiration_errors(msg_ids, true_expiration_ms)
 
         # .. and they are pulled before and after they expire.
         self._sleep_until(published_at + _early_pull_after_seconds)
-        self.early_received = self._pull(_early_sub_key)
+        self.early_received = self._pull(self.early_credentials)
 
         self._sleep_until(published_at + _late_pull_after_seconds)
-        self.late_received = self._pull(_late_sub_key)
+        self.late_received = self._pull(self.late_credentials)
 
 # ################################################################################################################################
 

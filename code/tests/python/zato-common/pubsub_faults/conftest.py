@@ -17,24 +17,20 @@ import sys
 import tempfile
 
 _here = os.path.dirname(__file__)
-_stability_dir = os.path.abspath(os.path.join(_here, '..', 'pubsub_stability'))
-_perf_dir = os.path.abspath(os.path.join(_here, '..', 'pubsub_backend_perf'))
-_lib_dir = os.path.abspath(os.path.join(_here, '..', 'lib'))
-
-sys.path.insert(0, _lib_dir)
-sys.path.insert(0, _perf_dir)
-sys.path.insert(0, _stability_dir)
 sys.path.insert(0, _here)
 
 # pytest
 import pytest
 
 # Zato
-from capture import limit_captured_logs
 from container import Container, get_disk_device
-from process import ProcessEnvironment
+from fault_server import get_fault_fixture_arguments, Server_Config
+from process import get_process_env, new_scope, ProcessEnvironment
+from pubsub_rest.capture import limit_captured_logs
+from pubsub_rest.server import PubSubServer
 from tools import build_fsfault
-from toxiproxy import Toxiproxy, Toxiproxy_Host
+from toxiproxy import Database_Proxy, Toxiproxy, Toxiproxy_Host
+from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
 from zato.common.db_env.database import get_database_engine
 from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.db_env.fence import ModuleCtx as FenceCtx
@@ -50,9 +46,11 @@ from zato.common.test.pubsub_replication import ReplicatedDatabase, start_replic
 if 0:
     from collections.abc import Generator
 
+    from process_faults import Scope
     from zato.common.typing_ import strstrdict
 
     nonegen        = Generator[None, None, None]
+    scopegen       = Generator['Scope', None, None]
     databasegen    = Generator['FaultDatabase', None, None]
     environmentgen = Generator[ProcessEnvironment, None, None]
     streamgen      = Generator[Toxiproxy, None, None]
@@ -65,12 +63,12 @@ if 0:
 # How many fully delivered messages each topic keeps during the runs, which bounds the tables.
 _delivered_max_messages = '10000'
 
+# The server of each test.
+_server = PubSubServer('pubsub-faults')
+
 # Where the container of PostgreSQL sees the library of the file system faults and the directory of its control file.
 _container_fsfault_path = '/zato-fault/fsfault.so'
 _container_control_dir = '/zato-fault/control'
-
-# The proxy of Toxiproxy on the link from the server to PostgreSQL.
-Database_Proxy = 'postgresql'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -198,6 +196,7 @@ def endpoint_work_dir() -> 'strgen':
         database = start_pubsub_database('endpoints', mode)
         env.update(database.env)
     else:
+        env[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
         env[DatabaseEnv.Env_Path] = os.path.join(work_dir, 'zato.db')
 
     try:
@@ -283,6 +282,7 @@ def process_environment() -> 'environmentgen':
         env.update(database.env)
 
     else:
+        env[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
         env[DatabaseEnv.Env_Path] = os.path.join(work_dir, 'zato.db')
 
     try:
@@ -292,6 +292,36 @@ def process_environment() -> 'environmentgen':
         if database:
             stop_pubsub_database(database)
         shutil.rmtree(work_dir, ignore_errors=True)
+
+# ################################################################################################################################
+
+@pytest.fixture
+def server_scope(process_environment:'ProcessEnvironment') -> 'scopegen':
+    """ The transient scope that the server of one test of a single server runs in, together with its cleanup process,
+    both of them with the libraries of the faults preloaded.
+    """
+    scope = new_scope()
+
+    Server_Config.server_env = get_process_env(process_environment)
+    Server_Config.command_prefix = scope.get_command_prefix()
+    Server_Config.scope = scope
+
+    try:
+        yield scope
+    finally:
+        Server_Config.reset()
+        scope.stop()
+
+# ################################################################################################################################
+
+# The server of one test, against the database that the fixtures requested before it select.
+zato_server = create_zato_server_fixture(**get_fault_fixture_arguments(_server, Server_Config))
+
+# ################################################################################################################################
+
+@pytest.fixture
+def server(zato_server:'None') -> 'PubSubServer':
+    return _server
 
 # ################################################################################################################################
 # ################################################################################################################################

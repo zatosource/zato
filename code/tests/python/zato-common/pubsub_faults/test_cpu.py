@@ -18,6 +18,7 @@ from run import FaultRun
 # ################################################################################################################################
 
 if 0:
+    from pubsub_rest.server import PubSubServer
     from conftest import FaultDatabase
 
     dutycycle = tuple[int, float]
@@ -40,7 +41,7 @@ for _target in [Freeze_WAL_Writer, Freeze_Autovacuum_Launcher]:
 # ################################################################################################################################
 
 @pytest.mark.parametrize('level', High_Severity_Levels)
-def test_cpu(fault_database:'FaultDatabase', level:'int') -> 'None':
+def test_cpu(fault_database:'FaultDatabase', server:'PubSubServer', level:'int') -> 'None':
     """ Item 15.7 - PostgreSQL loses a share of the CPU time that it used in the baseline, and all of its processes
     are frozen at a total loss.
     """
@@ -48,20 +49,20 @@ def test_cpu(fault_database:'FaultDatabase', level:'int') -> 'None':
 
     label = get_label(fault.name, level)
 
-    run = FaultRun(label)
+    run = FaultRun(server, label)
     run.run(fault, level)
     run.check()
 
 # ################################################################################################################################
 
 @pytest.mark.parametrize('target, duty_cycle', _freeze_cases)
-def test_freeze(fault_database:'FaultDatabase', target:'str', duty_cycle:'dutycycle') -> 'None':
+def test_freeze(fault_database:'FaultDatabase', server:'PubSubServer', target:'str', duty_cycle:'dutycycle') -> 'None':
     """ Item 15.7 - one process is frozen and resumed in a duty cycle - the WAL writer, the autovacuum launcher,
     one backend of pub/sub or the cleanup process.
     """
     period_seconds, frozen_seconds = duty_cycle
 
-    run = FaultRun('')
+    run = FaultRun(server, '')
 
     fault = FreezeFault(
         fault_database.database,

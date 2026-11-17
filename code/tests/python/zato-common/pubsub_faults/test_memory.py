@@ -17,13 +17,14 @@ from run import FaultRun
 # ################################################################################################################################
 
 if 0:
+    from pubsub_rest.server import PubSubServer
     from conftest import FaultDatabase
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @pytest.mark.parametrize('level', High_Severity_Levels)
-def test_memory(fault_database:'FaultDatabase', level:'int') -> 'None':
+def test_memory(fault_database:'FaultDatabase', server:'PubSubServer', level:'int') -> 'None':
     """ Item 15.8 - PostgreSQL is held below the memory that it used in the baseline, which causes reclaim stalls,
     and at a total loss the OOM killer ends one backend, after which every backend ends and crash recovery runs.
     """
@@ -31,7 +32,7 @@ def test_memory(fault_database:'FaultDatabase', level:'int') -> 'None':
 
     label = get_label(fault.name, level)
 
-    run = FaultRun(label)
+    run = FaultRun(server, label)
     run.run(fault, level)
     run.check()
 

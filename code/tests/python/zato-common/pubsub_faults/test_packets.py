@@ -17,6 +17,7 @@ from run import FaultRun
 # ################################################################################################################################
 
 if 0:
+    from pubsub_rest.server import PubSubServer
     from conftest import FaultDatabase
 
 # ################################################################################################################################
@@ -37,7 +38,7 @@ _cases.append((Packet_Loss, Total_Loss))
 # ################################################################################################################################
 
 @pytest.mark.parametrize('kind, level', _cases)
-def test_packets(fault_database:'FaultDatabase', kind:'str', level:'int') -> 'None':
+def test_packets(fault_database:'FaultDatabase', server:'PubSubServer', kind:'str', level:'int') -> 'None':
     """ Item 15.5 - the packets between pub/sub and PostgreSQL are lost, delayed with jitter, reordered,
     duplicated or corrupted, in both directions. In the TLS modes, a corrupted record ends its connection.
     """
@@ -45,7 +46,7 @@ def test_packets(fault_database:'FaultDatabase', kind:'str', level:'int') -> 'No
 
     label = get_label(fault.name, level)
 
-    run = FaultRun(label)
+    run = FaultRun(server, label)
     run.run(fault, level)
     run.check()
 

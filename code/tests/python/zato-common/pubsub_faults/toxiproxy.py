@@ -47,6 +47,9 @@ Stream_Downstream = 'downstream'
 
 Both_Streams = [Stream_Upstream, Stream_Downstream]
 
+# The proxy on the link from the server to PostgreSQL.
+Database_Proxy = 'postgresql'
+
 # The counter of the bytes that a proxy received, by direction, in the metrics of Toxiproxy.
 _received_bytes_metric = 'toxiproxy_proxy_received_bytes_total'
 

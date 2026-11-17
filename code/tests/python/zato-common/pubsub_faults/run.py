@@ -6,38 +6,40 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# One fault at one severity level during the production traffic - a baseline, the fault, a bounded recovery
+# One fault at one severity level during the production traffic of a server - a baseline, the fault, a bounded recovery
 # and the minutes after it, which are checked as in the soak, followed by the account of every publication.
 
 # stdlib
-from dataclasses import dataclass
+import logging
+from dataclasses import asdict, dataclass
 from time import monotonic
 from typing import NamedTuple
 
 # gevent
 from gevent import sleep, spawn
 
-# SQLAlchemy
-from sqlalchemy import text
-
 # Zato
-from expiration import ExpirationProbe, is_probe_enabled
-from monitor import Limits, Monitor
-from runner import get_count_mismatches, get_duration, get_report_path, run_for, start_cleanup_process, \
-    stop_cleanup_process
-from traffic import get_traffic_profile, Traffic
-from zato.common.db_env.database import get_database_engine
+from pubsub_rest.monitor import Limits, Monitor
+from pubsub_rest.runner import get_duration, run_for, start_cleanup_process, stop_cleanup_process
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from subprocess import Popen
+    from expiration import ExpirationProbe
     from faults import Fault
-    from zato.common.typing_ import strlist
+    from process_faults import Scope
+    from pubsub_rest.server import PubSubServer
+    from zato.common.typing_ import strlist, strstrdict
 
     intpair = tuple[int, int]
     process = Popen[bytes]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = logging.getLogger('zato.test.pubsub_faults')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -67,12 +69,6 @@ Default_Phases = FaultPhases(
 _drain_seconds = 900
 _drain_check_seconds = 1
 
-# How often the cleanup process sweeps, in seconds.
-_cleanup_interval_seconds = 60
-
-# How many deliveries are left in the queues.
-_delivery_rows_query = text('select count(*) from pubsub_delivery')
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -92,28 +88,33 @@ class FaultOutcome:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _count_delivery_rows() -> 'int':
-    with get_database_engine().connect() as connection:
-        out = connection.execute(_delivery_rows_query).scalar_one()
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class FaultRun:
-    """ Runs the traffic of one test through the phases of one fault and accounts for every publication.
+    """ Runs the traffic of one server through the phases of one fault and accounts for every publication.
     """
 
-    def __init__(self, label:'str', phases:'FaultPhases'=Default_Phases) -> 'None':
+    def __init__(
+        self,
+        server:'PubSubServer',
+        label:'str',
+        phases:'FaultPhases'=Default_Phases,
+        probes_expiration:'bool'=False,
+        cleanup_env:'strstrdict | None'=None,
+        ) -> 'None':
+
+        self.server = server
         self.label = label
         self.phases = phases
 
-        self.traffic = Traffic(get_traffic_profile())
-        self.traffic.tracks_deliveries = True
+        self.traffic = server.get_traffic()
 
         self.monitor:'Monitor | None' = None
         self.cleanup:'process | None' = None
         self.outcome = FaultOutcome()
+
+        # The variables that the cleanup process runs with in addition to those of the server,
+        # and the scope of the server, which the cleanup process runs in as well, if the server runs in one.
+        self.cleanup_env = cleanup_env
+        self.scope:'Scope | None' = server.properties['scope']
 
         # Whether the cleanup process was still running at the end, and how many minutes were reported
         # by the time the recovery ended.
@@ -123,8 +124,8 @@ class FaultRun:
         # The expirations of the messages published during a fault of the clock of the server.
         self.probe:'ExpirationProbe | None' = None
 
-        if is_probe_enabled():
-            self.probe = ExpirationProbe(self.traffic.backend)
+        if probes_expiration:
+            self.probe = server.properties['probe']
 
 # ################################################################################################################################
 
@@ -194,7 +195,7 @@ class FaultRun:
         while True:
 
             not_pulled, not_pushed = self._get_missing()
-            delivery_rows = _count_delivery_rows()
+            delivery_rows = self.server.get_delivery_count()
 
             # Everything was delivered once nothing is missing and the queues are empty ..
             if not_pulled == 0:
@@ -225,6 +226,18 @@ class FaultRun:
 
 # ################################################################################################################################
 
+    def _start_cleanup(self) -> 'process':
+        """ Starts the cleanup process, in the scope of the server if the server runs in one.
+        """
+        out = start_cleanup_process(self.cleanup_env)
+
+        if self.scope:
+            self.scope.add_pid(out.pid)
+
+        return out
+
+# ################################################################################################################################
+
     def run(self, fault:'Fault', level:'int') -> 'None':
         """ Runs the phases of one fault at one severity level, removing the fault even if a phase fails.
         """
@@ -238,16 +251,10 @@ class FaultRun:
         fault_seconds = max(fault_seconds, fault.min_duration)
 
         traffic = self.traffic
-        traffic.backend.take_over()
-        traffic.subscribe_all()
-
         probe = self.probe
 
-        if probe:
-            probe.subscribe()
-
-        cleanup = start_cleanup_process(_cleanup_interval_seconds)
-        monitor = Monitor(traffic, Limits(), get_report_path(f'fault-{fault.name}'), self.label)
+        cleanup = self._start_cleanup()
+        monitor = Monitor(self.server, traffic, Limits())
 
         self.cleanup = cleanup
         self.monitor = monitor
@@ -297,30 +304,7 @@ class FaultRun:
             traffic.stop()
             stop_cleanup_process(cleanup)
 
-            # The guard of this run is detached, so that the next run of the same engine installs its own.
-            guard = traffic.backend.generation_guard
-            if guard:
-                guard.uninstall(traffic.backend.engine)
-
-        self._write_outcome()
-
-# ################################################################################################################################
-
-    def _write_outcome(self) -> 'None':
-        monitor = self.monitor
-        assert monitor is not None
-
-        outcome = self.outcome
-
-        line = f'{self.label} | outcome | partner {outcome.acknowledged_partner}, not pulled {outcome.not_pulled} | ' + \
-            f'broadcast {outcome.acknowledged_broadcast}, not pushed {outcome.not_pushed}, ' + \
-            f'repeated pushes {outcome.repeated_pushes} | rows left {outcome.delivery_rows} | ' + \
-            f'publish errors {outcome.publish_errors} | drained in {outcome.drain_seconds}s'
-
-        with open(monitor.report_path, 'a') as report_file:
-            _ = report_file.write(line + '\n')
-
-        print(line, flush=True)
+        logger.info('%s -> %s', self.label, asdict(self.outcome))
 
 # ################################################################################################################################
 
@@ -332,15 +316,15 @@ class FaultRun:
         assert monitor is not None
 
         outcome = self.outcome
-        backend = self.traffic.backend
+        server = self.server
 
         assert outcome.not_pulled == 0, outcome
         assert outcome.not_pushed == 0, outcome
         assert outcome.delivery_rows == 0, outcome
 
-        assert not get_count_mismatches(), get_count_mismatches()
+        assert not server.get_count_mismatches(), server.get_count_mismatches()
         assert self.is_cleanup_running, 'The cleanup process stopped during the run'
-        assert not backend.is_replaced, 'The server was replaced during the run'
+        assert not server.is_replaced(), 'The server was replaced during the run'
 
         # At least one minute after the recovery is checked in full ..
         checked:'strlist' = []

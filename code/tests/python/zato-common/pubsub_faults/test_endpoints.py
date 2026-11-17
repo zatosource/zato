@@ -16,36 +16,31 @@ from time import monotonic
 # gevent
 from gevent import sleep, spawn
 
-# SQLAlchemy
-from sqlalchemy import text
+# pytest
+import pytest
 
 # Zato
 from endpoints import Behavior_Late_OK, Behavior_Mid_Close, Behavior_Normal, Behavior_Redirect, Behavior_Silent, \
     Behavior_Slow_Reader, Behavior_TLS_Stall, Endpoint
+from fault_server import Server_Config
 from toxiproxy import Stream_Upstream, Toxiproxy
-from zato.common.api import PubSub
-from zato.common.audit_log.api import AuditLog
-from zato.common.db_env.database import get_database_engine
-from zato.common.audit_log.common import AuditEvent
-from zato.common.pubsub.sql.backend import SQLPubSubBackend
-from zato.common.test.rest_push import RESTPushStore
-from zato.server.base.parallel.delivery import PushDelivery
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, intlist, strintdict, strlist, strstrdict
+    from collections.abc import Generator
+    from pubsub_rest.definition import Definition
+    from pubsub_rest.server import PubSubServer
+    from zato.common.typing_ import any_, anydict, anylist, floatlist, intlist, strintdict, strlist, strstrdict
 
-    floatlist       = list[float]
     strfloatdict    = dict[str, float]
     strintlistdict  = dict[str, intlist]
     strendpointdict = dict[str, Endpoint]
+    rungen          = Generator['_Run', None, None]
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-_server_name = 'faults.endpoints'
 
 # The endpoints - the name, the behavior, how many messages it receives and the retry settings of its messages.
 _healthy = 'healthy'
@@ -90,34 +85,11 @@ _healthy_p99_limit_seconds = 1.0
 _run_timeout_seconds = 600
 _poll_seconds = 1.0
 
-_queue_depth_query = text('select count(*) from pubsub_delivery where sub_key = :sub_key')
-_failed_events_query = text('select msg_id from event where event_type = :event_type and sub_key = :sub_key')
-
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _StubConfigManager:
-    """ Holds the push subscriptions and the outgoing REST connections the way the configuration manager of a server does.
-    """
-    def __init__(self) -> 'None':
-        self._push_subs:'anydict' = {}
-        self.rest_push_store = RESTPushStore()
-        self.config_store = self.rest_push_store.config_store
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class _StubServer:
-    """ Stands in for the server whose push delivery the suite runs.
-    """
-    def __init__(self) -> 'None':
-        self.config_manager = _StubConfigManager()
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _get_sub_key(name:'str') -> 'str':
-    out = f'zpsk.faults.endpoints.{name}'
+def _get_subscriber_name(name:'str') -> 'str':
+    out = f'faults.endpoints.{name}'
     return out
 
 # ################################################################################################################################
@@ -133,15 +105,16 @@ class _Run:
     """ The endpoints, their subscriptions and the account of their messages.
     """
 
-    def __init__(self, backend:'SQLPubSubBackend', toxiproxy:'Toxiproxy') -> 'None':
-        self.backend = backend
+    def __init__(self, toxiproxy:'Toxiproxy') -> 'None':
         self.toxiproxy = toxiproxy
+        self.server:'PubSubServer | None' = None
 
         self.endpoints:'strendpointdict' = {}
         self.hosts:'strstrdict' = {}
         self.message_counts:'strintdict' = {}
         self.retry_settings:'anydict' = {}
         self.publish_times:'strfloatdict' = {}
+        self.sub_keys:'strstrdict' = {}
 
 # ################################################################################################################################
 
@@ -183,50 +156,69 @@ class _Run:
 
 # ################################################################################################################################
 
+    def define(self, server:'PubSubServer', definition:'Definition') -> 'None':
+        """ Each endpoint is subscribed to a topic of its own and pushed to through its URL.
+        """
+        for name in self.message_counts:
+            subscriber_name = _get_subscriber_name(name)
+            topic_name = _get_topic_name(name)
+            _ = definition.add_push_subscriber_at(subscriber_name, [topic_name], self.hosts[name], _url_path)
+
+        self.server = server
+        server.ready_callbacks.append(self._attach)
+
+# ################################################################################################################################
+
+    def _attach(self) -> 'None':
+        sub_keys = self.get_server().get_sub_keys()
+
+        for name in self.message_counts:
+            self.sub_keys[name] = sub_keys[_get_subscriber_name(name)]
+
+# ################################################################################################################################
+
+    def get_server(self) -> 'PubSubServer':
+        server = self.server
+        assert server is not None, 'The server of the endpoints has not been started'
+        return server
+
+# ################################################################################################################################
+
     def publish(self, name:'str') -> 'None':
         max_retries, retry_sleep_time = self.retry_settings[name]
         topic_name = _get_topic_name(name)
         message_count = self.message_counts[name]
 
+        server = self.get_server()
+
         for index in range(message_count):
             data = {'endpoint': name, 'index': index}
-            result = self.backend.publish(topic_name, data, max_retries=max_retries, retry_sleep_time=retry_sleep_time)
-            self.publish_times[result.msg_id] = monotonic()
+            msg_id = server.publish_with_retries(topic_name, data, max_retries, retry_sleep_time)
+            self.publish_times[msg_id] = monotonic()
 
             if name == _healthy:
                 sleep(_healthy_interval_seconds)
 
 # ################################################################################################################################
 
-    def get_queue_depth(self, name:'str') -> 'int':
-        sub_key = _get_sub_key(name)
-
-        with self.backend.engine.connect() as connection:
-            out = connection.execute(_queue_depth_query, {'sub_key': sub_key}).scalar_one()
-
-        return out
-
-# ################################################################################################################################
-
-    def get_queue_depths(self) -> 'strintdict':
-        out:'strintdict' = {}
-
-        for name in self.message_counts:
-            out[name] = self.get_queue_depth(name)
-
+    def get_queue_depths(self) -> 'anydict':
+        out = self.get_server().get_queue_depths(list(self.sub_keys.values()))
         return out
 
 # ################################################################################################################################
 
     def is_done(self) -> 'bool':
 
-        for name in self.message_counts:
-            if self.get_queue_depth(name):
-                out = False
-                break
-        else:
-            out = True
+        for depth in self.get_queue_depths().values():
+            if depth:
+                return False
 
+        return True
+
+# ################################################################################################################################
+
+    def get_failed_msg_ids(self, name:'str') -> 'strlist':
+        out = self.get_server().get_failed_msg_ids(self.sub_keys[name])
         return out
 
 # ################################################################################################################################
@@ -239,22 +231,6 @@ def _get_attempts(endpoint:'Endpoint') -> 'strintlistdict':
         if request.msg_id not in out:
             out[request.msg_id] = []
         out[request.msg_id].append(request.attempt)
-
-    return out
-
-# ################################################################################################################################
-
-def _get_failed_msg_ids(name:'str') -> 'strlist':
-    sub_key = _get_sub_key(name)
-    params = {'event_type': AuditEvent.Delivery_Failed, 'sub_key': sub_key}
-
-    with get_database_engine().connect() as connection:
-        rows = connection.execute(_failed_events_query, params).fetchall()
-
-    out:'strlist' = []
-
-    for row in rows:
-        out.append(row.msg_id)
 
     return out
 
@@ -318,7 +294,7 @@ def _check(run:'_Run') -> 'None':
 
     # .. and each message that was never accepted was given up with an audit event.
     for name in _given_up:
-        failed_msg_ids = _get_failed_msg_ids(name)
+        failed_msg_ids = run.get_failed_msg_ids(name)
         assert len(failed_msg_ids) == message_counts[name], (name, failed_msg_ids)
 
         for request in endpoints[name].requests:
@@ -326,37 +302,35 @@ def _check(run:'_Run') -> 'None':
 
 # ################################################################################################################################
 
-def _run_endpoints(toxiproxy:'Toxiproxy') -> 'None':
-    audit_log = AuditLog(_server_name)
-    backend = SQLPubSubBackend(audit_log=audit_log)
-    backend.take_over()
+@pytest.fixture
+def endpoint_run(endpoint_work_dir:'str') -> 'rungen':
+    """ The endpoints of the test, started before the server, which pushes to them.
+    """
+    toxiproxy = Toxiproxy('endpoints')
+    toxiproxy.start()
 
-    run = _Run(backend, toxiproxy)
-    run.start_endpoints()
+    run = _Run(toxiproxy)
 
-    stub_server:'any_' = _StubServer()
-    push_delivery = PushDelivery(stub_server, backend)
+    try:
+        run.start_endpoints()
+        Server_Config.definers.append(run.define)
 
-    # Each endpoint is subscribed to a topic of its own and pushed to through its URL ..
-    for name in run.message_counts:
-        sub_key = _get_sub_key(name)
-        topic_name = _get_topic_name(name)
+        yield run
 
-        backend.subscribe(sub_key, topic_name)
+    finally:
+        Server_Config.reset()
+        run.stop_endpoints()
+        toxiproxy.stop()
 
-        host = run.hosts[name]
-        endpoint_id = stub_server.config_manager.rest_push_store.add_endpoint(name, host, _url_path)
+# ################################################################################################################################
 
-        stub_server.config_manager._push_subs[sub_key] = [{
-            'sub_key': sub_key,
-            'topic_name': topic_name,
-            'push_type': PubSub.Push_Type.REST,
-            'rest_push_endpoint_id': endpoint_id,
-        }]
+def test_endpoints(endpoint_work_dir:'str', endpoint_run:'_Run', server:'PubSubServer') -> 'None':
+    """ Push endpoints that read slowly, never respond, respond late, close in the middle of a response, stall
+    the TLS handshake or redirect, and push links that are slow, limited, sliced, held, reset or cut.
+    """
+    run = endpoint_run
 
-        push_delivery.start_sub_key(sub_key)
-
-    # .. the messages of all the endpoints are published at the same time ..
+    # The messages of all the endpoints are published at the same time ..
     publishers:'anylist' = []
 
     for name in run.message_counts:
@@ -369,30 +343,11 @@ def _run_endpoints(toxiproxy:'Toxiproxy') -> 'None':
     # .. and the run waits until every queue is empty.
     start = monotonic()
 
-    try:
-        while not run.is_done():
-            assert monotonic() - start < _run_timeout_seconds, ('Endpoints not done', run.get_queue_depths())
-            sleep(_poll_seconds)
-    finally:
-        push_delivery.stop()
-        run.stop_endpoints()
+    while not run.is_done():
+        assert monotonic() - start < _run_timeout_seconds, ('Endpoints not done', run.get_queue_depths())
+        sleep(_poll_seconds)
 
     _check(run)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def test_endpoints(endpoint_work_dir:'str') -> 'None':
-    """ Push endpoints that read slowly, never respond, respond late, close in the middle of a response, stall
-    the TLS handshake or redirect, and push links that are slow, limited, sliced, held, reset or cut.
-    """
-    toxiproxy = Toxiproxy('endpoints')
-    toxiproxy.start()
-
-    try:
-        _run_endpoints(toxiproxy)
-    finally:
-        toxiproxy.stop()
 
 # ################################################################################################################################
 # ################################################################################################################################
