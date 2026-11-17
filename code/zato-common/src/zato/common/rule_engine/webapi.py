@@ -6,14 +6,10 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import json
-
 # Zato
 from zato.common.rule_engine.document_checks import validate_definition_document
 from zato.common.rule_engine.parser import parse_data_details
 from zato.common.rule_engine.render import render_documents
-from zato.common.rule_engine.scenarios import run_test_set
 from zato.common.rule_engine.semantics import validate_document
 from zato.common.rule_engine.sql.constants import Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
@@ -25,16 +21,7 @@ from zato.common.util.logging_ import count_text
 
 if 0:
     from zato.common.rule_engine.sql import RuleSQLBackend
-    from zato.common.typing_ import any_, anydict, dictlist, intnone, stranydict, strnone
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# How many rows a definitions listing returns when the caller does not say otherwise.
-Default_List_Limit = 100
-
-# Where a definitions listing starts when the caller does not say otherwise.
-Default_List_Offset = 0
+    from zato.common.typing_ import any_, anydict, dictlist, stranydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -90,30 +77,6 @@ def definition_row(record:'any_') -> 'stranydict':
         'is_active':       record.is_active,
         'created_at':      record.created_at.isoformat(),
         'updated_at':      record.updated_at.isoformat(),
-    }
-
-    return out
-
-# ################################################################################################################################
-
-def event_row(record:'any_') -> 'stranydict':
-    """ One history event with its parsed payload.
-    """
-    # Not every event carries a payload, hence the boundary check.
-    payload = record.payload
-    if payload is None:
-        parsed = None
-    else:
-        parsed = json.loads(payload)
-
-    out = {
-        'id':            record.id,
-        'definition_id': record.definition_id,
-        'version':       record.version,
-        'event_type':    record.event_type,
-        'actor':         record.actor,
-        'created_at':    record.created_at.isoformat(),
-        'payload':       parsed,
     }
 
     return out
@@ -254,64 +217,6 @@ def save_document(backend:'RuleSQLBackend', body:'anydict', actor:'str') -> 'tup
         _ = backend.references.rebuild(definition_id=definition_id, documents=document[Documents_Key])
 
     return result, note
-
-# ################################################################################################################################
-
-def run_outcomes(body:'anydict') -> 'tuple[stranydict, str]':
-    """ The live-outcomes feed - the edited documents run against a test set, per-scenario results and traces included.
-    """
-    documents = required(body, 'documents')
-    test_set = required(body, 'test_set')
-
-    result = run_test_set(test_set, documents)
-
-    total = result['total']
-    passed = result['passed']
-    failed = result['failed']
-    explored = result['explored']
-
-    scenarios_text = count_text(total, 'scenario', 'scenarios')
-    rules_text = count_text(len(documents), 'edited rule', 'edited rules')
-
-    note = f'{scenarios_text} against {rules_text} -> {passed} passed, {failed} failed, {explored} explored'
-
-    return result, note
-
-# ################################################################################################################################
-
-def list_definitions(
-    backend:'RuleSQLBackend',
-    object_type:'strnone'=None,
-    search_text:'strnone'=None,
-    include_inactive:'bool'=False,
-    limit:'intnone'=None,
-    offset:'intnone'=None,
-) -> 'tuple[stranydict, str]':
-    """ Every stored definition, filterable by kind and content, paged.
-    """
-    if limit is None:
-        limit = Default_List_Limit
-
-    if offset is None:
-        offset = Default_List_Offset
-
-    records = backend.definitions.list(
-        object_type=object_type,
-        search_text=search_text,
-        include_inactive=include_inactive,
-        limit=limit,
-        offset=offset,
-    )
-
-    items = []
-    for record in records:
-        row = definition_row(record)
-        items.append(row)
-
-    note = count_text(len(items), 'definition', 'definitions')
-
-    out = {'items': items}
-    return out, note
 
 # ################################################################################################################################
 

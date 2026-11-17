@@ -105,7 +105,7 @@ def test_publication_is_delivered_to_slack(backend:'any_', slack_address:'any_')
         actor=_actor,
     )
 
-    _ = backend.versions.publish(definition_id=ruleset.id, version=1, actor=Author)
+    _ = backend.versions.publish(definition_id=ruleset.id, version=1)
 
     result = run_once(backend)
     assert result.messages_sent == 1
@@ -140,7 +140,7 @@ def test_failed_delivery_is_retried_on_the_next_pass(backend:'any_', slack_addre
         actor=_actor,
     )
 
-    _ = backend.versions.publish(definition_id=ruleset.id, version=1, actor=Author)
+    _ = backend.versions.publish(definition_id=ruleset.id, version=1)
 
     # The workspace rejects the channel for now ..
     SlackTestHandler.broken_channels = [_channel]
@@ -173,7 +173,7 @@ def test_missing_credentials_surface_on_the_destination(backend:'any_') -> 'None
     ruleset = create_ruleset(backend)
     _ = backend.notifications.add_destination(definition_id=ruleset.id, kind='slack', target=_channel, actor=_actor)
 
-    _ = backend.versions.publish(definition_id=ruleset.id, version=1, actor=Author)
+    _ = backend.versions.publish(definition_id=ruleset.id, version=1)
 
     result = run_once(backend)
     assert result.messages_sent == 0
@@ -282,7 +282,7 @@ def test_publication_is_delivered_to_teams(backend:'any_', teams_address:'any_')
         actor=_actor,
     )
 
-    _ = backend.versions.publish(definition_id=ruleset.id, version=1, actor=Author)
+    _ = backend.versions.publish(definition_id=ruleset.id, version=1)
 
     result = run_once(backend)
     assert result.messages_sent == 1

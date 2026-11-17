@@ -221,7 +221,7 @@ def _seed_old_mcp_ruleset(backend:'RuleSQLBackend') -> 'RuleDefinitionRecord':
         author='test',
         comment='From before the gateway had rules of its own',
     )
-    _ = backend.versions.publish(definition_id=out.id, version=out.current_version, actor='test')
+    _ = backend.versions.publish(definition_id=out.id, version=out.current_version)
 
     return out
 

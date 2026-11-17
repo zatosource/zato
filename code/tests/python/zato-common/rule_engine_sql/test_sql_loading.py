@@ -88,7 +88,7 @@ def test_load_live_ruleset_runs_stored_rules(backend:'RuleSQLBackend') -> 'None'
     """
     # Store and publish the first version ..
     definition = _create_ruleset(backend, _rules_v1)
-    _ = backend.versions.publish(definition_id=definition.id, version=1, actor=_author)
+    _ = backend.versions.publish(definition_id=definition.id, version=1)
 
     # .. load the live version into a fresh manager ..
     manager = RulesManager()
@@ -139,7 +139,7 @@ def test_publish_and_reload_swaps_rules_in_place(backend:'RuleSQLBackend') -> 'N
     """
     # Publish and load the first version ..
     definition = _create_ruleset(backend, _rules_v1)
-    _ = backend.versions.publish(definition_id=definition.id, version=1, actor=_author)
+    _ = backend.versions.publish(definition_id=definition.id, version=1)
 
     manager = RulesManager()
     _ = load_live_ruleset(manager, backend, definition.id)
@@ -184,7 +184,7 @@ then
     needs_review = true
 """
     definition = _create_ruleset(backend, two_rules)
-    _ = backend.versions.publish(definition_id=definition.id, version=1, actor=_author)
+    _ = backend.versions.publish(definition_id=definition.id, version=1)
 
     manager = RulesManager()
     loaded = load_live_ruleset(manager, backend, definition.id)

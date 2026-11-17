@@ -11,8 +11,7 @@ import logging
 
 # Zato
 from zato.common.rule_engine.invocation import is_ruleset_allowed, Vocabulary_Key
-from zato.common.rule_engine.openapi import example_from_vocabulary, nest_flat_input, vocabulary_to_schema
-from zato.common.rule_engine.sql.constants import Definition_Type_Test_Set
+from zato.common.rule_engine.openapi import example_from_vocabulary, vocabulary_to_schema
 from zato.common.rule_engine.sql.document import deserialize_document
 from zato.server.rule_engine_api import get_backend
 
@@ -45,7 +44,6 @@ _decision_schema = {
     'properties': {
         'ruleset':     {'type': 'string',  'description': 'The name the ruleset was invoked under'},
         'version':     {'type': 'integer', 'description': 'The version that served this call'},
-        'decision_id': {'type': 'string',  'description': 'The id this decision is logged under'},
         'outcome':     {'enum': ['matched', 'no-match', 'error'], 'description': 'What the evaluation ended with'},
         'outputs':     {'type': 'object',  'description': 'The merged assignments of every rule that fired'},
         'messages':    {'type': 'array', 'items': {'type': 'object'}, 'description': 'One entry per fired rule, in rule order'},
@@ -54,23 +52,6 @@ _decision_schema = {
 }
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _scenario_example(backend:'RuleSQLBackend', definition_id:'int') -> 'anydict | None':
-    """ Returns the first test scenario of one ruleset as a nested example request body,
-    or None if the ruleset has no suites. Real scenarios beat synthesized values.
-    """
-    suites = backend.definitions.list(parent_id=definition_id, object_type=Definition_Type_Test_Set)
-
-    for suite in suites:
-        document = deserialize_document(suite.document)
-
-        # The first scenario of the first suite that has one is the example -
-        # its input is flat dotted paths, while the API accepts nested JSON.
-        if scenarios := document.get('scenarios'):
-            out = nest_flat_input(scenarios[0]['input'])
-            return out
-
 # ################################################################################################################################
 
 def _ruleset_operation(
@@ -90,22 +71,16 @@ def _ruleset_operation(
     if vocabulary_id:
         vocabulary = backend.definitions.get_document(vocabulary_id)
         request_schema = vocabulary_to_schema(vocabulary)
-        default_example = example_from_vocabulary(vocabulary)
+        example = example_from_vocabulary(vocabulary)
 
     # .. without one the body is an object of whatever terms the rules read.
     else:
         request_schema = {'type': 'object'}
-        default_example = None
+        example = None
 
     sanitized_name = definition.name.replace('.', '_').replace(' ', '_')
     schema_name = f'RuleEngineInput_{sanitized_name}'
     schemas[schema_name] = request_schema
-
-    # A real test scenario beats a synthesized example.
-    example = _scenario_example(backend, definition.id)
-
-    if example is None:
-        example = default_example
 
     request_content:'anydict' = {'schema': {'$ref': f'#/components/schemas/{schema_name}'}}
 
@@ -122,7 +97,7 @@ def _ruleset_operation(
         },
         'responses': {
             '200': {
-                'description': 'The complete decision, logged under the decision id it carries',
+                'description': 'The outcome of the evaluation',
                 'content': {'application/json': {'schema': {'$ref': f'#/components/schemas/{_decision_schema_name}'}}},
             },
         },

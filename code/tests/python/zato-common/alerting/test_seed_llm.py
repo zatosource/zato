@@ -210,7 +210,7 @@ def _seed_old_llm_ruleset(backend:'RuleSQLBackend') -> 'RuleDefinitionRecord':
         author='test',
         comment='From before the completion and token rules',
     )
-    _ = backend.versions.publish(definition_id=out.id, version=out.current_version, actor='test')
+    _ = backend.versions.publish(definition_id=out.id, version=out.current_version)
 
     return out
 

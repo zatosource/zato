@@ -111,7 +111,7 @@ def publish_and_reload(
     """ Publishes one stored version and hot-reloads it into the manager in the same call.
     """
     # Make the requested snapshot live ..
-    _ = backend.versions.publish(definition_id=definition_id, version=version, actor=actor)
+    _ = backend.versions.publish(definition_id=definition_id, version=version)
 
     # .. and run it without a restart.
     out = load_live_ruleset(manager, backend, definition_id)

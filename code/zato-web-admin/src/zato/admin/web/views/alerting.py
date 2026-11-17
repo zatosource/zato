@@ -384,7 +384,7 @@ def action(req:'any_') -> 'HttpResponse':
         result, _ = webapi.save_document(backend, body, actor)
 
         # The change goes live in the same call, so the sweep already runs with it.
-        _ = backend.versions.publish(definition_id=definition.id, version=result['version'], actor=actor)
+        _ = backend.versions.publish(definition_id=definition.id, version=result['version'])
 
         out = JsonResponse({'is_ok': True})
         return out
@@ -411,7 +411,7 @@ def _read_json(req:'any_') -> 'stranydict':
 
 def _json_error(func:'Callable[..., JsonResponse]') -> 'Callable[..., JsonResponse]':
     """ Turns the shared webapi's exceptions into the JSON error answers the editor's
-    data layer reads - the same contract the rule engine dashboard's own views keep.
+    data layer reads.
     """
     def wrapper(req:'any_', *args:'any_', **kwargs:'any_') -> 'JsonResponse':
         try:
@@ -580,7 +580,7 @@ def api_save(req:'any_') -> 'JsonResponse':
         return out
 
     # The change goes live right away, like every other object the Dashboard edits.
-    _ = backend.versions.publish(definition_id=result['definition_id'], version=result['version'], actor=actor)
+    _ = backend.versions.publish(definition_id=result['definition_id'], version=result['version'])
 
     out = JsonResponse(result)
     return out

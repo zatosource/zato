@@ -1878,8 +1878,7 @@ urlpatterns += [
 urlpatterns += [
     url(r'^static/(?P<path>.*)$', static_serve, {'document_root': settings.MEDIA_ROOT}),
 
-    # The shared UI assets from zato-common - the rule editor component among them - served
-    # from the same tree the rule engine dashboard serves them from, so there is one copy
+    # The shared UI assets from zato-common, the rule editor component among them
     url(r'^shared-ui/(?P<path>.*)$', static_serve, {'document_root': settings.SHARED_UI_ROOT}),
 
     # The icon browsers ask for at the root path on their own

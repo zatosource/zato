@@ -232,7 +232,7 @@ def _publish_documents(ruleset_name, documents, comment):
     )
     version = record.version
 
-    _ = backend.versions.publish(definition_id=definition.id, version=version, actor=_actor)
+    _ = backend.versions.publish(definition_id=definition.id, version=version)
 
     return version
 

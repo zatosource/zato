@@ -89,7 +89,7 @@ def test_gate_off_by_default_and_status_is_readable(backend:'RuleSQLBackend') ->
     assert status.approval is None
 
     # .. and verify an unapproved version publishes while the gate is off.
-    published = backend.versions.publish(definition_id=definition.id, version=1, actor=_author)
+    published = backend.versions.publish(definition_id=definition.id, version=1)
     assert published.version == 1
 
 # ################################################################################################################################
@@ -104,7 +104,7 @@ def test_gate_on_blocks_publish_until_approved(backend:'RuleSQLBackend') -> 'Non
 
     # .. verify the unapproved version cannot be published ..
     with pytest.raises(ApprovalRequiredError):
-        _ = backend.versions.publish(definition_id=definition.id, version=1, actor=_author)
+        _ = backend.versions.publish(definition_id=definition.id, version=1)
 
     # .. approve the version through a different named approver ..
     approval = backend.approvals.approve(
@@ -121,7 +121,7 @@ def test_gate_on_blocks_publish_until_approved(backend:'RuleSQLBackend') -> 'Non
     assert approval.content_hash == expected_hash
 
     # .. verify the approved version now publishes ..
-    published = backend.versions.publish(definition_id=definition.id, version=1, actor=_author)
+    published = backend.versions.publish(definition_id=definition.id, version=1)
     assert published.version == 1
 
     # .. verify one-hop traceability from the live version to its approval with the matching hash ..
@@ -197,10 +197,10 @@ def test_approval_does_not_carry_over_to_new_versions(backend:'RuleSQLBackend') 
 
     # .. verify the new version cannot ride on the old approval ..
     with pytest.raises(ApprovalRequiredError):
-        _ = backend.versions.publish(definition_id=definition.id, version=2, actor=_author)
+        _ = backend.versions.publish(definition_id=definition.id, version=2)
 
     # .. while the approved first version still publishes.
-    published = backend.versions.publish(definition_id=definition.id, version=1, actor=_author)
+    published = backend.versions.publish(definition_id=definition.id, version=1)
     assert published.version == 1
 
 # ################################################################################################################################
@@ -224,7 +224,7 @@ def test_tampered_content_is_rejected_at_publish_time(backend:'RuleSQLBackend') 
 
     # .. and verify publication of the tampered snapshot is rejected.
     with pytest.raises(ApprovalContentMismatchError):
-        _ = backend.versions.publish(definition_id=definition.id, version=1, actor=_author)
+        _ = backend.versions.publish(definition_id=definition.id, version=1)
 
 # ################################################################################################################################
 
@@ -243,7 +243,7 @@ def test_gate_toggles_are_logged_and_turning_it_off_reopens_publish(backend:'Rul
     assert Event_Type_Approval_Gate_Off in event_types
 
     # .. and verify the unapproved version publishes again with the gate off.
-    published = backend.versions.publish(definition_id=definition.id, version=1, actor=_author)
+    published = backend.versions.publish(definition_id=definition.id, version=1)
     assert published.version == 1
 
 # ################################################################################################################################
@@ -314,7 +314,7 @@ def test_restore_bypasses_the_gate(backend:'RuleSQLBackend') -> 'None':
     definition = _create_ruleset(backend)
     _ = backend.approvals.set_gate(definition_id=definition.id, enabled=True, actor='compliance.admin')
     _ = backend.approvals.approve(definition_id=definition.id, version=1, approver=_approver)
-    _ = backend.versions.publish(definition_id=definition.id, version=1, actor=_author)
+    _ = backend.versions.publish(definition_id=definition.id, version=1)
 
     # .. create and approve a second version, then publish it ..
     second_document = _ruleset_document(720)
@@ -326,7 +326,7 @@ def test_restore_bypasses_the_gate(backend:'RuleSQLBackend') -> 'None':
         comment='Lower the minimum score after portfolio review',
     )
     _ = backend.approvals.approve(definition_id=definition.id, version=2, approver=_approver)
-    _ = backend.versions.publish(definition_id=definition.id, version=2, actor=_author)
+    _ = backend.versions.publish(definition_id=definition.id, version=2)
 
     # .. and verify rolling back to version 1 succeeds with no approval of the new version 3.
     restored = backend.versions.restore(

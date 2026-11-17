@@ -392,7 +392,7 @@ class TestChannelRules:
             author='test',
             comment='From before the REST channel rules',
         )
-        _ = backend.versions.publish(definition_id=ruleset.id, version=ruleset.current_version, actor='test')
+        _ = backend.versions.publish(definition_id=ruleset.id, version=ruleset.current_version)
 
         # .. and the seeding of the newer release adds every rule it never had, the silence one inactive as it ships.
         ensure_alerting_definitions(backend)
@@ -492,7 +492,7 @@ def _seed_rest_only_channel_ruleset(backend:'RuleSQLBackend') -> 'RuleDefinition
         author='test',
         comment='From before the SOAP channel rules',
     )
-    _ = backend.versions.publish(definition_id=out.id, version=out.current_version, actor='test')
+    _ = backend.versions.publish(definition_id=out.id, version=out.current_version)
 
     return out
 

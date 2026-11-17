@@ -7,16 +7,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # SQLAlchemy
-from sqlalchemy import func, insert, select
+from sqlalchemy import select
 
 # Local
 from .constants import Root_Parent_Key
-from .data import anydict, RuleDefinitionRecord, RuleEventRecord, RuleVersionRecord
-from .document import serialize_document
+from .data import RuleDefinitionRecord, RuleVersionRecord
 from .errors import InvalidStoreInputError, RecordNotFoundError
 from .records import definition_record, version_record
-from .schema import rule_definition_table, rule_event_table, rule_version_table
-from .time_ import utc_now
+from .schema import rule_definition_table, rule_version_table
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,38 +47,6 @@ def parent_key(parent_id:'int | None') -> 'int':
     # .. while a child uses its real parent id.
     else:
         out = parent_id
-
-    return out
-
-# ################################################################################################################################
-
-def payload_text(payload:'anydict | None') -> 'str | None':
-    """ Serializes an optional event payload.
-    """
-    # Preserve the distinction between no payload and an empty JSON document ..
-    if payload is None:
-        out = None
-
-    # .. while every supplied payload receives the same canonical encoding as rule documents.
-    else:
-        out = serialize_document(payload)
-
-    return out
-
-# ################################################################################################################################
-
-def newest_event_id(session:'Session') -> 'int':
-    """ Returns the newest event id in the caller's transaction, 0 for an empty feed.
-    """
-    query = select(func.max(rule_event_table.c.id))
-    result = session.execute(query)
-    newest_id = result.scalar()
-
-    # An empty feed has no maximum id.
-    if newest_id is None:
-        out = 0
-    else:
-        out = newest_id
 
     return out
 
@@ -130,55 +96,6 @@ def get_version(session:'Session', definition_id:'int', version:'int') -> 'RuleV
         message = f'No version {version} of rule definition {definition_id}'
         raise RecordNotFoundError(message)
 
-    return out
-
-# ################################################################################################################################
-
-def add_event(
-    session:'Session',
-    *,
-    definition_id:'int',
-    version:'int | None',
-    event_type:'str',
-    actor:'str',
-    payload:'anydict | None',
-    ) -> 'RuleEventRecord':
-    """ Appends one event inside the caller's transaction.
-    """
-    # Build every promoted event field ..
-    created_at = utc_now()
-    event_payload = payload_text(payload)
-    values = {
-        'definition_id': definition_id,
-        'version':       version,
-        'event_type':    event_type,
-        'actor':         actor,
-        'subject_id':    None,
-        'bucket_start':  None,
-        'event_count':   None,
-        'created_at':    created_at,
-        'payload':       event_payload,
-    }
-
-    # .. append the event in the caller's transaction ..
-    statement = insert(rule_event_table)
-    result = session.execute(statement, values)
-    primary_key = result.inserted_primary_key
-    event_id = primary_key[0]
-
-    # .. and build the detached record from the values just written, avoiding a redundant re-read.
-    out = RuleEventRecord(
-        id=event_id,
-        definition_id=definition_id,
-        version=version,
-        event_type=event_type,
-        actor=actor,
-        subject_id=None,
-        bucket_start=None,
-        event_count=None,
-        created_at=created_at,
-        payload=event_payload,
-    )
     return out
 
 # ################################################################################################################################

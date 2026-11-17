@@ -368,7 +368,7 @@ def _seed_vocabulary(backend:'RuleSQLBackend') -> 'bool':
         object_type=Definition_Type_Vocabulary,
         document=alerting_vocabulary(),
     )
-    _ = backend.versions.publish(definition_id=vocabulary.id, version=vocabulary.current_version, actor=System_Actor)
+    _ = backend.versions.publish(definition_id=vocabulary.id, version=vocabulary.current_version)
 
     return True
 
@@ -390,7 +390,7 @@ def _seed_ruleset(backend:'RuleSQLBackend', ruleset_name:'str', zrules_contents:
 
     documents = document[Documents_Key]
     _ = backend.references.rebuild(definition_id=ruleset.id, documents=documents)
-    _ = backend.versions.publish(definition_id=ruleset.id, version=ruleset.current_version, actor=System_Actor)
+    _ = backend.versions.publish(definition_id=ruleset.id, version=ruleset.current_version)
 
     return True
 
@@ -445,7 +445,7 @@ def _store_upgrade(backend:'RuleSQLBackend', definition:'RuleDefinitionRecord', 
     if definition.object_type == Definition_Type_Ruleset:
         _ = backend.references.rebuild(definition_id=definition.id, documents=document[Documents_Key])
 
-    _ = backend.versions.publish(definition_id=definition.id, version=version.version, actor=System_Actor)
+    _ = backend.versions.publish(definition_id=definition.id, version=version.version)
 
 # ################################################################################################################################
 

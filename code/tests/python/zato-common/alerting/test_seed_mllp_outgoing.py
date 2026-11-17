@@ -147,7 +147,7 @@ def _seed_channel_ruleset_alone(backend:'RuleSQLBackend') -> 'RuleDefinitionReco
         author='test',
         comment='From before the outgoing MLLP rules',
     )
-    _ = backend.versions.publish(definition_id=out.id, version=out.current_version, actor='test')
+    _ = backend.versions.publish(definition_id=out.id, version=out.current_version)
 
     return out
 

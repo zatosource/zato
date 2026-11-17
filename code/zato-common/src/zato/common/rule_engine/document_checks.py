@@ -9,10 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.rule_engine.document import Comparator_Arity, Arity, NodeKind
 from zato.common.rule_engine.models import rule_from_document
-from zato.common.rule_engine.scenarios import validate_test_set
-from zato.common.rule_engine.sql.constants import Definition_Type_Decision_Table, Definition_Type_Ruleset, \
-    Definition_Type_Sentence_Rule, Definition_Type_Test_Set, Definition_Type_Vocabulary, Documents_Key
-from zato.common.rule_engine.table import validate_table
+from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Definition_Type_Vocabulary, Documents_Key
 from zato.common.rule_engine.tokens import identifier_pattern, rule_name_pattern
 from zato.common.rule_engine.vocabulary import ErrorCode, new_error, validate_vocabulary
 
@@ -36,9 +33,6 @@ Action_Keys = ('then', 'else')
 
 # The joiners a document may put between its conditions.
 Joiners = ('and', 'or')
-
-# The key under which a document carries the negated guards a declared table override compiles into.
-Guards_Key = 'unless'
 
 # How many values each arity expects, where the count is fixed.
 Value_Counts = {
@@ -232,29 +226,6 @@ def _check_defaults(document:'anydict', rule:'str', errors:'dictlist') -> 'None'
         _check_value_node(node, rule, 'defaults', name, errors)
 
 # ################################################################################################################################
-
-def _check_guards(document:'anydict', rule:'str', errors:'dictlist') -> 'None':
-    """ Checks the negated guards, which only a compiled decision table carries.
-    """
-    guards = document.get(Guards_Key)
-
-    if guards is None:
-        return
-
-    if not isinstance(guards, list):
-        errors.append(_bad(rule, Guards_Key, '', f'Guards have to be a list, not {type(guards).__name__}'))
-        return
-
-    for guard in guards:
-
-        if not isinstance(guard, list) or not guard:
-            errors.append(_bad(rule, Guards_Key, '', 'Each guard is a non-empty list of conditions'))
-            continue
-
-        for condition in guard:
-            _check_condition(condition, rule, Guards_Key, errors)
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 def validate_document_shape(document:'any_') -> 'dictlist':
@@ -308,7 +279,6 @@ def validate_document_shape(document:'any_') -> 'dictlist':
     _check_defaults(document, rule, errors)
     _check_when(document, rule, errors)
     _check_actions(document, rule, errors)
-    _check_guards(document, rule, errors)
 
     # A document whose shape is wrong cannot be compiled, and one whose shape is right still may
     # not compile, e.g. a comparison the engine's own grammar rejects, so that is checked last.
@@ -385,10 +355,7 @@ def _validate_ruleset(document:'anydict') -> 'dictlist':
 # Which structural validation each definition type runs before it is stored.
 _validators = {
     Definition_Type_Ruleset:        _validate_ruleset,
-    Definition_Type_Sentence_Rule:  _validate_ruleset,
-    Definition_Type_Decision_Table: validate_table,
     Definition_Type_Vocabulary:     validate_vocabulary,
-    Definition_Type_Test_Set:       validate_test_set,
 }
 
 # The top-level keys each type's document carries, with the kind of container each one holds.
@@ -396,10 +363,7 @@ _validators = {
 # reported by name rather than as a failure inside it.
 _document_keys = {
     Definition_Type_Ruleset:        {Documents_Key: dict},
-    Definition_Type_Sentence_Rule:  {Documents_Key: dict},
-    Definition_Type_Decision_Table: {'name': str, 'conditions': list, 'actions': list, 'columns': list},
     Definition_Type_Vocabulary:     {'entities': list},
-    Definition_Type_Test_Set:       {'name': str, 'scenarios': list},
 }
 
 # ################################################################################################################################

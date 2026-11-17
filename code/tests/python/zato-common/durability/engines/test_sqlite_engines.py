@@ -52,10 +52,9 @@ class ModuleCtx:
     # The journal mode of every SQLite database of Zato
     Journal_Mode_WAL = 'wal'
 
-    # The production sources that connect the Django databases of the Dashboard and the rule engine dashboard
+    # The production sources that connect the Django databases of the Dashboard
     Django_Signal_Sources = (
         'code/zato-web-admin/src/zato/admin/settings.py',
-        'code/zato-rule-engine-dashboard/src/zato/rule_engine_dashboard/app/apps.py',
     )
 
     # The connection of a signal handler that gives a Django connection its settings
@@ -238,7 +237,7 @@ def test_django_connection(tmp_path:'Path') -> 'None':
 # ################################################################################################################################
 
 def test_django_signal_connected() -> 'None':
-    """ The Dashboard and the rule engine dashboard connect the handler that gives each Django connection its settings.
+    """ The Dashboard connects the handler that gives each Django connection its settings.
     """
     for relative_path in ModuleCtx.Django_Signal_Sources:
         path = os.path.join(SourcesModuleCtx.Installation_Dir, relative_path)

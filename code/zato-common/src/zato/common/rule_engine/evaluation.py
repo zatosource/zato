@@ -12,7 +12,6 @@ from typing import Iterable
 
 # Zato
 from zato.common.rule_engine.errors import RuleEvaluationError
-from zato.common.rule_engine.table import StatementSeverity
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,8 +29,10 @@ cached_rule_iterable = Iterable['CachedRule']
 
 # ################################################################################################################################
 
-# What a fired rule's trace line says when its document carries no statement.
-Default_Statement_Severity = StatementSeverity.Info
+class StatementSeverity:
+    """ How strongly the statement of a fired rule speaks.
+    """
+    Info = 'info'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,14 +63,10 @@ class RulesetOutcome:
 # ################################################################################################################################
 
 def _statement_of(document:'anydict') -> 'anydict':
-    """ The plain-language statement a fired rule reports - its own, or its docs as the default.
+    """ The plain-language statement a fired rule reports, which is its docs.
     """
-    statement = document.get('statement')
-
-    if statement is None:
-        statement = {'text': document['docs'], 'severity': Default_Statement_Severity}
-
-    return statement
+    out = {'text': document['docs'], 'severity': StatementSeverity.Info}
+    return out
 
 # ################################################################################################################################
 

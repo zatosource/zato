@@ -3,8 +3,7 @@
 /*                                                            */
 /* Every selector is scoped under .ruleset-browser, the       */
 /* component's own root class, the way editor.css is scoped   */
-/* under .rule-editor - the rule engine dashboard and any     */
-/* host that embeds the browser load this very same file.     */
+/* under .rule-editor.                                        */
 /* ---------------------------------------------------------- */
 
 /* ---------------------------------------------------------- */

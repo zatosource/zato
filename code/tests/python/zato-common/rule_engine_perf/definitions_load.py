@@ -95,7 +95,7 @@ def run_definitions_scenario(backend:'RuleSQLBackend', floors:'Floors') -> 'meas
         author=Author,
         comment='Refine the plan condition after review',
     )
-    _ = backend.versions.publish(definition_id=child_id, version=version.version, actor=Author)
+    _ = backend.versions.publish(definition_id=child_id, version=version.version)
     now = monotonic()
     publish_seconds = now - start
 

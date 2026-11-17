@@ -139,28 +139,4 @@ def example_from_vocabulary(vocabulary:'anydict') -> 'anydict':
     return out
 
 # ################################################################################################################################
-
-def nest_flat_input(flat:'anydict') -> 'anydict':
-    """ Turns a flat dotted mapping into the nested JSON the REST API accepts,
-    so `{"customer.creditScore": 720}` from a test scenario becomes `{"customer": {"creditScore": 720}}`.
-    """
-    out:'anydict' = {}
-
-    for path, value in flat.items():
-
-        # Walk every segment but the last, creating the nesting as needed ..
-        segments = path.split('.')
-        target = out
-
-        for segment in segments[:-1]:
-            if segment not in target:
-                target[segment] = {}
-            target = target[segment]
-
-        # .. and the last segment carries the value itself.
-        target[segments[-1]] = value
-
-    return out
-
-# ################################################################################################################################
 # ################################################################################################################################

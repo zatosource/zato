@@ -103,7 +103,7 @@ def apply_type_config(
     result, _ = webapi.save_document(backend, body, actor)
 
     # The change goes live in the same call, so the next sweep already runs with it
-    _ = backend.versions.publish(definition_id=definition.id, version=result['version'], actor=actor)
+    _ = backend.versions.publish(definition_id=definition.id, version=result['version'])
 
     return True
 

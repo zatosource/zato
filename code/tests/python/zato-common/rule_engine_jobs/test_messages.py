@@ -49,7 +49,7 @@ def test_publish_message_carries_the_change_summary(backend:'any_') -> 'None':
     """
     ruleset = create_ruleset(backend)
     _ = add_version(backend, ruleset, Rules_Text_Lower_Bar)
-    _ = backend.versions.publish(definition_id=ruleset.id, version=2, actor=Author)
+    _ = backend.versions.publish(definition_id=ruleset.id, version=2)
 
     event = _newest_event_of_type(backend, ruleset.id, Event_Type_Version_Published)
     message = build_message(backend, event)
@@ -64,7 +64,7 @@ def test_first_publication_has_no_change_summary(backend:'any_') -> 'None':
     """ Version one has no predecessor, so its message carries no diff.
     """
     ruleset = create_ruleset(backend)
-    _ = backend.versions.publish(definition_id=ruleset.id, version=1, actor=Author)
+    _ = backend.versions.publish(definition_id=ruleset.id, version=1)
 
     event = _newest_event_of_type(backend, ruleset.id, Event_Type_Version_Published)
     message = build_message(backend, event)
@@ -163,7 +163,7 @@ def test_deep_link_is_appended_when_the_base_url_is_known(backend:'any_') -> 'No
     """ With the dashboard's address in the environment, every message ends with a deep link.
     """
     ruleset = create_ruleset(backend)
-    _ = backend.versions.publish(definition_id=ruleset.id, version=1, actor=Author)
+    _ = backend.versions.publish(definition_id=ruleset.id, version=1)
 
     event = _newest_event_of_type(backend, ruleset.id, Event_Type_Version_Published)
 

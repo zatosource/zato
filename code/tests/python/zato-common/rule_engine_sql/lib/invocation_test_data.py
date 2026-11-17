@@ -124,7 +124,7 @@ def create_ruleset(
 def publish(backend:'RuleSQLBackend', definition_id:'int', version:'int'=1) -> 'None':
     """ Makes one stored version live.
     """
-    _ = backend.versions.publish(definition_id=definition_id, version=version, actor=author)
+    _ = backend.versions.publish(definition_id=definition_id, version=version)
 
 # ################################################################################################################################
 

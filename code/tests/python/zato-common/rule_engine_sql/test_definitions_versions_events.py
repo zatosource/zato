@@ -141,7 +141,7 @@ def test_optimistic_versions_publish_and_restore(backend:'RuleSQLBackend') -> 'N
     """
     # Create and publish the first snapshot ..
     definition = _create_ruleset(backend)
-    first_live = backend.versions.publish(definition_id=definition.id, version=1, actor=_author)
+    first_live = backend.versions.publish(definition_id=definition.id, version=1)
     assert first_live.version == 1
 
     # .. verify the one live pointer, the promoted definition column, follows publication ..
@@ -174,7 +174,7 @@ def test_optimistic_versions_publish_and_restore(backend:'RuleSQLBackend') -> 'N
         )
 
     # .. publish the second snapshot and prove the one pointer moved ..
-    second_live = backend.versions.publish(definition_id=definition.id, version=2, actor='mark.b')
+    second_live = backend.versions.publish(definition_id=definition.id, version=2)
     assert second_live.version == 2
     live = backend.versions.get_live(definition.id)
     assert live.version == 2

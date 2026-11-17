@@ -9,18 +9,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 # ################################################################################################################################
 
-Definition_Type_Ruleset        = 'ruleset'
-Definition_Type_Sentence_Rule  = 'sentence-rule'
-Definition_Type_Decision_Table = 'decision-table'
-Definition_Type_Vocabulary     = 'vocabulary'
-Definition_Type_Test_Set       = 'test-set'
+Definition_Type_Ruleset    = 'ruleset'
+Definition_Type_Vocabulary = 'vocabulary'
 
 Definition_Types = (
     Definition_Type_Ruleset,
-    Definition_Type_Sentence_Rule,
-    Definition_Type_Decision_Table,
     Definition_Type_Vocabulary,
-    Definition_Type_Test_Set,
 )
 
 # ################################################################################################################################

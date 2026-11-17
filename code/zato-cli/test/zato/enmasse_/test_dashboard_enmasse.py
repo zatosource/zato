@@ -181,7 +181,7 @@ class TestDashboardEnmasse(TestCase):
 
         # The rule store defaults to an SQLite file relative to the current directory, so the server
         # and the CLI the test spawns would otherwise read two different stores - pin both to one file.
-        cls.rule_store_url = f'sqlite:///{os.path.join(_tmpdir, "zato-rule-engine-dashboard.db")}'
+        cls.rule_store_url = f'sqlite:///{os.path.join(_tmpdir, "zato-rule-store.db")}'
 
         env = os.environ.copy()
         env['Zato_Config_Bind_Port'] = str(cls.port)

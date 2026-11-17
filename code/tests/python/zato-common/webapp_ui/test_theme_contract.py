@@ -21,7 +21,6 @@ import tempfile
 
 # Zato
 from zato.common.webapp import ui as webapp_ui
-from zato.rule_engine_dashboard import app as dashboard_app
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,7 +34,6 @@ if 0:
 _css_dir = os.path.join(os.path.dirname(os.path.abspath(webapp_ui.__file__)), 'static', 'webapp', 'css')
 _themes_dir = os.path.join(_css_dir, 'themes')
 _assets_dir = os.path.join(os.path.dirname(os.path.abspath(webapp_ui.__file__)), 'static', 'webapp', 'assets')
-_dashboard_css_dir = os.path.join(os.path.dirname(os.path.abspath(dashboard_app.__file__)), 'static', 'rule-engine', 'css')
 
 # ################################################################################################################################
 
@@ -99,14 +97,13 @@ def test_the_problems_panel_always_has_its_own_color() -> 'None':
 def test_no_raw_color_outside_the_generated_themes() -> 'None':
     color_pattern = re.compile(r'rgba?\([^)]*\)|#[0-9a-fA-F]{3,8}\b')
 
-    for css_dir in [_css_dir, _dashboard_css_dir]:
-        for name in sorted(os.listdir(css_dir)):
-            path = os.path.join(css_dir, name)
-            if not os.path.isfile(path):
-                continue
-            with open(path) as f:
-                raw = color_pattern.findall(f.read())
-            assert raw == [], (name, raw)
+    for name in sorted(os.listdir(_css_dir)):
+        path = os.path.join(_css_dir, name)
+        if not os.path.isfile(path):
+            continue
+        with open(path) as f:
+            raw = color_pattern.findall(f.read())
+        assert raw == [], (name, raw)
 
 # ################################################################################################################################
 

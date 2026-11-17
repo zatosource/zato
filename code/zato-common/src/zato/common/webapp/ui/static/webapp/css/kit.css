@@ -2,10 +2,9 @@
 /* Shared - the UI kit                                        */
 /*                                                            */
 /* Every selector is scoped under .rule-engine-ui, the one    */
-/* root class of the shared UI - the rule engine dashboard    */
-/* carries it on its body, a host page that embeds a shared   */
-/* component puts it on the component's container and on the  */
-/* floating root its surfaces attach to.                      */
+/* root class of the shared UI, which a host page puts on the */
+/* container of the component it embeds and on the floating   */
+/* root its surfaces attach to.                               */
 /* ---------------------------------------------------------- */
 
 /* ---------------------------------------------------------- */

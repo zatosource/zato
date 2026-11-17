@@ -135,7 +135,7 @@ def test_list_since_reads_forward_with_type_filter(backend:'any_') -> 'None':
     ruleset = create_ruleset(backend)
 
     # A publication event lands past the creation events ..
-    _ = backend.versions.publish(definition_id=ruleset.id, version=1, actor=Author)
+    _ = backend.versions.publish(definition_id=ruleset.id, version=1)
 
     # .. reading everything from the start sees both event kinds in feed order ..
     all_events = backend.events.list_since(since_id=0, definition_id=ruleset.id)

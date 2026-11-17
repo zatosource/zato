@@ -175,7 +175,7 @@ def test_ruleset_operation_documents_the_vocabulary_and_the_scenario(backend:'Ru
         author=_author,
         comment='Create the ruleset',
     )
-    _ = backend.versions.publish(definition_id=definition.id, version=1, actor=_author)
+    _ = backend.versions.publish(definition_id=definition.id, version=1)
 
     suite_document = {
         'name': 'Loan suite',

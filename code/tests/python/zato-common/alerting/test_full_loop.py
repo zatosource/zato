@@ -287,7 +287,7 @@ def backend(rule_database_engine:'Engine') -> 'RuleSQLBackend':
         author=_actor,
         comment='The full loop webhook rules',
     )
-    _ = out.versions.publish(definition_id=definition.id, version=definition.current_version, actor=_actor)
+    _ = out.versions.publish(definition_id=definition.id, version=definition.current_version)
 
     return out
 

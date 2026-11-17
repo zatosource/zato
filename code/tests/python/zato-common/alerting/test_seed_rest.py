@@ -182,7 +182,7 @@ def _seed_old_rest_ruleset(backend:'RuleSQLBackend') -> 'RuleDefinitionRecord':
         author='test',
         comment='From before the status code rules',
     )
-    _ = backend.versions.publish(definition_id=out.id, version=out.current_version, actor='test')
+    _ = backend.versions.publish(definition_id=out.id, version=out.current_version)
 
     return out
 
