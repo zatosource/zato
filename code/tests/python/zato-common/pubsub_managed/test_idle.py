@@ -22,7 +22,7 @@ from sqlalchemy import text
 # Zato
 from profiles import get_profile_limits
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
-from zato.common.pubsub.sql.config import get_pubsub_engine
+from zato.common.db_env.database import get_database_engine
 from zato.common.test.pubsub_database import connect, ModuleCtx
 from zato.common.test.pubsub_network import install_idle_limit, read_dropped_packets
 
@@ -119,7 +119,7 @@ def test_idle_connections(managed_database:'ManagedDatabase') -> 'None':
     backend = SQLPubSubBackend()
     backend.take_over()
 
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         server_pid = connection.execute(text('select pg_backend_pid()')).scalar_one()

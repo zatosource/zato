@@ -13,7 +13,7 @@ from django.views.static import serve as static_serve
 
 # Zato
 from zato.admin import settings
-from zato.admin.web.views import account, config_db, datadog, demo_config, destinations, env_repo, env_variables, \
+from zato.admin.web.views import account, datadog, demo_config, destinations, env_repo, env_variables, \
     grafana_cloud, highlight as highlight_view, http_soap, http_soap_limits, live_form_updates, log_streaming, logging_, \
     main, news, on_prem_gateway, openapi_, python_packages, redis_, sbom, scheduler, service, ssl_config, updates
 from zato.admin.web.views.channel import amqp_ as channel_amqp
@@ -1811,20 +1811,6 @@ urlpatterns += [
         login_required(on_prem_gateway.remote_address), name='on-prem-gateway-remote-address'),
     url(r'^zato/on-prem-gateway/refresh/$',
         login_required(on_prem_gateway.refresh), name='on-prem-gateway-refresh'),
-]
-# ################################################################################################################################
-# ################################################################################################################################
-
-urlpatterns += [
-
-    # Settings - Config DB
-
-    url(r'^zato/config-db/sql/$',
-        login_required(config_db.sql_index), name='config-db-sql'),
-    url(r'^zato/config-db/sql/test$',
-        login_required(config_db.sql_test), name='config-db-sql-test'),
-    url(r'^zato/config-db/sql/save$',
-        login_required(config_db.sql_save), name='config-db-sql-save'),
 ]
 # ################################################################################################################################
 # ################################################################################################################################

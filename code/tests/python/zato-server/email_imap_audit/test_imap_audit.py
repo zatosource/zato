@@ -18,7 +18,8 @@ from json import loads
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import get_attachment, list_attachments
 from zato.common.ext.bunch import Bunch
 from zato.server.connection.email import Microsoft365IMAPConnection, _build_attachment_envelopes, \
@@ -43,7 +44,7 @@ if 0:
 def _get_events() -> 'anylist':
     """ Everything the audit log holds, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.order_by(event_table.c.id)
@@ -84,7 +85,7 @@ def test_a_received_message_writes_one_event_with_its_attachments(tmp_path:'os.P
         assert summary['body'] == Body_Text
 
         # The attachment arrived with the event, bytes and all
-        engine = get_audit_engine()
+        engine = get_database_engine()
         items = list_attachments(engine, event['id'])
 
         assert len(items) == 1
@@ -166,7 +167,7 @@ def test_a_microsoft_365_message_writes_the_decoded_bytes(tmp_path:'os.PathLike'
         assert event['cid'] == 'cid-ms365-1'
 
         # The envelope carries the bytes the Graph API sent base64-encoded, decoded back
-        engine = get_audit_engine()
+        engine = get_database_engine()
         items = list_attachments(engine, event['id'])
 
         assert len(items) == 1

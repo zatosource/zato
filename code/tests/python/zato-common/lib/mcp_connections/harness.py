@@ -190,12 +190,12 @@ def start_environment(prefix:'str', extra_environ:'anydict | None' = None) -> 'L
     # .. the server's environment carries the port, its own broker port
     # and an audit database inside the temp directory ..
     broker_port = find_free_port()
-    audit_db_path = os.path.join(temp_directory, 'audit.db')
+    audit_db_path = os.path.join(temp_directory, 'zato.db')
 
     server_environ = os.environ.copy()
     server_environ['Zato_Config_Bind_Port'] = str(port)
     server_environ['Zato_Broker_HTTP_Port'] = str(broker_port)
-    server_environ['Zato_Audit_Log_DB_Name'] = audit_db_path
+    server_environ['Zato_Database_Path'] = audit_db_path
     _ = server_environ.pop('COVERAGE_PROCESS_START', None)
 
     if extra_environ:

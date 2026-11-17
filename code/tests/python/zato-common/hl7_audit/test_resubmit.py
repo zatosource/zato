@@ -16,13 +16,14 @@ import pytest
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import event_attr_table, event_link_table, event_table, get_audit_engine, \
-    AuditEvent, AuditLog, AuditOutcome, AuditSource
-from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource, event_attr_table, event_link_table, \
+    event_table
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.resubmit import get_resubmit_handler, load_event, Action_Reprocess, Action_Resend, \
     ResubmitException
 from zato.common.hl7.resubmit import reprocess, resend, validate_payload, Reprocess_Destinations
 from zato.common.json_internal import dumps, loads
+from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,15 +84,15 @@ def audit_db_env(tmp_path:'os.PathLike') -> 'any_':
     """ Points the audit database at a per-test SQLite file so every test
     runs on its own isolated database.
     """
-    database_path = os.path.join(str(tmp_path), 'audit.db')
+    database_path = os.path.join(str(tmp_path), 'zato.db')
 
-    os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
-    os.environ[AuditLogCtx.Env_Name] = database_path
+    os.environ[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
+    os.environ[DatabaseEnv.Env_Path] = database_path
 
     yield database_path
 
-    del os.environ[AuditLogCtx.Env_Type]
-    del os.environ[AuditLogCtx.Env_Name]
+    del os.environ[DatabaseEnv.Env_Type]
+    del os.environ[DatabaseEnv.Env_Path]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -116,7 +117,7 @@ def _seed_event(audit_log:'AuditLog', event_type:'str', object_name:'str', paylo
 def _get_event_row(event_id:'int') -> 'anydict':
     """ Returns one event row as a dict.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.where(event_table.c.id == event_id)
@@ -133,7 +134,7 @@ def _get_event_row(event_id:'int') -> 'anydict':
 def _get_attr_map(event_id:'int') -> 'anydict':
     """ Returns the attributes of one event as a dict of name to value.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_attr_table.c.name, event_attr_table.c.value)
     query = query.where(event_attr_table.c.event_id == event_id)
@@ -151,7 +152,7 @@ def _get_attr_map(event_id:'int') -> 'anydict':
 def _get_parent_ids(child_event_id:'int') -> 'anylist':
     """ Returns the lineage parents of one child event.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_link_table.c.parent_event_id)
     query = query.where(event_link_table.c.child_event_id == child_event_id)
@@ -170,7 +171,7 @@ def _get_parent_ids(child_event_id:'int') -> 'anylist':
 def _get_events(event_type:'str') -> 'anylist':
     """ Returns all events of one type, oldest first, each as a dict.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.where(event_table.c.event_type == event_type)

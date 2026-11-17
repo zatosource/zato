@@ -19,7 +19,8 @@ from zato.common.alerting.object_settings import load_object_settings
 from zato.common.alerting.probes import parse_tls_target, run_certificate_probe, run_health_probe, run_test_transfer_probe
 from zato.common.alerting.rendering import Template_Dir_Name
 from zato.common.alerting.sweep import load_alert_rules, run_sweep
-from zato.common.audit_log.api import get_audit_engine, AuditLog, AuditSource
+from zato.common.audit_log.api import AuditLog, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.json_internal import dumps
 from zato.common.odb.model import GenericConn, IntervalBasedJob, Job
 from zato.common.util.api import pluralize, utcnow
@@ -289,7 +290,7 @@ class AlertingRun(AdminService):
 
         transports = build_alert_transports(self, defaults.email_from)
         audit_log = AuditLog(self.server.name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
 
         # The notification texts render from the server's own template files,
         # the copies create_server put next to the rest of the config - an environment

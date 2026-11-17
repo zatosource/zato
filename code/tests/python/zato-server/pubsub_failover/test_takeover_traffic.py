@@ -140,8 +140,8 @@ def test_takeover_under_traffic(failover_env:'FailoverEnvironment', fault_comman
     not_in_flight = get_repeats_not_in_flight(records, workload.fault_windows)
     assert not not_in_flight, describe_copies(records, not_in_flight[:10], workload.fault_windows)
 
-    # .. the audit log of the new server records its takeover from the generation of the old one ..
-    takeovers = read_audit_takeovers(env.server_b, generation)
+    # .. the audit log records the takeover of the new server from the generation of the old one ..
+    takeovers = read_audit_takeovers(env.database, generation)
     assert takeovers == [(generation, generation + 1)], takeovers
 
     # .. and the stored counts equal the rows.

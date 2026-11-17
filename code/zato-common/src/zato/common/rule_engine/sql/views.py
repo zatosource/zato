@@ -28,8 +28,11 @@ from .time_ import utc_now
 # ################################################################################################################################
 
 if 0:
+    from datetime import datetime
     from sqlalchemy.orm import Session
 
+    # Dummy assignments to satisfy type checkers
+    datetime = datetime
     Session = Session
 
 # ################################################################################################################################
@@ -78,58 +81,58 @@ class ViewStore:
         require_text(name, 'View name')
         payload_text = serialize_document(payload)
         now = utc_now()
-        session = self._session_factory()
+        out = self._session_factory.write(self._save_row, actor, name, payload_text, now)
 
-        try:
-            with session.begin():
+        return out
 
-                # Saving over an existing name replaces its payload ..
-                existing = _get_view(session, actor, name)
+# ################################################################################################################################
 
-                if existing:
-                    statement = update(rule_view_table)
-                    id_condition = rule_view_table.c.id == existing.id
-                    statement = statement.where(id_condition)
-                    statement = statement.values(payload=payload_text, updated_at=now)
-                    _ = session.execute(statement)
+    def _save_row(self, session:'Session', actor:'str', name:'str', payload_text:'str', now:'datetime') -> 'RuleViewRecord':
+        """ Stores one saved view and returns it.
+        """
+        # Saving over an existing name replaces its payload ..
+        existing = _get_view(session, actor, name)
 
-                    # .. and the record keeps its original creation time.
-                    out = RuleViewRecord(
-                        id=existing.id,
-                        actor=actor,
-                        name=name,
-                        payload=payload_text,
-                        created_at=existing.created_at,
-                        updated_at=now,
-                    )
+        if existing:
+            statement = update(rule_view_table)
+            id_condition = rule_view_table.c.id == existing.id
+            statement = statement.where(id_condition)
+            statement = statement.values(payload=payload_text, updated_at=now)
+            _ = session.execute(statement)
 
-                # .. while a new name stores a whole new view.
-                else:
-                    values = {
-                        'actor':      actor,
-                        'name':       name,
-                        'payload':    payload_text,
-                        'created_at': now,
-                        'updated_at': now,
-                    }
-                    statement = insert(rule_view_table)
-                    result = session.execute(statement, values)
-                    result = cast_(CursorResult, result)
-                    primary_key = cast_(anytuple, result.inserted_primary_key)
-                    view_id = primary_key[0]
+            # .. and the record keeps its original creation time.
+            out = RuleViewRecord(
+                id=existing.id,
+                actor=actor,
+                name=name,
+                payload=payload_text,
+                created_at=existing.created_at,
+                updated_at=now,
+            )
 
-                    out = RuleViewRecord(
-                        id=view_id,
-                        actor=actor,
-                        name=name,
-                        payload=payload_text,
-                        created_at=now,
-                        updated_at=now,
-                    )
+        # .. while a new name stores a whole new view.
+        else:
+            values = {
+                'actor':      actor,
+                'name':       name,
+                'payload':    payload_text,
+                'created_at': now,
+                'updated_at': now,
+            }
+            statement = insert(rule_view_table)
+            result = session.execute(statement, values)
+            result = cast_(CursorResult, result)
+            primary_key = cast_(anytuple, result.inserted_primary_key)
+            view_id = primary_key[0]
 
-        # Release the transactional session in every case.
-        finally:
-            session.close()
+            out = RuleViewRecord(
+                id=view_id,
+                actor=actor,
+                name=name,
+                payload=payload_text,
+                created_at=now,
+                updated_at=now,
+            )
 
         return out
 
@@ -188,28 +191,26 @@ class ViewStore:
     def delete(self, *, actor:'str', name:'str') -> 'None':
         """ Deletes one saved view.
         """
-        session = self._session_factory()
+        self._session_factory.write(self._delete_row, actor, name)
 
-        try:
-            with session.begin():
+# ################################################################################################################################
 
-                # Remove the one promoted view identity ..
-                statement = delete(rule_view_table)
-                actor_condition = rule_view_table.c.actor == actor
-                name_condition = rule_view_table.c.name == name
-                statement = statement.where(actor_condition)
-                statement = statement.where(name_condition)
-                result = session.execute(statement)
-                result = cast_(CursorResult, result)
+    def _delete_row(self, session:'Session', actor:'str', name:'str') -> 'None':
+        """ Deletes the row of one saved view.
+        """
+        # Remove the one promoted view identity ..
+        statement = delete(rule_view_table)
+        actor_condition = rule_view_table.c.actor == actor
+        name_condition = rule_view_table.c.name == name
+        statement = statement.where(actor_condition)
+        statement = statement.where(name_condition)
+        result = session.execute(statement)
+        result = cast_(CursorResult, result)
 
-                # .. a view that does not exist cannot be deleted - name it directly.
-                if result.rowcount != 1:
-                    message = f'Actor {actor} has no saved view named `{name}`'
-                    raise RecordNotFoundError(message)
-
-        # Release the transactional session in every case.
-        finally:
-            session.close()
+        # .. a view that does not exist cannot be deleted - name it directly.
+        if result.rowcount != 1:
+            message = f'Actor {actor} has no saved view named `{name}`'
+            raise RecordNotFoundError(message)
 
 # ################################################################################################################################
 
@@ -218,38 +219,36 @@ class ViewStore:
         """
         # Validate the actor before any database work ..
         require_text(actor, 'Recent actor')
-        session = self._session_factory()
+        self._session_factory.write(self._touch_recent_row, actor, definition_id)
 
-        try:
-            with session.begin():
+# ################################################################################################################################
 
-                # Confirm the definition exists inside the same transaction ..
-                _ = get_definition(session, definition_id)
+    def _touch_recent_row(self, session:'Session', actor:'str', definition_id:'int') -> 'None':
+        """ Stores the time of one actor's visit to one definition.
+        """
+        # Confirm the definition exists inside the same transaction ..
+        _ = get_definition(session, definition_id)
 
-                # .. a repeat visit only moves its timestamp forward ..
-                now = utc_now()
-                statement = update(rule_recent_table)
-                actor_condition = rule_recent_table.c.actor == actor
-                definition_condition = rule_recent_table.c.definition_id == definition_id
-                statement = statement.where(actor_condition)
-                statement = statement.where(definition_condition)
-                statement = statement.values(visited_at=now)
-                result = session.execute(statement)
-                result = cast_(CursorResult, result)
+        # .. a repeat visit only moves its timestamp forward ..
+        now = utc_now()
+        statement = update(rule_recent_table)
+        actor_condition = rule_recent_table.c.actor == actor
+        definition_condition = rule_recent_table.c.definition_id == definition_id
+        statement = statement.where(actor_condition)
+        statement = statement.where(definition_condition)
+        statement = statement.values(visited_at=now)
+        result = session.execute(statement)
+        result = cast_(CursorResult, result)
 
-                # .. while a first visit stores the one row this pair will ever have.
-                if result.rowcount == 0:
-                    values = {
-                        'definition_id': definition_id,
-                        'actor':         actor,
-                        'visited_at':    now,
-                    }
-                    statement = insert(rule_recent_table)
-                    _ = session.execute(statement, values)
-
-        # Release the transactional session in every case.
-        finally:
-            session.close()
+        # .. while a first visit stores the one row this pair will ever have.
+        if result.rowcount == 0:
+            values = {
+                'definition_id': definition_id,
+                'actor':         actor,
+                'visited_at':    now,
+            }
+            statement = insert(rule_recent_table)
+            _ = session.execute(statement, values)
 
 # ################################################################################################################################
 

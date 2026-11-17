@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 import sqlite3
 from datetime import datetime, timezone
 from time import monotonic
@@ -14,8 +15,9 @@ from zlib import crc32
 
 # Zato
 from zato.common.db_env.common import Type_PostgreSQL
-from zato.common.pubsub.sql.config import get_pubsub_db_path, get_pubsub_engine
+from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.schema import metadata
+from zato.common.test.database_env import DatabaseEnv
 from zato.common.test.pubsub_database import get_db_mode, is_managed_mode
 from zato.common.util.time_ import datetime_to_ms, utcnow
 
@@ -45,7 +47,7 @@ _payload_crc32 = crc32(_payload.encode('utf8'))
 _priority = 5
 
 # The table of the generation, whose row the seeding keeps.
-_active_table_name = 'pubsub_active'
+_active_table_name = 'zato_active'
 
 # How the text format of COPY represents NULL.
 _copy_null = '\\N'
@@ -64,7 +66,7 @@ _delivery_columns = 'message_id, sub_key, topic_name, priority, expiration_ms'
 # ################################################################################################################################
 
 def _is_postgresql() -> 'bool':
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
     out = engine.dialect.name == Type_PostgreSQL
     return out
 
@@ -76,13 +78,13 @@ def connect_native() -> 'anytuple':
     """
 
     # The engine call makes sure the schema exists before the native connection uses it.
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     if engine.dialect.name == Type_PostgreSQL:
         connection = engine.raw_connection()
         out = (connection, '%s')
     else:
-        db_path = get_pubsub_db_path()
+        db_path = os.environ[DatabaseEnv.Env_Path]
         connection = sqlite3.connect(db_path)
         _ = connection.execute('pragma synchronous=off')
         out = (connection, '?')
@@ -108,7 +110,7 @@ def _clear_all_tables(cursor:'any_') -> 'None':
     for table in reversed(metadata.sorted_tables):
         _ = cursor.execute(f'drop table if exists {table.name}')
 
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
     metadata.create_all(engine)
 
 # ################################################################################################################################

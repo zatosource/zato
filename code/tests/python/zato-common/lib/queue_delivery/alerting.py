@@ -17,7 +17,8 @@ from sqlalchemy import func, select
 
 # Zato
 from zato.common.api import Alerting
-from zato.common.audit_log.api import event_table, get_audit_engine
+from zato.common.audit_log.api import event_table
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import AuditEvent
 
 # ################################################################################################################################
@@ -34,7 +35,7 @@ def get_newest_audit_event_id() -> 'int':
     """ The id of the newest event the audit log holds, zero when it holds none - what a scenario remembers before
     a sweep so it reads the alerts of that sweep alone.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(func.max(event_table.c.id))
 
@@ -60,7 +61,7 @@ def get_alerts_raised(object_name:'str', since_id:'int') -> 'anylist':
     """ The alerts raised about one object after the given event, oldest first - each with the source it was filed
     under and the rule that raised it.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.where(event_table.c.event_type == AuditEvent.Alert_Raised)

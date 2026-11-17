@@ -22,7 +22,8 @@ from json import dumps, loads
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import event_body_table, event_table, get_audit_engine, AuditEvent, AuditSource
+from zato.common.audit_log.api import event_body_table, event_table, AuditEvent, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import build_attachment, build_attachment_from_file
 from zato.common.audit_log.common import AuditBody
 from zato.common.audit_log.resubmit import ResubmitException
@@ -251,7 +252,7 @@ def load_transfer_content(cid:'str') -> 'bytes':
     ).where(event_table.c.event_type == AuditEvent.Request_Sent
     ).order_by(event_table.c.id)
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         rows = connection.execute(statement).fetchall()

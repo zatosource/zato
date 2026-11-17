@@ -22,7 +22,6 @@ from gevent import get_hub, signal_handler, spawn
 from gevent.event import Event
 
 # Zato
-from zato.common.audit_log.buffer import flush_all_buffers
 from zato.common.config_dispatcher import handle_config_event
 from zato.common.db_env.connection import SQLite_Busy_Timeout_Ms
 from zato.common.db_env.engine import bind_process_queues
@@ -283,11 +282,8 @@ class ConfigRuntime:
         self.is_draining = True
         logger.info('Config process is draining')
 
-        # A change in progress completes, and no other change begins after it ..
+        # A change in progress completes, and no other change begins after it.
         _ = self.gate.lock.acquire()
-
-        # .. and the audit events that wait in a buffer are written before the process exits.
-        flush_all_buffers()
 
         self.drained.set()
 

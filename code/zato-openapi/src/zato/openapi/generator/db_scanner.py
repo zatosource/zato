@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-_SQLITE_PATH = os.path.join(default_env_base_dir, 'zato.db')
+_SQLITE_PATH = os.path.join(default_env_base_dir, 'config.db')
 _ENGINE = create_engine(f'sqlite:///{_SQLITE_PATH}')
 Session = sessionmaker(bind=_ENGINE)
 

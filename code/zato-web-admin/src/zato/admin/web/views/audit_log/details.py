@@ -20,7 +20,8 @@ from django.http import HttpResponse, HttpResponseNotFound
 from zato.admin.web.views import method_allowed
 from zato.admin.web.views.audit_log.columns import _preview_length
 from zato.admin.web.views.audit_log.sources import _source_parse, render_scheduler_record, render_view_record
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditLog, AuditSource
+from zato.common.audit_log.api import event_table, AuditLog, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import get_attachment, list_attachments
 from zato.common.audit_log.body import resolve_body
 from zato.common.audit_log.config_audit import record_view_event
@@ -121,7 +122,7 @@ def details(req:'any_') -> 'HttpResponse':
     details_query = select(
         event_table.c.source, event_table.c.object_name, event_table.c.data,
         event_table.c.event_time).where(event_table.c.id == event_id)
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
 
@@ -190,7 +191,7 @@ def attachments(req:'any_') -> 'HttpResponse':
     body = json.loads(req.body)
     event_id = body['id']
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
     items = list_attachments(engine, event_id)
 
     response_json = json.dumps({'attachments': items})
@@ -227,7 +228,7 @@ def attachment_download(req:'any_') -> 'HttpResponse':
     # Query parameters are always strings while the body-row id column is numeric
     attachment_id = int(req.GET['id'])
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
     attachment = get_attachment(engine, attachment_id)
 
     if attachment is None:

@@ -25,7 +25,7 @@ from monitor import Limits, Monitor
 from runner import get_count_mismatches, get_duration, get_report_path, run_for, start_cleanup_process, \
     stop_cleanup_process
 from traffic import get_traffic_profile, Traffic
-from zato.common.pubsub.sql.config import get_pubsub_engine
+from zato.common.db_env.database import get_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,7 +79,7 @@ class FaultOutcome:
 # ################################################################################################################################
 
 def _count_delivery_rows() -> 'int':
-    with get_pubsub_engine().connect() as connection:
+    with get_database_engine().connect() as connection:
         out = connection.execute(_delivery_rows_query).scalar_one()
     return out
 

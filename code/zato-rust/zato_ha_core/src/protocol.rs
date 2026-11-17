@@ -52,7 +52,7 @@ const FILE_DATABASE: u8 = 1;
 /// The file kind byte of the log.
 const FILE_WAL: u8 = 2;
 
-/// Which file of a database a snapshot chunk belongs to.
+/// Which file of the Zato database a snapshot chunk belongs to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FileKind {
     /// The database file.
@@ -62,12 +62,9 @@ pub enum FileKind {
     Wal,
 }
 
-/// How far the standby holds the log of one database.
+/// How far the standby holds the log of the Zato database.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Position {
-    /// The name of the database.
-    pub database: String,
-
     /// The first salt of the log the standby holds.
     pub salt_one: u32,
 
@@ -92,11 +89,8 @@ pub enum Message {
 
     /// The standby answers [`Message::Hello`].
     HelloReply {
-        /// Whether the standby is in sync at this generation and can resume from its positions.
-        in_sync: bool,
-
-        /// The positions of the standby, if it is in sync.
-        positions: Vec<Position>,
+        /// The position of the standby if it is in sync at this generation and can resume from it.
+        position: Option<Position>,
     },
 
     /// The peer holds a higher generation, so the sender was replaced.
@@ -114,13 +108,10 @@ pub enum Message {
     /// The standby is alive.
     HeartbeatAck,
 
-    /// Committed frames of one database.
+    /// Committed frames of the Zato database.
     Frames {
         /// The generation of the active node.
         generation: u64,
-
-        /// The name of the database.
-        database: String,
 
         /// The header of a new log, which precedes its first frames.
         header: Option<Vec<u8>>,
@@ -135,23 +126,17 @@ pub enum Message {
         bytes: Vec<u8>,
     },
 
-    /// The standby synced the frames of a database up to a position.
+    /// The standby synced the frames of the Zato database up to a position.
     Confirm(Position),
 
-    /// The files of a database follow, replacing the copy of the standby.
+    /// The files of the Zato database follow, replacing the copy of the standby.
     SnapshotBegin {
         /// The generation of the active node.
         generation: u64,
-
-        /// The name of the database.
-        database: String,
     },
 
-    /// Bytes appended to a file of a database being replaced.
+    /// Bytes appended to a file of the Zato database being replaced.
     SnapshotChunk {
-        /// The name of the database.
-        database: String,
-
         /// The file.
         kind: FileKind,
 
@@ -159,11 +144,8 @@ pub enum Message {
         bytes: Vec<u8>,
     },
 
-    /// The files of a database are complete.
-    SnapshotEnd {
-        /// The name of the database.
-        database: String,
-    },
+    /// The files of the Zato database are complete.
+    SnapshotEnd,
 
     /// The referee accepted the standby as in sync at a new generation.
     Admit {
@@ -209,12 +191,10 @@ impl Encoder {
     }
 
     /// Appends a position.
-    fn position(&mut self, position: &Position) -> Result<(), Error> {
-        self.text(&position.database)?;
+    fn position(&mut self, position: &Position) {
         self.u32(position.salt_one);
         self.u32(position.salt_two);
         self.u32(position.end_frame);
-        Ok(())
     }
 }
 
@@ -277,7 +257,6 @@ impl<'body> Decoder<'body> {
     /// Reads a position.
     fn position(&mut self) -> Result<Position, Error> {
         Ok(Position {
-            database: self.text()?,
             salt_one: self.u32()?,
             salt_two: self.u32()?,
             end_frame: self.u32()?,
@@ -294,13 +273,11 @@ fn encode(message: &Message) -> Result<Vec<u8>, Error> {
             out.u64(*generation);
             out.text(active_node)?;
         }
-        Message::HelloReply { in_sync, positions } => {
+        Message::HelloReply { position } => {
             out.byte(KIND_HELLO_REPLY);
-            out.byte(u8::from(*in_sync));
-            let count = u32::try_from(positions.len()).map_err(|error| Error::new(ErrorKind::InvalidInput, error))?;
-            out.u32(count);
-            for position in positions {
-                out.position(position)?;
+            out.byte(u8::from(position.is_some()));
+            if let Some(position) = position {
+                out.position(position);
             }
         }
         Message::Refused { generation } => {
@@ -314,7 +291,6 @@ fn encode(message: &Message) -> Result<Vec<u8>, Error> {
         Message::HeartbeatAck => out.byte(KIND_HEARTBEAT_ACK),
         Message::Frames {
             generation,
-            database,
             header,
             first_frame,
             end_frame,
@@ -322,7 +298,6 @@ fn encode(message: &Message) -> Result<Vec<u8>, Error> {
         } => {
             out.byte(KIND_FRAMES);
             out.u64(*generation);
-            out.text(database)?;
             out.blob(header.as_deref().unwrap_or_default())?;
             out.u32(*first_frame);
             out.u32(*end_frame);
@@ -330,26 +305,21 @@ fn encode(message: &Message) -> Result<Vec<u8>, Error> {
         }
         Message::Confirm(position) => {
             out.byte(KIND_CONFIRM);
-            out.position(position)?;
+            out.position(position);
         }
-        Message::SnapshotBegin { generation, database } => {
+        Message::SnapshotBegin { generation } => {
             out.byte(KIND_SNAPSHOT_BEGIN);
             out.u64(*generation);
-            out.text(database)?;
         }
-        Message::SnapshotChunk { database, kind, bytes } => {
+        Message::SnapshotChunk { kind, bytes } => {
             out.byte(KIND_SNAPSHOT_CHUNK);
-            out.text(database)?;
             out.byte(match kind {
                 FileKind::Database => FILE_DATABASE,
                 FileKind::Wal => FILE_WAL,
             });
             out.blob(bytes)?;
         }
-        Message::SnapshotEnd { database } => {
-            out.byte(KIND_SNAPSHOT_END);
-            out.text(database)?;
-        }
+        Message::SnapshotEnd => out.byte(KIND_SNAPSHOT_END),
         Message::Admit { generation } => {
             out.byte(KIND_ADMIT);
             out.u64(*generation);
@@ -368,23 +338,17 @@ fn decode(body: &[u8]) -> Result<Message, Error> {
         },
         KIND_HELLO_REPLY => {
             let in_sync = input.byte()? != 0;
-            let count = input.u32()?;
-            let mut positions = Vec::new();
-            for _ in 0..count {
-                positions.push(input.position()?);
-            }
-            Message::HelloReply { in_sync, positions }
+            let position = if in_sync { Some(input.position()?) } else { None };
+            Message::HelloReply { position }
         }
         KIND_REFUSED => Message::Refused { generation: input.u64()? },
         KIND_HEARTBEAT => Message::Heartbeat { generation: input.u64()? },
         KIND_HEARTBEAT_ACK => Message::HeartbeatAck,
         KIND_FRAMES => {
             let generation = input.u64()?;
-            let database = input.text()?;
             let header = Some(input.blob()?).filter(|header| !header.is_empty());
             Message::Frames {
                 generation,
-                database,
                 header,
                 first_frame: input.u32()?,
                 end_frame: input.u32()?,
@@ -392,24 +356,19 @@ fn decode(body: &[u8]) -> Result<Message, Error> {
             }
         }
         KIND_CONFIRM => Message::Confirm(input.position()?),
-        KIND_SNAPSHOT_BEGIN => Message::SnapshotBegin {
-            generation: input.u64()?,
-            database: input.text()?,
-        },
+        KIND_SNAPSHOT_BEGIN => Message::SnapshotBegin { generation: input.u64()? },
         KIND_SNAPSHOT_CHUNK => {
-            let database = input.text()?;
             let kind = match input.byte()? {
                 FILE_DATABASE => FileKind::Database,
                 FILE_WAL => FileKind::Wal,
                 other => return Err(Error::new(ErrorKind::InvalidData, format!("unknown file kind {other}"))),
             };
             Message::SnapshotChunk {
-                database,
                 kind,
                 bytes: input.blob()?,
             }
         }
-        KIND_SNAPSHOT_END => Message::SnapshotEnd { database: input.text()? },
+        KIND_SNAPSHOT_END => Message::SnapshotEnd,
         KIND_ADMIT => Message::Admit { generation: input.u64()? },
         other => return Err(Error::new(ErrorKind::InvalidData, format!("unknown message kind {other}"))),
     };
@@ -457,45 +416,40 @@ mod tests {
     /// Returns a strategy of arbitrary messages.
     fn message_strategy() -> impl Strategy<Value = Message> {
         let text = "[a-z]{0,12}";
-        let position = (text, any::<u32>(), any::<u32>(), any::<u32>()).prop_map(|(database, salt_one, salt_two, end_frame)| Position {
-            database,
+        let position = (any::<u32>(), any::<u32>(), any::<u32>()).prop_map(|(salt_one, salt_two, end_frame)| Position {
             salt_one,
             salt_two,
             end_frame,
         });
         prop_oneof![
             (any::<u64>(), text).prop_map(|(generation, active_node)| Message::Hello { generation, active_node }),
-            (any::<bool>(), prop::collection::vec(position.clone(), 0..4))
-                .prop_map(|(in_sync, positions)| Message::HelloReply { in_sync, positions }),
+            prop::option::of(position.clone()).prop_map(|position| Message::HelloReply { position }),
             any::<u64>().prop_map(|generation| Message::Refused { generation }),
             any::<u64>().prop_map(|generation| Message::Heartbeat { generation }),
             Just(Message::HeartbeatAck),
             (
                 any::<u64>(),
-                text,
                 prop::option::of(prop::collection::vec(any::<u8>(), 1..40)),
                 any::<u32>(),
                 any::<u32>(),
                 prop::collection::vec(any::<u8>(), 0..100)
             )
-                .prop_map(|(generation, database, header, first_frame, end_frame, bytes)| Message::Frames {
+                .prop_map(|(generation, header, first_frame, end_frame, bytes)| Message::Frames {
                     generation,
-                    database,
                     header,
                     first_frame,
                     end_frame,
                     bytes
                 }),
             position.prop_map(Message::Confirm),
-            (any::<u64>(), text).prop_map(|(generation, database)| Message::SnapshotBegin { generation, database }),
-            (text, any::<bool>(), prop::collection::vec(any::<u8>(), 0..100)).prop_map(|(database, is_wal, bytes)| {
+            any::<u64>().prop_map(|generation| Message::SnapshotBegin { generation }),
+            (any::<bool>(), prop::collection::vec(any::<u8>(), 0..100)).prop_map(|(is_wal, bytes)| {
                 Message::SnapshotChunk {
-                    database,
                     kind: if is_wal { FileKind::Wal } else { FileKind::Database },
                     bytes,
                 }
             }),
-            text.prop_map(|database| Message::SnapshotEnd { database }),
+            Just(Message::SnapshotEnd),
             any::<u64>().prop_map(|generation| Message::Admit { generation }),
         ]
     }

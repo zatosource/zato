@@ -24,6 +24,7 @@ from zato.common.test.pubsub_database import get_db_mode, get_runtime_dir, is_po
 if 0:
     from conftest import FailoverEnvironment
     from failover import ContainerServer
+    from zato.common.test.pubsub_database import PubSubDatabase
     from zato.common.typing_ import dictlist, strlist
 
 # ################################################################################################################################
@@ -60,7 +61,7 @@ def _kill_and_restart(workload:'Workload', server:'ContainerServer') -> 'None':
 
 # ################################################################################################################################
 
-def _get_audit_deliveries(server:'ContainerServer', records:'dictlist', msg_ids:'strlist') -> 'tuple[int, strlist]':
+def _get_audit_deliveries(database:'PubSubDatabase', records:'dictlist', msg_ids:'strlist') -> 'tuple[int, strlist]':
     """ Compares the push deliveries that the receiver accepted with those that the audit log recorded,
     for the given messages. Returns how many accepted deliveries the audit log lacks, and each message
     that the audit log records more often than the receiver accepted it.
@@ -73,7 +74,7 @@ def _get_audit_deliveries(server:'ContainerServer', records:'dictlist', msg_ids:
         if record['status_code'] == _status_ok and record['msg_id'] in wanted:
             accepted[record['msg_id']] += 1
 
-    for row in read_audit_rows(server, _audit_delivered_query):
+    for row in read_audit_rows(database, _audit_delivered_query):
         if row[0] in wanted:
             audited[row[0]] += 1
 
@@ -182,7 +183,7 @@ def test_crash_during_bursts(crash_env:'FailoverEnvironment') -> 'None':
     # .. on PostgreSQL, the audit log records each restart as a takeover from the generation before it ..
     if is_postgresql:
 
-        takeovers = read_audit_takeovers(server, start_generation)
+        takeovers = read_audit_takeovers(env.database, start_generation)
         expected_takeovers:'list[tuple[int, int]]' = []
 
         for kill_index in range(1, _kill_count + 1):
@@ -193,7 +194,7 @@ def test_crash_during_bursts(crash_env:'FailoverEnvironment') -> 'None':
 
     # .. the audit log records each push that the receiver accepted as a delivery event of its own, a repeated one included,
     # .. except for those still in flight at a kill, whose number the report states ..
-    lost, surplus = _get_audit_deliveries(server, records, acknowledged)
+    lost, surplus = _get_audit_deliveries(env.database, records, acknowledged)
 
     logger.info('Audit delivery events lost %d in %d kills', lost, _kill_count)
     _write_audit_report(lost)

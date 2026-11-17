@@ -464,7 +464,7 @@ def _get_stored_outcome_explanations(source:'str', name:'str') -> 'anylist':
     """ Every explanation the live server stored for the connection under the source, read off its own ODB -
     the proofs share the server, so each one reads the explanations of its own connection alone.
     """
-    path = os.path.join(os.path.dirname(LiveServer.server_directory), 'zato.db')
+    path = os.path.join(os.path.dirname(LiveServer.server_directory), 'config.db')
     session_maker = sessionmaker(bind=create_engine(f'sqlite:///{path}'))
 
     store = ExplanationStore(session_maker)

@@ -20,12 +20,17 @@ from zato.common.pubsub.sql.schema import delivery_table, message_table
 
 if 0:
     from sqlalchemy.engine import Connection
-    from zato.common.typing_ import anylist, intlist, intset
+    from zato.common.typing_ import anydict, anylist, intlist, intset, strlist
 
     Connection = Connection
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+# The primary keys of messages by their public identifiers
+_message_ids_query = select(message_table.c.id, message_table.c.msg_id)
+_message_ids_query_plain = PlainStatement(_message_ids_query.where(
+    message_table.c.msg_id.in_(bindparam('write_msg_ids', expanding=True))))
 
 # A message is still in flight while any delivery row references it -
 # the update drops the payloads of the given messages that have none left.
@@ -80,6 +85,19 @@ def get_chunks(items:'anylist') -> 'anylist':
         end = start + batch_size
         chunk = items[start:end]
         out.append(chunk)
+
+    return out
+
+# ################################################################################################################################
+
+def get_message_ids(connection:'Connection', msg_ids:'strlist') -> 'anydict':
+    """ Maps public message identifiers to their primary keys, read within the caller's transaction.
+    """
+    out:'anydict' = {}
+
+    for chunk in get_chunks(msg_ids):
+        for row in _message_ids_query_plain.execute(connection, {'write_msg_ids': chunk}):
+            out[row.msg_id] = row.id
 
     return out
 

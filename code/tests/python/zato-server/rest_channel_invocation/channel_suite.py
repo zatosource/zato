@@ -78,7 +78,7 @@ class Suite:
 
     @property
     def audit_db_path(self) -> 'str':
-        out = os.path.join(self.environment.temp_directory, 'audit.db')
+        out = os.path.join(self.environment.temp_directory, 'zato.db')
         return out
 
 # ################################################################################################################################

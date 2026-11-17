@@ -16,7 +16,8 @@ from urllib.parse import parse_qs, urlparse
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditSource
+from zato.common.audit_log.api import event_table, AuditEvent, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.destination.audit import get_hop_entry
 from zato.common.destination.constants import DestinationOption
 from zato.common.json_internal import loads
@@ -75,7 +76,7 @@ class _Connections:
 def _get_stored_call() -> 'stranydict':
     """ The document the one request-sent row of the log carries.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table.c.data)
     query = query.where(event_table.c.event_type == AuditEvent.Request_Sent)

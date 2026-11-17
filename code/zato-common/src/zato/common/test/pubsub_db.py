@@ -7,14 +7,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Read-side helpers for server-level pub/sub tests - they open the same database
-# the test server uses, selected through the Zato_PubSub_DB_* variables, which the shared
+# the test server uses, selected through the Zato_Database_* variables, which the shared
 # server fixture points at the current quickstart directory or at a PostgreSQL container.
 
 # SQLAlchemy
 from sqlalchemy import func, select
 
 # Zato
-from zato.common.pubsub.sql.config import get_pubsub_engine
+from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
     topic_count_table, topic_sub_table
 
@@ -33,7 +33,7 @@ def get_subscribed_topics(sub_key:'str') -> 'strlist':
     query = select(topic_sub_table.c.topic_name)
     query = query.where(topic_sub_table.c.sub_key == sub_key)
 
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     out:'strlist' = []
 
@@ -51,7 +51,7 @@ def get_topic_subscribers(topic_name:'str') -> 'strlist':
     query = select(topic_sub_table.c.sub_key)
     query = query.where(topic_sub_table.c.topic_name == topic_name)
 
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     out:'strlist' = []
 
@@ -70,7 +70,7 @@ def count_topic_messages(topic_name:'str') -> 'int':
     query = query.select_from(message_table)
     query = query.where(message_table.c.topic_name == topic_name)
 
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         out = connection.execute(query).scalar()
@@ -89,7 +89,7 @@ def count_pending(sub_key:'str', topic_name:'str'='') -> 'int':
     if topic_name:
         query = query.where(delivery_table.c.topic_name == topic_name)
 
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         out = connection.execute(query).scalar()
@@ -105,7 +105,7 @@ def count_all_deliveries() -> 'int':
     query = select(func.count())
     query = query.select_from(delivery_table)
 
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         out = connection.execute(query).scalar()
@@ -121,7 +121,7 @@ def count_topic_deliveries(topic_name:'str') -> 'int':
     query = query.select_from(delivery_table)
     query = query.where(delivery_table.c.topic_name == topic_name)
 
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         out = connection.execute(query).scalar()
@@ -139,7 +139,7 @@ def get_pending_msg_ids(sub_key:'str') -> 'strlist':
     query = query.select_from(join_clause)
     query = query.where(delivery_table.c.sub_key == sub_key)
 
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     out:'strlist' = []
 
@@ -159,7 +159,7 @@ def count_message_rows(msg_ids:'strlist') -> 'int':
     query = query.select_from(message_table)
     query = query.where(message_table.c.msg_id.in_(msg_ids))
 
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         out = connection.execute(query).scalar()
@@ -177,7 +177,7 @@ def count_messages_with_payload(msg_ids:'strlist') -> 'int':
     query = query.where(message_table.c.msg_id.in_(msg_ids))
     query = query.where(message_table.c.payload.isnot(None))
 
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         out = connection.execute(query).scalar()
@@ -193,7 +193,7 @@ def set_pub_time_ms(msg_ids:'strlist', pub_time_ms:'int') -> 'None':
     update_statement = update_statement.where(message_table.c.msg_id.in_(msg_ids))
     update_statement = update_statement.values(pub_time_ms=pub_time_ms)
 
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     with engine.begin() as connection:
         _ = connection.execute(update_statement)
@@ -229,7 +229,7 @@ def count_empty_count_rows() -> 'int':
         [publish_count_table.c.topic_name, publish_count_table.c.minute_ms, publish_count_table.c.publisher],
         publish_count_table.c.total)
 
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     out = 0
 
@@ -245,7 +245,7 @@ def delete_all_messages() -> 'None':
     """ Removes every message and delivery row so no in-flight deliveries carry over
     across tests, while the subscription state stays as the server knows it.
     """
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     with engine.begin() as connection:
         _ = connection.execute(delivery_table.delete())
@@ -260,7 +260,7 @@ def remove_topic_subscriptions(topic_name:'str') -> 'None':
     delete_statement = topic_sub_table.delete()
     delete_statement = delete_statement.where(topic_sub_table.c.topic_name == topic_name)
 
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     with engine.begin() as connection:
         _ = connection.execute(delete_statement)

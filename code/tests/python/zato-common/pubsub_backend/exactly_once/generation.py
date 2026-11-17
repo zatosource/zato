@@ -85,7 +85,7 @@ def _ack_with_publications(backend:'SQLPubSubBackend', context:'WriteContext') -
     msg_ids = [context.pushed_message['msg_id']]
     publications:'anylist' = [context.publication.pending]
 
-    backend.ack_with_publications(Input_Sub_Key, msg_ids, publications)
+    backend.ack_with_publications(Input_Sub_Key, msg_ids, publications, [])
 
 # ################################################################################################################################
 
@@ -125,8 +125,8 @@ def _new_env(database:'PubSubDatabase', pool_size:'int') -> 'strstrdict':
     generation_file_path = os.path.join(work_dir, 'generation')
 
     out = dict(database.env)
-    out['Zato_PubSub_Generation_File'] = generation_file_path
-    out['Zato_PubSub_DB_Pool_Size'] = f'{pool_size}'
+    out['Zato_Database_Generation_File'] = generation_file_path
+    out['Zato_Database_Pool_Size'] = f'{pool_size}'
 
     return out
 

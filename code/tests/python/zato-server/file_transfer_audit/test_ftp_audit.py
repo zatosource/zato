@@ -19,7 +19,8 @@ from json import loads
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import event_attr_table, event_table, get_audit_engine, AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import get_attachment, list_attachments, Env_Max_Attachment_Size
 from zato.common.audit_log.file_transfer import Operation_Delete, Operation_Move, Operation_Store
 
@@ -43,7 +44,7 @@ if 0:
 def _get_events() -> 'anylist':
     """ Everything the audit log holds, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.order_by(event_table.c.id)
@@ -62,7 +63,7 @@ def _get_events() -> 'anylist':
 def _get_attributes(event_id:'int') -> 'any_':
     """ The searchable attributes of one event, by name.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_attr_table.c.name, event_attr_table.c.value)
     query = query.where(event_attr_table.c.event_id == event_id)
@@ -156,7 +157,7 @@ def test_the_flag_turned_on_stores_the_bytes(tmp_path:'os.PathLike') -> 'None':
         event = events[0]
         event_id = event['id']
 
-        engine = get_audit_engine()
+        engine = get_database_engine()
         items = list_attachments(engine, event_id)
 
         assert len(items) == 1
@@ -185,7 +186,7 @@ def test_the_flag_turned_off_stores_no_bytes(tmp_path:'os.PathLike') -> 'None':
         event = events[0]
         event_id = event['id']
 
-        engine = get_audit_engine()
+        engine = get_database_engine()
         assert list_attachments(engine, event_id) == []
 
 # ################################################################################################################################
@@ -206,7 +207,7 @@ def test_an_oversized_file_keeps_its_metadata_only(tmp_path:'os.PathLike', monke
         event = events[0]
         event_id = event['id']
 
-        engine = get_audit_engine()
+        engine = get_database_engine()
         items = list_attachments(engine, event_id)
 
         assert len(items) == 1

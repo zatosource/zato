@@ -334,7 +334,6 @@ fn process_command(conn: &mut RedisLink, keys: &StreamKeys, shared: &SchedulerSh
 /// Payload for `create_job` and `edit_job` commands.
 #[derive(Deserialize)]
 struct JobCommandPayload {
-
     /// The ODB job identifier.
     job_id: i64,
 
@@ -348,7 +347,6 @@ struct JobCommandPayload {
 /// Payload for the `delete_job` command.
 #[derive(Deserialize)]
 struct JobIdPayload {
-
     /// The ODB job identifier.
     job_id: i64,
 
@@ -382,8 +380,7 @@ struct MarkCompletePayload {
 /// Payload for reload command.
 #[derive(Deserialize)]
 struct ReloadPayload {
-
-    /// Full list of jobs from ODB, each with its run state from the common database.
+    /// Full list of jobs from ODB, each with its run state from the Zato database.
     jobs: Vec<ReloadedJob>,
 
     /// The number that the server drew before it read the ODB.

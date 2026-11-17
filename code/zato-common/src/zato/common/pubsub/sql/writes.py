@@ -16,6 +16,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import DBAPIError
 
 # Zato
+from zato.common.audit_log.bulk_insert import insert_pending_events
 from zato.common.db_env.commit_queue import CommitQueue
 from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.engine import call_database
@@ -23,19 +24,22 @@ from zato.common.db_env.errors import is_conflict, is_value_error
 from zato.common.db_env.outage import OutageTracker
 from zato.common.db_env.pg8000_copy import copy_rows
 from zato.common.db_env.plain_sql import PlainStatement
-from zato.common.pubsub.sql.config import get_commit_max_messages, get_commits_in_flight, \
-    get_pubsub_engine, get_urgent_commits_in_flight
+from zato.common.db_env.database import get_database_engine
+from zato.common.pubsub.sql.audit_events import collect_audit_events
+from zato.common.pubsub.sql.config import get_commit_max_messages, get_commits_in_flight, get_urgent_commits_in_flight
 from zato.common.pubsub.sql.fenced_ack import check_fenced, delete_fenced, PubSubAckConflict
-from zato.common.pubsub.sql.payloads import drop_payloads, get_chunks
+from zato.common.pubsub.sql.payloads import drop_payloads, get_chunks, get_message_ids
 from zato.common.pubsub.sql.pending import PendingAck, PendingAtomic, PendingPublication, reset_item
 from zato.common.pubsub.sql.pull import lease_messages
 from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from sqlalchemy.engine import Connection, Engine
+    from zato.common.audit_log.api import AuditLog
     from zato.common.pubsub.sql.pending import PendingLease, pending_ack_list, pending_atomic_list, pending_lease_list, \
         pending_publication_list
     from zato.common.typing_ import any_, anydict, anylist, intlist, strlist
@@ -43,6 +47,7 @@ if 0:
     # Dummy assignments to satisfy type checkers
     any_ = any_
     anydict = anydict
+    AuditLog = AuditLog
     Connection = Connection
     Engine = Engine
     PendingLease = PendingLease
@@ -102,10 +107,6 @@ _existing_messages_query = _existing_messages_query.where(
 
 _delivery_insert = PlainStatement(delivery_table.insert())
 
-_message_ids_query = select(message_table.c.id, message_table.c.msg_id)
-_message_ids_query_plain = PlainStatement(_message_ids_query.where(
-    message_table.c.msg_id.in_(bindparam('write_msg_ids', expanding=True))))
-
 # The subscriber column is concatenated with an empty string, which keeps SQLite from looking the rows up
 # through an index of subscribers, whose queues may be deep, rather than through the index of messages.
 _unindexed_sub_key = delivery_table.c.sub_key.concat('')
@@ -123,29 +124,20 @@ _delivery_delete_plain = PlainStatement(_delivery_delete.returning(delivery_tabl
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_message_ids(connection:'Connection', msg_ids:'strlist') -> 'anydict':
-    """ Maps public message identifiers to their primary keys, read within the caller's transaction.
-    """
-    out:'anydict' = {}
-
-    for chunk in get_chunks(msg_ids):
-        for row in _message_ids_query_plain.execute(connection, {'write_msg_ids': chunk}):
-            out[row.msg_id] = row.id
-
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class PubSubWriter:
     """ Writes the publications, acknowledgements and pulls of concurrent callers in shared transactions,
     in the thread pool of the gevent hub on SQLite. Each caller waits until the transaction with its item is committed.
     A transaction writes publications first, acknowledgements next and pulls last, and its size is limited
     by the number of messages it refers to. On PostgreSQL, publications also have a commit reserved for them,
     so that a publisher does not wait for the acknowledgements of deep queues being committed.
+    The audit events of the items commit in the transaction of the items.
     """
 
-    def __init__(self) -> 'None':
+    def __init__(self, audit_log:'AuditLog | None') -> 'None':
+
+        # The audit log is None in backend-only tests, in which case the items have no audit events.
+        self.audit_log = audit_log
+
         commit_max_messages = get_commit_max_messages()
         commits_in_flight = get_commits_in_flight()
         urgent_commits_in_flight = get_urgent_commits_in_flight()
@@ -208,27 +200,37 @@ class PubSubWriter:
     def _write_batch(self, batch:'anylist') -> 'None':
         """ Writes all the items of one batch, in a thread of the pool under gevent with SQLite.
         """
-        engine = get_pubsub_engine()
+        engine = get_database_engine()
+
+        # The audit events of the batch commit in its transaction ..
+        if self.audit_log:
+            self.audit_log.prepare_commit()
 
         try:
-            call_database(engine, self._write_items, engine, batch)
+            audit_events = call_database(engine, self._write_items, engine, batch)
         except DBAPIError:
             self._outage.on_failure()
             raise
 
         self._outage.on_success()
 
+        # .. and what follows their commit runs once the batch is committed.
+        if audit_events:
+            audit_log = cast_('AuditLog', self.audit_log)
+            audit_log.complete_commit(audit_events)
+
 # ################################################################################################################################
 
-    def _write_items(self, engine:'Engine', batch:'anylist') -> 'None':
+    def _write_items(self, engine:'Engine', batch:'anylist') -> 'anylist':
         """ Writes the items of a batch in one transaction, which PostgreSQL may roll back as a whole on a conflict
         with concurrent transactions, in which case nothing of it was committed and it runs again.
+        Returns the audit events that were committed.
         """
         attempt = 0
 
         while True:
             try:
-                self._write_transaction(engine, batch)
+                out = self._write_transaction(engine, batch)
                 break
 
             except DBAPIError as e:
@@ -237,7 +239,7 @@ class PubSubWriter:
                 # is written again in a transaction of its own and only the caller of the item at fault receives the error ..
                 if len(batch) > 1 and is_value_error(e):
                     logger.info('Pub/sub commit rejected a value, writing its %d items one by one -> %s', len(batch), e.orig)
-                    self._write_items_one_by_one(engine, batch)
+                    out = self._write_items_one_by_one(engine, batch)
                     break
 
                 attempt += 1
@@ -250,27 +252,35 @@ class PubSubWriter:
                 for item in batch:
                     reset_item(item)
 
+        return out
+
 # ################################################################################################################################
 
-    def _write_items_one_by_one(self, engine:'Engine', batch:'anylist') -> 'None':
+    def _write_items_one_by_one(self, engine:'Engine', batch:'anylist') -> 'anylist':
         """ Writes each item of a batch in a transaction of its own, storing in an item the error
-        of a value that PostgreSQL rejected in it.
+        of a value that PostgreSQL rejected in it. Returns the audit events that were committed.
         """
+        out:'anylist' = []
+
         for item in batch:
             reset_item(item)
 
             try:
-                self._write_items(engine, [item])
+                audit_events = self._write_items(engine, [item])
+                out.extend(audit_events)
             except DBAPIError as e:
                 if not is_value_error(e):
                     raise
                 item.exception = e
 
+        return out
+
 # ################################################################################################################################
 
-    def _write_transaction(self, engine:'Engine', batch:'anylist') -> 'None':
+    def _write_transaction(self, engine:'Engine', batch:'anylist') -> 'anylist':
         """ Writes the publications of a batch first, its acknowledgements next, its fenced acknowledgements
-        with their publications after them and its pulls last, in one transaction.
+        with their publications after them, its pulls and the audit events of all of them last, in one transaction.
+        Returns the audit events written.
         """
         publications:'pending_publication_list' = []
         acks:'pending_ack_list' = []
@@ -308,12 +318,21 @@ class PubSubWriter:
                     connection, lease.sub_key, lease.max_messages, lease.max_len, lease.now_ms, lease.leased_until_ms)
                 lease.rows = rows
                 lease.attempts = attempts
+                lease.on_leased(lease)
 
-            # .. and the payloads are dropped last. Dropping one holds the delivery rows of the other subscribers
-            # of its message until the commit, so a transaction that locked a delivery row after a drop could wait
-            # for one that waits for it in turn.
+            # .. the payloads are dropped after all the writes of delivery rows. Dropping one holds the delivery rows
+            # of the other subscribers of its message until the commit, so a transaction that locked a delivery row
+            # after a drop could wait for one that waits for it in turn ..
             if ack_by_message_id:
                 self._drop_payloads(connection, ack_by_message_id)
+
+            # .. and the audit events of what was written commit with it.
+            out = collect_audit_events(publications, atomics, leases)
+
+            if out:
+                _ = insert_pending_events(connection, out)
+
+        return out
 
 # ################################################################################################################################
 
@@ -567,7 +586,7 @@ class PubSubWriter:
                 lookup_msg_ids.extend(pending.msg_ids)
 
         if lookup_msg_ids:
-            found = _get_message_ids(connection, lookup_msg_ids)
+            found = get_message_ids(connection, lookup_msg_ids)
         else:
             found = {}
 

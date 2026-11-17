@@ -12,7 +12,8 @@ from datetime import timedelta
 # Zato
 from zato.common.alerting.collectors import collect_auth_failure_facts, collect_consecutive_failure_facts, \
     collect_error_rate_facts, collect_latency_facts, new_fact
-from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.util.api import utcnow
 
 # Local
@@ -48,7 +49,7 @@ class TestErrorRateFacts:
 
     def test_the_measures_say_what_happened_without_judging(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Three of four outcomes are errors - a 75% error rate
@@ -73,7 +74,7 @@ class TestErrorRateFacts:
 
     def test_each_object_gets_its_own_fact(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         seed_outcome(audit_log, 'facts-two-1', AuditOutcome.Error)
@@ -90,7 +91,7 @@ class TestErrorRateFacts:
 
     def test_a_soap_outgoing_connection_whose_every_call_fails_reads_a_full_error_rate(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Only the response half of each pair is measured, the way it is for a REST connection,
@@ -114,7 +115,7 @@ class TestErrorRateFacts:
 
     def test_traffic_outside_the_window_never_counts(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # One error, moved outside the window
@@ -130,7 +131,7 @@ class TestErrorRateFacts:
 
     def test_the_newest_failing_event_of_a_resubmittable_type_is_pointed_at(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Two failed per-hop deliveries of a source counting every event - the request-sent type is what
@@ -150,7 +151,7 @@ class TestErrorRateFacts:
 
     def test_a_failing_event_of_an_undeclared_type_is_pointed_at_without_a_resend_offer(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # An outbound acknowledgment is no type its source declared resubmittable
@@ -167,7 +168,7 @@ class TestErrorRateFacts:
 
     def test_a_failing_response_points_at_the_request_it_answered(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # One call - the request went out fine and the response came back a failure.
@@ -186,7 +187,7 @@ class TestErrorRateFacts:
 
     def test_the_paired_request_is_the_nearest_one_before_the_failure(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # One service call makes three requests to the same connection, all under the one
@@ -212,7 +213,7 @@ class TestErrorRateFacts:
 
     def test_a_failing_response_whose_request_is_gone_points_at_itself(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Retention deletes the older row first, so a response may outlive the request it answered.
@@ -229,7 +230,7 @@ class TestErrorRateFacts:
 
     def test_an_object_without_failures_points_at_nothing(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = audit_log.insert(AuditSource.Email_SMTP, AuditEvent.Request_Sent, Channel_Name,
@@ -249,7 +250,7 @@ class TestConsecutiveFailureFacts:
 
     def test_an_unbroken_run_of_errors_is_counted(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         seed_outcome(audit_log, 'consec-1', AuditOutcome.OK)
@@ -266,7 +267,7 @@ class TestConsecutiveFailureFacts:
 
     def test_a_success_breaks_the_streak(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # The newest outcome is an error but the one before it is not
@@ -283,7 +284,7 @@ class TestConsecutiveFailureFacts:
 
     def test_the_ok_halves_of_paired_events_never_hide_a_streak(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # A source that writes paired events - the request half always leaves with an OK
@@ -303,7 +304,7 @@ class TestConsecutiveFailureFacts:
 
     def test_a_clean_object_still_reports_a_zero(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         seed_outcome(audit_log, 'clean-1', AuditOutcome.OK)
@@ -320,7 +321,7 @@ class TestHealthCheckStreamIsCountedApart:
 
     def test_a_failing_ping_does_not_add_to_the_traffic_streak(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # One connection, failing on both what it carries and what watches it
@@ -347,7 +348,7 @@ class TestHealthCheckStreamIsCountedApart:
 
     def test_a_succeeding_ping_no_longer_breaks_the_traffic_streak(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # A check that answers between failing calls, oldest first. On one shared stream the
@@ -373,7 +374,7 @@ class TestHealthCheckStreamIsCountedApart:
 
     def test_a_connection_with_only_a_health_check_reports_only_the_health_source(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         seed_exchange(audit_log, AuditSource.REST_Outgoing_Health, 'only-check-1', AuditOutcome.Error)
@@ -393,7 +394,7 @@ class TestHealthCheckStreamIsCountedApart:
 
     def test_a_soap_check_is_counted_apart_from_soap_traffic(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         seed_exchange(audit_log, AuditSource.SOAP_Outgoing, 'soap-call-1', AuditOutcome.Error)
@@ -416,7 +417,7 @@ class TestHealthCheckStreamIsCountedApart:
 
     def test_an_object_mid_streak_points_at_its_newest_failing_event(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # An unbroken run of failed per-hop deliveries - the newest one is the one
@@ -437,7 +438,7 @@ class TestHealthCheckStreamIsCountedApart:
 
     def test_a_clean_object_points_at_nothing(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # A failure with a recovery after it - no streak, so nothing to point at either
@@ -458,7 +459,7 @@ class TestLatencyFacts:
 
     def test_the_average_covers_only_events_that_carry_a_duration(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Two completed calls with durations and one request event without one
@@ -479,7 +480,7 @@ class TestLatencyFacts:
 
     def test_traffic_outside_the_window_never_counts(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         event_id = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Response_Received, Channel_Name,
@@ -497,7 +498,7 @@ class TestAuthFailureFacts:
 
     def test_only_the_auth_failed_events_are_counted(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Two credentials rejections and one ordinary failure

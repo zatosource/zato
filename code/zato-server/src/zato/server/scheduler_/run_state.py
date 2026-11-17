@@ -106,7 +106,7 @@ def _is_slot_claimed(data:'anydict', nominal_slot:'datetime') -> 'bool':
 # ################################################################################################################################
 
 class SchedulerRunState:
-    """ The run state of each scheduler job in the common database - the latest slot that any server claimed and
+    """ The run state of each scheduler job in the Zato database - the latest slot that any server claimed and
     the number of runs claimed so far. A server runs a firing only after it claimed it here, so each slot of
     a schedule runs once across all the servers that schedule the job. The run state also records the fire stream entry
     whose run holds the latest slot, until that run returns, so that a delivery of the same entry again,
@@ -192,7 +192,7 @@ class SchedulerRunState:
             else:
                 out = self._claim_forced(job_name)
 
-        # A server that was replaced, or that cannot reach the common database, does not run the job,
+        # A server that was replaced, or that cannot reach the Zato database, does not run the job,
         # because the active server may be running it at the same time.
         except _not_active_errors as e:
             reason = f'Run state could not be claimed: {e}'

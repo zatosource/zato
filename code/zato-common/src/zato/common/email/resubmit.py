@@ -13,7 +13,8 @@ from dataclasses import dataclass
 
 # Zato
 from zato.common.api import SMTPMessage
-from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource, get_audit_engine
+from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import build_attachment, get_attachment, list_attachments
 from zato.common.audit_log.resubmit import register_resubmit_handler, require_event_type, ResubmitException, \
     Action_Resend
@@ -57,7 +58,7 @@ def load_attachments(event_id:'int') -> 'anylist':
     """ The attachments of one recorded e-mail, their bytes included, in the order they were
     stored. An attachment whose bytes were left out because of the size cap stops the resend.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     # Our response to produce
     out:'anylist' = []

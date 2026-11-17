@@ -15,7 +15,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.audit_log.common import AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource, is_audit_log_enabled
 from zato.common.pubsub.outgoing import Direction_In, Direction_Out, get_direction, get_outgoing_topic_name, has_queue, \
     is_dlq_active, Key_CID, Key_Conn_ID, Key_Conn_Name, Key_Conn_Type, Key_DLQ_Rounds, Key_DLQ_Rule_Rounds, Key_Msg_ID, \
     Key_Pub_Time, locate_outgoing_conn
@@ -28,7 +28,7 @@ from zato.common.util.time_ import parse_utc, utcnow
 
 if 0:
     from zato.common.pubsub.delivery import DeliveryExhausted
-    from zato.common.typing_ import anytuple, stranydict, strdictnone
+    from zato.common.typing_ import anylist, anytuple, stranydict, strdictnone
     from zato.server.base.parallel import ParallelServer
     strdictnone = strdictnone
 
@@ -202,7 +202,10 @@ def move_to_dlq(
     data = dumps(document)
     msg_id = new_msg_id()
 
-    # The DLQ is always in the pub/sub database, so this goes to the backend and not through the facade
+    # The move is recorded in the audit log in the transaction that publishes the message to the DLQ ..
+    audit_events = _new_dlq_audit_events(server, cid, envelope, dlq_topic_name, msg_id, data, exhausted)
+
+    # .. which is always in the Zato database, so this goes to the backend and not through the facade.
     try:
         _ = server.pubsub_backend.publish(
             dlq_topic_name,
@@ -211,13 +214,12 @@ def move_to_dlq(
             correl_id=cid,
             publisher=PubSub.Outgoing.Delivery_Service,
             msg_id=msg_id,
+            audit_events=audit_events,
         )
     except Exception:
         logger.warning('Could not move message `%s` of `%s` to DLQ `%s`, cid `%s`, e:`%s`',
             envelope[Key_Msg_ID], conn_name, dlq_topic_name, cid, format_exc())
         return ''
-
-    _insert_dlq_audit_event(server, cid, envelope, dlq_topic_name, msg_id, data, exhausted)
 
     logger.info('Moved message `%s` of `%s` to DLQ `%s` as `%s` after %d attempts, cid `%s`, reason `%s`',
         envelope[Key_Msg_ID], conn_name, dlq_topic_name, msg_id, exhausted.attempts, cid, exhausted.error)
@@ -226,7 +228,7 @@ def move_to_dlq(
 
 # ################################################################################################################################
 
-def _insert_dlq_audit_event(
+def _new_dlq_audit_events(
     server:'ParallelServer',
     cid:'str',
     envelope:'stranydict',
@@ -234,30 +236,38 @@ def _insert_dlq_audit_event(
     dlq_msg_id:'str',
     data:'str',
     exhausted:'DeliveryExhausted',
-    ) -> 'None':
-    """ Records the move of one message to the DLQ in the audit log.
+    ) -> 'anylist':
+    """ Returns the audit event that records the move of one message to the DLQ, or no event
+    when the audit log is turned off.
     """
+    out:'anylist' = []
+
     audit_log = server.pubsub_backend.audit_log
 
     # The backend has no audit log in unit tests only
-    if not audit_log:
-        return
+    if not audit_log or not is_audit_log_enabled():
+        return out
 
     # The envelope carries the publication time as an ISO 8601 string
     pub_time = parse_utc(envelope[Key_Pub_Time])
+    sub_key = get_dlq_sub_key(envelope[Key_Conn_Type], envelope[Key_Conn_ID])
+    size = len(data)
 
-    _ = audit_log.insert(AuditSource.PubSub, AuditEvent.DLQ, dlq_topic_name,
+    audit_event = audit_log.new_pending_event(AuditSource.PubSub, AuditEvent.DLQ, dlq_topic_name,
         cid=cid,
         msg_id=dlq_msg_id,
         correl_id=cid,
         pub_time=pub_time,
         endpoint=envelope[Key_Conn_Name],
-        sub_key=get_dlq_sub_key(envelope[Key_Conn_Type], envelope[Key_Conn_ID]),
-        size=len(data),
+        sub_key=sub_key,
+        size=size,
         outcome=AuditOutcome.Error,
         status=exhausted.error,
         data=data,
     )
+    out.append(audit_event)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -5,11 +5,10 @@
 
 //! The replication barrier, answered over a Unix socket.
 //!
-//! A client writes the name of a database followed by a newline, and the node answers `ok` once every frame
-//! of that database committed before the request is synced on the standby, or locally when the node runs
-//! alone. For a database shipped asynchronously, `ok` answers at once on a node that serves requests.
-//! A node that is no longer active answers `replaced`, and an unknown database is answered with
-//! `error` followed by a description. A connection accepts any number of requests, one after another.
+//! A request is a single newline, and the node answers `ok` once every frame of the Zato database committed
+//! before the request is synced on the standby, or locally when the node runs alone. A node that is no longer
+//! active answers `replaced`, and a barrier that cannot be answered is answered with `error` followed by
+//! a description. A connection accepts any number of requests, one after another.
 
 use std::fs::File;
 use std::io::{BufRead, BufReader, ErrorKind, Write};
@@ -17,7 +16,6 @@ use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
 use std::sync::Arc;
 
-use crate::config::ShippingMode;
 use crate::state::{Role, Shared};
 use crate::wal;
 
@@ -40,7 +38,7 @@ pub enum BarrierOutcome {
     Failed(String),
 }
 
-/// Syncs the log of a database to the local disk.
+/// Syncs the log of the Zato database to the local disk.
 fn sync_locally(db_path: &Path) -> BarrierOutcome {
     let path = wal::wal_path(db_path);
     let outcome = File::open(&path).and_then(|file| file.sync_data());
@@ -53,23 +51,10 @@ fn sync_locally(db_path: &Path) -> BarrierOutcome {
     }
 }
 
-/// Waits until the frames of `database` committed before the call are synced on the standby or locally.
-pub fn wait(shared: &Shared, database: &str) -> BarrierOutcome {
-    let Some(config) = shared.config.database(database) else {
-        return BarrierOutcome::Failed(format!("unknown database `{database}`"));
-    };
-
+/// Waits until the frames of the Zato database committed before the call are synced on the standby or locally.
+pub fn wait(shared: &Shared) -> BarrierOutcome {
+    let db_path = &shared.config.database_path;
     let mut state = shared.state.lock();
-
-    // The frames of an asynchronous database are never waited for, so its barrier only tells whether the node serves requests.
-    if config.shipping == ShippingMode::Asynchronous {
-        let is_serving = state.role.is_active() && !state.isolated;
-        return if is_serving {
-            BarrierOutcome::Synced
-        } else {
-            BarrierOutcome::Replaced
-        };
-    }
 
     // A scan that starts after this point reads every frame committed before the call.
     state.scan_requested += 1;
@@ -80,7 +65,7 @@ pub fn wait(shared: &Shared, database: &str) -> BarrierOutcome {
         match state.role {
             Role::ActiveSolo if !state.admitting => {
                 drop(state);
-                return sync_locally(&config.path);
+                return sync_locally(db_path);
             }
             Role::ActiveSolo | Role::ActiveReplicated => {
                 if state.scan_completed >= ticket {
@@ -92,35 +77,23 @@ pub fn wait(shared: &Shared, database: &str) -> BarrierOutcome {
         shared.changed.wait(&mut state);
     }
 
-    let Some(target) = state
-        .databases
-        .iter()
-        .find(|progress| progress.name == database)
-        .map(|progress| progress.scanned)
-    else {
-        return BarrierOutcome::Failed(format!("unknown database `{database}`"));
-    };
+    let target = state.database.scanned;
 
     loop {
         match state.role {
-            // The record may already name this node alone, and the mark-out syncs every log before the node is active alone.
+            // The record may already name this node alone, and the mark-out syncs the log before the node is active alone.
             Role::ActiveReplicated if state.needs_mark_out => {}
             Role::ActiveReplicated => {
-                let confirmed = state
-                    .databases
-                    .iter()
-                    .find(|progress| progress.name == database)
-                    .map(|progress| progress.confirmed);
-                if confirmed.is_some_and(|confirmed| confirmed >= target) {
+                if state.database.confirmed >= target {
                     return BarrierOutcome::Synced;
                 }
             }
 
-            // A mark-out syncs every log before it moves the node to this role, and an admission in progress
+            // A mark-out syncs the log before it moves the node to this role, and an admission in progress
             // holds the barrier until the standby is in sync.
             Role::ActiveSolo if !state.admitting => {
                 drop(state);
-                return sync_locally(&config.path);
+                return sync_locally(db_path);
             }
             Role::ActiveSolo => {}
             _ => return BarrierOutcome::Replaced,
@@ -137,10 +110,11 @@ fn serve_connection(shared: &Shared, stream: UnixStream) {
     let reader = BufReader::new(stream);
 
     for line in reader.lines() {
-        let Ok(database) = line else {
+        // A connection that fails to read ends.
+        if line.is_err() {
             return;
-        };
-        let answer = match wait(shared, database.trim()) {
+        }
+        let answer = match wait(shared) {
             BarrierOutcome::Synced => ANSWER_OK.to_owned(),
             BarrierOutcome::Replaced => ANSWER_REPLACED.to_owned(),
             BarrierOutcome::Failed(reason) => format!("error {}\n", reason.replace('\n', " ")),

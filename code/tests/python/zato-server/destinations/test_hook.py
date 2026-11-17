@@ -13,7 +13,8 @@ from json import dumps
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditOutcome
+from zato.common.audit_log.api import event_table, AuditEvent, AuditOutcome
+from zato.common.db_env.database import get_database_engine
 from zato.common.destination.constants import DeliveryMode, DestinationType, Respond_From_Service
 from zato.common.destination.coordinator import new_transports
 from zato.common.destination.model import DestinationException
@@ -148,7 +149,7 @@ def _new_config() -> 'ChannelDestinationConfig':
 # ################################################################################################################################
 
 def _count_hop_rows() -> 'int':
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.where(event_table.c.event_type == AuditEvent.Request_Sent)
@@ -360,7 +361,7 @@ class TestDeliveringWhatAServiceHandled:
             config, overrides, stub.request.raw, transports.make(),
             cid=stub.cid, server_name=stub.server.name)
 
-        engine = get_audit_engine()
+        engine = get_database_engine()
 
         query = select(event_table)
         query = query.where(event_table.c.event_type == AuditEvent.Request_Sent)

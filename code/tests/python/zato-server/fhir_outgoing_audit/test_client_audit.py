@@ -27,7 +27,8 @@ from requests.exceptions import ConnectionError as RequestsConnectionError, Time
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import event_attr_table, event_table, get_audit_engine, AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import TransportStatus
 from zato.common.json_internal import loads
 from zato.common.typing_ import cast_
@@ -65,7 +66,7 @@ _ping_path = '/CapabilityStatement'
 def _get_events() -> 'anylist':
     """ Everything the audit log holds, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.order_by(event_table.c.id)
@@ -80,7 +81,7 @@ def _get_events() -> 'anylist':
 def _get_attrs(event_id:'int') -> 'strdict':
     """ The searchable attributes of one event, by name.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_attr_table.c.name, event_attr_table.c.value)
     query = query.where(event_attr_table.c.event_id == event_id)

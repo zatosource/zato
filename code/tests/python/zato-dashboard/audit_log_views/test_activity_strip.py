@@ -19,9 +19,10 @@ from json import dumps, loads
 # Zato
 from zato.admin.web.views.audit_log import strip
 from zato.admin.web.views.audit_log.poll import _strip_max_buckets, _strip_min_buckets
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource, \
-    ModuleCtx as AuditLogCtx
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.ext.bunch import Bunch
+from zato.common.test.database_env import DatabaseEnv
 
 # Test support
 from live_sql.env import database_env
@@ -44,9 +45,6 @@ _channel_name = 'test.activity.strip.channel'
 
 # A second channel proving that the strip honors the filters
 _other_channel_name = 'test.activity.strip.other'
-
-# The prefix all the audit log database environment variables share
-_env_prefix = 'Zato_Audit_Log_DB_'
 
 # Three events over exactly two hours - the window the strip derives is two hours wide,
 # and with sixteen buckets each one is 7.5 minutes, so the events land in the first
@@ -91,20 +89,20 @@ def _strip_events(tmp_path:'any_') -> 'envgen':
     """ Points the audit log at a throwaway SQLite database holding three events of one channel
     spread over two hours, and one more event of another channel.
     """
-    db_path = os.path.join(str(tmp_path), 'audit.db')
+    db_path = os.path.join(str(tmp_path), 'zato.db')
 
     details_config = {
-        'type': AuditLogCtx.Type_SQLite,
-        'name': db_path,
+        'type': DatabaseEnv.Type_SQLite,
+        'path': db_path,
     }
 
-    with database_env(_env_prefix, details_config):
+    with database_env(details_config):
 
         # Creating the log creates the schema the events are inserted straight into -
         # straight, because their times have to be exact for the buckets to be known.
         _ = AuditLog(_server_name)
 
-        engine = get_audit_engine()
+        engine = get_database_engine()
 
         with engine.begin() as connection:
             _insert_event(connection, _channel_name, _first_time, AuditOutcome.OK)

@@ -23,7 +23,6 @@ from gevent import get_hub, getcurrent, signal_handler, sleep, spawn
 from gevent.event import Event
 
 # Zato
-from zato.common.audit_log.buffer import flush_all_buffers
 from zato.common.config_dispatcher import handle_config_event
 from zato.common.db_env.connection import SQLite_Busy_Timeout_Ms
 from zato.common.db_env.engine import bind_process_queues
@@ -314,11 +313,8 @@ class WorkerRuntime:
                 break
             sleep(ModuleCtx.Drain_Check_Interval)
 
-        # .. a message whose delivery is in progress remains in its queue for the next worker ..
+        # .. and a message whose delivery is in progress remains in its queue for the next worker.
         self.server.pubsub_push_delivery.pause_all(ArbiterCtx.Delivery_Pause_Period)
-
-        # .. and the audit events that wait in a buffer are written before the worker exits.
-        flush_all_buffers()
 
         self.drained.set()
 

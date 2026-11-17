@@ -263,7 +263,7 @@ class SchedulerClient:
 
     def reload(self, odb_adapter:'any_', run_state:'SchedulerRunState') -> 'None':
         """ Loads all jobs from ODB via the adapter and sends them to the scheduler, each with the run state
-        that the common database holds for it, so the scheduler continues the runs of any server before this one.
+        that the Zato database holds for it, so the scheduler continues the runs of any server before this one.
         """
         # The number is drawn before the ODB read, so a job command drawn later reflects a change this read may not see
         sequence = self._draw_sequence()

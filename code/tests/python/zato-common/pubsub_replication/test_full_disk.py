@@ -131,11 +131,11 @@ def test_full_disk() -> 'None':
         connection.autocommit = True
         cursor = connection.cursor()
         cursor.execute(f"create tablespace pubsub_ts location '{_tablespace_dir}'")
-        cursor.execute(f'alter database {primary.env["Zato_PubSub_DB_Name"]} set default_tablespace = pubsub_ts')
+        cursor.execute(f'alter database {primary.env["Zato_Database_Name"]} set default_tablespace = pubsub_ts')
         connection.close()
 
         env = dict(primary.env)
-        env['Zato_PubSub_Generation_File'] = os.path.join(work_dir, 'generation')
+        env['Zato_Database_Generation_File'] = os.path.join(work_dir, 'generation')
 
         with pubsub_db_env(env):
             try:

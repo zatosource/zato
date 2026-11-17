@@ -88,7 +88,7 @@ def _raise_generation(database:'PubSubDatabase') -> 'int':
 
     try:
         cursor = connection.cursor()
-        query = 'update pubsub_active set generation = generation + 1, owner = %s where id = 1 returning generation'
+        query = 'update zato_active set generation = generation + 1, owner = %s where id = 1 returning generation'
         cursor.execute(query, (_other_owner,))
         row = cast_('any_', cursor.fetchone())
         connection.commit()
@@ -107,7 +107,7 @@ def _restore_previous_generation(database:'PubSubDatabase') -> 'None':
 
     try:
         cursor = connection.cursor()
-        cursor.execute('update pubsub_active set generation = generation - 1 where id = 1')
+        cursor.execute('update zato_active set generation = generation - 1 where id = 1')
         connection.commit()
     finally:
         connection.close()
@@ -121,7 +121,7 @@ def _read_active(database:'PubSubDatabase') -> 'tuple[int, str]':
 
     try:
         cursor = connection.cursor()
-        cursor.execute('select generation, owner from pubsub_active where id = 1')
+        cursor.execute('select generation, owner from zato_active where id = 1')
         row = cast_('any_', cursor.fetchone())
     finally:
         connection.close()
@@ -138,9 +138,9 @@ def _take_over_as_node(database:'PubSubDatabase', ha_generation:'int', pool_size
     work_dir = tempfile.mkdtemp(prefix='zato_pubsub_generation_', dir=os.environ['TMPDIR'])
 
     env = dict(database.env)
-    env['Zato_PubSub_Generation_File'] = os.path.join(work_dir, 'generation')
+    env['Zato_Database_Generation_File'] = os.path.join(work_dir, 'generation')
     env['Zato_HA_Generation'] = str(ha_generation)
-    env['Zato_PubSub_DB_Pool_Size'] = str(pool_size)
+    env['Zato_Database_Pool_Size'] = str(pool_size)
 
     # The backend resolves its engine on first access, which happens here while the variables select the engine
     # that its guard is installed on.
@@ -178,8 +178,8 @@ def test_replaced_backend_and_cleanup(pubsub_database:'PubSubDatabase') -> 'None
     work_dir = tempfile.mkdtemp(prefix='zato_pubsub_generation_', dir=os.environ['TMPDIR'])
 
     env = dict(pubsub_database.env)
-    env['Zato_PubSub_Generation_File'] = os.path.join(work_dir, 'generation')
-    env['Zato_PubSub_DB_Pool_Size'] = str(_pool_size_replaced)
+    env['Zato_Database_Generation_File'] = os.path.join(work_dir, 'generation')
+    env['Zato_Database_Pool_Size'] = str(_pool_size_replaced)
 
     with pubsub_db_env(env):
 
@@ -232,8 +232,8 @@ def test_generation_reached_again_by_another_server(pubsub_database:'PubSubDatab
     work_dir = tempfile.mkdtemp(prefix='zato_pubsub_generation_', dir=os.environ['TMPDIR'])
 
     env = dict(pubsub_database.env)
-    env['Zato_PubSub_Generation_File'] = os.path.join(work_dir, 'generation')
-    env['Zato_PubSub_DB_Pool_Size'] = str(_pool_size_reached)
+    env['Zato_Database_Generation_File'] = os.path.join(work_dir, 'generation')
+    env['Zato_Database_Pool_Size'] = str(_pool_size_reached)
 
     with pubsub_db_env(env):
 

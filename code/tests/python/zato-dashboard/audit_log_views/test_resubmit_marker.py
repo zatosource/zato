@@ -16,11 +16,12 @@ from contextlib import contextmanager
 # Zato
 from zato.admin.web.views.audit_log.query import _mark_resubmittable, _mark_resubmitted
 from zato.admin.web.views.audit_log.resubmit import resubmit
-from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource, \
-    ModuleCtx as AuditLogCtx
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.request_context import Key_Payload, Key_Payload_Kind, Key_Redacted, Payload_Kind_Described
 from zato.common.ext.bunch import Bunch
 from zato.common.json_internal import dumps, loads
+from zato.common.test.database_env import DatabaseEnv
 
 # Test support
 from live_sql.env import database_env
@@ -44,9 +45,6 @@ if 0:
 _server_name = 'test-resubmit-marker-server'
 _connection_name = 'test.resubmit.marker.conn'
 
-# The prefix all the audit log database environment variables share
-_env_prefix = 'Zato_Audit_Log_DB_'
-
 # What a call that can be repeated recorded
 _stored_call = dumps({Key_Payload: '{"order": 1}', 'method': 'POST', 'address': 'https://crm.example.com/orders'})
 
@@ -57,14 +55,14 @@ _stored_call = dumps({Key_Payload: '{"order": 1}', 'method': 'POST', 'address': 
 def _audit_log(tmp_path:'any_') -> 'envgen':
     """ Points the audit log at a throwaway SQLite database and hands back a log writing to it.
     """
-    db_path = os.path.join(str(tmp_path), 'audit.db')
+    db_path = os.path.join(str(tmp_path), 'zato.db')
 
     details_config = {
-        'type': AuditLogCtx.Type_SQLite,
-        'name': db_path,
+        'type': DatabaseEnv.Type_SQLite,
+        'path': db_path,
     }
 
-    with database_env(_env_prefix, details_config):
+    with database_env(details_config):
         yield AuditLog(_server_name)
 
 # ################################################################################################################################
@@ -86,7 +84,7 @@ def _new_row(event_id:'int', cid:'str', data:'str'='') -> 'anydict':
 def _mark(rows:'anylist') -> 'None':
     """ Runs the resubmitted marker over a page of REST outgoing rows.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         _mark_resubmitted(connection, AuditSource.REST_Outgoing, rows)

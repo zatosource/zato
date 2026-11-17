@@ -331,21 +331,19 @@ class DecisionBatchWriter:
             decision_rows.append(row)
 
         rollup_counts = self._rollup_counts(decisions)
-        session = self._session_factory()
 
-        try:
-            with session.begin():
+        # .. and write them with their firing counters in one transaction.
+        self._session_factory.write(self._insert_batch, decision_rows, rollup_counts)
 
-                # .. persist one row per decision ..
-                statement = insert(rule_decision_table)
-                _ = session.execute(statement, decision_rows)
+# ################################################################################################################################
 
-                # .. and fold the batch's firing counters into their daily rows in the same commit.
-                self._upsert_rollups(session, rollup_counts)
+    def _insert_batch(self, session:'Session', decision_rows:'rowlist', rollup_counts:'rollup_count_dict') -> 'None':
+        """ Persists one row per decision and folds the batch's firing counters into their daily rows in the same commit.
+        """
+        statement = insert(rule_decision_table)
+        _ = session.execute(statement, decision_rows)
 
-        # Release the transactional session in every case.
-        finally:
-            session.close()
+        self._upsert_rollups(session, rollup_counts)
 
 # ################################################################################################################################
 
@@ -372,13 +370,10 @@ class DecisionBatchWriter:
 
         for decision in decisions:
             row = decision_to_row(decision, self._capture_policy)
-            session = self._session_factory()
 
             # Insert this one decision in its own transaction ..
             try:
-                with session.begin():
-                    statement = insert(rule_decision_table)
-                    _ = session.execute(statement, row)
+                self._session_factory.write(self._insert_one, row)
 
             # .. skip a decision the log already holds, its header was never lost ..
             except IntegrityError:
@@ -390,12 +385,17 @@ class DecisionBatchWriter:
                 # .. while a structural failure such as a missing ruleset must stop the writer loudly.
                 raise
 
-            finally:
-                session.close()
-
             landed.append(decision)
 
         return landed
+
+# ################################################################################################################################
+
+    def _insert_one(self, session:'Session', row:'rowdict') -> 'None':
+        """ Inserts one decision row.
+        """
+        statement = insert(rule_decision_table)
+        _ = session.execute(statement, row)
 
 # ################################################################################################################################
 
@@ -413,13 +413,7 @@ class DecisionBatchWriter:
             rollup_counts = self._rollup_counts(landed)
 
             if rollup_counts:
-                session = self._session_factory()
-
-                try:
-                    with session.begin():
-                        self._upsert_rollups(session, rollup_counts)
-                finally:
-                    session.close()
+                self._session_factory.write(self._upsert_rollups, rollup_counts)
 
 # ################################################################################################################################
 

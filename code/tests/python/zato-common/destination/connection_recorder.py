@@ -17,7 +17,8 @@ from http.client import BAD_REQUEST, SERVICE_UNAVAILABLE
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import event_attr_table, event_table, get_audit_engine, AuditEvent, AuditLog
+from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditLog
+from zato.common.db_env.database import get_database_engine
 from zato.common.destination.constants import DestinationType
 from zato.common.destination.coordinator import new_context, new_transports
 from zato.common.destination.model import new_send_result
@@ -253,7 +254,7 @@ def new_test_context(
 def get_hop_rows() -> 'anylist':
     """ Returns every delivery recorded for the message, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.where(event_table.c.event_type == AuditEvent.Request_Sent)
@@ -275,7 +276,7 @@ def get_hop_rows() -> 'anylist':
 def get_attr_map(event_id:'int') -> 'anydict':
     """ Returns the attributes of one recorded delivery as a dict of name to value.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_attr_table.c.name, event_attr_table.c.value)
     query = query.where(event_attr_table.c.event_id == event_id)

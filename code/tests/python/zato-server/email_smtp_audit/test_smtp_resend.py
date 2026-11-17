@@ -19,7 +19,8 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.api import SMTPMessage
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import Env_Max_Attachment_Size
 from zato.common.audit_log.resubmit import load_event, ResubmitException
 from zato.common.email.resubmit import resend as smtp_resend
@@ -75,7 +76,7 @@ def _new_message() -> 'SMTPMessage':
 def _get_rows() -> 'anylist':
     """ Every message-sent row of the connection under test, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.where(event_table.c.object_name == Connection_Name)
@@ -276,7 +277,7 @@ class TestPingSource:
 
             _ = connection.ping()
 
-            engine = get_audit_engine()
+            engine = get_database_engine()
 
             query = select(event_table.c.source, event_table.c.event_type)
             query = query.where(event_table.c.object_name == Connection_Name)

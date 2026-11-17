@@ -19,7 +19,8 @@ from django.http import HttpResponse, HttpResponseServerError, JsonResponse
 from zato.admin.web.views import get_action_json, invoke_action_handler, method_allowed, \
     Action_Message_Max_Length, _traceback_marker
 from zato.admin.web.views.audit_log.sources import _source_resubmit
-from zato.common.audit_log.api import event_table, get_audit_engine
+from zato.common.audit_log.api import event_table
+from zato.common.db_env.database import get_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -162,7 +163,7 @@ def resubmit(req:'any_') -> 'HttpResponse':
 
     # Find which event this is, so the right service can perform the resubmit.
     lookup_query = select(event_table.c.source, event_table.c.event_type).where(event_table.c.id == event_id)
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         result = connection.execute(lookup_query)

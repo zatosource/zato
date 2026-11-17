@@ -22,7 +22,6 @@ const DEFAULT_COALESCE_WINDOW_MS: i64 = 50;
 
 /// Mutable state guarded by the scheduler mutex.
 pub struct SchedulerState {
-
     /// Map of job id to its runtime representation.
     pub jobs: HashMap<i64, RunningJob>,
 

@@ -18,10 +18,11 @@ from io import BytesIO
 
 # Zato
 from live_sql.env import database_env
-from zato.common.audit_log.api import AuditLog, ModuleCtx as AuditLogCtx
+from zato.common.audit_log.api import AuditLog
 from zato.common.ext.bunch import Bunch
 from zato.common.ext.imbox.parser import Struct
 from zato.server.connection.email import GenericIMAPConnection
+from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,9 +54,6 @@ Attachment_Name = 'results.pdf'
 Attachment_Type = 'application/pdf'
 Attachment_Content = b'%PDF-1.4 lab results'
 
-# The prefix all the audit log database environment variables share
-_env_prefix = 'Zato_Audit_Log_DB_'
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -63,14 +61,14 @@ _env_prefix = 'Zato_Audit_Log_DB_'
 def imap_audit_env(tmp_path:'any_') -> 'envgen':
     """ Points the audit log at a throwaway SQLite database for the duration of a test.
     """
-    db_path = os.path.join(str(tmp_path), 'audit.db')
+    db_path = os.path.join(str(tmp_path), 'zato.db')
 
     details = {
-        'type': AuditLogCtx.Type_SQLite,
-        'name': db_path,
+        'type': DatabaseEnv.Type_SQLite,
+        'path': db_path,
     }
 
-    with database_env(_env_prefix, details):
+    with database_env(details):
         yield
 
 # ################################################################################################################################

@@ -20,7 +20,7 @@ from production_mix import run_production_mix_scenario
 from push import run_push_delivery_scenario
 from runner import get_report_path
 from throughput import run_delivery_throughput_scenario, run_publish_throughput_scenario
-from zato.common.pubsub.sql.config import get_pubsub_engine
+from zato.common.db_env.database import get_database_engine
 from zato.common.test.pubsub_database import ModuleCtx
 
 # ################################################################################################################################
@@ -67,7 +67,7 @@ def test_latency(start_managed:'callable_', round_trip_ms:'float', monkeypatch:'
             lines.append(f'round trip {round_trip_ms} ms | {name} {elapsed:.1f}s')
 
     finally:
-        get_pubsub_engine().dispose()
+        get_database_engine().dispose()
 
         report_path = get_report_path('latency')
 

@@ -21,7 +21,7 @@ from sqlalchemy import text
 
 # Zato
 from zato.common.pubsub.sql.counts import No_Publisher
-from zato.common.pubsub.sql.config import get_pubsub_engine
+from zato.common.db_env.database import get_database_engine
 from zato.common.test.pubsub_database import get_db_mode, get_runtime_dir
 
 # ################################################################################################################################
@@ -148,7 +148,7 @@ def get_count_mismatches(is_snapshot:'bool'=False) -> 'strlist':
     A snapshot reads all of them in one repeatable read transaction of PostgreSQL, which is consistent during traffic.
     """
     out:'strlist' = []
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     if is_snapshot:
         engine = engine.execution_options(isolation_level=_snapshot_isolation_level)

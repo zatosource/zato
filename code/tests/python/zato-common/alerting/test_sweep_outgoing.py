@@ -24,7 +24,8 @@ from zato.common.alerting.object_config import alert_type_fhir, alert_type_rest,
 from zato.common.alerting.seed.rules_connections import rest_rules, soap_rules
 from zato.common.alerting.seed.rules_fhir import fhir_rules
 from zato.common.alerting.sweep import run_sweep
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import TransportStatus
 from zato.common.rule_engine.loading import load_documents
 from zato.common.rule_engine.parser import parse_data_details
@@ -203,7 +204,7 @@ class TestOutgoingRestSweep:
 
     def test_the_default_codes_fire_on_a_503_and_not_on_a_404(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Three 404s - not among the default 401, 403 and 5xx, and too few for the error rate ..
@@ -231,7 +232,7 @@ class TestOutgoingRestSweep:
 
     def test_the_connections_own_codes_stand_in_for_the_default(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_failures(audit_log, engine, now, 'nf', 3, '404 Not Found')
@@ -264,7 +265,7 @@ class TestOutgoingRestSweep:
 
     def test_the_connections_own_threshold_stands_in_for_the_rules_default(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_failures(audit_log, engine, now, 'down', 2, '503 Service Unavailable')
@@ -284,7 +285,7 @@ class TestOutgoingRestSweep:
 
     def test_timeouts_and_refused_connections_raise_connection_failures(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_failures(audit_log, engine, now, 'timeout', 2, TransportStatus.Timeout)
@@ -304,7 +305,7 @@ class TestOutgoingRestSweep:
 
     def test_a_connection_with_alerts_off_is_skipped_with_its_health_check(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # The connection fails on its calls and on its checks, and so does the other one
@@ -332,7 +333,7 @@ class TestOutgoingRestSweep:
 
     def test_the_connections_own_window_reaches_its_traffic_alone(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Three 503s an hour and a half back for both connections
@@ -355,7 +356,7 @@ class TestOutgoingRestSweep:
 
     def test_a_soap_outgoing_connection_is_judged_by_its_own_rules_and_named_as_soap(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Three 503s among the traffic of a SOAP connection - the same default codes a REST one alerts on ..
@@ -396,7 +397,7 @@ class TestOutgoingSoapSweep:
 
     def test_three_faults_raise_soap_faults_alone_and_not_status_codes(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Three Receiver faults on 500 - a 500 is among the default status codes, yet a fault is a fault
@@ -418,7 +419,7 @@ class TestOutgoingSoapSweep:
 
     def test_the_connections_own_fault_codes_stand_in_for_the_default(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Three Sender faults - the default alerts on them ..
@@ -452,7 +453,7 @@ class TestOutgoingSoapSweep:
 
     def test_a_rest_and_a_soap_connection_of_one_name_read_settings_of_their_own(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Three 404s through a REST connection and three Sender faults through a SOAP one, both of one name
@@ -482,7 +483,7 @@ class TestOutgoingFhirSweep:
 
     def test_three_outcomes_raise_operation_outcomes_alone_and_not_status_codes(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Three exception outcomes on 500 - a 500 is among the default status codes, yet an outcome is an outcome
@@ -504,7 +505,7 @@ class TestOutgoingFhirSweep:
 
     def test_the_connections_own_outcome_codes_stand_in_for_the_default(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Three not-found outcomes - the default does not alert on a missing resource ..
@@ -543,7 +544,7 @@ class TestOutgoingFhirSweep:
 
     def test_a_fhir_health_check_is_judged_by_the_fhir_rules(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Three failed checks in a row - the check's own streak, the connection's traffic being fine

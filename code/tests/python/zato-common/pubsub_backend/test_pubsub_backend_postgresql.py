@@ -16,7 +16,7 @@ import pytest
 # Zato
 from cleanup_postgresql import run_cleanup_postgresql_scenario
 from scenarios import run_common_scenarios
-from zato.common.pubsub.sql.config import get_pubsub_engine
+from zato.common.db_env.database import get_database_engine
 from zato.common.test.pubsub_database import connect, get_suite_modes, pubsub_db_env, PubSubDBMode, \
     start_pubsub_database, stop_pubsub_database
 
@@ -54,7 +54,7 @@ def test_pubsub_backend_postgresql(pubsub_database:'PubSubDatabase') -> 'None':
     """
     with pubsub_db_env(pubsub_database.env):
 
-        engine = get_pubsub_engine()
+        engine = get_database_engine()
         assert engine.dialect.name == 'postgresql'
 
         run_common_scenarios()
@@ -67,7 +67,7 @@ def test_pubsub_postgresql_connections_use_tls(pubsub_database:'PubSubDatabase')
     """
     with pubsub_db_env(pubsub_database.env):
 
-        engine = get_pubsub_engine()
+        engine = get_database_engine()
 
         with engine.connect() as connection:
             query = 'select ssl from pg_stat_ssl where pid = pg_backend_pid()'

@@ -22,7 +22,8 @@ from zato.common.alerting.engine import AlertDefaults, AlertTransports
 from zato.common.alerting.object_config import alert_type_mcp, get_defaults as get_object_defaults
 from zato.common.alerting.seed.rules_mcp import mcp_rules
 from zato.common.alerting.sweep import run_sweep
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import MCPAttr
 from zato.common.json_internal import dumps
 from zato.common.rule_engine.loading import load_documents
@@ -245,7 +246,7 @@ class TestInvalidCalls:
 
     def test_two_invalid_calls_are_quiet_by_default_and_fire_on_the_gateways_own_two(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Two invalid calls among twenty-four - under the error rate's tenth and under the default five
@@ -268,7 +269,7 @@ class TestInvalidCalls:
 
     def test_the_invalid_calls_window_of_the_gateway_applies_to_the_invalid_calls_alone(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Five invalid calls half an hour back - outside the rule's five minutes, inside the gateway's own hour
@@ -296,7 +297,7 @@ class TestSlowToolCalls:
 
     def test_the_warning_yields_to_the_error_above_the_error_value(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Thirty calls of 1200 ms each - under the rule's five seconds ..
@@ -327,7 +328,7 @@ class TestTooManyTools:
 
     def test_thirty_tools_fire_with_no_audit_rows_at_all(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         result, recorder = _run_sweep(engine, audit_log, now, 'cid-mcp-tools-1', None, tool_counts={_gateway_name: 30})
@@ -343,7 +344,7 @@ class TestTooManyTools:
 
     def test_twenty_five_tools_stay_quiet_under_the_gateways_own_thirty(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # At the default of twenty-five the count has reached the number ..
@@ -362,7 +363,7 @@ class TestRepeatedCallsAndVolume:
 
     def test_a_repeated_call_names_the_session_and_the_tool(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Six calls of one tool from one session - under the default twenty, over a gateway's own five
@@ -383,7 +384,7 @@ class TestRepeatedCallsAndVolume:
 
     def test_the_volume_over_the_budget_fires_and_reads_as_a_size(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Four responses of half a megabyte each - two megabytes, far under the default hundred
@@ -408,7 +409,7 @@ class TestTheOtherRules:
 
     def test_a_gateway_with_alerts_off_is_skipped_while_another_still_raises(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_invalid_calls(audit_log, engine, now, 5)
@@ -428,7 +429,7 @@ class TestTheOtherRules:
 
     def test_three_failed_tool_calls_in_a_row_mean_the_gateway_is_failing(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_tool_calls(audit_log, engine, now, 30)
@@ -442,7 +443,7 @@ class TestTheOtherRules:
 
     def test_a_silent_gateway_fires_only_once_it_expects_traffic(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # One call two hours back and nothing since

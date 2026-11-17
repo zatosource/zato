@@ -22,7 +22,8 @@ from requests.exceptions import ConnectionError as RequestsConnectionError, SSLE
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, AuditEvent, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import TransportStatus
 from zato.common.json_internal import loads
 
@@ -60,7 +61,7 @@ _connection_error = 'The endpoint went away'
 def _get_events() -> 'anylist':
     """ Everything the audit log holds, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.order_by(event_table.c.id)

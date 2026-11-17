@@ -300,10 +300,10 @@ def build_ssl_context(database:'PubSubDatabase') -> 'ssl.SSLContext':
     """
     env = database.env
 
-    out = ssl.create_default_context(cafile=env['Zato_PubSub_DB_SSL_CA_File'])
+    out = ssl.create_default_context(cafile=env['Zato_Database_SSL_CA_File'])
 
-    if cert_file := env.get('Zato_PubSub_DB_SSL_Cert_File'):
-        out.load_cert_chain(cert_file, env['Zato_PubSub_DB_SSL_Key_File'])
+    if cert_file := env.get('Zato_Database_SSL_Cert_File'):
+        out.load_cert_chain(cert_file, env['Zato_Database_SSL_Key_File'])
 
     return out
 
@@ -542,28 +542,28 @@ def start_pubsub_database(label:'str', mode:'str', extra_settings:'strlist | Non
 
     # .. the environment of the server and of the test process point at the container ..
     out.env = {
-        'Zato_PubSub_DB_Type': 'postgresql',
-        'Zato_PubSub_DB_Host': host,
-        'Zato_PubSub_DB_Port': f'{out.port}',
-        'Zato_PubSub_DB_Username': ModuleCtx.Username,
-        'Zato_PubSub_DB_Password': out.password,
-        'Zato_PubSub_DB_Name': ModuleCtx.DB_Name,
+        'Zato_Database_Type': 'postgresql',
+        'Zato_Database_Host': host,
+        'Zato_Database_Port': f'{out.port}',
+        'Zato_Database_Username': ModuleCtx.Username,
+        'Zato_Database_Password': out.password,
+        'Zato_Database_Name': ModuleCtx.DB_Name,
     }
 
     if mode in _tls_modes:
-        out.env['Zato_PubSub_DB_SSL'] = 'true'
-        out.env['Zato_PubSub_DB_SSL_CA_File'] = os.path.join(certs_dir, 'ca.crt')
+        out.env['Zato_Database_SSL'] = 'true'
+        out.env['Zato_Database_SSL_CA_File'] = os.path.join(certs_dir, 'ca.crt')
 
     if mode == PubSubDBMode.PostgreSQL_MTLS:
-        out.env['Zato_PubSub_DB_SSL_Cert_File'] = os.path.join(certs_dir, 'client.crt')
-        out.env['Zato_PubSub_DB_SSL_Key_File'] = os.path.join(certs_dir, 'client.key')
+        out.env['Zato_Database_SSL_Cert_File'] = os.path.join(certs_dir, 'client.crt')
+        out.env['Zato_Database_SSL_Key_File'] = os.path.join(certs_dir, 'client.key')
 
     if out.profile_name:
         dns_env = session_dns.get_env()
         out.env.update(dns_env)
 
         profile = Managed_Profiles[out.profile_name]
-        out.env['Zato_PubSub_DB_Pool_Size'] = f'{profile.pool_size}'
+        out.env['Zato_Database_Pool_Size'] = f'{profile.pool_size}'
 
     # .. the container is ready once it accepts them ..
     _wait_until_ready(out)
@@ -574,7 +574,7 @@ def start_pubsub_database(label:'str', mode:'str', extra_settings:'strlist | Non
     if out.profile_name:
         if os.environ.get(ModuleCtx.Env_Bouncer, ''):
             _start_bouncer(out)
-            out.env['Zato_PubSub_DB_Port'] = f'{Bouncer_Port}'
+            out.env['Zato_Database_Port'] = f'{Bouncer_Port}'
 
     return out
 
@@ -650,7 +650,7 @@ def replace_container(database:'PubSubDatabase', image:'str'='', extra_settings:
 
 @contextmanager
 def pubsub_db_env(env:'strstrdict') -> 'Iterator[None]':
-    """ Points the Zato_PubSub_DB_* variables at one database for the duration of a test.
+    """ Points the Zato_Database_* variables at one database for the duration of a test.
     """
     old_values:'anydict' = {}
 

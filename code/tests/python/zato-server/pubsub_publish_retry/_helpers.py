@@ -14,7 +14,8 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.audit_log.api import event_table, get_audit_engine
+from zato.common.audit_log.api import event_table
+from zato.common.db_env.database import get_database_engine
 from zato.common.test.client import AdminClient
 
 # ################################################################################################################################
@@ -196,7 +197,7 @@ def wait_for_empty_queue(
 def get_audit_events(msg_id:'str', event_type:'strnone'=None) -> 'anylist':
     """ The events the audit log holds about one message, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.where(event_table.c.msg_id == msg_id)

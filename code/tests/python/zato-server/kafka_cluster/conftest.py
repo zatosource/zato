@@ -89,14 +89,13 @@ def kafka_suite() -> 'iterator_':
         parts.add('zato environment', zato.stop)
         zato.create()
 
-        # The server gets a pub/sub database of its own, so nothing of an earlier session's DLQs is restored into it
+        # The server gets a Zato database of its own, so nothing of an earlier session's DLQs is restored into it
         environment = dict(bridge.server_environment)
-        environment[ModuleCtx.PubSub_DB_Path_Variable] = os.path.join(directory, ModuleCtx.PubSub_DB_File_Name)
 
         zato.start(environment)
 
         # The tests read the audit log the server writes
-        os.environ[ModuleCtx.Audit_DB_Variable] = zato.audit_db_path
+        os.environ[ModuleCtx.Database_Path_Variable] = zato.audit_db_path
 
         # .. the services the tests drive ..
         zato.deploy(ModuleCtx.Shared_Services_File.name, ModuleCtx.Shared_Services_File.read_text())

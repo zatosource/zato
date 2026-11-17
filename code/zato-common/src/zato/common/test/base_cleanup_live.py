@@ -20,7 +20,7 @@ from sqlalchemy import text
 
 # Zato
 from zato.common.db_env.common import Type_PostgreSQL
-from zato.common.pubsub.sql.config import get_pubsub_db_path, get_pubsub_engine
+from zato.common.db_env.database import get_database_engine, get_database_values
 from zato.common.test import pubsub_db
 
 # local
@@ -101,7 +101,7 @@ class BaseCleanupLiveTestCase(unittest.TestCase):
 
     def _run_cleanup_once(self, extra_env:'strstrdict | None'=None) -> 'None':
         """ Runs the cleanup subprocess in --once mode against the shared pub/sub database.
-        Zato_PubSub_DB_Path is inherited from this test process's environment,
+        Zato_Database_Path is inherited from this test process's environment,
         and extra_env adds the settings that one test needs.
         """
         env = dict(os.environ)
@@ -118,9 +118,9 @@ class BaseCleanupLiveTestCase(unittest.TestCase):
 
     def _run_cleanup_while_locked(self, lock_seconds:'float') -> 'str':
         """ Runs the cleanup subprocess in --once mode while another connection holds the write lock
-        of the shared pub/sub database for the given time, and returns what the subprocess logged.
+        of the Zato database for the given time, and returns what the subprocess logged.
         """
-        engine = get_pubsub_engine()
+        engine = get_database_engine()
 
         if engine.dialect.name == Type_PostgreSQL:
             output = self._run_cleanup_while_locked_postgresql(engine, lock_seconds)
@@ -135,7 +135,7 @@ class BaseCleanupLiveTestCase(unittest.TestCase):
         """ Holds the write lock of the SQLite file for longer than the busy timeout of the cleanup process,
         which postpones its sweep until the lock is released.
         """
-        db_path = get_pubsub_db_path()
+        db_path = get_database_values()['name']
 
         lock_connection = sqlite3.connect(db_path, isolation_level=None)
         _ = lock_connection.execute('begin immediate')

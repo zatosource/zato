@@ -15,8 +15,9 @@ from sqlalchemy import select
 # Zato
 from common import delete_all_events
 from resubmit_context import run_hop_ack_checks, run_request_context_checks, run_run_once_checks
-from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
-    get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, AuditEvent, AuditLog, \
+    AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import event_dedup_table, AuditBody, AuditClassification
 from zato.common.audit_log.dedup import acquire_dedup_key, build_dedup_key, complete_dedup_key, get_in_doubt, \
     release_dedup_key
@@ -58,7 +59,7 @@ _actor = 'resubmit.operator'
 def _get_event_row(event_id:'int') -> 'anydict':
     """ Returns one event row as a dict.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.where(event_table.c.id == event_id)
@@ -75,7 +76,7 @@ def _get_event_row(event_id:'int') -> 'anydict':
 def _get_attr_value(event_id:'int', name:'str') -> 'str':
     """ Returns the value of one attribute of one event.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_attr_table.c.value)
     query = query.where(event_attr_table.c.event_id == event_id)
@@ -93,7 +94,7 @@ def _get_attr_value(event_id:'int', name:'str') -> 'str':
 def _get_ledger_actor(dedup_key:'str') -> 'str':
     """ Returns who claimed one dedup key, straight off the ledger.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_dedup_table.c.actor)
     query = query.where(event_dedup_table.c.dedup_key == dedup_key)
@@ -110,7 +111,7 @@ def _get_ledger_actor(dedup_key:'str') -> 'str':
 def _get_parent_ids(child_event_id:'int') -> 'anylist':
     """ Returns the lineage parents of one child event.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_link_table.c.parent_event_id)
     query = query.where(event_link_table.c.child_event_id == child_event_id)
@@ -376,7 +377,7 @@ def _run_hop_resend_checks(audit_log:'AuditLog') -> 'None':
     else:
         raise Exception('A failed send was expected to propagate')
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.where(event_table.c.cid == 'cid-core-hop-fail')
@@ -439,7 +440,7 @@ def _run_dedup_checks() -> 'None':
     """ Confirms the dedup ledger - deterministic keys, atomic single acquisition,
     in-doubt detection of interrupted resubmits, and release making a key acquirable again.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     # The same operation always hashes to the same key, a different one never does ..
     first_key = build_dedup_key(Action_Resend, 123, 'payload-a')
@@ -489,7 +490,7 @@ def _run_bulk_resubmit_checks(audit_log:'AuditLog') -> 'None':
     dedup preventing double-apply, a failed row staying retryable, and the one
     audit event recording the whole operation.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     payloads = ['bulk-one', 'bulk-two-bad', 'bulk-three']
     seeded_ids:'anylist' = []

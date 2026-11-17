@@ -13,7 +13,7 @@ import os
 from contextlib import contextmanager
 
 # Zato
-from zato.common.pubsub.sql.config import ModuleCtx as PubSubDBCtx
+from zato.common.test.database_env import DatabaseEnv
 from zato.common.test.rabbitmq_ import RabbitMQProcess
 
 # ################################################################################################################################
@@ -52,7 +52,7 @@ SSL_CA_Env_Name = 'SSL_CERT_FILE'
 # A comma-separated list of backend names that narrows the run
 Backends_Env_Name = 'Zato_Test_PubSub_Backends'
 
-SQLite_File_Name = 'pubsub.db'
+SQLite_File_Name = 'zato.db'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -82,18 +82,18 @@ def get_backend_names() -> 'strlist':
 
 @contextmanager
 def pubsub_path_env(db_path:'str') -> 'envgen':
-    """ Points Zato_PubSub_DB_Path at one SQLite file for as long as the context is open.
+    """ Points Zato_Database_Path at one SQLite file for as long as the context is open.
     """
-    old_path = os.environ.get(PubSubDBCtx.Env_Path)
-    os.environ[PubSubDBCtx.Env_Path] = db_path
+    old_path = os.environ.get(DatabaseEnv.Env_Path)
+    os.environ[DatabaseEnv.Env_Path] = db_path
 
     try:
         yield
     finally:
         if old_path is None:
-            _ = os.environ.pop(PubSubDBCtx.Env_Path, None)
+            _ = os.environ.pop(DatabaseEnv.Env_Path, None)
         else:
-            os.environ[PubSubDBCtx.Env_Path] = old_path
+            os.environ[DatabaseEnv.Env_Path] = old_path
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -28,7 +28,8 @@ from redis import Redis
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import event_attr_table, event_table, get_audit_engine, AuditEvent, AuditSource
+from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import LLMAttr, LLMFinish, TransportStatus
 from zato.common.ext.bunch import Bunch
 from zato.common.typing_ import cast_
@@ -140,7 +141,7 @@ def _get_wrapper(
 def _rows_of(conn_name:'str') -> 'list':
     """ The audit rows a connection has written, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table).where(
         event_table.c.source == AuditSource.LLM,
@@ -157,7 +158,7 @@ def _rows_of(conn_name:'str') -> 'list':
 def _attrs_of(event_id:'int') -> 'strdict':
     """ The attributes of one audit row, as stored.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_attr_table.c.name, event_attr_table.c.value, event_attr_table.c.value_number).where(
         event_attr_table.c.event_id == event_id,

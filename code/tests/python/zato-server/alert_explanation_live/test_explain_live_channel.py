@@ -418,7 +418,7 @@ def _produce_channel_failures(channel:'_ChannelDescription') -> 'None':
 def _server_audit_engine() -> 'any_':
     """ The audit database of the live server - the one file the server writes and this process reads.
     """
-    path = os.path.join(LiveServer.server_directory, 'audit.db')
+    path = os.path.join(LiveServer.server_directory, 'zato.db')
     out = create_engine(f'sqlite:///{path}')
     return out
 
@@ -451,7 +451,7 @@ def _get_stored_explanations(channel:'_ChannelDescription') -> 'anylist':
     """ Every explanation the live server stored for the channel's source, read off its own ODB - the two proofs
     share the server, so each reads the explanations of its own channel kind alone.
     """
-    path = os.path.join(os.path.dirname(LiveServer.server_directory), 'zato.db')
+    path = os.path.join(os.path.dirname(LiveServer.server_directory), 'config.db')
     session_maker = sessionmaker(bind=create_engine(f'sqlite:///{path}'))
 
     store = ExplanationStore(session_maker)

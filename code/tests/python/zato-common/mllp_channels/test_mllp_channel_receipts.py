@@ -20,13 +20,14 @@ import pytest
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog
-from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
+from zato.common.audit_log.api import AuditEvent, AuditLog, event_table
+from zato.common.db_env.database import get_database_engine
 from zato.common.hl7.mllp.reply import Unmatched_Object_Name
 from zato.common.hl7.mllp.router import HL7MessageRouter
 from zato.common.hl7.mllp.server import ConnectionContext, HL7MLLPServer
 from zato.common.hl7.mllp.settings import ListenerConfig, RouteSettings
 from zato.common.typing_ import cast_
+from zato.common.test.database_env import DatabaseEnv
 
 from mllp_live_util import sample_adt_a01
 
@@ -69,14 +70,14 @@ _no_message_error_text = 'Batch contains no MSH segment'
 def audit_db_env(tmp_path:'os.PathLike') -> 'any_':
     """ Points the audit database at a SQLite file of this test's own.
     """
-    database_path = os.path.join(str(tmp_path), 'audit.db')
-    os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
-    os.environ[AuditLogCtx.Env_Name] = database_path
+    database_path = os.path.join(str(tmp_path), 'zato.db')
+    os.environ[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
+    os.environ[DatabaseEnv.Env_Path] = database_path
 
     yield database_path
 
-    del os.environ[AuditLogCtx.Env_Type]
-    del os.environ[AuditLogCtx.Env_Name]
+    del os.environ[DatabaseEnv.Env_Type]
+    del os.environ[DatabaseEnv.Env_Path]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -148,7 +149,7 @@ def _deliver(server:'HL7MLLPServer', router:'HL7MessageRouter', message:'bytes',
 def _get_events(event_type:'str') -> 'dictlist':
     """ Returns every audit event of one type, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.where(event_table.c.event_type == event_type)

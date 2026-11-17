@@ -24,7 +24,7 @@ from urllib.request import Request, urlopen
 
 # Zato
 from zato.common.test.conftest_base_pubsub import find_free_port
-from zato.common.test.pubsub_database import connect, get_runtime_dir
+from zato.common.test.pubsub_database import connect, get_runtime_dir, is_postgresql_mode
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -158,13 +158,12 @@ def _container_command(server:'ContainerServer', action:'str') -> 'strlist':
 # ################################################################################################################################
 
 def build_server_env(server:'ContainerServer', database:'PubSubDatabase') -> 'None':
-    """ Fills in the environment of a server - its ports, the shared pub/sub database
+    """ Fills in the environment of a server - its ports, the shared Zato database
     and the files of its own environment.
     """
     server.env['Zato_Config_Bind_Port'] = str(server.port)
     server.env['Zato_Broker_HTTP_Port'] = str(server.broker_port)
-    server.env['Zato_PubSub_Generation_File'] = os.path.join(server.server_directory, 'pubsub-generation')
-    server.env['Zato_Audit_Log_DB_Name'] = os.path.join(server.server_directory, 'audit.db')
+    server.env['Zato_Database_Generation_File'] = os.path.join(server.server_directory, 'database-generation')
     server.env['Zato_PubSub_Pull_Lease_Seconds'] = _pull_lease_seconds
     server.env.update(database.env)
 
@@ -257,7 +256,7 @@ def read_generation(database:'PubSubDatabase') -> 'int':
 
     try:
         cursor = connection.cursor()
-        cursor.execute('select generation from pubsub_active where id = 1')
+        cursor.execute('select generation from zato_active where id = 1')
         rows = cursor.fetchall()
         out = rows[0][0]
     finally:
@@ -283,10 +282,13 @@ def wait_for_generation(database:'PubSubDatabase', generation:'int', timeout_sec
 
 # ################################################################################################################################
 
-def read_audit_rows(server:'ContainerServer', query:'str') -> 'list':
-    """ Returns the rows of a query against the audit log of a server, which is a SQLite file in its directory.
+def read_audit_rows(database:'PubSubDatabase', query:'str') -> 'list':
+    """ Returns the rows of a query against the audit log in the shared Zato database of the pair.
     """
-    connection = sqlite3.connect(server.env['Zato_Audit_Log_DB_Name'])
+    if is_postgresql_mode(database.mode):
+        connection = connect(database)
+    else:
+        connection = sqlite3.connect(database.env['Zato_Database_Path'])
 
     try:
         cursor = connection.cursor()
@@ -299,13 +301,13 @@ def read_audit_rows(server:'ContainerServer', query:'str') -> 'list':
 
 # ################################################################################################################################
 
-def read_audit_takeovers(server:'ContainerServer', after_generation:'int') -> 'list[tuple[int, int]]':
+def read_audit_takeovers(database:'PubSubDatabase', after_generation:'int') -> 'list[tuple[int, int]]':
     """ Returns the previous and the new generation of each takeover that the audit log of a server recorded
     above the given generation, in the order of the takeovers.
     """
     out:'list[tuple[int, int]]' = []
 
-    for previous_value, generation_value in read_audit_rows(server, _audit_takeover_query):
+    for previous_value, generation_value in read_audit_rows(database, _audit_takeover_query):
         generation = int(generation_value)
         if generation > after_generation:
             out.append((int(previous_value), generation))

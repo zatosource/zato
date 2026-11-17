@@ -17,7 +17,8 @@ from zato.common.alerting.explain.explanation import parse_explanation
 from zato.common.alerting.explain.skill import get_skill_source, load_skill, Skills_Dir_Name
 from zato.common.alerting.explain.store import ExplanationStore
 from zato.common.alerting.object_config import LLM_Connection_Config_Key
-from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditLog, AuditOutcome
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome
+from zato.common.db_env.database import get_database_engine
 from zato.common.util.api import utcnow
 from zato.server.service.internal.alerting.object_info import get_object_info
 
@@ -66,7 +67,7 @@ def get_explanation(service:'AdminService', payload:'stranydict') -> 'stranydict
     # Collect the evidence - the rows the measures were counted from, grouped and fitted
     # to the budget, the object's definition and the baseline around the failures ..
     now = utcnow()
-    engine = get_audit_engine()
+    engine = get_database_engine()
     fact = payload['fact']
 
     object_info, baseline_object_name, test_transfers_on = get_object_info(service, source, object_name)

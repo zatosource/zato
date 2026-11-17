@@ -398,7 +398,7 @@ class Create(ZatoCommand):
         args_path = os.path.abspath(args.path)
 
         # The ODB is a file in the environment's directory unless given explicitly
-        args.odb_path = args.odb_path or os.path.join(args_path, 'zato.db')
+        args.odb_path = args.odb_path or os.path.join(args_path, 'config.db')
 
         next_step = count(1)
         server_name = 'server1'

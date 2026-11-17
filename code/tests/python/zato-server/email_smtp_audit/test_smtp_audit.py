@@ -19,7 +19,8 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.api import SMTPMessage
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, AuditEvent, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import get_attachment, list_attachments
 from zato.common.destination.constants import DestinationOption, DestinationType
 from zato.common.destination.coordinator import deliver_hop, new_context, PlannedHop
@@ -75,7 +76,7 @@ def _new_message() -> 'SMTPMessage':
 def _get_events() -> 'anylist':
     """ Everything the audit log holds, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.order_by(event_table.c.id)
@@ -129,7 +130,7 @@ def test_the_sent_attachments_are_stored_as_they_went_out(tmp_path:'os.PathLike'
         conn = new_smtp_connection()
         _ = conn.send(_new_message(), cid=_cid)
 
-        engine = get_audit_engine()
+        engine = get_database_engine()
         event = _get_events()[0]
 
         items = list_attachments(engine, event['id'])

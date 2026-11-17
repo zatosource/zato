@@ -19,7 +19,7 @@ from time import monotonic, sleep
 
 # Zato
 from zato.common.api import HL7
-from zato.common.audit_log.api import get_audit_engine
+from zato.common.db_env.database import get_database_engine
 from zato.common.demo.seed import get_demo_rule_defs, purge_demo_data, seed_demo_data, Channel_Clinic, Channel_Lab, \
     Channel_Main, Facilities_By_Channel, Outconn_FHIR, Outconn_Forward, Route_Clinic, Route_Lab, Route_Main, SeedConfig
 from zato.common.destination.constants import DestinationType
@@ -556,7 +556,7 @@ def import_demo_data(server:'ParallelServer', *, config:'SeedConfig | None'=None
 
     # The seeded history goes into the same audit database the server writes to,
     # collected in memory first and landing in one bulk transaction
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     phase_start = monotonic()
     result = seed_demo_data(engine, server_name=server.name, config=config)
@@ -621,7 +621,7 @@ def remove_demo_data(server:'ParallelServer') -> 'stranydict':
         deleted_connections.append(rest_name)
 
     # The audit rows go next
-    engine = get_audit_engine()
+    engine = get_database_engine()
     purge_demo_data(engine)
 
     # The services file the import once wrote goes away too, so a restart does not redeploy it

@@ -26,8 +26,8 @@ sys.path.insert(0, _lib_dir)
 import pytest
 
 # Zato
-from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
+from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,15 +73,15 @@ def audit_db_env(tmp_path:'any_') -> 'any_':
     """ Points the deduplicating alert store at a per-test SQLite file
     so spike sweeps run on their own isolated database.
     """
-    database_path = os.path.join(str(tmp_path), 'audit.db')
+    database_path = os.path.join(str(tmp_path), 'zato.db')
 
-    os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
-    os.environ[AuditLogCtx.Env_Name] = database_path
+    os.environ[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
+    os.environ[DatabaseEnv.Env_Path] = database_path
 
     yield database_path
 
-    del os.environ[AuditLogCtx.Env_Type]
-    del os.environ[AuditLogCtx.Env_Name]
+    del os.environ[DatabaseEnv.Env_Type]
+    del os.environ[DatabaseEnv.Env_Path]
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -56,7 +56,7 @@ def get_replication_mode() -> 'str':
 
 @contextmanager
 def replicated_environment(label:'str', is_sync:'bool') -> 'Iterator[ReplicatedDatabase]':
-    """ A primary, its standby and the proxy, with the Zato_PubSub_DB_* variables pointing at the proxy,
+    """ A primary, its standby and the proxy, with the Zato_Database_* variables pointing at the proxy,
     the generation file and the audit log of the test in a directory of their own.
     """
     mode = get_replication_mode()
@@ -64,8 +64,7 @@ def replicated_environment(label:'str', is_sync:'bool') -> 'Iterator[ReplicatedD
     work_dir = tempfile.mkdtemp(prefix=f'zato_pubsub_replication_{label}_', dir=get_runtime_dir())
 
     env = dict(database.env)
-    env['Zato_PubSub_Generation_File'] = os.path.join(work_dir, 'generation')
-    env['Zato_Audit_Log_DB_Name'] = os.path.join(work_dir, 'audit.db')
+    env['Zato_Database_Generation_File'] = os.path.join(work_dir, 'generation')
     env[ModuleCtx.Env_Pull_Lease_Seconds] = Pull_Lease_Seconds
 
     try:

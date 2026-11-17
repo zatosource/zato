@@ -3,7 +3,7 @@
 // Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 // Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
-//! The copy of one database on the standby, built from the frames and the snapshots the active node sends.
+//! The copy of the Zato database on the standby, built from the frames and the snapshots the active node sends.
 //!
 //! No `SQLite` connection is open on a copy while frames arrive, so the frames are written at their offsets
 //! in its log as they are. `SQLite` opens the copy only to checkpoint it before a new cycle of the log
@@ -94,11 +94,8 @@ fn start_new_log(db_path: &Path, raw: &[u8], has_log: bool) -> Result<(WalHeader
     Ok((header, file))
 }
 
-/// The copy of one database.
+/// The copy of the Zato database.
 pub struct DatabaseCopy {
-    /// The name of the database.
-    pub name: String,
-
     /// The path of the copy.
     db_path: PathBuf,
 
@@ -114,9 +111,8 @@ pub struct DatabaseCopy {
 
 impl DatabaseCopy {
     /// Opens the copy at `db_path` and finds how far its log reaches.
-    pub fn open(name: &str, db_path: &Path) -> Result<Self, Error> {
+    pub fn open(db_path: &Path) -> Result<Self, Error> {
         let mut out = Self {
-            name: name.to_owned(),
             db_path: db_path.to_owned(),
             header: None,
             end_frame: 0,
@@ -151,7 +147,6 @@ impl DatabaseCopy {
     pub fn position(&self) -> Position {
         let (salt_one, salt_two) = self.header.as_ref().map_or((0, 0), |header| (header.salt_one, header.salt_two));
         Position {
-            database: self.name.clone(),
             salt_one,
             salt_two,
             end_frame: self.end_frame,
@@ -170,10 +165,7 @@ impl DatabaseCopy {
             (Some((fresh_header, fresh_file)), _, _) => (fresh_header, fresh_file, 0),
             (None, Some(current_header), Some(file)) => (current_header, file, self.end_frame),
             (None, _, _) => {
-                return Err(Error::new(
-                    ErrorKind::InvalidData,
-                    format!("frames of {} arrived before a log header", self.name),
-                ));
+                return Err(Error::new(ErrorKind::InvalidData, "frames arrived before a log header"));
             }
         };
 
@@ -181,20 +173,14 @@ impl DatabaseCopy {
         if first_frame != current_end {
             return Err(Error::new(
                 ErrorKind::InvalidData,
-                format!(
-                    "frames of {} start at {first_frame} while the copy ends at {current_end}",
-                    self.name
-                ),
+                format!("frames start at {first_frame} while the copy ends at {current_end}"),
             ));
         }
 
         let frame_count = u64::from(end_frame.saturating_sub(first_frame));
         let expected_length = frame_count * current_header.frame_size();
         if u64::try_from(bytes.len()).ok() != Some(expected_length) {
-            return Err(Error::new(
-                ErrorKind::InvalidData,
-                format!("frames of {} have an unexpected length", self.name),
-            ));
+            return Err(Error::new(ErrorKind::InvalidData, "frames have an unexpected length"));
         }
 
         file.write_all_at(bytes, current_header.frame_offset(first_frame))?;
@@ -300,14 +286,14 @@ mod tests {
     fn the_copy_holds_every_shipped_commit_across_restarts() {
         let source_dir = tempfile::tempdir().unwrap();
         let copy_dir = tempfile::tempdir().unwrap();
-        let source_path = source_dir.path().join("pubsub.db");
-        let copy_path = copy_dir.path().join("pubsub.db");
+        let source_path = source_dir.path().join("zato.db");
+        let copy_path = copy_dir.path().join("zato.db");
 
         // A copy begins with the database file, as a snapshot delivers it.
         let source = open(&source_path);
         let _ = std::fs::copy(&source_path, &copy_path).unwrap();
         let mut cursor = WalCursor::new(wal::wal_path(&source_path));
-        let mut copy = DatabaseCopy::open("pubsub", &copy_path).unwrap();
+        let mut copy = DatabaseCopy::open(&copy_path).unwrap();
 
         source
             .execute_batch("create table item (value text); insert into item values ('one');")
@@ -329,7 +315,7 @@ mod tests {
     fn a_gap_is_refused() {
         let source_dir = tempfile::tempdir().unwrap();
         let copy_dir = tempfile::tempdir().unwrap();
-        let source_path = source_dir.path().join("pubsub.db");
+        let source_path = source_dir.path().join("zato.db");
         let source = open(&source_path);
         source
             .execute_batch("create table item (value text); insert into item values ('one');")
@@ -340,7 +326,7 @@ mod tests {
         let ScanOutcome::Restarted { header, frames } = cursor.scan().unwrap() else {
             panic!("expected a new log")
         };
-        let mut copy = DatabaseCopy::open("pubsub", &copy_dir.path().join("pubsub.db")).unwrap();
+        let mut copy = DatabaseCopy::open(&copy_dir.path().join("zato.db")).unwrap();
         let _ = copy.apply_frames(Some(&header), 0, 0, &[]).unwrap();
         let error = copy
             .apply_frames(None, 1, frames.end_frame, frames.bytes.get(4120..).unwrap_or_default())
@@ -351,7 +337,7 @@ mod tests {
     #[test]
     fn a_checkpoint_that_a_reader_keeps_from_completing_fails() {
         let source_dir = tempfile::tempdir().unwrap();
-        let source_path = source_dir.path().join("pubsub.db");
+        let source_path = source_dir.path().join("zato.db");
         let source = open(&source_path);
         source
             .execute_batch("create table item (value text); insert into item values ('one');")

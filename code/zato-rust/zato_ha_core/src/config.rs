@@ -5,9 +5,9 @@
 
 //! Configuration of the node, read from `Zato_HA_*` environment variables.
 //!
-//! A deployment sets the mode, and every other variable overrides a default defined in this module. A pub/sub
+//! A deployment sets the mode, and every other variable overrides a default defined in this module. A Zato
 //! database on `PostgreSQL` puts the node in the shared storage mode, in which both hosts use the one database,
-//! nothing is replicated between them, and the node probes the database with the `Zato_PubSub_DB_*` variables
+//! nothing is replicated between them, and the node probes the database with the `Zato_Database_*` variables
 //! of the Zato server.
 
 use std::path::{Path, PathBuf};
@@ -37,7 +37,7 @@ pub const ENV_REPLICATION_PORT: &str = "Zato_HA_Replication_Port";
 /// The environment variable with the port of the role endpoint.
 pub const ENV_ROLE_PORT: &str = "Zato_HA_Role_Port";
 
-/// The environment variable with the directory of the databases and of the node's own files.
+/// The environment variable with the directory of the Zato database and of the node's own files.
 pub const ENV_DATA_DIR: &str = "Zato_HA_Data_Dir";
 
 /// The environment variable with the CA file of the replication link.
@@ -64,50 +64,44 @@ pub const ENV_BARRIER_SOCKET: &str = "Zato_HA_Barrier_Socket";
 /// The environment variable through which the node passes its generation to the Zato server.
 pub const ENV_GENERATION: &str = "Zato_HA_Generation";
 
-/// The environment variable with the path of the pub/sub database, shared with the Zato server.
-pub const ENV_PUBSUB_DB_PATH: &str = "Zato_PubSub_DB_Path";
+/// The environment variable with the path of the Zato database, shared with the Zato server.
+pub const ENV_DATABASE_PATH: &str = "Zato_Database_Path";
 
-/// The environment variable with the type of the pub/sub database, shared with the Zato server.
-pub const ENV_PUBSUB_DB_TYPE: &str = "Zato_PubSub_DB_Type";
+/// The environment variable with the type of the Zato database, shared with the Zato server.
+pub const ENV_DATABASE_TYPE: &str = "Zato_Database_Type";
 
-/// The environment variable with the host of the pub/sub database on `PostgreSQL`.
-pub const ENV_PUBSUB_DB_HOST: &str = "Zato_PubSub_DB_Host";
+/// The environment variable with the host of the Zato database on `PostgreSQL`.
+pub const ENV_DATABASE_HOST: &str = "Zato_Database_Host";
 
-/// The environment variable with the port of the pub/sub database on `PostgreSQL`.
-pub const ENV_PUBSUB_DB_PORT: &str = "Zato_PubSub_DB_Port";
+/// The environment variable with the port of the Zato database on `PostgreSQL`.
+pub const ENV_DATABASE_PORT: &str = "Zato_Database_Port";
 
-/// The environment variable with the user name of the pub/sub database on `PostgreSQL`.
-pub const ENV_PUBSUB_DB_USERNAME: &str = "Zato_PubSub_DB_Username";
+/// The environment variable with the user name of the Zato database on `PostgreSQL`.
+pub const ENV_DATABASE_USERNAME: &str = "Zato_Database_Username";
 
-/// The environment variable with the password of the pub/sub database on `PostgreSQL`.
-pub const ENV_PUBSUB_DB_PASSWORD: &str = "Zato_PubSub_DB_Password";
+/// The environment variable with the password of the Zato database on `PostgreSQL`.
+pub const ENV_DATABASE_PASSWORD: &str = "Zato_Database_Password";
 
-/// The environment variable with the file whose content is the password of the pub/sub database on `PostgreSQL`.
-pub const ENV_PUBSUB_DB_PASSWORD_FILE: &str = "Zato_PubSub_DB_Password_File";
+/// The environment variable with the file whose content is the password of the Zato database on `PostgreSQL`.
+pub const ENV_DATABASE_PASSWORD_FILE: &str = "Zato_Database_Password_File";
 
-/// The environment variable with the name of the pub/sub database on `PostgreSQL`.
-pub const ENV_PUBSUB_DB_NAME: &str = "Zato_PubSub_DB_Name";
+/// The environment variable with the name of the Zato database on `PostgreSQL`.
+pub const ENV_DATABASE_NAME: &str = "Zato_Database_Name";
 
-/// The environment variable that turns on TLS to the pub/sub database on `PostgreSQL`.
-pub const ENV_PUBSUB_DB_SSL: &str = "Zato_PubSub_DB_SSL";
+/// The environment variable that turns on TLS to the Zato database on `PostgreSQL`.
+pub const ENV_DATABASE_SSL: &str = "Zato_Database_SSL";
 
 /// The environment variable with the CA file that the certificate of `PostgreSQL` is verified against.
-pub const ENV_PUBSUB_DB_SSL_CA_FILE: &str = "Zato_PubSub_DB_SSL_CA_File";
+pub const ENV_DATABASE_SSL_CA_FILE: &str = "Zato_Database_SSL_CA_File";
 
 /// The environment variable with the client certificate file of mutual TLS to `PostgreSQL`.
-pub const ENV_PUBSUB_DB_SSL_CERT_FILE: &str = "Zato_PubSub_DB_SSL_Cert_File";
+pub const ENV_DATABASE_SSL_CERT_FILE: &str = "Zato_Database_SSL_Cert_File";
 
 /// The environment variable with the client key file of mutual TLS to `PostgreSQL`.
-pub const ENV_PUBSUB_DB_SSL_KEY_FILE: &str = "Zato_PubSub_DB_SSL_Key_File";
+pub const ENV_DATABASE_SSL_KEY_FILE: &str = "Zato_Database_SSL_Key_File";
 
 /// The environment variable that turns off the verification of the certificate of `PostgreSQL`.
-pub const ENV_PUBSUB_DB_SSL_VERIFY: &str = "Zato_PubSub_DB_SSL_Verify";
-
-/// The environment variable with the path of the common database, shared with the Zato server.
-pub const ENV_COMMON_DB_PATH: &str = "Zato_Common_DB_Path";
-
-/// The environment variable with the path of the audit log database, shared with the Zato server.
-pub const ENV_AUDIT_DB_PATH: &str = "Zato_Audit_Log_DB_Name";
+pub const ENV_DATABASE_SSL_VERIFY: &str = "Zato_Database_SSL_Verify";
 
 /// The environment variable with the log level filter of the node.
 pub const ENV_LOG_LEVEL: &str = "Zato_HA_Log_Level";
@@ -121,11 +115,11 @@ pub const DEFAULT_REFEREE_TYPE: &str = REFEREE_TYPE_KUBERNETES;
 /// The name of the `Lease` of the referee record when the variable is not set.
 pub const DEFAULT_LEASE_NAME: &str = "zato-ha";
 
-/// The pub/sub database type of the Zato server that is a `SQLite` file on each host.
-pub const PUBSUB_DB_TYPE_SQLITE: &str = "sqlite";
+/// The type of the Zato database that is a `SQLite` file on each host.
+pub const DATABASE_TYPE_SQLITE: &str = "sqlite";
 
-/// The pub/sub database type of the Zato server that both hosts share.
-pub const PUBSUB_DB_TYPE_POSTGRESQL: &str = "postgresql";
+/// The type of the Zato database that both hosts share.
+pub const DATABASE_TYPE_POSTGRESQL: &str = "postgresql";
 
 /// The default port of `PostgreSQL`.
 pub const DEFAULT_POSTGRESQL_PORT: u16 = 5432;
@@ -148,7 +142,7 @@ pub const DEFAULT_REPLICATION_PORT: u16 = 35_200;
 /// The default port of the role endpoint.
 pub const DEFAULT_ROLE_PORT: u16 = 35_201;
 
-/// The default directory of the databases, relative to the home directory, as in `zato.common.defaults`.
+/// The default directory of the Zato database, relative to the home directory, as in `zato.common.defaults`.
 pub const DEFAULT_DATA_DIR_UNDER_HOME: &str = "env/qs-1";
 
 /// The default heartbeat interval, in seconds.
@@ -163,29 +157,14 @@ pub const DEFAULT_TAKEOVER_TIME: f64 = 6.0;
 /// The default log level filter.
 pub const DEFAULT_LOG_LEVEL: &str = "info";
 
-/// The file name of the pub/sub database.
-pub const PUBSUB_DB_FILE_NAME: &str = "pubsub.db";
-
-/// The file name of the common database.
-pub const COMMON_DB_FILE_NAME: &str = "common.db";
-
-/// The file name of the audit log database.
-pub const AUDIT_DB_FILE_NAME: &str = "audit.db";
+/// The file name of the Zato database.
+pub const DATABASE_FILE_NAME: &str = "zato.db";
 
 /// The file name of the barrier socket in the data directory.
 pub const BARRIER_SOCKET_FILE_NAME: &str = "ha-barrier.sock";
 
 /// The file name of the highest generation this node has seen, in the data directory.
 pub const GENERATION_FILE_NAME: &str = "ha-generation";
-
-/// The name under which the barrier refers to the pub/sub database.
-pub const DB_NAME_PUBSUB: &str = "pubsub";
-
-/// The name under which the barrier refers to the common database.
-pub const DB_NAME_COMMON: &str = "common";
-
-/// The name under which the replication link refers to the audit log database.
-pub const DB_NAME_AUDIT: &str = "audit";
 
 /// Errors that stop the node at startup.
 #[derive(Debug)]
@@ -234,7 +213,7 @@ pub struct PostgreSqlTls {
     pub verify: bool,
 }
 
-/// The settings of the pub/sub database on `PostgreSQL`, which are those of the Zato server.
+/// The settings of the Zato database on `PostgreSQL`, which are those of the Zato server.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PostgreSqlConfig {
     /// The host of `PostgreSQL`.
@@ -273,37 +252,14 @@ pub enum RefereeConfig {
     Kubernetes(KubernetesConfig),
 }
 
-/// Where the databases of the Zato server are kept.
+/// Where the Zato database is kept.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StorageMode {
-    /// Each host keeps `SQLite` files, which the active node replicates to the standby.
+    /// Each host keeps a `SQLite` file, which the active node replicates to the standby.
     Replicated,
 
     /// Both hosts use one database on `PostgreSQL`, and the active node renews its lease on the referee record.
     Shared,
-}
-
-/// How the frames of a database reach the standby.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ShippingMode {
-    /// Success is reported to a caller only after the standby synced the frames.
-    Synchronous,
-
-    /// The frames are shipped without a barrier, so the standby may lag behind the commits of the active node.
-    Asynchronous,
-}
-
-/// One replicated database.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DatabaseConfig {
-    /// The name of the database on the replication link and in the barrier.
-    pub name: &'static str,
-
-    /// The path of the database file.
-    pub path: PathBuf,
-
-    /// How its frames reach the standby.
-    pub shipping: ShippingMode,
 }
 
 /// The files of mutual TLS on the replication link.
@@ -338,7 +294,7 @@ pub struct NodeConfig {
     /// The selected referee and its settings.
     pub referee: RefereeConfig,
 
-    /// Where the databases of the Zato server are kept.
+    /// Where the Zato database is kept.
     pub storage: StorageMode,
 
     /// The name of this node.
@@ -359,14 +315,14 @@ pub struct NodeConfig {
     /// The files of mutual TLS on the replication link, which the shared storage mode does not open.
     pub tls: Option<TlsFiles>,
 
-    /// The pub/sub database that the node probes, which only the shared storage mode has.
+    /// The Zato database that the node probes, which only the shared storage mode has.
     pub shared_database: Option<PostgreSqlConfig>,
 
     /// The timers.
     pub timers: Timers,
 
-    /// The replicated databases.
-    pub databases: Vec<DatabaseConfig>,
+    /// The path of the replicated Zato database file, at which the Zato server of this host opens it.
+    pub database_path: PathBuf,
 
     /// The path of the barrier socket.
     pub barrier_socket: PathBuf,
@@ -446,41 +402,41 @@ fn boolean(source: &dyn VariableSource, name: &'static str, default: bool) -> Re
 
 /// Returns the TLS settings of `PostgreSQL`, or `None` if TLS is off.
 fn postgresql_tls(source: &dyn VariableSource) -> Result<Option<PostgreSqlTls>, ConfigError> {
-    if !boolean(source, ENV_PUBSUB_DB_SSL, DEFAULT_POSTGRESQL_SSL)? {
+    if !boolean(source, ENV_DATABASE_SSL, DEFAULT_POSTGRESQL_SSL)? {
         return Ok(None);
     }
 
     // A client certificate is used only together with its key.
     let client_files = match (
-        source.variable(ENV_PUBSUB_DB_SSL_CERT_FILE),
-        source.variable(ENV_PUBSUB_DB_SSL_KEY_FILE),
+        source.variable(ENV_DATABASE_SSL_CERT_FILE),
+        source.variable(ENV_DATABASE_SSL_KEY_FILE),
     ) {
         (Some(certificate), Some(key)) => Some((PathBuf::from(certificate), PathBuf::from(key))),
         (None, None) => None,
-        (Some(_), None) => return Err(ConfigError::Missing(ENV_PUBSUB_DB_SSL_KEY_FILE)),
-        (None, Some(_)) => return Err(ConfigError::Missing(ENV_PUBSUB_DB_SSL_CERT_FILE)),
+        (Some(_), None) => return Err(ConfigError::Missing(ENV_DATABASE_SSL_KEY_FILE)),
+        (None, Some(_)) => return Err(ConfigError::Missing(ENV_DATABASE_SSL_CERT_FILE)),
     };
 
     Ok(Some(PostgreSqlTls {
-        ca_file: source.variable(ENV_PUBSUB_DB_SSL_CA_FILE).map(PathBuf::from),
+        ca_file: source.variable(ENV_DATABASE_SSL_CA_FILE).map(PathBuf::from),
         client_files,
-        verify: boolean(source, ENV_PUBSUB_DB_SSL_VERIFY, DEFAULT_POSTGRESQL_SSL_VERIFY)?,
+        verify: boolean(source, ENV_DATABASE_SSL_VERIFY, DEFAULT_POSTGRESQL_SSL_VERIFY)?,
     }))
 }
 
-/// Returns the settings of the pub/sub database on `PostgreSQL`.
+/// Returns the settings of the Zato database on `PostgreSQL`.
 fn postgresql(source: &dyn VariableSource) -> Result<PostgreSqlConfig, ConfigError> {
     // A database that authenticates without a password is given an empty one.
-    let password = source.variable(ENV_PUBSUB_DB_PASSWORD_FILE).map_or_else(
-        || PostgreSqlPassword::Value(source.variable(ENV_PUBSUB_DB_PASSWORD).unwrap_or_default()),
+    let password = source.variable(ENV_DATABASE_PASSWORD_FILE).map_or_else(
+        || PostgreSqlPassword::Value(source.variable(ENV_DATABASE_PASSWORD).unwrap_or_default()),
         |path| PostgreSqlPassword::File(PathBuf::from(path)),
     );
     Ok(PostgreSqlConfig {
-        host: required(source, ENV_PUBSUB_DB_HOST)?,
-        port: port(source, ENV_PUBSUB_DB_PORT, DEFAULT_POSTGRESQL_PORT)?,
-        username: required(source, ENV_PUBSUB_DB_USERNAME)?,
+        host: required(source, ENV_DATABASE_HOST)?,
+        port: port(source, ENV_DATABASE_PORT, DEFAULT_POSTGRESQL_PORT)?,
+        username: required(source, ENV_DATABASE_USERNAME)?,
         password,
-        database: required(source, ENV_PUBSUB_DB_NAME)?,
+        database: required(source, ENV_DATABASE_NAME)?,
         tls: postgresql_tls(source)?,
     })
 }
@@ -499,17 +455,17 @@ fn referee(source: &dyn VariableSource) -> Result<RefereeConfig, ConfigError> {
     }
 }
 
-/// Returns the storage mode, which the type of the pub/sub database of the Zato server decides.
+/// Returns the storage mode, which the type of the Zato database decides.
 fn storage_mode(source: &dyn VariableSource) -> Result<StorageMode, ConfigError> {
-    let Some(value) = source.variable(ENV_PUBSUB_DB_TYPE) else {
+    let Some(value) = source.variable(ENV_DATABASE_TYPE) else {
         return Ok(StorageMode::Replicated);
     };
     match value.as_str() {
-        PUBSUB_DB_TYPE_SQLITE => Ok(StorageMode::Replicated),
-        PUBSUB_DB_TYPE_POSTGRESQL => Ok(StorageMode::Shared),
+        DATABASE_TYPE_SQLITE => Ok(StorageMode::Replicated),
+        DATABASE_TYPE_POSTGRESQL => Ok(StorageMode::Shared),
         _ => Err(ConfigError::Invalid {
-            name: ENV_PUBSUB_DB_TYPE,
-            reason: format!("unsupported pub/sub database type `{value}`"),
+            name: ENV_DATABASE_TYPE,
+            reason: format!("unsupported Zato database type `{value}`"),
         }),
     }
 }
@@ -567,26 +523,11 @@ fn node_name(source: &dyn VariableSource) -> Result<String, ConfigError> {
     Ok(host_name.trim().to_owned())
 }
 
-/// Returns the replicated databases, with the paths that the Zato server uses.
-fn databases(source: &dyn VariableSource, data_dir: &Path) -> Vec<DatabaseConfig> {
-    let path_of = |name: &str, file_name: &str| source.variable(name).map_or_else(|| data_dir.join(file_name), PathBuf::from);
-    vec![
-        DatabaseConfig {
-            name: DB_NAME_PUBSUB,
-            path: path_of(ENV_PUBSUB_DB_PATH, PUBSUB_DB_FILE_NAME),
-            shipping: ShippingMode::Synchronous,
-        },
-        DatabaseConfig {
-            name: DB_NAME_COMMON,
-            path: path_of(ENV_COMMON_DB_PATH, COMMON_DB_FILE_NAME),
-            shipping: ShippingMode::Synchronous,
-        },
-        DatabaseConfig {
-            name: DB_NAME_AUDIT,
-            path: path_of(ENV_AUDIT_DB_PATH, AUDIT_DB_FILE_NAME),
-            shipping: ShippingMode::Asynchronous,
-        },
-    ]
+/// Returns the path of the replicated Zato database, which is the one that the Zato server uses.
+fn database_path(source: &dyn VariableSource, data_dir: &Path) -> PathBuf {
+    source
+        .variable(ENV_DATABASE_PATH)
+        .map_or_else(|| data_dir.join(DATABASE_FILE_NAME), PathBuf::from)
 }
 
 impl NodeConfig {
@@ -624,7 +565,7 @@ impl NodeConfig {
         Ok(Self {
             referee,
             storage,
-            databases: databases(source, &data_dir),
+            database_path: database_path(source, &data_dir),
             node_name,
             advertised_address,
             replication_port: port(source, ENV_REPLICATION_PORT, DEFAULT_REPLICATION_PORT)?,
@@ -641,11 +582,6 @@ impl NodeConfig {
     /// Returns the path of the file with the highest generation this node has seen.
     pub fn generation_file(&self) -> PathBuf {
         self.data_dir.join(GENERATION_FILE_NAME)
-    }
-
-    /// Returns the replicated database with the given name.
-    pub fn database(&self, name: &str) -> Option<&DatabaseConfig> {
-        self.databases.iter().find(|database| database.name == name)
     }
 }
 

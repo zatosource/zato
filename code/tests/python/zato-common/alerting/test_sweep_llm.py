@@ -23,7 +23,8 @@ from zato.common.alerting.object_config import alert_type_llm, get_defaults as g
 from zato.common.alerting.seed.rules_llm import llm_rules
 from zato.common.alerting.sweep import run_sweep
 from zato.common.api import Alerting
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditLog, AuditSource
+from zato.common.audit_log.api import event_table, AuditLog, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.calls import record_remote_call
 from zato.common.audit_log.common import LLMAttr, LLMFinish, TransportStatus
 from zato.common.rule_engine.loading import load_documents
@@ -251,7 +252,7 @@ class TestStatusCodes:
 
     def test_three_429s_fire_on_the_rules_default_codes(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Three rate limits out of thirty-three calls - under the error rate's tenth, at the default threshold of three codes
@@ -272,7 +273,7 @@ class TestStatusCodes:
 
     def test_the_connections_own_codes_stand_in_for_the_rules_default(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_failures(audit_log, engine, now, 3, _status_rate_limited)
@@ -299,7 +300,7 @@ class TestStatusCodes:
 
     def test_a_5xx_counts_under_its_class(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_failures(audit_log, engine, now, 3, _status_server_error)
@@ -316,7 +317,7 @@ class TestStatusCodes:
 
     def test_three_timeouts_are_connection_failures_and_not_status_codes(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_failures(audit_log, engine, now, 3, TransportStatus.Timeout)
@@ -337,7 +338,7 @@ class TestCompletions:
 
     def test_three_truncations_fire_off_ok_rows(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_completions(audit_log, engine, now, 3, finish_reason=LLMFinish.Length)
@@ -356,7 +357,7 @@ class TestCompletions:
 
     def test_three_refusals_fire_off_ok_rows(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_completions(audit_log, engine, now, 3, finish_reason=LLMFinish.Refusal)
@@ -374,7 +375,7 @@ class TestCompletions:
 
     def test_two_of_each_fire_nothing_at_the_default_thresholds(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_completions(audit_log, engine, now, 2, finish_reason=LLMFinish.Length)
@@ -394,7 +395,7 @@ class TestCompletions:
 
     def test_the_truncations_window_of_the_connection_applies_to_the_truncations_alone(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Three truncations half an hour back - outside the rule's five minutes, inside the connection's own hour
@@ -418,7 +419,7 @@ class TestTokenBudget:
 
     def test_a_sum_over_the_budget_fires_and_one_under_it_does_not(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Twenty completions of 150 tokens each - 3000 tokens, far under the default ten million
@@ -441,7 +442,7 @@ class TestTokenBudget:
 
     def test_a_sum_at_the_budget_reaches_it_and_one_token_under_does_not(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_completions(audit_log, engine, now, 20)
@@ -460,7 +461,7 @@ class TestTokenBudget:
 
     def test_the_budget_window_of_the_connection_applies_to_the_tokens_alone(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Twenty completions two hours back - inside the rule's day, outside a connection's own hour
@@ -478,7 +479,7 @@ class TestTokenBudget:
 
     def test_the_connections_own_llm_connection_rides_in_the_outcome(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_completions(audit_log, engine, now, 20)
@@ -507,7 +508,7 @@ class TestTheOtherRules:
 
     def test_a_connection_with_alerts_off_is_skipped_while_another_still_raises(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_completions(audit_log, engine, now, 3, finish_reason=LLMFinish.Length)
@@ -527,7 +528,7 @@ class TestTheOtherRules:
 
     def test_the_connections_own_latency_is_in_seconds_and_takes_fractions(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Thirty completions of 1200 ms each - under the rule's ten seconds ..
@@ -555,7 +556,7 @@ class TestTheOtherRules:
 
     def test_three_failures_in_a_row_mean_the_connection_is_down(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_completions(audit_log, engine, now, 30)

@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import sys
+import tempfile
 
 # The account helpers are local and use flat imports
 _here = os.path.dirname(__file__)
@@ -19,6 +20,7 @@ import pytest
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,14 +31,19 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# One file-backed SQLite database shared by Django's own tables and the rule engine's SQL backend.
+_db_name = 'zato-user-management-test-' + CryptoManager.generate_hex_string() + '.db'
+_db_path = os.path.join(tempfile.gettempdir(), _db_name)
+
 # The root account's password, set before the application boots
 _root_password = 'root-password-' + CryptoManager.generate_hex_string()
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The application's own configuration - an in-memory database and the root account's password
-os.environ['Zato_Rule_Engine_Dashboard_DB_URL'] = 'sqlite:///:memory:'
+# The application's own configuration - a database file of this session and the root account's password
+os.environ[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
+os.environ[DatabaseEnv.Env_Path] = _db_path
 os.environ['Zato_Rule_Engine_Dashboard_Admin_Password'] = _root_password
 
 # ################################################################################################################################

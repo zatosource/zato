@@ -18,7 +18,9 @@ from sqlalchemy import select
 
 # Zato
 from live_sql.env import database_env
-from zato.common.audit_log.api import event_link_table, event_table, get_audit_engine, ModuleCtx as AuditLogCtx
+from zato.common.audit_log.api import event_link_table, event_table
+from zato.common.db_env.database import get_database_engine
+from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,9 +37,6 @@ if 0:
 # The server the audit events are written under
 Server_Name = 'test-file-transfer-audit-server'
 
-# The prefix all the audit log database environment variables share
-_env_prefix = 'Zato_Audit_Log_DB_'
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -45,14 +44,14 @@ _env_prefix = 'Zato_Audit_Log_DB_'
 def audit_db_env(tmp_path:'any_') -> 'envgen':
     """ Points the audit log at a throwaway SQLite database for the duration of a test.
     """
-    db_path = os.path.join(str(tmp_path), 'audit.db')
+    db_path = os.path.join(str(tmp_path), 'zato.db')
 
     details = {
-        'type': AuditLogCtx.Type_SQLite,
-        'name': db_path,
+        'type': DatabaseEnv.Type_SQLite,
+        'path': db_path,
     }
 
-    with database_env(_env_prefix, details):
+    with database_env(details):
         yield
 
 # ################################################################################################################################
@@ -60,7 +59,7 @@ def audit_db_env(tmp_path:'any_') -> 'envgen':
 def get_events() -> 'anylist':
     """ Everything the audit log holds, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.order_by(event_table.c.id)
@@ -91,7 +90,7 @@ def events_of_type(events:'anylist', event_type:'str') -> 'anylist':
 def get_parents(event_id:'int') -> 'intlist':
     """ The ids of the events one event names as its parents.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_link_table.c.parent_event_id)
     query = query.where(event_link_table.c.child_event_id == event_id)

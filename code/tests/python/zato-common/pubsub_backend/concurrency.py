@@ -62,12 +62,13 @@ class _RecordingWriter(PubSubWriter):
     """
 
     def __init__(self) -> 'None':
-        super().__init__()
+        super().__init__(None)
         self.transaction_sizes:'intlist' = []
 
-    def _write_transaction(self, engine:'Engine', batch:'anylist') -> 'None':
+    def _write_transaction(self, engine:'Engine', batch:'anylist') -> 'anylist':
         self.transaction_sizes.append(len(batch))
-        super()._write_transaction(engine, batch)
+        out = super()._write_transaction(engine, batch)
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -348,7 +349,7 @@ def _run_disjoint_ack_flow() -> 'None':
     first_ack = new_pending_ack(_sub_key_1, [first.msg_id], None)
     second_ack = new_pending_ack(_sub_key_2, [second.msg_id], None)
 
-    writer._write_transaction(backend.engine, [first_ack, second_ack])
+    _ = writer._write_transaction(backend.engine, [first_ack, second_ack])
 
     # .. each acknowledgement removed its own row alone ..
     assert first_ack.removed_count == 1

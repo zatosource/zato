@@ -22,7 +22,8 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.api import FileTransfer
-from zato.common.audit_log.api import event_link_table, get_audit_engine, AuditEvent, AuditSource
+from zato.common.audit_log.api import event_link_table, AuditEvent, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.resubmit import source_resubmit_actions, is_event_type_resubmittable
 from zato.common.ext.bunch import Bunch
 from zato.common.file_transfer.api import Default_Encoding, Encoding
@@ -123,7 +124,7 @@ def _run_one_schedule(
 def _get_parents(event_id:'int') -> 'intlist':
     """ The ids of the events one event names as its parents.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_link_table.c.parent_event_id)
     query = query.where(event_link_table.c.child_event_id == event_id)

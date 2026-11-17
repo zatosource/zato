@@ -6,13 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import os
-
 # Zato
-from zato.common.rule_engine.sql.constants import Default_DB_URL, Env_DB_URL
 from zato.common.webapp.settings import build_settings, build_templates
-from zato.rule_engine_dashboard.app.database import database_from_url
+from zato.rule_engine_dashboard.app.database import get_django_database
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,14 +52,9 @@ TEMPLATES = build_templates(context_processors=[
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-# The database both the rule engine's SQL backend and Django share - Django keeps only its own tables there
-if _db_url := os.environ.get(Env_DB_URL):
-    pass
-else:
-    _db_url = Default_DB_URL
-
+# The Zato database, which holds the rule engine tables and the tables of Django
 DATABASES = {
-    'default': database_from_url(_db_url),
+    'default': get_django_database(),
 }
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'

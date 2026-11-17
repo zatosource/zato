@@ -11,10 +11,7 @@ use std::sync::Arc;
 
 use tempfile::TempDir;
 
-use crate::config::{
-    DB_NAME_AUDIT, DB_NAME_COMMON, DB_NAME_PUBSUB, DEFAULT_LEASE_NAME, DatabaseConfig, KubernetesConfig, NodeConfig, RefereeConfig,
-    ShippingMode, StorageMode, Timers, TlsFiles,
-};
+use crate::config::{DATABASE_FILE_NAME, DEFAULT_LEASE_NAME, KubernetesConfig, NodeConfig, RefereeConfig, StorageMode, Timers, TlsFiles};
 use crate::link::TlsContext;
 use crate::referee::Referee;
 use crate::state::Shared;
@@ -162,23 +159,7 @@ fn config(node: &str, dir: &Path, storage: StorageMode, tls: Option<TlsFiles>, t
         tls,
         shared_database: None,
         timers,
-        databases: vec![
-            DatabaseConfig {
-                name: DB_NAME_PUBSUB,
-                path: dir.join("pubsub.db"),
-                shipping: ShippingMode::Synchronous,
-            },
-            DatabaseConfig {
-                name: DB_NAME_COMMON,
-                path: dir.join("common.db"),
-                shipping: ShippingMode::Synchronous,
-            },
-            DatabaseConfig {
-                name: DB_NAME_AUDIT,
-                path: dir.join("audit.db"),
-                shipping: ShippingMode::Asynchronous,
-            },
-        ],
+        database_path: dir.join(DATABASE_FILE_NAME),
         barrier_socket: dir.join("ha-barrier.sock"),
         log_level: "info".to_owned(),
     }

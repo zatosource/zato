@@ -46,7 +46,6 @@
         "zato-common/src/zato/common/alerting/explain/settings_info.py",
         "zato-common/src/zato/common/analytics/baseline.py",
         "zato-common/src/zato/common/analytics/query.py",
-        "zato-common/src/zato/common/audit_log/buffer.py",
         "zato-common/src/zato/common/bearer_token_verifier.py",
         "zato-common/src/zato/common/broker_message.py",
         "zato-common/src/zato/common/config_dispatcher.py",

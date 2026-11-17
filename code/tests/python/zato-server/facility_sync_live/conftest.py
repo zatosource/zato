@@ -22,6 +22,7 @@ import pytest
 # Zato
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 from zato.common.crypto.api import CryptoManager
+from zato.common.test.database_env import DatabaseEnv
 
 # Live environment
 from live_containers.ready import wait_until
@@ -112,7 +113,7 @@ def _server_environment() -> 'strstrdict':
     out:'strstrdict' = {
         ModuleCtx.Project_Root_Variable: ModuleCtx.Project_Directory,
         AuditLogCtx.Env_Enabled: 'True',
-        AuditLogCtx.Env_Type:    AuditLogCtx.Type_SQLite,
+        DatabaseEnv.Env_Type:    DatabaseEnv.Type_SQLite,
     }
 
     if ModuleCtx.License_Key_Variable not in os.environ:

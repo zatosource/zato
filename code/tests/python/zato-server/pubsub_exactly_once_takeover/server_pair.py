@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Two servers of the pub/sub failover suite, each in a container, sharing one PostgreSQL pub/sub database,
+# Two servers of the pub/sub failover suite, each in a container, sharing one PostgreSQL database,
 # with the relay of the exactly-once tests deployed on both.
 
 # stdlib
@@ -42,7 +42,7 @@ logger = logging.getLogger('zato.test.pubsub_exactly_once_takeover.server_pair')
 
 class ModuleCtx:
 
-    # The label of the pub/sub database container
+    # The label of the Zato database container
     Database_Label = 'exactly-once-takeover'
 
     # The zato command of the current tree

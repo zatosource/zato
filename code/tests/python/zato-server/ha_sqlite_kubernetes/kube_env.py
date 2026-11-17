@@ -77,9 +77,9 @@ class ModuleCtx:
     Role_Standby_In_Sync = 'StandbyInSync'
 
     # The database file of pub/sub
-    PubSub_DB_File = 'pubsub.db'
+    Database_File = 'zato.db'
 
-    # The optional Secret with the pub/sub database settings of the pods, and the CA file that the pods mount
+    # The optional Secret with the Zato database settings of the pods, and the CA file that the pods mount
     PubSub_DB_Secret = 'zato-ha-pubsub-db'
     Pod_CA_File = '/zato-ha-tls/ca.pem'
 
@@ -275,7 +275,7 @@ class KubeEnvironment:
 
     def point_database_at(self, node:'KubeNode') -> 'None':
         node.locate()
-        self.database.env['Zato_PubSub_DB_Path'] = node.db_path(ModuleCtx.PubSub_DB_File)
+        self.database.env['Zato_Database_Path'] = node.db_path(ModuleCtx.Database_File)
 
     def wait_for_pair(self, timeout:'float') -> 'KubeNode':
         """ Waits until one pod is active with its server up and the other is its standby in sync,

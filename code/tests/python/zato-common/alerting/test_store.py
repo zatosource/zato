@@ -15,7 +15,8 @@ from sqlalchemy import select
 # Zato
 from zato.common.alerting.model import new_finding, new_rule, FindingKind
 from zato.common.alerting.store import raise_alert, render_alert_message
-from zato.common.audit_log.api import get_audit_engine, AuditLog, AuditSource
+from zato.common.audit_log.api import AuditLog, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import alert_table
 from zato.common.util.api import utcnow
 
@@ -52,7 +53,7 @@ def _new_engine() -> 'Engine':
     """
     _ = AuditLog(_server_name)
 
-    out = get_audit_engine()
+    out = get_database_engine()
     return out
 
 # ################################################################################################################################

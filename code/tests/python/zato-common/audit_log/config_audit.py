@@ -14,8 +14,8 @@ from sqlalchemy import select
 
 # Zato
 from common import delete_all_events
-from zato.common.audit_log.api import event_attr_table, event_table, get_audit_engine, \
-    AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.config_audit import build_change_summary, is_secret_field, mask_secrets, \
     record_config_change, record_view_event, ConfigScope, Secret_Mask
 from zato.common.typing_ import cast_
@@ -52,7 +52,7 @@ _object_name = 'config.test.channel'
 def _get_event_row(event_id:'int') -> 'anydict':
     """ Returns one event row as a dict.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.where(event_table.c.id == event_id)
@@ -69,7 +69,7 @@ def _get_event_row(event_id:'int') -> 'anydict':
 def _get_attr_map(event_id:'int') -> 'anydict':
     """ Returns the attributes of one event as a dict of name to (value, value_number).
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_attr_table)
     query = query.where(event_attr_table.c.event_id == event_id)
@@ -88,7 +88,7 @@ def _get_attr_map(event_id:'int') -> 'anydict':
 def _search_by_attr(name:'str', value:'str') -> 'anylist':
     """ Returns the ids of the events carrying one attribute value.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_attr_table.c.event_id)
     query = query.where(event_attr_table.c.name == name)

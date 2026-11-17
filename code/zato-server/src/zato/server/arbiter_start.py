@@ -7,8 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The start of a server as an arbiter with the config process and the worker. The arbiter creates the schemas
-# of the shared databases, removes the MCP sessions of the previous start, takes over the pub/sub database on PostgreSQL,
-# creates the shared region with one queue for each SQLite file that both processes write to, confirms that nothing
+# of the Zato database, removes the MCP sessions of the previous start, takes over the Zato database on PostgreSQL,
+# creates the shared region with the queue of the SQLite file of the Zato database, confirms that nothing
 # that a fork would duplicate is open, and forks the config process and the worker.
 
 # stdlib
@@ -20,14 +20,11 @@ from time import monotonic
 from gevent import get_hub, sleep
 
 # Zato
-from zato.common.audit_log.api import new_unshared_audit_engine
-from zato.common.audit_log.sqlite_writes import env_config as audit_env_config
-from zato.common.common_db.config import get_common_sqlite_path
-from zato.common.db_env.common import get_env_sqlite_path, Type_PostgreSQL, Type_SQLite
-from zato.common.db_env.engine import create_schema, get_cached_engine_count, get_queue_by_path
-from zato.common.pubsub.sql.config import get_pubsub_db_path, get_pubsub_db_type, new_unshared_pubsub_engine
+from zato.common.db_env.common import Type_PostgreSQL
+from zato.common.db_env.database import database_config, get_database_sqlite_path, get_database_type, \
+    new_unshared_database_engine
+from zato.common.db_env.engine import create_schemas, get_cached_engine_count, get_queue_by_path
 from zato.common.pubsub.sql.generation import take_over_before_fork
-from zato.common.pubsub.sql.schema import metadata as pubsub_metadata
 from zato.server.arbiter import Arbiter
 from zato.server.arbiter_config import ArbiterConfig, ArbiterError
 from zato.server.server_region import new_server_region
@@ -72,39 +69,29 @@ class ModuleCtx:
 # ################################################################################################################################
 
 def get_sqlite_paths() -> 'strlist':
-    """ Returns the paths of the SQLite files to which both the worker and the config process write.
+    """ Returns the paths of the SQLite files to which both the worker and the config process write,
+    which is the file of the Zato database, or none on PostgreSQL.
     """
     out:'strlist' = []
 
-    if get_pubsub_db_type() == Type_SQLite:
-        pubsub_path = get_pubsub_db_path()
-        out.append(pubsub_path)
-
-    if audit_path := get_env_sqlite_path(audit_env_config):
-        out.append(audit_path)
-
-    if common_path := get_common_sqlite_path():
-        out.append(common_path)
+    if db_path := get_database_sqlite_path():
+        out.append(db_path)
 
     return out
 
 # ################################################################################################################################
 
-def prepare_databases() -> 'None':
-    """ Creates the schemas of the pub/sub and audit databases and, on PostgreSQL, makes the server the active one,
+def prepare_databases(server_name:'str') -> 'None':
+    """ Creates the schemas of the Zato database and, on PostgreSQL, makes the server the active one,
     all through engines that are disposed before the fork,
     so that neither the worker nor the config process runs DDL concurrently with the other or raises the generation itself.
     """
-    pubsub_engine = new_unshared_pubsub_engine()
-    create_schema(pubsub_engine, pubsub_metadata)
-    pubsub_engine.dispose()
+    engine = new_unshared_database_engine()
+    create_schemas(engine, database_config.metadata_tuple)
+    engine.dispose()
 
-    audit_engine = new_unshared_audit_engine()
-    create_schema(audit_engine, audit_env_config.metadata)
-    audit_engine.dispose()
-
-    if get_pubsub_db_type() == Type_PostgreSQL:
-        _ = take_over_before_fork(new_unshared_pubsub_engine)
+    if get_database_type() == Type_PostgreSQL:
+        _ = take_over_before_fork(new_unshared_database_engine, server_name)
 
 # ################################################################################################################################
 
@@ -188,7 +175,7 @@ def run_arbiter(zato_app:'ZatoApplication') -> 'int':
     server = zato_app.zato_server
 
     # The shared databases are ready before any process starts ..
-    prepare_databases()
+    prepare_databases(server.name)
 
     # .. each SQLite file receives one queue of the region ..
     sqlite_paths = get_sqlite_paths()

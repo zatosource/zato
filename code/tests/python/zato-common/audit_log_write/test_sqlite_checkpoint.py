@@ -19,9 +19,8 @@ import pytest
 from conftest import ModuleCtx
 from live_sql.env import database_env
 from support import Object_Name, Server_Name
-from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
-from zato.common.audit_log.sqlite_writes import env_config
-from zato.common.db_env import dispose_env_engine
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import dispose_database_engine, get_database_engine
 from zato.common.db_env.engine import _checkpointer_cache
 from zato.common.db_env.sqlite_checkpoint import Autocheckpoint_Pages, Checkpoint_Interval_Seconds
 
@@ -76,8 +75,8 @@ def sqlite_db_path(tmp_path:'os.PathLike') -> 'strgen':
         'name': db_path,
     }
 
-    with database_env(ModuleCtx.Env_Prefix, details):
-        _ = get_audit_engine()
+    with database_env(details):
+        _ = get_database_engine()
         yield db_path
 
 # ################################################################################################################################
@@ -86,7 +85,7 @@ def test_wal_is_checkpointed_in_background(sqlite_db_path:'str') -> 'None':
     """ The commits of the SQLite audit database leave the WAL to a thread of its own, which copies it into
     the database file, and the thread stops along with its engine.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
     checkpointer = _get_checkpointer(engine)
 
     # The connections checkpoint by themselves only once the log is much longer ..
@@ -114,7 +113,7 @@ def test_wal_is_checkpointed_in_background(sqlite_db_path:'str') -> 'None':
     assert os.path.getsize(sqlite_db_path) > size_after_writes
 
     # The checkpoints end with the engine.
-    dispose_env_engine(env_config)
+    dispose_database_engine()
 
     checkpointer._thread.join(Checkpoint_Interval_Seconds * 4)
     assert not checkpointer._thread.is_alive()

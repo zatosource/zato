@@ -33,7 +33,7 @@ from zato.common.audit_log.export.sender import sender_by_protocol
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.audit_log.buffer import pending_event_list
+    from zato.common.audit_log.pending import pending_event_list
     from zato.common.audit_log.export.config import ExportConfig
     from zato.common.typing_ import stranydict
 

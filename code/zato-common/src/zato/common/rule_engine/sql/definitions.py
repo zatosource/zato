@@ -32,8 +32,14 @@ from .time_ import utc_now
 # ################################################################################################################################
 
 if 0:
+    from datetime import datetime
+    from sqlalchemy.orm import Session
     from zato.common.rule_engine.changes import ChangePublisher
+
+    # Dummy assignments to satisfy type checkers
     ChangePublisher = ChangePublisher
+    datetime = datetime
+    Session = Session
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,95 +89,108 @@ class DefinitionStore:
         # .. serialize the complete document before opening a transaction ..
         document_text = serialize_document(document)
         now = utc_now()
-        session = self._session_factory()
 
         try:
-            with session.begin():
-
-                # Resolve the optional parent ..
-                if parent_id is not None:
-                    _ = get_definition(session, parent_id)
-
-                # .. insert the current definition ..
-                definition_parent_key = parent_key(parent_id)
-                definition_values = {
-                    'parent_id':       parent_id,
-                    'parent_key':      definition_parent_key,
-                    'name':            name,
-                    'object_type':     object_type,
-                    'current_version': 1,
-                    'live_version':    None,
-                    'is_active':       True,
-                    'created_at':      now,
-                    'updated_at':      now,
-                    'document':        document_text,
-                }
-                statement = insert(rule_definition_table)
-                result = session.execute(statement, definition_values)
-                result = cast_(CursorResult, result)
-                primary_key = cast_(anytuple, result.inserted_primary_key)
-                definition_id = primary_key[0]
-
-                # .. preserve the first immutable full snapshot ..
-                version_values = {
-                    'definition_id': definition_id,
-                    'version':       1,
-                    'author':        author,
-                    'comment':       comment,
-                    'created_at':    now,
-                    'document':      document_text,
-                }
-                statement = insert(rule_version_table)
-                _ = session.execute(statement, version_values)
-
-                # .. append the definition creation event ..
-                created_payload = {'name': name, 'object_type': object_type}
-                _ = add_event(
-                    session,
-                    definition_id=definition_id,
-                    version=1,
-                    event_type=Event_Type_Definition_Created,
-                    actor=author,
-                    payload=created_payload,
-                )
-
-                # .. append the first version event in the same commit ..
-                version_payload = {'comment': comment}
-                _ = add_event(
-                    session,
-                    definition_id=definition_id,
-                    version=1,
-                    event_type=Event_Type_Version_Created,
-                    actor=author,
-                    payload=version_payload,
-                )
-
-                # .. and build the detached definition from the values just written, avoiding a redundant re-read.
-                definition = RuleDefinitionRecord(
-                    id=definition_id,
-                    parent_id=parent_id,
-                    parent_key=definition_parent_key,
-                    name=name,
-                    object_type=object_type,
-                    current_version=1,
-                    live_version=None,
-                    is_active=True,
-                    created_at=now,
-                    updated_at=now,
-                    document=document_text,
-                )
+            definition = self._session_factory.write(self._create_rows, name, object_type, parent_id, document_text, now,
+                author, comment)
 
         # Translate a duplicate portable identity into a domain error ..
         except IntegrityError as e:
             message = f'A rule definition named "{name}" already exists under the same parent and type'
             raise InvalidStoreInputError(message) from e
 
-        # .. and release the session in every case.
-        finally:
-            session.close()
-
         # Announce the committed creation - a name that servers cached as unknown may exist now.
         self._announce_change(Change_Definition_Created, definition.id, name, object_type)
+
+        return definition
+
+# ################################################################################################################################
+
+    def _create_rows(
+        self,
+        session:'Session',
+        name:'str',
+        object_type:'str',
+        parent_id:'int | None',
+        document_text:'str',
+        now:'datetime',
+        author:'str',
+        comment:'str',
+        ) -> 'RuleDefinitionRecord':
+        """ Writes a definition, its first snapshot and its creation events and returns the definition.
+        """
+        # Resolve the optional parent ..
+        if parent_id is not None:
+            _ = get_definition(session, parent_id)
+
+        # .. insert the current definition ..
+        definition_parent_key = parent_key(parent_id)
+        definition_values = {
+            'parent_id':       parent_id,
+            'parent_key':      definition_parent_key,
+            'name':            name,
+            'object_type':     object_type,
+            'current_version': 1,
+            'live_version':    None,
+            'is_active':       True,
+            'created_at':      now,
+            'updated_at':      now,
+            'document':        document_text,
+        }
+        statement = insert(rule_definition_table)
+        result = session.execute(statement, definition_values)
+        result = cast_(CursorResult, result)
+        primary_key = cast_(anytuple, result.inserted_primary_key)
+        definition_id = primary_key[0]
+
+        # .. preserve the first immutable full snapshot ..
+        version_values = {
+            'definition_id': definition_id,
+            'version':       1,
+            'author':        author,
+            'comment':       comment,
+            'created_at':    now,
+            'document':      document_text,
+        }
+        statement = insert(rule_version_table)
+        _ = session.execute(statement, version_values)
+
+        # .. append the definition creation event ..
+        created_payload = {'name': name, 'object_type': object_type}
+        _ = add_event(
+            session,
+            definition_id=definition_id,
+            version=1,
+            event_type=Event_Type_Definition_Created,
+            actor=author,
+            payload=created_payload,
+        )
+
+        # .. append the first version event in the same commit ..
+        version_payload = {'comment': comment}
+        _ = add_event(
+            session,
+            definition_id=definition_id,
+            version=1,
+            event_type=Event_Type_Version_Created,
+            actor=author,
+            payload=version_payload,
+        )
+
+        # .. and build the detached definition from the values just written, avoiding a redundant re-read.
+        definition = RuleDefinitionRecord(
+            id=definition_id,
+            parent_id=parent_id,
+            parent_key=definition_parent_key,
+            name=name,
+            object_type=object_type,
+            current_version=1,
+            live_version=None,
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+            document=document_text,
+        )
 
         return definition
 
@@ -357,55 +376,60 @@ class DefinitionStore:
         require_text(name, 'Definition name')
         require_text(actor, 'Rename actor')
 
-        session = self._session_factory()
-
         try:
-            with session.begin():
-
-                # Read the definition being renamed, so its old name can be preserved ..
-                definition = get_definition(session, definition_id)
-                old_name = definition.name
-
-                # .. a rename to the name a definition already has changes nothing ..
-                if name == old_name:
-                    return definition
-
-                # .. store the new name ..
-                now = utc_now()
-                statement = update(rule_definition_table)
-                id_condition = rule_definition_table.c.id == definition_id
-                statement = statement.where(id_condition)
-                statement = statement.values(name=name, updated_at=now)
-                _ = session.execute(statement)
-
-                # .. preserve which name it had before, in the same commit ..
-                renamed_payload = {'old_name': old_name, 'new_name': name}
-                _ = add_event(
-                    session,
-                    definition_id=definition_id,
-                    version=definition.current_version,
-                    event_type=Event_Type_Definition_Renamed,
-                    actor=actor,
-                    payload=renamed_payload,
-                )
-
-                # .. and answer with the definition as it now stands.
-                out = definition._replace(name=name, updated_at=now)
+            out, is_renamed = self._session_factory.write(self._rename_rows, definition_id, name, actor)
 
         # Translate a name another definition already holds into a domain error ..
         except IntegrityError as e:
             message = f'A rule definition named "{name}" already exists under the same parent and type'
             raise InvalidStoreInputError(message) from e
 
-        # .. and release the session in every case.
-        finally:
-            session.close()
+        # .. a rename to the name a definition already has changes nothing ..
+        if not is_renamed:
+            return out
 
-        # Announce the committed rename under the new name - the consumer also evicts every
+        # .. and the committed rename is announced under the new name - the consumer also evicts every
         # name that resolved to this id, which is what drops the old name.
-        self._announce_change(Change_Definition_Renamed, definition_id, name, definition.object_type)
+        self._announce_change(Change_Definition_Renamed, definition_id, name, out.object_type)
 
         return out
+
+# ################################################################################################################################
+
+    def _rename_rows(self, session:'Session', definition_id:'int', name:'str', actor:'str') -> 'anytuple':
+        """ Stores the new name of a definition with its rename event and returns the definition as it now stands,
+        along with whether the name changed.
+        """
+        # Read the definition being renamed, so its old name can be preserved ..
+        definition = get_definition(session, definition_id)
+        old_name = definition.name
+
+        # .. a rename to the name a definition already has changes nothing ..
+        if name == old_name:
+            return definition, False
+
+        # .. store the new name ..
+        now = utc_now()
+        statement = update(rule_definition_table)
+        id_condition = rule_definition_table.c.id == definition_id
+        statement = statement.where(id_condition)
+        statement = statement.values(name=name, updated_at=now)
+        _ = session.execute(statement)
+
+        # .. preserve which name it had before, in the same commit ..
+        renamed_payload = {'old_name': old_name, 'new_name': name}
+        _ = add_event(
+            session,
+            definition_id=definition_id,
+            version=definition.current_version,
+            event_type=Event_Type_Definition_Renamed,
+            actor=actor,
+            payload=renamed_payload,
+        )
+
+        # .. and answer with the definition as it now stands.
+        out = definition._replace(name=name, updated_at=now)
+        return out, True
 
 # ################################################################################################################################
 
@@ -414,36 +438,36 @@ class DefinitionStore:
         """
         # Validate the actor before changing state ..
         require_text(actor, 'Archive actor')
-        session = self._session_factory()
-
-        try:
-            with session.begin():
-
-                # Mark the current object inactive ..
-                definition = get_definition(session, definition_id)
-                now = utc_now()
-                statement = update(rule_definition_table)
-                id_condition = rule_definition_table.c.id == definition_id
-                statement = statement.where(id_condition)
-                statement = statement.values(is_active=False, updated_at=now)
-                _ = session.execute(statement)
-
-                # .. and preserve the state transition in the same commit.
-                _ = add_event(
-                    session,
-                    definition_id=definition_id,
-                    version=definition.current_version,
-                    event_type=Event_Type_Definition_Archived,
-                    actor=actor,
-                    payload=None,
-                )
-
-        # Release the transactional session in every case.
-        finally:
-            session.close()
+        definition = self._session_factory.write(self._archive_rows, definition_id, actor)
 
         # Announce the committed archival - servers stop resolving this definition's name.
         self._announce_change(Change_Definition_Archived, definition_id, definition.name, definition.object_type)
+
+# ################################################################################################################################
+
+    def _archive_rows(self, session:'Session', definition_id:'int', actor:'str') -> 'RuleDefinitionRecord':
+        """ Marks a definition inactive with its archival event and returns the definition as it was read.
+        """
+        # Mark the current object inactive ..
+        definition = get_definition(session, definition_id)
+        now = utc_now()
+        statement = update(rule_definition_table)
+        id_condition = rule_definition_table.c.id == definition_id
+        statement = statement.where(id_condition)
+        statement = statement.values(is_active=False, updated_at=now)
+        _ = session.execute(statement)
+
+        # .. and preserve the state transition in the same commit.
+        _ = add_event(
+            session,
+            definition_id=definition_id,
+            version=definition.current_version,
+            event_type=Event_Type_Definition_Archived,
+            actor=actor,
+            payload=None,
+        )
+
+        return definition
 
 # ################################################################################################################################
 # ################################################################################################################################

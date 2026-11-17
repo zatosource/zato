@@ -127,7 +127,7 @@ proptest! {
         let mut running_job = RunningJob::from_scheduler_job(&job);
         running_job.current_run = current_run.saturating_add(lower_by);
 
-        // The common database has not counted the runs that this scheduler fired and no worker claimed yet
+        // The Zato database has not counted the runs that this scheduler fired and no worker claimed yet
         running_job.restore_run_state(current_run, None, Utc::now());
         prop_assert_eq!(running_job.current_run, current_run.saturating_add(lower_by));
     }

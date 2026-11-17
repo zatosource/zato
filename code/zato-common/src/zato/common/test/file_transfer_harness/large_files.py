@@ -14,7 +14,8 @@ from hashlib import sha256
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import event_table, get_audit_engine
+from zato.common.audit_log.api import event_table
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import get_attachment, list_attachments
 from zato.common.file_transfer.spool import Chunk_Size
 
@@ -56,7 +57,7 @@ def checksum_of_path(path:'str') -> 'str':
 def get_kept_content(remote_path:'str') -> 'bytes':
     """ The bytes the audit log kept for the latest operation on a remote path.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table.c.id)
     query = query.where(event_table.c.endpoint == remote_path)

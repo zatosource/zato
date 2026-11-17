@@ -23,7 +23,8 @@ from yaml import safe_load as yaml_load
 # Zato
 from live_environment.quickstart import Host
 from live_kafka.containers import create_topic, KafkaCluster
-from zato.common.audit_log.api import event_table, get_audit_engine
+from zato.common.audit_log.api import event_table
+from zato.common.db_env.database import get_database_engine
 from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
@@ -68,12 +69,8 @@ class ModuleCtx:
     # The consumer group the server reads a recv stream as
     Recv_Group = 'server-recv'
 
-    # Where the server's audit log is, for the tests to read it from the same file
-    Audit_DB_Variable = 'Zato_Audit_Log_DB_Name'
-
-    # The pub/sub database the server's queues and DLQs live in
-    PubSub_DB_Path_Variable = 'Zato_PubSub_DB_Path'
-    PubSub_DB_File_Name     = 'pubsub.db'
+    # The Zato database of the server, for the tests to read its audit log from the same file
+    Database_Path_Variable = 'Zato_Database_Path'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -446,7 +443,7 @@ class KafkaSuite:
     def audit_events(self, cid:'str', event_type:'str'='') -> 'anylist':
         """ The events the server's audit log holds under one cid, oldest first.
         """
-        engine = get_audit_engine()
+        engine = get_database_engine()
 
         query = select(event_table).where(event_table.c.cid == cid)
 

@@ -20,7 +20,8 @@ from sqlalchemy import update
 # Zato
 from zato.common.alerting.collectors import collect_facts, collect_llm_completion_facts, collect_llm_token_facts, \
     collect_outgoing_status_facts, Measure_Refusals, Measure_Tokens, Measure_Truncations, Window_Seconds_By_Measure_Key
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditLog, AuditSource
+from zato.common.audit_log.api import event_table, AuditLog, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.calls import record_remote_call
 from zato.common.audit_log.common import LLMAttr, LLMFinish, TransportStatus
 from zato.common.util.api import utcnow
@@ -61,7 +62,7 @@ _status_rate_limited = '429 Too Many Requests'
 def _backdate(event_id:'int', event_time:'datetime') -> 'None':
     """ Moves one stored event back in time.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     statement = update(event_table)
     statement = statement.where(event_table.c.id == event_id)
@@ -112,7 +113,7 @@ def _seed_failure(audit_log:'AuditLog', status:'str', *, object_name:'str' = _co
 def _newest_event_id() -> 'int':
     """ The id of the newest row stored.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         out = connection.execute(event_table.select().order_by(event_table.c.id.desc()).limit(1)).fetchone()[0]
@@ -138,7 +139,7 @@ class TestTokens:
 
     def test_the_tokens_of_every_call_add_up_with_their_split(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_completion(audit_log)
@@ -155,7 +156,7 @@ class TestTokens:
 
     def test_a_call_outside_the_window_adds_nothing(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_completion(audit_log)
@@ -168,7 +169,7 @@ class TestTokens:
 
     def test_a_connection_with_no_usage_emits_no_token_fact(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_failure(audit_log, _status_rate_limited)
@@ -178,7 +179,7 @@ class TestTokens:
 
     def test_each_connection_gets_its_own_fact(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_completion(audit_log)
@@ -191,7 +192,7 @@ class TestTokens:
 
     def test_another_source_asked_for_is_not_measured(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_completion(audit_log)
@@ -210,7 +211,7 @@ class TestCompletions:
 
     def test_truncations_and_refusals_are_counted_and_a_stop_counts_nothing(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_completion(audit_log, finish_reason=LLMFinish.Length)
@@ -227,7 +228,7 @@ class TestCompletions:
 
     def test_a_connection_that_only_stopped_emits_no_fact(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_completion(audit_log)
@@ -237,7 +238,7 @@ class TestCompletions:
 
     def test_a_refusal_written_as_an_error_row_is_counted_too(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # A Gemini prompt block - an Error row with a refusal for its finish reason and no usage
@@ -252,7 +253,7 @@ class TestCompletions:
 
     def test_completions_outside_the_window_are_not_counted(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_completion(audit_log, finish_reason=LLMFinish.Length)
@@ -270,7 +271,7 @@ class TestStatusAndFailures:
 
     def test_a_429_lands_in_the_status_counts(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_failure(audit_log, _status_rate_limited)
@@ -284,7 +285,7 @@ class TestStatusAndFailures:
 
     def test_a_timeout_lands_in_the_connection_failures(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_failure(audit_log, TransportStatus.Timeout)
@@ -302,7 +303,7 @@ class TestMerged:
 
     def test_the_merged_fact_carries_every_llm_measure_with_its_window(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_completion(audit_log, finish_reason=LLMFinish.Length)

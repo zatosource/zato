@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 from dataclasses import dataclass
 from logging import getLogger
 from time import monotonic
@@ -21,10 +20,10 @@ from sqlalchemy import text
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.audit_log.api import AuditLog, get_audit_engine
+from zato.common.audit_log.api import AuditLog
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import AuditEvent
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
-from zato.common.test.pubsub_database import pubsub_db_env
 from zato.common.test.rest_push import RESTPushStore
 from zato.server.base.parallel.delivery import PushDelivery
 
@@ -250,7 +249,7 @@ def _get_failed_msg_ids(name:'str') -> 'strlist':
     """
     params = {'event_type': AuditEvent.Delivery_Failed, 'sub_key': _get_sub_key(name)}
 
-    with get_audit_engine().connect() as connection:
+    with get_database_engine().connect() as connection:
         rows = connection.execute(_failed_events_query, params).fetchall()
 
     out:'strlist' = []
@@ -380,7 +379,6 @@ def _run_partners() -> 'None':
         push_delivery.stop()
         server.stop(timeout=1)
 
-    audit_log.flush()
 
     # The healthy partner received each of its messages once and without delay ..
     healthy_requests = partners.requests[_healthy]
@@ -417,12 +415,7 @@ def test_failing_partners(stability_env:'strstrdict') -> 'None':
     their retry settings allow, the messages they never accept are given up with an audit event each,
     and the healthy partner receives its messages without delay throughout.
     """
-    work_dir = os.path.dirname(stability_env['Zato_PubSub_Generation_File'])
-
-    audit_env:'strstrdict' = {'Zato_Audit_Log_DB_Name': os.path.join(work_dir, 'audit.db')}
-
-    with pubsub_db_env(audit_env):
-        _run_partners()
+    _run_partners()
 
 # ################################################################################################################################
 # ################################################################################################################################

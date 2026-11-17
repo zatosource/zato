@@ -21,7 +21,8 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.api import FileTransfer
-from zato.common.audit_log.api import event_attr_table, event_table, get_audit_engine, AuditLog
+from zato.common.audit_log.api import event_attr_table, event_table, AuditLog
+from zato.common.db_env.database import get_database_engine
 from zato.common.ext.bunch import Bunch
 from zato.common.file_transfer.api import Default_Verify_How
 from zato.common.typing_ import cast_
@@ -286,7 +287,7 @@ def new_schedule(**overrides:'any_') -> 'stranydict':
 def get_events() -> 'anylist':
     """ Everything the audit log holds, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.order_by(event_table.c.id)
@@ -305,7 +306,7 @@ def get_events() -> 'anylist':
 def get_attrs(event_id:'int') -> 'stranydict':
     """ The searchable attributes of one event, by name.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_attr_table.c.name, event_attr_table.c.value)
     query = query.where(event_attr_table.c.event_id == event_id)

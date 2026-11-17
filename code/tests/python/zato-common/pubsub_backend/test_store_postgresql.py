@@ -13,7 +13,7 @@ import pytest
 from sqlalchemy import inspect, text
 
 # Zato
-from zato.common.pubsub.sql.config import get_pubsub_engine
+from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.schema import metadata
 from zato.common.test.pubsub_database import get_suite_modes, pubsub_db_env, PubSubDBMode, start_pubsub_database, \
     stop_pubsub_database
@@ -30,7 +30,7 @@ if 0:
 # ################################################################################################################################
 
 _expected_tables = {
-    'pubsub_active',
+    'zato_active',
     'pubsub_delivery',
     'pubsub_message',
     'pubsub_publish_count',
@@ -104,7 +104,7 @@ def test_postgresql_schema(pubsub_database:'PubSubDatabase') -> 'None':
     """
     with pubsub_db_env(pubsub_database.env):
 
-        engine = get_pubsub_engine()
+        engine = get_database_engine()
         inspector = inspect(engine)
 
         # The tables ..
@@ -138,7 +138,7 @@ def test_postgresql_schema(pubsub_database:'PubSubDatabase') -> 'None':
             assert _expected_triggers <= triggers, triggers
 
             # .. the generation row ..
-            generation = connection.execute(text('select generation from pubsub_active where id = 1')).scalar()
+            generation = connection.execute(text('select generation from zato_active where id = 1')).scalar()
             assert generation == 0, generation
 
             # .. the compression of the payloads ..
@@ -175,7 +175,7 @@ def test_postgresql_schema_created_once(pubsub_database:'PubSubDatabase') -> 'No
     """
     with pubsub_db_env(pubsub_database.env):
 
-        engine = get_pubsub_engine()
+        engine = get_database_engine()
         metadata.create_all(engine)
 
         inspector = inspect(engine)

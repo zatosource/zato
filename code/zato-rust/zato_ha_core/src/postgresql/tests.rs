@@ -33,8 +33,8 @@ const STARTUP_POLL: Duration = Duration::from_millis(250);
 const CLOSED_PORT: u16 = 1;
 
 /// The table of the generation guard with its one row, as the Zato server creates it.
-const CREATE_GUARD: &str = "CREATE TABLE pubsub_active (id INTEGER PRIMARY KEY, generation BIGINT NOT NULL, owner TEXT NOT NULL);
-    INSERT INTO pubsub_active (id, generation, owner) VALUES (1, 1, 'zato-a')";
+const CREATE_GUARD: &str = "CREATE TABLE zato_active (id INTEGER PRIMARY KEY, generation BIGINT NOT NULL, owner TEXT NOT NULL);
+    INSERT INTO zato_active (id, generation, owner) VALUES (1, 1, 'zato-a')";
 
 /// A `PostgreSQL` server in a container removed on drop.
 struct PostgreSqlContainer {

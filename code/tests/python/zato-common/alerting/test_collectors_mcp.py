@@ -25,7 +25,8 @@ from zato.common.alerting.collectors import collect_auth_failure_facts, collect_
 from zato.common.alerting.collectors.mcp import collect_invalid_call_facts, collect_mcp_truncation_facts, \
     collect_rejection_facts, collect_repeat_call_facts, collect_throttled_facts, collect_tool_count_facts, \
     collect_volume_facts, Error_Code_Invalid_Params, Error_Code_Method_Not_Found
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import MCPAttr
 from zato.common.json_internal import dumps
 from zato.common.util.api import utcnow
@@ -70,7 +71,7 @@ _method_tools_call = 'tools/call'
 def _backdate(event_id:'int', event_time:'datetime') -> 'None':
     """ Moves one stored event back in time.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     statement = update(event_table)
     statement = statement.where(event_table.c.id == event_id)
@@ -84,7 +85,7 @@ def _backdate(event_id:'int', event_time:'datetime') -> 'None':
 def _newest_event_id() -> 'int':
     """ The id of the newest row stored.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         out = connection.execute(event_table.select().order_by(event_table.c.id.desc()).limit(1)).fetchone()[0]
@@ -180,7 +181,7 @@ class TestInvalidCalls:
 
     def test_both_error_codes_count_and_a_backend_error_does_not(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_invalid_call(audit_log, Error_Code_Method_Not_Found)
@@ -198,7 +199,7 @@ class TestInvalidCalls:
 
     def test_a_call_outside_the_window_adds_nothing(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_invalid_call(audit_log, Error_Code_Method_Not_Found)
@@ -211,7 +212,7 @@ class TestInvalidCalls:
 
     def test_a_gateway_with_no_invalid_calls_emits_no_fact(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_tool_call(audit_log)
@@ -221,7 +222,7 @@ class TestInvalidCalls:
 
     def test_each_gateway_gets_its_own_fact_and_another_source_is_not_measured(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_invalid_call(audit_log, Error_Code_Method_Not_Found)
@@ -246,7 +247,7 @@ class TestRejectionsAndTruncations:
 
     def test_a_rejected_response_counts_by_its_reject_kind(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_tool_call(audit_log, is_ok=False, attrs={MCPAttr.Reject_Kind: 'size'})
@@ -260,7 +261,7 @@ class TestRejectionsAndTruncations:
 
     def test_a_truncated_response_counts_by_its_flag(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         attrs = {MCPAttr.Was_Truncated: True, MCPAttr.Tokens_Before: 9000, MCPAttr.Tokens_After: 2000}
@@ -282,7 +283,7 @@ class TestThrottledCallers:
 
     def test_rate_limited_rows_count_and_tool_calls_do_not(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_rate_limited(audit_log)
@@ -297,7 +298,7 @@ class TestThrottledCallers:
 
     def test_a_gateway_that_throttled_nobody_emits_no_fact(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_tool_call(audit_log)
@@ -312,7 +313,7 @@ class TestVolume:
 
     def test_the_sizes_of_every_tool_call_add_up(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_tool_call(audit_log, size=1000)
@@ -329,7 +330,7 @@ class TestVolume:
 
     def test_a_call_outside_the_window_adds_nothing(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_tool_call(audit_log, size=1000)
@@ -342,7 +343,7 @@ class TestVolume:
 
     def test_a_gateway_whose_responses_were_all_empty_emits_no_fact(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_tool_call(audit_log, size=0)
@@ -356,7 +357,7 @@ class TestRepeatCalls:
 
     def test_the_worst_session_and_tool_are_picked(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # One session calling one tool four times, the same session calling another tool twice
@@ -375,7 +376,7 @@ class TestRepeatCalls:
 
     def test_two_sessions_calling_the_same_tool_never_add_up(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         for _ in range(3):
@@ -391,7 +392,7 @@ class TestRepeatCalls:
 
     def test_a_session_that_called_once_and_a_call_without_a_session_do_not_repeat(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_tool_call(audit_log, session_id=_session_id)
@@ -403,7 +404,7 @@ class TestRepeatCalls:
 
     def test_calls_outside_the_window_are_not_counted(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_tool_call(audit_log)
@@ -433,7 +434,7 @@ class TestToolCount:
 
     def test_the_merged_facts_carry_the_tool_count_next_to_the_traffic(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_invalid_call(audit_log, Error_Code_Method_Not_Found)
@@ -470,7 +471,7 @@ class TestSharedRatesOnAGateway:
 
     def test_the_error_rate_and_latency_read_tool_calls_alone(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Four tool calls, one of them failed, each 100 ms ..
@@ -496,7 +497,7 @@ class TestSharedRatesOnAGateway:
 
     def test_a_streak_is_counted_over_tool_calls_and_rejected_callers_are_their_own_measure(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_tool_call(audit_log)

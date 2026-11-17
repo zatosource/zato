@@ -82,7 +82,7 @@ class KubePostgreSQL(KubeBackend):
             work_dir=self.directory,
         )
 
-        self.database.env['Zato_PubSub_DB_SSL_CA_File'] = session.authority.cert_path
+        self.database.env['Zato_Database_SSL_CA_File'] = session.authority.cert_path
 
 # ################################################################################################################################
 
@@ -181,14 +181,14 @@ def _start_postgresql(session:'KubeSession') -> 'KubePostgreSQL':
     host = f'{ModuleCtx.StatefulSet_Name}.{namespace}.svc.cluster.local'
 
     create_secret(EnvCtx.PubSub_DB_Secret, {}, {
-        'Zato_PubSub_DB_Type': 'postgresql',
-        'Zato_PubSub_DB_Host': host,
-        'Zato_PubSub_DB_Port': str(ModuleCtx.Port),
-        'Zato_PubSub_DB_Username': DatabaseCtx.Username,
-        'Zato_PubSub_DB_Password': out.password,
-        'Zato_PubSub_DB_Name': DatabaseCtx.DB_Name,
-        'Zato_PubSub_DB_SSL': 'true',
-        'Zato_PubSub_DB_SSL_CA_File': EnvCtx.Pod_CA_File,
+        'Zato_Database_Type': 'postgresql',
+        'Zato_Database_Host': host,
+        'Zato_Database_Port': str(ModuleCtx.Port),
+        'Zato_Database_Username': DatabaseCtx.Username,
+        'Zato_Database_Password': out.password,
+        'Zato_Database_Name': DatabaseCtx.DB_Name,
+        'Zato_Database_SSL': 'true',
+        'Zato_Database_SSL_CA_File': EnvCtx.Pod_CA_File,
     })
 
     logger.info('PostgreSQL ready in %s', ModuleCtx.Zone)

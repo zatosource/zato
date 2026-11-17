@@ -9,7 +9,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.alerting.collectors import collect_certificate_facts, collect_health_facts, collect_test_transfer_facts, \
     Attr_Days_Left
-from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.util.api import utcnow
 
 # Local
@@ -22,7 +23,7 @@ class TestCertificateFacts:
 
     def test_the_newest_days_left_measure_surfaces(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # An older measure and a newer one - only the newer one speaks
@@ -41,7 +42,7 @@ class TestCertificateFacts:
 
     def test_a_failed_check_reports_nothing_rather_than_a_false_zero(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # A handshake that failed wrote an error event with no days-left attr
@@ -59,7 +60,7 @@ class TestHealthFacts:
 
     def test_the_newest_state_of_each_service_surfaces(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # A service that recovered and one that degraded
@@ -84,7 +85,7 @@ class TestTransferFacts:
 
     def test_the_newest_outcome_is_the_current_truth(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # A connection whose test transfer failed and one whose test transfer recovered

@@ -32,7 +32,8 @@ from sqlalchemy import text
 
 # Zato
 from zato.common.db_env.common import Type_PostgreSQL
-from zato.common.pubsub.sql.config import get_pubsub_db_path, get_pubsub_engine
+from zato.common.db_env.database import get_database_engine
+from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -220,14 +221,14 @@ class Monitor:
         # The processor time the process used until the start of the current minute, in seconds.
         self._cpu_seconds = 0.0
 
-        self._is_postgresql = get_pubsub_engine().dialect.name == Type_PostgreSQL
+        self._is_postgresql = get_database_engine().dialect.name == Type_PostgreSQL
 
 # ################################################################################################################################
 
     def _read_database(self, report:'MinuteReport') -> 'None':
         """ Adds the table sizes, the WAL, the checkpoints and the autovacuum runs to the report of a minute.
         """
-        engine = get_pubsub_engine()
+        engine = get_database_engine()
 
         if self._is_postgresql:
             with engine.connect() as connection:
@@ -271,7 +272,7 @@ class Monitor:
                 report.message_rows = connection.execute(text(f'select count(*) from {_message_table}')).scalar_one()
                 report.delivery_rows = connection.execute(text(f'select count(*) from {_delivery_table}')).scalar_one()
 
-            wal_path = get_pubsub_db_path() + '-wal'
+            wal_path = os.environ[DatabaseEnv.Env_Path] + '-wal'
 
             if os.path.exists(wal_path):
                 report.wal_mb = os.path.getsize(wal_path) / _bytes_per_mb

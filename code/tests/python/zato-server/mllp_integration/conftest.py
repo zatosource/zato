@@ -285,15 +285,15 @@ def zato_server() -> 'strobj_dict_gen':
 
     # The audit database lives in the test's own temporary directory,
     # so the test process can read what the server wrote.
-    audit_db_path = os.path.join(_temp_directory, 'audit.db')
+    audit_db_path = os.path.join(_temp_directory, 'zato.db')
 
     server_environment = os.environ.copy()
     server_environment['Zato_Config_Bind_Port'] = str(port)
     server_environment['Zato_Broker_HTTP_Port'] = str(broker_port)
     server_environment['Zato_HL7_MLLP_Port'] = str(mllp_port)
     server_environment['Zato_Test_MLLP_Messages_File'] = messages_file
-    server_environment['Zato_Audit_Log_DB_Type'] = 'sqlite'
-    server_environment['Zato_Audit_Log_DB_Name'] = audit_db_path
+    server_environment['Zato_Database_Type'] = 'sqlite'
+    server_environment['Zato_Database_Path'] = audit_db_path
     _ = server_environment.pop('COVERAGE_PROCESS_START', None)
 
     # start_new_session makes the launcher its own process-group leader, so the teardown

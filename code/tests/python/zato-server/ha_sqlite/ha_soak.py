@@ -38,7 +38,7 @@ if 0:
     from ha_traffic import TimedPublisher
     from nodes import Node
     from workload import Workload
-    from zato.common.typing_ import anydict, strintdict, strlist
+    from zato.common.typing_ import anydict, strlist
 
     HAEnvironment = HAEnvironment
     TimedPublisher = TimedPublisher
@@ -91,13 +91,13 @@ class ModuleCtx:
     Probe_Interval = 0.1
     Probe_Timeout = 30.0
 
-    # The database whose barrier is probed, the file name of the socket and the answer of a barrier that completed
-    Probe_Database = 'pubsub'
+    # The request of a barrier, the file name of the socket and the answer of a barrier that completed
+    Barrier_Request = b'\n'
     Barrier_Socket_Name = 'ha-barrier.sock'
     Barrier_OK = b'ok\n'
 
-    # The databases whose WAL is measured
-    Database_Files = ['pubsub.db', 'common.db']
+    # The database whose WAL is measured
+    Database_File = 'zato.db'
 
     # The percentile of the latency that each report contains
     Percentile_99 = 0.99
@@ -128,7 +128,7 @@ class NodeSample:
     memory_mb: 'float'
     open_files: 'int'
     tasks: 'int'
-    wal_bytes: 'strintdict'
+    wal_bytes: 'int'
     lag_frames: 'int'
 
 # ################################################################################################################################
@@ -156,35 +156,30 @@ class MinuteReport:
 # ################################################################################################################################
 
 def get_lag_frames(report:'anydict') -> 'int':
-    """ Returns how many frames the node scanned and the standby has not confirmed yet, across all the databases.
+    """ Returns how many frames the node scanned and the standby has not confirmed yet.
     """
-    out = 0
+    database = report['database']
+    scanned = database['scanned']
+    confirmed = database['confirmed']
 
-    for database in report['databases']:
-        scanned = database['scanned']
-        confirmed = database['confirmed']
-
-        # A new cycle of the WAL begins at its first frame, so every frame of the cycle scanned is unconfirmed.
-        if scanned['cycle'] == confirmed['cycle']:
-            out += scanned['frame'] - confirmed['frame']
-        else:
-            out += scanned['frame']
+    # A new cycle of the WAL begins at its first frame, so every frame of the cycle scanned is unconfirmed.
+    if scanned['cycle'] == confirmed['cycle']:
+        out = scanned['frame'] - confirmed['frame']
+    else:
+        out = scanned['frame']
 
     return out
 
 # ################################################################################################################################
 
-def read_wal_bytes(node:'Node') -> 'strintdict':
-    out:'strintdict' = {}
+def read_wal_bytes(node:'Node') -> 'int':
+    wal_path = node.db_path(ModuleCtx.Database_File) + '-wal'
 
-    for file_name in ModuleCtx.Database_Files:
-        wal_path = node.db_path(file_name) + '-wal'
-
-        # A database without a writer since its last checkpoint has no WAL.
-        if os.path.exists(wal_path):
-            out[file_name] = os.path.getsize(wal_path)
-        else:
-            out[file_name] = 0
+    # A database without a writer since its last checkpoint has no WAL.
+    if os.path.exists(wal_path):
+        out = os.path.getsize(wal_path)
+    else:
+        out = 0
 
     return out
 
@@ -248,7 +243,7 @@ def _format_row(report:'MinuteReport') -> 'str':
         roles.append(sample.role)
         lags.append(str(sample.lag_frames))
         memory.append(f'{sample.memory_mb:.0f}')
-        wal.append(f'{max(sample.wal_bytes.values()) / ModuleCtx.Bytes_Per_MB:.1f}')
+        wal.append(f'{sample.wal_bytes / ModuleCtx.Bytes_Per_MB:.1f}')
 
     cells = [
         report.since_start,
@@ -340,12 +335,10 @@ class BarrierProbe:
     def _request(self, path:'str') -> 'bool':
         """ Requests one barrier and tells whether it completed.
         """
-        request = ModuleCtx.Probe_Database.encode('utf8') + b'\n'
-
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
             connection.settimeout(ModuleCtx.Probe_Timeout)
             connection.connect(path)
-            connection.sendall(request)
+            connection.sendall(ModuleCtx.Barrier_Request)
             answer = connection.recv(len(ModuleCtx.Barrier_OK))
 
         out = answer == ModuleCtx.Barrier_OK
@@ -490,10 +483,9 @@ class MinuteReporter:
             if sample.role.startswith('Active'):
                 active_count += 1
 
-            for file_name, size in sample.wal_bytes.items():
-                if size > ModuleCtx.WAL_Bound_Bytes:
-                    out.result = ModuleCtx.Result_Error
-                    out.details.append(f'{sample.node_name} {file_name} WAL {size} bytes')
+            if sample.wal_bytes > ModuleCtx.WAL_Bound_Bytes:
+                out.result = ModuleCtx.Result_Error
+                out.details.append(f'{sample.node_name} WAL {sample.wal_bytes} bytes')
 
         if active_count > 1:
             out.result = ModuleCtx.Result_Error

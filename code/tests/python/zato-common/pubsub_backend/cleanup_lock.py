@@ -20,7 +20,7 @@ from gevent import sleep
 from cleanup import set_expired
 from common import delete_all_rows, get_message_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
-from zato.common.pubsub.sql.config import get_pubsub_db_path
+from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -72,7 +72,7 @@ def run_cleanup_lock_scenario() -> 'None':
     set_expired(expired_msg_ids)
 
     # Another writer holds the write lock ..
-    db_path = get_pubsub_db_path()
+    db_path = os.environ[DatabaseEnv.Env_Path]
 
     lock_connection = sqlite3.connect(db_path, isolation_level=None)
     _ = lock_connection.execute('begin immediate')

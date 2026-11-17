@@ -21,7 +21,8 @@ from sqlalchemy import update
 from zato.common.alerting.collectors import collect_ack_code_facts, collect_consecutive_failure_facts, \
     collect_error_rate_facts, collect_facts, collect_latency_facts, collect_mllp_connection_failure_facts, \
     Default_Consecutive_Depth, Measure_Ack_Codes, Measure_Connection_Failures, Window_Seconds_By_Measure_Key
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditLog, AuditSource
+from zato.common.audit_log.api import event_table, AuditLog, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.destination.audit import record_hop
 from zato.common.destination.constants import DestinationType
 from zato.common.destination.model import new_entry
@@ -70,7 +71,7 @@ _reject_text = 'Unknown patient'
 def _backdate(event_id:'int', event_time:'datetime') -> 'None':
     """ Moves one stored event back in time.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     statement = update(event_table)
     statement = statement.where(event_table.c.id == event_id)
@@ -140,7 +141,7 @@ class TestAckCodes:
 
     def test_the_negative_acks_answered_land_in_the_fault_counts_by_their_code(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_message(audit_log, 'ack-1', 'AR')
@@ -156,7 +157,7 @@ class TestAckCodes:
 
     def test_a_positive_ack_counts_nothing(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_message(audit_log, 'ok-1', 'AA')
@@ -166,7 +167,7 @@ class TestAckCodes:
 
     def test_a_timeout_is_not_a_negative_ack(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_message(audit_log, 'to-1', ACKStatus.Timeout)
@@ -176,7 +177,7 @@ class TestAckCodes:
 
     def test_each_connection_gets_its_own_fact(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_message(audit_log, 'one-1', 'AR')
@@ -190,7 +191,7 @@ class TestAckCodes:
 
     def test_the_outgoing_source_asked_for_is_measured_alone(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_message(audit_log, 'one-1', 'AR')
@@ -204,7 +205,7 @@ class TestAckCodes:
 
     def test_acks_outside_the_window_are_not_counted(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         old_id = _seed_message(audit_log, 'old-1', 'AR')
@@ -223,7 +224,7 @@ class TestConnectionFailures:
 
     def test_the_timeouts_land_in_the_connection_failures(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_message(audit_log, 'to-1', ACKStatus.Timeout)
@@ -238,7 +239,7 @@ class TestConnectionFailures:
 
     def test_a_negative_ack_is_not_a_connection_failure(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_message(audit_log, 'ack-1', 'AR')
@@ -248,7 +249,7 @@ class TestConnectionFailures:
 
     def test_an_acknowledgment_that_was_not_understood_is_not_a_connection_failure(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # An acknowledgment with no MSA segment and one with a code outside table 0008 - both arrived, so
@@ -272,7 +273,7 @@ class TestConnectionFailures:
 
     def test_another_source_measures_nothing(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_message(audit_log, 'to-1', ACKStatus.Timeout)
@@ -281,7 +282,7 @@ class TestConnectionFailures:
 
     def test_timeouts_outside_the_window_are_not_counted(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         old_id = _seed_message(audit_log, 'old-1', ACKStatus.Timeout)
@@ -300,7 +301,7 @@ class TestAcksAlone:
 
     def test_the_error_rate_reads_the_acks_and_not_the_messages_sent(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Two messages failed out of four - the four OK message-sent rows must not dilute it
@@ -317,7 +318,7 @@ class TestAcksAlone:
 
     def test_the_deliveries_a_channel_made_through_the_connection_are_left_out(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_message(audit_log, 'rate-1', 'AA')
@@ -337,7 +338,7 @@ class TestAcksAlone:
 
     def test_the_failures_in_a_row_are_not_broken_by_the_messages_sent(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_message(audit_log, 'row-1', 'AA')
@@ -351,7 +352,7 @@ class TestAcksAlone:
 
     def test_a_run_of_failures_longer_than_the_default_depth_is_counted_to_the_depth_asked_for(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_message(audit_log, 'deep-1', 'AE')
@@ -369,7 +370,7 @@ class TestAcksAlone:
 
     def test_the_latency_is_the_acks_duration(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_message(audit_log, 'lat-1', 'AA', duration_ms=100)
@@ -381,7 +382,7 @@ class TestAcksAlone:
 
     def test_a_message_no_acknowledgment_came_back_for_is_not_averaged(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_message(audit_log, 'unanswered-1', 'AA', duration_ms=100)
@@ -400,7 +401,7 @@ class TestCollectFacts:
 
     def test_an_outgoing_mllp_fact_carries_every_measure_at_once(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_message(audit_log, 'all-1', 'AA', duration_ms=100)
@@ -427,7 +428,7 @@ class TestCollectFacts:
 
     def test_the_windows_of_the_source_apply_to_their_own_measures_alone(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         old_ack_id = _seed_message(audit_log, 'win-1', 'AR')
@@ -455,7 +456,7 @@ class TestCollectFacts:
 
     def test_the_newest_failure_points_at_the_message_its_ack_answered(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_message(audit_log, 'ev-0', 'AA')

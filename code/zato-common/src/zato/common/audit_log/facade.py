@@ -10,7 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import event_table, get_audit_engine
+from zato.common.audit_log.api import event_table
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.body import resolve_body
 from zato.common.audit_log.common import AuditBody, AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.search import last_seen, search_events, Default_Page, Default_Page_Size
@@ -128,7 +129,7 @@ class AuditFacade:
         The filter values come from zato.common.audit_log.api - AuditSource, AuditEvent,
         AuditOutcome and Status_Outstanding.
         """
-        engine = get_audit_engine()
+        engine = get_database_engine()
 
         out = search_events(
             engine,
@@ -152,7 +153,7 @@ class AuditFacade:
         """ Returns the newest event time of each of one source's objects - a dict mapping
         each object name, e.g. each MLLP channel, to a datetime in UTC.
         """
-        engine = get_audit_engine()
+        engine = get_database_engine()
 
         out = last_seen(engine, source)
         return out
@@ -164,7 +165,7 @@ class AuditFacade:
         only previews. An empty kind returns the newest body of any kind, otherwise
         kind names which one, e.g. 'request', 'response' or 'error'.
         """
-        engine = get_audit_engine()
+        engine = get_database_engine()
 
         # The body may live in the source's own store, so read the event's source first ..
         statement = select(event_table.c.source)

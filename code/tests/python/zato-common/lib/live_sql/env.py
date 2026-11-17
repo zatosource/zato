@@ -10,6 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from contextlib import contextmanager
 
+# Zato
+from zato.common.db_env.database import database_config
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -23,9 +26,10 @@ if 0:
 # ################################################################################################################################
 
 # Maps connection detail keys to the suffix of the corresponding environment variable -
-# a prefix such as Zato_Audit_Log_DB_ turns the suffix Type into Zato_Audit_Log_DB_Type.
+# the prefix Zato_Database_ turns the suffix Type into Zato_Database_Type.
 _detail_suffixes = {
     'type':          'Type',
+    'path':          'Path',
     'host':          'Host',
     'port':          'Port',
     'username':      'Username',
@@ -41,22 +45,22 @@ _detail_suffixes = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_env_names(prefix:'str') -> 'strlist':
-    """ Returns the names of all the environment variables a given prefix expands to.
+def get_env_names() -> 'strlist':
+    """ Returns the names of all the environment variables that select the Zato database.
     """
 
     # Our response to produce
     out:'strlist' = []
 
     for suffix in _detail_suffixes.values():
-        out.append(prefix + suffix)
+        out.append(database_config.env_prefix + suffix)
 
     return out
 
 # ################################################################################################################################
 
-def build_env(prefix:'str', details:'stranydict') -> 'stranydict':
-    """ Turns a database server's connection details into environment variables under a given prefix.
+def build_env(details:'stranydict') -> 'stranydict':
+    """ Turns a database server's connection details into the environment variables of the Zato database.
     """
 
     # Our response to produce
@@ -64,18 +68,18 @@ def build_env(prefix:'str', details:'stranydict') -> 'stranydict':
 
     for key, value in details.items():
         suffix = _detail_suffixes[key]
-        out[prefix + suffix] = value
+        out[database_config.env_prefix + suffix] = value
 
     return out
 
 # ################################################################################################################################
 
 @contextmanager
-def database_env(prefix:'str', details:'stranydict') -> 'envgen':
-    """ Points the environment variables under a given prefix at one database for the duration of a block.
+def database_env(details:'stranydict') -> 'envgen':
+    """ Points the Zato database at one database server or SQLite file for the duration of a block.
     """
-    env_names = get_env_names(prefix)
-    values = build_env(prefix, details)
+    env_names = get_env_names()
+    values = build_env(details)
 
     # Save everything that is set now so it can be restored later ..
     saved:'stranydict' = {}

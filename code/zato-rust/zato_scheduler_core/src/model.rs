@@ -105,7 +105,7 @@ pub struct SchedulerJob {
     pub on_error_job: Option<String>,
 }
 
-/// A scheduler job as the server sends it in a reload, with the run state from the common database.
+/// A scheduler job as the server sends it in a reload, with the run state from the Zato database.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ReloadedJob {
     /// The job definition from the ODB.

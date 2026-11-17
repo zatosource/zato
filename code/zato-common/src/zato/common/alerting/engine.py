@@ -32,7 +32,8 @@ from zato.common.alerting.rendering import render_alert_template, Template_Diges
     Template_Email_Body, Template_Email_Subject, Template_Slack, Template_Teams, Template_Webhook
 from zato.common.alerting.store import raise_alert, render_alert_message
 from zato.common.api import Alerting
-from zato.common.audit_log.api import AuditEvent, get_audit_engine
+from zato.common.audit_log.api import AuditEvent
+from zato.common.db_env.database import get_database_engine
 from zato.common.json_internal import dumps
 from zato.common.typing_ import list_field
 from zato.common.util.api import pluralize
@@ -551,7 +552,7 @@ def process_findings(
     notification only - the alert is already raised and in the audit trail,
     and the findings after it are dispatched as usual.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     if defaults is None:
         defaults = AlertDefaults()

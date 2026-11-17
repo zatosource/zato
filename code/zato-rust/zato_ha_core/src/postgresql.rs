@@ -3,9 +3,9 @@
 // Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 // Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
-//! The probe of the pub/sub database on `PostgreSQL` in the shared storage mode.
+//! The probe of the Zato database on `PostgreSQL` in the shared storage mode.
 //!
-//! A probe reads the row of `pubsub_active` that the generation guard of the Zato server keeps, which establishes
+//! A probe reads the row of `zato_active` that the generation guard of the Zato server keeps, which establishes
 //! that the database is reachable from the pod, including before the Zato server first created the table.
 //! Each probe runs within [`REQUEST_TIMEOUT`] on a runtime of the probe,
 //! and a probe that fails or does not complete in time ends the session, so that the next probe connects again.
@@ -35,7 +35,7 @@ pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
 const APPLICATION_NAME: &str = "zato-ha-node";
 
 /// Reads the row of the generation guard, which fails if the database is not reachable.
-const PROBE_STATEMENT: &str = "SELECT 1 FROM pubsub_active WHERE id = 1";
+const PROBE_STATEMENT: &str = "SELECT 1 FROM zato_active WHERE id = 1";
 
 /// The error of a probe that did not succeed.
 #[derive(Debug)]
@@ -177,9 +177,9 @@ fn tls_connector(settings: &PostgreSqlTls) -> Result<MakeRustlsConnect, ProbeErr
     Ok(MakeRustlsConnect::new(config))
 }
 
-/// The probe of the pub/sub database on `PostgreSQL`.
+/// The probe of the Zato database on `PostgreSQL`.
 pub struct PostgreSqlProbe {
-    /// The connection settings, which are those of the pub/sub database.
+    /// The connection settings, which are those of the Zato database.
     settings: PostgreSqlConfig,
 
     /// The TLS connector, if TLS is on.

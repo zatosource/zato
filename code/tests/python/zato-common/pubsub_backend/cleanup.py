@@ -13,7 +13,8 @@ import os
 from common import delete_all_rows, get_delivery_rows, get_message_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
-from zato.common.pubsub.sql.config import get_pubsub_engine, ModuleCtx
+from zato.common.db_env.database import get_database_engine
+from zato.common.pubsub.sql.config import ModuleCtx
 from zato.common.pubsub.sql.schema import message_table
 from zato.common.util.time_ import datetime_to_ms, utcnow
 
@@ -47,7 +48,7 @@ _aged_days = 30
 def set_expired(msg_ids:'strlist') -> 'None':
     """ Moves the expiration of the given messages into the past, straight in the database.
     """
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     now_ms = int(datetime_to_ms(utcnow()))
     expired_ms = now_ms - _ms_per_second
@@ -65,7 +66,7 @@ def _set_aged(msg_ids:'strlist') -> 'None':
     """ Moves the publication time of the given messages far into the past,
     straight in the database.
     """
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     now_ms = int(datetime_to_ms(utcnow()))
     aged_ms = now_ms - _aged_days * _ms_per_day

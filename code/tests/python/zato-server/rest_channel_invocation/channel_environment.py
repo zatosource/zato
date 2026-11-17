@@ -55,16 +55,10 @@ _redis_environment_keys = (
 # The variables naming the databases and sockets that otherwise default to the shared quickstart directory,
 # each with the name of the file it points to in the temporary directory of the environment
 _isolated_file_variables = (
-    ('Zato_Audit_Log_DB_Name', 'audit.db'),
-    ('Zato_Common_DB_Name', 'common.db'),
-    ('Zato_PubSub_DB_Name', 'pubsub.db'),
+    ('Zato_Database_Path', 'zato.db'),
     ('Zato_Analytics_DB_Path', 'analytics.db'),
     ('Zato_HA_Barrier_Socket', 'barrier.sock'),
 )
-
-# The rule engine names its database through a URL rather than through a path
-_rule_engine_variable = 'Zato_Rule_Engine_Dashboard_DB_URL'
-_rule_engine_file_name = 'rule-engine.db'
 
 # The metrics channel of a new environment is secured with this user and the password of this variable
 Metrics_Username = 'metrics'
@@ -291,9 +285,6 @@ class ChannelEnvironment:
 
         for variable, file_name in _isolated_file_variables:
             out[variable] = os.path.join(self.temp_directory, file_name)
-
-        rule_engine_path = os.path.join(self.temp_directory, _rule_engine_file_name)
-        out[_rule_engine_variable] = 'sqlite:///' + rule_engine_path
 
         out[_metrics_password_variable] = self.metrics_password
 

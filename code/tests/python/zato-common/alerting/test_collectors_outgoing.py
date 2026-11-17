@@ -21,7 +21,8 @@ from sqlalchemy import update
 from zato.common.alerting.collectors import channel_sources, collect_error_rate_facts, collect_facts, \
     collect_outgoing_status_facts, outgoing_sources, Measure_Connection_Failures, Measure_Status_Codes, \
     Window_Seconds_By_Measure_Key
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import TransportStatus
 from zato.common.util.api import utcnow
 
@@ -53,7 +54,7 @@ _window_seconds = 3600
 def _backdate(event_id:'int', event_time:'datetime') -> 'None':
     """ Moves one stored event back in time.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     statement = update(event_table)
     statement = statement.where(event_table.c.id == event_id)
@@ -101,7 +102,7 @@ class TestOutgoingStatusFacts:
 
     def test_the_responses_are_counted_by_code_and_the_failed_calls_on_their_own(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_call(audit_log, 'ok-1', '200 OK')
@@ -129,7 +130,7 @@ class TestOutgoingStatusFacts:
 
     def test_a_transport_status_never_lands_among_the_codes(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_call(audit_log, 'timeout-1', TransportStatus.Timeout)
@@ -143,7 +144,7 @@ class TestOutgoingStatusFacts:
 
     def test_a_response_without_a_status_counts_nowhere(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_call(audit_log, 'blank-1', '')
@@ -154,7 +155,7 @@ class TestOutgoingStatusFacts:
 
     def test_responses_outside_the_window_are_not_counted(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         old_id = _seed_call(audit_log, 'old-1', '503 Service Unavailable')
@@ -168,7 +169,7 @@ class TestOutgoingStatusFacts:
 
     def test_a_connection_asked_for_by_name_is_measured_alone(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_call(audit_log, 'name-1', '503 Service Unavailable')
@@ -182,7 +183,7 @@ class TestOutgoingStatusFacts:
 
     def test_an_outgoing_soap_connection_is_counted_by_status_as_a_rest_one(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_call(audit_log, 'soap-1', '500 Internal Server Error', source=AuditSource.SOAP_Outgoing)
@@ -200,7 +201,7 @@ class TestOutgoingStatusFacts:
 
     def test_a_fault_is_counted_by_its_code_and_never_as_a_status_code(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_call(audit_log, 'fault-1', '500 Internal Server Error', source=AuditSource.SOAP_Outgoing, fault_code='Receiver')
@@ -224,7 +225,7 @@ class TestOutgoingStatusFacts:
 
     def test_a_connection_with_faults_alone_gets_a_fact(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_call(audit_log, 'fault-1', '500 Internal Server Error', source=AuditSource.SOAP_Outgoing, fault_code='Receiver')
@@ -238,7 +239,7 @@ class TestOutgoingStatusFacts:
 
     def test_an_operation_outcome_is_counted_by_its_issue_code_and_never_as_a_status_code(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # A FHIR server's OperationOutcomes carry their issue code as the application outcome ..
@@ -263,7 +264,7 @@ class TestOutgoingStatusFacts:
 
     def test_a_fhir_health_check_is_counted_by_its_response_event_under_its_own_source(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_call(audit_log, 'check-1', '200 OK', source=AuditSource.FHIR_Health)
@@ -281,7 +282,7 @@ class TestOutgoingStatusFacts:
 
     def test_a_source_outside_the_outgoing_ones_measures_nothing(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_call(audit_log, 'chan-1', '500 Internal Server Error', source=AuditSource.REST_Channel)
@@ -299,7 +300,7 @@ class TestErrorRateOverResponses:
 
     def test_an_outgoing_rest_connection_whose_every_call_fails_reads_as_100_percent(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_call(audit_log, 'down-1', '503 Service Unavailable')
@@ -323,7 +324,7 @@ class TestSources:
 
     def test_a_channel_and_a_connection_of_one_name_each_get_facts_of_their_own_source(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # The connection fails on a 503 and a timeout ..

@@ -21,7 +21,8 @@ from zato.common.alerting.object_config import alert_type_file_transfer, encode_
     get_defaults as get_object_defaults, LLM_Connection_Config_Key
 from zato.common.alerting.sweep import build_fact_message, build_finding_link, read_outcome, run_sweep
 from zato.common.api import Alerting
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import get_source_label
 from zato.common.monitoring.health import EndpointMetrics
 from zato.common.rule_engine.loading import load_documents
@@ -302,7 +303,7 @@ class TestRunSweep:
 
     def test_a_matching_fact_dispatches_the_action_with_the_outcome_config(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         recorder = _TransportRecorder()
         now = utcnow()
 
@@ -340,7 +341,7 @@ class TestRunSweep:
         defaults so the service can run that action itself once the LLM has spoken.
         """
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         recorder = _TransportRecorder()
         now = utcnow()
 
@@ -392,7 +393,7 @@ class TestRunSweep:
 
     def test_a_repeated_match_deduplicates_instead_of_raising_anew(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         recorder = _TransportRecorder()
         now = utcnow()
 
@@ -418,7 +419,7 @@ class TestRunSweep:
 
     def test_a_fact_below_the_threshold_matches_nothing(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         recorder = _TransportRecorder()
         now = utcnow()
 
@@ -442,7 +443,7 @@ class TestRunSweep:
 
     def test_a_deactivated_rule_matches_nothing_while_remaining_stored(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         recorder = _TransportRecorder()
         now = utcnow()
 
@@ -465,7 +466,7 @@ class TestRunSweep:
 
     def test_each_fact_runs_through_each_rule(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         recorder = _TransportRecorder()
         now = utcnow()
 
@@ -507,7 +508,7 @@ class TestRunSweep:
         what is measured apart is reported apart.
         """
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         recorder = _TransportRecorder()
         now = utcnow()
 
@@ -547,7 +548,7 @@ class TestRunSweep:
         the way the job intervals do, and a schedule past its own window raises an email alert.
         """
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         recorder = _TransportRecorder()
         now = utcnow()
 
@@ -588,7 +589,7 @@ class TestRunSweep:
         a failure two hours back counts within a day's window and not within ten minutes.
         """
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         event_id = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Message_Sent, 'sftp.window',
@@ -696,7 +697,7 @@ class TestObjectSettings:
 
     def test_an_inactive_object_raises_nothing_while_the_others_still_do(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_transfer_failure(audit_log, engine, now, _settings_object_name, cid='settings-inactive-1')
@@ -718,7 +719,7 @@ class TestObjectSettings:
 
     def test_an_inactive_object_is_not_measured(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_transfer_failure(audit_log, engine, now, _settings_object_name, cid='settings-unmeasured-1')
@@ -745,7 +746,7 @@ class TestObjectSettings:
 
     def test_a_toggle_that_is_off_mutes_its_rule_for_that_object(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_transfer_failure(audit_log, engine, now, _settings_object_name, cid='settings-toggle-1')
@@ -770,7 +771,7 @@ class TestObjectSettings:
 
     def test_the_objects_own_number_stands_in_for_the_rules_default(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_transfer_failure(audit_log, engine, now, _settings_object_name, cid='settings-threshold-1')
@@ -793,7 +794,7 @@ class TestObjectSettings:
 
     def test_the_objects_own_window_is_what_it_is_measured_over(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # A failure two hours back for both connections
@@ -828,7 +829,7 @@ class TestObjectSettings:
 
     def test_the_objects_own_email_connection_reaches_the_transport(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_transfer_failure(audit_log, engine, now, _settings_object_name, cid='settings-email-1')
@@ -856,7 +857,7 @@ class TestObjectSettings:
 
     def test_the_objects_use_llm_switch_off_runs_the_action_under_a_ruleset_that_explains(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_transfer_failure(audit_log, engine, now, _settings_object_name, cid='settings-llm-off-1')
@@ -894,7 +895,7 @@ class TestObjectSettings:
 
     def test_the_objects_use_llm_switch_on_explains_under_a_ruleset_that_does_not(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_transfer_failure(audit_log, engine, now, _settings_object_name, cid='settings-llm-on-1')
@@ -1055,7 +1056,7 @@ class TestFindingLinks:
 
     def test_a_resubmittable_failure_deep_links_at_the_failing_event(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         recorder = _TransportRecorder()
         now = utcnow()
 
@@ -1080,7 +1081,7 @@ class TestFindingLinks:
 
     def test_a_failure_no_source_declared_resubmittable_keeps_the_plain_link(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         recorder = _TransportRecorder()
         now = utcnow()
 
@@ -1102,7 +1103,7 @@ class TestFindingLinks:
 
     def test_a_rule_with_a_link_of_its_own_keeps_it(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         recorder = _TransportRecorder()
         now = utcnow()
 
@@ -1120,7 +1121,7 @@ class TestFindingLinks:
 
     def test_the_dashboard_address_leads_the_link_when_configured(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         recorder = _TransportRecorder()
         now = utcnow()
 

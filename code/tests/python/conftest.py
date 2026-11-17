@@ -34,7 +34,6 @@ class ModuleCtx:
     Stop_Functions = (
         ('zato.common.db_env.engine', 'dispose_cached_engines'),
         ('zato.common.util.memory_trim', 'stop_memory_trimmer'),
-        ('zato.common.audit_log.buffer', 'stop_all_flushers'),
         ('zato.common.audit_log.search_index_merge', 'stop_search_index_merger'),
         ('zato.common.audit_log.retention_runner', 'stop_retention_runner'),
     )

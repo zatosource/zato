@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The environment of the PostgreSQL suites. The session is the one of the SQLite suite, with its lease as the referee,
-# and every test receives a new PostgreSQL cluster, which both nodes share as the pub/sub database, both nodes started
+# and every test receives a new PostgreSQL cluster, which both nodes share as the Zato database, both nodes started
 # from a copy of the environments of the session and HAProxy in front of them.
 
 # stdlib
@@ -37,7 +37,7 @@ if 0:
 class ModuleCtx:
 
     # The file in which the server of a node records its pub/sub generation and its owner
-    Server_Generation_File = 'pubsub-generation'
+    Server_Generation_File = 'database-generation'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,7 +50,7 @@ def get_cluster(env:'HAEnvironment') -> 'PostgreSQLCluster':
 
 def prepare_node(node:'Node', lease:'Lease', cluster:'PostgreSQLCluster', timers:'Timers') -> 'None':
     """ Fills in the environment of a node with the lease as its referee and the database of the cluster
-    as its pub/sub database, which selects the shared storage mode.
+    as its Zato database, which selects the shared storage mode.
     """
     node.prepare_common(lease, timers)
     node.env.update(cluster.node_env)

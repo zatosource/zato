@@ -19,7 +19,8 @@ from zato.common.analytics.api import get_analytics_engine, get_latency_bucket_i
     Latency_Bucket_Count, Latency_Buckets_Ms, ModuleCtx as AnalyticsCtx
 from zato.common.analytics.query import get_percentile, period_to_datetime
 from zato.common.analytics.rollup import run_rollup
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.json_internal import loads
 
 # ################################################################################################################################
@@ -35,9 +36,6 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# The prefix of the audit log's environment variables
-_audit_env_prefix = 'Zato_Audit_Log_DB_'
 
 # The server name all the test events are written under
 _server_name = 'test-analytics-server'
@@ -87,7 +85,7 @@ def analytics_test_env(details:'stranydict', analytics_db_path:'str') -> 'envgen
     """ Points the audit log at a given backend and the analytics store at a given SQLite file
     for the duration of a test.
     """
-    with database_env(_audit_env_prefix, details):
+    with database_env(details):
         with analytics_path_env(analytics_db_path):
             yield
 
@@ -129,7 +127,7 @@ def _insert_event(
         data='',
     )
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.begin() as connection:
         _ = connection.execute(insert_statement)
@@ -139,7 +137,7 @@ def _insert_event(
 def _clean_tables() -> 'None':
     """ Starts from empty tables because containers and SQLite files can be reused between runs.
     """
-    audit_engine = get_audit_engine()
+    audit_engine = get_database_engine()
 
     with audit_engine.begin() as connection:
         _ = connection.execute(event_table.delete())
@@ -225,7 +223,7 @@ def _get_max_event_id() -> 'int':
     statement = statement.order_by(event_table.c.id.desc())
     statement = statement.limit(1)
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         result = connection.execute(statement)

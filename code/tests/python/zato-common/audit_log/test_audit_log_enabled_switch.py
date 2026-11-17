@@ -17,6 +17,7 @@ from sqlalchemy import create_engine, func, select
 from common import audit_log_env
 from zato.common.audit_log.api import event_table, is_audit_log_enabled, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
+from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -117,8 +118,8 @@ def test_audit_log_enabled_switch(tmp_path:'os.PathLike') -> 'None':
     db_path = os.path.join(str(tmp_path), 'audit-enabled.db')
 
     details = {
-        'type': AuditLogCtx.Type_SQLite,
-        'name': db_path,
+        'type': DatabaseEnv.Type_SQLite,
+        'path': db_path,
     }
 
     with audit_log_env(details):

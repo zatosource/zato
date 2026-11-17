@@ -270,12 +270,9 @@ class DecisionStore:
             return out
 
         # .. insert the whole batch in one transaction ..
-        session = self._session_factory()
 
         try:
-            with session.begin():
-                statement = insert(rule_decision_table)
-                _ = session.execute(statement, rows)
+            self._session_factory.write(self._insert_rows, rows)
 
         # .. diagnose an integrity failure honestly, as duplicates or a missing ruleset, never a guess ..
         except IntegrityError as e:
@@ -288,12 +285,16 @@ class DecisionStore:
 
             raise error from e
 
-        # .. and always release the session.
-        finally:
-            session.close()
-
         out = len(rows)
         return out
+
+# ################################################################################################################################
+
+    def _insert_rows(self, session:'Session', rows:'rowlist') -> 'None':
+        """ Inserts the decision rows of one batch.
+        """
+        statement = insert(rule_decision_table)
+        _ = session.execute(statement, rows)
 
 # ################################################################################################################################
 
@@ -342,40 +343,45 @@ class DecisionStore:
         # Our count of deleted decision rows.
         out = 0
 
-        # Select one bounded group of expired identifiers at a time ..
+        # Delete one bounded group of expired identifiers at a time ..
         while True:
-            session = self._session_factory()
+            deleted_count = self._session_factory.write(self._delete_chunk, cutoff, chunk_size)
 
-            try:
-                with session.begin():
-                    query = select(rule_decision_table.c.id)
-                    cutoff_condition = rule_decision_table.c.occurred_at < cutoff
-                    query = query.where(cutoff_condition)
-                    query = query.order_by(rule_decision_table.c.id)
-                    query = query.limit(chunk_size)
+            # .. stop when the indexed timestamp finds no more expired rows ..
+            if not deleted_count:
+                break
 
-                    result = session.execute(query)
-                    scalars = result.scalars()
-                    decision_ids = scalars.all()
+            # .. and add the size of each group to the total.
+            out += deleted_count
 
-                    # .. stop when the indexed timestamp finds no more expired rows ..
-                    if not decision_ids:
-                        break
+        return out
 
-                    # .. delete exactly the selected group in the same transaction ..
-                    statement = delete(rule_decision_table)
-                    id_condition = rule_decision_table.c.id.in_(decision_ids)
-                    statement = statement.where(id_condition)
-                    _ = session.execute(statement)
+# ################################################################################################################################
 
-                    # .. and add its size to the total.
-                    deleted_count = len(decision_ids)
-                    out += deleted_count
+    def _delete_chunk(self, session:'Session', cutoff:'datetime', chunk_size:'int') -> 'int':
+        """ Deletes one bounded group of expired decisions and returns how many it deleted.
+        """
+        query = select(rule_decision_table.c.id)
+        cutoff_condition = rule_decision_table.c.occurred_at < cutoff
+        query = query.where(cutoff_condition)
+        query = query.order_by(rule_decision_table.c.id)
+        query = query.limit(chunk_size)
 
-            # Release each chunk's session before selecting the next one.
-            finally:
-                session.close()
+        result = session.execute(query)
+        scalars = result.scalars()
+        decision_ids = scalars.all()
 
+        # A group without rows deletes nothing ..
+        if not decision_ids:
+            return 0
+
+        # .. while any other group is deleted exactly as it was selected.
+        statement = delete(rule_decision_table)
+        id_condition = rule_decision_table.c.id.in_(decision_ids)
+        statement = statement.where(id_condition)
+        _ = session.execute(statement)
+
+        out = len(decision_ids)
         return out
 
 # ################################################################################################################################

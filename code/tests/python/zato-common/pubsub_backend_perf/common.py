@@ -28,8 +28,9 @@ from sqlalchemy import func, select
 # Zato
 from perf import silence_logging_teardown, Max_Operation_Seconds, Min_Delivery_Rate_Per_Second, \
     Min_Publish_Rate_Per_Second, Progress_Interval_Seconds
-from zato.common.pubsub.sql.config import dispose_pubsub_engine, get_pubsub_engine, ModuleCtx
+from zato.common.db_env.database import dispose_database_engine, get_database_engine
 from zato.common.pubsub.sql.schema import topic_sub_table
+from zato.common.test.database_env import DatabaseEnv
 from zato.common.util.memory_trim import stop_memory_trimmer
 
 # ################################################################################################################################
@@ -81,9 +82,6 @@ Min_Free_Disk_GB = 20
 
 # How many bytes one gigabyte has.
 _bytes_per_gb = 1024 ** 3
-
-# The variable that selects a database other than SQLite.
-_env_type = ModuleCtx.Env_Prefix + 'Type'
 
 # What the currently running scenario looks like.
 progress_context = {
@@ -178,10 +176,10 @@ def _get_subscription_count() -> 'int':
     """ How many topic subscriptions the database holds right now -
     zero when no database is configured, e.g. between tests.
     """
-    if ModuleCtx.Env_Path not in os.environ and _env_type not in os.environ:
+    if DatabaseEnv.Env_Path not in os.environ and DatabaseEnv.Env_Type not in os.environ:
         return 0
 
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         query = select(func.count()).select_from(topic_sub_table)
@@ -240,18 +238,18 @@ def report_progress_forever(counters:'ProgressCounters') -> 'None':
 
 @contextmanager
 def pubsub_backend_env(db_path:'str') -> 'envgen':
-    """ Points Zato_PubSub_DB_Path at one SQLite file for the duration of a test.
+    """ Points Zato_Database_Path at one SQLite file for the duration of a test.
     """
-    old_path = os.environ.get(ModuleCtx.Env_Path)
-    os.environ[ModuleCtx.Env_Path] = db_path
+    old_path = os.environ.get(DatabaseEnv.Env_Path)
+    os.environ[DatabaseEnv.Env_Path] = db_path
 
     try:
         yield
     finally:
         if old_path is None:
-            _ = os.environ.pop(ModuleCtx.Env_Path, None)
+            _ = os.environ.pop(DatabaseEnv.Env_Path, None)
         else:
-            os.environ[ModuleCtx.Env_Path] = old_path
+            os.environ[DatabaseEnv.Env_Path] = old_path
 
 # ################################################################################################################################
 
@@ -263,7 +261,7 @@ def cleanup_sqlite_db(db_path:'str') -> 'None':
 
     # Release all pooled connections and stop the background threads first, so the files can be removed
     # and no checkpoint or trimmer thread outlives the test ..
-    dispose_pubsub_engine()
+    dispose_database_engine()
     stop_memory_trimmer()
 
     # .. and remove the database along with its WAL companions.

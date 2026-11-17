@@ -23,7 +23,8 @@ from zato.admin.web.views.audit_log.columns import _data_preview_length, _defaul
 from zato.admin.web.views.audit_log.query import hydrate_rows, normalize_row
 from zato.admin.web.views.audit_log.trace import attach_trace_lines
 from zato.common.audit_log.activity import count_by_bucket, get_match_window
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditSource
+from zato.common.audit_log.api import event_table, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.flow import get_flow_ids, resolve_seed
 from zato.common.audit_log.listing import count_matching, event_conditions, new_search_filters
 from zato.common.util.time_ import parse_utc
@@ -80,7 +81,7 @@ def poll(req:'any_') -> 'HttpResponse':
     if page < _default_page:
         page = _default_page
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     where_conditions = event_conditions(engine.dialect.name, filters)
 
@@ -251,7 +252,7 @@ def strip(req:'any_') -> 'HttpResponse':
     if bucket_count < _strip_min_buckets:
         bucket_count = _strip_min_buckets
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     buckets:'anylist' = []
 
@@ -383,7 +384,7 @@ def flow(req:'any_') -> 'HttpResponse':
     body = json.loads(req.body)
     seed_id = body['id']
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         rows = _read_flow_rows(connection, seed_id)
@@ -410,7 +411,7 @@ def journey(req:'any_') -> 'HttpResponse':
 
     rows:'anylist' = []
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
 

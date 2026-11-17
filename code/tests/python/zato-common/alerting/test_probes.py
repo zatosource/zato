@@ -13,7 +13,8 @@ from sqlalchemy import select
 from zato.common.alerting.collectors import collect_certificate_facts, collect_health_facts, collect_test_transfer_facts
 from zato.common.alerting.probes import normalize_health_state, parse_tls_target, run_certificate_probe, \
     run_health_probe, run_test_transfer_probe
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -40,7 +41,7 @@ _health_conn_name = 'Microsoft 365 notifications'
 def _load_events(source:'str') -> 'anylist':
     """ Returns every stored event of one source, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     statement = select(
         event_table.c.object_name,
@@ -99,7 +100,7 @@ class TestCertificateProbe:
 
     def test_a_measured_target_writes_the_days_left_the_collector_reads(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # The remote side is faked - the probe's own bookkeeping is what runs for real
@@ -157,7 +158,7 @@ class TestHealthProbe:
 
     def test_every_state_is_recorded_normalized_with_the_raw_one_kept(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # The remote side is faked - the probe's own bookkeeping is what runs for real
@@ -189,7 +190,7 @@ class TestHealthProbe:
 
     def test_a_fetch_that_fails_records_no_state_at_all(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         def fetch() -> 'anylist':
@@ -219,7 +220,7 @@ class TestTransferProbe:
 
     def test_a_successful_transfer_writes_an_ok_outcome(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         transfers = []
@@ -244,7 +245,7 @@ class TestTransferProbe:
 
     def test_a_failed_transfer_writes_the_error_the_collector_reads(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         def transfer() -> 'None':

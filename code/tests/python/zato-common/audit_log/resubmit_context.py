@@ -10,7 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, AuditEvent, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import AuditClassification
 from zato.common.audit_log.request_context import Key_Headers, Key_Payload, Key_Payload_Kind, Key_Redacted, \
     Payload_Kind_Described, Redacted_Value
@@ -56,7 +57,7 @@ _described_payload = '<MultipartEncoder object at 0x1>'
 def get_event_rows(cid:'str', event_type:'str') -> 'anylist':
     """ Returns the rows of one type written under one correlation id, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.where(event_table.c.cid == cid)

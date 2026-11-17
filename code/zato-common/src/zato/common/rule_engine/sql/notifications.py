@@ -28,6 +28,19 @@ from .time_ import utc_now
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from datetime import datetime
+    from sqlalchemy.orm import Session
+    from zato.common.typing_ import any_
+
+    # Dummy assignments to satisfy type checkers
+    any_ = any_
+    datetime = datetime
+    Session = Session
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _require_kind(kind:'str') -> 'None':
     """ Rejects a chat platform this store does not know.
     """
@@ -55,40 +68,38 @@ class NotificationStore:
         require_text(payload, 'Chat config payload')
         require_text(actor, 'Chat config actor')
         now = utc_now()
-        session = self._session_factory()
+        self._session_factory.write(self._set_chat_config_row, kind, payload, actor, now)
 
-        try:
-            with session.begin():
+# ################################################################################################################################
 
-                # Look for the platform's current row ..
-                query = select(rule_chat_config_table.c.id)
-                kind_condition = rule_chat_config_table.c.kind == kind
-                query = query.where(kind_condition)
-                result = session.execute(query)
-                row = result.one_or_none()
+    def _set_chat_config_row(self, session:'Session', kind:'str', payload:'str', actor:'str', now:'datetime') -> 'None':
+        """ Stores the row of one chat platform's credentials payload.
+        """
+        # Look for the platform's current row ..
+        query = select(rule_chat_config_table.c.id)
+        kind_condition = rule_chat_config_table.c.kind == kind
+        query = query.where(kind_condition)
+        result = session.execute(query)
+        row = result.one_or_none()
 
-                # .. replace the payload in place when it exists ..
-                if row:
-                    statement = update(rule_chat_config_table)
-                    id_condition = rule_chat_config_table.c.id == row.id
-                    statement = statement.where(id_condition)
-                    statement = statement.values(payload=payload, updated_at=now, updated_by=actor)
-                    _ = session.execute(statement)
+        # .. replace the payload in place when it exists ..
+        if row:
+            statement = update(rule_chat_config_table)
+            id_condition = rule_chat_config_table.c.id == row.id
+            statement = statement.where(id_condition)
+            statement = statement.values(payload=payload, updated_at=now, updated_by=actor)
+            _ = session.execute(statement)
 
-                # .. or create the platform's first row.
-                else:
-                    values = {
-                        'kind':       kind,
-                        'payload':    payload,
-                        'updated_at': now,
-                        'updated_by': actor,
-                    }
-                    statement = insert(rule_chat_config_table)
-                    _ = session.execute(statement, values)
-
-        # Release the transactional session in every case.
-        finally:
-            session.close()
+        # .. or create the platform's first row.
+        else:
+            values = {
+                'kind':       kind,
+                'payload':    payload,
+                'updated_at': now,
+                'updated_by': actor,
+            }
+            statement = insert(rule_chat_config_table)
+            _ = session.execute(statement, values)
 
 # ################################################################################################################################
 
@@ -159,59 +170,69 @@ class NotificationStore:
         require_text(target, 'Destination target')
         require_text(actor, 'Destination actor')
         now = utc_now()
-        session = self._session_factory()
 
         try:
-            with session.begin():
-
-                # Confirm the parent exists inside the same transaction ..
-                _ = get_definition(session, definition_id)
-
-                # .. new destinations only hear about changes made after they were added,
-                # .. so the cursor starts at the newest event already in the feed ..
-                cursor_id = newest_event_id(session)
-
-                # .. and insert the destination row.
-                values = {
-                    'definition_id':    definition_id,
-                    'kind':             kind,
-                    'target':           target,
-                    'is_active':        True,
-                    'cursor_id':        cursor_id,
-                    'last_status':      None,
-                    'last_error':       None,
-                    'last_delivery_at': None,
-                    'created_at':       now,
-                    'created_by':       actor,
-                }
-                statement = insert(rule_notify_destination_table)
-                result = session.execute(statement, values)
-                result = cast_(CursorResult, result)
-                primary_key = cast_(anytuple, result.inserted_primary_key)
-                destination_id = primary_key[0]
-
-                out = RuleNotifyDestinationRecord(
-                    id=destination_id,
-                    definition_id=definition_id,
-                    kind=kind,
-                    target=target,
-                    is_active=True,
-                    cursor_id=cursor_id,
-                    last_status=None,
-                    last_error=None,
-                    last_delivery_at=None,
-                    created_at=now,
-                    created_by=actor,
-                )
+            out = self._session_factory.write(self._add_destination_row, definition_id, kind, target, actor, now)
 
         # Translate a duplicate destination into a domain error ..
         except IntegrityError as e:
             message = f'Destination `{target}` ({kind}) already exists for rule definition {definition_id}'
             raise InvalidStoreInputError(message) from e
 
-        # .. and release the session in every case.
-        finally:
-            session.close()
+        return out
+
+# ################################################################################################################################
+
+    def _add_destination_row(
+        self,
+        session:'Session',
+        definition_id:'int',
+        kind:'str',
+        target:'str',
+        actor:'str',
+        now:'datetime',
+        ) -> 'RuleNotifyDestinationRecord':
+        """ Stores one destination and returns it.
+        """
+        # Confirm the parent exists inside the same transaction ..
+        _ = get_definition(session, definition_id)
+
+        # .. new destinations only hear about changes made after they were added,
+        # .. so the cursor starts at the newest event already in the feed ..
+        cursor_id = newest_event_id(session)
+
+        # .. and insert the destination row.
+        values = {
+            'definition_id':    definition_id,
+            'kind':             kind,
+            'target':           target,
+            'is_active':        True,
+            'cursor_id':        cursor_id,
+            'last_status':      None,
+            'last_error':       None,
+            'last_delivery_at': None,
+            'created_at':       now,
+            'created_by':       actor,
+        }
+        statement = insert(rule_notify_destination_table)
+        result = session.execute(statement, values)
+        result = cast_(CursorResult, result)
+        primary_key = cast_(anytuple, result.inserted_primary_key)
+        destination_id = primary_key[0]
+
+        out = RuleNotifyDestinationRecord(
+            id=destination_id,
+            definition_id=definition_id,
+            kind=kind,
+            target=target,
+            is_active=True,
+            cursor_id=cursor_id,
+            last_status=None,
+            last_error=None,
+            last_delivery_at=None,
+            created_at=now,
+            created_by=actor,
+        )
 
         return out
 
@@ -264,22 +285,20 @@ class NotificationStore:
         statement = delete(rule_notify_destination_table)
         id_condition = rule_notify_destination_table.c.id == destination_id
         statement = statement.where(id_condition)
-        session = self._session_factory()
+        self._session_factory.write(self._delete_destination_row, destination_id, statement)
 
-        # Delete the row inside one transaction ..
-        try:
-            with session.begin():
-                result = session.execute(statement)
-                result = cast_(CursorResult, result)
+# ################################################################################################################################
 
-                # .. deleting a destination that does not exist is an error worth reporting.
-                if result.rowcount != 1:
-                    message = f'No such notification destination -> {destination_id}'
-                    raise RecordNotFoundError(message)
+    def _delete_destination_row(self, session:'Session', destination_id:'int', statement:'any_') -> 'None':
+        """ Deletes the row of one destination.
+        """
+        result = session.execute(statement)
+        result = cast_(CursorResult, result)
 
-        # Release the transactional session in every case.
-        finally:
-            session.close()
+        # .. deleting a destination that does not exist is an error worth reporting.
+        if result.rowcount != 1:
+            message = f'No such notification destination -> {destination_id}'
+            raise RecordNotFoundError(message)
 
 # ################################################################################################################################
 
@@ -329,16 +348,14 @@ class NotificationStore:
         id_condition = rule_notify_destination_table.c.id == destination_id
         statement = statement.where(id_condition)
         statement = statement.values(**values)
-        session = self._session_factory()
+        self._session_factory.write(self._update_destination_row, statement)
 
-        # Apply the update inside one transaction ..
-        try:
-            with session.begin():
-                _ = session.execute(statement)
+# ################################################################################################################################
 
-        # .. and release the transactional session in every case.
-        finally:
-            session.close()
+    def _update_destination_row(self, session:'Session', statement:'any_') -> 'None':
+        """ Runs the update of one destination row.
+        """
+        _ = session.execute(statement)
 
 # ################################################################################################################################
 
@@ -375,39 +392,37 @@ class NotificationStore:
         # Validate the cursor name before opening a transaction ..
         require_text(name, 'Job cursor name')
         now = utc_now()
-        session = self._session_factory()
+        self._session_factory.write(self._set_job_cursor_row, name, last_id, now)
 
-        try:
-            with session.begin():
+# ################################################################################################################################
 
-                # Look for the job's current position ..
-                query = select(rule_job_cursor_table.c.id)
-                name_condition = rule_job_cursor_table.c.name == name
-                query = query.where(name_condition)
-                result = session.execute(query)
-                row = result.one_or_none()
+    def _set_job_cursor_row(self, session:'Session', name:'str', last_id:'int', now:'datetime') -> 'None':
+        """ Stores the row of a named job's feed position.
+        """
+        # Look for the job's current position ..
+        query = select(rule_job_cursor_table.c.id)
+        name_condition = rule_job_cursor_table.c.name == name
+        query = query.where(name_condition)
+        result = session.execute(query)
+        row = result.one_or_none()
 
-                # .. move it in place when it exists ..
-                if row:
-                    statement = update(rule_job_cursor_table)
-                    id_condition = rule_job_cursor_table.c.id == row.id
-                    statement = statement.where(id_condition)
-                    statement = statement.values(last_id=last_id, updated_at=now)
-                    _ = session.execute(statement)
+        # .. move it in place when it exists ..
+        if row:
+            statement = update(rule_job_cursor_table)
+            id_condition = rule_job_cursor_table.c.id == row.id
+            statement = statement.where(id_condition)
+            statement = statement.values(last_id=last_id, updated_at=now)
+            _ = session.execute(statement)
 
-                # .. or create the job's first position row.
-                else:
-                    values = {
-                        'name':       name,
-                        'last_id':    last_id,
-                        'updated_at': now,
-                    }
-                    statement = insert(rule_job_cursor_table)
-                    _ = session.execute(statement, values)
-
-        # Release the transactional session in every case.
-        finally:
-            session.close()
+        # .. or create the job's first position row.
+        else:
+            values = {
+                'name':       name,
+                'last_id':    last_id,
+                'updated_at': now,
+            }
+            statement = insert(rule_job_cursor_table)
+            _ = session.execute(statement, values)
 
 # ################################################################################################################################
 # ################################################################################################################################

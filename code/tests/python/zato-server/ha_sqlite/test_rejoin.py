@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # of either node in each of the three phases leaves a pair that recovers, with nothing acknowledged lost.
 #
 # Each phase is held until the crash. The link from the active node to the joining node is slowed down
-# to a rate at which the backup of the current databases lasts a known time, and the frames written meanwhile
+# to a rate at which the backup of the current database lasts a known time, and the frames written meanwhile
 # reach the joining node over the same link during the catch-up. The admission is held by a referee
 # that the active node cannot reach, after the link is fast again.
 
@@ -81,11 +81,11 @@ class ModuleCtx:
     Active_Solo = ['ActiveSolo']
     Active_Replicated = 'ActiveReplicated'
 
-    # The databases of a backup, each sent as its file and its log
-    Database_Files = ['pubsub.db', 'common.db', 'audit.db']
+    # The database of a backup, sent as its file and its log
+    Database_File = 'zato.db'
     WAL_Suffix = '-wal'
 
-    # How long the backup of the current databases lasts over the slowed link, in seconds
+    # How long the backup of the current database lasts over the slowed link, in seconds
     Backup_Seconds = 60
 
     # The units of the rate of the slowed link
@@ -117,11 +117,7 @@ def _is_in_phase(report:'anydict', phase:'str') -> 'bool':
     if report['link'] != ModuleCtx.Link_Joining:
         return False
 
-    has_confirmed = False
-
-    for database in report['databases']:
-        if database['confirmed']['frame'] > 0:
-            has_confirmed = True
+    has_confirmed = report['database']['confirmed']['frame'] > 0
 
     if phase == ModuleCtx.Phase_Backup:
         out = not has_confirmed
@@ -156,18 +152,15 @@ def _wait_for_phase(active:'Node', phase:'str') -> 'None':
 # ################################################################################################################################
 
 def _get_backup_netem(active:'Node') -> 'str':
-    """ Returns the rate of the link at which the backup of the current databases of the active node lasts
-    the configured time. Each log is sent only up to its end, so the backup may take less than that, never more.
+    """ Returns the rate of the link at which the backup of the current database of the active node lasts
+    the configured time. The log is sent only up to its end, so the backup may take less than that, never more.
     """
-    total = 0
+    path = active.db_path(ModuleCtx.Database_File)
+    total = os.path.getsize(path)
 
-    for file_name in ModuleCtx.Database_Files:
-        path = active.db_path(file_name)
-        total += os.path.getsize(path)
-
-        wal_path = path + ModuleCtx.WAL_Suffix
-        if os.path.exists(wal_path):
-            total += os.path.getsize(wal_path)
+    wal_path = path + ModuleCtx.WAL_Suffix
+    if os.path.exists(wal_path):
+        total += os.path.getsize(wal_path)
 
     kbit = total * ModuleCtx.Bits_Per_Byte // (ModuleCtx.Backup_Seconds * ModuleCtx.Bits_Per_Kbit)
 

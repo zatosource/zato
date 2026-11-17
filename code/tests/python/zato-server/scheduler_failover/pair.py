@@ -232,7 +232,7 @@ def add_service_row(quickstart_directory:'str') -> 'None':
     """ Adds the service of the jobs to the configuration database, because the import of a job requires its service.
     The server matches the row with the service from the pickup directory by its name.
     """
-    odb_path = os.path.join(quickstart_directory, 'zato.db')
+    odb_path = os.path.join(quickstart_directory, 'config.db')
     connection = sqlite3.connect(odb_path)
 
     try:
@@ -346,7 +346,7 @@ def _new_server(
     if is_postgresql_mode(database.mode):
 
         database_proxy = LinkProxy(find_free_port(), database.port, os.path.join(work_dir, f'proxy-database-{label}.log'))
-        env['Zato_PubSub_DB_Port'] = str(database_proxy.listen_port)
+        env['Zato_Database_Port'] = str(database_proxy.listen_port)
 
         internal_port = find_free_port()
         env['Zato_Config_Bind_Port'] = str(internal_port)

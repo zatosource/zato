@@ -72,7 +72,7 @@ def _fetch_payload(backend:'any_', msg_id:'str') -> 'str':
 
 def _new_backend(db_path:'str') -> 'any_':
     gevent.reinit()
-    os.environ['Zato_PubSub_DB_Path'] = db_path
+    os.environ['Zato_Database_Path'] = db_path
 
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
 
@@ -174,7 +174,7 @@ def _edit_during_a_delivery(db_path:'str') -> 'None':
 # ################################################################################################################################
 
 def test_a_payload_read_before_an_edit_is_not_sent_after_it(tmp_path:'any_') -> 'None':
-    db_path = os.path.join(tmp_path, 'pubsub.db')
+    db_path = os.path.join(tmp_path, 'zato.db')
 
     _run_forked(_edit_during_a_delivery, db_path)
 

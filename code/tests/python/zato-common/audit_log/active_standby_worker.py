@@ -11,7 +11,7 @@ import sys
 from time import monotonic, sleep
 
 # Zato
-from zato.common.audit_log.api import get_audit_engine
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import event_attr_table, event_count_table
 from zato.common.audit_log.event_count import compact_event_counts
 from zato.common.audit_log.resubmit import run_once, Action_Resend
@@ -37,7 +37,7 @@ def run_background(seconds:'float') -> 'None':
     """ Runs the retention, the count compaction and the search index merge of one server process
     one after another, without a pause, for the given number of seconds.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
     index_names = get_postgresql_index_names(event_attr_table.name)
     merger = SearchIndexMerger(engine, index_names)
 

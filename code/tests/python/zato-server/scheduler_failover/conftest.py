@@ -85,7 +85,7 @@ def sqlite_server() -> 'any_':
     sqlite_dir = tempfile.mkdtemp(prefix='zato_scheduler_failover_sqlite_', dir=get_runtime_dir())
 
     database = PubSubDatabase(mode=PubSubDBMode.SQLite)
-    database.env = {'Zato_PubSub_DB_Path': os.path.join(sqlite_dir, 'pubsub.db')}
+    database.env = {'Zato_Database_Path': os.path.join(sqlite_dir, 'zato.db')}
 
     out = build_pair(database, 1, False)
 

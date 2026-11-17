@@ -11,7 +11,8 @@ from datetime import timedelta
 
 # Zato
 from zato.common.alerting.collectors import collect_feed_silent_facts, collect_outstanding_facts
-from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.monitoring.health import EndpointMetrics
 from zato.common.util.api import utcnow
 
@@ -25,7 +26,7 @@ class TestOutstandingFacts:
 
     def test_a_message_without_its_followup_counts_with_its_age(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # One message sent ten minutes ago, never acknowledged
@@ -47,7 +48,7 @@ class TestOutstandingFacts:
 
     def test_an_answered_message_never_counts(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # A message and its acknowledgment, on the same correlation id

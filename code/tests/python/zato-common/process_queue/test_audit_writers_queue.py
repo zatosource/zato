@@ -85,18 +85,20 @@ def _write_through_every_writer(region:'SharedRegion', db_path:'str', conn:'Conn
 
         from zato.common.alerting.model import AlertRule, Finding
         from zato.common.alerting.store import raise_alert
-        from zato.common.audit_log.api import AuditLink, AuditLog, get_audit_engine, ModuleCtx as AuditLogCtx
+        from zato.common.audit_log.api import AuditLink, AuditLog
+        from zato.common.db_env.database import get_database_engine
         from zato.common.audit_log.dedup import acquire_dedup_key, complete_dedup_key, release_dedup_key
         from zato.common.audit_log.file_transfer_run import update_run_event, write_run_error
         from zato.common.audit_log.scheduler import append_job_log_entry, record_job_complete, record_job_timeout
         from zato.common.db_env.engine import set_process_queue
         from zato.common.db_env.process_queue import ProcessQueue
+        from zato.common.test.database_env import DatabaseEnv
         from zato.common.util.api import utcnow
 
-        os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
-        os.environ[AuditLogCtx.Env_Name] = db_path
+        os.environ[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
+        os.environ[DatabaseEnv.Env_Path] = db_path
 
-        engine = get_audit_engine()
+        engine = get_database_engine()
         audit_log = AuditLog(ModuleCtx.Server_Name)
         now = utcnow()
 
@@ -155,7 +157,7 @@ def _write_through_every_writer(region:'SharedRegion', db_path:'str', conn:'Conn
 
 def test_every_writer_of_the_audit_database_waits_for_its_turn(tmp_path:'Path') -> 'None':
     region = SharedRegion(_region_config)
-    db_path = str(tmp_path / 'audit.db')
+    db_path = str(tmp_path / 'zato.db')
 
     # The config process takes the turn of the file and keeps it throughout ..
     _ = region.queue_enter(ModuleCtx.Queue, ModuleCtx.Holder_Place)

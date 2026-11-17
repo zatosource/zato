@@ -29,7 +29,8 @@ from zato.common.alerting.seed import alerting_vocabulary, build_ruleset_documen
 from zato.common.alerting.seed.rules_common import channels_rules
 from zato.common.alerting.sweep import load_alert_rules, run_sweep, Fact_Entity
 from zato.common.api import Alerting
-from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Definition_Type_Vocabulary, Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
@@ -243,7 +244,7 @@ class TestSweepOverSeededRules:
         assert _error_rate_rule_name in rule_names
 
         audit_log = AuditLog(_server_name)
-        audit_engine = get_audit_engine()
+        audit_engine = get_database_engine()
         recorder = _TransportRecorder()
         now = utcnow()
 

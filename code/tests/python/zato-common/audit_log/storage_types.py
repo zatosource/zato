@@ -18,7 +18,8 @@ from sqlalchemy import func, select
 
 # Zato
 from common import delete_all_events
-from zato.common.audit_log.api import event_attr_table, event_table, get_audit_engine, AuditEvent, AuditSource
+from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.search import build_search_conditions
 from zato.common.db_env.common import hour_period, Type_SQLite
 
@@ -138,7 +139,7 @@ def run_timestamp_scenario() -> 'None':
     in UTC, sort as moments rather than as wall-clock text, and bound time windows exactly.
     """
     delete_all_events()
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     _ = _insert_event(engine, 'india', _india_time, '')
     _ = _insert_event(engine, 'utc', _utc_time, '')
@@ -183,7 +184,7 @@ def run_hour_period_scenario() -> 'None':
     """ The database groups events into hourly periods by their moments in UTC, whatever offset they were given at.
     """
     delete_all_events()
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     _ = _insert_event(engine, 'india', _india_time, '')
     _ = _insert_event(engine, 'utc', _utc_time, '')
@@ -213,7 +214,7 @@ def run_search_scenario() -> 'None':
     for terms in several scripts, with LIKE wildcards and quotes, and for terms shorter than the index tokens.
     """
     delete_all_events()
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     now = datetime.now(timezone.utc)
 

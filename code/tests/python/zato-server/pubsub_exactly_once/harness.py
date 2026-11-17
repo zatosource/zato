@@ -15,7 +15,7 @@ from typing import NamedTuple
 # Zato
 from pubsub_exactly_once.rest import publish
 from zato.common.crypto.api import CryptoManager
-from zato.common.pubsub.sql.config import get_pubsub_engine
+from zato.common.db_env.database import get_database_engine
 from zato.common.test.conftest_base_pubsub import render_template
 from zato.common.test.exactly_once.config import TestConfig
 from zato.common.test.exactly_once.control import hold, Input_Topic, release, wait_until_held
@@ -90,7 +90,7 @@ def publish_inputs(keys:'strlist') -> 'None':
 def get_engine() -> 'Engine':
     """ Returns the engine of the pub/sub database of the server.
     """
-    out = get_pubsub_engine()
+    out = get_database_engine()
     return out
 
 # ################################################################################################################################

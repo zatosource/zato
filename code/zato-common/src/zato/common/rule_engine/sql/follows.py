@@ -74,58 +74,58 @@ class FollowStore:
         """
         # Validate the actor before any database work ..
         require_text(actor, 'Follow actor')
-        session = self._session_factory()
+        out = self._session_factory.write(self._follow_rows, actor, definition_id)
 
-        try:
-            with session.begin():
+        return out
 
-                # Confirm the definition exists inside the same transaction ..
-                _ = get_definition(session, definition_id)
+# ################################################################################################################################
 
-                # .. following twice is the same follow, with its original clock ..
-                existing = _get_follow(session, actor, definition_id)
+    def _follow_rows(self, session:'Session', actor:'str', definition_id:'int') -> 'RuleFollowRecord':
+        """ Stores one follow with its feed event, unless it exists, and returns the follow.
+        """
+        # Confirm the definition exists inside the same transaction ..
+        _ = get_definition(session, definition_id)
 
-                if existing:
-                    out = existing
+        # .. following twice is the same follow, with its original clock ..
+        existing = _get_follow(session, actor, definition_id)
 
-                else:
-                    # .. store the follow with its clock starting now ..
-                    now = utc_now()
-                    values = {
-                        'definition_id': definition_id,
-                        'actor':         actor,
-                        'created_at':    now,
-                        'last_seen_at':  now,
-                    }
-                    statement = insert(rule_follow_table)
-                    result = session.execute(statement, values)
-                    result = cast_(CursorResult, result)
-                    primary_key = cast_(anytuple, result.inserted_primary_key)
-                    follow_id = primary_key[0]
+        if existing:
+            out = existing
 
-                    # .. record the change in the activity feed in the same commit ..
-                    payload = {'following': True}
-                    _ = add_event(
-                        session,
-                        definition_id=definition_id,
-                        version=None,
-                        event_type=Event_Type_Follow_Changed,
-                        actor=actor,
-                        payload=payload,
-                    )
+        else:
+            # .. store the follow with its clock starting now ..
+            now = utc_now()
+            values = {
+                'definition_id': definition_id,
+                'actor':         actor,
+                'created_at':    now,
+                'last_seen_at':  now,
+            }
+            statement = insert(rule_follow_table)
+            result = session.execute(statement, values)
+            result = cast_(CursorResult, result)
+            primary_key = cast_(anytuple, result.inserted_primary_key)
+            follow_id = primary_key[0]
 
-                    # .. and build the detached record from the values just written.
-                    out = RuleFollowRecord(
-                        id=follow_id,
-                        definition_id=definition_id,
-                        actor=actor,
-                        created_at=now,
-                        last_seen_at=now,
-                    )
+            # .. record the change in the activity feed in the same commit ..
+            payload = {'following': True}
+            _ = add_event(
+                session,
+                definition_id=definition_id,
+                version=None,
+                event_type=Event_Type_Follow_Changed,
+                actor=actor,
+                payload=payload,
+            )
 
-        # Release the transactional session in every case.
-        finally:
-            session.close()
+            # .. and build the detached record from the values just written.
+            out = RuleFollowRecord(
+                id=follow_id,
+                definition_id=definition_id,
+                actor=actor,
+                created_at=now,
+                last_seen_at=now,
+            )
 
         return out
 
@@ -136,38 +136,36 @@ class FollowStore:
         """
         # Validate the actor before any database work ..
         require_text(actor, 'Follow actor')
-        session = self._session_factory()
+        self._session_factory.write(self._unfollow_rows, actor, definition_id)
 
-        try:
-            with session.begin():
+# ################################################################################################################################
 
-                # A follow that does not exist cannot be removed - name it directly ..
-                existing = _get_follow(session, actor, definition_id)
+    def _unfollow_rows(self, session:'Session', actor:'str', definition_id:'int') -> 'None':
+        """ Removes one follow with its feed event.
+        """
+        # A follow that does not exist cannot be removed - name it directly ..
+        existing = _get_follow(session, actor, definition_id)
 
-                if existing is None:
-                    message = f'Actor {actor} does not follow definition {definition_id}'
-                    raise RecordNotFoundError(message)
+        if existing is None:
+            message = f'Actor {actor} does not follow definition {definition_id}'
+            raise RecordNotFoundError(message)
 
-                # .. remove the one follow row ..
-                statement = delete(rule_follow_table)
-                id_condition = rule_follow_table.c.id == existing.id
-                statement = statement.where(id_condition)
-                _ = session.execute(statement)
+        # .. remove the one follow row ..
+        statement = delete(rule_follow_table)
+        id_condition = rule_follow_table.c.id == existing.id
+        statement = statement.where(id_condition)
+        _ = session.execute(statement)
 
-                # .. and record the change in the activity feed in the same commit.
-                payload = {'following': False}
-                _ = add_event(
-                    session,
-                    definition_id=definition_id,
-                    version=None,
-                    event_type=Event_Type_Follow_Changed,
-                    actor=actor,
-                    payload=payload,
-                )
-
-        # Release the transactional session in every case.
-        finally:
-            session.close()
+        # .. and record the change in the activity feed in the same commit.
+        payload = {'following': False}
+        _ = add_event(
+            session,
+            definition_id=definition_id,
+            version=None,
+            event_type=Event_Type_Follow_Changed,
+            actor=actor,
+            payload=payload,
+        )
 
 # ################################################################################################################################
 
@@ -221,30 +219,28 @@ class FollowStore:
         """
         # Validate the actor before any database work ..
         require_text(actor, 'Follow actor')
-        session = self._session_factory()
+        self._session_factory.write(self._mark_seen_row, actor, definition_id)
 
-        try:
-            with session.begin():
+# ################################################################################################################################
 
-                # Move the clock on the one promoted follow identity ..
-                now = utc_now()
-                statement = update(rule_follow_table)
-                actor_condition = rule_follow_table.c.actor == actor
-                definition_condition = rule_follow_table.c.definition_id == definition_id
-                statement = statement.where(actor_condition)
-                statement = statement.where(definition_condition)
-                statement = statement.values(last_seen_at=now)
-                result = session.execute(statement)
-                result = cast_(CursorResult, result)
+    def _mark_seen_row(self, session:'Session', actor:'str', definition_id:'int') -> 'None':
+        """ Moves the clock of one follow forward to now.
+        """
+        # Move the clock on the one promoted follow identity ..
+        now = utc_now()
+        statement = update(rule_follow_table)
+        actor_condition = rule_follow_table.c.actor == actor
+        definition_condition = rule_follow_table.c.definition_id == definition_id
+        statement = statement.where(actor_condition)
+        statement = statement.where(definition_condition)
+        statement = statement.values(last_seen_at=now)
+        result = session.execute(statement)
+        result = cast_(CursorResult, result)
 
-                # .. a follow that does not exist has no clock to move - name it directly.
-                if result.rowcount != 1:
-                    message = f'Actor {actor} does not follow definition {definition_id}'
-                    raise RecordNotFoundError(message)
-
-        # Release the transactional session in every case.
-        finally:
-            session.close()
+        # .. a follow that does not exist has no clock to move - name it directly.
+        if result.rowcount != 1:
+            message = f'Actor {actor} does not follow definition {definition_id}'
+            raise RecordNotFoundError(message)
 
 # ################################################################################################################################
 

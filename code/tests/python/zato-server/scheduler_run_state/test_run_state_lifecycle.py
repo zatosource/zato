@@ -142,19 +142,19 @@ class _ServiceCall:
 # ################################################################################################################################
 
 class _Environment:
-    """ The ODB, the common database and the recorders of one test.
+    """ The ODB, the Zato database and the recorders of one test.
     """
     def __init__(self, tmp_path:'Path') -> 'None':
 
-        odb_engine = create_engine(f'sqlite:///{os.path.join(tmp_path, "odb.db")}')
+        odb_engine = create_engine(f'sqlite:///{os.path.join(tmp_path, "config.db")}')
         Base.metadata.create_all(odb_engine)
         self.odb_session = sessionmaker(bind=odb_engine)
 
-        common_engine = create_engine(f'sqlite:///{os.path.join(tmp_path, "common.db")}')
-        metadata.create_all(common_engine)
+        database_engine = create_engine(f'sqlite:///{os.path.join(tmp_path, "zato.db")}')
+        metadata.create_all(database_engine)
 
         self.events:'anylist' = []
-        self.store = _RecordingStore(common_engine, self.odb_session, self.events)
+        self.store = _RecordingStore(database_engine, self.odb_session, self.events)
         self.run_state = SchedulerRunState(self.store)
         self.server = _Server(self.run_state, _RecordingScheduler(self.events))
 
@@ -193,7 +193,7 @@ class _Environment:
         return out
 
     def get_run_state_names(self) -> 'strlist':
-        """ Returns the names of all the jobs that the common database holds a run state for.
+        """ Returns the names of all the jobs that the Zato database holds a run state for.
         """
         out = sorted(item.name for item in self.store.list(RunStateCtx.Object_Type))
         return out

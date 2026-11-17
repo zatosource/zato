@@ -18,7 +18,8 @@ from json import loads
 
 # Zato
 from zato.common.api import FileTransfer
-from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import list_attachments
 from zato.common.audit_log.file_transfer import Operation_Move, Operation_Read
 from zato.common.audit_log.file_transfer_run import Phase_Reading, Run_Status_Interrupted, Run_Status_No_Directory
@@ -299,7 +300,7 @@ def test_content_is_stored_on_read_when_opted_in(tmp_path:'any_') -> 'None':
         events = get_events()
         read = _get_read_event(events)
 
-        engine = get_audit_engine()
+        engine = get_database_engine()
         items = list_attachments(engine, read['id'])
 
         assert len(items) == 1

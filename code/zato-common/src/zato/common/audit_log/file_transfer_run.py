@@ -18,8 +18,9 @@ from json import dumps, loads
 from sqlalchemy import and_, func, select
 
 # Zato
-from zato.common.audit_log.api import event_attr_table, event_body_table, event_table, get_audit_engine, AuditBody, \
-    AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_attr_table, event_body_table, event_table, AuditBody, AuditEvent, AuditOutcome, \
+    AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.export.api import get_audit_export
 from zato.common.db_env.engine import execute_write
 from zato.common.util.api import utcnow
@@ -204,7 +205,7 @@ def update_run_event(
     statement = statement.where(event_table.c.id == event_id)
     statement = statement.values(**values)
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
     _ = execute_write(engine, statement)
 
     # The collector sees the updated run as another record of the same event
@@ -259,7 +260,7 @@ def _write_body(event_id:'int', kind:'str', event_time:'datetime', data:'str') -
     statement = event_body_table.insert()
     statement = statement.values(event_id=event_id, kind=kind, event_time=event_time, data=data)
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
     _ = execute_write(engine, statement)
 
 # ################################################################################################################################
@@ -283,7 +284,7 @@ def load_attempt_memory(conn_name:'str', schedule_name:'str', since:'datetime') 
     statement = statement.where(and_(is_source, is_conn, is_remembered, is_recent))
     statement = statement.order_by(event_table.c.id)
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         result = connection.execute(statement)
@@ -338,7 +339,7 @@ def find_seen_before(conn_name:'str', schedule_name:'str', checksum:'str', since
     statement = statement.where(and_(is_source, is_conn, is_delivered, is_recent, is_checksum_attr, is_same_checksum))
     statement = statement.order_by(newest_first)
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         result = connection.execute(statement)
@@ -379,7 +380,7 @@ def count_delivered_since(conn_name:'str', schedule_name:'str', since:'datetime'
     statement = statement.select_from(attr_join)
     statement = statement.where(and_(is_source, is_conn, is_delivered, is_recent, is_schedule_attr, is_same_schedule))
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         result = connection.execute(statement)
@@ -409,7 +410,7 @@ def find_running_runs(conn_name:'str', schedule_name:'str', server_name:'str') -
     statement = statement.where(and_(is_source, is_conn, is_run, is_running, is_server))
     statement = statement.order_by(event_table.c.id)
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         result = connection.execute(statement)

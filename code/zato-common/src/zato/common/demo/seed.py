@@ -49,7 +49,7 @@ from zato.hl7v2 import parse_hl7
 if 0:
     from sqlalchemy.engine import Connection, Engine
     from zato.common.alerting.model import AlertRule, Finding
-    from zato.common.audit_log.buffer import pending_event_list
+    from zato.common.audit_log.pending import pending_event_list
     from zato.common.typing_ import anydict, anylist, anytuple, dictlist, intanydict, intnone
 
     anydict = anydict
@@ -310,9 +310,8 @@ class _BulkAuditLog(AuditLog):
 
     def __init__(self, server_name:'str') -> 'None':
 
-        # flush_max_size=1 routes every insert through _write_batch synchronously,
-        # which is where this class collects instead of writing
-        super().__init__(server_name, flush_max_size=1)
+        # Every insert reaches _write_batch through the commit queue, which is where this class collects instead of writing
+        super().__init__(server_name)
 
         # Everything collected so far - an event's position here is its relative id
         self.pending_events:'anylist' = []

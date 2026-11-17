@@ -43,9 +43,9 @@ import pytest
 # Zato
 from zato.common.alerting.explain.skill import get_default_skills_dir, Skills_Dir_Name
 from zato.common.alerting.rendering import get_default_template_dir, Template_Dir_Name
-from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 from zato.common.hl7.mllp.haproxy import Env_Port_Name as MLLP_Port_Env_Name
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
+from zato.common.test.database_env import DatabaseEnv
 from zato.common.test.sftp_ import SFTPTestServer
 from zato.common.typing_ import cast_
 
@@ -111,6 +111,7 @@ from json import dumps
 
 # Zato
 from zato.server.service import Service
+from zato.common.test.database_env import DatabaseEnv
 
 class AlwaysRaise(Service):
     """ Fails on purpose, so that the channel in front of it answers with a 500.
@@ -345,17 +346,17 @@ def quiet_when_traced() -> 'None':
 
 @pytest.fixture(autouse=True)
 def audit_db_env(tmp_path:'Path') -> 'any_':
-    """ Points the audit database at a per-test SQLite file so every test runs on its own.
+    """ Points the Zato database at a per-test SQLite file so every test runs on its own.
     """
-    database_path = os.path.join(str(tmp_path), 'audit.db')
+    database_path = os.path.join(str(tmp_path), 'zato.db')
 
-    os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
-    os.environ[AuditLogCtx.Env_Name] = database_path
+    os.environ[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
+    os.environ[DatabaseEnv.Env_Path] = database_path
 
     yield database_path
 
-    del os.environ[AuditLogCtx.Env_Type]
-    del os.environ[AuditLogCtx.Env_Name]
+    del os.environ[DatabaseEnv.Env_Type]
+    del os.environ[DatabaseEnv.Env_Path]
 
 # ################################################################################################################################
 

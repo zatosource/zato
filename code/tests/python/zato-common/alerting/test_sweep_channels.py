@@ -19,7 +19,8 @@ from zato.common.alerting.object_config import alert_type_channels, encode_email
 from zato.common.alerting.seed.rules_common import channels_rules
 from zato.common.alerting.sweep import run_sweep
 from zato.common.api import Alerting
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.rule_engine.loading import load_documents
 from zato.common.rule_engine.parser import parse_data_details
 from zato.common.util.api import utcnow
@@ -202,7 +203,7 @@ class TestChannelSweep:
 
     def test_a_channel_with_alerts_off_is_skipped_while_another_still_raises(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_rejections(audit_log, engine, now, 'off-a', 10)
@@ -226,7 +227,7 @@ class TestChannelSweep:
 
     def test_the_channels_own_threshold_stands_in_for_the_rules_default(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_rejections(audit_log, engine, now, 'own', 3)
@@ -248,7 +249,7 @@ class TestChannelSweep:
 
     def test_the_traffic_expected_toggle_decides_whether_silence_is_measured(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # The one call the channel ever received is two hours old
@@ -273,7 +274,7 @@ class TestChannelSweep:
 
     def test_the_silence_window_of_the_channel_is_what_it_is_measured_against(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Half an hour of silence - under the rule's hour, over the channel's own ten minutes
@@ -293,7 +294,7 @@ class TestChannelSweep:
 
     def test_the_rejected_callers_have_a_window_of_their_own(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Ten rejections an hour and a half back for both channels
@@ -315,7 +316,7 @@ class TestChannelSweep:
 
     def test_the_channels_own_llm_connection_rides_in_the_outcome(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_rejections(audit_log, engine, now, 'conn-a', 3)
@@ -342,7 +343,7 @@ class TestChannelSweep:
 
     def test_the_channels_own_email_connection_reaches_the_transport(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_rejections(audit_log, engine, now, 'email-a', 3)
@@ -361,7 +362,7 @@ class TestSoapChannelSweep:
 
     def test_the_soap_channels_own_threshold_fires_on_its_own_facts(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_rejections(audit_log, engine, now, 'soap-own', 3, source=AuditSource.SOAP_Channel)
@@ -386,7 +387,7 @@ class TestSoapChannelSweep:
 
     def test_a_soap_channel_with_alerts_off_is_skipped(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_rejections(audit_log, engine, now, 'soap-off', 10, source=AuditSource.SOAP_Channel)
@@ -401,7 +402,7 @@ class TestSoapChannelSweep:
 
     def test_a_soap_channels_silence_and_its_own_window_are_measured(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # The one call the SOAP channel ever received is half an hour old - under the rule's hour,
@@ -425,7 +426,7 @@ class TestSoapChannelSweep:
 
     def test_a_rest_and_a_soap_channel_of_one_name_are_alerted_on_apart(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Only the SOAP channel of the name has enough rejections

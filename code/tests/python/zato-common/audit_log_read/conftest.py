@@ -27,9 +27,8 @@ from live_sql.containers import start_postgresql, stop_container
 from live_sql.env import database_env
 from perf import silence_logging_teardown
 from support import Backend_PostgreSQL, Backend_SQLite, delete_all_rows
-from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
-from zato.common.audit_log.sqlite_writes import env_config
-from zato.common.db_env import dispose_env_engine
+from zato.common.db_env.database import dispose_database_engine
+from zato.common.test.database_env import DatabaseEnv
 
 _ = atexit.register(silence_logging_teardown)
 
@@ -60,11 +59,8 @@ class ModuleCtx:
     Password = 'test-audit-log-read-password'
     DB_Name  = 'zato_audit_log_read'
 
-    # The prefix all the audit log database environment variables share
-    Env_Prefix = 'Zato_Audit_Log_DB_'
-
     # The name of the SQLite file in the directory of each test
-    SQLite_File_Name = 'audit.db'
+    SQLite_File_Name = 'zato.db'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -101,14 +97,14 @@ def audit_backend(request:'pytest.FixtureRequest', tmp_path:'os.PathLike') -> 's
     else:
         db_path = os.path.join(str(tmp_path), ModuleCtx.SQLite_File_Name)
         details = {
-            'type': AuditLogCtx.Type_SQLite,
-            'name': db_path,
+            'type': DatabaseEnv.Type_SQLite,
+            'path': db_path,
         }
 
-    with database_env(ModuleCtx.Env_Prefix, details):
+    with database_env(details):
         delete_all_rows()
         yield backend
-        dispose_env_engine(env_config)
+        dispose_database_engine()
 
 # ################################################################################################################################
 # ################################################################################################################################

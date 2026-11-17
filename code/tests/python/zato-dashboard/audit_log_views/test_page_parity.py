@@ -21,9 +21,10 @@ from django.http import QueryDict
 # Zato
 from zato.admin.web.views.audit_log import object_index
 from zato.admin.web.views.audit_log.sources import get_resubmit_labels, _source_resubmit
-from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource, ModuleCtx as AuditLogCtx
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.ext.bunch import Bunch
 from zato.common.typing_ import cast_
+from zato.common.test.database_env import DatabaseEnv
 
 # Test support
 from live_sql.env import database_env
@@ -44,9 +45,6 @@ if 0:
 _server_name = 'test-page-parity-server'
 _channel_name = 'test.page.parity.channel'
 
-# The prefix all the audit log database environment variables share
-_env_prefix = 'Zato_Audit_Log_DB_'
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -54,14 +52,14 @@ _env_prefix = 'Zato_Audit_Log_DB_'
 def _one_mllp_event(tmp_path:'any_') -> 'envgen':
     """ Points the audit log at a throwaway SQLite database holding one MLLP channel event.
     """
-    db_path = os.path.join(str(tmp_path), 'audit.db')
+    db_path = os.path.join(str(tmp_path), 'zato.db')
 
     details_config = {
-        'type': AuditLogCtx.Type_SQLite,
-        'name': db_path,
+        'type': DatabaseEnv.Type_SQLite,
+        'path': db_path,
     }
 
-    with database_env(_env_prefix, details_config):
+    with database_env(details_config):
 
         audit_log = AuditLog(_server_name)
 

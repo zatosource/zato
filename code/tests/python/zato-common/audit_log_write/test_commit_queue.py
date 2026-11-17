@@ -19,8 +19,9 @@ from sqlalchemy import text
 # Zato
 from support import Backend_PostgreSQL, Object_Name, read_rows, record_statements, Server_Name
 from zato.common.audit_log import retention_runner
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
-from zato.common.audit_log.buffer import PendingEvent
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
+from zato.common.audit_log.pending import PendingEvent
 from zato.common.audit_log.search_index import PostgreSQL_Pending_List_Limit_KB
 from zato.common.audit_log.search_index_merge import get_search_index_merger
 from zato.common.db_env.commit_queue import CommitQueue
@@ -32,7 +33,7 @@ from zato.common.db_env.commit_ticket import CommitTicket
 if 0:
     from datetime import datetime
     from sqlalchemy.engine import Engine
-    from zato.common.audit_log.buffer import pending_event_list
+    from zato.common.audit_log.pending import pending_event_list
     from zato.common.typing_ import any_, anylist, callable_, intlist, intnone
 
     any_ = any_
@@ -178,7 +179,7 @@ def test_concurrent_callers_receive_their_own_ids(audit_backend:'str') -> 'None'
     """ Concurrent callers share commits, and each of them receives the id of the row of its own event.
     """
     audit_log = AuditLog(Server_Name)
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     # Warm up the engine so that its pool and the schema exist before the callers start
     _ = _insert(audit_log, -1)
@@ -215,7 +216,7 @@ def test_concurrent_event_lists_share_commits(audit_backend:'str') -> 'None':
     the id of its own row.
     """
     audit_log = AuditLog(Server_Name)
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     # Warm up the engine so that its pool and the schema exist before the callers start
     _ = _insert(audit_log, -1)
@@ -251,7 +252,7 @@ def test_isolated_insert_is_one_transaction(audit_backend:'str') -> 'None':
     """ A caller with no concurrent callers commits its event at once, in a transaction of its own.
     """
     audit_log = AuditLog(Server_Name)
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     _ = _insert(audit_log, -1)
 
@@ -296,22 +297,6 @@ def test_failing_commit_raises_in_each_caller(audit_backend:'str') -> 'None':
 
 # ################################################################################################################################
 
-def test_needs_id_under_buffered_mode(audit_backend:'str') -> 'None':
-    """ A caller that needs the id of its event receives it from a buffered writer as well.
-    """
-    audit_log = AuditLog(Server_Name, flush_max_size=500, flush_max_wait_ms=60_000)
-
-    event_id = audit_log.insert(AuditSource.REST_Channel, AuditEvent.Message_Received, Object_Name,
-        cid='cid-needs-id', msg_id='msg-needs-id', outcome=AuditOutcome.OK, needs_id=True)
-
-    rows = read_rows(event_table)
-
-    assert len(rows) == 1
-    assert rows[0]['id'] == event_id
-    assert rows[0]['cid'] == 'cid-needs-id'
-
-# ################################################################################################################################
-
 def test_search_indexes_are_merged(audit_backend:'str') -> 'None':
     """ A process that writes events to PostgreSQL merges the event and attribute indexes,
     whose pending lists have the same limit, and no merger runs on SQLite.
@@ -319,7 +304,7 @@ def test_search_indexes_are_merged(audit_backend:'str') -> 'None':
     audit_log = AuditLog(Server_Name)
     _ = _insert(audit_log, 0)
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
     merger = get_search_index_merger(engine)
 
     if audit_backend != Backend_PostgreSQL:
@@ -370,12 +355,12 @@ def test_retention_runs_outside_the_write(audit_backend:'str', monkeypatch:'pyte
     monkeypatch.setattr(retention_runner, 'run_retention', run_retention)
     monkeypatch.setattr(retention_runner, 'call_database', call_database)
 
-    audit_log = AuditLog(Server_Name, flush_max_size=_retention_check_interval, flush_max_wait_ms=60_000)
+    audit_log = AuditLog(Server_Name)
 
     for index in range(_retention_check_interval):
         _ = _insert(audit_log, index)
 
-    # The insert that wrote the batch returned before the retention completed ..
+    # The insert that reached the interval returned before the retention completed ..
     assert not finished_event.is_set()
     assert len(read_rows(event_table)) == _retention_check_interval
 

@@ -25,11 +25,12 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.api import EMAIL, SMTPMessage
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource, \
-     ModuleCtx as AuditLogCtx
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import get_attachment, list_attachments
 from zato.common.ext.bunch import Bunch
 from zato.server.connection.email import Microsoft365SMTPConnection, SMTPConnection, SMTPConnStore
+from zato.common.test.database_env import DatabaseEnv
 
 # Test support
 from chat_simulators import find_free_port
@@ -74,9 +75,6 @@ _pdf_content = b'%PDF-1.4 summary'
 # The cid a caller hands the send
 _cid = 'cid-microsoft-365-smtp-1'
 
-# The prefix all the audit log database environment variables share
-_env_prefix = 'Zato_Audit_Log_DB_'
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -84,14 +82,14 @@ _env_prefix = 'Zato_Audit_Log_DB_'
 def audit_env(tmp_path:'any_') -> 'envgen':
     """ Points the audit log at a throwaway SQLite database for the duration of a test.
     """
-    db_path = os.path.join(str(tmp_path), 'audit.db')
+    db_path = os.path.join(str(tmp_path), 'zato.db')
 
     details = {
-        'type': AuditLogCtx.Type_SQLite,
-        'name': db_path,
+        'type': DatabaseEnv.Type_SQLite,
+        'path': db_path,
     }
 
-    with database_env(_env_prefix, details):
+    with database_env(details):
         yield
 
 # ################################################################################################################################
@@ -139,7 +137,7 @@ def new_connection(
 def _get_events() -> 'anylist':
     """ Everything the audit log holds, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.order_by(event_table.c.id)
@@ -275,7 +273,7 @@ def test_attachments_travel_inside_the_message_and_into_the_audit_log(
         assert b64decode(attachments[0]['contentBytes']) == _pdf_content
 
         # The audit log keeps the same bytes
-        engine = get_audit_engine()
+        engine = get_database_engine()
         event = _get_events()[0]
 
         items = list_attachments(engine, event['id'])

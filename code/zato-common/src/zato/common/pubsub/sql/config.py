@@ -10,40 +10,21 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 
 # Zato
-from zato.common.db_env import get_sqlite_file_engine
-from zato.common.db_env.common import Default_Type, EnvDBConfig
-from zato.common.db_env.engine import dispose_env_engine, dispose_sqlite_file_engine, get_env_engine, \
-    new_unshared_env_engine, new_unshared_sqlite_file_engine
+from zato.common.db_env.common import Type_SQLite
+from zato.common.db_env.database import get_database_type
 from zato.common.defaults import default_env_base_dir
-from zato.common.ha.common import Database_PubSub
-from zato.common.pubsub.sql.schema import metadata, pubsub_db_file_name
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from sqlalchemy.engine import Engine
-
-    # Dummy assignments to satisfy type checkers
-    Engine = Engine
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ModuleCtx:
 
-    # The prefix of the environment variables selecting the pub/sub database
-    Env_Prefix = 'Zato_PubSub_DB_'
-
-    # The environment variable with the full path to the pub/sub SQLite file.
-    Env_Path = 'Zato_PubSub_DB_Path'
-
     # The environment variables overriding how long fully delivered messages are kept.
     Env_Delivered_Max_Messages = 'Zato_PubSub_Delivered_Max_Messages'
     Env_Delivered_Max_Days     = 'Zato_PubSub_Delivered_Max_Days'
 
     # The environment variable overriding how many rows one bulk statement may touch.
-    Env_Batch_Size = 'Zato_PubSub_DB_Batch_Size'
+    Env_Batch_Size = 'Zato_PubSub_Batch_Size'
 
     # The environment variable overriding how many messages the publications and acknowledgements
     # of one group commit refer to at most.
@@ -57,7 +38,7 @@ class ModuleCtx:
     Env_Pull_Lease_Seconds = 'Zato_PubSub_Pull_Lease_Seconds'
 
     # The environment variable with the path to the file in which the active server records its generation.
-    Env_Generation_File = 'Zato_PubSub_Generation_File'
+    Env_Generation_File = 'Zato_Database_Generation_File'
 
 # ################################################################################################################################
 
@@ -83,89 +64,9 @@ _default_commits_in_flight = 2
 _urgent_commits_in_flight = 1
 
 # The name of the file in which the active server records its generation, under the environment directory.
-_generation_file_name = 'pubsub-generation'
-
-# The pub/sub database, as the Zato_PubSub_DB_* variables select it.
-pubsub_db_config = EnvDBConfig(
-    env_prefix=ModuleCtx.Env_Prefix,
-    sqlite_file_name=pubsub_db_file_name,
-    metadata=metadata,
-    needs_pool=True,
-    needs_background_checkpoint=True,
-    replicated_database=Database_PubSub,
-)
+_generation_file_name = 'database-generation'
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def get_pubsub_db_type() -> 'str':
-    """ Returns the type of the pub/sub database, sqlite or postgresql.
-    """
-    if db_type := os.environ.get(pubsub_db_config.env_type, ''):
-        out = db_type
-    else:
-        out = Default_Type
-
-    return out
-
-# ################################################################################################################################
-
-def get_pubsub_db_path() -> 'str':
-    """ Returns the full path to the pub/sub SQLite file.
-    """
-    out = os.environ.get(ModuleCtx.Env_Path)
-
-    if out is None:
-        out = os.path.join(default_env_base_dir, pubsub_db_file_name)
-
-    return out
-
-# ################################################################################################################################
-
-def get_pubsub_engine() -> 'Engine':
-    """ Returns an SQLAlchemy engine for the pub/sub database, creating the schema if needed.
-    SQLite uses the file that Zato_PubSub_DB_Path names, and every other type is built from the Zato_PubSub_DB_* variables.
-    """
-    db_type = get_pubsub_db_type()
-
-    if db_type == Default_Type:
-        db_path = get_pubsub_db_path()
-        out = get_sqlite_file_engine(db_path, metadata, needs_pool=True, needs_background_checkpoint=True,
-            replicated_database=Database_PubSub)
-    else:
-        out = get_env_engine(pubsub_db_config)
-
-    return out
-
-# ################################################################################################################################
-
-def new_unshared_pubsub_engine() -> 'Engine':
-    """ Returns an engine of the pub/sub database that no other caller receives, which its caller disposes.
-    """
-    db_type = get_pubsub_db_type()
-
-    if db_type == Default_Type:
-        db_path = get_pubsub_db_path()
-        out = new_unshared_sqlite_file_engine(db_path, replicated_database=Database_PubSub)
-    else:
-        out = new_unshared_env_engine(pubsub_db_config)
-
-    return out
-
-# ################################################################################################################################
-
-def dispose_pubsub_engine() -> 'None':
-    """ Disposes the shared engine of the pub/sub database, stopping its background checkpointer, so the next
-    get_pubsub_engine call builds a fresh engine and no checkpoint thread is left running.
-    """
-    db_type = get_pubsub_db_type()
-
-    if db_type == Default_Type:
-        db_path = get_pubsub_db_path()
-        dispose_sqlite_file_engine(db_path, needs_pool=True)
-    else:
-        dispose_env_engine(pubsub_db_config)
-
 # ################################################################################################################################
 
 def get_generation_file_path() -> 'str':
@@ -243,9 +144,9 @@ def get_pull_lease_seconds() -> 'int':
 def get_commits_in_flight() -> 'int':
     """ Returns how many group commits may be in progress at once - one on SQLite, which has a single writer.
     """
-    db_type = get_pubsub_db_type()
+    db_type = get_database_type()
 
-    if db_type == Default_Type:
+    if db_type == Type_SQLite:
         out = 1
     elif value := os.environ.get(ModuleCtx.Env_Commits_In_Flight, ''):
         out = int(value)
@@ -260,9 +161,9 @@ def get_urgent_commits_in_flight() -> 'int':
     """ Returns how many group commits of publications may be in progress in addition to those that get_commits_in_flight
     allows, so that a publication does not wait for a commit of acknowledgements - none on SQLite, which has a single writer.
     """
-    db_type = get_pubsub_db_type()
+    db_type = get_database_type()
 
-    if db_type == Default_Type:
+    if db_type == Type_SQLite:
         out = 0
     else:
         out = _urgent_commits_in_flight

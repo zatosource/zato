@@ -6,12 +6,6 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import os
-
-# Zato
-from zato.common.defaults import default_env_base_dir
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -104,13 +98,6 @@ Delivery_Status_Error     = 'error'
 Job_Cursor_Advisory = 'advisory-runs'
 
 # ################################################################################################################################
-
-# Which database the rule engine and its jobs share, the same variable the dashboard reads.
-Env_DB_URL = 'Zato_Rule_Engine_Dashboard_DB_URL'
-
-# The default file is an absolute path, so every component opens the same one regardless of its working directory.
-_default_db_path = os.path.join(default_env_base_dir, 'zato-rule-engine-dashboard.db')
-Default_DB_URL   = 'sqlite:///' + _default_db_path
 
 # What percentage of successful decisions keep their full story. Errors always keep theirs, so
 # lowering this trades the stories of routine successes for write volume and disk. Deployments

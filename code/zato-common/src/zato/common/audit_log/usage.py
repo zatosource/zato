@@ -25,7 +25,8 @@ from urllib.parse import quote
 from sqlalchemy import and_, or_, select
 
 # Zato
-from zato.common.audit_log.api import AuditEvent, AuditSource, event_table, get_audit_engine
+from zato.common.audit_log.api import AuditEvent, AuditSource, event_table
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.reports import get_range_cutoff
 
 # ################################################################################################################################
@@ -192,7 +193,7 @@ def _load_usage_events(cutoff:'datetime', sources:'strlist', objects:'strlist') 
     # call of a row are read off this order
     statement = statement.order_by(event_table.c.event_time, event_table.c.id)
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         result = connection.execute(statement)
@@ -278,7 +279,7 @@ def get_object_options() -> 'object_options_dict':
     statement = statement.where(conditions)
     statement = statement.order_by(event_table.c.source, event_table.c.object_name)
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         result = connection.execute(statement)

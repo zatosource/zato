@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The PostgreSQL database that both nodes of a pair share as the pub/sub database - a primary
+# The PostgreSQL database that both nodes of a pair share as the Zato database - a primary
 # with TLS and two standbys streaming from it, each built from a base backup of the primary, with each commit
 # waiting for the first standby that streams. The containers are on the network of the pair, and the nodes reach
 # the instance accepting writes under a network alias that a failover moves to the promoted standby.
@@ -98,7 +98,7 @@ class Instance:
 # ################################################################################################################################
 
 class PostgreSQLCluster(Backend):
-    """ The primary and the two standbys of the pub/sub database of a pair.
+    """ The primary and the two standbys of the Zato database of a pair.
     """
 
     def __init__(self, run_dir:'str') -> 'None':
@@ -132,18 +132,18 @@ class PostgreSQLCluster(Backend):
             certs_dir=self.certs_dir,
         )
 
-        self.database.env['Zato_PubSub_DB_SSL_CA_File'] = self.ca_path
+        self.database.env['Zato_Database_SSL_CA_File'] = self.ca_path
 
         # .. and the nodes reach it under the name of the endpoint.
         self.node_env = {
-            'Zato_PubSub_DB_Type': 'postgresql',
-            'Zato_PubSub_DB_Host': ModuleCtx.Endpoint_Name,
-            'Zato_PubSub_DB_Port': str(ModuleCtx.Port),
-            'Zato_PubSub_DB_Username': DatabaseCtx.Username,
-            'Zato_PubSub_DB_Password': self.password,
-            'Zato_PubSub_DB_Name': DatabaseCtx.DB_Name,
-            'Zato_PubSub_DB_SSL': 'true',
-            'Zato_PubSub_DB_SSL_CA_File': self.ca_path,
+            'Zato_Database_Type': 'postgresql',
+            'Zato_Database_Host': ModuleCtx.Endpoint_Name,
+            'Zato_Database_Port': str(ModuleCtx.Port),
+            'Zato_Database_Username': DatabaseCtx.Username,
+            'Zato_Database_Password': self.password,
+            'Zato_Database_Name': DatabaseCtx.DB_Name,
+            'Zato_Database_SSL': 'true',
+            'Zato_Database_SSL_CA_File': self.ca_path,
         }
 
 # ################################################################################################################################

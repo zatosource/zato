@@ -35,7 +35,9 @@ from container import Container, get_disk_device
 from process import ProcessEnvironment
 from tools import build_fsfault
 from toxiproxy import Toxiproxy, Toxiproxy_Host
-from zato.common.pubsub.sql.config import get_pubsub_engine, ModuleCtx
+from zato.common.db_env.database import get_database_engine
+from zato.common.pubsub.sql.config import ModuleCtx
+from zato.common.test.database_env import DatabaseEnv
 from zato.common.test.pubsub_database import get_database_address, get_db_mode, get_runtime_dir, is_postgresql_mode, \
     PubSubDatabase, pubsub_db_env, start_pubsub_database, stop_pubsub_database
 from zato.common.test.pubsub_profile import session_dns
@@ -104,7 +106,7 @@ def fault_database() -> 'databasegen':
     database = start_pubsub_database('faults', mode)
 
     env = {
-        ModuleCtx.Env_Generation_File: os.path.join(work_dir, 'pubsub-generation'),
+        ModuleCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
         ModuleCtx.Env_Delivered_Max_Messages: _delivered_max_messages,
     }
     env.update(database.env)
@@ -112,7 +114,7 @@ def fault_database() -> 'databasegen':
     try:
         with pubsub_db_env(env):
             yield FaultDatabase(database)
-            get_pubsub_engine().dispose()
+            get_database_engine().dispose()
     finally:
         stop_pubsub_database(database)
         shutil.rmtree(work_dir, ignore_errors=True)
@@ -131,7 +133,7 @@ def standby_database() -> 'databasegen':
     replicated = start_replicated_database('faults-standby', mode, is_sync=True)
 
     env = {
-        ModuleCtx.Env_Generation_File: os.path.join(work_dir, 'pubsub-generation'),
+        ModuleCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
         ModuleCtx.Env_Delivered_Max_Messages: _delivered_max_messages,
     }
     env.update(replicated.env)
@@ -143,7 +145,7 @@ def standby_database() -> 'databasegen':
     try:
         with pubsub_db_env(env):
             yield standby
-            get_pubsub_engine().dispose()
+            get_database_engine().dispose()
     finally:
         stop_replicated_database(replicated)
         shutil.rmtree(work_dir, ignore_errors=True)
@@ -161,7 +163,7 @@ def failover_database() -> 'replicatedgen':
     replicated = start_replicated_database('faults-failover', mode, is_sync=True)
 
     env = {
-        ModuleCtx.Env_Generation_File: os.path.join(work_dir, 'pubsub-generation'),
+        ModuleCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
         ModuleCtx.Env_Delivered_Max_Messages: _delivered_max_messages,
     }
     env.update(replicated.env)
@@ -169,7 +171,7 @@ def failover_database() -> 'replicatedgen':
     try:
         with pubsub_db_env(env):
             yield replicated
-            get_pubsub_engine().dispose()
+            get_database_engine().dispose()
     finally:
         stop_replicated_database(replicated)
         shutil.rmtree(work_dir, ignore_errors=True)
@@ -185,7 +187,7 @@ def endpoint_work_dir() -> 'strgen':
     work_dir = tempfile.mkdtemp(prefix='zato-pubsub-endpoints-', dir=get_runtime_dir())
 
     env:'strstrdict' = {
-        ModuleCtx.Env_Generation_File: os.path.join(work_dir, 'pubsub-generation'),
+        ModuleCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
         ModuleCtx.Env_Delivered_Max_Messages: _delivered_max_messages,
     }
 
@@ -195,12 +197,12 @@ def endpoint_work_dir() -> 'strgen':
         database = start_pubsub_database('endpoints', mode)
         env.update(database.env)
     else:
-        env[ModuleCtx.Env_Path] = os.path.join(work_dir, 'pubsub.db')
+        env[DatabaseEnv.Env_Path] = os.path.join(work_dir, 'zato.db')
 
     try:
         with pubsub_db_env(env):
             yield work_dir
-            get_pubsub_engine().dispose()
+            get_database_engine().dispose()
     finally:
         if database:
             stop_pubsub_database(database)
@@ -231,15 +233,15 @@ def stream_database() -> 'streamgen':
             session_dns.register(runtime_dir, database.endpoint, Toxiproxy_Host)
 
         env = {
-            ModuleCtx.Env_Generation_File: os.path.join(work_dir, 'pubsub-generation'),
+            ModuleCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
             ModuleCtx.Env_Delivered_Max_Messages: _delivered_max_messages,
         }
         env.update(database.env)
-        env['Zato_PubSub_DB_Port'] = f'{listen_port}'
+        env['Zato_Database_Port'] = f'{listen_port}'
 
         with pubsub_db_env(env):
             yield toxiproxy
-            get_pubsub_engine().dispose()
+            get_database_engine().dispose()
 
     finally:
         toxiproxy.stop()
@@ -257,7 +259,7 @@ def process_environment() -> 'environmentgen':
     work_dir = tempfile.mkdtemp(prefix='zato-pubsub-process-faults-', dir=get_runtime_dir())
 
     env:'strstrdict' = {
-        ModuleCtx.Env_Generation_File: os.path.join(work_dir, 'pubsub-generation'),
+        ModuleCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
         ModuleCtx.Env_Delivered_Max_Messages: _delivered_max_messages,
     }
 
@@ -280,7 +282,7 @@ def process_environment() -> 'environmentgen':
         env.update(database.env)
 
     else:
-        env[ModuleCtx.Env_Path] = os.path.join(work_dir, 'pubsub.db')
+        env[DatabaseEnv.Env_Path] = os.path.join(work_dir, 'zato.db')
 
     try:
         with pubsub_db_env(env):

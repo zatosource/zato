@@ -350,8 +350,8 @@ impl Control {
         }
 
         // Acknowledgments completed on confirmations of the standby alone are synced locally before the write, because
-        // a write whose answer is lost names this node alone, and a restart under that record serves only the local logs.
-        self.sync_every_log();
+        // a write whose answer is lost names this node alone, and a restart under that record serves only the local log.
+        self.sync_log();
 
         let node_name = self.shared.config.node_name.clone();
         let intended = RefereeRecord::solo(generation + 1, &node_name);
@@ -380,15 +380,15 @@ impl Control {
         }
     }
 
-    /// Syncs the log of every database to the local disk.
-    fn sync_every_log(&self) {
-        for database in &self.shared.config.databases {
-            let path = wal::wal_path(&database.path);
-            match File::open(&path).and_then(|file| file.sync_data()) {
-                Ok(()) => {}
-                Err(error) if error.kind() == ErrorKind::NotFound => {}
-                Err(error) => tracing::error!("Cannot sync {}: {error}", path.display()),
-            }
+    /// Syncs the log of the Zato database to the local disk.
+    fn sync_log(&self) {
+        let path = wal::wal_path(&self.shared.config.database_path);
+        match File::open(&path).and_then(|file| file.sync_data()) {
+            Ok(()) => {}
+
+            // A database whose log does not exist yet has nothing to sync.
+            Err(error) if error.kind() == ErrorKind::NotFound => {}
+            Err(error) => tracing::error!("Cannot sync {}: {error}", path.display()),
         }
     }
 

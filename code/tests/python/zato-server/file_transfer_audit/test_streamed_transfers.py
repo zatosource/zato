@@ -23,7 +23,8 @@ from pytest import fixture, mark, raises
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import event_attr_table, event_table, get_audit_engine, AuditEvent, AuditOutcome
+from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditOutcome
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import get_attachment, list_attachments, Env_Max_Attachment_Size
 from zato.common.audit_log.file_transfer import Operation_Read, Operation_Store, Status_Verified, Status_Verify_Failed
 from zato.common.file_transfer.api import VerifyHow
@@ -118,7 +119,7 @@ _protocols = [
 def _get_events() -> 'anylist':
     """ Everything the audit log holds, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.order_by(event_table.c.id)
@@ -137,7 +138,7 @@ def _get_events() -> 'anylist':
 def _get_attributes(event_id:'int') -> 'anydict':
     """ The searchable attributes of one event, by name.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_attr_table.c.name, event_attr_table.c.value)
     query = query.where(event_attr_table.c.event_id == event_id)
@@ -156,7 +157,7 @@ def _get_attributes(event_id:'int') -> 'anydict':
 def _get_stored_content(event_id:'int') -> 'anydict':
     """ The one attachment of an event, with its bytes.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     items = list_attachments(engine, event_id)
     assert len(items) == 1

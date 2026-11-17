@@ -76,7 +76,7 @@ class _InterleavedStore(SharedObjectStore):
 
 @pytest.fixture
 def store(tmp_path:'Path') -> '_InterleavedStore':
-    db_path = os.path.join(tmp_path, 'common.db')
+    db_path = os.path.join(tmp_path, 'zato.db')
 
     engine = create_engine(f'sqlite:///{db_path}')
     metadata.create_all(engine)

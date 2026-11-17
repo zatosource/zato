@@ -23,7 +23,7 @@ from runner import get_count_mismatches, get_duration, get_report_path, run_for,
 from seeding import connect_native, seed_aged_queue
 from traffic import get_traffic_profile, Traffic
 from zato.common.db_env.common import Type_PostgreSQL
-from zato.common.pubsub.sql.config import get_pubsub_engine
+from zato.common.db_env.database import get_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,7 +81,7 @@ _trace_count_query = text('select count(*) from pubsub_message where topic_name 
 # ################################################################################################################################
 
 def _count_traces() -> 'int':
-    with get_pubsub_engine().connect() as connection:
+    with get_database_engine().connect() as connection:
         out = connection.execute(_trace_count_query, {'topic_name': _trace_topic}).scalar_one()
     return out
 
@@ -114,7 +114,7 @@ class _CleanupChaos:
     """ Kills the cleanup process in the middle of its sweeps and starts it again, then makes a sweep meet locks.
     """
     def __init__(self) -> 'None':
-        self.is_postgresql = get_pubsub_engine().dialect.name == Type_PostgreSQL
+        self.is_postgresql = get_database_engine().dialect.name == Type_PostgreSQL
 
         self.process:'Popen[bytes]' = start_cleanup_process(_cleanup_interval_seconds)
         self.kills = 0

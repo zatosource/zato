@@ -26,8 +26,8 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.api import GENERIC
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditLog, AuditOutcome, AuditSource, \
-    ModuleCtx as AuditLogCtx
+from zato.common.audit_log.api import event_table, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.ext.bunch import Bunch
 from zato.common.file_transfer.api import Default_Verify_How
 from zato.common.pubsub.outgoing import audit_disabled_conn_types, build_envelope, deliver_envelope, Key_Data, \
@@ -35,6 +35,7 @@ from zato.common.pubsub.outgoing import audit_disabled_conn_types, build_envelop
 from zato.common.sftp import SFTPOutput
 from zato.server.connection.file_transfer_base import spool_file_payload, Key_Remote_Path, Key_Spool_Path
 from zato.server.connection.outgoing_delivery import publishable_generic_types, register_delivery_handlers
+from zato.common.test.database_env import DatabaseEnv
 
 # Test support
 from live_sql.env import database_env
@@ -65,9 +66,6 @@ _payload = b'code,label\nA1,First\nA2,Second\n'
 # What the failing clients say
 _raised_error = 'The server went away'
 
-# The prefix all the audit log database environment variables share
-_env_prefix = 'Zato_Audit_Log_DB_'
-
 # The line an SFTP listing answers with when the remote file is already there -
 # what makes the overwriting write delete it first.
 _existing_file_ls_line = '-rw-------    1 user1    group1         336 Mar  3 11:50 report.csv'
@@ -86,14 +84,14 @@ _ftp_modify_fact = '20260820103000'
 def _audit_db_env(tmp_path:'any_') -> 'envgen':
     """ Points the audit log at a throwaway SQLite database for the duration of a test.
     """
-    db_path = os.path.join(str(tmp_path), 'audit.db')
+    db_path = os.path.join(str(tmp_path), 'zato.db')
 
     details = {
-        'type': AuditLogCtx.Type_SQLite,
-        'name': db_path,
+        'type': DatabaseEnv.Type_SQLite,
+        'path': db_path,
     }
 
-    with database_env(_env_prefix, details):
+    with database_env(details):
         yield
 
 # ################################################################################################################################
@@ -101,7 +99,7 @@ def _audit_db_env(tmp_path:'any_') -> 'envgen':
 def _get_events() -> 'anylist':
     """ Everything the audit log holds, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.order_by(event_table.c.id)

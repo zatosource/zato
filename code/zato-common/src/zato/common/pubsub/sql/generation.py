@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The generation of the active server. One server is active at a time and its standby is a stopped container.
-# A server that starts on PostgreSQL raises the generation in the single row of pubsub_active and writes a value unique
+# A server that starts on PostgreSQL raises the generation in the single row of zato_active and writes a value unique
 # to itself, its owner, in the same statement, and each transaction of the pub/sub database first confirms that
 # the generation and the owner are still those of its server. A transaction that writes locks the row for share,
 # so raising the generation waits for the writes of the previous server in progress and every write that begins
@@ -28,6 +28,8 @@ from typing import NamedTuple
 from sqlalchemy import event, text
 
 # Zato
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource, is_audit_log_enabled
+from zato.common.audit_log.bulk_insert import insert_pending_events
 from zato.common.crypto.api import CryptoManager
 from zato.common.db_env.outage import call_until_available
 from zato.common.pubsub.sql.config import get_generation_file_path
@@ -39,13 +41,14 @@ from zato.common.typing_ import cast_
 
 if 0:
     from sqlalchemy.engine import Connection, Engine
-    from zato.common.typing_ import any_, anylist, callable_, intnone
+    from zato.common.typing_ import any_, anylist, callable_, intnone, strnone
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
     anylist = anylist
     callable_ = callable_
     intnone = intnone
+    strnone = strnone
     Connection = Connection
     Engine = Engine
 
@@ -73,16 +76,19 @@ _read_prefix = 'SELECT'
 _write_clause = 'FOR UPDATE'
 
 # What a transaction runs before its first read and before its first write.
-_check_query = 'SELECT 1 FROM pubsub_active WHERE id = 1 AND generation = %s AND owner = %s'
-_lock_query = 'SELECT 1 FROM pubsub_active WHERE id = 1 AND generation = %s AND owner = %s FOR SHARE'
+_check_query = 'SELECT 1 FROM zato_active WHERE id = 1 AND generation = %s AND owner = %s'
+_lock_query = 'SELECT 1 FROM zato_active WHERE id = 1 AND generation = %s AND owner = %s FOR SHARE'
 
 # What raises the generation.
-_raise_query = text('UPDATE pubsub_active SET generation = generation + 1, owner = :owner WHERE id = 1 ' + \
+_raise_query = text('UPDATE zato_active SET generation = generation + 1, owner = :owner WHERE id = 1 ' + \
     'RETURNING generation')
 
 # What sets the generation of an active-standby node, unless the stored generation is higher.
-_set_query = text('UPDATE pubsub_active SET generation = :generation, owner = :owner WHERE id = 1 ' + \
+_set_query = text('UPDATE zato_active SET generation = :generation, owner = :owner WHERE id = 1 ' + \
     'AND generation <= :generation RETURNING generation')
+
+# The object of the audit event that records a takeover of the Zato database.
+Takeover_Object_Name = 'pubsub-database'
 
 # The environment variable through which an active-standby node passes the generation of its referee record.
 _ha_generation_env = 'Zato_HA_Generation'
@@ -159,6 +165,9 @@ class GenerationGuard:
 
         # Once replaced, a server remains replaced, because generations only ever increase.
         self.is_replaced = False
+
+        # The audit event that the takeover was recorded with, if it was recorded.
+        self.takeover_event_id:'intnone' = None
 
 # ################################################################################################################################
 
@@ -257,14 +266,17 @@ class GenerationGuard:
 class _GenerationRaiser:
     """ Raises the generation on a connection of its own, in a thread that the caller waits for, or sets it
     to the generation of an active-standby node. The generation remains None if the stored one is higher.
+    A server with a name records the takeover in the audit log in the same transaction.
     """
 
-    def __init__(self, engine:'Engine', owner:'str', ha_generation:'intnone') -> 'None':
+    def __init__(self, engine:'Engine', owner:'str', ha_generation:'intnone', server_name:'strnone') -> 'None':
         self.engine = engine
         self.owner = owner
         self.ha_generation = ha_generation
+        self.server_name = server_name
         self.backend_pid = 0
         self.generation:'intnone' = None
+        self.takeover_event_id:'intnone' = None
         self.exception:'BaseException | None' = None
 
         # Set once the session that raises the generation knows its own process identifier.
@@ -285,9 +297,39 @@ class _GenerationRaiser:
                     parameters = {'generation': self.ha_generation, 'owner': self.owner}
                     self.generation = connection.execute(_set_query, parameters).scalar_one_or_none()
 
+                # Each generation is one higher than the one it replaces, which the audit log records with the takeover,
+                # and a server that a later one replaced before its start took nothing over.
+                if self.server_name and self.generation is not None:
+                    self.takeover_event_id = _insert_takeover_event(connection, self.server_name, self.generation)
+
         except BaseException as e:
             self.exception = e
             self.has_pid = True
+
+# ################################################################################################################################
+
+def _insert_takeover_event(connection:'Connection', server_name:'str', generation:'int') -> 'intnone':
+    """ Records a takeover in the audit log in the transaction of the connection and returns the id of its event,
+    or None when the audit log is turned off.
+    """
+    if not is_audit_log_enabled():
+        return None
+
+    previous_generation = generation - 1
+
+    attrs = {
+        'previous_generation': f'{previous_generation}',
+        'generation': f'{generation}',
+    }
+
+    audit_log = AuditLog(server_name)
+    audit_event = audit_log.new_pending_event(AuditSource.PubSub, AuditEvent.Takeover, Takeover_Object_Name,
+        outcome=AuditOutcome.OK, attrs=attrs)
+
+    event_ids = insert_pending_events(connection, [audit_event])
+
+    out = event_ids[0]
+    return out
 
 # ################################################################################################################################
 
@@ -304,13 +346,14 @@ def _terminate_blockers(engine:'Engine', backend_pid:'int') -> 'anylist':
 
 # ################################################################################################################################
 
-def _raise_generation(engine:'Engine', owner:'str', ha_generation:'intnone') -> 'intnone':
+def _raise_generation(engine:'Engine', owner:'str', ha_generation:'intnone', server_name:'strnone') -> '_GenerationRaiser':
     """ Raises the generation once, or sets the generation of an active-standby node, and writes the owner.
-    Returns None if the stored generation is higher than the one of the node. The transactions of the previous server
-    that are still in progress are waited for up to a fixed time, after which the sessions that still hold them
-    are ended, as a frozen or cut-off server would hold its row locks until PostgreSQL notices the lost client.
+    Returns the raiser, whose generation is None if the stored generation is higher than the one of the node.
+    The transactions of the previous server that are still in progress are waited for up to a fixed time, after which
+    the sessions that still hold them are ended, as a frozen or cut-off server would hold its row locks until PostgreSQL
+    notices the lost client.
     """
-    raiser = _GenerationRaiser(engine, owner, ha_generation)
+    raiser = _GenerationRaiser(engine, owner, ha_generation, server_name)
 
     thread = Thread(target=raiser.run, daemon=True)
     thread.start()
@@ -335,8 +378,7 @@ def _raise_generation(engine:'Engine', owner:'str', ha_generation:'intnone') -> 
     if raiser.exception is not None:
         raise raiser.exception
 
-    out = raiser.generation
-    return out
+    return raiser
 
 # ################################################################################################################################
 
@@ -373,13 +415,14 @@ def _connect_and_raise_generation(
     get_engine:'callable_',
     owner:'str',
     ha_generation:'intnone',
-    ) -> 'tuple[Engine, intnone]':
+    server_name:'strnone',
+    ) -> 'tuple[Engine, _GenerationRaiser]':
     """ Builds the engine, which creates the schema if needed, and raises the generation through it.
     """
     engine = get_engine()
-    generation = _raise_generation(engine, owner, ha_generation)
+    raiser = _raise_generation(engine, owner, ha_generation, server_name)
 
-    out = engine, generation
+    out = engine, raiser
     return out
 
 # ################################################################################################################################
@@ -396,17 +439,20 @@ def _get_ha_generation() -> 'intnone':
 
 # ################################################################################################################################
 
-def take_over(get_engine:'callable_') -> 'GenerationGuard':
+def take_over(get_engine:'callable_', server_name:'strnone') -> 'GenerationGuard':
     """ Makes this server the active one - raises the generation, or sets the generation of its active-standby node,
     and writes an owner unique to this server, waiting for the database to become available if it is not, records both
     and guards every subsequent transaction of the engine with them. The engine is built within the wait as well,
     because building it already connects to the database. A raise that is run again after an error writes the same owner.
+    A server with a name records the takeover in the audit log in the transaction that raises the generation.
     """
     owner = CryptoManager.generate_hex_string()
     ha_generation = _get_ha_generation()
 
-    engine, generation = call_until_available(
-        'Pub/sub takeover', _connect_and_raise_generation, get_engine, owner, ha_generation)
+    engine, raiser = call_until_available(
+        'Pub/sub takeover', _connect_and_raise_generation, get_engine, owner, ha_generation, server_name)
+
+    generation = raiser.generation
 
     # A node that a later node replaced before its server set the generation leaves the server replaced from its start ..
     if generation is None:
@@ -423,18 +469,19 @@ def take_over(get_engine:'callable_') -> 'GenerationGuard':
 
     out = GenerationGuard(generation, owner)
     out.is_replaced = is_replaced
+    out.takeover_event_id = raiser.takeover_event_id
     out.install(engine)
 
     return out
 
 # ################################################################################################################################
 
-def take_over_before_fork(new_engine:'callable_') -> 'GenerationGuard':
+def take_over_before_fork(new_engine:'callable_', server_name:'str') -> 'GenerationGuard':
     """ Makes this server the active one once for the processes that its arbiter forks next, through an engine
     that is disposed before the fork, and retains the guard for those processes, each of which follows it on an engine of its own.
     """
     recorder = _EngineRecorder(new_engine)
-    out = take_over(recorder.get_engine)
+    out = take_over(recorder.get_engine, server_name)
 
     engine = cast_('Engine', recorder.engine)
     out.uninstall(engine)
@@ -460,6 +507,7 @@ def follow_takeover(engine:'Engine', fork_guard:'GenerationGuard') -> 'Generatio
     """
     out = GenerationGuard(fork_guard.generation, fork_guard.owner)
     out.is_replaced = fork_guard.is_replaced
+    out.takeover_event_id = fork_guard.takeover_event_id
     out.install(engine)
 
     return out

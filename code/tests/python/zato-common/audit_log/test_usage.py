@@ -16,12 +16,13 @@ from sqlalchemy import update
 
 # Zato
 from common import audit_log_env, delete_all_events
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
-from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource, event_table
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.reports import Range_Day
 from zato.common.audit_log.usage import get_object_options, get_usage, normalize_sources, usage_csv, Usage_Sources
 from zato.common.hl7.audit import audit_ack_sent
 from zato.common.util.api import utcnow
+from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -72,11 +73,11 @@ _hostile_names = [
 def _usage_env(tmp_path:'os.PathLike') -> 'envgen':
     """ A per-test SQLite audit database with the usage events seeded.
     """
-    db_path = os.path.join(str(tmp_path), 'audit.db')
+    db_path = os.path.join(str(tmp_path), 'zato.db')
 
     details = {
-        'type': AuditLogCtx.Type_SQLite,
-        'name': db_path,
+        'type': DatabaseEnv.Type_SQLite,
+        'path': db_path,
     }
 
     with audit_log_env(details):
@@ -210,7 +211,7 @@ class TestGetUsage:
 
             statement = update(event_table).where(event_table.c.id == event_id).values(event_time=older)
 
-            engine = get_audit_engine()
+            engine = get_database_engine()
 
             with engine.begin() as connection:
                 _ = connection.execute(statement)
@@ -278,8 +279,8 @@ class TestGetUsage:
     def test_the_link_carries_the_name_url_quoted(self, tmp_path:'os.PathLike') -> 'None':
 
         audit_log_details = {
-            'type': AuditLogCtx.Type_SQLite,
-            'name': os.path.join(str(tmp_path), 'audit.db'),
+            'type': DatabaseEnv.Type_SQLite,
+            'path': os.path.join(str(tmp_path), 'zato.db'),
         }
 
         hostile_name = 'name&with=query#chars'

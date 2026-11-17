@@ -195,7 +195,7 @@ class TestODBSQLiteDefault(TestCase):
 # ################################################################################################################################
 
     def test_sqlite_db_file_exists(self):
-        db_path = os.path.join(cast_('any_', _tmpdir), 'zato.db')
+        db_path = os.path.join(cast_('any_', _tmpdir), 'config.db')
         self.assertTrue(os.path.isfile(db_path), f'SQLite DB not found at {db_path}')
         self.assertGreater(os.path.getsize(db_path), 0, 'SQLite DB file is empty')
 
@@ -217,7 +217,7 @@ class TestODBSQLiteDefault(TestCase):
         odb = config['odb']
 
         self.assertEqual(sorted(odb.keys()), ['db_name', 'engine', 'extra'])
-        self.assertEqual(odb['db_name'], os.path.join(cast_('any_', _tmpdir), 'zato.db'))
+        self.assertEqual(odb['db_name'], os.path.join(cast_('any_', _tmpdir), 'config.db'))
 
 # ################################################################################################################################
 
@@ -237,7 +237,7 @@ class TestODBSQLiteDefault(TestCase):
             config = json.load(f)
 
         self.assertEqual(config['db_type'], 'sqlite')
-        self.assertEqual(config['DATABASE_NAME'], os.path.join(cast_('any_', _tmpdir), 'zato.db'))
+        self.assertEqual(config['DATABASE_NAME'], os.path.join(cast_('any_', _tmpdir), 'config.db'))
 
         for key in config:
             if key.startswith('DATABASE_'):
@@ -246,7 +246,7 @@ class TestODBSQLiteDefault(TestCase):
 # ################################################################################################################################
 
     def test_sqlite_db_has_tables(self):
-        db_path = os.path.join(cast_('any_', _tmpdir), 'zato.db')
+        db_path = os.path.join(cast_('any_', _tmpdir), 'config.db')
         conn = sqlite3.connect(db_path)
         try:
             cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table'")

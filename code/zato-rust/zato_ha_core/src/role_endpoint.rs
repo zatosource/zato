@@ -27,12 +27,9 @@ pub const HEALTH_PATH: &str = "/zato/ha/health";
 /// How long a client may take to send its request.
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
 
-/// The progress of one database in the report.
+/// The progress of the Zato database in the report.
 #[derive(Serialize)]
 struct DatabaseReport {
-    /// The name of the database.
-    name: &'static str,
-
     /// The end of the log at the last scan.
     scanned: LogPosition,
 
@@ -61,23 +58,18 @@ struct RoleReport {
     /// The state of the link on the active node.
     link: LinkState,
 
-    /// The progress of each database.
-    databases: Vec<DatabaseReport>,
+    /// The progress of the Zato database.
+    database: DatabaseReport,
 }
 
 /// Builds the report and tells whether the node serves traffic.
 fn report(shared: &Shared) -> (bool, RoleReport) {
     let state = shared.state.lock();
     let serving = state.role.is_active() && !state.isolated;
-    let databases = state
-        .databases
-        .iter()
-        .map(|progress| DatabaseReport {
-            name: progress.name,
-            scanned: progress.scanned,
-            confirmed: progress.confirmed,
-        })
-        .collect();
+    let database = DatabaseReport {
+        scanned: state.database.scanned,
+        confirmed: state.database.confirmed,
+    };
     let out = RoleReport {
         node: shared.config.node_name.clone(),
         role: state.role,
@@ -85,7 +77,7 @@ fn report(shared: &Shared) -> (bool, RoleReport) {
         isolated: state.isolated,
         admitting: state.admitting,
         link: state.link_state,
-        databases,
+        database,
     };
     drop(state);
     (serving, out)

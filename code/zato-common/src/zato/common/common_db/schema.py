@@ -16,9 +16,6 @@ from zato.common.db_env.common import Type_PostgreSQL, UTC_DateTime
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The name of the SQLite file of the common database.
-common_db_file_name = 'common.db'
-
 # Maximum length of the type and the name of a shared object.
 _name_column_len = 200
 
@@ -28,7 +25,7 @@ _data_type = JSON().with_variant(JSONB(), Type_PostgreSQL)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# All the tables of the common database.
+# The tables of the shared objects in the Zato database.
 metadata = MetaData()
 
 # ################################################################################################################################

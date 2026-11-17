@@ -18,8 +18,8 @@ from support import actual_counts, Base_Time, Connection_Names, count_filter_set
     expected_open_ids, insert_rows, new_event_row, new_event_rows, new_filters, populate, random_time, \
     read_count_rows, read_event_ids, read_events, read_open_ids, reopen_database, run_blocking, search_windows, \
     Server_Name
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, \
-    AuditSource, Env_Retention_Days
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource, Env_Retention_Days
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import event_count_table
 from zato.common.audit_log.event_count import compact_event_counts
 from zato.common.audit_log.listing import count_matching, event_conditions
@@ -38,6 +38,9 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+# How many events one batch written through the API holds
+_api_batch_size = 100
 
 # How many days of events retention keeps, and how far past the start of the test events it runs,
 # so that it deletes the events of the first ninety minutes.
@@ -75,7 +78,7 @@ def _assert_counts_compacted() -> 'None':
 def _update(ids:'intlist', **values:'any_') -> 'None':
     """ Updates the events of the ids given in place, in one statement.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     is_selected = event_table.c.id.in_(ids)
     statement = event_table.update().where(is_selected).values(**values)
@@ -88,7 +91,7 @@ def _update(ids:'intlist', **values:'any_') -> 'None':
 def _delete(ids:'intlist') -> 'None':
     """ Deletes the events of the ids given, in one statement.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     is_selected = event_table.c.id.in_(ids)
     statement = event_table.delete().where(is_selected)
@@ -165,7 +168,7 @@ def _retention() -> 'None':
     rows = new_event_rows(rng, 3000, 0)
     insert_rows(rows)
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
     now = Base_Time + _retention_run_offset
 
     run_retention(engine, now)
@@ -182,7 +185,7 @@ def _compaction() -> 'None':
     """ Compacts the counts of inserts, updates and deletes, then those of later changes, then nothing.
     """
     rng = Random(20261103)
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     # Counts of inserts, updates and deletes are compacted ..
     rows = new_event_rows(rng, 2000, 0)
@@ -264,7 +267,7 @@ def _count_matching_searches() -> 'None':
     rng = Random(20261105)
     populate(rng, 4500)
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         dialect_name = connection.dialect.name
@@ -292,9 +295,9 @@ def test_counts_after_writes_through_the_api(audit_backend:'str') -> 'None':
     """
     rng = Random(20261030)
 
-    # Each event in a transaction of its own ..
-    audit_log = AuditLog(Server_Name, flush_max_size=1)
+    audit_log = AuditLog(Server_Name)
 
+    # Each event in a transaction of its own ..
     for index in range(40):
         object_name = rng.choice(Connection_Names)
         outcome = rng.choice([AuditOutcome.OK, AuditOutcome.Error])
@@ -302,15 +305,19 @@ def test_counts_after_writes_through_the_api(audit_backend:'str') -> 'None':
             msg_id=f'msg.{index}', outcome=outcome)
 
     # .. and in batches.
-    buffered_log = AuditLog(Server_Name, flush_max_size=100, flush_max_wait_ms=60000)
+    batch = []
 
     for index in range(400):
         object_name = rng.choice(Connection_Names)
         outcome = rng.choice([AuditOutcome.OK, AuditOutcome.Error])
-        _ = buffered_log.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Received, object_name,
+        pending = audit_log.new_pending_event(AuditSource.MLLP_Channel, AuditEvent.Message_Received, object_name,
             cid=f'cid.batch.{index}', msg_id=f'msg.{index}', outcome=outcome, status='closed')
+        batch.append(pending)
 
-    buffered_log.flush()
+        # Each batch of events commits in one transaction
+        if len(batch) == _api_batch_size:
+            audit_log.write_events(batch)
+            batch = []
 
     _ = run_blocking(_assert_counts_exact)
 

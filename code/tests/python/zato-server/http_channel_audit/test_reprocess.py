@@ -14,7 +14,8 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.api import CHANNEL, DATA_FORMAT, URL_TYPE
-from zato.common.audit_log.api import event_attr_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_attr_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.resubmit import source_resubmit_actions, is_event_type_resubmittable
 from zato.common.ext.bunch import Bunch
 from zato.common.typing_ import cast_
@@ -132,7 +133,7 @@ def _run_reprocess(event_id:'int', server:'ServerStub', *, actor:'str'='') -> 's
 def _get_attributes(event_id:'int') -> 'stranydict':
     """ The searchable attributes of one event, by name.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_attr_table.c.name, event_attr_table.c.value)
     query = query.where(event_attr_table.c.event_id == event_id)

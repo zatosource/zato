@@ -178,7 +178,7 @@ def read_run_states(pair:'SchedulerPair') -> 'anydict':
             connection.close()
 
     else:
-        connection = sqlite3.connect(database.env['Zato_PubSub_DB_Path'])
+        connection = sqlite3.connect(database.env['Zato_Database_Path'])
 
         try:
             cursor = connection.cursor()

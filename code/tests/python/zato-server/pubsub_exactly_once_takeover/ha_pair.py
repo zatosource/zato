@@ -113,7 +113,7 @@ def create_session(rendered_yaml:'str', services_source:'str') -> 'HASession':
 # ################################################################################################################################
 
 def _read_copied_check(path:'str', keys:'strlist', prefix:'str') -> 'OutputCheck':
-    """ Checks the outputs of the relay in a private copy of the pub/sub database of a node, which the node never waits for.
+    """ Checks the outputs of the relay in a private copy of the Zato database of a node, which the node never waits for.
     """
     with TemporaryDirectory() as copy_dir:
         copy_path = os.path.join(copy_dir, os.path.basename(path))
@@ -140,10 +140,10 @@ def _read_copied_check(path:'str', keys:'strlist', prefix:'str') -> 'OutputCheck
 # ################################################################################################################################
 
 def verify_node(node:'Node', prefix:'str', keys:'strlist') -> 'OutputCheck':
-    """ Waits until the outputs of the relay settle in the pub/sub database of a node and asserts that each key
+    """ Waits until the outputs of the relay settle in the Zato database of a node and asserts that each key
     was relayed exactly once and in order.
     """
-    path = node.db_path(EnvCtx.PubSub_DB_File)
+    path = node.db_path(EnvCtx.Database_File)
     read_check = partial(_read_copied_check, path, keys, prefix)
 
     out = wait_for_checks(read_check, ModuleCtx.Settle_Timeout)
@@ -158,7 +158,7 @@ def get_cluster_env(cluster:'PostgreSQLCluster') -> 'strstrdict':
     at its own address rather than under the name of the endpoint that only the nodes resolve.
     """
     out = dict(cluster.node_env)
-    out['Zato_PubSub_DB_Host'] = cluster.ip
+    out['Zato_Database_Host'] = cluster.ip
 
     return out
 

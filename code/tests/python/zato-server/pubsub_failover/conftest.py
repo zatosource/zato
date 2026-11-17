@@ -152,7 +152,7 @@ def _environment(mode:'str') -> 'any_':
     sqlite_dir = tempfile.mkdtemp(prefix='zato_pubsub_failover_sqlite_', dir=get_runtime_dir())
 
     if not is_postgresql_mode(mode):
-        database.env = {'Zato_PubSub_DB_Path': os.path.join(sqlite_dir, 'pubsub.db')}
+        database.env = {'Zato_Database_Path': os.path.join(sqlite_dir, 'zato.db')}
 
     state_a = SessionState('zato.test.pubsub_failover.a', 'server-logs-failover-a.txt')
     state_b = SessionState('zato.test.pubsub_failover.b', 'server-logs-failover-b.txt')

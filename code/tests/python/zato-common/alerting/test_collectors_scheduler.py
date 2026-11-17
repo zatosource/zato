@@ -11,7 +11,8 @@ from datetime import timedelta
 
 # Zato
 from zato.common.alerting.collectors import collect_facts, collect_file_transfer_facts, collect_scheduler_facts, Measure_File_Runs
-from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.scheduler import Attr_Delay_Ms
 from zato.common.util.api import utcnow
 
@@ -25,7 +26,7 @@ class TestSchedulerFacts:
 
     def test_the_worst_start_delay_of_the_window_speaks(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = audit_log.insert(AuditSource.Scheduler, AuditEvent.Job_Executed, 'billing.sync',
@@ -43,7 +44,7 @@ class TestSchedulerFacts:
 
     def test_the_overdue_ratio_sizes_itself_against_the_jobs_own_interval(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # A job that last ran twenty minutes ago, on a five-minute interval
@@ -60,7 +61,7 @@ class TestSchedulerFacts:
 
     def test_a_job_without_an_interval_has_no_notion_of_being_overdue(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         event_id = audit_log.insert(AuditSource.Scheduler, AuditEvent.Job_Executed, 'one.time.job',
@@ -101,7 +102,7 @@ class TestFileTransferArrivalFacts:
 
     def test_the_time_since_the_newest_arrival_is_measured(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # An older arrival and a newer one - only the newer one sets the measure
@@ -126,7 +127,7 @@ class TestFileTransferArrivalFacts:
 
     def test_a_schedule_without_a_window_declares_no_expectation(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         event_id = self._seed_arrival(audit_log, 'arrival-no-window-1')
@@ -140,7 +141,7 @@ class TestFileTransferArrivalFacts:
 # ################################################################################################################################
 
     def test_a_schedule_that_never_delivered_has_no_baseline(self) -> 'None':
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # A window is declared but nothing ever arrived - there is nothing to be overdue against
@@ -152,7 +153,7 @@ class TestFileTransferArrivalFacts:
 
     def test_each_schedule_measures_against_its_own_window(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Two schedules whose newest arrivals are equally old ..
@@ -179,7 +180,7 @@ class TestFileTransferArrivalFacts:
 
     def test_the_facts_flow_through_collect_facts(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         event_id = self._seed_arrival(audit_log, 'arrival-flow-1')

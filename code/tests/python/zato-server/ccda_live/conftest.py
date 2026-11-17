@@ -246,7 +246,7 @@ def zato_server() -> 'any_':
     port = _find_free_port()
     _temp_directory = tempfile.mkdtemp(prefix='zato_ccda_live_test_')
 
-    audit_db_path = os.path.join(_temp_directory, 'audit.db')
+    audit_db_path = os.path.join(_temp_directory, 'zato.db')
 
     quickstart_command = [
         _zato_bin, 'quickstart', 'create', _temp_directory,
@@ -280,7 +280,7 @@ def zato_server() -> 'any_':
     server_env = os.environ.copy()
     server_env['Zato_Config_Bind_Port'] = str(port)
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
-    server_env['Zato_Audit_Log_DB_Name'] = audit_db_path
+    server_env['Zato_Database_Path'] = audit_db_path
 
     _server_process = subprocess.Popen(
         [_zato_bin, 'start', server_directory, '--fg'],

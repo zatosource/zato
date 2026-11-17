@@ -12,8 +12,8 @@ from copy import deepcopy
 # Zato
 from support import Backend_PostgreSQL, Event_Time, insert_seed_event, new_batch, read_rows, record_statements, \
     Server_Name
-from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
-    get_audit_engine, AuditLog
+from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, AuditLog
+from zato.common.db_env.database import get_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -109,7 +109,7 @@ def test_one_statement_per_table(audit_backend:'str') -> 'None':
     seed_event_id = insert_seed_event(audit_log)
 
     batch = new_batch(audit_log, _event_count, seed_event_id)
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with record_statements(engine) as recorder:
         last_event_id = audit_log._write_batch(batch)

@@ -16,7 +16,8 @@ from sqlalchemy import select
 # Zato
 from support import count_filter_sets, event_filter_sets, new_filters, populate, run_blocking, search_windows
 from zato.common.audit_log.activity import count_by_bucket, get_match_window
-from zato.common.audit_log.api import event_table, get_audit_engine
+from zato.common.audit_log.api import event_table
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.listing import event_conditions
 
 # ################################################################################################################################
@@ -160,7 +161,7 @@ def _check_search(connection:'Connection', filters:'SearchFilters', label:'objec
 def _check_searches(filter_sets:'anylist') -> 'None':
     """ Checks the strip of each search of the filters given in each of the time windows.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         for window in search_windows():

@@ -44,7 +44,7 @@ class ModuleCtx:
 def read_active_server(env:'HAEnvironment') -> 'tuple[int, str]':
     """ Returns the pub/sub generation and the owner of the active server as the database holds them.
     """
-    rows = read_rows(cast_('any_', env), 'select generation, owner from pubsub_active')
+    rows = read_rows(cast_('any_', env), 'select generation, owner from zato_active')
     generation, owner = rows[0]
 
     out = (generation, owner)

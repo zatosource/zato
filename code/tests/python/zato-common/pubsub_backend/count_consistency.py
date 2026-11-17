@@ -13,7 +13,7 @@ from sqlalchemy import select
 from common import delete_all_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
-from zato.common.pubsub.sql.config import get_pubsub_engine
+from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.counts import Milliseconds_Per_Minute, No_Publisher
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
     topic_count_table
@@ -50,7 +50,7 @@ _moved_back_ms = 3 * Milliseconds_Per_Minute
 def _read_rows(table:'Table') -> 'anylist':
     """ Reads all the rows of one table.
     """
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         out = connection.execute(select(table)).fetchall()
@@ -151,7 +151,7 @@ def _assert_counts_match(backend:'SQLPubSubBackend', step:'str') -> 'None':
 def _move_back(msg_ids:'strlist') -> 'None':
     """ Moves the publication time of the given messages a few minutes back and makes one of them anonymous.
     """
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     with engine.begin() as connection:
         for index, msg_id in enumerate(msg_ids):

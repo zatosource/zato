@@ -21,12 +21,13 @@ from sqlalchemy import bindparam
 # Zato
 from zato.common.api import HTTP_SOAP
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.export.api import get_audit_export
 from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.ha.common import get_generation, get_node_name, is_active_standby
 from zato.common.pubsub.sql.clock import get_engine_clock
-from zato.common.pubsub.sql.config import get_pubsub_db_type, get_pubsub_engine
-from zato.common.pubsub.sql.generation import follow_takeover, get_fork_takeover, take_over
+from zato.common.db_env.database import get_database_engine, get_database_type
+from zato.common.pubsub.sql.generation import follow_takeover, get_fork_takeover, take_over, Takeover_Object_Name
 from zato.common.pubsub.sql.payload_cache import Max_Payload_Cache_Size, PayloadCache, PayloadEpoch
 from zato.common.pubsub.sql.schema import delivery_table
 from zato.common.pubsub.sql.payloads import drop_payloads
@@ -72,9 +73,6 @@ _retry = HTTP_SOAP.Retry
 # How long back-to-back SQLite calls may hold the event loop before the backend
 # yields it, in seconds - see _yield_after_write.
 _yield_interval_seconds = 0.005
-
-# The object of the audit event that records a takeover of the pub/sub database.
-_takeover_object_name = 'pubsub-database'
 
 # What records one push attempt of a delivery row and returns its number.
 _record_attempt_statement = delivery_table.update()
@@ -127,8 +125,8 @@ class SQLBackendCore:
         # When _yield_after_write last let the event loop run.
         self._last_yield = monotonic()
 
-        # Publications and acknowledgements of concurrent callers share their commits.
-        self._writer = PubSubWriter()
+        # Publications and acknowledgements of concurrent callers share their commits, with their audit events.
+        self._writer = PubSubWriter(audit_log)
 
         # The generation that this server raised on PostgreSQL, if it took over the database.
         self.generation_guard:'GenerationGuard | None' = None
@@ -146,13 +144,13 @@ class SQLBackendCore:
 
     @property
     def engine(self) -> 'Engine':
-        """ The engine of the pub/sub database that the Zato_PubSub_DB_* variables select, resolved on first access.
+        """ The engine of the Zato database that the Zato_Database_* variables select, resolved on first access.
         Every transaction of this backend runs on the one engine that its generation guard is installed on.
         """
         out = self._engine
 
         if out is None:
-            out = get_pubsub_engine()
+            out = get_database_engine()
             self._engine = out
 
         return out
@@ -174,33 +172,30 @@ class SQLBackendCore:
         """ Makes this server the active one on PostgreSQL, whose database a standby server may take over,
         and guards each subsequent transaction with the generation raised. A process that an arbiter started follows
         the takeover that its arbiter ran before the fork. On SQLite under an active-standby node, the node made
-        this server the active one already. The takeover is recorded in the audit log once per server start.
+        this server the active one already. The takeover is recorded in the audit log once per server start,
+        on PostgreSQL in the transaction that raises the generation.
         """
-        if get_pubsub_db_type() == Type_PostgreSQL:
+        if get_database_type() == Type_PostgreSQL:
 
             # A worker guards its engine with the generation of its arbiter and never raises it itself ..
             if fork_guard := get_fork_takeover():
                 generation_guard = follow_takeover(self.engine, fork_guard)
 
-            # .. while a server with no arbiter raises it.
+            # .. while a server with no arbiter raises it, recording the takeover if it has an audit log.
             else:
-                generation_guard = take_over(get_pubsub_engine)
+                if self.audit_log:
+                    server_name = self.audit_log.server_name
+                else:
+                    server_name = None
+
+                generation_guard = take_over(get_database_engine, server_name)
 
             self.generation_guard = generation_guard
 
-            # Each generation is one higher than the one it replaces, which the audit log records with the takeover,
-            # and a server that a later one replaced before its start took nothing over.
-            if self.audit_log and is_first_start() and not generation_guard.is_replaced:
-                generation = generation_guard.generation
-                previous_generation = generation - 1
-
-                attrs = {
-                    'previous_generation': f'{previous_generation}',
-                    'generation': f'{generation}',
-                }
-
-                self.audit_log.insert(AuditSource.PubSub, AuditEvent.Takeover, _takeover_object_name,
-                    outcome=AuditOutcome.OK, attrs=attrs)
+            # The recorded takeover leaves with the audit export once per server start.
+            if is_first_start() and (takeover_event_id := generation_guard.takeover_event_id):
+                if export := get_audit_export():
+                    export.emit_row(self.engine, takeover_event_id)
 
         elif is_active_standby():
             if self.audit_log and is_first_start():
@@ -212,7 +207,7 @@ class SQLBackendCore:
                     'node': node_name,
                 }
 
-                self.audit_log.insert(AuditSource.PubSub, AuditEvent.Takeover, _takeover_object_name,
+                self.audit_log.insert(AuditSource.PubSub, AuditEvent.Takeover, Takeover_Object_Name,
                     outcome=AuditOutcome.OK, attrs=attrs)
 
 # ################################################################################################################################

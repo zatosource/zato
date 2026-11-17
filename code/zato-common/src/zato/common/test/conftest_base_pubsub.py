@@ -27,6 +27,7 @@ import pytest
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.api import PubSub
+from zato.common.test.database_env import DatabaseEnv
 from zato.common.test.pubsub_database import get_db_mode, is_postgresql_mode, start_pubsub_database, \
     stop_pubsub_database
 
@@ -451,37 +452,27 @@ def create_zato_server_fixture(
             quickstart_prefix=quickstart_prefix,
         )
 
-        # .. point the pub/sub database at this environment's own file, or at a PostgreSQL container of this session,
+        # .. point the Zato database at this environment's own file, or at a PostgreSQL container of this session,
         # .. so the server, any subprocesses and the test process itself all share one database
         # .. that starts empty and disappears together with the environment ..
-        pubsub_db_mode = get_db_mode()
+        db_mode = get_db_mode()
 
         # .. the generation of the active server is recorded in this environment too ..
-        generation_file_path = os.path.join(server_directory, 'pubsub-generation')
-        os.environ['Zato_PubSub_Generation_File'] = generation_file_path
+        generation_file_path = os.path.join(server_directory, 'database-generation')
+        os.environ['Zato_Database_Generation_File'] = generation_file_path
 
-        if is_postgresql_mode(pubsub_db_mode):
-            pubsub_database = start_pubsub_database('live', pubsub_db_mode)
+        if is_postgresql_mode(db_mode):
+            pubsub_database = start_pubsub_database('live', db_mode)
             state.pubsub_database = pubsub_database
             _ = atexit.register(stop_pubsub_database, pubsub_database)
             os.environ.update(pubsub_database.env)
-            logger.info('Pub/sub database: %s (%s)', pubsub_database.container_name, pubsub_db_mode)
+            logger.info('Zato database: %s (%s)', pubsub_database.container_name, db_mode)
         else:
             pubsub_database = None
-            pubsub_db_path = os.path.join(server_directory, 'pubsub.db')
-            os.environ['Zato_PubSub_DB_Path'] = pubsub_db_path
-            logger.info('Pub/sub database: %s', pubsub_db_path)
-
-        # .. the audit log gets a database that the suite started for this session, or else its own file,
-        # .. so the test server never writes its audit events into the developer's own environment's database ..
-        if 'audit_db_env' in setup_result:
-            os.environ.update(setup_result['audit_db_env'])
-            logger.info('Audit log database: %s', os.environ['Zato_Audit_Log_DB_Type'])
-        else:
-            audit_db_path = os.path.join(server_directory, 'audit.db')
-            os.environ['Zato_Audit_Log_DB_Type'] = 'sqlite'
-            os.environ['Zato_Audit_Log_DB_Name'] = audit_db_path
-            logger.info('Audit log database: %s', audit_db_path)
+            db_path = os.path.join(server_directory, DatabaseEnv.File_Name)
+            os.environ[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
+            os.environ[DatabaseEnv.Env_Path] = db_path
+            logger.info('Zato database: %s', db_path)
 
         # .. copy services into the pickup directory if needed ..
         hot_deploy_sources = setup_result.get('hot_deploy_sources', []) # type: ignore[union-attr]

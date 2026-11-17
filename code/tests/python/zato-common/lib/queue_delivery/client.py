@@ -18,8 +18,8 @@ from logging import getLogger
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import event_attr_table, event_body_table, event_table, get_audit_engine
-from zato.common.pubsub.sql.config import get_pubsub_engine
+from zato.common.audit_log.api import event_attr_table, event_body_table, event_table
+from zato.common.db_env.database import get_database_engine
 from zato.common.test.client import AdminClient
 from zato.common.test.conftest_base_pubsub import find_free_port, start_server_process
 
@@ -97,7 +97,7 @@ def get_receiver(key:'str') -> 'RecordingReceiver':
 def get_pubsub_db_engine() -> 'Engine':
     """ An engine over the pub/sub database the current server uses.
     """
-    out = get_pubsub_engine()
+    out = get_database_engine()
     return out
 
 # ################################################################################################################################
@@ -320,7 +320,7 @@ def wait_for_queue_empty(
 def get_audit_events(cid:'str', event_type:'strnone'=None) -> 'anylist':
     """ The events the audit log holds under one correlation id, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.where(event_table.c.cid == cid)
@@ -344,7 +344,7 @@ def get_audit_events(cid:'str', event_type:'strnone'=None) -> 'anylist':
 def get_audit_attrs(event_id:'int') -> 'strdict':
     """ The attributes one audit event carries, by name.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_attr_table)
     query = query.where(event_attr_table.c.event_id == event_id)
@@ -363,7 +363,7 @@ def get_audit_attrs(event_id:'int') -> 'strdict':
 def get_audit_bodies(event_id:'int') -> 'strdict':
     """ The bodies one audit event carries, by their kind.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_body_table)
     query = query.where(event_body_table.c.event_id == event_id)

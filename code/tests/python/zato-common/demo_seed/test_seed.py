@@ -15,8 +15,9 @@ from time import monotonic
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
-    get_audit_engine, AuditBody, AuditEvent, AuditLink, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, AuditBody, AuditEvent, \
+    AuditLink, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import alert_table, event_dedup_table
 from zato.common.audit_log.reports import Range_Week
 from zato.common.audit_log.usage import get_usage
@@ -65,7 +66,7 @@ def _small_config() -> 'SeedConfig':
 # ################################################################################################################################
 
 def _run_seed() -> 'any_':
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     out = seed_demo_data(engine, server_name=_server_name, now=_now, config=_small_config())
     return out
@@ -73,7 +74,7 @@ def _run_seed() -> 'any_':
 # ################################################################################################################################
 
 def _get_events(**where:'any_') -> 'anylist':
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     statement = select(event_table)
 
@@ -91,7 +92,7 @@ def _get_events(**where:'any_') -> 'anylist':
 def _get_request_bodies(object_name:'str') -> 'anylist':
     """ The stored message bodies of everything one channel received.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     events = _get_events(event_type=AuditEvent.Message_Received, object_name=object_name)
     event_ids = [event['id'] for event in events]
@@ -185,7 +186,7 @@ class TestSeedContents:
         """
         _ = _run_seed()
 
-        engine = get_audit_engine()
+        engine = get_database_engine()
 
         with engine.connect() as connection:
             rows = connection.execute(select(event_body_table.c.data)).fetchall()
@@ -328,7 +329,7 @@ class TestSeedContents:
 
         parent_id = parent_events[0]['id']
 
-        engine = get_audit_engine()
+        engine = get_database_engine()
 
         statement = select(event_link_table).where(event_link_table.c.parent_event_id == parent_id)
         statement = statement.where(event_link_table.c.link_type == AuditLink.Batch_Item_Of)
@@ -352,7 +353,7 @@ class TestSeedContents:
         # Every chain has its first hop, and every few chains a second one
         assert len(chain_events) >= result.resubmit_count
 
-        engine = get_audit_engine()
+        engine = get_database_engine()
 
         for event in chain_events:
 
@@ -385,7 +386,7 @@ class TestSeedContents:
         """
         _ = _run_seed()
 
-        engine = get_audit_engine()
+        engine = get_database_engine()
 
         with engine.connect() as connection:
             rows = connection.execute(select(alert_table)).fetchall()
@@ -406,7 +407,7 @@ class TestSeedContents:
         """
         result = _run_seed()
 
-        engine = get_audit_engine()
+        engine = get_database_engine()
 
         with engine.connect() as connection:
             rows = connection.execute(select(event_dedup_table)).fetchall()
@@ -512,7 +513,7 @@ class TestSeedBehaviour:
         """
         _ = _run_seed()
 
-        engine = get_audit_engine()
+        engine = get_database_engine()
         purge_demo_data(engine)
 
         with engine.connect() as connection:
@@ -531,7 +532,7 @@ class TestSeedBehaviour:
         in one bulk transaction, so the import stays fast enough to sit behind
         a button in the UI.
         """
-        engine = get_audit_engine()
+        engine = get_database_engine()
 
         start = monotonic()
         result = seed_demo_data(engine, server_name=_server_name, now=_now)

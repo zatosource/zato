@@ -14,8 +14,9 @@ from datetime import datetime, timezone
 from sqlalchemy import event as sa_event, select
 
 # Zato
-from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
-    get_audit_engine, AuditBody, AuditEvent, AuditLink, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, AuditBody, AuditEvent, \
+    AuditLink, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import build_attachment
 from zato.common.audit_log.common import event_dedup_table
 from zato.common.typing_ import cast_
@@ -28,7 +29,7 @@ if 0:
     from sqlalchemy.engine import Engine
     from sqlalchemy.sql.schema import Table
     from zato.common.audit_log.api import AuditLog
-    from zato.common.audit_log.buffer import pending_event_list
+    from zato.common.audit_log.pending import pending_event_list
     from zato.common.typing_ import any_, anylist, strlist
 
     any_ = any_
@@ -123,7 +124,7 @@ def record_statements(engine:'Engine') -> 'recordergen':
 def delete_all_rows() -> 'None':
     """ Starts a test from empty tables because the PostgreSQL container is shared by all the tests.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.begin() as connection:
         _ = connection.execute(event_attr_table.delete())
@@ -191,7 +192,7 @@ def new_batch(audit_log:'AuditLog', event_count:'int', seed_event_id:'int') -> '
 def read_rows(table:'Table') -> 'anylist':
     """ Returns all the rows of a table as dicts, in the order of their ids.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(table)
     query = query.order_by(table.c.id)

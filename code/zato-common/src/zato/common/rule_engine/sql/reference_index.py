@@ -22,6 +22,15 @@ from .store_common import get_definition, require_text
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from sqlalchemy.orm import Session
+
+    # Dummy assignments to satisfy type checkers
+    Session = Session
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ReferenceIndex:
     """ A persisted where-used index over the terms every stored rule references.
 
@@ -51,32 +60,30 @@ class ReferenceIndex:
                 }
                 rows.append(row)
 
-        session = self._session_factory()
-
-        try:
-            with session.begin():
-
-                # Confirm the parent inside the same transaction ..
-                _ = get_definition(session, definition_id)
-
-                # .. drop the definition's previous index rows ..
-                statement = delete(rule_reference_table)
-                definition_condition = rule_reference_table.c.definition_id == definition_id
-                statement = statement.where(definition_condition)
-                _ = session.execute(statement)
-
-                # .. and store the current ones in the same commit, so the index
-                # .. can never hold a mix of the old and the new documents.
-                if rows:
-                    statement = insert(rule_reference_table)
-                    _ = session.execute(statement, rows)
-
-        # Release the transactional session in every case.
-        finally:
-            session.close()
+        self._session_factory.write(self._rebuild_rows, definition_id, rows)
 
         out = len(rows)
         return out
+
+# ################################################################################################################################
+
+    def _rebuild_rows(self, session:'Session', definition_id:'int', rows:'rowlist') -> 'None':
+        """ Replaces the index rows of one definition with the given ones.
+        """
+        # Confirm the parent inside the same transaction ..
+        _ = get_definition(session, definition_id)
+
+        # .. drop the definition's previous index rows ..
+        statement = delete(rule_reference_table)
+        definition_condition = rule_reference_table.c.definition_id == definition_id
+        statement = statement.where(definition_condition)
+        _ = session.execute(statement)
+
+        # .. and store the current ones in the same commit, so the index
+        # .. can never hold a mix of the old and the new documents.
+        if rows:
+            statement = insert(rule_reference_table)
+            _ = session.execute(statement, rows)
 
 # ################################################################################################################################
 

@@ -35,7 +35,8 @@ from zato.common.alerting.explain.evidence import Heading_Failures, Heading_Obje
 from zato.common.alerting.explain.store import ExplanationStore
 from zato.common.alerting.model import Default_Dedup_Window_Seconds
 from zato.common.api import SMTPMessage
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.crypto.api import CryptoManager
 from zato.common.odb.model import Base, GenericConn, GenericObject, HTTPBasicAuth, HTTPSOAP, SecurityBase, Service
 from zato.server.service.internal.alerting import Explain
@@ -435,7 +436,7 @@ def object_section(document:'str') -> 'str':
 def get_explained_events() -> 'anylist':
     """ Every alert-explained event the audit log holds.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table).where(event_table.c.event_type == AuditEvent.Alert_Explained)
 

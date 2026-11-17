@@ -14,7 +14,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from sqlalchemy import update
 
 # Zato
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,7 +47,7 @@ def backdate(event_id:'int', event_time:'datetime') -> 'None':
     """ Moves one stored event back in time - the collectors compare event times,
     and the tests need events older than their deadlines.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     statement = update(event_table)
     statement = statement.where(event_table.c.id == event_id)

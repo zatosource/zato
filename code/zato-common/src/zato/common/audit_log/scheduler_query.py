@@ -21,7 +21,8 @@ from sqlalchemy import func, or_, select
 
 # Zato
 from zato.common.api import SCHEDULER
-from zato.common.audit_log.api import AuditEvent, AuditSource, get_audit_engine
+from zato.common.audit_log.api import AuditEvent, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import event_attr_table, event_body_table, event_table
 from zato.common.audit_log.scheduler import Attr_Current_Run, Attr_Delay_Ms, Attr_Job_ID, Log_Kind_Error, Log_Kind_Info, \
     Log_Kind_System, Log_Kind_Warn, Log_Kinds
@@ -255,7 +256,7 @@ def get_history_page(
     """ Returns one page of a job's execution records, newest first, along with the total
     count of completed records matching the filter.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
     allowed = _parse_outcome_filter(outcomes)
 
     rows_query = _job_events(job_name)
@@ -297,7 +298,7 @@ def get_history_since(
     """ Returns a job's records added since the given timestamp, newest first. Runs named
     in running_runs are always included so a poll can watch them complete no matter the filter.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
     allowed = _parse_outcome_filter(outcomes)
 
     # The rows a poll asks for - everything new enough and allowed through the filter ..
@@ -344,7 +345,7 @@ def get_run_detail(job_id:'int', job_name:'str', current_run:'int') -> 'anydict'
     """ Returns a single run's record along with the run numbers just before and after it,
     for the run detail screen's navigation.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     run_match = _attr_match(Attr_Current_Run, current_run)
     row_query = _job_events(job_name).where(event_table.c.id.in_(run_match)).order_by(
@@ -391,7 +392,7 @@ def get_log_entries(job_name:'str', current_run:'int', since_idx:'int') -> 'dict
     """ Returns a run's log lines in the order they were written, starting at the given
     index so a live tail only ever fetches what it has not seen yet.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     run_match = _attr_match(Attr_Current_Run, current_run)
     event_query = select(event_table.c.id).where(
@@ -427,7 +428,7 @@ def get_chart_data(since:'datetime | None' = None, until:'datetime | None' = Non
     counts. With both boundaries given the bucket grid spans exactly that window, so the chart
     never shifts between polls - without them the grid spans the data itself.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     # A fixed window needs both boundaries, the right way around
     fixed_window = None
@@ -538,7 +539,7 @@ def get_timeline_events_since(since:'datetime | None' = None, limit:'int' = 0) -
     """ Returns every job's executions strictly after the given timestamp, newest first,
     for the dashboard's recent activity table.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     events_query = select(event_table).where(
         event_table.c.source == AuditSource.Scheduler).where(
@@ -581,7 +582,7 @@ def get_job_aggregates() -> 'anydict':
     run's outcome, duration and time, and the last few outcomes for the activity strip.
     These are the fields the dashboard merges into the scheduler's runtime job summaries.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     counts_query = select(event_table.c.object_name, event_table.c.outcome, func.count().label('outcome_count')).where(
         event_table.c.source == AuditSource.Scheduler).where(

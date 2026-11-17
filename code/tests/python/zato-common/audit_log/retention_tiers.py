@@ -17,9 +17,9 @@ from sqlalchemy import func, select
 
 # Zato
 from common import delete_all_events
-from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
-    get_audit_engine, get_source_env_suffix, register_prunability, AuditEvent, AuditLink, AuditLog, AuditOutcome, \
-    AuditSource, Env_Retention_Days_Prefix
+from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, get_source_env_suffix, \
+    register_prunability, AuditEvent, AuditLink, AuditLog, AuditOutcome, AuditSource, Env_Retention_Days_Prefix
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log import retention
 from zato.common.audit_log.query import outstanding_conditions
 from zato.common.audit_log.retention import Env_Archive_Dir, Env_Content_Retention_Days
@@ -93,7 +93,7 @@ def _insert_event_at(
 
     event_time = utcnow() - timedelta(days=age_days)
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     backdate_event = event_table.update()
     backdate_event = backdate_event.where(event_table.c.id == event_id)
@@ -115,7 +115,7 @@ def _insert_event_at(
 def _get_event_row(event_id:'int') -> 'anydictnone':
     """ Returns one event row as a dict, or None if it no longer exists.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.where(event_table.c.id == event_id)
@@ -136,7 +136,7 @@ def _get_event_row(event_id:'int') -> 'anydictnone':
 def _count_rows(table:'any_', event_id_column:'any_', event_id:'int') -> 'int':
     """ Counts the rows of one companion table that reference one event.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(func.count())
     query = query.select_from(table)
@@ -153,7 +153,7 @@ def _count_rows(table:'any_', event_id_column:'any_', event_id:'int') -> 'int':
 def _count_outstanding(source:'str') -> 'int':
     """ Counts the open exchanges of one source the way the outstanding filter of the page does.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     conditions = outstanding_conditions(source)
 
@@ -300,7 +300,7 @@ def _run_chunk_order_checks(audit_log:'AuditLog') -> 'None':
     # Every exchange is older than the retention window
     event_time = utcnow() - timedelta(days=_row_expired_age_days)
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     backdate_events = event_table.update()
     backdate_events = backdate_events.where(event_table.c.source == AuditSource.MLLP_Outgoing)

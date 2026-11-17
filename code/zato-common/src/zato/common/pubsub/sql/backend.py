@@ -18,11 +18,13 @@ from sqlalchemy import and_, select
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource, is_audit_log_enabled
+from zato.common.db_env.engine import call_database, execute_write
 from zato.common.pubsub.delivery_scope import get_delivery_scope
 from zato.common.pubsub.sql.admin import SQLAdminAPI
 from zato.common.pubsub.sql.config import get_batch_size, get_pull_lease_seconds
-from zato.common.pubsub.sql.publication import build_publication, complete_publication, complete_publications
+from zato.common.pubsub.sql.publication import add_published_event, build_publication, complete_publication, \
+    complete_publications
 from zato.common.pubsub.sql.pull import fetch_query, has_lease_candidates, outgoing_fetch_query, payload_query
 from zato.common.pubsub.sql.schema import delivery_table, topic_sub_table
 from zato.common.pubsub.sql.pending import new_fenced_ack, new_pending_atomic, new_pending_lease
@@ -34,9 +36,15 @@ from zato.server.metrics import zato_pubsub_messages_delivered_total
 # ################################################################################################################################
 
 if 0:
-    from zato.common.pubsub.sql.pending import PendingAck
+    from sqlalchemy.engine import Engine
+    from zato.common.audit_log.api import AuditLog
+    from zato.common.audit_log.pending import PendingEvent
+    from zato.common.pubsub.sql.pending import PendingAck, PendingLease
     from zato.common.pubsub.sql.publication import built_publication_list
-    from zato.common.typing_ import any_, anydict, anylist, intlist, intnone, strdict, strlist, strnone
+    from zato.common.typing_ import any_, anydict, anylist, anylistnone, intlist, intnone, strdict, strlist, strnone
+
+    # Dummy assignments to satisfy type checkers
+    AuditLog = AuditLog
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,8 +89,8 @@ class AckPulledResult(NamedTuple):
 # ################################################################################################################################
 
 class SQLPubSubBackend(SQLAdminAPI):
-    """ SQL-based pub/sub backend - messages, queues and delivery state live
-    in the local SQLite file configured through Zato_PubSub_DB_Path.
+    """ SQL-based pub/sub backend - messages, queues and delivery state are stored
+    in the Zato database that the Zato_Database_* variables select.
     Payloads are stored in the database itself and dropped once every subscriber
     has acknowledged a message, leaving the row behind as the delivered-message trace.
     """
@@ -105,10 +113,12 @@ class SQLPubSubBackend(SQLAdminAPI):
         retry_sleep_time:'intnone'=None,
         retry_backoff_threshold:'intnone'=None,
         retry_backoff_multiplier:'intnone'=None,
+        audit_events:'anylistnone'=None,
     ) -> 'PublishResult':
         """ Publish a message to a topic. A caller that needs to know the message's id before the message is
         stored, e.g. because the id travels inside the message itself, gives its own, otherwise one is generated.
         The retry settings, when given, travel with the message and the push delivery retries it as they say.
+        The audit events, when given, commit with the message in addition to the one that records the publication.
         """
         built = build_publication(
             self,
@@ -131,7 +141,13 @@ class SQLPubSubBackend(SQLAdminAPI):
 
         pending = built.pending
 
-        # One transaction, possibly shared with other callers, inserts the message and one delivery row
+        # The audit events commit with the message ..
+        add_published_event(self, built)
+
+        if audit_events:
+            pending.audit_events.extend(audit_events)
+
+        # .. one transaction, possibly shared with other callers, inserts the message and one delivery row
         # per subscriber, and a topic without subscribers has its message stored without its payload,
         # though the publications of a subscriber service that processes a push delivery batch
         # commit in the transaction that acknowledges the batch, which wakes up their subscribers ..
@@ -150,14 +166,22 @@ class SQLPubSubBackend(SQLAdminAPI):
 
 # ################################################################################################################################
 
-    def ack_with_publications(self, sub_key:'str', msg_ids:'strlist', publications:'anylist') -> 'None':
+    def ack_with_publications(
+        self,
+        sub_key:'str',
+        msg_ids:'strlist',
+        publications:'anylist',
+        audit_events:'anylist',
+        ) -> 'None':
         """ Acknowledges the messages of a push delivery batch in one transaction with the publications that its
         subscriber services made, which commits all of them or none, and then wakes up the subscribers of the publications.
         A batch whose delivery rows another delivery of the same messages already removed commits nothing, and if it
-        would store a new message, it raises PubSubAckConflict.
+        would store a new message, it raises PubSubAckConflict. The audit events of the deliveries of the batch
+        commit in the same transaction in either case.
         """
         ack = new_fenced_ack(sub_key, msg_ids, None)
         atomic = new_pending_atomic(publications, ack, False)
+        atomic.audit_events = audit_events
 
         self._writer.ack_atomic(atomic)
         self._log_concluded(ack)
@@ -207,7 +231,9 @@ class SQLPubSubBackend(SQLAdminAPI):
 
         pending_publications:'anylist' = []
 
+        # Each publication commits with the audit event that records it
         for built in publications:
+            add_published_event(self, built)
             pending_publications.append(built.pending)
 
         atomic = new_pending_atomic(pending_publications, ack, True)
@@ -244,9 +270,18 @@ class SQLPubSubBackend(SQLAdminAPI):
         # Normalize topic name to lowercase for case-insensitivity ..
         topic_name = topic_name.lower()
 
-        with self.engine.begin() as connection:
+        # .. and record the subscription unless it exists.
+        if call_database(self.engine, self._subscribe, self.engine, sub_key, topic_name):
+            logger.info('Subscribed -> sub_key:%s, topic_name:%s', sub_key, topic_name)
 
-            # .. subscribing twice is a no-op ..
+# ################################################################################################################################
+
+    def _subscribe(self, engine:'Engine', sub_key:'str', topic_name:'str') -> 'bool':
+        """ Records a subscription in a transaction of its own and returns whether it did not exist before.
+        """
+        with engine.begin() as connection:
+
+            # Subscribing twice is a no-op ..
             query = select(topic_sub_table.c.sub_key)
             query = query.where(and_(
                 topic_sub_table.c.sub_key == sub_key,
@@ -255,13 +290,13 @@ class SQLPubSubBackend(SQLAdminAPI):
             row = connection.execute(query).fetchone()
 
             if row:
-                return
+                return False
 
             # .. record the subscription.
             insert_statement = topic_sub_table.insert().values(sub_key=sub_key, topic_name=topic_name)
             _ = connection.execute(insert_statement)
 
-        logger.info('Subscribed -> sub_key:%s, topic_name:%s', sub_key, topic_name)
+        return True
 
 # ################################################################################################################################
 
@@ -279,10 +314,10 @@ class SQLPubSubBackend(SQLAdminAPI):
             topic_sub_table.c.topic_name == topic_name,
         ))
 
-        with self.engine.begin() as connection:
-            _ = connection.execute(delete_statement)
+        _ = execute_write(self.engine, delete_statement)
 
-        # .. then clean up the pending deliveries in bounded batches.
+        # .. then clean up the pending deliveries in bounded batches, each committed in turn
+        # .. with the other writes of the server to the same SQLite file.
         batch_size = get_batch_size()
         cleaned_up_count = 0
 
@@ -290,40 +325,55 @@ class SQLPubSubBackend(SQLAdminAPI):
 
             batch_started = monotonic()
 
-            with self.engine.begin() as connection:
+            batch_count = call_database(self.engine, self._unsubscribe_batch, self.engine, sub_key, topic_name, batch_size)
 
-                query = select(delivery_table.c.id, delivery_table.c.message_id)
-                query = query.where(and_(
-                    delivery_table.c.sub_key == sub_key,
-                    delivery_table.c.topic_name == topic_name,
-                ))
-                query = query.limit(batch_size)
+            # An empty batch means nothing is pending for the pair anymore ..
+            if not batch_count:
+                break
 
-                rows = connection.execute(query).fetchall()
+            cleaned_up_count += batch_count
 
-                if not rows:
-                    break
-
-                delivery_ids:'intlist' = []
-                message_ids:'intlist' = []
-
-                for row in rows:
-                    delivery_ids.append(row.id)
-                    message_ids.append(row.message_id)
-
-                batch_delete = delivery_table.delete()
-                batch_delete = batch_delete.where(delivery_table.c.id.in_(delivery_ids))
-                _ = connection.execute(batch_delete)
-
-                _ = self._drop_fully_delivered_payloads(connection, message_ids)
-
-                cleaned_up_count += len(rows)
-
-            # Let the other greenlets run between the batches.
+            # .. let the other greenlets run between the batches.
             self._yield_after_batch(monotonic() - batch_started)
 
         logger.info('Unsubscribed -> sub_key:%s, topic_name:%s, cleaned_up_count:%d',
             sub_key, topic_name, cleaned_up_count)
+
+# ################################################################################################################################
+
+    def _unsubscribe_batch(self, engine:'Engine', sub_key:'str', topic_name:'str', batch_size:'int') -> 'int':
+        """ Deletes one bounded batch of the pending deliveries of a subscription that was removed,
+        in a transaction of its own, and returns how many it deleted.
+        """
+        with engine.begin() as connection:
+
+            query = select(delivery_table.c.id, delivery_table.c.message_id)
+            query = query.where(and_(
+                delivery_table.c.sub_key == sub_key,
+                delivery_table.c.topic_name == topic_name,
+            ))
+            query = query.limit(batch_size)
+
+            rows = connection.execute(query).fetchall()
+
+            if not rows:
+                return 0
+
+            delivery_ids:'intlist' = []
+            message_ids:'intlist' = []
+
+            for row in rows:
+                delivery_ids.append(row.id)
+                message_ids.append(row.message_id)
+
+            batch_delete = delivery_table.delete()
+            batch_delete = batch_delete.where(delivery_table.c.id.in_(delivery_ids))
+            _ = connection.execute(batch_delete)
+
+            _ = self._drop_fully_delivered_payloads(connection, message_ids)
+
+        out = len(rows)
+        return out
 
 # ################################################################################################################################
 
@@ -477,15 +527,63 @@ class SQLPubSubBackend(SQLAdminAPI):
         # .. while any other one leases its messages in a commit that it may share with other writes.
         leased_until_ms = now_ms + get_pull_lease_seconds() * 1000
 
-        lease = new_pending_lease(sub_key, max_messages, max_len, now_ms, leased_until_ms)
+        lease = new_pending_lease(sub_key, max_messages, max_len, now_ms, leased_until_ms, self._on_leased)
         self._writer.lease(lease)
 
-        # Each copy of a message carries the number of the pull that handed it out, which a repeated copy raises.
+        out = lease.messages
+        return out
+
+# ################################################################################################################################
+
+    def _on_leased(self, lease:'PendingLease') -> 'None':
+        """ Builds the messages of the rows that a pull leased and the audit events of their reception,
+        in the transaction that leases them, so that a reception is recorded if and only if its lease is committed.
+        """
+        is_audited = self.audit_log and is_audit_log_enabled()
+
         for row in lease.rows:
+
+            # Each copy of a message carries the number of the pull that handed it out, which a repeated copy raises ..
             data = self._load_payload_from_row(row)
             message = self._build_message_from_row(row, data)
             message['delivery_attempt'] = lease.attempts[row.id]
-            out.append(message)
+            lease.messages.append(message)
+
+            # .. and its reception is recorded, unless the audit log of its topic is off.
+            if is_audited and row.topic_name not in self.audit_disabled_topics:
+                audit_event = self._new_received_event(message, lease.sub_key)
+                lease.audit_events.append(audit_event)
+
+# ################################################################################################################################
+
+    def _new_received_event(self, message:'anydict', sub_key:'str') -> 'PendingEvent':
+        """ Returns the audit event of the reception of one message by a pull client.
+        """
+        audit_log = cast_('AuditLog', self.audit_log)
+        topic_name = message['topic_name']
+        data = message['data']
+
+        # Messages published before CIDs were carried inside them have no CID stored.
+        if 'cid' in message:
+            cid = message['cid']
+        else:
+            cid = ''
+
+        pub_time = parse_utc(message['pub_time_iso'])
+        size = len(data)
+        is_export_payload_active = self.is_topic_payload_exported(topic_name)
+
+        out = audit_log.new_pending_event(AuditSource.PubSub, AuditEvent.Received, topic_name,
+            cid=cid,
+            msg_id=message['msg_id'],
+            pub_time=pub_time,
+            sub_key=sub_key,
+            size=size,
+            priority=message['priority'],
+            outcome=AuditOutcome.OK,
+            data=data,
+            is_export_payload_active=is_export_payload_active,
+        )
 
         return out
 
@@ -502,16 +600,13 @@ class SQLPubSubBackend(SQLAdminAPI):
 # ################################################################################################################################
 
     def format_messages_for_rest(self, messages:'anylist', sub_key:'str') -> 'anylist':
-        """ Format messages that a pull leased into the {data, meta} structure expected by the REST API,
-        recording each reception and incrementing delivery counters.
+        """ Formats messages that a pull leased into the {data, meta} structure expected by the REST API
+        and increments the delivery counters. The lease recorded the reception of each of them.
         """
         clock = self.clock
         now = clock.now()
 
         out:'anylist' = []
-
-        # The receptions of all the messages of the pull are recorded together
-        audit_events:'anylist' = []
 
         for message in messages:
 
@@ -560,38 +655,9 @@ class SQLPubSubBackend(SQLAdminAPI):
                 'meta': meta
             })
 
-            # .. record the reception in the audit log, unless the topic's audit log is off ..
-            if self.audit_log:
-                if message['topic_name'] not in self.audit_disabled_topics:
-
-                    # Messages published before CIDs were carried inside them have no CID stored.
-                    message_cid = message.get('cid')
-                    if message_cid is None:
-                        message_cid = ''
-
-                    audit_pub_time = parse_utc(pub_time_iso)
-
-                    audit_event = self.audit_log.new_pending_event(AuditSource.PubSub, AuditEvent.Received, message['topic_name'],
-                        cid=message_cid,
-                        msg_id=message['msg_id'],
-                        pub_time=audit_pub_time,
-                        sub_key=sub_key,
-                        size=data_size,
-                        priority=message['priority'],
-                        outcome=AuditOutcome.OK,
-                        data=data_raw,
-                        is_export_payload_active=self.is_topic_payload_exported(message['topic_name']),
-                    )
-                    audit_events.append(audit_event)
-
-            # .. update the delivery counter.
+            # .. and update the delivery counter.
             counter = zato_pubsub_messages_delivered_total.labels(topic_name=message['topic_name'])
             _ = counter.inc()
-
-        # .. and the receptions are recorded in one write.
-        if audit_events:
-            audit_log = cast_(AuditLog, self.audit_log)
-            audit_log.write_events(audit_events)
 
         return out
 

@@ -18,7 +18,8 @@ from zato.common.alerting.collectors.common import Probe_Source_Test_Transfer
 from zato.common.alerting.collectors.evidence import collect_baseline, collect_deliveries, collect_failed_events, \
     collect_measure_rows, collect_quarantined, collect_test_transfers, collect_troubled_runs, collect_verify_failed, \
     measure_to_evidence
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.file_transfer_run import Run_Status_Clean, Run_Status_Failed, Run_Status_Interrupted, \
     Run_Status_List_Failed
 from zato.common.util.api import utcnow
@@ -47,7 +48,7 @@ _window_seconds = 3600
 # ################################################################################################################################
 
 def _backdate(event_id:'int', event_time:'datetime') -> 'None':
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     statement = update(event_table).where(event_table.c.id == event_id).values(event_time=event_time)
 
@@ -101,7 +102,7 @@ class TestFailedEvents:
 
     def test_only_the_failed_events_of_the_object_within_the_window(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_transfer(audit_log, 'ok-1', AuditOutcome.OK)
@@ -122,7 +123,7 @@ class TestFailedEvents:
 
     def test_a_row_carries_the_columns_the_document_reads(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_transfer(audit_log, 'err-1', AuditOutcome.Error, data='Permission denied')
@@ -136,7 +137,7 @@ class TestFailedEvents:
 
     def test_a_fact_without_a_window_uses_the_default_one(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_transfer(audit_log, 'err-1', AuditOutcome.Error, data='Now')
@@ -156,7 +157,7 @@ class TestTroubledRuns:
 
     def test_only_the_schedules_own_troubled_runs(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_run(audit_log, 'run-clean', _schedule_name, AuditOutcome.OK, Run_Status_Clean)
@@ -184,7 +185,7 @@ class TestDeliveries:
 
     def test_only_the_schedules_deliveries_joined_on_the_attr(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_delivery(audit_log, 'del-1', _schedule_name)
@@ -210,7 +211,7 @@ class TestProbesAndFileEvents:
 
     def test_test_transfers_read_the_probe_rows_of_the_connection(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = audit_log.insert(Probe_Source_Test_Transfer, AuditEvent.Run_Completed, _conn_name, cid='probe-1',
@@ -226,7 +227,7 @@ class TestProbesAndFileEvents:
 
     def test_quarantined_and_verify_failed_read_their_own_event_types(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.File_Quarantined, _conn_name, cid='q-1',
@@ -260,7 +261,7 @@ class TestMeasureRows:
 
     def test_the_rows_of_all_measures_come_together_once_each_newest_first(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         first_id = _seed_transfer(audit_log, 'err-1', AuditOutcome.Error, data='One')
@@ -281,7 +282,7 @@ class TestMeasureRows:
 
     def test_an_unmapped_measure_reads_the_failed_events(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_transfer(audit_log, 'err-1', AuditOutcome.Error, data='One')
@@ -297,7 +298,7 @@ class TestBaseline:
 
     def test_the_successes_the_streak_and_the_last_ok_before_it(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_transfer(audit_log, 'ok-1', AuditOutcome.OK, endpoint='/out/1.xml')
@@ -318,7 +319,7 @@ class TestBaseline:
 
     def test_a_success_as_the_newest_event_means_no_streak(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_transfer(audit_log, 'err-1', AuditOutcome.Error, data='Reset')
@@ -331,7 +332,7 @@ class TestBaseline:
 
     def test_a_streak_with_no_success_before_it(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_transfer(audit_log, 'err-1', AuditOutcome.Error, data='Reset')
@@ -345,7 +346,7 @@ class TestBaseline:
 
     def test_a_schedule_reads_its_baseline_under_the_owning_connection(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_transfer(audit_log, 'ok-1', AuditOutcome.OK)
@@ -356,7 +357,7 @@ class TestBaseline:
 
     def test_the_newest_test_transfer_when_they_are_on(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = audit_log.insert(Probe_Source_Test_Transfer, AuditEvent.Run_Completed, _conn_name, cid='probe-1',
@@ -371,7 +372,7 @@ class TestBaseline:
         assert baseline['test_transfer']['data'] == 'Permission denied'
 
     def test_test_transfers_on_without_a_result_yet(self) -> 'None':
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         baseline = collect_baseline(engine, _fact(), now, test_transfers_on=True)
@@ -413,7 +414,7 @@ class TestChannelBaseline:
 
     def test_a_channels_baseline_counts_its_responses_not_its_requests(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_channel_call(audit_log, 'call-1', '200 OK')
@@ -433,7 +434,7 @@ class TestChannelBaseline:
 
     def test_a_channel_whose_newest_call_went_through_has_no_streak(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_channel_call(audit_log, 'call-1', '500 Internal Server Error')
@@ -447,7 +448,7 @@ class TestChannelBaseline:
 
     def test_a_channels_failed_rows_carry_their_callers(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_channel_call(audit_log, 'call-1', '401 Unauthorized', caller='partner-b')

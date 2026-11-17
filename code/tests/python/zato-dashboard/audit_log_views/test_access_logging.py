@@ -26,11 +26,12 @@ from sqlalchemy import select
 from zato.admin.web.views.audit_log import attachment_download, details
 from zato.admin.web.views.audit_log.sources import render_view_record
 from zato.admin.web.views.outgoing import delivery
-from zato.common.audit_log.api import event_attr_table, event_table, get_audit_engine, AuditEvent, AuditLog, \
-    AuditOutcome, AuditSource, ModuleCtx as AuditLogCtx
+from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import build_attachment, list_attachments
 from zato.common.ext.bunch import Bunch, bunchify
 from zato.common.pubsub.outgoing import Body_Mode_HL7, Key_CID, Key_Conn_Name, Key_Data, Key_Msg_ID, Key_Request
+from zato.common.test.database_env import DatabaseEnv
 
 # Test support
 from live_sql.env import database_env
@@ -59,9 +60,6 @@ _pdf_name = 'referral.pdf'
 _pdf_type = 'application/pdf'
 _pdf_content = b'%PDF-1.4 referral'
 
-# The prefix all the audit log database environment variables share
-_env_prefix = 'Zato_Audit_Log_DB_'
-
 # The queued message the delivery page shows, and the connection it waits in
 _queue_conn_type = 'hl7-mllp'
 _queue_conn_name = 'test.access.logging.orders'
@@ -77,14 +75,14 @@ def _event_to_view(tmp_path:'any_') -> 'envgen':
     """ Points the audit log at a throwaway SQLite database holding one event with a body
     and an attachment and hands the event's id to the block.
     """
-    db_path = os.path.join(str(tmp_path), 'audit.db')
+    db_path = os.path.join(str(tmp_path), 'zato.db')
 
     details_config = {
-        'type': AuditLogCtx.Type_SQLite,
-        'name': db_path,
+        'type': DatabaseEnv.Type_SQLite,
+        'path': db_path,
     }
 
-    with database_env(_env_prefix, details_config):
+    with database_env(details_config):
 
         audit_log = AuditLog(_server_name)
 
@@ -101,7 +99,7 @@ def _event_to_view(tmp_path:'any_') -> 'envgen':
 def _get_view_events() -> 'any_':
     """ The content-viewed rows the access log holds, with their attributes, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     events_query = select(event_table.c.id, event_table.c.source, event_table.c.event_type, event_table.c.object_name)
     events_query = events_query.where(event_table.c.event_type == AuditEvent.Content_Viewed)
@@ -244,7 +242,7 @@ def test_an_attachment_download_writes_one_content_viewed_row_too(tmp_path:'os.P
     """
     with _event_to_view(tmp_path) as event_id:
 
-        engine = get_audit_engine()
+        engine = get_database_engine()
         items = list_attachments(engine, event_id)
 
         response = attachment_download(_new_download_request(items[0]['id']))
@@ -304,7 +302,7 @@ def test_a_queued_message_read_or_downloaded_writes_one_content_viewed_row_each(
             assert 'viewed_event_id' not in view_event['attrs']
 
         # The record reads by the message's coordinates, there being no event to resolve it against
-        engine = get_audit_engine()
+        engine = get_database_engine()
 
         data_query = select(event_table.c.data, event_table.c.event_time)
         data_query = data_query.where(event_table.c.id == view_events[0]['id'])

@@ -8,7 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from common import delete_all_events
-from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.flow import resolve_seed, Resolved_Cid, Resolved_Event_Id, Resolved_Msg_Id
 
 # ################################################################################################################################
@@ -30,7 +31,7 @@ def run_flow_resolve_scenario() -> 'None':
     """
 
     # Start from empty tables because containers can be reused between test runs ..
-    engine = get_audit_engine()
+    engine = get_database_engine()
     delete_all_events()
 
     audit_log = AuditLog(_server_name)

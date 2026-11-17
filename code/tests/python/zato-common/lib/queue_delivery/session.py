@@ -139,11 +139,7 @@ class Session:
             declare_broker_queues(backend.broker, self.type_under_test)
             rendered_yaml = add_amqp_config(rendered_yaml, backend.broker, self.type_under_test)
 
-        # The audit log gets a file of its own, or the events land in the developer's database
-        audit_db_path = os.path.join(self.state.test_data_directory, 'audit.db')
-        os.environ['Zato_Audit_Log_DB_Name'] = audit_db_path
-
-        # Every process started from here on inherits the backend as its pub/sub database
+        # Every process started from here on inherits the backend as its database
         self._exit_stack.enter_context(pubsub_path_env(backend.db_path))
 
         server_directory = run_quickstart_and_enmasse(

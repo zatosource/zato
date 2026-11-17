@@ -1,6 +1,6 @@
-//! Active-standby replication of the `SQLite` databases of Zato.
+//! Active-standby replication of the `SQLite` Zato database.
 //!
-//! The `_zato_ha_node` binary reads the write-ahead logs of the databases of a Zato server, ships their
+//! The `_zato_ha_node` binary reads the write-ahead log of the Zato database of a Zato server, ships its
 //! frames to a standby node, answers the replication barrier of the server, and moves the active role
 //! between two nodes through compare-and-set writes to a referee.
 

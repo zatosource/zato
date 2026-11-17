@@ -6,28 +6,15 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Config DB - services behind the dashboard screens that configure the databases the server
-# itself uses. The SQL screen drives the audit log database through the
-# Zato_Audit_Log_DB_* environment variables, applied live and persisted into an env file.
-# The Redis screen drives the [redis] section of server.conf,
-# persisted on disk and applied live to the cache's Redis client.
+# Config DB - services behind the Dashboard screen that configures the Redis connection of the server.
+# The screen drives the [redis] section of server.conf, persisted on disk and applied live to the Redis client of the cache.
 
 # stdlib
-import os
 from logging import getLogger
 from time import time
 
-# SQLAlchemy
-from sqlalchemy import create_engine
-from sqlalchemy import text as sa_text
-
 # Zato
-from zato.common.audit_log.common import Audit_DB_File_Name, metadata as audit_metadata
 from zato.common.broker_message import Server as BrokerMessageServer
-from zato.common.config_db import apply_env_variables, build_enabled_env_variables, build_env_variables, \
-    get_default_env_file_path, get_enabled_from_env, persist_env_variables, sql_env_prefix_by_database, \
-    sql_field_suffixes
-from zato.common.db_env import build_connect_args_from_values, build_engine_url_from_values, get_env_values, EnvDBConfig
 from zato.common.redis_env import get_redis_conn_from_values, get_redis_values_from_section
 from zato.common.util.config import get_config_object, update_config_file
 from zato.server.service.internal import AdminService
@@ -46,20 +33,10 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-_sql_service_prefix   = 'zato.config-db.sql.'
 _redis_service_prefix = 'zato.config-db.redis.'
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# The environment-configured SQL databases the SQL screen knows about
-_sql_databases = {
-    'audit-log': EnvDBConfig(
-        env_prefix=sql_env_prefix_by_database['audit-log'],
-        sqlite_file_name=Audit_DB_File_Name,
-        metadata=audit_metadata,
-    ),
-}
 
 # The keys of the [redis] section of server.conf the Redis screen saves, mapped from the form fields
 _redis_conf_keys = {
@@ -73,151 +50,6 @@ _redis_conf_keys = {
     'ssl_key_file':  'ssl_key_file',
     'ssl_verify':    'ssl_verify',
 }
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SQLGet(AdminService):
-    """ Returns the current configuration of one environment-driven SQL database.
-    """
-    name = _sql_service_prefix + 'get'
-
-    def handle(self):
-
-        # Which of the databases we are to read ..
-        database = self.request.raw['database']
-        config = _sql_databases[database]
-
-        # .. the connection values come out of the environment with defaults filled in ..
-        values = get_env_values(config)
-
-        # .. and so do the display name and description ..
-        values['display_name'] = os.environ.get(config.env_prefix + 'Display_Name', '')
-        values['description']  = os.environ.get(config.env_prefix + 'Description', '')
-
-        # .. and whether the database is in use at all, which only the audit log can turn off.
-        values['enabled'] = get_enabled_from_env(database)
-
-        self.response.payload = {
-            'success': True,
-            'values': values,
-        }
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SQLTest(AdminService):
-    """ Connects to an SQL database described by the submitted form values and runs a test query.
-    """
-    name = _sql_service_prefix + 'test'
-
-    def handle(self):
-
-        values = self.request.raw['values']
-        db_type = values['type']
-
-        try:
-            # Build a throwaway engine out of the submitted values ..
-            engine_url   = build_engine_url_from_values(values, db_type)
-            connect_args = build_connect_args_from_values(values, db_type)
-            engine       = create_engine(engine_url, connect_args=connect_args)
-
-            # .. run the simplest possible query and time it ..
-            start = time()
-
-            with engine.connect() as connection:
-                _ = connection.execute(sa_text('select 1'))
-
-            response_time = round(time() - start, 3)
-
-            # .. the engine is not needed anymore.
-            engine.dispose()
-
-            self.response.payload = {
-                'success': True,
-                'message': f'Connection OK, response time: {response_time}s',
-            }
-
-        except Exception as e:
-            self.response.payload = {
-                'success': False,
-                'error': str(e),
-            }
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SQLSave(AdminService):
-    """ Applies the submitted SQL form values to this database's environment variables,
-    live in this process and persisted into an env file so they survive restarts.
-    The audit log resolves its engine per write, so new operations use the new database immediately.
-    The audit log's Enabled switch is read per write too, so turning it off stops
-    the writing from the very next event on.
-    """
-    changes_config = True
-    name = _sql_service_prefix + 'save'
-
-    def handle(self):
-
-        # Which of the databases we are to configure ..
-        database = self.request.raw['database']
-        values = self.request.raw['values']
-
-        env_prefix = sql_env_prefix_by_database[database]
-
-        # .. turn the form values into their environment variables ..
-        env_variables = build_env_variables(env_prefix, sql_field_suffixes, values)
-
-        # .. the Enabled switch has a variable of its own, outside the connection's variable prefix ..
-        env_variables.update(build_enabled_env_variables(database, values))
-
-        # .. apply them to this process and to every other process of the server ..
-        set_count = apply_env_variables(env_variables)
-        self._relay_env_variables(env_variables)
-
-        # .. persist them so a restart re-applies them - into the file the server
-        # .. was started with or, without one, into a well-known file under the config
-        # .. repo that startup loads on its own ..
-        if env_path := self.server.env_file:
-            pass
-        else:
-            env_path = get_default_env_file_path(self.server.repo_location)
-
-        message = f'Saved, {set_count} variables set'
-
-        try:
-            persist_env_variables(env_path, env_variables)
-        except OSError as e:
-            # .. the values are live in RAM even when the file cannot be written, e.g. on a read-only mount.
-            message = f'Saved in RAM only, could not persist to `{env_path}` - {e}'
-
-        logger.info('Config DB SQL save: `%s`, set %d variables, env file `%s`', database, set_count, env_path)
-
-        self.response.payload = {
-            'success': True,
-            'message': message,
-            'env_variables': env_variables,
-        }
-
-# ################################################################################################################################
-
-    def _relay_env_variables(self, env_variables:'stranydict') -> 'None':
-        """ Sends the variables to every other process of the server, which applies them as this one did.
-        """
-        set_variables:'stranydict' = {}
-        deleted_variables:'list[str]' = []
-
-        for env_name, value in env_variables.items():
-            if value:
-                set_variables[env_name] = value
-            else:
-                deleted_variables.append(env_name)
-
-        self.config_dispatcher.relay_only({
-            'action': BrokerMessageServer.Env_Variables_Apply.value,
-            'set_variables': set_variables,
-            'deleted_variables': deleted_variables,
-        })
 
 # ################################################################################################################################
 # ################################################################################################################################

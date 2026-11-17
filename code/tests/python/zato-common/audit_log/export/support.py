@@ -28,7 +28,7 @@ from zato.common.audit_log.export.queue import ExportQueue
 if 0:
     from opentelemetry.proto.common.v1.common_pb2 import AnyValue
     from opentelemetry.proto.logs.v1.logs_pb2 import LogRecord
-    from zato.common.audit_log.buffer import PendingEvent
+    from zato.common.audit_log.pending import PendingEvent
     from zato.common.typing_ import any_, anylist, callable_, intnone, stranydict
 
     log_record_list = list[LogRecord]
@@ -263,7 +263,7 @@ class CapturingAuditLog(AuditLog):
     """ An audit log that keeps the events it would have written, giving each one the id the database would.
     """
     def __init__(self, server_name:'str'=Server_Name) -> 'None':
-        super().__init__(server_name, flush_max_size=1, flush_max_wait_ms=1)
+        super().__init__(server_name)
         self.pending:'pending_event_list' = []
         self.next_id = 1
 

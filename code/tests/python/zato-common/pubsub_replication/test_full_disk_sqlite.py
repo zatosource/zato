@@ -100,12 +100,11 @@ def test_full_disk_sqlite() -> 'None':
     and processing resumes once the limit is lifted.
     """
     work_dir = tempfile.mkdtemp(prefix='zato_pubsub_full_disk_sqlite_', dir=get_runtime_dir())
-    db_path = os.path.join(work_dir, 'pubsub.db')
+    db_path = os.path.join(work_dir, 'zato.db')
 
     env = {
-        'Zato_PubSub_DB_Path': db_path,
-        'Zato_PubSub_Generation_File': os.path.join(work_dir, 'generation'),
-        'Zato_Audit_Log_DB_Name': os.path.join(work_dir, 'audit.db'),
+        'Zato_Database_Path': db_path,
+        'Zato_Database_Generation_File': os.path.join(work_dir, 'generation'),
         ModuleCtx.Env_Pull_Lease_Seconds: Pull_Lease_Seconds,
     }
 

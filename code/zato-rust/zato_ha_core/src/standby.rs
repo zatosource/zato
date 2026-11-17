@@ -16,41 +16,10 @@ use std::time::Instant;
 
 use parking_lot::MutexGuard;
 
-use crate::config::DatabaseConfig;
 use crate::copy::DatabaseCopy;
 use crate::link::{AcceptedLink, LinkReceiver, LinkSender, verify_peer_name};
-use crate::protocol::{Message, Position};
+use crate::protocol::Message;
 use crate::state::{Role, Shared};
-
-/// The databases of the copy of one session, in the order of the configuration.
-struct Copies {
-    /// The copy of each database.
-    databases: Vec<DatabaseCopy>,
-}
-
-impl Copies {
-    /// Opens the copies of the databases, each at the path that the Zato server of this node uses.
-    fn open(configs: &[DatabaseConfig]) -> Result<Self, Error> {
-        let mut databases = Vec::new();
-        for config in configs {
-            databases.push(DatabaseCopy::open(config.name, &config.path)?);
-        }
-        Ok(Self { databases })
-    }
-
-    /// Returns the copy of a database.
-    fn get(&mut self, name: &str) -> Result<&mut DatabaseCopy, Error> {
-        self.databases
-            .iter_mut()
-            .find(|copy| copy.name == name)
-            .ok_or_else(|| Error::new(ErrorKind::InvalidData, format!("unknown database `{name}`")))
-    }
-
-    /// Returns the positions of every copy.
-    fn positions(&self) -> Vec<Position> {
-        self.databases.iter().map(DatabaseCopy::position).collect()
-    }
-}
 
 /// Answers a link opened by a node of a lower generation, which fences that node.
 fn refuse(sender: &LinkSender, generation: u64, shared: &Shared) {
@@ -121,20 +90,14 @@ fn run_session(shared: &Shared, sender: &LinkSender, mut receiver: LinkReceiver,
     };
     let timeout = shared.config.timers.mark_out;
 
-    // The positions are read only once an earlier session finished the message it was applying.
+    // The position is read only once an earlier session finished the message it was applying.
     let Some(gate) = enter_gate(shared, session) else {
         return Ok(());
     };
-    let mut copies = Copies::open(&shared.config.databases)?;
-    let positions = if resumes { copies.positions() } else { Vec::new() };
+    let mut copy = DatabaseCopy::open(&shared.config.database_path)?;
+    let position = resumes.then(|| copy.position());
     drop(gate);
-    sender.send(
-        &Message::HelloReply {
-            in_sync: resumes,
-            positions,
-        },
-        timeout,
-    )?;
+    sender.send(&Message::HelloReply { position }, timeout)?;
     tracing::info!("Session with {active_node} at generation {generation} opened, resuming in sync: {resumes}");
 
     loop {
@@ -150,7 +113,6 @@ fn run_session(shared: &Shared, sender: &LinkSender, mut receiver: LinkReceiver,
         match message {
             Message::Frames {
                 generation: frames_generation,
-                database,
                 header,
                 first_frame,
                 end_frame,
@@ -165,9 +127,7 @@ fn run_session(shared: &Shared, sender: &LinkSender, mut receiver: LinkReceiver,
                     refuse(sender, own, shared);
                     return Ok(());
                 }
-                let position = copies
-                    .get(&database)?
-                    .apply_frames(header.as_deref(), first_frame, end_frame, &bytes)?;
+                let position = copy.apply_frames(header.as_deref(), first_frame, end_frame, &bytes)?;
 
                 // The confirmation is sent only after the frames are synced and only under the gate, so that
                 // a takeover written in the meantime is never followed by a confirmation of the old generation.
@@ -184,7 +144,7 @@ fn run_session(shared: &Shared, sender: &LinkSender, mut receiver: LinkReceiver,
                 }
                 sender.send(&Message::HeartbeatAck, timeout)?;
             }
-            Message::SnapshotBegin { database, .. } => {
+            Message::SnapshotBegin { .. } => {
                 {
                     let mut state = shared.state.lock();
 
@@ -208,21 +168,21 @@ fn run_session(shared: &Shared, sender: &LinkSender, mut receiver: LinkReceiver,
                     drop(state);
                     shared.changed.notify_all();
                 }
-                copies.get(&database)?.begin_snapshot()?;
+                copy.begin_snapshot()?;
                 drop(gate);
             }
-            Message::SnapshotChunk { database, kind, bytes } => {
+            Message::SnapshotChunk { kind, bytes } => {
                 let Some(gate) = enter_gate(shared, session) else {
                     return Ok(());
                 };
-                copies.get(&database)?.append_snapshot(kind, &bytes)?;
+                copy.append_snapshot(kind, &bytes)?;
                 drop(gate);
             }
-            Message::SnapshotEnd { database } => {
+            Message::SnapshotEnd => {
                 let Some(gate) = enter_gate(shared, session) else {
                     return Ok(());
                 };
-                let position = copies.get(&database)?.end_snapshot()?;
+                let position = copy.end_snapshot()?;
                 sender.send(&Message::Confirm(position), timeout)?;
                 drop(gate);
             }

@@ -17,7 +17,7 @@ from typing_extensions import TypeAlias
 # Zato
 from zato.common.alerting.model import new_finding, new_rule
 from zato.common.alerting.store import raise_alert
-from zato.common.audit_log.api import get_audit_engine
+from zato.common.db_env.database import get_database_engine
 from zato.common.rule_engine.jobs.common import build_backend, configure_job
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Event_Type_Decisions_Spiked, \
     Hour_Bucket_Format, System_Actor
@@ -92,7 +92,7 @@ def run_spike_sweep(backend:'RuleSQLBackend', now:'datetime | None' = None) -> '
 
     # The deduplicating alert store remembers spikes across sweeps and stores aware UTC values,
     # .. whereas the rule engine database stores naive UTC values ..
-    audit_engine = get_audit_engine()
+    audit_engine = get_database_engine()
     alert_time = now.replace(tzinfo=timezone.utc)
 
     # .. one grouped scan covers the trailing window plus the current hour for every ruleset at once,

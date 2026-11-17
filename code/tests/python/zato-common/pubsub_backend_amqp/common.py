@@ -18,7 +18,8 @@ from sqlalchemy import select
 # Zato
 from live_amqp.env import get_broker_address
 from live_amqp.harness import PubSubAMQPHarness, RESTPushListener
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditOutcome
+from zato.common.audit_log.api import event_table, AuditEvent, AuditOutcome
+from zato.common.db_env.database import get_database_engine
 from zato.common.facade import PubSubFacade
 from zato.common.test.rabbitmq_ import declare_and_bind, drain_queue, get_queue_depth, publish_to_exchange
 from zato.common.typing_ import cast_
@@ -61,7 +62,7 @@ _broker_password = 'guest'
 def get_audit_events(topic_name:'str') -> 'dictlist':
     """ Returns all the audit events of one topic, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(
         event_table.c.event_type,

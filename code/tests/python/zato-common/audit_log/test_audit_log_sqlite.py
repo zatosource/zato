@@ -19,7 +19,7 @@ from retention_tiers import run_retention_tiers_scenario
 from scheduler_history import run_scheduler_history_scenario
 from storage_types import run_storage_types_scenario
 from structured import run_structured_events_scenario
-from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
+from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,11 +27,11 @@ from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 def test_audit_log_sqlite(tmp_path:'os.PathLike') -> 'None':
     """ The complete audit log scenario against the default SQLite backend.
     """
-    db_path = os.path.join(str(tmp_path), 'audit.db')
+    db_path = os.path.join(str(tmp_path), 'zato.db')
 
     details = {
-        'type': AuditLogCtx.Type_SQLite,
-        'name': db_path,
+        'type': DatabaseEnv.Type_SQLite,
+        'path': db_path,
     }
 
     with audit_log_env(details):

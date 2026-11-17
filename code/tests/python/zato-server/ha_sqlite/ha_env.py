@@ -73,7 +73,7 @@ class ModuleCtx:
     Node_Names = ('a', 'b')
 
     # The database files that the nodes replicate
-    PubSub_DB_File = 'pubsub.db'
+    Database_File = 'zato.db'
 
     # How long both nodes may take to form a pair after they start, in seconds
     Pair_Ready_Timeout = 180
@@ -169,9 +169,9 @@ class HAEnvironment:
 # ################################################################################################################################
 
     def point_database_at(self, node:'Node') -> 'None':
-        """ Makes the checks of the shared workload read the pub/sub database of the given node.
+        """ Makes the checks of the shared workload read the Zato database of the given node.
         """
-        self.database.env['Zato_PubSub_DB_Path'] = node.db_path(ModuleCtx.PubSub_DB_File)
+        self.database.env['Zato_Database_Path'] = node.db_path(ModuleCtx.Database_File)
 
 # ################################################################################################################################
 

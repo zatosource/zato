@@ -21,7 +21,8 @@ from live_sql.env import database_env
 from support import attributes_of, build_config, decode_records, wait_for_bodies, wait_for_exported, wait_until, FakeSender, \
     Server_Name
 from zato.common.api import SCHEDULER
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditLog, ModuleCtx as AuditLogCtx
+from zato.common.audit_log.api import event_table, AuditLog, ModuleCtx as AuditLogCtx
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import AuditBody, AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.export.api import get_audit_export, set_audit_export, AuditExport, ModuleCtx as APICtx
 from zato.common.audit_log.export.data import ModuleCtx as DataCtx
@@ -29,6 +30,7 @@ from zato.common.audit_log.export.mapping import ModuleCtx as MappingCtx
 from zato.common.audit_log.file_transfer import record_file_transfer
 from zato.common.audit_log.file_transfer_run import update_run_event
 from zato.common.audit_log.scheduler import record_job_complete, record_job_start, record_job_timeout
+from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,9 +43,6 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# The prefix all the audit log database environment variables share
-_env_prefix = 'Zato_Audit_Log_DB_'
 
 # When every scheduler job of the tests was planned to fire
 _planned_fire_time = datetime(2026, 3, 1, 2, 0, 0, tzinfo=timezone.utc)
@@ -72,7 +71,7 @@ def _payload(name:'str') -> 'str':
 def _read_row(event_id:'int') -> 'stranydict':
     """ The event's row as the database holds it.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
     query = select(event_table).where(event_table.c.id == event_id)
 
     with engine.connect() as connection:
@@ -103,9 +102,9 @@ class _HookTestCase(TestCase):
 
     def setUp(self) -> 'None':
         self.directory = mkdtemp(prefix='zato-audit-export-')
-        db_path = os.path.join(self.directory, 'audit.db')
+        db_path = os.path.join(self.directory, DatabaseEnv.File_Name)
 
-        self.env = database_env(_env_prefix, {'type': AuditLogCtx.Type_SQLite, 'name': db_path})
+        self.env = database_env({'type': DatabaseEnv.Type_SQLite, 'path': db_path})
         _ = self.env.__enter__()
 
         self.saved_enabled = os.environ.pop(AuditLogCtx.Env_Enabled, None)
@@ -113,7 +112,7 @@ class _HookTestCase(TestCase):
         self.sender = FakeSender()
         self.export = self.build_export(batch_size=1, flush_interval_ms=20)
 
-        self.audit_log = AuditLog(Server_Name, flush_max_size=1, flush_max_wait_ms=1)
+        self.audit_log = AuditLog(Server_Name)
 
     def tearDown(self) -> 'None':
         set_audit_export(None)
@@ -228,16 +227,18 @@ class TestHandOff(_HookTestCase):
 
 # ################################################################################################################################
 
-    def test_buffered_writer_hands_off_after_its_flush(self) -> 'None':
+    def test_events_of_one_batch_are_handed_off_after_their_commit(self) -> 'None':
 
-        audit_log = AuditLog(Server_Name, flush_max_size=3, flush_max_wait_ms=60000)
+        batch = []
 
         for index in range(3):
-            out = audit_log.insert(AuditSource.REST_Channel, AuditEvent.Request_Received, 'billing.invoices',
-                cid=f'cid-buffered-{index}', outcome=AuditOutcome.OK)
-            self.assertIsNone(out)
+            pending = self.audit_log.new_pending_event(AuditSource.REST_Channel, AuditEvent.Request_Received,
+                'billing.invoices', cid=f'cid-batch-{index}', outcome=AuditOutcome.OK)
+            batch.append(pending)
 
-        # The worker may send the flushed events in one body or in several, depending on when it wakes up.
+        self.audit_log.write_events(batch)
+
+        # The worker may send the committed events in one body or in several, depending on when it wakes up.
         self.assertTrue(wait_for_exported(self.export.queue, 3))
 
         records = self.records()

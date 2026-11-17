@@ -26,9 +26,6 @@ from zato.common.exception import BackendInvocationError
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The name of the SQLite file holding all audit events, shared by all sources
-Audit_DB_File_Name = 'audit.db'
-
 # The environment variable overriding how many days of events are kept
 Env_Retention_Days = 'Zato_Audit_Log_Retention_Days'
 

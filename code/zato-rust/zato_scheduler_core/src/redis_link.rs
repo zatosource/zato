@@ -18,7 +18,6 @@ const UNREACHABLE_RETRY_INTERVAL: Duration = Duration::from_secs(1);
 
 /// A Redis connection that is opened again after Redis closed it.
 pub struct RedisLink {
-
     /// The client that opens each connection, with the address and the credentials of Redis.
     client: Client,
 
@@ -27,7 +26,6 @@ pub struct RedisLink {
 }
 
 impl RedisLink {
-
     /// Opens the first connection of a link to the Redis of a client.
     ///
     /// # Errors
@@ -86,6 +84,13 @@ impl RedisLink {
         }
     }
 
+    /// Runs one request on the connection in use, opening a new connection if Redis closed the previous one.
+    fn run_request<T, F: FnOnce(&mut Connection) -> RedisResult<T>>(&mut self, request: F) -> RedisResult<T> {
+        let connection = self.get_connection()?;
+        let result = request(connection);
+        self.check_result(result)
+    }
+
     /// Releases the connection after an error that leaves it unusable, so that the next command opens another one.
     fn check_result<T>(&mut self, result: RedisResult<T>) -> RedisResult<T> {
         if let Err(err) = &result {
@@ -100,15 +105,12 @@ impl RedisLink {
 }
 
 impl ConnectionLike for RedisLink {
-
     fn req_packed_command(&mut self, cmd: &[u8]) -> RedisResult<Value> {
-        let result = self.get_connection()?.req_packed_command(cmd);
-        self.check_result(result)
+        self.run_request(|connection| connection.req_packed_command(cmd))
     }
 
     fn req_packed_commands(&mut self, cmd: &[u8], offset: usize, count: usize) -> RedisResult<Vec<Value>> {
-        let result = self.get_connection()?.req_packed_commands(cmd, offset, count);
-        self.check_result(result)
+        self.run_request(|connection| connection.req_packed_commands(cmd, offset, count))
     }
 
     fn get_db(&self) -> i64 {

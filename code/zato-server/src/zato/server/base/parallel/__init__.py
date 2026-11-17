@@ -37,7 +37,6 @@ from zato.common.audit_log.api import AuditLog
 from zato.common.audit_log.scheduler import record_job_complete, record_job_start, record_job_timeout
 from zato.common.bearer_token import BearerTokenManager, normalize_scopes
 from zato.common.broker_message import HOT_DEPLOY, PUBSUB, SCHEDULER as SCHEDULER_MSG, Server as BrokerMessageServer
-from zato.common.common_db.config import check_common_db_config
 from zato.common.common_db.store import SharedObjectStore
 from zato.common.const import SECRETS
 from zato.common.db_env.outage import call_until_available
@@ -1149,7 +1148,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # Job runs are recorded in the audit log the same way any other source's events are.
         self._scheduler_audit_log = AuditLog(self.name)
 
-        # Each run of a job is claimed in the common database first, so a slot runs once across all servers.
+        # Each run of a job is claimed in the Zato database first, so a slot runs once across all servers.
         self._scheduler_run_state = SchedulerRunState(self.shared_objects)
 
         # A worker that starts while Redis is unavailable keeps connecting in the background, so that it consumes
@@ -1400,7 +1399,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # the service touches downstream shares it and the run seeds the message flow ..
         cid = new_cid_server()
 
-        # .. the run is claimed in the common database first, so a slot that another server ran already,
+        # .. the run is claimed in the Zato database first, so a slot that another server ran already,
         # or a firing on a server that is no longer the active one, does not run here.
         claim = self._scheduler_run_state.claim(job_name, ctx['nominal_fire_time_iso'], entry_id)
 
@@ -1924,7 +1923,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
     def _start_pubsub_backend(self):
 
-        # Messages, queues and delivery state live in the database selected through the Zato_PubSub_DB_* variables.
+        # Messages, queues and delivery state are in the Zato database that the Zato_Database_* variables select.
         audit_log = AuditLog(self.name)
 
         self.pubsub_backend = SQLPubSubBackend(
@@ -1933,18 +1932,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             encrypt_at_rest=self.encrypt_at_rest,
         )
 
-        # The common database confirms the generation in the row of the pub/sub database, so on PostgreSQL both are one ..
-        check_common_db_config()
-
-        # .. on PostgreSQL, this server becomes the active one before it reads any pub/sub state, so that it starts
+        # On PostgreSQL, this server becomes the active one before it reads any pub/sub state, so that it starts
         # .. from everything the server it replaces committed, and that server changes nothing from now on ..
         self.pubsub_backend.take_over()
 
-        # .. every transaction of the common database confirms the same generation ..
+        # .. the shared objects are in the same database, whose every transaction confirms the generation ..
         self.shared_objects = SharedObjectStore()
-
-        if generation_guard := self.pubsub_backend.generation_guard:
-            self.shared_objects.install_generation_guard(generation_guard, self.pubsub_backend.engine)
 
         # .. and only now is the state read. Each step that writes to the database may run again as a whole,
         # .. so it waits for the database through an outage or a failover that begins after the takeover.

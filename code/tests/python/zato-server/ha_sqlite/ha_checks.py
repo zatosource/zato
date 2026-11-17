@@ -44,10 +44,8 @@ if 0:
 
 class ModuleCtx:
 
-    # The replicated databases whose contents both nodes hold
-    PubSub_DB_File = 'pubsub.db'
-    Common_DB_File = 'common.db'
-    Synchronous_DB_Files = (PubSub_DB_File, Common_DB_File)
+    # The replicated database whose contents both nodes hold
+    Database_File = 'zato.db'
 
     # The answer of an integrity check that found no problem
     Integrity_OK = 'ok'
@@ -127,9 +125,9 @@ def read_rows(path:'str', query:'str', params:'anylist | None'=None) -> 'anylist
 # ################################################################################################################################
 
 def has_message(node:'Node', msg_id:'str') -> 'bool':
-    """ Tells whether the pub/sub database of a node holds a message.
+    """ Tells whether the Zato database of a node holds a message.
     """
-    rows = read_rows(node.db_path(ModuleCtx.PubSub_DB_File), 'select 1 from pubsub_message where msg_id = ?', [msg_id])
+    rows = read_rows(node.db_path(ModuleCtx.Database_File), 'select 1 from pubsub_message where msg_id = ?', [msg_id])
 
     out = bool(rows)
     return out
@@ -138,17 +136,16 @@ def has_message(node:'Node', msg_id:'str') -> 'bool':
 # ################################################################################################################################
 
 def get_integrity_problems(env:'HAEnvironment') -> 'strlist':
-    """ Returns each replicated database of each node whose integrity check reports a problem.
+    """ Returns each node whose replicated database the integrity check reports a problem in.
     """
     out:'strlist' = []
 
     for node in env.node_list:
-        for file_name in ModuleCtx.Synchronous_DB_Files:
-            rows = read_rows(node.db_path(file_name), 'pragma integrity_check')
-            answer = rows[0][0]
+        rows = read_rows(node.db_path(ModuleCtx.Database_File), 'pragma integrity_check')
+        answer = rows[0][0]
 
-            if answer != ModuleCtx.Integrity_OK:
-                out.append(f'{node.node_name} {file_name}: {rows}')
+        if answer != ModuleCtx.Integrity_OK:
+            out.append(f'{node.node_name}: {rows}')
 
     return out
 
@@ -180,20 +177,19 @@ def get_copy_differences(active:'Node', standby:'Node') -> 'strlist':
     """
     out:'strlist' = []
 
-    for file_name in ModuleCtx.Synchronous_DB_Files:
-        active_contents = read_contents(active.db_path(file_name))
-        standby_contents = read_contents(standby.db_path(file_name))
+    active_contents = read_contents(active.db_path(ModuleCtx.Database_File))
+    standby_contents = read_contents(standby.db_path(ModuleCtx.Database_File))
 
-        for table_name in sorted(set(active_contents) | set(standby_contents)):
-            if table_name not in active_contents:
-                out.append(f'{file_name} {table_name}: only in {standby.node_name}')
-            elif table_name not in standby_contents:
-                out.append(f'{file_name} {table_name}: only in {active.node_name}')
-            elif active_contents[table_name] != standby_contents[table_name]:
-                active_count = len(active_contents[table_name])
-                standby_count = len(standby_contents[table_name])
-                out.append(f'{file_name} {table_name}: {active_count} rows on {active.node_name}, ' + \
-                    f'{standby_count} rows on {standby.node_name}')
+    for table_name in sorted(set(active_contents) | set(standby_contents)):
+        if table_name not in active_contents:
+            out.append(f'{table_name}: only in {standby.node_name}')
+        elif table_name not in standby_contents:
+            out.append(f'{table_name}: only in {active.node_name}')
+        elif active_contents[table_name] != standby_contents[table_name]:
+            active_count = len(active_contents[table_name])
+            standby_count = len(standby_contents[table_name])
+            out.append(f'{table_name}: {active_count} rows on {active.node_name}, ' + \
+                f'{standby_count} rows on {standby.node_name}')
 
     return out
 
@@ -227,10 +223,10 @@ def _decode_run_states(rows:'anylist') -> 'anydict':
 # ################################################################################################################################
 
 def read_run_states(node:'Node') -> 'anydict':
-    """ Returns the run state of each scheduler job as the common database of a node holds it.
+    """ Returns the run state of each scheduler job as the Zato database of a node holds it.
     """
     query = 'select name, data from zato_shared_object where object_type = ?'
-    rows = read_rows(node.db_path(ModuleCtx.Common_DB_File), query, [PairCtx.Run_State_Object_Type])
+    rows = read_rows(node.db_path(ModuleCtx.Database_File), query, [PairCtx.Run_State_Object_Type])
 
     out = _decode_run_states(rows)
     return out
@@ -238,7 +234,7 @@ def read_run_states(node:'Node') -> 'anydict':
 # ################################################################################################################################
 
 def read_active_run_states(env:'HAEnvironment', active:'Node') -> 'anydict':
-    """ Returns the run state of each scheduler job as the active node reads it - from its own common database,
+    """ Returns the run state of each scheduler job as the active node reads it - from its own Zato database,
     or from the PostgreSQL database that both nodes share.
     """
     if is_postgresql_mode(env.database.mode):
@@ -313,14 +309,14 @@ def check_no_runs_while_replaced(env:'HAEnvironment', replaced:'Node', boundary:
 # ################################################################################################################################
 
 def check_publications_stored(env:'HAEnvironment', active:'Node', msg_ids:'strlist') -> 'None':
-    """ Checks that the pub/sub database of the active node holds every publication with the given message IDs.
+    """ Checks that the Zato database of the active node holds every publication with the given message IDs.
     """
     query = 'select msg_id from pubsub_message'
 
     if is_postgresql_mode(env.database.mode):
         rows = read_database_rows(cast_('any_', env), query)
     else:
-        rows = read_rows(active.db_path(ModuleCtx.PubSub_DB_File), query)
+        rows = read_rows(active.db_path(ModuleCtx.Database_File), query)
 
     stored:'set[str]' = set()
 

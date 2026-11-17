@@ -19,7 +19,7 @@ from sqlalchemy.exc import DBAPIError
 
 # Zato
 from zato.common.db_env.common import Type_PostgreSQL
-from zato.common.pubsub.sql.config import get_pubsub_engine
+from zato.common.db_env.database import get_database_engine
 from zato.common.typing_ import cast_
 from zato.common.util.time_ import datetime_from_ms, datetime_to_ms, utcnow
 
@@ -178,9 +178,9 @@ def get_engine_clock(engine:'Engine') -> 'DatabaseClock':
 # ################################################################################################################################
 
 def get_database_clock() -> 'DatabaseClock':
-    """ The clock of the pub/sub database that the Zato_PubSub_DB_* variables select.
+    """ The clock of the Zato database that the Zato_Database_* variables select.
     """
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
 
     out = get_engine_clock(engine)
     return out

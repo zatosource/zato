@@ -35,7 +35,7 @@ def _connect(database:'ReplicatedDatabase') -> 'any_':
     """ Opens a connection to the SQLite file of the test or to whichever PostgreSQL server is the primary now.
     """
     if database.mode == PubSubDBMode.SQLite:
-        out = sqlite3.connect(database.env['Zato_PubSub_DB_Path'])
+        out = sqlite3.connect(database.env['Zato_Database_Path'])
     else:
         out = connect_active(database)
 
@@ -85,7 +85,7 @@ def pending_msg_ids(database:'ReplicatedDatabase', sub_key:'str') -> 'set[str]':
 # ################################################################################################################################
 
 def read_generation(database:'ReplicatedDatabase') -> 'int':
-    rows = _fetch_all(database, 'select generation from pubsub_active where id = 1')
+    rows = _fetch_all(database, 'select generation from zato_active where id = 1')
     out = rows[0][0]
     return out
 
@@ -98,7 +98,7 @@ def raise_generation(database:'ReplicatedDatabase') -> 'int':
 
     try:
         cursor = connection.cursor()
-        cursor.execute('update pubsub_active set generation = generation + 1 where id = 1 returning generation')
+        cursor.execute('update zato_active set generation = generation + 1 where id = 1 returning generation')
         row = cursor.fetchone()
         connection.commit()
     finally:

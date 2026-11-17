@@ -15,8 +15,8 @@ from sqlalchemy import func, select
 
 # Zato
 from common import delete_all_events
-from zato.common.audit_log.api import event_body_table, event_table, get_audit_engine, AuditBody, AuditEvent, AuditLog, \
-    AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_body_table, event_table, AuditBody, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import build_attachment, get_attachment, list_attachments, Env_Max_Attachment_Size
 from zato.common.audit_log.body import resolve_body
 from zato.common.util.api import utcnow
@@ -70,7 +70,7 @@ _five_megabytes_size = 5 * 1024 * 1024
 def _count_attachment_rows(event_id:'int') -> 'int':
     """ How many attachment body rows one event has, straight off the table.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     count_query = select(func.count())
     count_query = count_query.select_from(event_body_table)
@@ -92,7 +92,7 @@ def run_attachment_scenario() -> 'None':
     """
     delete_all_events()
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
     audit_log = AuditLog(_server_name)
 
     # An event carrying a message body and two attachments ..
@@ -214,7 +214,7 @@ def run_raw_content_scenario() -> 'None':
     """ Attachments of 0 bytes, 1 byte and 5 MB, with file names in Japanese, Greek and Polish,
     come back byte for byte, and the stored column holds the raw bytes rather than an encoding of them.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
     audit_log = AuditLog(_server_name)
 
     large_content = _five_megabytes()

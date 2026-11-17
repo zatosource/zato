@@ -50,8 +50,8 @@ _listener_path = os.path.join(
 # Every environment binds its server here
 Host = '127.0.0.1'
 
-# The variable the server reads the path of its audit database from
-_Audit_DB_Variable = 'Zato_Audit_Log_DB_Name'
+# The variable the server reads the path of its Zato database from
+_Database_Path_Variable = 'Zato_Database_Path'
 
 _server_ready_timeout    = 60
 _hot_deploy_timeout      = 30
@@ -143,7 +143,7 @@ class ZatoEnvironment:
         self.pickup_directory = os.path.join(self.server_directory, 'pickup', 'incoming', 'services')
 
         # Where the server writes its audit trail, which a test reads back what was received and delivered from
-        self.audit_db_path = os.path.join(directory, 'audit.db')
+        self.audit_db_path = os.path.join(directory, 'zato.db')
 
         self.password = password_prefix + '.' + CryptoManager.generate_hex_string()
 
@@ -258,7 +258,7 @@ class ZatoEnvironment:
         environment['Zato_Config_Bind_Port'] = str(self.server_port)
         environment['Zato_Broker_HTTP_Port'] = str(find_free_port())
         environment['Zato_HL7_MLLP_Port'] = str(self.mllp_internal_port)
-        environment[_Audit_DB_Variable] = self.audit_db_path
+        environment[_Database_Path_Variable] = self.audit_db_path
         environment.update(extra_environment)
 
         self._server_process = self._start_process(

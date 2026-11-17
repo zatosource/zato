@@ -8,18 +8,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-import os
 
 # Zato
-from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
-from zato.common.rule_engine.sql.constants import Default_DB_URL, Env_DB_URL
+from zato.common.db_env.database import get_database_engine
+from zato.common.rule_engine.sql import RuleSQLBackend
 from zato.common.util.env import populate_environment_from_file
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# SQLite connections travel between the pooled sessions of one process, hence the flag.
-_sqlite_connect_args = {'check_same_thread': False}
 
 # The shared format every rule engine job logs in.
 _log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
@@ -40,23 +36,9 @@ def configure_job(env_file:'str') -> 'None':
 # ################################################################################################################################
 
 def build_backend() -> 'RuleSQLBackend':
-    """ Opens the same rule engine database the dashboard uses and returns the typed SQL facade over it.
+    """ Returns the typed SQL facade over the rule engine tables of the Zato database.
     """
-    # The URL is the same one the dashboard keeps its tables under ..
-    if url := os.environ.get(Env_DB_URL):
-        pass
-    else:
-        url = Default_DB_URL
-
-    # .. SQLite connections have to be usable across threads ..
-    if url.startswith('sqlite'):
-        engine = create_database_engine(url, connect_args=_sqlite_connect_args)
-    else:
-        engine = create_database_engine(url)
-
-    # .. the tables come into being on first run and every later call is a no-op.
-    create_schema(engine)
-
+    engine = get_database_engine()
     out = RuleSQLBackend.from_engine(engine)
     return out
 

@@ -7,15 +7,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from time import monotonic, sleep
 
 # SQLAlchemy
 from sqlalchemy import func, select
 
 # Zato
 from common import delete_all_events
-from zato.common.audit_log.api import event_attr_table, event_link_table, event_table, get_audit_engine, \
-    AuditBody, AuditClassification, AuditEvent, AuditLink, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_attr_table, event_link_table, event_table, AuditBody, AuditClassification, \
+    AuditEvent, AuditLink, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.body import register_body_resolver, resolve_body
 
 # ################################################################################################################################
@@ -43,16 +43,13 @@ _other_usage_channel_name = 'audit.test.other-usage-channel'
 # A source whose bodies live outside the audit database
 _external_body_source = 'audit-test-external-body'
 
-# How long the time-based flush may take before the scenario gives up
-_flush_wait_seconds = 5.0
-
 # ################################################################################################################################
 # ################################################################################################################################
 
 def _get_event_row(event_id:'int') -> 'anydict':
     """ Returns one event row as a dict.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.where(event_table.c.id == event_id)
@@ -69,7 +66,7 @@ def _get_event_row(event_id:'int') -> 'anydict':
 def _get_attr_map(event_id:'int') -> 'anydict':
     """ Returns the attributes of one event as a dict of name to (value, value_number).
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_attr_table)
     query = query.where(event_attr_table.c.event_id == event_id)
@@ -80,23 +77,6 @@ def _get_attr_map(event_id:'int') -> 'anydict':
         for row in connection.execute(query):
             mapping = row._mapping
             out[mapping['name']] = (mapping['value'], mapping['value_number'])
-
-    return out
-
-# ################################################################################################################################
-
-def _count_source_events(source:'str') -> 'int':
-    """ Counts the events of one source.
-    """
-    engine = get_audit_engine()
-
-    query = select(func.count())
-    query = query.select_from(event_table)
-    query = query.where(event_table.c.source == source)
-
-    with engine.connect() as connection:
-        result = connection.execute(query)
-        out = result.scalar()
 
     return out
 
@@ -149,7 +129,7 @@ def _run_aggregation_checks() -> 'None':
     """ Runs the usage-report query shape - a sum over the numeric attribute column
     grouped by the object the events belong to.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table.c.object_name, func.sum(event_attr_table.c.value_number))
     query = query.select_from(event_table.join(event_attr_table, event_attr_table.c.event_id == event_table.c.id))
@@ -172,7 +152,7 @@ def _run_attr_search_checks(expected_event_id:'int') -> 'None':
     """ Finds events through an indexed attribute - the string value matches exactly,
     leading zeros included.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_attr_table.c.event_id)
     query = query.where(event_attr_table.c.name == 'mrn')
@@ -257,7 +237,7 @@ def _run_body_checks(audit_log:'AuditLog') -> 'None':
     """ Confirms bodies are stored by reference and resolved per kind,
     and that a source with its own body store answers through its resolver.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     event_id = audit_log.insert(AuditSource.REST_Channel, AuditEvent.Request_Received, 'audit.test.bodies',
         cid='cid-bodies-1', outcome=AuditOutcome.Error,
@@ -296,29 +276,10 @@ def _run_body_checks(audit_log:'AuditLog') -> 'None':
 def _get_link_rows(child_event_id:'int') -> 'anylist':
     """ Returns the lineage links of one child event as (parent_event_id, link_type) tuples.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_link_table.c.parent_event_id, event_link_table.c.link_type)
     query = query.where(event_link_table.c.child_event_id == child_event_id)
-    query = query.order_by(event_link_table.c.id)
-
-    out:'anylist' = []
-
-    with engine.connect() as connection:
-        for row in connection.execute(query):
-            out.append(tuple(row))
-
-    return out
-
-# ################################################################################################################################
-
-def _get_child_link_rows(parent_event_id:'int') -> 'anylist':
-    """ Returns the lineage links of one parent event as (child_event_id, link_type) tuples.
-    """
-    engine = get_audit_engine()
-
-    query = select(event_link_table.c.child_event_id, event_link_table.c.link_type)
-    query = query.where(event_link_table.c.parent_event_id == parent_event_id)
     query = query.order_by(event_link_table.c.id)
 
     out:'anylist' = []
@@ -360,67 +321,12 @@ def _run_lineage_checks(audit_log:'AuditLog') -> 'None':
     assert links == [(child_id, AuditLink.Resubmit_Of)], links
 
 # ################################################################################################################################
-
-def _run_buffered_writer_checks() -> 'None':
-    """ Confirms the buffered writer flushes when the batch is full, on an explicit flush
-    and, at the latest, when the oldest event has waited long enough.
-    """
-    buffered = AuditLog(_server_name, flush_max_size=3, flush_max_wait_ms=300)
-
-    # Buffered writes return no id and nothing is visible yet ..
-    result = buffered.insert(AuditSource.PubSub, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
-    assert result is None
-    assert _count_source_events(AuditSource.PubSub) == 0
-
-    # .. the third event fills the batch up and everything lands at once ..
-    _ = buffered.insert(AuditSource.PubSub, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
-    _ = buffered.insert(AuditSource.PubSub, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
-    assert _count_source_events(AuditSource.PubSub) == 3
-
-    # .. an explicit flush writes out a partial batch ..
-    _ = buffered.insert(AuditSource.PubSub, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
-    assert _count_source_events(AuditSource.PubSub) == 3
-
-    buffered.flush()
-    assert _count_source_events(AuditSource.PubSub) == 4
-
-    # .. and an event left in the buffer is flushed by time, without any further writes.
-    _ = buffered.insert(AuditSource.PubSub, AuditEvent.Message_Sent, 'audit.test.buffered', cid='cid-buffered')
-
-    deadline = monotonic() + _flush_wait_seconds
-
-    while monotonic() < deadline:
-
-        if _count_source_events(AuditSource.PubSub) == 5:
-            break
-
-        sleep(0.1)
-
-    assert _count_source_events(AuditSource.PubSub) == 5, 'The time-based flush never ran'
-
-    # A caller that links further events to one it writes receives the id from a buffered writer too,
-    # so the links of the events that follow are written as they are under a synchronous writer ..
-    parent_id = buffered.insert(AuditSource.MLLP_Channel, AuditEvent.Interchange_Received, 'audit.test.buffered',
-        cid='cid-buffered-batch', needs_id=True)
-    assert parent_id is not None
-
-    _ = buffered.insert(AuditSource.MLLP_Channel, AuditEvent.Message_Received, 'audit.test.buffered',
-        cid='cid-buffered-batch', parents=[parent_id], parent_link_type=AuditLink.Batch_Item_Of)
-    buffered.flush()
-
-    # .. and the link row names the parent written at once.
-    child_rows = _get_child_link_rows(parent_id)
-    assert len(child_rows) == 1, child_rows
-    assert child_rows[0][1] == AuditLink.Batch_Item_Of, child_rows
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 def run_structured_events_scenario() -> 'None':
     """ The structured-events scenario every backend must pass: searchable attributes
     with numeric aggregation, per-cid sequence numbers, two-layer outcomes with failure
-    classification, bodies by reference with pluggable resolvers, multi-parent lineage
-    and the buffered writer.
+    classification, bodies by reference with pluggable resolvers and multi-parent lineage.
     """
     delete_all_events()
 
@@ -434,7 +340,6 @@ def run_structured_events_scenario() -> 'None':
     _run_classification_checks(audit_log)
     _run_body_checks(audit_log)
     _run_lineage_checks(audit_log)
-    _run_buffered_writer_checks()
 
 # ################################################################################################################################
 # ################################################################################################################################

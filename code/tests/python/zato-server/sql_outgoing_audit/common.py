@@ -28,10 +28,11 @@ from sqlalchemy.pool import NullPool
 from live_sql.containers import connect_mssql
 from live_sql.env import database_env
 from zato.common.api import MS_SQL
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditOutcome, AuditSource, \
-    ModuleCtx as AuditLogCtx
+from zato.common.audit_log.api import event_table, AuditEvent, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.odb.api import PoolStore
 from zato.common.oracledb import RowsOut, StringIn, StringOut
+from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -150,9 +151,6 @@ begin
 end {_oracle_proc_rows};
 """
 
-# The prefix all the audit log database environment variables share
-_env_prefix = 'Zato_Audit_Log_DB_'
-
 # How long to wait for a session wrapper to finish its initialization
 _init_timeout_seconds = 5
 
@@ -166,14 +164,14 @@ def _audit_db_env(tmp_path:'any_', check_name:'str') -> 'envgen':
     directory = os.path.join(str(tmp_path), check_name)
     os.makedirs(directory)
 
-    db_path = os.path.join(directory, 'audit.db')
+    db_path = os.path.join(directory, 'zato.db')
 
     details = {
-        'type': AuditLogCtx.Type_SQLite,
-        'name': db_path,
+        'type': DatabaseEnv.Type_SQLite,
+        'path': db_path,
     }
 
-    with database_env(_env_prefix, details):
+    with database_env(details):
         yield
 
 # ################################################################################################################################
@@ -364,7 +362,7 @@ def _seed_sqlite_table(db_path:'str') -> 'None':
 def _get_events() -> 'anylist':
     """ Everything the audit log holds, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.order_by(event_table.c.id)

@@ -26,9 +26,10 @@ from sqlalchemy import select
 
 # Zato
 from live_sql.env import database_env
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource, \
-    ModuleCtx as AuditLogCtx
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.server.connection.smb import SMBConnection
+from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,9 +58,6 @@ Test_File_Data = b'Test invoice content'
 
 # A path no operation can find
 Missing_File_Name = 'missing-report.pdf'
-
-# The prefix all the audit log database environment variables share
-_env_prefix = 'Zato_Audit_Log_DB_'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -118,14 +116,14 @@ def _audit_db_env(tmp_path:'any_', check_name:'str') -> 'envgen':
     directory = os.path.join(str(tmp_path), check_name)
     os.makedirs(directory)
 
-    db_path = os.path.join(directory, 'audit.db')
+    db_path = os.path.join(directory, 'zato.db')
 
     details = {
-        'type': AuditLogCtx.Type_SQLite,
-        'name': db_path,
+        'type': DatabaseEnv.Type_SQLite,
+        'path': db_path,
     }
 
-    with database_env(_env_prefix, details):
+    with database_env(details):
         yield
 
 # ################################################################################################################################
@@ -146,7 +144,7 @@ def _new_connection(tmp_path:'any_', check_name:'str') -> 'SMBConnection':
 def _get_events() -> 'anylist':
     """ Everything the audit log holds, oldest first.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table)
     query = query.order_by(event_table.c.id)

@@ -502,8 +502,8 @@ def zato_server(request:'any_') -> 'any_':
 
     # Point the audit log at a file inside the temp directory so the live server
     # never writes into the real environment's audit database.
-    audit_db_path = os.path.join(_temp_directory, 'audit.db')
-    server_env['Zato_Audit_Log_DB_Name'] = audit_db_path
+    audit_db_path = os.path.join(_temp_directory, 'zato.db')
+    server_env['Zato_Database_Path'] = audit_db_path
 
     if use_coverage:
         server_env['COVERAGE_PROCESS_START'] = coveragerc_path # pyright: ignore[reportArgumentType]

@@ -16,8 +16,8 @@ from sqlalchemy import select
 # Zato
 from support import Base_Time, Connection_Names, expected_open_ids, insert_rows, new_event_row, new_event_rows, \
     random_time, read_event_ids, read_events, read_open_ids, run_blocking, Server_Name
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, \
-    AuditSource, Env_Retention_Days
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource, Env_Retention_Days
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import Status_Outstanding
 from zato.common.audit_log.listing import event_conditions, new_search_filters
 from zato.common.audit_log.retention import Env_Archive_Dir, run_retention
@@ -40,6 +40,9 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# How many events one batch written through the API holds
+_api_batch_size = 100
+
 # How many days of events retention keeps, and how far past the start of the test events it runs,
 # so that it deletes the events of the first ninety minutes.
 _retention_days = 30
@@ -51,7 +54,7 @@ _retention_run_offset = timedelta(days=_retention_days, minutes=90)
 def _outstanding_ids() -> 'intset':
     """ The ids of the events the outstanding filter of the outgoing MLLP source finds.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     filters = new_search_filters(
         sources=[AuditSource.MLLP_Outgoing],
@@ -146,7 +149,7 @@ def _exchange_rows(
 def _update(ids:'intlist', **values:'any_') -> 'None':
     """ Updates the events of the ids given in place, in one statement.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     is_selected = event_table.c.id.in_(ids)
     statement = event_table.update().where(is_selected).values(**values)
@@ -253,7 +256,7 @@ def _retention() -> 'None':
 
     _assert_open_exact()
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
     now = Base_Time + _retention_run_offset
 
     run_retention(engine, now)
@@ -283,17 +286,22 @@ def test_sends_and_acks_through_the_api(audit_backend:'str') -> 'None':
     """
     rng = Random(20261110)
 
-    buffered_log = AuditLog(Server_Name, flush_max_size=100, flush_max_wait_ms=60000)
+    audit_log = AuditLog(Server_Name)
+    batch = []
 
     for index in range(600):
         event_type = rng.choice([AuditEvent.Message_Sent, AuditEvent.Ack_Received])
         object_name = rng.choice(Connection_Names[:2])
         msg_number = rng.randrange(200)
 
-        _ = buffered_log.insert(AuditSource.MLLP_Outgoing, event_type, object_name, cid=f'cid.api.{index}',
+        pending = audit_log.new_pending_event(AuditSource.MLLP_Outgoing, event_type, object_name, cid=f'cid.api.{index}',
             msg_id=f'msg.{msg_number}', outcome=AuditOutcome.OK)
+        batch.append(pending)
 
-    buffered_log.flush()
+        # Each batch of events commits in one transaction
+        if len(batch) == _api_batch_size:
+            audit_log.write_events(batch)
+            batch = []
 
     _ = run_blocking(_assert_open_exact)
 

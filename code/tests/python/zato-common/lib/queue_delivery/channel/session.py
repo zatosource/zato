@@ -154,11 +154,7 @@ class ChannelSession:
 
         invoke_password = 'test.invoke.' + CryptoManager.generate_hex_string()
 
-        # The audit log gets a file of its own, or the events land in the developer's database
-        audit_db_path = os.path.join(test_data_directory, 'audit.db')
-        os.environ['Zato_Audit_Log_DB_Name'] = audit_db_path
-
-        # Every process started from here on inherits the backend as its pub/sub database
+        # Every process started from here on inherits the backend as its database
         self._exit_stack.enter_context(pubsub_path_env(backend.db_path))
 
         # On a broker backend every channel's topic is an AMQP-backed one, and the topics go in before the server

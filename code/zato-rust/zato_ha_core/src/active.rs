@@ -5,14 +5,14 @@
 
 //! The opening end of the replication link on the active node.
 //!
-//! One thread, the shipper, reads every log, records the end of each for the barrier, ships the new frames
-//! to the standby, sends snapshots to a standby that joins, admits a standby that caught up, and checkpoints
-//! the logs. A second thread per session receives the confirmations, and a third sends the heartbeats.
+//! One thread, the shipper, reads the log of the Zato database, records its end for the barrier, ships the new
+//! frames to the standby, sends a snapshot to a standby that joins, admits a standby that caught up, and checkpoints
+//! the log. A second thread per session receives the confirmations, and a third sends the heartbeats.
 
 use std::fs::File;
 use std::io::{Error, ErrorKind, Read};
 use std::os::unix::fs::FileExt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -20,7 +20,6 @@ use std::time::{Duration, Instant};
 use rusqlite::Connection;
 use rusqlite::config::DbConfig;
 
-use crate::config::{DatabaseConfig, ShippingMode};
 use crate::link::{LinkReceiver, LinkSender};
 use crate::protocol::{FileKind, Message, Position};
 use crate::record::RefereeRecord;
@@ -28,7 +27,7 @@ use crate::referee::{Transition, transition};
 use crate::state::{CycleRecord, LinkState, LogPosition, NodeState, Role, Shared};
 use crate::wal::{self, MAX_SCAN_BYTES, ScanOutcome, WalCursor};
 
-/// How often the logs are read when no barrier asks for it, which keeps the standby close to the active node.
+/// How often the log is read when no barrier asks for it, which keeps the standby close to the active node.
 const POLL_INTERVAL: Duration = Duration::from_millis(20);
 
 /// How often a link to the standby is attempted while there is none.
@@ -40,10 +39,10 @@ const SNAPSHOT_CHUNK_SIZE: usize = 1024 * 1024;
 /// The size above which a log is checkpointed.
 const CHECKPOINT_WAL_SIZE: u64 = 64 * 1024 * 1024;
 
-/// How long the node's own connections wait for the write lock of a database.
+/// How long the node's own connections wait for the write lock of the Zato database.
 const LOCK_BUSY_TIMEOUT: Duration = Duration::from_secs(5);
 
-/// The connections the node keeps open to one database while it is active.
+/// The connections the node keeps open to the Zato database while it is active.
 ///
 /// Keeping a connection open means no connection of the Zato server is ever the last one to close,
 /// which would checkpoint and delete the log.
@@ -69,10 +68,10 @@ fn open_connection(path: &Path) -> Result<Connection, Error> {
     Ok(connection)
 }
 
-/// One replicated database as the shipper sees it.
+/// The replicated Zato database as the shipper sees it.
 struct Database {
-    /// Its configuration.
-    config: DatabaseConfig,
+    /// The path of the database file.
+    path: PathBuf,
 
     /// The cursor whose end every barrier and every session refers to.
     cursor: WalCursor,
@@ -83,10 +82,10 @@ struct Database {
 
 impl Database {
     /// Returns a database nothing was read from.
-    fn new(config: &DatabaseConfig) -> Self {
+    fn new(path: &Path) -> Self {
         Self {
-            cursor: WalCursor::new(wal::wal_path(&config.path)),
-            config: config.clone(),
+            cursor: WalCursor::new(wal::wal_path(path)),
+            path: path.to_owned(),
             connections: None,
         }
     }
@@ -96,15 +95,15 @@ impl Database {
         if self.connections.is_some() {
             return Ok(());
         }
-        if let Some(parent) = self.config.path.parent() {
+        if let Some(parent) = self.path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        let lock = open_connection(&self.config.path)?;
-        let checkpoint = open_connection(&self.config.path)?;
+        let lock = open_connection(&self.path)?;
+        let checkpoint = open_connection(&self.path)?;
         self.connections = Some(DatabaseConnections { lock, checkpoint });
 
         // A log read under another role describes files that may have been replaced since.
-        self.cursor = WalCursor::new(wal::wal_path(&self.config.path));
+        self.cursor = WalCursor::new(wal::wal_path(&self.path));
         Ok(())
     }
 
@@ -135,7 +134,7 @@ impl Database {
     }
 }
 
-/// What a session has sent of one database.
+/// What a session has sent of the Zato database.
 #[derive(Debug, Clone)]
 struct SessionDatabase {
     /// The header of the log the standby holds.
@@ -153,8 +152,8 @@ struct Session {
     /// The session number, which tells the receiving and the heartbeat threads that they belong to it.
     number: u64,
 
-    /// What was sent of each database, in the order of the configuration.
-    databases: Vec<SessionDatabase>,
+    /// What was sent of the Zato database.
+    database: SessionDatabase,
 
     /// Whether the standby is joining, as opposed to being in sync.
     joining: bool,
@@ -168,8 +167,8 @@ pub struct Shipper {
     /// The shared state.
     shared: Arc<Shared>,
 
-    /// The replicated databases.
-    databases: Vec<Database>,
+    /// The replicated Zato database.
+    database: Database,
 
     /// The current session, if any.
     session: Option<Session>,
@@ -184,10 +183,10 @@ pub struct Shipper {
 impl Shipper {
     /// Returns a shipper that has not read anything yet.
     pub fn new(shared: Arc<Shared>) -> Self {
-        let databases = shared.config.databases.iter().map(Database::new).collect();
+        let database = Database::new(&shared.config.database_path);
         Self {
             shared,
-            databases,
+            database,
             session: None,
             last_connect: None,
             admission_started: Instant::now(),
@@ -218,9 +217,7 @@ impl Shipper {
 
         // A node that is no longer active keeps neither a session nor connections to files that a snapshot will replace.
         self.end_session();
-        for database in &mut self.databases {
-            database.connections = None;
-        }
+        self.database.connections = None;
 
         state = self.shared.state.lock();
         while !state.role.is_active() && !state.stopping {
@@ -241,9 +238,7 @@ impl Shipper {
             }
         }
 
-        for database in &mut self.databases {
-            database.open()?;
-        }
+        self.database.open()?;
 
         let ticket = {
             let mut state = self.shared.state.lock();
@@ -263,27 +258,20 @@ impl Shipper {
         Ok(())
     }
 
-    /// Reads every log to its end, ships what the session has not sent yet and completes the scan for the barrier.
+    /// Reads the log to its end, ships what the session has not sent yet and completes the scan for the barrier.
     fn scan_and_ship(&mut self, ticket: u64) -> Result<(), Error> {
-        let mut fresh = Vec::new();
-        for database in &mut self.databases {
-            fresh.push(scan_to_end(&mut database.cursor)?);
-        }
+        let fresh = scan_to_end(&mut self.database.cursor)?;
 
         // The standby in sync owes the frames from the moment they are read, whether or not a session can ship them.
-        self.record_reads();
+        self.record_read();
         self.ship(&fresh)?;
 
+        let end = self.database.end();
+        let record = self.database.cycle_record();
         let mut state = self.shared.state.lock();
-        for database in &self.databases {
-            let end = database.end();
-            let record = database.cycle_record();
-            if let Some(progress) = state.database_mut(database.config.name) {
-                progress.scanned = end;
-                if let Some(record) = record {
-                    progress.record_cycle(record);
-                }
-            }
+        state.database.scanned = end;
+        if let Some(record) = record {
+            state.database.record_cycle(record);
         }
         state.scan_completed = state.scan_completed.max(ticket);
         drop(state);
@@ -291,34 +279,29 @@ impl Shipper {
         Ok(())
     }
 
-    /// Records the end of every log as read and not yet confirmed while a standby is in sync.
-    fn record_reads(&self) {
+    /// Records the end of the log as read and not yet confirmed while a standby is in sync.
+    fn record_read(&self) {
         let read_at = Instant::now();
+        let end = self.database.end();
         let mut state = self.shared.state.lock();
 
         // Without a standby in sync, no barrier waits for a confirmation.
         if state.role != Role::ActiveReplicated {
             return;
         }
-        for database in &self.databases {
-            if let Some(progress) = state.database_mut(database.config.name) {
-                progress.record_read(database.end(), read_at);
-            }
-        }
+        state.database.record_read(end, read_at);
     }
 
-    /// Sends the next chunk of the frames of each database that the session, if any, has not sent yet.
-    fn ship(&mut self, fresh: &[Vec<FreshFrames>]) -> Result<(), Error> {
+    /// Sends the next chunk of the frames that the session, if any, has not sent yet.
+    fn ship(&mut self, fresh: &[FreshFrames]) -> Result<(), Error> {
         let Some(session) = self.session.as_mut() else {
             return Ok(());
         };
         let generation = self.shared.state.lock().generation;
         let timeout = self.shared.config.timers.mark_out;
 
-        for ((database, sent), fresh_frames) in self.databases.iter().zip(session.databases.iter_mut()).zip(fresh) {
-            for message in frames_to_send(database, sent, fresh_frames, generation)? {
-                session.sender.send(&message, timeout)?;
-            }
+        for message in frames_to_send(&self.database, &mut session.database, fresh, generation)? {
+            session.sender.send(&message, timeout)?;
         }
         Ok(())
     }
@@ -369,8 +352,8 @@ impl Shipper {
         )?;
 
         let (reply, receiver) = receiver.receive()?;
-        let (in_sync, positions) = match reply {
-            Message::HelloReply { in_sync, positions } => (in_sync, positions),
+        let position = match reply {
+            Message::HelloReply { position } => position,
             Message::Refused { generation: higher } => {
                 self.shared.fence(&mut self.shared.state.lock(), higher);
                 return Ok(());
@@ -385,27 +368,27 @@ impl Shipper {
         };
 
         let session = if role == Role::ActiveReplicated {
-            if !in_sync {
+            let Some(position) = position else {
                 // The record names this standby as in sync, so it may not join before it is marked out.
                 self.request_mark_out(&peer.node_name, "the standby is not in sync");
                 sender.close();
                 return Ok(());
-            }
-            let Some(databases) = self.resume_positions(&positions) else {
-                self.request_mark_out(&peer.node_name, "the standby cannot resume from its positions");
+            };
+            let Some(database) = self.resume_position(&position) else {
+                self.request_mark_out(&peer.node_name, "the standby cannot resume from its position");
                 sender.close();
                 return Ok(());
             };
             Session {
                 sender: sender.clone(),
                 number,
-                databases,
+                database,
                 joining: false,
                 peer: peer.node_name.clone(),
             }
         } else {
-            let databases = match self.send_snapshots(&sender, generation) {
-                Ok(databases) => databases,
+            let database = match self.send_snapshot(&sender, generation) {
+                Ok(database) => database,
                 Err(error) => {
                     // A backup that did not complete leaves no standby joining.
                     self.shared.state.lock().close_link();
@@ -416,7 +399,7 @@ impl Shipper {
             Session {
                 sender: sender.clone(),
                 number,
-                databases,
+                database,
                 joining: true,
                 peer: peer.node_name.clone(),
             }
@@ -449,124 +432,103 @@ impl Shipper {
         self.shared.changed.notify_all();
     }
 
-    /// Returns what the standby holds of each database, if it can resume from its positions.
-    fn resume_positions(&self, positions: &[Position]) -> Option<Vec<SessionDatabase>> {
-        let progress_list = self.shared.state.lock().databases.clone();
-        let mut out = Vec::new();
+    /// Returns what the standby holds of the Zato database, if it can resume from its position.
+    fn resume_position(&self, position: &Position) -> Option<SessionDatabase> {
+        let progress = self.shared.state.lock().database.clone();
+        let cursor = &self.database.cursor;
 
-        for database in &self.databases {
-            let position = positions.iter().find(|position| position.database == database.config.name)?;
-            let progress = progress_list.iter().find(|progress| progress.name == database.config.name)?;
-
-            // A standby without a log can resume only while the active node has none either.
-            if position.salt_one == 0 && position.salt_two == 0 && position.end_frame == 0 {
-                if database.cursor.header().is_some() {
-                    return None;
-                }
-                out.push(SessionDatabase {
-                    header: None,
-                    sent: LogPosition::default(),
-                });
-                continue;
-            }
-
-            let record = progress.cycle_of(position.salt_one, position.salt_two)?;
-            let is_current = record.cycle == database.cursor.cycle();
-
-            // The standby holds a prefix of the current cycle, or the whole of the previous one.
-            let holds_prefix = is_current && position.end_frame <= database.cursor.end_frame();
-            let holds_previous = !is_current && position.end_frame == record.end_frame;
-            if !holds_prefix && !holds_previous {
+        // A standby without a log can resume only while the active node has none either.
+        if position.salt_one == 0 && position.salt_two == 0 && position.end_frame == 0 {
+            if cursor.header().is_some() {
                 return None;
             }
-
-            let header = if is_current {
-                database.cursor.header().map(|header| header.raw.to_vec())
-            } else {
-                None
-            };
-            out.push(SessionDatabase {
-                header,
-                sent: LogPosition {
-                    cycle: record.cycle,
-                    frame: position.end_frame,
-                },
+            return Some(SessionDatabase {
+                header: None,
+                sent: LogPosition::default(),
             });
         }
-        Some(out)
+
+        let record = progress.cycle_of(position.salt_one, position.salt_two)?;
+        let is_current = record.cycle == cursor.cycle();
+
+        // The standby holds a prefix of the current cycle, or the whole of the previous one.
+        let holds_prefix = is_current && position.end_frame <= cursor.end_frame();
+        let holds_previous = !is_current && position.end_frame == record.end_frame;
+        if !holds_prefix && !holds_previous {
+            return None;
+        }
+
+        let header = if is_current {
+            cursor.header().map(|header| header.raw.to_vec())
+        } else {
+            None
+        };
+        Some(SessionDatabase {
+            header,
+            sent: LogPosition {
+                cycle: record.cycle,
+                frame: position.end_frame,
+            },
+        })
     }
 
-    /// Sends the files of every database to a joining standby and returns what it then holds.
-    fn send_snapshots(&mut self, sender: &LinkSender, generation: u64) -> Result<Vec<SessionDatabase>, Error> {
+    /// Sends the files of the Zato database to a joining standby and returns what it then holds.
+    fn send_snapshot(&mut self, sender: &LinkSender, generation: u64) -> Result<SessionDatabase, Error> {
         let timeout = self.shared.config.timers.mark_out;
-        let mut out = Vec::new();
 
         {
             // What an earlier standby confirmed says nothing about this one, which is joining from here on.
             let mut state = self.shared.state.lock();
-            for progress in &mut state.databases {
-                progress.confirmed = LogPosition::default();
-            }
+            state.database.confirmed = LogPosition::default();
             state.link_state = LinkState::Joining;
         }
 
-        for database in &mut self.databases {
-            let Some(connections) = database.connections.as_ref() else {
-                return Err(Error::other("the database is not open"));
+        let database = &mut self.database;
+        let Some(connections) = database.connections.as_ref() else {
+            return Err(Error::other("the database is not open"));
+        };
+
+        // Under the write lock, no frame is appended while the end of the log is recorded,
+        // and with no checkpoint running, neither file changes below that end afterwards.
+        connections.lock.execute_batch("begin immediate").map_err(Error::other)?;
+        let scanned = scan_to_end(&mut database.cursor);
+        connections.lock.execute_batch("rollback").map_err(Error::other)?;
+        let _ = scanned?;
+
+        sender.send(&Message::SnapshotBegin { generation }, timeout)?;
+        let database_file = SnapshotFile {
+            kind: FileKind::Database,
+            path: &database.path,
+            length: None,
+        };
+        send_file(sender, &database_file, timeout)?;
+
+        let header = database.cursor.header().map(|header| header.raw.to_vec());
+        if let Some(wal_header) = database.cursor.header() {
+            let length = wal_header.frame_offset(database.cursor.end_frame());
+            let wal_path = wal::wal_path(&database.path);
+            let wal_file = SnapshotFile {
+                kind: FileKind::Wal,
+                path: &wal_path,
+                length: Some(length),
             };
-
-            // Under the write lock, no frame is appended while the end of the log is recorded,
-            // and with no checkpoint running, neither file changes below that end afterwards.
-            connections.lock.execute_batch("begin immediate").map_err(Error::other)?;
-            let scanned = scan_to_end(&mut database.cursor);
-            connections.lock.execute_batch("rollback").map_err(Error::other)?;
-            let _ = scanned?;
-
-            let name = database.config.name.to_owned();
-            sender.send(
-                &Message::SnapshotBegin {
-                    generation,
-                    database: name.clone(),
-                },
-                timeout,
-            )?;
-            let database_file = SnapshotFile {
-                database: &name,
-                kind: FileKind::Database,
-                path: &database.config.path,
-                length: None,
-            };
-            send_file(sender, &database_file, timeout)?;
-
-            let header = database.cursor.header().map(|header| header.raw.to_vec());
-            if let Some(wal_header) = database.cursor.header() {
-                let length = wal_header.frame_offset(database.cursor.end_frame());
-                let wal_path = wal::wal_path(&database.config.path);
-                let wal_file = SnapshotFile {
-                    database: &name,
-                    kind: FileKind::Wal,
-                    path: &wal_path,
-                    length: Some(length),
-                };
-                send_file(sender, &wal_file, timeout)?;
-            }
-            sender.send(&Message::SnapshotEnd { database: name }, timeout)?;
-            out.push(SessionDatabase {
-                header,
-                sent: database.end(),
-            });
+            send_file(sender, &wal_file, timeout)?;
         }
-        Ok(out)
+        sender.send(&Message::SnapshotEnd, timeout)?;
+        Ok(SessionDatabase {
+            header,
+            sent: database.end(),
+        })
     }
 
-    /// Admits a joining standby once it confirmed the end of every log.
+    /// Admits a joining standby once it confirmed the end of the log.
     fn admit_if_caught_up(&mut self) -> Result<(), Error> {
         let Some(session) = self.session.as_ref().filter(|session| session.joining) else {
             self.resolve_abandoned_admission();
             return Ok(());
         };
 
-        let Some(generation) = admission_generation(&self.shared, &self.databases, session, &mut self.admission_started) else {
+        let Some(generation) = admission_generation(&self.shared, &self.database, session, &mut self.admission_started) else {
             return Ok(());
         };
 
@@ -654,7 +616,7 @@ impl Shipper {
         self.shared.changed.notify_all();
     }
 
-    /// Checkpoints every log that exceeds the size limit.
+    /// Checkpoints the log once it exceeds the size limit.
     fn checkpoint_if_due(&mut self) -> Result<(), Error> {
         let (role, streaming) = {
             let state = self.shared.state.lock();
@@ -672,30 +634,20 @@ impl Shipper {
             return Ok(());
         }
 
-        for index in 0..self.databases.len() {
-            let Some(database) = self.databases.get(index) else {
-                continue;
-            };
-            let end = database.end();
-
-            // The standby confirms a log only once all of it was sent, which a long backlog takes several iterations for,
-            // and a checkpoint would hold the write lock while it waited.
-            let has_backlog = self
-                .session
-                .as_ref()
-                .and_then(|session| session.databases.get(index))
-                .is_some_and(|sent| sent.sent < end);
-            if database.is_long() && !has_backlog {
-                self.checkpoint(index, role)?;
-            }
+        // The standby confirms a log only once all of it was sent, which a long backlog takes several iterations for,
+        // and a checkpoint would hold the write lock while it waited.
+        let end = self.database.end();
+        let has_backlog = self.session.as_ref().is_some_and(|session| session.database.sent < end);
+        if self.database.is_long() && !has_backlog {
+            self.checkpoint(role)?;
         }
         Ok(())
     }
 
-    /// Checkpoints one log under its write lock, after the standby confirmed every frame of it.
-    fn checkpoint(&mut self, index: usize, role: Role) -> Result<(), Error> {
+    /// Checkpoints the log under its write lock, after the standby confirmed every frame of it.
+    fn checkpoint(&mut self, role: Role) -> Result<(), Error> {
         {
-            let Some(connections) = self.databases.get(index).and_then(|database| database.connections.as_ref()) else {
+            let Some(connections) = self.database.connections.as_ref() else {
                 return Ok(());
             };
 
@@ -705,46 +657,39 @@ impl Shipper {
             }
         }
 
-        let outcome = self.checkpoint_under_lock(index, role);
+        let outcome = self.checkpoint_under_lock(role);
 
-        if let Some(connections) = self.databases.get(index).and_then(|database| database.connections.as_ref()) {
+        if let Some(connections) = self.database.connections.as_ref() {
             connections.lock.execute_batch("rollback").map_err(Error::other)?;
         }
         outcome
     }
 
     /// Ships and confirms every frame, then checkpoints, while the write lock is held.
-    fn checkpoint_under_lock(&mut self, index: usize, role: Role) -> Result<(), Error> {
+    fn checkpoint_under_lock(&mut self, role: Role) -> Result<(), Error> {
         let ticket = self.shared.state.lock().scan_requested;
         self.scan_and_ship(ticket)?;
 
-        let Some(database) = self.databases.get(index) else {
-            return Ok(());
-        };
+        let database = &self.database;
 
         // A log that restarted since the previous scan is short again, and checkpointing it would only restart it once more.
         if !database.is_long() {
             return Ok(());
         }
-        let name = database.config.name;
         let end = database.end();
 
         if role == Role::ActiveReplicated {
             let deadline = Instant::now() + self.shared.config.timers.mark_out;
             let mut state = self.shared.state.lock();
             loop {
-                let confirmed = state
-                    .databases
-                    .iter()
-                    .find(|progress| progress.name == name)
-                    .map(|progress| progress.confirmed);
-                if confirmed.is_some_and(|confirmed| confirmed >= end) {
+                let confirmed = state.database.confirmed;
+                if confirmed >= end {
                     break;
                 }
 
                 // A standby that does not confirm in time is marked out by the control loop, and the checkpoint waits.
                 if state.role != Role::ActiveReplicated || Instant::now() >= deadline {
-                    tracing::warn!("Checkpoint of {name} postponed, the standby confirmed {confirmed:?} of {end:?}");
+                    tracing::warn!("Checkpoint postponed, the standby confirmed {confirmed:?} of {end:?}");
                     return Ok(());
                 }
                 let _ = self.shared.changed.wait_until(&mut state, deadline);
@@ -759,30 +704,25 @@ impl Shipper {
                     Ok((row.get(0)?, row.get(1)?, row.get(2)?))
                 })
                 .map_err(Error::other)?;
-            tracing::debug!("Checkpoint of {name}: busy {busy}, log frames {log_frames}, checkpointed {checkpointed}");
+            tracing::debug!("Checkpoint: busy {busy}, log frames {log_frames}, checkpointed {checkpointed}");
         }
         Ok(())
     }
 }
 
 /// Returns the generation at which the joining standby of `session` is admitted, once it confirmed
-/// the end of every synchronous log while the barriers were held.
+/// the end of the log while the barriers were held.
 ///
 /// Under steady writes, new frames are read before the standby confirms the previous ones, so the barriers
 /// are held from the moment everything read was sent, which stops the writers until the standby confirms it.
-fn admission_generation(shared: &Shared, databases: &[Database], session: &Session, admission_started: &mut Instant) -> Option<u64> {
+fn admission_generation(shared: &Shared, database: &Database, session: &Session, admission_started: &mut Instant) -> Option<u64> {
     let mut state = shared.state.lock();
     if state.role != Role::ActiveSolo {
         return None;
     }
 
     if !state.admitting {
-        // The copy of an asynchronous database may lag behind, so only the synchronous ones decide.
-        let all_sent = databases
-            .iter()
-            .zip(&session.databases)
-            .filter(|(database, _)| database.config.shipping == ShippingMode::Synchronous)
-            .all(|(database, sent)| sent.sent >= database.end());
+        let all_sent = session.database.sent >= database.end();
 
         // From here on, no barrier completes until the standby is in sync or the admission is abandoned.
         // A barrier that completed before this point synced locally frames that the last scan may not
@@ -795,11 +735,7 @@ fn admission_generation(shared: &Shared, databases: &[Database], session: &Sessi
         return None;
     }
 
-    let caught_up = state
-        .databases
-        .iter()
-        .filter(|progress| progress.shipping == ShippingMode::Synchronous)
-        .all(|progress| progress.confirmed >= progress.scanned);
+    let caught_up = state.database.confirmed >= state.database.scanned;
     if caught_up {
         return Some(state.generation);
     }
@@ -859,7 +795,6 @@ fn frames_to_send(database: &Database, sent: &mut SessionDatabase, fresh: &[Fres
         return Ok(out);
     };
     let end = database.end();
-    let name = database.config.name.to_owned();
 
     // The standby holds an earlier cycle, which it holds whole, so the current one is sent from its first frame.
     let is_new_cycle = sent.header.as_deref() != Some(&header.raw[..]);
@@ -868,7 +803,8 @@ fn frames_to_send(database: &Database, sent: &mut SessionDatabase, fresh: &[Fres
         return Ok(out);
     }
 
-    // One call sends at most one chunk of a long backlog, so that the frames of the other databases do not wait behind it.
+    // One call sends at most one chunk of a long backlog, so that each iteration completes its scan for the barrier
+    // without waiting for the whole backlog to be sent.
     let send_end = end.frame.min(start.saturating_add(frames_per_chunk(header)?));
 
     // The frames of the most recent scan are sent as they were read, and anything older is read again from the log.
@@ -877,14 +813,13 @@ fn frames_to_send(database: &Database, sent: &mut SessionDatabase, fresh: &[Fres
         .find(|frames| frames.cycle == end.cycle && frames.first_frame == start && frames.end_frame == send_end);
     let chunks = match fresh_match {
         Some(frames) => vec![(frames.first_frame, frames.end_frame, frames.bytes.clone())],
-        None => read_frames(&database.config.path, header, start, send_end)?,
+        None => read_frames(&database.path, header, start, send_end)?,
     };
 
     let mut header_to_send = if is_new_cycle { Some(header.raw.to_vec()) } else { None };
     if chunks.is_empty() && header_to_send.is_some() {
         out.push(Message::Frames {
             generation,
-            database: name.clone(),
             header: header_to_send.take(),
             first_frame: 0,
             end_frame: 0,
@@ -894,7 +829,6 @@ fn frames_to_send(database: &Database, sent: &mut SessionDatabase, fresh: &[Fres
     for (first_frame, end_frame, bytes) in chunks {
         out.push(Message::Frames {
             generation,
-            database: name.clone(),
             header: header_to_send.take(),
             first_frame,
             end_frame,
@@ -940,9 +874,6 @@ fn read_frames(db_path: &Path, header: &wal::WalHeader, start: u32, end: u32) ->
 
 /// One file of a snapshot.
 struct SnapshotFile<'snapshot> {
-    /// The name of the database.
-    database: &'snapshot str,
-
     /// Which file of the database it is.
     kind: FileKind,
 
@@ -975,7 +906,6 @@ fn send_file(sender: &LinkSender, snapshot_file: &SnapshotFile<'_>, timeout: Dur
         let bytes = chunk.get(..count).ok_or_else(|| Error::other("read past the buffer"))?.to_vec();
         sender.send(
             &Message::SnapshotChunk {
-                database: snapshot_file.database.to_owned(),
                 kind: snapshot_file.kind,
                 bytes,
             },
@@ -1003,9 +933,7 @@ fn end_from_thread(shared: &Shared, number: u64, reason: &str) {
 
 /// Applies a confirmation of the standby.
 fn apply_confirmation(state: &mut NodeState, position: &Position) {
-    let Some(progress) = state.database_mut(&position.database) else {
-        return;
-    };
+    let progress = &mut state.database;
     let confirmed = if position.salt_one == 0 && position.salt_two == 0 {
         Some(LogPosition {
             cycle: 0,
@@ -1101,13 +1029,11 @@ fn start_session_threads(shared: &Arc<Shared>, receiver: LinkReceiver, sender: L
 mod tests {
     use super::*;
     use crate::barrier::{self, BarrierOutcome};
-    use crate::config::{DB_NAME_PUBSUB, Timers};
+    use crate::config::{DATABASE_FILE_NAME, Timers};
     use crate::link::TlsContext;
     use crate::record::NodeAddress;
     use crate::referee::tests::MemoryReferee;
     use crate::test_support::{self, Certificates, LOOPBACK, NODE_A, NODE_B};
-    use std::collections::HashMap;
-    use std::collections::hash_map::Entry;
     use std::net::TcpListener;
     use std::sync::mpsc;
 
@@ -1131,8 +1057,8 @@ mod tests {
     /// The body of the publication acknowledged while the snapshot is being sent.
     const PUBLICATION: &[u8] = b"acknowledged-publication";
 
-    /// The report of the frames of the publish/subscribe database.
-    const PUBSUB_FRAMES: &str = "frames of pubsub";
+    /// The report of the frames of the Zato database.
+    const FRAMES: &str = "frames";
 
     /// The report of an admission.
     const ADMIT: &str = "admit";
@@ -1155,7 +1081,7 @@ mod tests {
     /// How long a standby that keeps pace with the writers may take to be admitted.
     const ADMISSION_TIMEOUT: Duration = Duration::from_secs(3);
 
-    /// Fills the publish/subscribe database in its main file and leaves it without a log, as a checkpoint does.
+    /// Fills the Zato database in its main file and leaves it without a log, as a checkpoint does.
     fn fill_database(path: &Path) {
         let connection = Connection::open(path).unwrap();
         connection
@@ -1176,7 +1102,7 @@ mod tests {
         /// Tells the standby to read again.
         resume: mpsc::Receiver<()>,
 
-        /// Receives the frames of the publish/subscribe database and the admissions, in the order they arrive.
+        /// Receives the frames of the Zato database and the admissions, in the order they arrive.
         reports: mpsc::Sender<&'static str>,
     }
 
@@ -1185,10 +1111,7 @@ mod tests {
         let (tcp, _) = listener.accept().unwrap();
         let accepted = tls.accept(tcp).unwrap();
         let (_, mut receiver) = accepted.receiver.receive().unwrap();
-        let reply = Message::HelloReply {
-            in_sync: false,
-            positions: Vec::new(),
-        };
+        let reply = Message::HelloReply { position: None };
         accepted.sender.send(&reply, RECEIVE_TIMEOUT).unwrap();
 
         let mut paused = false;
@@ -1200,7 +1123,7 @@ mod tests {
                 channels.resume.recv().unwrap();
             }
             let report = match message {
-                Message::Frames { database, .. } if database == DB_NAME_PUBSUB => PUBSUB_FRAMES,
+                Message::Frames { .. } => FRAMES,
                 Message::Admit { .. } => ADMIT,
                 _ => continue,
             };
@@ -1215,42 +1138,32 @@ mod tests {
         let (tcp, _) = listener.accept().unwrap();
         let accepted = tls.accept(tcp).unwrap();
         let (_, mut receiver) = accepted.receiver.receive().unwrap();
-        let reply = Message::HelloReply {
-            in_sync: false,
-            positions: Vec::new(),
-        };
+        let reply = Message::HelloReply { position: None };
         accepted.sender.send(&reply, RECEIVE_TIMEOUT).unwrap();
 
-        // The salts of each log, read from the start of its file in the snapshot or from the header of a new cycle.
-        let mut salts: HashMap<String, (u32, u32)> = HashMap::new();
+        // The salts of the log, read from the start of its file in the snapshot or from the header of a new cycle.
+        let mut salts: Option<(u32, u32)> = None;
         while let Ok((message, next)) = receiver.receive() {
             receiver = next;
             let confirmation = match message {
                 Message::SnapshotChunk {
-                    database,
                     kind: FileKind::Wal,
                     bytes,
                 } => {
-                    if let Entry::Vacant(entry) = salts.entry(database) {
+                    if salts.is_none() {
                         let header = wal::WalHeader::parse(bytes.get(..wal::HEADER_SIZE).unwrap().try_into().unwrap()).unwrap();
-                        let _ = entry.insert((header.salt_one, header.salt_two));
+                        salts = Some((header.salt_one, header.salt_two));
                     }
                     continue;
                 }
-                Message::Frames {
-                    database,
-                    header,
-                    end_frame,
-                    ..
-                } => {
+                Message::Frames { header, end_frame, .. } => {
                     if let Some(raw) = header {
                         let header = wal::WalHeader::parse(raw[..].try_into().unwrap()).unwrap();
-                        let _ = salts.insert(database.clone(), (header.salt_one, header.salt_two));
+                        salts = Some((header.salt_one, header.salt_two));
                     }
-                    let (salt_one, salt_two) = *salts.get(&database).unwrap();
+                    let (salt_one, salt_two) = salts.unwrap();
                     thread::sleep(STANDBY_SYNC);
                     Message::Confirm(Position {
-                        database,
                         salt_one,
                         salt_two,
                         end_frame,
@@ -1318,8 +1231,8 @@ mod tests {
     fn a_publication_acknowledged_during_a_join_reaches_the_standby_before_its_admission() {
         let certificates = Certificates::issue();
         let dir = tempfile::tempdir().unwrap();
-        let pubsub_path = dir.path().join("pubsub.db");
-        fill_database(&pubsub_path);
+        let database_path = dir.path().join(DATABASE_FILE_NAME);
+        fill_database(&database_path);
 
         let listener = TcpListener::bind((LOOPBACK, 0)).unwrap();
         let shared = active_node(dir.path(), &certificates, listener.local_addr().unwrap().port());
@@ -1339,15 +1252,15 @@ mod tests {
 
         // The shipper recorded the end of every log and is blocked sending the database file.
         paused.recv_timeout(RECEIVE_TIMEOUT).unwrap();
-        let connection = Connection::open(&pubsub_path).unwrap();
+        let connection = Connection::open(&database_path).unwrap();
         connection.busy_timeout(RECEIVE_TIMEOUT).unwrap();
         let _ = connection.execute("insert into message (body) values (?1)", [PUBLICATION]).unwrap();
-        assert_eq!(barrier::wait(&shared, DB_NAME_PUBSUB), BarrierOutcome::Synced);
+        assert_eq!(barrier::wait(&shared), BarrierOutcome::Synced);
         resume_sender.send(()).unwrap();
 
         // The standby confirms nothing, so the frames of the publication arrive and no admission follows them.
         let first = reports.recv_timeout(RECEIVE_TIMEOUT).unwrap();
-        assert_eq!(first, PUBSUB_FRAMES);
+        assert_eq!(first, FRAMES);
 
         shared.announce_stop();
         shipper.join().unwrap();
@@ -1358,7 +1271,7 @@ mod tests {
     fn a_standby_receiving_its_backup_is_reported_as_joining() {
         let certificates = Certificates::issue();
         let dir = tempfile::tempdir().unwrap();
-        fill_database(&dir.path().join("pubsub.db"));
+        fill_database(&dir.path().join(DATABASE_FILE_NAME));
 
         let listener = TcpListener::bind((LOOPBACK, 0)).unwrap();
         let shared = active_node(dir.path(), &certificates, listener.local_addr().unwrap().port());
@@ -1386,16 +1299,9 @@ mod tests {
         standby.join().unwrap();
     }
 
-    /// Returns the cycle of the log of the publish/subscribe database at the most recent scan.
-    fn pubsub_cycle(shared: &Shared) -> u64 {
-        let state = shared.state.lock();
-        state
-            .databases
-            .iter()
-            .find(|progress| progress.name == DB_NAME_PUBSUB)
-            .unwrap()
-            .scanned
-            .cycle
+    /// Returns the cycle of the log of the Zato database at the most recent scan.
+    fn log_cycle(shared: &Shared) -> u64 {
+        shared.state.lock().database.scanned.cycle
     }
 
     /// Commits one small transaction and lets the shipper scan it.
@@ -1408,8 +1314,8 @@ mod tests {
     fn a_log_that_restarted_is_not_checkpointed_again_until_its_cycle_is_long() {
         let certificates = Certificates::issue();
         let dir = tempfile::tempdir().unwrap();
-        let pubsub_path = dir.path().join("pubsub.db");
-        let connection = Connection::open(&pubsub_path).unwrap();
+        let database_path = dir.path().join(DATABASE_FILE_NAME);
+        let connection = Connection::open(&database_path).unwrap();
         connection.busy_timeout(RECEIVE_TIMEOUT).unwrap();
         connection
             .execute_batch("pragma journal_mode=wal; pragma wal_autocheckpoint=0; create table message (body blob); begin;")
@@ -1427,19 +1333,19 @@ mod tests {
         let shipper = thread::spawn(move || Shipper::new(shipper_shared).run());
 
         // The first write after the checkpoint of the long log restarts it ..
-        let first_cycle = pubsub_cycle(&shared);
+        let first_cycle = log_cycle(&shared);
         let deadline = Instant::now() + RECEIVE_TIMEOUT;
-        while pubsub_cycle(&shared) == first_cycle {
+        while log_cycle(&shared) == first_cycle {
             assert!(Instant::now() < deadline, "The long log was not checkpointed");
             write_small(&connection);
         }
 
         // .. and the short cycle that follows is not checkpointed, even though the file of the log keeps its length.
-        let restarted_cycle = pubsub_cycle(&shared);
+        let restarted_cycle = log_cycle(&shared);
         for _ in 0..SMALL_WRITES {
             write_small(&connection);
         }
-        assert_eq!(pubsub_cycle(&shared), restarted_cycle);
+        assert_eq!(log_cycle(&shared), restarted_cycle);
 
         shared.announce_stop();
         shipper.join().unwrap();
@@ -1451,7 +1357,7 @@ mod tests {
         connection.busy_timeout(RECEIVE_TIMEOUT).unwrap();
         while shared.state.lock().role == Role::ActiveSolo {
             let _ = connection.execute("insert into message (body) values (?1)", [PUBLICATION]).unwrap();
-            assert_eq!(barrier::wait(shared, DB_NAME_PUBSUB), BarrierOutcome::Synced);
+            assert_eq!(barrier::wait(shared), BarrierOutcome::Synced);
         }
     }
 
@@ -1459,8 +1365,8 @@ mod tests {
     fn a_standby_that_keeps_pace_with_steady_writers_is_admitted() {
         let certificates = Certificates::issue();
         let dir = tempfile::tempdir().unwrap();
-        let pubsub_path = dir.path().join("pubsub.db");
-        let connection = Connection::open(&pubsub_path).unwrap();
+        let database_path = dir.path().join(DATABASE_FILE_NAME);
+        let connection = Connection::open(&database_path).unwrap();
         connection
             .execute_batch("pragma journal_mode=wal; pragma wal_autocheckpoint=0; create table message (body blob);")
             .unwrap();
@@ -1470,7 +1376,7 @@ mod tests {
         let mut writers = Vec::new();
         for _ in 0..WRITERS {
             let writer_shared = Arc::clone(&shared);
-            let writer_path = pubsub_path.clone();
+            let writer_path = database_path.clone();
             writers.push(thread::spawn(move || write_while_solo(&writer_shared, &writer_path)));
         }
         let standby_tls = TlsContext::load(&certificates.files(NODE_B)).unwrap();
@@ -1497,7 +1403,7 @@ mod tests {
     fn a_standby_in_sync_without_a_session_owes_every_frame_read() {
         let certificates = Certificates::issue();
         let dir = tempfile::tempdir().unwrap();
-        let connection = Connection::open(dir.path().join("pubsub.db")).unwrap();
+        let connection = Connection::open(dir.path().join(DATABASE_FILE_NAME)).unwrap();
         connection.busy_timeout(RECEIVE_TIMEOUT).unwrap();
         connection
             .execute_batch("pragma journal_mode=wal; create table message (body blob);")
@@ -1543,6 +1449,6 @@ mod tests {
             (state.role, state.generation)
         };
         assert_eq!((role, generation), (Role::Fenced, 3));
-        assert_eq!(barrier::wait(&shared, DB_NAME_PUBSUB), BarrierOutcome::Replaced);
+        assert_eq!(barrier::wait(&shared), BarrierOutcome::Replaced);
     }
 }

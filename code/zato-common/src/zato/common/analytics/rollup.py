@@ -22,7 +22,8 @@ from sqlalchemy import and_, func, select, text, update
 # Zato
 from zato.common.analytics.api import get_analytics_engine, get_error_source, get_latency_bucket_index, get_status_class, \
     ErrorSource, Latency_Bucket_Count, usage_table, watermark_table
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditSource
+from zato.common.audit_log.api import event_table, AuditEvent, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.db_env.common import hour_period, Type_PostgreSQL
 from zato.common.json_internal import dumps, loads
 
@@ -125,7 +126,7 @@ def _load_new_events(last_event_id:'int') -> 'list':
     Responses are what the rollup runs on - they carry the caller, the HTTP status
     and the request duration, while request events know none of these yet.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     source_matches = event_table.c.source.in_(_channel_sources)
     event_type_matches = event_table.c.event_type == AuditEvent.Response_Sent

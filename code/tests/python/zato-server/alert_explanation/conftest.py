@@ -23,7 +23,7 @@ import pytest
 # Zato
 from zato.common.alerting.explain.skill import get_default_skills_dir, Skills_Dir_Name
 from zato.common.alerting.rendering import get_default_template_dir, Template_Dir_Name
-from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
+from zato.common.test.database_env import DatabaseEnv
 
 # Test helpers
 from chat_simulators import find_free_port, start_slack_server
@@ -49,15 +49,15 @@ def audit_db_env(tmp_path:'os.PathLike') -> 'any_':
     """ Points the audit database at a per-test SQLite file so every test
     runs on its own isolated database.
     """
-    database_path = os.path.join(str(tmp_path), 'audit.db')
+    database_path = os.path.join(str(tmp_path), 'zato.db')
 
-    os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
-    os.environ[AuditLogCtx.Env_Name] = database_path
+    os.environ[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
+    os.environ[DatabaseEnv.Env_Path] = database_path
 
     yield database_path
 
-    del os.environ[AuditLogCtx.Env_Type]
-    del os.environ[AuditLogCtx.Env_Name]
+    del os.environ[DatabaseEnv.Env_Type]
+    del os.environ[DatabaseEnv.Env_Path]
 
 # ################################################################################################################################
 

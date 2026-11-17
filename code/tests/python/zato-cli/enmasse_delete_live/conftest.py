@@ -20,6 +20,7 @@ import pytest
 
 # Zato
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
+from zato.common.test.database_env import DatabaseEnv
 
 # Live environment
 from live_containers.ready import wait_until
@@ -65,7 +66,7 @@ def server_environment() -> 'strstrdict':
     """
     out = {
         AuditLogCtx.Env_Enabled: 'True',
-        AuditLogCtx.Env_Type:    AuditLogCtx.Type_SQLite,
+        DatabaseEnv.Env_Type:    DatabaseEnv.Type_SQLite,
     }
     return out
 

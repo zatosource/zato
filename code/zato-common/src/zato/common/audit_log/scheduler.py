@@ -21,7 +21,8 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.api import SCHEDULER
-from zato.common.audit_log.api import AuditEvent, AuditSource, get_audit_engine
+from zato.common.audit_log.api import AuditEvent, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import event_attr_table, event_body_table, event_table
 from zato.common.audit_log.export.api import get_audit_export
 from zato.common.db_env.engine import call_database, execute_write
@@ -160,7 +161,7 @@ def record_job_complete(event_id:'int', *, outcome:'str', duration_ms:'int', err
     """ Updates a run's event with its final outcome, duration and error, keeping one record
     per run from start to finish.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     update_statement = event_table.update()
     update_statement = update_statement.where(event_table.c.id == event_id)
@@ -182,7 +183,7 @@ def record_job_timeout(job_id:'int', current_run:'int', *, elapsed_ms:'int', err
     """ Marks a run as timed out. The run is located through its job id and run number
     because the timeout arrives from the scheduler process, which never saw the event id.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     # Find the newest event of this very run ..
     job_id_match = select(event_attr_table.c.event_id).where(
@@ -248,7 +249,7 @@ def append_job_log_entry(event_id:'int', timestamp:'datetime', level:'str', mess
     """ Stores one log line a service emitted during a run, as an event body row keyed
     by the run's event id.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     kind = _get_log_kind(level)
     timestamp_iso = timestamp.isoformat()

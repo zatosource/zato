@@ -234,9 +234,9 @@ impl RunningJob {
         }
     }
 
-    /// Restores the run state that the server loaded from the common database for this job.
+    /// Restores the run state that the server loaded from the Zato database for this job.
     ///
-    /// The run counter takes the count of the common database only when that count is higher,
+    /// The run counter takes the count of the Zato database only when that count is higher,
     /// because a run fired and not yet claimed is counted here and not there.
     /// A job whose repeats are used up, or a one-time job that already ran, does not fire again.
     /// An interval-based job whose latest due slot lies after the last claimed slot fires
@@ -272,7 +272,7 @@ impl RunningJob {
         }
     }
 
-    /// Restores the run count that the server loaded from the common database for a job whose schedule this
+    /// Restores the run count that the server loaded from the Zato database for a job whose schedule this
     /// scheduler kept running, which therefore missed no slot.
     ///
     /// The next fire time is kept, because a slot that fired and that no worker claimed yet lies after
@@ -286,7 +286,7 @@ impl RunningJob {
         }
     }
 
-    /// Takes the run count of the common database only when it is higher than the counter of this job.
+    /// Takes the run count of the Zato database only when it is higher than the counter of this job.
     const fn raise_run_count(&mut self, current_run: u32) {
         // Runs claimed through other servers raise the counter, and a run fired and not yet claimed keeps it
         if current_run > self.current_run {

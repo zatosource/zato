@@ -20,6 +20,7 @@ import pytest
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,7 +38,8 @@ _db_path = os.path.join(tempfile.gettempdir(), _db_name)
 # The root account's password, set before the application boots
 _root_password = 'root-password-' + CryptoManager.generate_hex_string()
 
-os.environ['Zato_Rule_Engine_Dashboard_DB_URL'] = f'sqlite:///{_db_path}'
+os.environ[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
+os.environ[DatabaseEnv.Env_Path] = _db_path
 os.environ['Zato_Rule_Engine_Dashboard_Admin_Password'] = _root_password
 
 # ################################################################################################################################

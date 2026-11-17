@@ -69,7 +69,7 @@ def run_atomic_rollback_scenario() -> 'None':
     publications:'anylist' = [first.pending, second.pending]
 
     with pytest.raises(DBAPIError):
-        backend.ack_with_publications(Input_Sub_Key, msg_ids, publications)
+        backend.ack_with_publications(Input_Sub_Key, msg_ids, publications, [])
 
     # .. so neither publication is stored ..
     assert count_messages(First_Output_Topic) == 0
@@ -84,7 +84,7 @@ def run_atomic_rollback_scenario() -> 'None':
 
     # The same items committed again find nothing of the failed transaction ..
     second_values['data_size'] = data_size
-    backend.ack_with_publications(Input_Sub_Key, msg_ids, publications)
+    backend.ack_with_publications(Input_Sub_Key, msg_ids, publications, [])
 
     # .. each publication is stored once ..
     assert count_messages(First_Output_Topic) == 1
@@ -111,7 +111,7 @@ def run_repeat_in_batch_scenario() -> 'None':
     other = build(backend, Second_Output_Topic, 'output-second')
 
     publications:'anylist' = [repeated.pending, other.pending]
-    backend.ack_with_publications(Input_Sub_Key, msg_ids, publications)
+    backend.ack_with_publications(Input_Sub_Key, msg_ids, publications, [])
 
     # The repetition is recognized ..
     assert repeated.pending.is_repeat
@@ -135,21 +135,21 @@ def run_batch_committed_twice_scenario() -> 'None':
     first_msg_id = get_built_msg_id(first)
 
     first_publications:'anylist' = [first.pending]
-    backend.ack_with_publications(Input_Sub_Key, msg_ids, first_publications)
+    backend.ack_with_publications(Input_Sub_Key, msg_ids, first_publications, [])
 
     # The second delivery of the same batch published again under new message IDs ..
     second = build(backend, First_Output_Topic, 'output-second')
     second_publications:'anylist' = [second.pending]
 
     with pytest.raises(PubSubAckConflict):
-        backend.ack_with_publications(Input_Sub_Key, msg_ids, second_publications)
+        backend.ack_with_publications(Input_Sub_Key, msg_ids, second_publications, [])
 
     # .. which are not stored ..
     assert get_msg_ids(First_Output_Topic) == [first_msg_id]
     assert count_deliveries(First_Output_Sub_Key) == 1
 
     # .. and a second delivery that published nothing concludes without an error.
-    backend.ack_with_publications(Input_Sub_Key, msg_ids, [])
+    backend.ack_with_publications(Input_Sub_Key, msg_ids, [], [])
 
     assert count_messages(First_Output_Topic) == 1
     assert count_deliveries(Input_Sub_Key) == 0

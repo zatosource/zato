@@ -36,6 +36,7 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.test.process_util import kill_process_tree
 from zato.common.util.config import get_config_object, update_config_file
 from zato.common.typing_ import cast_
+from zato.common.test.database_env import DatabaseEnv
 
 # Live environment
 from live_environment.scheduler import SchedulerProcess
@@ -228,7 +229,7 @@ def zato_server(request:'any_'):
     # A fresh audit database per session, with the audit log explicitly enabled -
     # job execution history lives there and the history tests read it back through
     # the server's own services.
-    audit_db_path = os.path.join(_tmpdir, 'audit.db')
+    audit_db_path = os.path.join(_tmpdir, 'zato.db')
 
     env = os.environ.copy()
     env['Zato_Config_Bind_Port'] = str(port)
@@ -236,8 +237,8 @@ def zato_server(request:'any_'):
     scheduler_environment = _scheduler.server_environment()
     env.update(scheduler_environment)
     env[AuditLogCtx.Env_Enabled] = 'True'
-    env[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
-    env[AuditLogCtx.Env_Name] = audit_db_path
+    env[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
+    env[DatabaseEnv.Env_Path] = audit_db_path
     _ = env.pop('COVERAGE_PROCESS_START', None)
     if coveragerc_path:
         env['COVERAGE_PROCESS_START'] = coveragerc_path

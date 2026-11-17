@@ -22,11 +22,10 @@ from sqlalchemy.exc import DBAPIError
 # Zato
 from zato.common.api import PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
-from zato.common.db_env.common import get_env_values
+from zato.common.db_env.database import get_database_values
 from zato.common.db_env.outage import OutageTracker
 from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryInterrupted, Interrupt_Database, \
     Interrupt_Expired, Interrupt_Paused, Interrupt_Replaced, Interrupt_Withdrawn, wait_between_rounds
-from zato.common.pubsub.sql.config import pubsub_db_config
 from zato.common.pubsub.sql.fenced_ack import PubSubAckConflict
 from zato.common.pubsub.sql.replaced import PubSubReplaced
 from zato.common.util.retry import RetryPolicy
@@ -95,7 +94,7 @@ class PushDelivery:
 
         # Each read of a queue and each recorded attempt holds one of these slots while it uses a connection,
         # and no delivery holds one while it waits for a publication or sends a message to its endpoint.
-        pool_size = get_env_values(pubsub_db_config)['pool_size']
+        pool_size = get_database_values()['pool_size']
         slot_count = pool_size * _delivery_pool_share_numerator // _delivery_pool_share_denominator
         self._database_slots = BoundedSemaphore(slot_count)
 

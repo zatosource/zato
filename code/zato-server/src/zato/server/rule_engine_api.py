@@ -21,11 +21,11 @@ from redis import Redis
 
 # Zato
 from zato.common.alerting.seed import ensure_alerting_definitions
+from zato.common.db_env.database import get_database_engine
 from zato.common.rule_engine.changes import ModuleCtx as ChangesCtx
 from zato.common.rule_engine.invocation import RulesetInvoker
 from zato.common.rule_engine.sql import RuleSQLBackend
-from zato.common.rule_engine.sql.constants import Default_DB_URL, Env_DB_URL, Env_Success_Capture_Percent
-from zato.common.rule_engine.sql.database import create_database_engine, create_schema
+from zato.common.rule_engine.sql.constants import Env_Success_Capture_Percent
 from zato.common.rule_engine.sql.decisions import CapturePolicy
 from zato.common.rule_engine.sql.errors import InvalidStoreInputError
 from zato.common.typing_ import cast_
@@ -62,24 +62,9 @@ _lock = RLock()
 # ################################################################################################################################
 
 def _build_backend() -> 'RuleSQLBackend':
-    """ Builds the SQL facade over the rule engine's own database.
+    """ Builds the SQL facade over the rule engine tables of the Zato database.
     """
-    # The URL is the same one the rule engine dashboard reads ..
-    database_url = os.environ.get(Env_DB_URL)
-
-    if not database_url:
-        database_url = Default_DB_URL
-
-    # .. an SQLite connection has to be shareable with the writer thread ..
-    if database_url.startswith('sqlite'):
-        connection_options = {'check_same_thread': False}
-        engine = create_database_engine(database_url, connect_args=connection_options)
-    else:
-        engine = create_database_engine(database_url)
-
-    # .. the tables come into being on first run and every later call is a no-op ..
-    create_schema(engine)
-
+    engine = get_database_engine()
     out = RuleSQLBackend.from_engine(engine)
 
     # .. and a new environment gains the alerting vocabulary and the default

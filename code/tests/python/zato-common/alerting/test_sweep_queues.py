@@ -25,7 +25,8 @@ from zato.common.alerting.seed.rules_mllp import mllp_outgoing_rules
 from zato.common.alerting.seed.rules_queue import DLQ_Messages_Rule, DLQ_Threshold_Value, Queue_Backlog_Rule, \
     Queue_Depth_Threshold_Value
 from zato.common.alerting.sweep import run_sweep
-from zato.common.audit_log.api import get_audit_engine, AuditLog, AuditSource
+from zato.common.audit_log.api import AuditLog, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.outgoing import OutgoingType
 from zato.common.rule_engine.loading import load_documents
 from zato.common.rule_engine.parser import parse_data_details
@@ -156,7 +157,7 @@ def _run_sweep(conn_type:'str', queue_rows:'dictlist', cid:'str', object_setting
     """ Runs one sweep of one kind's ruleset over the given queue rows, with no audit rows at all.
     """
     audit_log = AuditLog(_server_name)
-    engine = get_audit_engine()
+    engine = get_database_engine()
     now = utcnow()
 
     defaults = AlertDefaults()
@@ -249,7 +250,7 @@ class TestCollector:
 # ################################################################################################################################
 
     def test_the_depths_reach_the_merged_facts(self) -> 'None':
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         rows = [_row(OutgoingType.REST, _rest_name, queue_depth=1500, dlq_depth=2)]

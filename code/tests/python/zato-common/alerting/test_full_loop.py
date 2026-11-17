@@ -53,7 +53,8 @@ from zato.common.alerting.engine import process_findings, AlertDefaults, AlertTr
 from zato.common.alerting.model import new_finding, new_rule, AlertAction
 from zato.common.alerting.seed import build_ruleset_document, ensure_alerting_definitions
 from zato.common.alerting.sweep import load_alert_rules, run_sweep
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key
 from zato.common.util.api import utcnow
@@ -370,7 +371,7 @@ def _seed_events() -> 'None':
 def _get_raised_events() -> 'list':
     """ Every alert-raised event the audit log holds.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table).where(event_table.c.event_type == AuditEvent.Alert_Raised)
 
@@ -394,7 +395,7 @@ class TestFullLoop:
         _seed_events()
 
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         recorder = _ServiceRecorder()
@@ -513,7 +514,7 @@ class TestFullLoop:
         _seed_events()
 
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         recorder = _ServiceRecorder()
@@ -568,7 +569,7 @@ class TestFullLoop:
         _seed_events()
 
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         recorder = _ServiceRecorder()
@@ -666,7 +667,7 @@ class TestFullLoop:
         ) -> 'None':
 
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         recorder = _ServiceRecorder()

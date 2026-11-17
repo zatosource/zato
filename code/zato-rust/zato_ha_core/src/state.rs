@@ -11,7 +11,7 @@ use std::time::Instant;
 use parking_lot::{Condvar, Mutex};
 use serde::Serialize;
 
-use crate::config::{NodeConfig, ShippingMode};
+use crate::config::NodeConfig;
 use crate::link::{LinkSender, TlsContext};
 use crate::record::RefereeRecord;
 use crate::referee::Referee;
@@ -53,7 +53,7 @@ impl Role {
     }
 }
 
-/// A position in the log of a database, ordered by the cycle of the log and then by the frame.
+/// A position in the log of the Zato database, ordered by the cycle of the log and then by the frame.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Serialize)]
 pub struct LogPosition {
     /// The cycle of the log, raised on every restart of it.
@@ -79,15 +79,9 @@ pub struct CycleRecord {
     pub end_frame: u32,
 }
 
-/// The replication progress of one database on the active node.
-#[derive(Debug, Clone)]
+/// The replication progress of the Zato database on the active node, which begins with nothing read.
+#[derive(Debug, Clone, Default)]
 pub struct DatabaseProgress {
-    /// The name of the database.
-    pub name: &'static str,
-
-    /// How its frames reach the standby.
-    pub shipping: ShippingMode,
-
     /// The end of the log at the most recent completed scan.
     pub scanned: LogPosition,
 
@@ -101,22 +95,10 @@ pub struct DatabaseProgress {
     pub cycles: Vec<CycleRecord>,
 }
 
-/// How many cycles of each log are remembered for mapping confirmations.
+/// How many cycles of the log are remembered for mapping confirmations.
 const REMEMBERED_CYCLES: usize = 2;
 
 impl DatabaseProgress {
-    /// Returns the progress of a database nothing was read from.
-    pub const fn new(name: &'static str, shipping: ShippingMode) -> Self {
-        Self {
-            name,
-            shipping,
-            scanned: LogPosition { cycle: 0, frame: 0 },
-            confirmed: LogPosition { cycle: 0, frame: 0 },
-            unconfirmed: VecDeque::new(),
-            cycles: Vec::new(),
-        }
-    }
-
     /// Records that the log was read up to `end` at `read_at`, which the standby in sync owes a confirmation of.
     pub fn record_read(&mut self, end: LogPosition, read_at: Instant) {
         let newest = self.unconfirmed.back().map_or(self.confirmed, |(newest, _)| *newest);
@@ -194,8 +176,8 @@ pub struct NodeState {
     /// Whether the standby could not resume and must be marked out before it joins again.
     pub needs_mark_out: bool,
 
-    /// The progress of each replicated database, in the order of the configuration.
-    pub databases: Vec<DatabaseProgress>,
+    /// The replication progress of the Zato database.
+    pub database: DatabaseProgress,
 
     /// Raised by every barrier that needs a fresh scan.
     pub scan_requested: u64,
@@ -226,19 +208,9 @@ pub struct NodeState {
 }
 
 impl NodeState {
-    /// Returns the progress of the database with the given name.
-    pub fn database_mut(&mut self, name: &str) -> Option<&mut DatabaseProgress> {
-        self.databases.iter_mut().find(|database| database.name == name)
-    }
-
-    /// When the oldest read of a synchronous database that the standby has not confirmed yet took place, if there is one.
-    /// The copy of an asynchronous database may lag behind the active node.
+    /// When the oldest read that the standby has not confirmed yet took place, if there is one.
     pub fn oldest_unconfirmed(&self) -> Option<Instant> {
-        self.databases
-            .iter()
-            .filter(|database| database.shipping == ShippingMode::Synchronous)
-            .filter_map(|database| database.unconfirmed.front().map(|(_, read_at)| *read_at))
-            .min()
+        self.database.unconfirmed.front().map(|(_, read_at)| *read_at)
     }
 
     /// Closes the link of the current session, if any.
@@ -254,9 +226,7 @@ impl NodeState {
 
         // Outside of `ActiveReplicated`, no standby is in sync, so nothing waits for these reads.
         if self.role != Role::ActiveReplicated {
-            for database in &mut self.databases {
-                database.unconfirmed.clear();
-            }
+            self.database.unconfirmed.clear();
         }
     }
 }
@@ -286,18 +256,13 @@ pub struct Shared {
 impl Shared {
     /// Returns the shared state of a node that has not read the referee record yet.
     pub fn new(config: NodeConfig, referee: Box<dyn Referee>, tls: Option<TlsContext>) -> Self {
-        let databases = config
-            .databases
-            .iter()
-            .map(|database| DatabaseProgress::new(database.name, database.shipping))
-            .collect();
         let state = NodeState {
             role: Role::Down,
             generation: 0,
             admitting: false,
             isolated: false,
             needs_mark_out: false,
-            databases,
+            database: DatabaseProgress::default(),
             scan_requested: 0,
             scan_completed: 0,
             last_peer_contact: Instant::now(),
@@ -353,7 +318,7 @@ impl Shared {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{DB_NAME_AUDIT, DB_NAME_PUBSUB, Timers};
+    use crate::config::Timers;
     use crate::referee::tests::MemoryReferee;
     use crate::test_support::{self, Certificates, NODE_A};
     use std::time::Duration;
@@ -375,7 +340,7 @@ mod tests {
 
     #[test]
     fn a_confirmation_leaves_only_the_reads_after_it_unconfirmed() {
-        let mut progress = DatabaseProgress::new("pubsub", ShippingMode::Synchronous);
+        let mut progress = DatabaseProgress::default();
         let first = Instant::now();
         let second = first + READ_GAP;
 
@@ -392,7 +357,7 @@ mod tests {
 
     #[test]
     fn an_end_already_recorded_or_confirmed_is_not_a_new_read() {
-        let mut progress = DatabaseProgress::new("pubsub", ShippingMode::Synchronous);
+        let mut progress = DatabaseProgress::default();
         let now = Instant::now();
 
         progress.record_read(position(10), now);
@@ -405,27 +370,6 @@ mod tests {
     }
 
     #[test]
-    fn only_the_reads_of_synchronous_databases_make_a_standby_lag() {
-        let certificates = Certificates::issue();
-        let dir = tempfile::tempdir().unwrap();
-        let config = test_support::node_config(NODE_A, dir.path(), &certificates, TIMERS);
-        let shared = test_support::shared(config, Box::new(MemoryReferee::default()));
-        let mut state = shared.state.lock();
-        let audit_read_at = Instant::now();
-        let pubsub_read_at = audit_read_at + READ_GAP;
-
-        state.database_mut(DB_NAME_AUDIT).unwrap().record_read(position(10), audit_read_at);
-        assert_eq!(state.oldest_unconfirmed(), None);
-
-        state
-            .database_mut(DB_NAME_PUBSUB)
-            .unwrap()
-            .record_read(position(10), pubsub_read_at);
-        assert_eq!(state.oldest_unconfirmed(), Some(pubsub_read_at));
-        drop(state);
-    }
-
-    #[test]
     fn a_session_that_ends_keeps_the_lag_of_a_standby_in_sync_until_it_is_marked_out() {
         let certificates = Certificates::issue();
         let dir = tempfile::tempdir().unwrap();
@@ -435,7 +379,7 @@ mod tests {
         let read_at = Instant::now();
 
         state.role = Role::ActiveReplicated;
-        state.database_mut(DB_NAME_PUBSUB).unwrap().record_read(position(10), read_at);
+        state.database.record_read(position(10), read_at);
         state.close_link();
         assert_eq!(state.oldest_unconfirmed(), Some(read_at));
 

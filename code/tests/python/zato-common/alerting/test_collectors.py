@@ -12,7 +12,8 @@ from json import dumps
 
 # Zato
 from zato.common.alerting.collectors import collect_facts, collect_file_transfer_facts, Health_Window_Seconds, Measure_Error_Rate
-from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.file_transfer_run import Run_Status_Failed
 from zato.common.monitoring.health import EndpointMetrics
 from zato.common.util.api import utcnow
@@ -27,7 +28,7 @@ class TestPerSourceWindows:
 
     def test_a_source_with_a_window_of_its_own_is_measured_over_it(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # A file transfer error older than the default window but within
@@ -48,7 +49,7 @@ class TestPerSourceWindows:
 
     def test_a_source_without_a_window_of_its_own_is_measured_over_the_default(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         event_id = audit_log.insert(AuditSource.File_Outgoing, AuditEvent.Message_Sent, 'sftp.default-window',
@@ -67,7 +68,7 @@ class TestPerSourceWindows:
 
     def test_the_health_sources_keep_their_hour_unless_a_rule_names_them(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # A failed health check older than the default window but within the hour - a check's ping is
@@ -87,7 +88,7 @@ class TestPerSourceWindows:
 
     def test_the_run_counts_of_a_schedule_cover_the_file_transfer_window(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # A failed run half an hour back
@@ -115,7 +116,7 @@ class TestPerSourceWindows:
 
     def test_a_schedule_with_a_window_of_its_own_is_counted_over_it(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # A failed run half an hour back for two schedules
@@ -143,7 +144,7 @@ class TestPerSourceWindows:
 
     def test_an_object_with_a_window_of_its_own_has_its_rate_measured_over_it(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # A failure twenty minutes back for two connections
@@ -172,7 +173,7 @@ class TestCollectFacts:
 
     def test_the_measures_of_one_object_merge_into_one_fact(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # The same channel errors and sits silent at the same time
@@ -196,7 +197,7 @@ class TestCollectFacts:
 
     def test_different_objects_stay_apart(self) -> 'None':
         audit_log = AuditLog(Server_Name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         seed_outcome(audit_log, 'facts-apart-1', AuditOutcome.Error)

@@ -13,11 +13,12 @@ from dataclasses import dataclass
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anylist, intdict, intlistnone, strlist
+    from zato.common.typing_ import anydict, anylist, callable_, intdict, intlistnone, strlist
 
     # Dummy assignments to satisfy type checkers
     anydict = anydict
     anylist = anylist
+    callable_ = callable_
     intdict = intdict
     intlistnone = intlistnone
     strlist = strlist
@@ -50,6 +51,9 @@ class PendingPublication:
 
     # Whether the message ID existed already with the same topic and payload, so that nothing was written
     is_repeat: 'bool'
+
+    # The audit events that commit with the message, and only if the message is written
+    audit_events: 'anylist'
 
 # ################################################################################################################################
 
@@ -97,6 +101,9 @@ class PendingAtomic:
     # Why nothing of the item was written, while the other items of its commit could be
     exception: 'BaseException | None'
 
+    # The audit events of the deliveries that the item concludes, which commit with the item whatever its outcome
+    audit_events: 'anylist'
+
 # ################################################################################################################################
 
 @dataclass(init=False)
@@ -115,6 +122,12 @@ class PendingLease:
     rows: 'anylist'
     attempts: 'intdict'
 
+    # What builds the messages and the audit events of the leased rows in the transaction that leases them,
+    # with the messages handed to the client and the audit events that commit with the lease
+    on_leased: 'callable_'
+    messages: 'anylist'
+    audit_events: 'anylist'
+
     # Why the lease could not be written, while the other items of its commit could
     exception: 'BaseException | None'
 
@@ -129,6 +142,7 @@ def new_pending_publication(message_values:'anydict') -> 'PendingPublication':
     out.subscriber_keys = []
     out.exception = None
     out.is_repeat = False
+    out.audit_events = []
 
     return out
 
@@ -172,6 +186,7 @@ def new_pending_atomic(publications:'pending_publication_list', ack:'PendingAck'
     out.ack = ack
     out.is_strict = is_strict
     out.exception = None
+    out.audit_events = []
 
     return out
 
@@ -183,6 +198,7 @@ def new_pending_lease(
     max_len:'int',
     now_ms:'int',
     leased_until_ms:'int',
+    on_leased:'callable_',
     ) -> 'PendingLease':
     """ Returns a pull that is yet to be written.
     """
@@ -194,6 +210,9 @@ def new_pending_lease(
     out.leased_until_ms = leased_until_ms
     out.rows = []
     out.attempts = {}
+    out.on_leased = on_leased
+    out.messages = []
+    out.audit_events = []
     out.exception = None
 
     return out
@@ -223,6 +242,8 @@ def reset_item(item:'PendingPublication | PendingAck | PendingAtomic | PendingLe
     else:
         item.rows = []
         item.attempts = {}
+        item.messages = []
+        item.audit_events = []
         item.exception = None
 
 # ################################################################################################################################

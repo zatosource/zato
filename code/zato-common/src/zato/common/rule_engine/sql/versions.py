@@ -31,8 +31,14 @@ from .time_ import utc_now
 # ################################################################################################################################
 
 if 0:
+    from datetime import datetime
+    from sqlalchemy.orm import Session
     from zato.common.rule_engine.changes import ChangePublisher
+
+    # Dummy assignments to satisfy type checkers
     ChangePublisher = ChangePublisher
+    datetime = datetime
+    Session = Session
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -75,88 +81,15 @@ class VersionStore:
         document_text = serialize_document(document)
         new_version = expected_current_version + 1
         now = utc_now()
-        session = self._session_factory()
 
         try:
-            with session.begin():
-
-                # Confirm that the definition exists and still accepts edits ..
-                definition = get_definition(session, definition_id)
-                if not definition.is_active:
-                    message = f'Rule definition {definition_id} is archived'
-                    raise InvalidStoreInputError(message)
-
-                # .. claim the next version with one optimistic update ..
-                statement = update(rule_definition_table)
-                id_condition = rule_definition_table.c.id == definition_id
-                version_condition = rule_definition_table.c.current_version == expected_current_version
-                statement = statement.where(id_condition)
-                statement = statement.where(version_condition)
-                statement = statement.values(current_version=new_version, document=document_text, updated_at=now)
-                result = session.execute(statement)
-                result = cast_(CursorResult, result)
-
-                if result.rowcount != 1:
-                    message = f'Rule definition {definition_id} is no longer at version {expected_current_version}'
-                    raise VersionConflictError(message)
-
-                # .. stage the immutable full snapshot ..
-                version_values = {
-                    'definition_id': definition_id,
-                    'version':       new_version,
-                    'author':        author,
-                    'comment':       comment,
-                    'created_at':    now,
-                    'document':      document_text,
-                }
-                statement = insert(rule_version_table)
-                insert_result = session.execute(statement, version_values)
-                insert_result = cast_(CursorResult, insert_result)
-                primary_key = cast_(anytuple, insert_result.inserted_primary_key)
-                version_id = primary_key[0]
-
-                # .. append its history event in the same commit ..
-                payload = {'comment': comment}
-                _ = add_event(
-                    session,
-                    definition_id=definition_id,
-                    version=new_version,
-                    event_type=Event_Type_Version_Created,
-                    actor=author,
-                    payload=payload,
-                )
-
-                # .. a version created while the approval gate is on cannot go live yet,
-                # .. which the feed announces with its own awaiting-approval event ..
-                if is_gate_enabled(session, definition_id):
-                    _ = add_event(
-                        session,
-                        definition_id=definition_id,
-                        version=new_version,
-                        event_type=Event_Type_Approval_Requested,
-                        actor=author,
-                        payload=None,
-                    )
-
-                # .. and build the detached snapshot from the values just written, avoiding a redundant re-read.
-                version = RuleVersionRecord(
-                    id=version_id,
-                    definition_id=definition_id,
-                    version=new_version,
-                    author=author,
-                    comment=comment,
-                    created_at=now,
-                    document=document_text,
-                )
+            definition, version = self._session_factory.write(self._create_rows, definition_id, expected_current_version,
+                new_version, document_text, now, author, comment)
 
         # A uniqueness failure means another transaction claimed the same version ..
         except IntegrityError as e:
             message = f'Rule definition {definition_id} was changed while version {new_version} was being created'
             raise VersionConflictError(message) from e
-
-        # .. and every path releases the session.
-        finally:
-            session.close()
 
         # Announce the committed snapshot - for a vocabulary this is also an edit of its current document.
         self._announce_change(Change_Version_Created, definition_id, definition.name, definition.object_type)
@@ -165,55 +98,141 @@ class VersionStore:
 
 # ################################################################################################################################
 
+    def _create_rows(
+        self,
+        session:'Session',
+        definition_id:'int',
+        expected_current_version:'int',
+        new_version:'int',
+        document_text:'str',
+        now:'datetime',
+        author:'str',
+        comment:'str',
+        ) -> 'anytuple':
+        """ Writes the next version of a definition with its events and returns the definition and the version.
+        """
+        # Confirm that the definition exists and still accepts edits ..
+        definition = get_definition(session, definition_id)
+        if not definition.is_active:
+            message = f'Rule definition {definition_id} is archived'
+            raise InvalidStoreInputError(message)
+
+        # .. claim the next version with one optimistic update ..
+        statement = update(rule_definition_table)
+        id_condition = rule_definition_table.c.id == definition_id
+        version_condition = rule_definition_table.c.current_version == expected_current_version
+        statement = statement.where(id_condition)
+        statement = statement.where(version_condition)
+        statement = statement.values(current_version=new_version, document=document_text, updated_at=now)
+        result = session.execute(statement)
+        result = cast_(CursorResult, result)
+
+        if result.rowcount != 1:
+            message = f'Rule definition {definition_id} is no longer at version {expected_current_version}'
+            raise VersionConflictError(message)
+
+        # .. stage the immutable full snapshot ..
+        version_values = {
+            'definition_id': definition_id,
+            'version':       new_version,
+            'author':        author,
+            'comment':       comment,
+            'created_at':    now,
+            'document':      document_text,
+        }
+        statement = insert(rule_version_table)
+        insert_result = session.execute(statement, version_values)
+        insert_result = cast_(CursorResult, insert_result)
+        primary_key = cast_(anytuple, insert_result.inserted_primary_key)
+        version_id = primary_key[0]
+
+        # .. append its history event in the same commit ..
+        payload = {'comment': comment}
+        _ = add_event(
+            session,
+            definition_id=definition_id,
+            version=new_version,
+            event_type=Event_Type_Version_Created,
+            actor=author,
+            payload=payload,
+        )
+
+        # .. a version created while the approval gate is on cannot go live yet,
+        # .. which the feed announces with its own awaiting-approval event ..
+        if is_gate_enabled(session, definition_id):
+            _ = add_event(
+                session,
+                definition_id=definition_id,
+                version=new_version,
+                event_type=Event_Type_Approval_Requested,
+                actor=author,
+                payload=None,
+            )
+
+        # .. and build the detached snapshot from the values just written, avoiding a redundant re-read.
+        version = RuleVersionRecord(
+            id=version_id,
+            definition_id=definition_id,
+            version=new_version,
+            author=author,
+            comment=comment,
+            created_at=now,
+            document=document_text,
+        )
+
+        return definition, version
+
+# ################################################################################################################################
+
     def publish(self, *, definition_id:'int', version:'int', actor:'str') -> 'RuleVersionRecord':
         """ Makes exactly one existing snapshot live in an atomic transaction.
         """
         # Validate the actor before changing publication state ..
         require_text(actor, 'Publish actor')
-        session = self._session_factory()
-
-        try:
-            with session.begin():
-
-                # Resolve the active definition and target snapshot ..
-                definition = get_definition(session, definition_id)
-                if not definition.is_active:
-                    message = f'Rule definition {definition_id} is archived'
-                    raise InvalidStoreInputError(message)
-
-                target = get_version(session, definition_id, version)
-
-                # .. block publication while the approval gate is on and this snapshot
-                # .. has no approval matching its exact content ..
-                assert_version_publishable(session, definition_id, version, target.document)
-
-                # .. move the one live pointer, the promoted definition column, to the requested snapshot ..
-                statement = update(rule_definition_table)
-                id_condition = rule_definition_table.c.id == definition_id
-                statement = statement.where(id_condition)
-                now = utc_now()
-                statement = statement.values(live_version=version, updated_at=now)
-                _ = session.execute(statement)
-
-                # .. and append the publication event in the same commit.
-                payload = {'published_version': version}
-                _ = add_event(
-                    session,
-                    definition_id=definition_id,
-                    version=version,
-                    event_type=Event_Type_Version_Published,
-                    actor=actor,
-                    payload=payload,
-                )
-
-        # Release the transactional session in every case.
-        finally:
-            session.close()
+        definition, target = self._session_factory.write(self._publish_rows, definition_id, version, actor)
 
         # Announce the committed publication - servers re-read the live pointer on their next request.
         self._announce_change(Change_Version_Published, definition_id, definition.name, definition.object_type)
 
         return target
+
+# ################################################################################################################################
+
+    def _publish_rows(self, session:'Session', definition_id:'int', version:'int', actor:'str') -> 'anytuple':
+        """ Moves the live pointer of a definition to one snapshot with its event and returns the definition and the snapshot.
+        """
+        # Resolve the active definition and target snapshot ..
+        definition = get_definition(session, definition_id)
+        if not definition.is_active:
+            message = f'Rule definition {definition_id} is archived'
+            raise InvalidStoreInputError(message)
+
+        target = get_version(session, definition_id, version)
+
+        # .. block publication while the approval gate is on and this snapshot
+        # .. has no approval matching its exact content ..
+        assert_version_publishable(session, definition_id, version, target.document)
+
+        # .. move the one live pointer, the promoted definition column, to the requested snapshot ..
+        statement = update(rule_definition_table)
+        id_condition = rule_definition_table.c.id == definition_id
+        statement = statement.where(id_condition)
+        now = utc_now()
+        statement = statement.values(live_version=version, updated_at=now)
+        _ = session.execute(statement)
+
+        # .. and append the publication event in the same commit.
+        payload = {'published_version': version}
+        _ = add_event(
+            session,
+            definition_id=definition_id,
+            version=version,
+            event_type=Event_Type_Version_Published,
+            actor=actor,
+            payload=payload,
+        )
+
+        return definition, target
 
 # ################################################################################################################################
 
@@ -237,99 +256,112 @@ class VersionStore:
         require_text(comment, 'Restore comment')
         new_version = expected_current_version + 1
         now = utc_now()
-        session = self._session_factory()
 
         try:
-            with session.begin():
-
-                # Resolve both the current definition and the source snapshot ..
-                definition = get_definition(session, definition_id)
-                source = get_version(session, definition_id, source_version)
-
-                if not definition.is_active:
-                    message = f'Rule definition {definition_id} is archived'
-                    raise InvalidStoreInputError(message)
-
-                # .. claim a new current and live version with the source document ..
-                statement = update(rule_definition_table)
-                id_condition = rule_definition_table.c.id == definition_id
-                version_condition = rule_definition_table.c.current_version == expected_current_version
-                statement = statement.where(id_condition)
-                statement = statement.where(version_condition)
-                statement = statement.values(
-                    current_version=new_version,
-                    live_version=new_version,
-                    document=source.document,
-                    updated_at=now,
-                )
-                result = session.execute(statement)
-                result = cast_(CursorResult, result)
-
-                if result.rowcount != 1:
-                    message = f'Rule definition {definition_id} is no longer at version {expected_current_version}'
-                    raise VersionConflictError(message)
-
-                # .. preserve the restored document as a new immutable snapshot ..
-                restored_values = {
-                    'definition_id': definition_id,
-                    'version':       new_version,
-                    'author':        actor,
-                    'comment':       comment,
-                    'created_at':    now,
-                    'document':      source.document,
-                }
-                statement = insert(rule_version_table)
-                insert_result = session.execute(statement, restored_values)
-                insert_result = cast_(CursorResult, insert_result)
-                primary_key = cast_(anytuple, insert_result.inserted_primary_key)
-                restored_id = primary_key[0]
-
-                # .. record where the restored document came from ..
-                restored_payload = {'source_version': source_version, 'comment': comment}
-                _ = add_event(
-                    session,
-                    definition_id=definition_id,
-                    version=new_version,
-                    event_type=Event_Type_Version_Restored,
-                    actor=actor,
-                    payload=restored_payload,
-                )
-
-                # .. record publication in the same commit ..
-                published_payload = {'published_version': new_version}
-                _ = add_event(
-                    session,
-                    definition_id=definition_id,
-                    version=new_version,
-                    event_type=Event_Type_Version_Published,
-                    actor=actor,
-                    payload=published_payload,
-                )
-
-                # .. and build the detached restored snapshot from the values just written.
-                restored = RuleVersionRecord(
-                    id=restored_id,
-                    definition_id=definition_id,
-                    version=new_version,
-                    author=actor,
-                    comment=comment,
-                    created_at=now,
-                    document=source.document,
-                )
+            definition, restored = self._session_factory.write(self._restore_rows, definition_id, source_version,
+                expected_current_version, new_version, now, actor, comment)
 
         # A uniqueness failure means another transaction claimed the same version ..
         except IntegrityError as e:
             message = f'Rule definition {definition_id} was changed while version {new_version} was being restored'
             raise VersionConflictError(message) from e
 
-        # .. and every path releases the session.
-        finally:
-            session.close()
-
         # Announce the committed restore - it moved the live pointer just like a publish does.
         self._announce_change(Change_Version_Restored, definition_id, definition.name, definition.object_type)
 
         return restored
+
+# ################################################################################################################################
+
+    def _restore_rows(
+        self,
+        session:'Session',
+        definition_id:'int',
+        source_version:'int',
+        expected_current_version:'int',
+        new_version:'int',
+        now:'datetime',
+        actor:'str',
+        comment:'str',
+        ) -> 'anytuple':
+        """ Writes a copy of a past snapshot as the new current and live version with its events and returns the definition and the copy.
+        """
+        # Resolve both the current definition and the source snapshot ..
+        definition = get_definition(session, definition_id)
+        source = get_version(session, definition_id, source_version)
+
+        if not definition.is_active:
+            message = f'Rule definition {definition_id} is archived'
+            raise InvalidStoreInputError(message)
+
+        # .. claim a new current and live version with the source document ..
+        statement = update(rule_definition_table)
+        id_condition = rule_definition_table.c.id == definition_id
+        version_condition = rule_definition_table.c.current_version == expected_current_version
+        statement = statement.where(id_condition)
+        statement = statement.where(version_condition)
+        statement = statement.values(
+            current_version=new_version,
+            live_version=new_version,
+            document=source.document,
+            updated_at=now,
+        )
+        result = session.execute(statement)
+        result = cast_(CursorResult, result)
+
+        if result.rowcount != 1:
+            message = f'Rule definition {definition_id} is no longer at version {expected_current_version}'
+            raise VersionConflictError(message)
+
+        # .. preserve the restored document as a new immutable snapshot ..
+        restored_values = {
+            'definition_id': definition_id,
+            'version':       new_version,
+            'author':        actor,
+            'comment':       comment,
+            'created_at':    now,
+            'document':      source.document,
+        }
+        statement = insert(rule_version_table)
+        insert_result = session.execute(statement, restored_values)
+        insert_result = cast_(CursorResult, insert_result)
+        primary_key = cast_(anytuple, insert_result.inserted_primary_key)
+        restored_id = primary_key[0]
+
+        # .. record where the restored document came from ..
+        restored_payload = {'source_version': source_version, 'comment': comment}
+        _ = add_event(
+            session,
+            definition_id=definition_id,
+            version=new_version,
+            event_type=Event_Type_Version_Restored,
+            actor=actor,
+            payload=restored_payload,
+        )
+
+        # .. record publication in the same commit ..
+        published_payload = {'published_version': new_version}
+        _ = add_event(
+            session,
+            definition_id=definition_id,
+            version=new_version,
+            event_type=Event_Type_Version_Published,
+            actor=actor,
+            payload=published_payload,
+        )
+
+        # .. and build the detached restored snapshot from the values just written.
+        restored = RuleVersionRecord(
+            id=restored_id,
+            definition_id=definition_id,
+            version=new_version,
+            author=actor,
+            comment=comment,
+            created_at=now,
+            document=source.document,
+        )
+
+        return definition, restored
 
 # ################################################################################################################################
 

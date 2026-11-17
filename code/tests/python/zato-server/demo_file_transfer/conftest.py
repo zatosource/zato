@@ -27,7 +27,6 @@ import pytest
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 from zato.common.crypto.api import CryptoManager
 from zato.common.sftp_local import LocalSFTPServer
 from zato.common.test import kill_server_process
@@ -37,6 +36,7 @@ from zato.common.test.process_util import kill_process_tree
 from zato.common.util.local_server import read_pid_file, stop_pid
 from zato.common.util.tcp import get_free_port
 from zato.server.demo_file_transfer.common import get_paths, Root_Env_Name
+from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -250,9 +250,8 @@ def zato_server() -> 'any_':
     demo_root = os.path.join(quickstart_directory, 'demo-file-transfer')
     os.environ[Root_Env_Name] = demo_root
 
-    # .. and so does the audit log database the tests read the transfers from.
-    audit_db_path = os.path.join(quickstart_directory, 'audit.db')
-    pubsub_db_path = os.path.join(quickstart_directory, 'pubsub.db')
+    # .. and so does the Zato database the tests read the transfers from.
+    audit_db_path = os.path.join(quickstart_directory, 'zato.db')
 
     _patch_server_conf(server_directory, server_port)
 
@@ -263,9 +262,8 @@ def zato_server() -> 'any_':
     environment['Zato_Broker_HTTP_Port'] = str(find_free_port())
     environment['Zato_Scheduler_Stream_Prefix'] = _scheduler_stream_prefix
     environment['Zato_Scheduler_HTTP_Port'] = str(_scheduler_http_port)
-    environment['Zato_Audit_Log_DB_Type'] = AuditLogCtx.Type_SQLite
-    environment['Zato_Audit_Log_DB_Name'] = audit_db_path
-    environment['Zato_PubSub_DB_Path'] = pubsub_db_path
+    environment[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
+    environment[DatabaseEnv.Env_Path] = audit_db_path
 
     server_process = _start_server(zato_bin, server_directory, server_port, environment)
     listener_process = None

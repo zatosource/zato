@@ -23,8 +23,9 @@ from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.errors import is_transient
 from zato.common.db_env.outage import OutageTracker
 from zato.common.pubsub.sql.clock import get_database_clock
+from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.config import get_batch_size, get_delivered_max_days, get_delivered_max_messages, \
-    get_generation_file_path, get_pubsub_engine
+    get_generation_file_path
 from zato.common.pubsub.sql.counts import compact_counts
 from zato.common.pubsub.sql.generation import GenerationGuard, read_generation_file
 from zato.common.pubsub.sql.replaced import PubSubReplaced
@@ -126,9 +127,9 @@ class PubSubCleanup:
 
     @property
     def engine(self) -> 'Engine':
-        """ The engine of the pub/sub database that the Zato_PubSub_DB_* variables select.
+        """ The engine of the Zato database that the Zato_Database_* variables select.
         """
-        out = get_pubsub_engine()
+        out = get_database_engine()
         return out
 
 # ################################################################################################################################
@@ -576,7 +577,7 @@ def main() -> 'int':
     log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
     logging.basicConfig(level=log_level, format=log_format)
 
-    # .. load the Zato_PubSub_DB_* variables from the environment file if one was given -
+    # .. load the Zato_Database_* variables from the environment file if one was given -
     # .. without them, the default SQLite file is used ..
     if args.env_file:
         from zato.common.util.env import populate_environment_from_file

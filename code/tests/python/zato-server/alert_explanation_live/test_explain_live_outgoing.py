@@ -520,7 +520,7 @@ def _get_stored_explanations(outgoing:'_OutgoingDescription') -> 'anylist':
     """ Every explanation the live server stored for the connection, read off its own ODB - the proofs share
     the server, so this one reads the explanations of its own connections alone.
     """
-    path = os.path.join(os.path.dirname(LiveServer.server_directory), 'zato.db')
+    path = os.path.join(os.path.dirname(LiveServer.server_directory), 'config.db')
     session_maker = sessionmaker(bind=create_engine(f'sqlite:///{path}'))
 
     store = ExplanationStore(session_maker)
@@ -630,7 +630,7 @@ def _wait_for_soap_pings(count:'int') -> 'anylist':
 def _get_stored_soap_health_explanations() -> 'anylist':
     """ Every explanation the live server stored for the SOAP connection's health check, read off its own ODB.
     """
-    path = os.path.join(os.path.dirname(LiveServer.server_directory), 'zato.db')
+    path = os.path.join(os.path.dirname(LiveServer.server_directory), 'config.db')
     session_maker = sessionmaker(bind=create_engine(f'sqlite:///{path}'))
 
     store = ExplanationStore(session_maker)

@@ -24,7 +24,8 @@ from zato.common.alerting.object_config import alert_type_mllp_outgoing, get_def
 from zato.common.alerting.seed.rules_mllp import mllp_channel_rules, mllp_outgoing_rules
 from zato.common.alerting.sweep import run_sweep
 from zato.common.api import Alerting
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditLog, AuditSource
+from zato.common.audit_log.api import event_table, AuditLog, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.hl7.audit import audit_ack_received, audit_message_sent, ACKStatus
 from zato.common.rule_engine.loading import load_documents
 from zato.common.rule_engine.parser import parse_data_details
@@ -230,7 +231,7 @@ class TestNegativeAcks:
 
     def test_the_rules_default_codes_count_every_negative_ack(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Two rejects and one application error out of thirty-six messages - under the error rate's tenth,
@@ -253,7 +254,7 @@ class TestNegativeAcks:
 
     def test_the_connections_own_codes_stand_in_for_the_rules_default(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Three application errors and nothing else negative
@@ -281,7 +282,7 @@ class TestNegativeAcks:
 
     def test_three_rejects_fire_on_a_connection_naming_the_rejects(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_failures(audit_log, engine, now, 'rej', 3, 'AR')
@@ -299,7 +300,7 @@ class TestNegativeAcks:
 
     def test_the_connections_own_threshold_stands_in_for_the_rules_default(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_failures(audit_log, engine, now, 'thr', 1, 'AR')
@@ -320,7 +321,7 @@ class TestNegativeAcks:
 
     def test_the_acks_window_of_the_connection_applies_to_the_acks_alone(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Three rejects half an hour back - outside the rule's five minutes, inside the connection's own hour
@@ -342,7 +343,7 @@ class TestNegativeAcks:
 
     def test_the_connections_own_llm_connection_rides_in_the_outcome(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_failures(audit_log, engine, now, 'llm', 3, 'CR')
@@ -371,7 +372,7 @@ class TestConnectionFailures:
 
     def test_three_timeouts_are_connection_failures_and_not_negative_acks(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_failures(audit_log, engine, now, 'to', 3, ACKStatus.Timeout)
@@ -390,7 +391,7 @@ class TestConnectionFailures:
 
     def test_the_connections_own_threshold_and_window_apply_to_the_failures(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Two timeouts half an hour back - under the rule's three and outside its five minutes
@@ -415,7 +416,7 @@ class TestTheOtherRules:
 
     def test_a_connection_with_alerts_off_is_skipped_while_another_still_raises(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_failures(audit_log, engine, now, 'off-a', 5, 'AR')
@@ -436,7 +437,7 @@ class TestTheOtherRules:
 
     def test_a_streak_of_failures_is_a_connection_down(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_message(audit_log, engine, now, 'streak-0', 'AA')
@@ -453,7 +454,7 @@ class TestTheOtherRules:
 
     def test_slow_acknowledgments_are_slow_responses(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_message(audit_log, engine, now, 'slow-1', 'AA', duration_ms=6000)

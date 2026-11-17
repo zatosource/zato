@@ -53,13 +53,13 @@ def _new_atomic(msg_id:'str', expected_attempt:'int', publication:'BuiltPublicat
 
 # ################################################################################################################################
 
-def _new_lease(now_ms:'int', max_messages:'int') -> 'PendingLease':
+def _new_lease(backend:'SQLPubSubBackend', now_ms:'int', max_messages:'int') -> 'PendingLease':
     """ Returns a lease of the messages of the input subscriber as of the given time.
     """
     lease_ms = get_lease_ms()
     leased_until_ms = now_ms + lease_ms
 
-    out = new_pending_lease(Input_Sub_Key, max_messages, _lease_max_len, now_ms, leased_until_ms)
+    out = new_pending_lease(Input_Sub_Key, max_messages, _lease_max_len, now_ms, leased_until_ms, backend._on_leased)
     return out
 
 # ################################################################################################################################
@@ -67,7 +67,7 @@ def _new_lease(now_ms:'int', max_messages:'int') -> 'PendingLease':
 def _write_batch(backend:'SQLPubSubBackend', batch:'anylist') -> 'None':
     """ Writes the items in one commit, as the commit queue writes the items of its concurrent callers.
     """
-    backend._writer._write_transaction(backend.engine, batch)
+    _ = backend._writer._write_transaction(backend.engine, batch)
 
 # ################################################################################################################################
 
@@ -195,7 +195,7 @@ def run_lease_after_ack_in_batch_scenario() -> 'None':
     acknowledged = _new_atomic(first_msg_id, attempts[first_msg_id], publication)
 
     # .. in the same commit as a new lease, which is listed first ..
-    pending_lease = _new_lease(later_ms, _shared_lease_max_messages)
+    pending_lease = _new_lease(backend, later_ms, _shared_lease_max_messages)
     _write_batch(backend, [pending_lease, acknowledged])
 
     # .. so the acknowledgement is committed and the lease hands out the other message alone, with its next attempt.
@@ -217,8 +217,8 @@ def run_two_leases_in_batch_scenario() -> 'None':
 
     now_ms = backend.clock.now_ms()
 
-    first_lease = _new_lease(now_ms, _shared_lease_max_messages)
-    second_lease = _new_lease(now_ms, _shared_lease_max_messages)
+    first_lease = _new_lease(backend, now_ms, _shared_lease_max_messages)
+    second_lease = _new_lease(backend, now_ms, _shared_lease_max_messages)
 
     _write_batch(backend, [first_lease, second_lease])
 

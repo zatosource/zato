@@ -16,7 +16,7 @@ from sqlalchemy import text
 
 # Zato
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
-from zato.common.pubsub.sql.config import get_pubsub_engine
+from zato.common.db_env.database import get_database_engine
 from zato.common.test.pubsub_database import connect, get_container_settings, ModuleCtx
 from zato.common.test.pubsub_profile import Managed_Profiles
 
@@ -128,7 +128,7 @@ def test_role(managed_database:'ManagedDatabase') -> 'None':
     """
     profile = Managed_Profiles[managed_database.database.profile_name]
 
-    with get_pubsub_engine().connect() as connection:
+    with get_database_engine().connect() as connection:
         role = connection.execute(_role_query, {'admin_role': profile.admin_role}).one()
         foreign_tables = connection.execute(_foreign_tables_query).scalar_one()
         is_ssl = connection.execute(_ssl_query).scalar_one()

@@ -8,16 +8,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-import os
 
 # Zato
 from zato.common.alerting.config_store import apply_type_config
 from zato.common.alerting.notification_config import set_notification_config
 from zato.common.alerting.seed import ensure_alerting_definitions
 from zato.common.api import Alerting, GENERIC
+from zato.common.db_env.database import get_database_engine
 from zato.common.odb.model import GenericConn
-from zato.common.rule_engine.sql import create_database_engine, create_schema, RuleSQLBackend
-from zato.common.rule_engine.sql.constants import Default_DB_URL, Env_DB_URL
+from zato.common.rule_engine.sql import RuleSQLBackend
 from zato.common.util.scheduler import ensure_alerting_job_exists
 
 # ################################################################################################################################
@@ -76,25 +75,9 @@ def _ensure_llm_connection_exists(name:'str', session:'SASession') -> 'None':
 # ################################################################################################################################
 
 def get_rule_backend() -> 'RuleSQLBackend':
-    """ The typed SQL facade over the rule store, resolved through the same
-    Env_DB_URL and Default_DB_URL the server's own get_backend uses.
+    """ The typed SQL facade over the rule engine tables of the Zato database.
     """
-    # The URL is the same one the rule engine dashboard reads ..
-    database_url = os.environ.get(Env_DB_URL)
-
-    if not database_url:
-        database_url = Default_DB_URL
-
-    # .. an SQLite connection has to be shareable between threads ..
-    if database_url.startswith('sqlite'):
-        connection_options = {'check_same_thread': False}
-        engine = create_database_engine(database_url, connect_args=connection_options)
-    else:
-        engine = create_database_engine(database_url)
-
-    # The tables come into being on first run and every later call is a no-op
-    create_schema(engine)
-
+    engine = get_database_engine()
     out = RuleSQLBackend.from_engine(engine)
     return out
 

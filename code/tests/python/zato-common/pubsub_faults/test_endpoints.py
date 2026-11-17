@@ -11,7 +11,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # its retries run out, and each repeated copy has a higher attempt number.
 
 # stdlib
-import os
 from time import monotonic
 
 # gevent
@@ -25,10 +24,10 @@ from endpoints import Behavior_Late_OK, Behavior_Mid_Close, Behavior_Normal, Beh
     Behavior_Slow_Reader, Behavior_TLS_Stall, Endpoint
 from toxiproxy import Stream_Upstream, Toxiproxy
 from zato.common.api import PubSub
-from zato.common.audit_log.api import AuditLog, get_audit_engine
+from zato.common.audit_log.api import AuditLog
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import AuditEvent
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
-from zato.common.test.pubsub_database import pubsub_db_env
 from zato.common.test.rest_push import RESTPushStore
 from zato.server.base.parallel.delivery import PushDelivery
 
@@ -249,7 +248,7 @@ def _get_failed_msg_ids(name:'str') -> 'strlist':
     sub_key = _get_sub_key(name)
     params = {'event_type': AuditEvent.Delivery_Failed, 'sub_key': sub_key}
 
-    with get_audit_engine().connect() as connection:
+    with get_database_engine().connect() as connection:
         rows = connection.execute(_failed_events_query, params).fetchall()
 
     out:'strlist' = []
@@ -378,7 +377,6 @@ def _run_endpoints(toxiproxy:'Toxiproxy') -> 'None':
         push_delivery.stop()
         run.stop_endpoints()
 
-    audit_log.flush()
     _check(run)
 
 # ################################################################################################################################
@@ -388,15 +386,11 @@ def test_endpoints(endpoint_work_dir:'str') -> 'None':
     """ Push endpoints that read slowly, never respond, respond late, close in the middle of a response, stall
     the TLS handshake or redirect, and push links that are slow, limited, sliced, held, reset or cut.
     """
-    audit_db_path = os.path.join(endpoint_work_dir, 'audit.db')
-    audit_env:'strstrdict' = {'Zato_Audit_Log_DB_Name': audit_db_path}
-
     toxiproxy = Toxiproxy('endpoints')
     toxiproxy.start()
 
     try:
-        with pubsub_db_env(audit_env):
-            _run_endpoints(toxiproxy)
+        _run_endpoints(toxiproxy)
     finally:
         toxiproxy.stop()
 

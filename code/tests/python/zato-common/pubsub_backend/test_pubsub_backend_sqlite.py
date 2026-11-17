@@ -20,7 +20,7 @@ from scenarios import run_common_scenarios
 def test_pubsub_backend_sqlite(tmp_path:'os.PathLike') -> 'None':
     """ The complete pub/sub backend scenario against the default SQLite backend.
     """
-    db_path = os.path.join(str(tmp_path), 'pubsub.db')
+    db_path = os.path.join(str(tmp_path), 'zato.db')
 
     with pubsub_path_env(db_path):
         run_common_scenarios()

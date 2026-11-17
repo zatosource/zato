@@ -386,7 +386,7 @@ def start_replicated_database(label:'str', mode:'str', is_sync:'bool') -> 'Repli
     _start_proxy(out)
 
     out.env = dict(primary.env)
-    out.env['Zato_PubSub_DB_Port'] = f'{out.proxy_port}'
+    out.env['Zato_Database_Port'] = f'{out.proxy_port}'
 
     if primary.profile_name:
         runtime_dir = get_runtime_dir()

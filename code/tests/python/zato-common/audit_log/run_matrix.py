@@ -69,9 +69,6 @@ _certificate_dir_mode = 0o755
 # The backends every UI test runs against, in this order
 _backend_names = ('sqlite', 'postgresql', 'postgresql-ssl')
 
-# The prefix all the audit log database environment variables share
-_env_prefix = 'Zato_Audit_Log_DB_'
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -110,7 +107,7 @@ def main() -> 'None':
     """ Runs every audit log test - the dashboard UI ones and the unit ones that write
     to the audit log directly - against every backend: sqlite and PostgreSQL,
     the latter both plain and TLS-required. The UI tests create their own
-    server and dashboard which inherit the Zato_Audit_Log_DB_* variables set here.
+    server and dashboard which inherit the Zato_Database_* variables set here.
     """
 
     # Certificates for the TLS-required containers
@@ -144,8 +141,8 @@ def main() -> 'None':
         # The per-backend environments the components are restarted with
         backend_env:'stranydict' = {
             'sqlite': {},
-            'postgresql': build_env(_env_prefix, servers['postgresql'].details),
-            'postgresql-ssl': build_env(_env_prefix, servers['postgresql-ssl'].details),
+            'postgresql': build_env(servers['postgresql'].details),
+            'postgresql-ssl': build_env(servers['postgresql-ssl'].details),
         }
 
         for backend_name in _backend_names:

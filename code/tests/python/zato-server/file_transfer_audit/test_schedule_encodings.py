@@ -22,7 +22,8 @@ from pytest import fixture, mark
 
 # Zato
 from zato.common.api import FileTransfer
-from zato.common.audit_log.api import get_audit_engine, AuditEvent, AuditOutcome
+from zato.common.audit_log.api import AuditEvent, AuditOutcome
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import Env_Max_Attachment_Size, list_attachments
 from zato.common.audit_log.file_transfer import load_transfer_content, Operation_Read
 from zato.common.file_transfer.api import Default_Encoding, Encoding, Encoding_List
@@ -299,7 +300,7 @@ def test_stored_content_over_the_cap_keeps_only_its_metadata(tmp_path:'any_', mo
 
         read = _get_read_event(get_events())
 
-        engine = get_audit_engine()
+        engine = get_database_engine()
         items = list_attachments(engine, read['id'])
 
         assert len(items) == 1

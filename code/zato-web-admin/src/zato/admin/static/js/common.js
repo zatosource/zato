@@ -85,8 +85,6 @@ $.namespace('zato.cloud.microsoft_power_automate');
 $.namespace('zato.cloud.salesforce');
 $.namespace('zato.common');
 $.namespace('zato.common.security');
-$.namespace('zato.config_db');
-$.namespace('zato.config_db.sql');
 $.namespace('zato.config_files');
 $.namespace('zato.config_files.combo');
 $.namespace('zato.config_files.convert');

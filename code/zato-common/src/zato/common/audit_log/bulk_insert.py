@@ -12,7 +12,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.common import event_table
+from zato.common.audit_log.attachment import build_attachment_rows
+from zato.common.audit_log.attr_rows import build_attr_rows
+from zato.common.audit_log.common import event_attr_table, event_body_table, event_link_table, event_table
+from zato.common.crypto.api import CryptoManager
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.pg8000_copy import copy_rows
 from zato.common.db_env.plain_sql import PlainStatement
@@ -23,13 +26,16 @@ from zato.common.db_env.plain_sql import PlainStatement
 if 0:
     from sqlalchemy.engine import Connection, Dialect
     from sqlalchemy.sql.schema import Table
-    from zato.common.typing_ import anydict, dictlist, intlist
+    from zato.common.audit_log.pending import pending_event_list
+    from zato.common.typing_ import anydict, anylist, dictlist, intlist
 
     # Dummy assignments to satisfy type checkers
+    anylist = anylist
     Connection = Connection
     Dialect = Dialect
     dictlist = dictlist
     intlist = intlist
+    pending_event_list = pending_event_list
     Table = Table
 
 # ################################################################################################################################
@@ -131,6 +137,75 @@ def insert_rows(connection:'Connection', table:'Table', rows:'dictlist') -> 'Non
             _insert_statements[table.name] = insert_statement
 
         _ = insert_statement.insert_rows(connection, rows)
+
+# ################################################################################################################################
+
+def insert_pending_events(connection:'Connection', batch:'pending_event_list') -> 'intlist':
+    """ Inserts the events of one batch with their attributes, bodies and lineage links in the transaction
+    of the connection, with one statement per table, and returns the ids of the events in the order of the batch.
+    """
+
+    # The id of the commit identifies the event rows of this batch on the databases that need it
+    commit_id = CryptoManager.generate_hex_string()
+
+    event_rows:'anylist' = []
+
+    for pending in batch:
+        event_rows.append(pending.values)
+
+    # The companion rows of all the events, one list per table
+    attr_rows:'anylist' = []
+    body_rows:'anylist' = []
+    link_rows:'anylist' = []
+
+    # The event rows come first, so everything else can reference their ids ..
+    out = insert_events(connection, event_rows, commit_id)
+
+    for pending, event_id in zip(batch, out):
+
+        # .. the export needs the id once the batch is written ..
+        pending.event_id = event_id
+        event_time = pending.values['event_time']
+
+        # .. searchable attributes ..
+        if pending.attrs:
+            event_attr_rows = build_attr_rows(event_id, pending.attrs)
+            attr_rows.extend(event_attr_rows)
+
+        # .. message bodies, stamped with the event's own time so pruning never needs a join ..
+        for kind, body_data in pending.bodies.items():
+            body_rows.append({
+                'event_id': event_id,
+                'kind': kind,
+                'event_time': event_time,
+                'data': body_data,
+                'content': None,
+            })
+
+        # .. attachments, one body row each, stamped the same way ..
+        if pending.attachments:
+            attachment_rows = build_attachment_rows(event_id, event_time, pending.attachments)
+            body_rows.extend(attachment_rows)
+
+        # .. lineage links to parent events ..
+        for parent_event_id in pending.parents:
+            link_rows.append({
+                'child_event_id': event_id,
+                'parent_event_id': parent_event_id,
+                'link_type': pending.parent_link_type,
+            })
+
+    # .. and one statement for each of the tables that has rows to write.
+    if attr_rows:
+        insert_rows(connection, event_attr_table, attr_rows)
+
+    if body_rows:
+        insert_rows(connection, event_body_table, body_rows)
+
+    if link_rows:
+        insert_rows(connection, event_link_table, link_rows)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

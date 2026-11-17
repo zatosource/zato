@@ -17,7 +17,6 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.db_env.engine import get_sqlite_file_engine
-from zato.common.ha.common import Not_Replicated
 from zato.common.pubsub.sql.schema import message_table, metadata
 from zato.common.typing_ import cast_
 
@@ -117,9 +116,8 @@ def wait_for_topic_message(
     """ Waits until the SQL pub/sub store receives a message published to the given topic
     whose data preview contains the marker and returns that message's row as a dict.
     """
-    # The store the server publishes to - the file the server was started with through Zato_PubSub_DB_Path
-    engine = get_sqlite_file_engine(pubsub_db_path, metadata, needs_pool=False, needs_background_checkpoint=False,
-        replicated_database=Not_Replicated)
+    # The store the server publishes to - the file the server was started with through Zato_Database_Path
+    engine = get_sqlite_file_engine(pubsub_db_path, metadata, needs_pool=False, needs_background_checkpoint=False)
 
     # Topic names are lowercased on publish
     topic_name = topic_name.lower()

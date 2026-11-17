@@ -20,9 +20,10 @@ from django.http import QueryDict
 
 # Zato
 from zato.admin.web.views.audit_log import attachment_download, attachments
-from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource, ModuleCtx as AuditLogCtx
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.attachment import build_attachment
 from zato.common.ext.bunch import Bunch
+from zato.common.test.database_env import DatabaseEnv
 
 # Test support
 from live_sql.env import database_env
@@ -52,9 +53,6 @@ _csv_name = 'codes.csv'
 _csv_type = 'text/csv'
 _csv_content = b'code,label\nA1,First\n'
 
-# The prefix all the audit log database environment variables share
-_env_prefix = 'Zato_Audit_Log_DB_'
-
 # Who is logged into the dashboard in these tests
 _username = 'dashboard.reader'
 
@@ -66,14 +64,14 @@ def _event_with_attachments(tmp_path:'any_') -> 'envgen':
     """ Points the audit log at a throwaway SQLite database holding one event with two
     attachments and hands the event's id to the block.
     """
-    db_path = os.path.join(str(tmp_path), 'audit.db')
+    db_path = os.path.join(str(tmp_path), 'zato.db')
 
     details = {
-        'type': AuditLogCtx.Type_SQLite,
-        'name': db_path,
+        'type': DatabaseEnv.Type_SQLite,
+        'path': db_path,
     }
 
-    with database_env(_env_prefix, details):
+    with database_env(details):
 
         audit_log = AuditLog(_server_name)
 

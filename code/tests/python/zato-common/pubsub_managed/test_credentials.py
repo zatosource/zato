@@ -27,7 +27,7 @@ if 0:
 # ################################################################################################################################
 
 # The variable with the path to the file that holds the password of pub/sub.
-_env_password_file = 'Zato_PubSub_DB_Password_File'
+_env_password_file = 'Zato_Database_Password_File'
 
 # How many rotations a run must include at the least.
 _min_rotations = 2

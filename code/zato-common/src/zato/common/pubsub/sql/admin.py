@@ -15,7 +15,7 @@ from sqlalchemy import and_, BigInteger, cast, func, select
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.db_env.engine import call_database
+from zato.common.db_env.engine import call_database, execute_write
 from zato.common.pubsub.sql.browse import SQLBrowseAPI
 from zato.common.pubsub.sql.config import get_batch_size
 from zato.common.pubsub.sql.counts import Milliseconds_Per_Minute, No_Publisher
@@ -449,7 +449,18 @@ class SQLAdminAPI(SQLBrowseAPI):
         """
         topic_name = topic_name.lower()
 
-        with self.engine.begin() as connection:
+        out = call_database(self.engine, self._delete_message, self.engine, sub_key, topic_name, msg_id)
+
+        logger.info('delete_message -> sub_key:%s, topic_name:%s, msg_id:%s', sub_key, topic_name, msg_id)
+
+        return out
+
+# ################################################################################################################################
+
+    def _delete_message(self, engine:'Engine', sub_key:'str', topic_name:'str', msg_id:'str') -> 'bool':
+        """ Deletes one message from a subscriber's queue and returns whether the message row itself was removed.
+        """
+        with engine.begin() as connection:
 
             # Map the public identifier to the message row ..
             query = select(message_table.c.id)
@@ -487,8 +498,6 @@ class SQLAdminAPI(SQLBrowseAPI):
             message_delete = message_delete.where(message_table.c.id == message_id)
             _ = connection.execute(message_delete)
 
-        logger.info('delete_message -> sub_key:%s, topic_name:%s, msg_id:%s', sub_key, topic_name, msg_id)
-
         return True
 
 # ################################################################################################################################
@@ -524,8 +533,7 @@ class SQLAdminAPI(SQLBrowseAPI):
             data_preview=data_preview if data_preview else None,
         )
 
-        with self.engine.begin() as connection:
-            result = connection.execute(update_statement)
+        result = execute_write(self.engine, update_statement)
 
         # .. and the payloads kept from earlier deliveries are dropped, or the next delivery would send
         # the replaced one instead.
@@ -540,8 +548,42 @@ class SQLAdminAPI(SQLBrowseAPI):
 
 # ################################################################################################################################
 
+    def _update_topic_name_batch(self, engine:'Engine', table:'any_', old_topic_name:'str', new_topic_name:'str',
+        batch_size:'int') -> 'bool':
+        """ Renames a topic in one bounded batch of rows of a table, in a transaction of its own,
+        and returns whether the read found any rows, so the caller knows whether the table still has more.
+        """
+        with engine.begin() as connection:
+
+            # Take the next batch of rows still carrying the old name ..
+            query = select(table.c.id)
+            query = query.where(table.c.topic_name == old_topic_name)
+            query = query.limit(batch_size)
+
+            rows = connection.execute(query).fetchall()
+
+            if not rows:
+                return False
+
+            row_ids:'intlist' = []
+
+            for row in rows:
+                row_ids.append(row.id)
+
+            # .. and point them at the new name.
+            update_statement = table.update()
+            update_statement = update_statement.where(table.c.id.in_(row_ids))
+            update_statement = update_statement.values(topic_name=new_topic_name)
+
+            _ = connection.execute(update_statement)
+
+        return True
+
+# ################################################################################################################################
+
     def _update_topic_name_in_batches(self, table:'any_', old_topic_name:'str', new_topic_name:'str') -> 'None':
-        """ Renames a topic in one table, a bounded batch of rows at a time.
+        """ Renames a topic in one table, a bounded batch of rows at a time, each batch committed in turn
+        with the other writes of the server to the same SQLite file.
         """
         batch_size = get_batch_size()
 
@@ -549,31 +591,14 @@ class SQLAdminAPI(SQLBrowseAPI):
 
             batch_started = monotonic()
 
-            with self.engine.begin() as connection:
+            rows_found = call_database(self.engine, self._update_topic_name_batch, self.engine, table,
+                old_topic_name, new_topic_name, batch_size)
 
-                # Take the next batch of rows still carrying the old name ..
-                query = select(table.c.id)
-                query = query.where(table.c.topic_name == old_topic_name)
-                query = query.limit(batch_size)
+            # An empty read means the table holds no more rows of the old name ..
+            if not rows_found:
+                break
 
-                rows = connection.execute(query).fetchall()
-
-                if not rows:
-                    break
-
-                row_ids:'intlist' = []
-
-                for row in rows:
-                    row_ids.append(row.id)
-
-                # .. and point them at the new name.
-                update_statement = table.update()
-                update_statement = update_statement.where(table.c.id.in_(row_ids))
-                update_statement = update_statement.values(topic_name=new_topic_name)
-
-                _ = connection.execute(update_statement)
-
-            # Let the other greenlets run between the batches.
+            # .. let the other greenlets run between the batches.
             self._yield_after_batch(monotonic() - batch_started)
 
 # ################################################################################################################################
@@ -593,16 +618,47 @@ class SQLAdminAPI(SQLBrowseAPI):
         update_statement = update_statement.where(topic_sub_table.c.topic_name == old_topic_name)
         update_statement = update_statement.values(topic_name=new_topic_name)
 
-        with self.engine.begin() as connection:
-            result = connection.execute(update_statement)
+        result = execute_write(self.engine, update_statement)
 
         logger.info('rename_topic -> old:%s, new:%s, subscribers_updated:%d',
             old_topic_name, new_topic_name, result.rowcount)
 
 # ################################################################################################################################
 
+    def _delete_topic_rows_batch(self, engine:'Engine', table:'any_', topic_name:'str', batch_size:'int') -> 'bool':
+        """ Deletes one bounded batch of a topic's rows from a table, in a transaction of its own,
+        and returns whether the read found any rows, so the caller knows whether the table still has more.
+        """
+        with engine.begin() as connection:
+
+            # Take the next batch of this topic's rows ..
+            query = select(table.c.id)
+            query = query.where(table.c.topic_name == topic_name)
+            query = query.limit(batch_size)
+
+            rows = connection.execute(query).fetchall()
+
+            if not rows:
+                return False
+
+            row_ids:'intlist' = []
+
+            for row in rows:
+                row_ids.append(row.id)
+
+            # .. and delete them.
+            delete_statement = table.delete()
+            delete_statement = delete_statement.where(table.c.id.in_(row_ids))
+
+            _ = connection.execute(delete_statement)
+
+        return True
+
+# ################################################################################################################################
+
     def _delete_topic_rows_in_batches(self, table:'any_', topic_name:'str') -> 'None':
-        """ Deletes all of one topic's rows from a table, a bounded batch at a time.
+        """ Deletes all of one topic's rows from a table, a bounded batch at a time, each batch committed in turn
+        with the other writes of the server to the same SQLite file.
         """
         batch_size = get_batch_size()
 
@@ -610,30 +666,13 @@ class SQLAdminAPI(SQLBrowseAPI):
 
             batch_started = monotonic()
 
-            with self.engine.begin() as connection:
+            rows_found = call_database(self.engine, self._delete_topic_rows_batch, self.engine, table, topic_name, batch_size)
 
-                # Take the next batch of this topic's rows ..
-                query = select(table.c.id)
-                query = query.where(table.c.topic_name == topic_name)
-                query = query.limit(batch_size)
+            # An empty read means the table holds no more rows of the topic ..
+            if not rows_found:
+                break
 
-                rows = connection.execute(query).fetchall()
-
-                if not rows:
-                    break
-
-                row_ids:'intlist' = []
-
-                for row in rows:
-                    row_ids.append(row.id)
-
-                # .. and delete them.
-                delete_statement = table.delete()
-                delete_statement = delete_statement.where(table.c.id.in_(row_ids))
-
-                _ = connection.execute(delete_statement)
-
-            # Let the other greenlets run between the batches.
+            # .. let the other greenlets run between the batches.
             self._yield_after_batch(monotonic() - batch_started)
 
 # ################################################################################################################################
@@ -653,8 +692,7 @@ class SQLAdminAPI(SQLBrowseAPI):
         delete_statement = topic_sub_table.delete()
         delete_statement = delete_statement.where(topic_sub_table.c.topic_name == topic_name)
 
-        with self.engine.begin() as connection:
-            result = connection.execute(delete_statement)
+        result = execute_write(self.engine, delete_statement)
 
         logger.info('delete_topic -> topic_name:%s, subscribers_removed:%d', topic_name, result.rowcount)
 

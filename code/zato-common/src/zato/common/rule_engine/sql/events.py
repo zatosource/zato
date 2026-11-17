@@ -20,6 +20,15 @@ from .store_common import add_event, get_definition, newest_event_id, require_te
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from sqlalchemy.orm import Session
+
+    # Dummy assignments to satisfy type checkers
+    Session = Session
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class EventStore:
     """ Append-only review, state, publication, follow, test and activity events.
     """
@@ -43,27 +52,35 @@ class EventStore:
         # Validate the feed fields before opening a transaction ..
         require_text(event_type, 'Event type')
         require_text(actor, 'Event actor')
-        session = self._session_factory()
+        out = self._session_factory.write(self._append_row, definition_id, version, event_type, actor, payload)
 
-        try:
-            with session.begin():
+        return out
 
-                # Confirm the parent inside the same transaction ..
-                _ = get_definition(session, definition_id)
+# ################################################################################################################################
 
-                # .. and append the event as the transaction's only write.
-                out = add_event(
-                    session,
-                    definition_id=definition_id,
-                    version=version,
-                    event_type=event_type,
-                    actor=actor,
-                    payload=payload,
-                )
+    def _append_row(
+        self,
+        session:'Session',
+        definition_id:'int',
+        version:'int | None',
+        event_type:'str',
+        actor:'str',
+        payload:'anydict | None',
+        ) -> 'RuleEventRecord':
+        """ Appends one event after confirming that its parent definition exists and returns the event.
+        """
+        # Confirm the parent inside the same transaction ..
+        _ = get_definition(session, definition_id)
 
-        # Release the transactional session in every case.
-        finally:
-            session.close()
+        # .. and append the event as the transaction's only write.
+        out = add_event(
+            session,
+            definition_id=definition_id,
+            version=version,
+            event_type=event_type,
+            actor=actor,
+            payload=payload,
+        )
 
         return out
 

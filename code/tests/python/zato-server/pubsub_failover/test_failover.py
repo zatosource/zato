@@ -200,8 +200,8 @@ def test_takeover_after_kill(failover_env:'FailoverEnvironment', stop_command:'s
     switch_seconds = time.monotonic() - kill_time
     logger.info('Kill to takeover: %.1fs', switch_seconds)
 
-    # .. its audit log records the takeover from the generation of the old server ..
-    takeovers = read_audit_takeovers(env.server_b, generation)
+    # .. the audit log records the takeover from the generation of the old server ..
+    takeovers = read_audit_takeovers(env.database, generation)
     assert takeovers == [(generation, generation + 1)], takeovers
 
     # .. it hands out every message to the pull subscriber ..
@@ -316,7 +316,7 @@ def test_takeover_from_cut_off_server(failover_env:'FailoverEnvironment') -> 'No
     server_a.env['Zato_Config_Bind_Port'] = str(internal_port)
 
     database_proxy = LinkProxy(find_free_port(), env.database.port, os.path.join(env.work_dir, 'proxy-database.log'))
-    server_a.env['Zato_PubSub_DB_Port'] = str(database_proxy.listen_port)
+    server_a.env['Zato_Database_Port'] = str(database_proxy.listen_port)
 
     http_proxy = LinkProxy(server_a.port, internal_port, os.path.join(env.work_dir, 'proxy-http.log'))
 
@@ -388,7 +388,7 @@ def test_takeover_from_open_session(failover_env:'FailoverEnvironment') -> 'None
     # A session locks the row of the generation and stays open ..
     blocker = connect(env.database)
     cursor = blocker.cursor()
-    cursor.execute('select generation from pubsub_active where id = 1 for share')
+    cursor.execute('select generation from zato_active where id = 1 for share')
 
     # .. the standby is started ..
     start = time.monotonic()

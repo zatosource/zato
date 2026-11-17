@@ -16,8 +16,8 @@ from sqlalchemy.pool import QueuePool
 # Zato
 from common import pubsub_path_env
 from zato.common.defaults import default_env_base_dir
-from zato.common.pubsub.sql.config import get_pubsub_db_path, get_pubsub_engine, ModuleCtx
-from zato.common.pubsub.sql.schema import pubsub_db_file_name
+from zato.common.db_env.database import get_database_engine, get_database_sqlite_path
+from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,7 +32,7 @@ if 0:
 # ################################################################################################################################
 
 _expected_tables = {
-    'pubsub_active',
+    'zato_active',
     'pubsub_delivery',
     'pubsub_message',
     'pubsub_publish_count',
@@ -48,10 +48,10 @@ _expected_tables = {
 def test_default_path(monkeypatch:'MonkeyPatch') -> 'None':
     """ Without the environment variable, the store is the default file under the environment directory.
     """
-    monkeypatch.delenv(ModuleCtx.Env_Path, raising=False)
+    monkeypatch.delenv(DatabaseEnv.Env_Path, raising=False)
 
-    db_path = get_pubsub_db_path()
-    expected_path = os.path.join(default_env_base_dir, pubsub_db_file_name)
+    db_path = get_database_sqlite_path()
+    expected_path = os.path.join(default_env_base_dir, DatabaseEnv.File_Name)
 
     assert db_path == expected_path, f'Expected `{expected_path}`, got `{db_path}`'
 
@@ -63,10 +63,10 @@ def test_path_from_environment(tmp_path:'os.PathLike') -> 'None':
     db_path = os.path.join(str(tmp_path), 'store', 'pubsub-custom.db')
 
     with pubsub_path_env(db_path):
-        resolved_path = get_pubsub_db_path()
+        resolved_path = get_database_sqlite_path()
         assert resolved_path == db_path, f'Expected `{db_path}`, got `{resolved_path}`'
 
-        engine = get_pubsub_engine()
+        engine = get_database_engine()
 
         assert engine.dialect.name == 'sqlite', f'Expected sqlite, got `{engine.dialect.name}`'
         assert engine.url.database == db_path, f'Expected `{db_path}`, got `{engine.url.database}`'
@@ -94,10 +94,10 @@ def test_engine_follows_path_change(tmp_path:'os.PathLike') -> 'None':
     second_path = os.path.join(str(tmp_path), 'pubsub-second.db')
 
     with pubsub_path_env(first_path):
-        first_engine = get_pubsub_engine()
+        first_engine = get_database_engine()
 
     with pubsub_path_env(second_path):
-        second_engine = get_pubsub_engine()
+        second_engine = get_database_engine()
 
     assert first_engine.url.database == first_path
     assert second_engine.url.database == second_path
@@ -111,8 +111,8 @@ def test_engine_is_cached_per_path(tmp_path:'os.PathLike') -> 'None':
     db_path = os.path.join(str(tmp_path), 'pubsub-cached.db')
 
     with pubsub_path_env(db_path):
-        first_engine  = get_pubsub_engine()
-        second_engine = get_pubsub_engine()
+        first_engine  = get_database_engine()
+        second_engine = get_database_engine()
 
     assert second_engine is first_engine
 

@@ -21,7 +21,8 @@ from zato.admin.web.views.audit_log.columns import get_source_outcomes, _all_sou
     _endpoint_page_url, _event_type_label, _object_page_url, _poll_url, _run_page_url, _source_columns, _source_endpoint_label, \
     _source_event_label, _source_except_label, _source_label, _source_object_label, _source_page_url, _source_title
 from zato.admin.web.views.audit_log.sources import get_resubmit_labels, _source_outstanding
-from zato.common.audit_log.api import event_table, get_audit_engine
+from zato.common.audit_log.api import event_table
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.file_transfer_words import file_transfer_words
 
 # ################################################################################################################################
@@ -56,7 +57,7 @@ def _get_filter_options() -> 'anylist':
     statement = statement.distinct()
     statement = statement.order_by(event_table.c.source, event_table.c.object_name)
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         result = connection.execute(statement)

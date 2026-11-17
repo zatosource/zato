@@ -124,7 +124,7 @@ def _read_attempts(standby:'Node', msg_id:'str') -> 'list[int]':
     """
     out:'list[int]' = []
 
-    for (attempt,) in read_rows(standby.db_path('pubsub.db'), ModuleCtx.Attempt_Query, [msg_id]):
+    for (attempt,) in read_rows(standby.db_path('zato.db'), ModuleCtx.Attempt_Query, [msg_id]):
         out.append(attempt)
 
     return out
@@ -204,7 +204,7 @@ def test_replication_barrier(ha_pair:'HAEnvironment') -> 'None':
     client = PublishClient(env.haproxy.base_url, env.publisher_username, env.publisher_password)
     missing:'strlist' = []
 
-    rows = read_rows(standby.db_path('pubsub.db'), ModuleCtx.Subscriber_Query, [Topic_Name])
+    rows = read_rows(standby.db_path('zato.db'), ModuleCtx.Subscriber_Query, [Topic_Name])
     subscriber_count = rows[0][0]
 
     # Each acknowledged publication is in the standby copy at once ..

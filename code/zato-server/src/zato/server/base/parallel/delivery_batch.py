@@ -13,7 +13,7 @@ from logging import getLogger
 
 # Zato
 from zato.common.api import DATA_FORMAT
-from zato.common.audit_log.api import AuditEvent, AuditLog
+from zato.common.audit_log.api import AuditLog
 from zato.common.audit_log.service import Push_Delivery_Key
 from zato.common.pubsub.delivery_scope import close_delivery_scope, get_delivery_scope, open_delivery_scope
 from zato.common.typing_ import cast_
@@ -100,31 +100,18 @@ def _commit_batch(
     sub_key:'str',
     msg_ids:'strlist',
 ) -> 'None':
-    """ Commits what a delivery batch produced. The outcome of each delivery is recorded before the acknowledgement,
-    as it is for a single message, and a publication is recorded only after it was committed.
+    """ Commits what a delivery batch produced. The audit events of the deliveries commit with the acknowledgement
+    and the publications, each publication with the audit event that records it.
     """
-    published_events:'anylist' = []
-    other_events:'anylist' = []
-
-    for pending in scope.audit_events:
-        if pending.values['event_type'] == AuditEvent.Published:
-            published_events.append(pending)
-        else:
-            other_events.append(pending)
-
-    # The audit log collects events only if the backend has one, which is the case outside of unit tests ..
-    audit_log = cast_(AuditLog, backend.audit_log)
-
-    if other_events:
-        audit_log.write_pending(other_events)
-
-    # .. the acknowledgement and the publications commit together ..
+    # The acknowledgement, the publications and the audit events commit together ..
     if msg_ids:
-        backend.ack_with_publications(sub_key, msg_ids, scope.publications)
+        backend.ack_with_publications(sub_key, msg_ids, scope.publications, scope.audit_events)
 
-    # .. and only then are the publications recorded.
-    if published_events:
-        audit_log.write_pending(published_events)
+    # .. while a batch that concluded no message has only its audit events to commit, which exist only if the backend
+    # .. has an audit log, as it does outside of unit tests.
+    elif scope.audit_events:
+        audit_log = cast_(AuditLog, backend.audit_log)
+        audit_log.write_pending(scope.audit_events)
 
 # ################################################################################################################################
 
@@ -166,29 +153,13 @@ def _invoke_subscriber(server:'ParallelServer', service_name:'str', payload:'any
 
     # .. whereas inside of one, the publications of a failed attempt are discarded along with their audit events.
     publication_count = len(scope.publications)
-    event_count = len(scope.audit_events)
 
     try:
         server.invoke(service_name, payload, **kwargs)
 
     except Exception:
-        _discard_attempt(scope, publication_count, event_count)
+        del scope.publications[publication_count:]
         raise
-
-# ################################################################################################################################
-
-def _discard_attempt(scope:'DeliveryScope', publication_count:'int', event_count:'int') -> 'None':
-    """ Removes from a scope the publications of a failed attempt and the events that recorded them.
-    """
-    del scope.publications[publication_count:]
-
-    kept_events:'anylist' = []
-
-    for pending in scope.audit_events[event_count:]:
-        if pending.values['event_type'] != AuditEvent.Published:
-            kept_events.append(pending)
-
-    scope.audit_events[event_count:] = kept_events
 
 # ################################################################################################################################
 # ################################################################################################################################

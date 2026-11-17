@@ -22,8 +22,9 @@ from sqlalchemy import func, select, text
 # Zato
 from active_standby_worker import Mode_Background, Mode_Resubmit
 from common import delete_all_events
-from zato.common.audit_log.api import event_body_table, event_table, get_audit_engine, get_source_env_suffix, \
-    AuditEvent, AuditLog, AuditSource, Env_Retention_Days_Prefix
+from zato.common.audit_log.api import event_body_table, event_table, get_source_env_suffix, AuditEvent, AuditLog, AuditSource, \
+    Env_Retention_Days_Prefix
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import event_count_table
 from zato.common.audit_log.dedup import build_dedup_key, get_in_doubt
 from zato.common.audit_log.resubmit import run_once, Action_Resend, DuplicateResubmitException
@@ -132,7 +133,7 @@ def _insert_events(audit_log:'AuditLog', count:'int', age_days:'int') -> 'intlis
         backdate_bodies = backdate_bodies.where(event_body_table.c.event_id.in_(out))
         backdate_bodies = backdate_bodies.values(event_time=event_time)
 
-        with get_audit_engine().begin() as connection:
+        with get_database_engine().begin() as connection:
             _ = connection.execute(backdate_events)
             _ = connection.execute(backdate_bodies)
 
@@ -146,7 +147,7 @@ def _count_rows(table_id_column:'any_', ids:'intlist') -> 'int':
     query = select(func.count())
     query = query.where(table_id_column.in_(ids))
 
-    with get_audit_engine().connect() as connection:
+    with get_database_engine().connect() as connection:
         out = connection.execute(query).scalar_one()
 
     return out
@@ -159,7 +160,7 @@ def _get_count_mismatches() -> 'strlist':
     query = _count_mismatch_query.format(event_table=event_table.name, count_table=event_count_table.name)
     out:'strlist' = []
 
-    with get_audit_engine().connect() as connection:
+    with get_database_engine().connect() as connection:
         for row in connection.execute(text(query)):
             out.append(f'{tuple(row)}')
 
@@ -208,7 +209,7 @@ def _run_concurrent_background_checks(audit_log:'AuditLog') -> 'None':
             assert worker.returncode == 0, output
 
         # .. and one more run covers the events written after their last one.
-        run_retention(get_audit_engine(), utcnow())
+        run_retention(get_database_engine(), utcnow())
 
     finally:
         _ = os.environ.pop(Env_Content_Retention_Days, None)
@@ -263,7 +264,7 @@ def _run_in_doubt_checks(audit_log:'AuditLog') -> 'None':
 
     # The successor lists the resubmission as in doubt ..
     dedup_key = build_dedup_key(Action_Resend, event_id, _resubmit_payload)
-    in_doubt = get_in_doubt(get_audit_engine())
+    in_doubt = get_in_doubt(get_database_engine())
 
     assert len(in_doubt) == 1
     assert in_doubt[0]['dedup_key'] == dedup_key

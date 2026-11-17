@@ -495,8 +495,8 @@ def zato_server() -> 'any_':
 
     # Point the audit log at a file inside the temp directory so the live server
     # never writes into the real environment's audit database.
-    audit_db_path = os.path.join(_temp_directory, 'audit.db')
-    server_env['Zato_Audit_Log_DB_Name'] = audit_db_path
+    audit_db_path = os.path.join(_temp_directory, 'zato.db')
+    server_env['Zato_Database_Path'] = audit_db_path
 
     _spawn_server(server_directory, server_env, 'w')
     print(f'[TIMING] server log: {_server_log_path}')

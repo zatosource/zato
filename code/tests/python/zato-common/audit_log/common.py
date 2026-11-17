@@ -16,8 +16,9 @@ from sqlalchemy import func, select
 # Zato
 from live_sql.asserts import assert_postgresql_connection_encrypted as assert_postgresql_engine_encrypted
 from live_sql.env import database_env
-from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
-    get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, AuditEvent, AuditLog, \
+    AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import event_dedup_table
 from zato.common.audit_log.search import build_search_conditions
 from zato.common.util.api import utcnow
@@ -46,17 +47,14 @@ _other_channel_name = 'audit.test.other-channel'
 # An event time old enough for retention to always delete it
 _expired_event_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
 
-# The prefix all the audit log database environment variables share
-_env_prefix = 'Zato_Audit_Log_DB_'
-
 # ################################################################################################################################
 # ################################################################################################################################
 
 @contextmanager
 def audit_log_env(details:'stranydict') -> 'envgen':
-    """ Points the Zato_Audit_Log_DB_* variables at one backend for the duration of a test.
+    """ Points the Zato_Database_* variables at one backend for the duration of a test.
     """
-    with database_env(_env_prefix, details):
+    with database_env(details):
         yield
 
 # ################################################################################################################################
@@ -64,7 +62,7 @@ def audit_log_env(details:'stranydict') -> 'envgen':
 def delete_all_events() -> 'None':
     """ Starts a scenario from empty tables because containers can be reused between test runs.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.begin() as connection:
         _ = connection.execute(event_attr_table.delete())
@@ -78,7 +76,7 @@ def delete_all_events() -> 'None':
 def _count_events(source:'str', object_name:'str', query:'str'='') -> 'int':
     """ Runs the same count query the web-admin poll view runs.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     where_conditions = build_search_conditions(engine.dialect.name, [source], [object_name], query=query)
 
@@ -97,7 +95,7 @@ def _count_events(source:'str', object_name:'str', query:'str'='') -> 'int':
 def _get_page(source:'str', object_name:'str', page:'int', page_size:'int') -> 'anylist':
     """ Runs the same pagination query the web-admin poll view runs.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     offset = (page - 1) * page_size
 
@@ -124,7 +122,7 @@ def run_audit_log_scenario() -> 'None':
     """
 
     # Start from empty tables because containers can be reused between test runs ..
-    engine = get_audit_engine()
+    engine = get_database_engine()
     delete_all_events()
 
     # .. the schema was created and the writer connects ..
@@ -222,7 +220,7 @@ def run_audit_log_scenario() -> 'None':
 def assert_postgresql_connection_encrypted() -> 'None':
     """ Confirms the current PostgreSQL session really is encrypted.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
     assert_postgresql_engine_encrypted(engine)
 
 # ################################################################################################################################

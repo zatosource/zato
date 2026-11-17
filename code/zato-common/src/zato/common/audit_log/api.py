@@ -12,33 +12,30 @@ from collections import OrderedDict
 from logging import getLogger
 from time import monotonic
 
+# gevent
+from gevent.monkey import get_original
+
 # SQLAlchemy
 from sqlalchemy.exc import OperationalError
 
 # Zato
-from zato.common.audit_log.attachment import build_attachment_rows
 from zato.common.audit_log.attr_rows import build_attr_rows
-from zato.common.audit_log.buffer import Env_Flush_Max_Size, Env_Flush_Max_Wait_Ms, EventBuffer, get_flush_max_size, \
-    get_flush_max_wait_ms, PendingEvent
-from zato.common.audit_log.bulk_insert import insert_events, insert_rows
+from zato.common.audit_log.bulk_insert import insert_pending_events
 from zato.common.audit_log.classification import derive_classification
-from zato.common.audit_log.common import Audit_DB_File_Name, AuditBody, AuditClassification, \
-    AuditEvent, AuditLink, AuditOutcome, AuditSource, Env_Retention_Days, \
-    Env_Retention_Days_Prefix, event_attr_table, event_body_table, event_link_table, event_table, get_retention_days, \
-    get_source_env_suffix, metadata, Status_Outstanding
+from zato.common.audit_log.common import AuditBody, AuditClassification, AuditEvent, AuditLink, AuditOutcome, AuditSource, \
+    Env_Retention_Days, Env_Retention_Days_Prefix, event_attr_table, event_body_table, event_link_table, event_table, \
+    get_retention_days, get_source_env_suffix, metadata, Status_Outstanding
 from zato.common.audit_log.export.api import get_audit_export
+from zato.common.audit_log.pending import PendingEvent
 from zato.common.audit_log.retention import Env_Archive_Dir, Env_Content_Retention_Days, \
     Env_Content_Retention_Days_Prefix, get_content_retention_days, register_prunability, run_retention
 from zato.common.audit_log.retention_runner import request_retention
 from zato.common.audit_log.search_index_merge import get_search_index_merger
-from zato.common.audit_log.sqlite_writes import apply_write_wait, dispose_stale_sqlite_engine, env_config, \
-    mark_write_accepted, mark_write_refused
+from zato.common.audit_log.sqlite_writes import dispose_stale_sqlite_engine
 from zato.common.config_db import Default_Enabled, Env_Audit_Log_Enabled
-from zato.common.crypto.api import CryptoManager
-from zato.common.db_env import Default_SSL, Default_SSL_Verify, Default_Type, dispose_env_engine, get_env_engine, \
-    Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.commit_queue import CommitQueue
-from zato.common.db_env.engine import call_database, execute_write, new_unshared_env_engine
+from zato.common.db_env.database import dispose_database_engine, get_database_engine
+from zato.common.db_env.engine import call_database, execute_write
 from zato.common.pubsub.delivery_scope import get_delivery_scope
 from zato.common.util.api import as_bool, utcnow
 
@@ -48,7 +45,7 @@ from zato.common.util.api import as_bool, utcnow
 if 0:
     from datetime import datetime
     from sqlalchemy.engine import Engine
-    from zato.common.audit_log.buffer import pending_event_list
+    from zato.common.audit_log.pending import pending_event_list
     from zato.common.typing_ import anylist, anylistnone, intlist, intlistnone, intnone, stranydict, strdictnone
 
     # Dummy assignments to satisfy type checkers
@@ -68,9 +65,9 @@ if 0:
 
 # The public names of this module - the audit log's one-stop API surface
 __all__ = [
-    'Audit_DB_File_Name', 'build_attr_rows', 'derive_classification', 'event_attr_table', 'event_body_table', 'event_link_table',
-    'event_table', 'get_audit_db_path', 'get_audit_engine', 'get_content_retention_days', 'get_retention_days',
-    'get_source_env_suffix', 'is_audit_log_enabled', 'metadata', 'new_unshared_audit_engine', 'register_prunability',
+    'build_attr_rows', 'derive_classification', 'event_attr_table', 'event_body_table', 'event_link_table',
+    'event_table', 'get_content_retention_days', 'get_retention_days',
+    'get_source_env_suffix', 'is_audit_log_enabled', 'metadata', 'register_prunability',
     'AuditBody', 'AuditClassification', 'AuditEvent', 'AuditLink', 'AuditLog', 'AuditOutcome', 'AuditSource', 'ModuleCtx',
     'Retention_Days', 'Status_Outstanding',
 ]
@@ -108,21 +105,6 @@ class ModuleCtx:
     # The environment variable turning the whole audit log off
     Env_Enabled = Env_Audit_Log_Enabled
 
-    # Environment variables selecting and configuring the audit log database
-    Env_Type     = 'Zato_Audit_Log_DB_Type'
-    Env_Host     = 'Zato_Audit_Log_DB_Host'
-    Env_Port     = 'Zato_Audit_Log_DB_Port'
-    Env_Username = 'Zato_Audit_Log_DB_Username'
-    Env_Password = 'Zato_Audit_Log_DB_Password'
-    Env_Name     = 'Zato_Audit_Log_DB_Name'
-
-    # Environment variables configuring SSL/TLS for the audit log database
-    Env_SSL           = 'Zato_Audit_Log_DB_SSL'
-    Env_SSL_CA_File   = 'Zato_Audit_Log_DB_SSL_CA_File'
-    Env_SSL_Cert_File = 'Zato_Audit_Log_DB_SSL_Cert_File'
-    Env_SSL_Key_File  = 'Zato_Audit_Log_DB_SSL_Key_File'
-    Env_SSL_Verify    = 'Zato_Audit_Log_DB_SSL_Verify'
-
     # The environment variables overriding how long events and their content are kept,
     # process-wide and, with the source name appended, for one source alone
     Env_Retention_Days                = Env_Retention_Days
@@ -131,34 +113,20 @@ class ModuleCtx:
     Env_Content_Retention_Days_Prefix = Env_Content_Retention_Days_Prefix
     Env_Archive_Dir                   = Env_Archive_Dir
 
-    # The environment variables configuring the buffered writer
-    Env_Flush_Max_Size    = Env_Flush_Max_Size
-    Env_Flush_Max_Wait_Ms = Env_Flush_Max_Wait_Ms
-
     # The environment variable configuring the group commit of synchronous writes
     Env_Commit_Max_Events = Env_Commit_Max_Events
 
-    # Recognized database types
-    Type_SQLite     = Type_SQLite
-    Type_PostgreSQL = Type_PostgreSQL
-
     # The audit log records events unless it is turned off explicitly
     Default_Enabled = Default_Enabled
-
-    # What is used when Zato_Audit_Log_DB_Type is not set
-    Default_Type = Default_Type
-
-    # SSL is off unless requested explicitly
-    Default_SSL = Default_SSL
-
-    # When SSL is on, the server certificate is verified unless turned off explicitly
-    Default_SSL_Verify = Default_SSL_Verify
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 # Retention runs after every that many inserts
 _retention_check_interval = 1000
+
+# A lock of the threads of the operating system, which gevent does not replace
+_allocate_thread_lock = get_original('_thread', 'allocate_lock')
 
 logger = getLogger(__name__)
 
@@ -179,36 +147,9 @@ Retention_Days = get_retention_days()
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_audit_db_path() -> 'str':
-    """ Returns the full path to the default SQLite audit database file.
-    """
-    out = env_config.get_sqlite_path()
-    return out
-
-# ################################################################################################################################
-
-def get_audit_engine() -> 'Engine':
-    """ Returns an SQLAlchemy engine for the audit log database, creating the schema if needed.
-    Which database is used comes from the Zato_Audit_Log_DB_* environment variables,
-    defaulting to a shared SQLite file.
-    """
-    out = get_env_engine(env_config)
-    return out
-
-# ################################################################################################################################
-
-def new_unshared_audit_engine() -> 'Engine':
-    """ Returns an engine of the audit log database that no other caller receives, which its caller disposes.
-    """
-    out = new_unshared_env_engine(env_config)
-    return out
-
-# ################################################################################################################################
-
 def is_audit_log_enabled() -> 'bool':
-    """ Whether the audit log records anything at all, as set through the Config DB SQL screen.
-    Read on each write rather than cached, so turning the switch off takes effect at once,
-    with no restart and with no need to rebuild any writer.
+    """ Whether the audit log records anything at all. Read on each write rather than cached, so turning
+    the switch off takes effect at once, with no restart and with no need to rebuild any writer.
     """
 
     # An unset variable means the audit log is on
@@ -223,48 +164,24 @@ def is_audit_log_enabled() -> 'bool':
 # ################################################################################################################################
 
 class AuditLog:
-    """ A source-agnostic audit log writing structured events into one shared database.
-    The database is SQLite by default and can be PostgreSQL,
-    as configured through the Zato_Audit_Log_DB_* environment variables.
-    Events are written synchronously by default - high-volume producers turn on batching
-    through the flush parameters or the Zato_Audit_Log_Flush_* environment variables.
-    The whole log can be turned off through Zato_Audit_Log_Enabled, in which case every
-    insert becomes a silent no-op.
+    """ A source-agnostic audit log writing structured events into the Zato database. Each event is committed
+    before the call that writes it returns. The whole log can be turned off through Zato_Audit_Log_Enabled,
+    in which case every insert becomes a silent no-op.
     """
 
-    def __init__(
-        self,
-        server_name:'str',
-        *,
-        flush_max_size:'intnone' = None,
-        flush_max_wait_ms:'intnone' = None,
-        ) -> 'None':
+    def __init__(self, server_name:'str') -> 'None':
 
         self.server_name = server_name
 
         # Counts inserts so retention can run periodically instead of on every write
         self._insert_count = 0
 
-        # Per-cid sequence counters - ordered so the least recently used ones can be dropped
+        # Per-cid sequence counters - ordered so the least recently used ones can be dropped. The lock is a thread lock,
+        # because the pub/sub writer builds events in the thread of its transaction.
         self._cid_sequence:'OrderedDict' = OrderedDict()
+        self._cid_sequence_lock = _allocate_thread_lock()
 
-        # The flush configuration comes from the environment unless given explicitly ..
-        if flush_max_size is None:
-            flush_max_size = get_flush_max_size()
-
-        if flush_max_wait_ms is None:
-            flush_max_wait_ms = get_flush_max_wait_ms()
-
-        self.flush_max_size = flush_max_size
-
-        # .. the buffer holds events between flushes ..
-        self._buffer = EventBuffer(
-            max_size=flush_max_size,
-            max_wait_ms=flush_max_wait_ms,
-            write_batch=self._write_batch,
-        )
-
-        # .. and synchronous writes of concurrent callers share their commits, each caller submitting a list of events.
+        # The writes of concurrent callers share their commits, each caller submitting a list of events
         commit_max_events = get_commit_max_events()
 
         self._commit_queue = CommitQueue(
@@ -276,12 +193,9 @@ class AuditLog:
 
     @property
     def engine(self) -> 'Engine':
-        """ The engine behind the current Zato_Audit_Log_DB_* configuration - resolved on each
-        access, with the per-configuration cache in db_env making the lookup cheap, so changing
-        the variables at runtime redirects all new writes, the background flusher's included,
-        to the new database.
+        """ The engine of the Zato database, resolved on each access, with the cache in db_env making the lookup cheap.
         """
-        out = get_audit_engine()
+        out = get_database_engine()
         return out
 
 # ################################################################################################################################
@@ -315,11 +229,9 @@ class AuditLog:
         is_export_payload_active:'bool' = False,
         needs_id:'bool' = False,
         ) -> 'intnone':
-        """ Writes one audit event, at the moment it happens, in the same process.
-        Returns the event's id when the write is synchronous, None when it was buffered,
-        and None without writing anything when the audit log is turned off.
-        A caller that links further events to this one sets needs_id, which writes the event
-        at once under a buffered writer too, so the id comes back.
+        """ Writes one audit event, at the moment it happens, in the same process, and returns its id.
+        An event of a push delivery batch commits along with the batch and returns None, unless the caller sets needs_id,
+        because it links further events to this one. Nothing is written and None is returned when the audit log is turned off.
         The payload leaves the process with the OTLP export only if is_export_payload_active is set.
         """
 
@@ -339,17 +251,11 @@ class AuditLog:
             scope.audit_events.append(pending)
             return None
 
-        # .. write it now if batching is off, or if the caller needs the id for the events it links to this one ..
-        elif self.flush_max_size <= 1 or needs_id:
-            self._commit_queue.write([pending], weight=_commit_event_weight, is_urgent=False)
+        # .. while any other event is committed before the call returns.
+        self._commit_queue.write([pending], weight=_commit_event_weight, is_urgent=False)
 
-            out = pending.event_id
-            return out
-
-        # .. or leave it in the buffer for the next flush.
-        else:
-            self._buffer.add(pending)
-            return None
+        out = pending.event_id
+        return out
 
 # ################################################################################################################################
 
@@ -451,27 +357,14 @@ class AuditLog:
 
 # ################################################################################################################################
 
-    def flush(self) -> 'None':
-        """ Writes out everything currently buffered. Events accepted while the audit log
-        was still on are written out even after it has been turned off - they were recorded
-        already, only their trip to the database was pending.
-        """
-        self._buffer.flush()
-
-# ################################################################################################################################
-
     def write_events(self, batch:'pending_event_list') -> 'None':
-        """ Writes the events that one operation produced together - in one transaction when the writes are synchronous,
-        or into the buffer for its next flush otherwise - and nothing when the audit log is turned off.
+        """ Writes the events that one operation produced together, in one transaction,
+        and nothing when the audit log is turned off.
         """
         if not is_audit_log_enabled():
             return
 
-        if self.flush_max_size <= 1:
-            self.write_pending(batch)
-        else:
-            for pending in batch:
-                self._buffer.add(pending)
+        self.write_pending(batch)
 
 # ################################################################################################################################
 
@@ -523,20 +416,22 @@ class AuditLog:
         """ Returns the next sequence number for this cid, monotonic within this writer.
         """
 
-        # Advance this cid's counter, starting a new one if we have not seen it ..
-        if cid in self._cid_sequence:
-            out = self._cid_sequence[cid] + 1
-        else:
-            out = 1
+        with self._cid_sequence_lock:
 
-        self._cid_sequence[cid] = out
-        self._cid_sequence.move_to_end(cid)
+            # Advance this cid's counter, starting a new one if we have not seen it ..
+            if cid in self._cid_sequence:
+                out = self._cid_sequence[cid] + 1
+            else:
+                out = 1
 
-        # .. and forget the least recently used cid once there are too many.
-        tracked_count = len(self._cid_sequence)
+            self._cid_sequence[cid] = out
+            self._cid_sequence.move_to_end(cid)
 
-        if tracked_count > _max_tracked_cids:
-            _ = self._cid_sequence.popitem(last=False)
+            # .. and forget the least recently used cid once there are too many.
+            tracked_count = len(self._cid_sequence)
+
+            if tracked_count > _max_tracked_cids:
+                _ = self._cid_sequence.popitem(last=False)
 
         return out
 
@@ -564,6 +459,25 @@ class AuditLog:
 
         _trace('db write of %d events done %.1fms', batch_size, write_elapsed_ms)
 
+        self.complete_commit(batch)
+
+        return out
+
+# ################################################################################################################################
+
+    def prepare_commit(self) -> 'None':
+        """ Runs what precedes a commit of events, in this process or in the transaction of another writer.
+        """
+        # The search indexes of the database the events go to are merged in the background
+        _ = get_search_index_merger(self.engine)
+
+# ################################################################################################################################
+
+    def complete_commit(self, batch:'pending_event_list') -> 'None':
+        """ Runs what follows a commit of events, in this process or in the transaction of another writer.
+        """
+        batch_size = len(batch)
+
         # Events the database accepted go out to the OTLP collector too, if this process exports them.
         # The export is looked up here rather than held by the writer because writers are built
         # in many places, and this way all of them share the one export the process has.
@@ -580,8 +494,6 @@ class AuditLog:
             self._insert_count = 0
             request_retention(self.engine)
 
-        return out
-
 # ################################################################################################################################
 
     def commit_batch(self, batch:'pending_event_list') -> 'int':
@@ -590,23 +502,16 @@ class AuditLog:
         # A deleted or read-only database file is only visible to a fresh engine
         dispose_stale_sqlite_engine()
 
-        # The search indexes of the database the events go to are merged in the background
-        _ = get_search_index_merger(self.engine)
+        self.prepare_commit()
 
         try:
             out = call_database(self.engine, self._insert_batch, batch)
         except OperationalError:
 
-            # A refused write shortens the wait of every write from here on, the retry below included ..
-            mark_write_refused()
-
-            # .. and a pooled connection that opened the file while it was read-only stays
-            # read-only after the permissions come back - a fresh engine self-heals that.
-            dispose_env_engine(env_config)
+            # A pooled connection that opened the file while it was read-only stays read-only
+            # after the permissions come back, which a fresh engine does not.
+            dispose_database_engine()
             out = call_database(self.engine, self._insert_batch, batch)
-
-        # A write that went through brings the full busy timeout back
-        mark_write_accepted()
 
         return out
 
@@ -616,71 +521,8 @@ class AuditLog:
         """ Inserts one batch of events in a single transaction, with one statement per table,
         and returns the id of the last event written.
         """
-
-        # The id of the commit identifies the event rows of this batch on the databases that need it
-        commit_id = CryptoManager.generate_hex_string()
-
-        event_rows:'anylist' = []
-
-        for pending in batch:
-            event_rows.append(pending.values)
-
-        # The companion rows of all the events, one list per table
-        attr_rows:'anylist' = []
-        body_rows:'anylist' = []
-        link_rows:'anylist' = []
-
         with self.engine.begin() as connection:
-
-            # After a refused write, this one waits for another writer only briefly
-            apply_write_wait(connection)
-
-            # The event rows come first, so everything else can reference their ids ..
-            event_ids = insert_events(connection, event_rows, commit_id)
-
-            for pending, event_id in zip(batch, event_ids):
-
-                # .. the export needs the id once the batch is written ..
-                pending.event_id = event_id
-                event_time = pending.values['event_time']
-
-                # .. searchable attributes ..
-                if pending.attrs:
-                    event_attr_rows = self._build_attr_rows(event_id, pending.attrs)
-                    attr_rows.extend(event_attr_rows)
-
-                # .. message bodies, stamped with the event's own time so pruning never needs a join ..
-                for kind, body_data in pending.bodies.items():
-                    body_rows.append({
-                        'event_id': event_id,
-                        'kind': kind,
-                        'event_time': event_time,
-                        'data': body_data,
-                        'content': None,
-                    })
-
-                # .. attachments, one body row each, stamped the same way ..
-                if pending.attachments:
-                    attachment_rows = build_attachment_rows(event_id, event_time, pending.attachments)
-                    body_rows.extend(attachment_rows)
-
-                # .. lineage links to parent events ..
-                for parent_event_id in pending.parents:
-                    link_rows.append({
-                        'child_event_id': event_id,
-                        'parent_event_id': parent_event_id,
-                        'link_type': pending.parent_link_type,
-                    })
-
-            # .. and one statement for each of the tables that has rows to write.
-            if attr_rows:
-                insert_rows(connection, event_attr_table, attr_rows)
-
-            if body_rows:
-                insert_rows(connection, event_body_table, body_rows)
-
-            if link_rows:
-                insert_rows(connection, event_link_table, link_rows)
+            event_ids = insert_pending_events(connection, batch)
 
         out = event_ids[-1]
         return out

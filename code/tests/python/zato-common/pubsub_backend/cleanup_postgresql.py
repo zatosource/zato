@@ -23,7 +23,7 @@ from common import delete_all_rows, get_message_rows
 from zato.common.db_env.errors import get_sqlstate, is_transient, SQLState
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
-from zato.common.pubsub.sql.config import get_pubsub_engine
+from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.schema import delivery_table, message_table
 
 # ################################################################################################################################
@@ -96,7 +96,7 @@ def _run_locked_rows_flow(backend:'SQLPubSubBackend') -> 'None':
     lock_query = lock_query.where(message_table.c.msg_id.in_(locked_msg_ids))
     lock_query = lock_query.with_for_update()
 
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
     cleanup = PubSubCleanup()
 
     with engine.connect() as lock_connection:
@@ -143,7 +143,7 @@ def _run_terminated_connection_flow(backend:'SQLPubSubBackend') -> 'None':
     lock_query = lock_query.limit(1)
     lock_query = lock_query.with_for_update()
 
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
     cleanup = PubSubCleanup()
 
     with engine.connect() as lock_connection:
@@ -207,7 +207,7 @@ def _run_deadlock_flow(backend:'SQLPubSubBackend') -> 'None':
     delivery_query = delivery_query.limit(1)
     delivery_query = delivery_query.with_for_update()
 
-    engine = get_pubsub_engine()
+    engine = get_database_engine()
     cleanup = PubSubCleanup()
 
     with engine.connect() as connection:

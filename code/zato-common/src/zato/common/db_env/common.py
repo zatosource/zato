@@ -32,18 +32,17 @@ if 0:
     from sqlalchemy.engine import Dialect
     from sqlalchemy.sql.compiler import SQLCompiler
     from sqlalchemy.types import TypeEngine
-    from zato.common.typing_ import any_, stranydict, strnone, tuple_
+    from zato.common.typing_ import any_, anytuple, stranydict, strnone
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
+    anytuple = anytuple
     strnone = strnone
     datetime = datetime
     Dialect = Dialect
     MetaData = MetaData
     SQLCompiler = SQLCompiler
     TypeEngine = TypeEngine
-
-    metadata_tuple = tuple_[MetaData, ...]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -187,7 +186,7 @@ class EnvDBConfig:
         *,
         env_prefix:'str',
         sqlite_file_name:'str',
-        metadata_tuple:'metadata_tuple',
+        metadata_tuple:'anytuple',
         needs_pool:'bool' = False,
         needs_background_checkpoint:'bool' = False,
         is_replicated:'bool' = False,

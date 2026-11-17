@@ -14,14 +14,14 @@ from random import Random
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
-    get_audit_engine, new_unshared_audit_engine, AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, AuditEvent, \
+    AuditOutcome, AuditSource
+from zato.common.db_env.database import database_config, dispose_database_engine, get_database_engine, \
+    new_unshared_database_engine
 from zato.common.audit_log.common import event_count_table, event_dedup_table, event_open_table, Status_Outstanding
 from zato.common.audit_log.event_count import compact_event_counts, count_key_columns
 from zato.common.audit_log.listing import new_search_filters
-from zato.common.audit_log.sqlite_writes import env_config
-from zato.common.db_env import dispose_env_engine
-from zato.common.db_env.engine import call_database, create_schema
+from zato.common.db_env.engine import call_database, create_schemas
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -92,7 +92,7 @@ def run_blocking(func:'callable_', *args:'any_') -> 'any_':
     """ Runs a function that makes blocking database calls, in the thread pool of the gevent hub when the database needs it,
     so that a long run of statements does not block the event loop.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     out = call_database(engine, func, *args)
     return out
@@ -103,7 +103,7 @@ def delete_all_rows() -> 'None':
     """ Starts a test from empty tables because the PostgreSQL container is shared by all the tests.
     The event counts and the open exchanges are emptied last, after the triggers wrote what deleting the events changes.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.begin() as connection:
         _ = connection.execute(event_attr_table.delete())
@@ -190,7 +190,7 @@ def new_event_rows(rng:'Random', count:'int', first_index:'int') -> 'anylist':
 def insert_rows(rows:'anylist') -> 'None':
     """ Inserts event rows in one transaction, in statements of at most _rows_per_statement rows each.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.begin() as connection:
         for start in range(0, len(rows), _rows_per_statement):
@@ -204,7 +204,7 @@ def insert_rows(rows:'anylist') -> 'None':
 def read_event_ids() -> 'intlist':
     """ The ids of all the events, in their order.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_table.c.id)
     query = query.order_by(event_table.c.id)
@@ -221,7 +221,7 @@ def read_event_ids() -> 'intlist':
 def read_events() -> 'anylist':
     """ The columns of all the events that the event counts and the open exchanges are kept from, one dict per event.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     columns:'anylist' = [
         event_table.c.id,
@@ -282,7 +282,7 @@ def expected_counts(events:'anylist') -> 'anydict':
 def read_count_rows() -> 'anylist':
     """ All the rows of the event counts, one dict per row.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_count_table)
 
@@ -365,7 +365,7 @@ def expected_open_ids(events:'anylist') -> 'intset':
 def read_open_ids() -> 'intlist':
     """ The event ids the table of open exchanges holds, duplicates included.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     query = select(event_open_table.c.event_id)
 
@@ -381,7 +381,7 @@ def read_open_ids() -> 'intlist':
 def drop_read_schema(backend:'str') -> 'None':
     """ Turns the database into one created before the event counts and the open exchanges existed.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.begin() as connection:
 
@@ -409,10 +409,10 @@ def reopen_database() -> 'None':
     and a checkpointer runs on the hub of the thread that starts it, and the caller of the next blocking call
     opens the shared engine again in the main thread.
     """
-    dispose_env_engine(env_config)
+    dispose_database_engine()
 
-    engine = new_unshared_audit_engine()
-    create_schema(engine, env_config.metadata)
+    engine = new_unshared_database_engine()
+    create_schemas(engine, database_config.metadata_tuple)
     engine.dispose()
 
 # ################################################################################################################################
@@ -422,7 +422,7 @@ def populate(rng:'Random', event_count:'int') -> 'None':
     updated in place and deleted before and after a compaction. Two thirds of the events are written
     before the compaction and one third after it.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     first_count = event_count * 2 // 3
     later_count = event_count - first_count

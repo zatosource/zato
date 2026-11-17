@@ -16,9 +16,9 @@ from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 # Zato
-from zato.common.common_db.config import get_common_engine
 from zato.common.common_db.schema import shared_object_table
 from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
+from zato.common.db_env.database import get_database_engine
 from zato.common.db_env.engine import call_database
 
 # ################################################################################################################################
@@ -26,13 +26,11 @@ from zato.common.db_env.engine import call_database
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.pubsub.sql.generation import GenerationGuard
     from zato.common.typing_ import anydict, intnone
 
     # Dummy assignments to satisfy type checkers
     anydict = anydict
     Engine = Engine
-    GenerationGuard = GenerationGuard
     intnone = intnone
 
 sharedobjectlist = list['SharedObject']
@@ -154,39 +152,28 @@ def _update(engine:'Engine', object_type:'str', name:'str', data:'anydict', vers
 # ################################################################################################################################
 
 class SharedObjectStore:
-    """ JSON documents in the common database, each under a type and a name. Every write is a compare-and-set
+    """ JSON documents in the Zato database, each under a type and a name. Every write is a compare-and-set
     against the version that the writer read, so of two concurrent writers of one object, only one succeeds.
     """
 
     def __init__(self) -> 'None':
 
-        # The engine of the common database, resolved on first access.
+        # The engine of the Zato database, resolved on first access.
         self._engine:'Engine | None' = None
 
 # ################################################################################################################################
 
     @property
     def engine(self) -> 'Engine':
-        """ The engine of the common database that the Zato_Common_DB_* variables select, resolved on first access.
+        """ The engine of the Zato database, resolved on first access.
         """
         out = self._engine
 
         if out is None:
-            out = get_common_engine()
+            out = get_database_engine()
             self._engine = out
 
         return out
-
-# ################################################################################################################################
-
-    def install_generation_guard(self, generation_guard:'GenerationGuard', pubsub_engine:'Engine') -> 'None':
-        """ Confirms the generation of the active server in every transaction of the common database, unless the common
-        database shares the engine of pub/sub, which confirms it already.
-        """
-        engine = self.engine
-
-        if engine is not pubsub_engine:
-            generation_guard.install(engine)
 
 # ################################################################################################################################
 

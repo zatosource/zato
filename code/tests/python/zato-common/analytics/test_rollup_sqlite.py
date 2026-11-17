@@ -11,7 +11,7 @@ import os
 
 # Zato
 from common import analytics_test_env, run_rollup_scenario
-from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
+from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -20,12 +20,12 @@ def test_rollup_sqlite(tmp_path:'os.PathLike') -> 'None':
     """ The complete rollup scenario with the audit log and the analytics store
     each in its own SQLite file.
     """
-    audit_db_path = os.path.join(str(tmp_path), 'audit.db')
+    audit_db_path = os.path.join(str(tmp_path), 'zato.db')
     analytics_db_path = os.path.join(str(tmp_path), 'analytics.db')
 
     audit_details = {
-        'type': AuditLogCtx.Type_SQLite,
-        'name': audit_db_path,
+        'type': DatabaseEnv.Type_SQLite,
+        'path': audit_db_path,
     }
 
     with analytics_test_env(audit_details, analytics_db_path):

@@ -16,7 +16,8 @@ from sqlalchemy import update
 from zato.common.alerting.collectors import collect_channel_silence_facts, collect_channel_status_facts, \
     collect_error_rate_facts, collect_facts, collect_latency_facts, Measure_Auth_Failures, Measure_Client_Errors, \
     Measure_Error_Rate, Measure_Latency, Measure_Server_Errors, Window_Seconds_By_Measure_Key
-from zato.common.audit_log.api import event_table, get_audit_engine, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.db_env.database import get_database_engine
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -52,7 +53,7 @@ _window_seconds = 3600
 def _backdate(event_id:'int', event_time:'datetime') -> 'None':
     """ Moves one stored event back in time.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     statement = update(event_table)
     statement = statement.where(event_table.c.id == event_id)
@@ -116,7 +117,7 @@ class TestErrorRateOverResponses:
 
     def test_a_channel_counts_its_calls_not_its_events(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Three calls, two of them failed - six events in all
@@ -132,7 +133,7 @@ class TestErrorRateOverResponses:
 
     def test_an_outgoing_rest_connection_is_measured_over_its_responses(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_outgoing(audit_log, 'out-1', AuditOutcome.Error)
@@ -147,7 +148,7 @@ class TestErrorRateOverResponses:
 
     def test_an_outgoing_soap_connection_is_measured_over_its_responses_too(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_outgoing(audit_log, 'out-1', AuditOutcome.Error, source=AuditSource.SOAP_Outgoing)
@@ -162,7 +163,7 @@ class TestErrorRateOverResponses:
 
     def test_a_channel_asked_for_by_name_is_measured_alone(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_call(audit_log, 'name-1', '500')
@@ -182,7 +183,7 @@ class TestStatusClasses:
 
     def test_one_query_sorts_the_statuses_into_three_measures(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_call(audit_log, 'st-1', '401')
@@ -204,7 +205,7 @@ class TestStatusClasses:
 
     def test_a_status_line_with_a_reason_is_read_by_its_code(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_call(audit_log, 'line-1', '401 Unauthorized')
@@ -218,7 +219,7 @@ class TestStatusClasses:
 
     def test_ok_responses_count_nowhere(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_call(audit_log, 'ok-1', '200')
@@ -233,7 +234,7 @@ class TestStatusClasses:
 
     def test_a_soap_channel_is_measured_too_and_a_connection_is_not(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_call(audit_log, 'soap-1', '500', source=AuditSource.SOAP_Channel)
@@ -247,7 +248,7 @@ class TestStatusClasses:
 
     def test_responses_outside_the_window_are_not_counted(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         old_id = _seed_call(audit_log, 'old-1', '500')
@@ -261,7 +262,7 @@ class TestStatusClasses:
         assert fact['server_error_rate'] == 1.0
 
     def test_a_source_outside_the_map_measures_nothing(self) -> 'None':
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         facts = collect_channel_status_facts(engine, _window_seconds, now, source=AuditSource.REST_Outgoing)
@@ -275,7 +276,7 @@ class TestSilence:
 
     def test_only_the_names_passed_in_are_measured(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         request_id = _seed_call(audit_log, 'sil-1', '200')
@@ -294,7 +295,7 @@ class TestSilence:
 
     def test_no_names_means_no_facts(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_call(audit_log, 'sil-1', '200')
@@ -302,7 +303,7 @@ class TestSilence:
         assert collect_channel_silence_facts(engine, now, set()) == []
 
     def test_a_channel_that_never_received_a_request_has_nothing_to_measure(self) -> 'None':
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         assert collect_channel_silence_facts(engine, now, {_channel_name}) == []
@@ -314,7 +315,7 @@ class TestLatency:
 
     def test_latency_is_unchanged_for_channels(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_call(audit_log, 'lat-1', '200', duration_ms=100)
@@ -331,7 +332,7 @@ class TestCollectFacts:
 
     def test_a_channel_fact_carries_every_measure_at_once(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_call(audit_log, 'all-1', '401')
@@ -356,7 +357,7 @@ class TestCollectFacts:
 
     def test_each_measure_names_its_window(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_call(audit_log, 'win-1', '401')
@@ -375,7 +376,7 @@ class TestCollectFacts:
 
     def test_the_rejected_callers_and_the_error_rate_have_windows_of_their_own(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # Two rejections half an hour ago and one failure a minute ago
@@ -413,7 +414,7 @@ class TestCollectFacts:
 
     def test_a_source_window_covers_the_measures_it_names_alone(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         old = _seed_call(audit_log, 'src-1', '500')
@@ -440,7 +441,7 @@ class TestCollectFacts:
 
     def test_the_rest_type_measures_error_rate_and_latency_over_its_one_window(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _seed_outgoing(audit_log, 'rest-1', AuditOutcome.Error)
@@ -468,7 +469,7 @@ class TestSoapChannel:
 
     def test_a_soap_channels_silence_is_measured_under_its_own_source(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         request_id = _seed_call(audit_log, 'soap-sil-1', '200', source=AuditSource.SOAP_Channel)
@@ -486,7 +487,7 @@ class TestSoapChannel:
 
     def test_a_soap_channels_status_classes_count_as_a_rest_channels_do(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         _ = _seed_call(audit_log, 'soap-1', '401', source=AuditSource.SOAP_Channel)
@@ -508,7 +509,7 @@ class TestSoapChannel:
 
     def test_a_rest_and_a_soap_channel_of_one_name_get_facts_of_their_own_source(self) -> 'None':
         audit_log = AuditLog(_server_name)
-        engine = get_audit_engine()
+        engine = get_database_engine()
         now = utcnow()
 
         # The REST channel fails once out of two calls, the SOAP one of the same name three times out of three

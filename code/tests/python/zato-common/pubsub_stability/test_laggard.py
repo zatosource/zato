@@ -18,7 +18,7 @@ from runner import get_count_mismatches, get_duration, get_report_path, run_for,
     stop_cleanup_process
 from seeding import seed_backlog
 from traffic import get_traffic_profile, Traffic
-from zato.common.pubsub.sql.config import get_pubsub_engine
+from zato.common.db_env.database import get_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,7 +60,7 @@ _laggard_depth_query = text('select count(*) from pubsub_delivery where sub_key 
 # ################################################################################################################################
 
 def _get_laggard_depth() -> 'int':
-    with get_pubsub_engine().connect() as connection:
+    with get_database_engine().connect() as connection:
         out = connection.execute(_laggard_depth_query, {'sub_key': _laggard_sub_key}).scalar_one()
     return out
 

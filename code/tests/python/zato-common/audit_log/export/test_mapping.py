@@ -21,7 +21,6 @@ from opentelemetry.proto.logs.v1.logs_pb2 import SEVERITY_NUMBER_ERROR, SEVERITY
 from live_sql.env import database_env
 from support import attributes_of, build_queued, to_queued, CapturingAuditLog, Default_Event_Time, Server_Name
 from zato.common.api import SCHEDULER
-from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 from zato.common.audit_log.calls import record_remote_call
 from zato.common.audit_log.common import AuditBody, AuditClassification, AuditEvent, AuditOutcome, AuditSource, LLMAttr, \
     MCPAttr
@@ -37,12 +36,13 @@ from zato.common.bearer_token_identity import build_auth_block, Auth_Type_Bearer
 from zato.common.hl7.audit import audit_message_received
 from zato.common.model.security import BearerAuthInfo, BearerRefusalReason
 from zato.server.connection.mcp.audit import build_audit_event, build_rate_limit_audit_event
+from zato.common.test.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.audit_log.buffer import PendingEvent
+    from zato.common.audit_log.pending import PendingEvent
     from zato.common.typing_ import any_, anytuple, stranydict
 
 # ################################################################################################################################
@@ -58,9 +58,6 @@ _identity = 'maria.johnson@example.com'
 
 # The default payload cap the tests build records with
 _max_payload_size = 65536
-
-# The prefix all the audit log database environment variables share
-_env_prefix = 'Zato_Audit_Log_DB_'
 
 # When the scheduler job was planned to fire and when the pub/sub message was published
 _planned_fire_time = datetime(2026, 3, 1, 2, 0, 0, tzinfo=timezone.utc)
@@ -629,10 +626,10 @@ class TestSources(TestCase):
 
         # The start of a run writes its first log entry straight to the database, so the test has one of its own
         directory = mkdtemp(prefix='zato-audit-mapping-')
-        db_path = os.path.join(directory, 'audit.db')
+        db_path = os.path.join(directory, 'zato.db')
 
         try:
-            with database_env(_env_prefix, {'type': AuditLogCtx.Type_SQLite, 'name': db_path}):
+            with database_env({'type': DatabaseEnv.Type_SQLite, 'path': db_path}):
                 _ = record_job_start(self.audit_log, 'nightly.cleanup',
                     cid='cid-job-1', job_id=12, current_run=3, planned_fire_time=_planned_fire_time,
                     delay_ms=15, service='demo.cleanup')

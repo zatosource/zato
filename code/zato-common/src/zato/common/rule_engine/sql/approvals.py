@@ -31,8 +31,11 @@ from .time_ import utc_now
 # ################################################################################################################################
 
 if 0:
+    from datetime import datetime
     from sqlalchemy.orm import Session
 
+    # Dummy assignments to satisfy type checkers
+    datetime = datetime
     Session = Session
 
 # ################################################################################################################################
@@ -147,82 +150,92 @@ class ApprovalStore:
         # Validate the approver before opening a transaction ..
         require_text(approver, 'Approval approver')
         now = utc_now()
-        session = self._session_factory()
 
         try:
-            with session.begin():
-
-                # Confirm that the definition exists and still accepts changes ..
-                definition = get_definition(session, definition_id)
-                if not definition.is_active:
-                    message = f'Rule definition {definition_id} is archived'
-                    raise InvalidStoreInputError(message)
-
-                # .. resolve the exact immutable snapshot being approved ..
-                target = get_version(session, definition_id, version)
-
-                # .. enforce author and approver separation unless self-approval was explicitly allowed ..
-                config = get_config_row(session, definition_id)
-
-                if config is None:
-                    allow_self_approval = Default_Allow_Self_Approval
-                else:
-                    allow_self_approval = config.allow_self_approval
-
-                if target.author == approver:
-                    if not allow_self_approval:
-                        message = f'Author {approver} cannot approve their own version {version} ' + \
-                            f'of rule definition {definition_id}'
-                        raise SelfApprovalNotAllowedError(message)
-
-                # .. bind the approval to the exact bytes of the approved snapshot ..
-                approved_hash = content_hash(target.document)
-
-                # .. stage the immutable approval row ..
-                values = {
-                    'definition_id': definition_id,
-                    'version':       version,
-                    'content_hash':  approved_hash,
-                    'approver':      approver,
-                    'comment':       comment,
-                    'created_at':    now,
-                }
-                statement = insert(rule_approval_table)
-                result = session.execute(statement, values)
-                result = cast_(CursorResult, result)
-                primary_key = cast_(anytuple, result.inserted_primary_key)
-                approval_id = primary_key[0]
-
-                # .. append its history event in the same commit ..
-                payload = {'content_hash': approved_hash, 'comment': comment}
-                _ = add_event(
-                    session,
-                    definition_id=definition_id,
-                    version=version,
-                    event_type=Event_Type_Version_Approved,
-                    actor=approver,
-                    payload=payload,
-                )
-
-                # .. and build the detached record from the values just written, avoiding a redundant re-read.
-                out = RuleApprovalRecord(
-                    id=approval_id,
-                    definition_id=definition_id,
-                    version=version,
-                    content_hash=approved_hash,
-                    approver=approver,
-                    comment=comment,
-                    created_at=now,
-                )
+            out = self._session_factory.write(self._approve_rows, definition_id, version, approver, comment, now)
 
         # A uniqueness failure means the version already has its one immutable approval ..
         except IntegrityError as e:
             message = f'Version {version} of rule definition {definition_id} is already approved'
             raise InvalidStoreInputError(message) from e
 
-        # .. and every path releases the session.
-        finally:
-            session.close()
+        return out
+
+# ################################################################################################################################
+
+    def _approve_rows(
+        self,
+        session:'Session',
+        definition_id:'int',
+        version:'int',
+        approver:'str',
+        comment:'str | None',
+        now:'datetime',
+        ) -> 'RuleApprovalRecord':
+        """ Stores the approval of one version with its history event and returns the approval.
+        """
+        # Confirm that the definition exists and still accepts changes ..
+        definition = get_definition(session, definition_id)
+        if not definition.is_active:
+            message = f'Rule definition {definition_id} is archived'
+            raise InvalidStoreInputError(message)
+
+        # .. resolve the exact immutable snapshot being approved ..
+        target = get_version(session, definition_id, version)
+
+        # .. enforce author and approver separation unless self-approval was explicitly allowed ..
+        config = get_config_row(session, definition_id)
+
+        if config is None:
+            allow_self_approval = Default_Allow_Self_Approval
+        else:
+            allow_self_approval = config.allow_self_approval
+
+        if target.author == approver:
+            if not allow_self_approval:
+                message = f'Author {approver} cannot approve their own version {version} ' + \
+                    f'of rule definition {definition_id}'
+                raise SelfApprovalNotAllowedError(message)
+
+        # .. bind the approval to the exact bytes of the approved snapshot ..
+        approved_hash = content_hash(target.document)
+
+        # .. stage the immutable approval row ..
+        values = {
+            'definition_id': definition_id,
+            'version':       version,
+            'content_hash':  approved_hash,
+            'approver':      approver,
+            'comment':       comment,
+            'created_at':    now,
+        }
+        statement = insert(rule_approval_table)
+        result = session.execute(statement, values)
+        result = cast_(CursorResult, result)
+        primary_key = cast_(anytuple, result.inserted_primary_key)
+        approval_id = primary_key[0]
+
+        # .. append its history event in the same commit ..
+        payload = {'content_hash': approved_hash, 'comment': comment}
+        _ = add_event(
+            session,
+            definition_id=definition_id,
+            version=version,
+            event_type=Event_Type_Version_Approved,
+            actor=approver,
+            payload=payload,
+        )
+
+        # .. and build the detached record from the values just written, avoiding a redundant re-read.
+        out = RuleApprovalRecord(
+            id=approval_id,
+            definition_id=definition_id,
+            version=version,
+            content_hash=approved_hash,
+            approver=approver,
+            comment=comment,
+            created_at=now,
+        )
 
         return out
 
@@ -350,90 +363,98 @@ class ApprovalStore:
         # Validate the actor before opening a transaction ..
         require_text(actor, 'Approval config actor')
         now = utc_now()
-        session = self._session_factory()
+        out = self._session_factory.write(self._set_config_field_rows, definition_id, field_name, field_value, actor, now)
 
-        try:
-            with session.begin():
+        return out
 
-                # Confirm the definition exists inside the same transaction ..
-                _ = get_definition(session, definition_id)
+# ################################################################################################################################
 
-                # .. read the current configuration, an unconfigured definition starts from the module-level defaults ..
-                existing = get_config_row(session, definition_id)
+    def _set_config_field_rows(
+        self,
+        session:'Session',
+        definition_id:'int',
+        field_name:'str',
+        field_value:'bool',
+        actor:'str',
+        now:'datetime',
+        ) -> 'RuleApprovalConfigRecord':
+        """ Stores one gate configuration change with its audit event and returns the configuration.
+        """
+        # Confirm the definition exists inside the same transaction ..
+        _ = get_definition(session, definition_id)
 
-                if existing is None:
-                    current_values = {
-                        'gate_enabled':        Default_Approval_Gate_Enabled,
-                        'allow_self_approval': Default_Allow_Self_Approval,
-                    }
-                else:
-                    current_values = {
-                        'gate_enabled':        existing.gate_enabled,
-                        'allow_self_approval': existing.allow_self_approval,
-                    }
+        # .. read the current configuration, an unconfigured definition starts from the module-level defaults ..
+        existing = get_config_row(session, definition_id)
 
-                # .. a change that changes nothing writes nothing and logs nothing ..
-                has_changed = current_values[field_name] != field_value
+        if existing is None:
+            current_values = {
+                'gate_enabled':        Default_Approval_Gate_Enabled,
+                'allow_self_approval': Default_Allow_Self_Approval,
+            }
+        else:
+            current_values = {
+                'gate_enabled':        existing.gate_enabled,
+                'allow_self_approval': existing.allow_self_approval,
+            }
 
-                # .. apply the one changed field over the current state ..
-                current_values[field_name] = field_value
+        # .. a change that changes nothing writes nothing and logs nothing ..
+        has_changed = current_values[field_name] != field_value
 
-                # .. store the configuration in place or create its first row ..
-                if existing is None:
-                    insert_values = {
-                        'definition_id':       definition_id,
-                        'gate_enabled':        current_values['gate_enabled'],
-                        'allow_self_approval': current_values['allow_self_approval'],
-                        'updated_at':          now,
-                        'updated_by':          actor,
-                    }
-                    statement = insert(rule_approval_config_table)
-                    result = session.execute(statement, insert_values)
-                    result = cast_(CursorResult, result)
-                    primary_key = cast_(anytuple, result.inserted_primary_key)
-                    config_id = primary_key[0]
+        # .. apply the one changed field over the current state ..
+        current_values[field_name] = field_value
 
-                else:
-                    update_values = {
-                        'gate_enabled':        current_values['gate_enabled'],
-                        'allow_self_approval': current_values['allow_self_approval'],
-                        'updated_at':          now,
-                        'updated_by':          actor,
-                    }
-                    statement = update(rule_approval_config_table)
-                    id_condition = rule_approval_config_table.c.id == existing.id
-                    statement = statement.where(id_condition)
-                    statement = statement.values(**update_values)
-                    _ = session.execute(statement)
-                    config_id = existing.id
+        # .. store the configuration in place or create its first row ..
+        if existing is None:
+            insert_values = {
+                'definition_id':       definition_id,
+                'gate_enabled':        current_values['gate_enabled'],
+                'allow_self_approval': current_values['allow_self_approval'],
+                'updated_at':          now,
+                'updated_by':          actor,
+            }
+            statement = insert(rule_approval_config_table)
+            result = session.execute(statement, insert_values)
+            result = cast_(CursorResult, result)
+            primary_key = cast_(anytuple, result.inserted_primary_key)
+            config_id = primary_key[0]
 
-                # .. an actual change appends its audit event in the same commit,
-                # .. so the gate can never be reconfigured without a trace ..
-                if has_changed:
-                    event_type = _config_event_type(field_name, field_value)
-                    payload = {field_name: field_value}
-                    _ = add_event(
-                        session,
-                        definition_id=definition_id,
-                        version=None,
-                        event_type=event_type,
-                        actor=actor,
-                        payload=payload,
-                    )
+        else:
+            update_values = {
+                'gate_enabled':        current_values['gate_enabled'],
+                'allow_self_approval': current_values['allow_self_approval'],
+                'updated_at':          now,
+                'updated_by':          actor,
+            }
+            statement = update(rule_approval_config_table)
+            id_condition = rule_approval_config_table.c.id == existing.id
+            statement = statement.where(id_condition)
+            statement = statement.values(**update_values)
+            _ = session.execute(statement)
+            config_id = existing.id
 
-                # .. and build the detached record from the values just written.
-                out = RuleApprovalConfigRecord(
-                    id=config_id,
-                    definition_id=definition_id,
-                    gate_enabled=current_values['gate_enabled'],
-                    allow_self_approval=current_values['allow_self_approval'],
-                    updated_at=now,
-                    updated_by=actor,
-                )
+        # .. an actual change appends its audit event in the same commit,
+        # .. so the gate can never be reconfigured without a trace ..
+        if has_changed:
+            event_type = _config_event_type(field_name, field_value)
+            payload = {field_name: field_value}
+            _ = add_event(
+                session,
+                definition_id=definition_id,
+                version=None,
+                event_type=event_type,
+                actor=actor,
+                payload=payload,
+            )
 
-        # Release the transactional session in every case.
-        finally:
-            session.close()
+        # .. and build the detached record from the values just written.
+        out = RuleApprovalConfigRecord(
+            id=config_id,
+            definition_id=definition_id,
+            gate_enabled=current_values['gate_enabled'],
+            allow_self_approval=current_values['allow_self_approval'],
+            updated_at=now,
+            updated_by=actor,
+        )
 
         return out
 

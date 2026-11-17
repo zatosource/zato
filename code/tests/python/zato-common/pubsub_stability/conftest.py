@@ -29,7 +29,9 @@ import pytest
 
 # Zato
 from capture import limit_captured_logs
-from zato.common.pubsub.sql.config import get_pubsub_engine, ModuleCtx
+from zato.common.db_env.database import get_database_engine
+from zato.common.pubsub.sql.config import ModuleCtx
+from zato.common.test.database_env import DatabaseEnv
 from zato.common.test.pubsub_database import get_db_mode, get_runtime_dir, is_postgresql_mode, pubsub_db_env, \
     start_pubsub_database, stop_pubsub_database
 
@@ -69,7 +71,7 @@ def stability_env() -> 'Iterator[strstrdict]':
     work_dir = tempfile.mkdtemp(prefix='zato-pubsub-stability-', dir=get_runtime_dir())
 
     env:'strstrdict' = {
-        ModuleCtx.Env_Generation_File: os.path.join(work_dir, 'pubsub-generation'),
+        ModuleCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
         ModuleCtx.Env_Delivered_Max_Messages: _delivered_max_messages,
     }
 
@@ -79,12 +81,12 @@ def stability_env() -> 'Iterator[strstrdict]':
         database = start_pubsub_database('stability', mode)
         env.update(database.env)
     else:
-        env[ModuleCtx.Env_Path] = os.path.join(work_dir, 'pubsub.db')
+        env[DatabaseEnv.Env_Path] = os.path.join(work_dir, 'zato.db')
 
     try:
         with pubsub_db_env(env):
             yield env
-            get_pubsub_engine().dispose()
+            get_database_engine().dispose()
     finally:
         if database:
             stop_pubsub_database(database)

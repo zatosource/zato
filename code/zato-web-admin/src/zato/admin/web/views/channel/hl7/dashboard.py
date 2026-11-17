@@ -21,7 +21,7 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
-from zato.common.audit_log.api import get_audit_engine
+from zato.common.db_env.database import get_database_engine
 from zato.common.hl7.dashboard import derive_live_health, get_channel_dashboard, Default_Range, Health_Unknown, \
     Range_Day, Range_Hours, Range_Label, Range_Month, Range_Quarter, Range_Week
 
@@ -148,7 +148,7 @@ def _get_dashboard_data(req:'any_', time_range:'str') -> 'stranydict':
     with the live state merged in.
     """
     now = datetime.now(timezone.utc)
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     out = get_channel_dashboard(engine, now, time_range)
 

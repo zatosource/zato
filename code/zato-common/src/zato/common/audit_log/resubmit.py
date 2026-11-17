@@ -21,7 +21,8 @@ from traceback import format_exc
 from sqlalchemy import select
 
 # Zato
-from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource, event_body_table, event_table, get_audit_engine
+from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource, event_body_table, event_table
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import AuditBody
 from zato.common.audit_log.dedup import acquire_dedup_key, build_dedup_key, complete_dedup_key, release_dedup_key
 from zato.common.audit_log.request_context import Key_Payload, Key_Payload_Kind, Key_Redacted, Payload_Kind_Described
@@ -180,7 +181,7 @@ def run_once(action:'str', event_id:'int', payload:'str', cid:'str', actor:'str'
     """ Runs one single-row resubmit under a dedup key built from the action, the event and the
     payload. A failure releases the key and a success keeps it claimed for good.
     """
-    engine = get_audit_engine()
+    engine = get_database_engine()
     dedup_key = build_dedup_key(action, event_id, payload)
 
     if not acquire_dedup_key(engine, dedup_key, cid, action, actor):
@@ -231,7 +232,7 @@ def load_event(event_id:'int', *, is_raw_payload:'bool'=False) -> 'StoredEvent':
         event_table.c.data,
     ).where(event_table.c.id == event_id)
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     with engine.connect() as connection:
         result = connection.execute(statement)
@@ -528,7 +529,7 @@ def find_event_ids(resubmit_filter:'ResubmitFilter') -> 'intlist':
 
     statement = statement.order_by(event_table.c.id)
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     out:'intlist' = []
 
@@ -564,7 +565,7 @@ def bulk_resubmit(
     out.is_dry_run = dry_run
     out.rows = []
 
-    engine = get_audit_engine()
+    engine = get_database_engine()
 
     event_ids = find_event_ids(resubmit_filter)
     out.total = len(event_ids)
