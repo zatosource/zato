@@ -298,8 +298,9 @@ def test_failing_commit_raises_in_each_caller(audit_backend:'str') -> 'None':
 # ################################################################################################################################
 
 def test_search_indexes_are_merged(audit_backend:'str') -> 'None':
-    """ A process that writes events to PostgreSQL merges the event and attribute indexes,
-    whose pending lists have the same limit, and no merger runs on SQLite.
+    """ A process that writes events to PostgreSQL merges the event and attribute indexes, along with the indexes
+    of other tables registered with the merger, the pending lists of the audit log indexes have the same limit,
+    and no merger runs on SQLite.
     """
     audit_log = AuditLog(Server_Name)
     _ = _insert(audit_log, 0)
@@ -312,7 +313,11 @@ def test_search_indexes_are_merged(audit_backend:'str') -> 'None':
         return
 
     assert merger is not None
-    assert merger.index_names == _index_names
+
+    # The indexes of the audit log come first, followed by the indexes of other tables registered with the merger.
+    audit_index_count = len(_index_names)
+    assert merger.index_names[:audit_index_count] == _index_names
+
     assert merger._thread.is_alive()
 
     # The pending lists can be merged ..

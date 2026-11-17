@@ -116,5 +116,9 @@ def audit_backend(request:'pytest.FixtureRequest', tmp_path:'os.PathLike') -> 's
         yield backend
         dispose_database_engine()
 
+    # The cyclic garbage of a test is collected before the next test starts, outside the window of the event loop
+    # monitor, so that a full collection of it does not block the event loop during a later test.
+    _ = gc.collect()
+
 # ################################################################################################################################
 # ################################################################################################################################
