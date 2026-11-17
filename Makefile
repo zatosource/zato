@@ -12,7 +12,7 @@
 	test-soak test-soak-pubsub test-soak-scheduler-failover test-soak-ha-sqlite test-soak-ha-postgresql \
 	test-arbiter \
 	test-rate-limiting test-enmasse test-cli \
-	test-pubsub test-pubsub-perf test-pubsub-exactly-once test-durability test-durability-fast test-durability-static test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
+	test-pubsub test-pubsub-perf test-pubsub-perf-latency test-pubsub-exactly-once test-durability test-durability-fast test-durability-static test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
 	test-mcp test-bearer test-graphql test-grpc \
 	test-edifact test-soap test-openapi test-api-portal-live \
@@ -676,13 +676,13 @@ test-rest-outgoing: ## Outgoing REST invocation tests, in-process and through a 
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest_outgoing_invocation_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-# The measurement environment of outgoing REST invocations - the target endpoint and the scripts
-REST_OUTGOING_BENCH_DIR ?= $(HOME)/reports/rest-outgoing/bench
-
-test-rest-perf: ## Outgoing REST invocations measured through requests and through the Rust transport, side by side.
+test-rest-perf: ## Outgoing REST invocations measured as server CPU time per invocation.
 	$(Zato_Log_Reset)
 	$(MAKE) test-durability-static $(Zato_Log)
-	cd $(REST_OUTGOING_BENCH_DIR) && $(ZATO_PY) compare_transports.py 2>&1 | tee -a /tmp/logs-$@.txt
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/rest_outgoing_perf/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest_outgoing_perf -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 test-rest-channel: ## REST and SOAP channel invocation tests through a running server.
 	$(Zato_Log_Reset)
@@ -691,13 +691,13 @@ test-rest-channel: ## REST and SOAP channel invocation tests through a running s
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest_channel_invocation -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-# The measurement environment of REST and SOAP channels - the load client and the scripts
-REST_CHANNEL_BENCH_DIR ?= $(HOME)/reports/rest-channel/bench
-
 test-rest-channel-perf: ## REST and SOAP channels measured as server CPU time per request.
 	$(Zato_Log_Reset)
 	$(MAKE) test-durability-static $(Zato_Log)
-	cd $(REST_CHANNEL_BENCH_DIR) && $(ZATO_PY) bench_rest_channel.py 2>&1 | tee -a /tmp/logs-$@.txt
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/rest_channel_perf/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest_channel_perf -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 # fuzz_disabled
 test-rest-fuzz: ## REST mutation tests.
@@ -942,13 +942,9 @@ test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing del
 Zato_Test_Soak             := test-soak-pubsub test-soak-scheduler-failover test-soak-ha-sqlite test-soak-ha-postgresql
 Zato_Test_Soak_Resume_File := $(CURDIR)/code/tests/.test-soak-resume
 
-test-soak-pubsub: ## The pub/sub soak tests - the faults suite on PostgreSQL and the stability suite on every database mode.
+test-soak-pubsub: ## The pub/sub soak tests - the stability suite on every database mode.
 	$(Zato_Log_Reset)
 	$(MAKE) test-durability-static $(Zato_Log)
-	Zato_Test_PubSub_DB_Mode=postgresql ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_faults/ $(Zato_Test_Soak_Only) \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_faults_soak -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	for mode in $(Zato_Test_PubSub_Stability_Modes); do \
 		Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 			$(CURDIR)/code/tests/python/zato-common/pubsub_stability/ $(Zato_Test_Soak_Only) \
@@ -1067,6 +1063,20 @@ test-pubsub-perf: ## Pub/sub performance through a live server - concurrent publ
 	fi; \
 	$(foreach step,$(Zato_Test_PubSub_Perf_Steps),$(call Zato_Test_PubSub_Perf_Step,$(step))) \
 	rm -f $(Zato_Test_PubSub_Perf_Resume_File)
+
+# The round-trip times of a network within one availability zone and across zones of a managed database, in milliseconds
+Zato_Test_PubSub_Perf_Round_Trips := 0.5 1.0 2.0
+
+test-pubsub-perf-latency: ## Pub/sub capacity through a live server on PostgreSQL, with each round-trip time of a managed database added to the network of the database container.
+	$(Zato_Log_Reset)
+	$(MAKE) test-durability-static $(Zato_Log)
+	for round_trip in $(Zato_Test_PubSub_Perf_Round_Trips); do \
+		Zato_Test_PubSub_DB_Mode=postgresql Zato_Test_PubSub_DB_Round_Trip_Ms=$$round_trip ZATO_TEST_BASE_DIR=$(CURDIR) \
+		$(ZATO_PY) -m pytest -W ignore::DeprecationWarning \
+			$(Zato_Test_PubSub_Perf_Dir)/test_capacity.py -v -s --tb=short \
+			-o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_perf_latency \
+			$(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
+	done
 
 # The live suites of exactly-once delivery.
 Zato_Test_Exactly_Once_Dir      := $(CURDIR)/code/tests/python/zato-server/pubsub_exactly_once
@@ -2025,7 +2035,7 @@ Zato_Test_Live := \
 Zato_Test_Heavy := test-rest test-server
 
 # Standalone performance suites, left out of test-all
-Zato_Test_Perf := test-pubsub-perf test-rule-engine-perf
+Zato_Test_Perf := test-pubsub-perf test-pubsub-perf-latency test-rule-engine-perf
 
 Zato_Test_Fuzz := test-rest-fuzz test-server-fuzz
 

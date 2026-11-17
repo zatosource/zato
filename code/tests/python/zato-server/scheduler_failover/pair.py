@@ -157,6 +157,9 @@ class SchedulerPair:
     puller_password: 'str' = ''
     receivers: 'dict' = field(default_factory=dict)
 
+    # The password of the client of the services of each server
+    invoke_password: 'str' = ''
+
     @property
     def a(self) -> 'SchedulerServer':
         return self.servers[0]
@@ -433,6 +436,8 @@ def build_pair(database:'PubSubDatabase', server_count:'int', needs_workload:'bo
         rendered_yaml = pubsub_yaml + '\n' + rendered_yaml
 
     invoke_password = 'test.invoke.' + CryptoManager.generate_hex_string()
+    pair.invoke_password = invoke_password
+
     labels = ['a', 'b'][:server_count]
 
     try:

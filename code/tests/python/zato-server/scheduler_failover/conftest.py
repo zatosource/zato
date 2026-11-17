@@ -19,8 +19,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 # Zato
 from pair import build_pair, remove_pair
-from zato.common.test.pubsub_database import get_runtime_dir, get_suite_modes, PubSubDatabase, PubSubDBMode, \
-    start_pubsub_database, stop_pubsub_database
+from zato.common.test.pubsub_database import get_runtime_dir, get_suite_modes, new_sqlite_database, PubSubDatabase, \
+    PubSubDBMode, start_pubsub_database, stop_pubsub_database
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -111,8 +111,7 @@ def sqlite_server() -> 'any_':
     """
     sqlite_dir = tempfile.mkdtemp(prefix='zato_scheduler_failover_sqlite_', dir=get_runtime_dir())
 
-    database = PubSubDatabase(mode=PubSubDBMode.SQLite)
-    database.env = {'Zato_Database_Path': os.path.join(sqlite_dir, 'zato.db')}
+    database = new_sqlite_database(sqlite_dir)
 
     out = build_pair(database, 1, False)
 

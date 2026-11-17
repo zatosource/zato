@@ -21,8 +21,6 @@ from zato.common.test.pubsub_database import get_db_mode, is_managed_mode, PubSu
 if 0:
     from zato.common.typing_ import intlist
 
-    floatlist = list[float]
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -58,9 +56,6 @@ class ProfileLimits:
     # How long a failover leaves the endpoint without a database, in seconds
     failover_delays: 'intlist'
 
-    # The round-trip times within one availability zone and across zones, in milliseconds
-    round_trip_ms: 'floatlist'
-
     # How often the credentials of the pub/sub role change, in seconds
     rotation_seconds: 'int'
 
@@ -90,7 +85,6 @@ def _get_rds_limits() -> 'ProfileLimits':
     ]
     out.baseline_cpus = 0.4
     out.failover_delays = [35, 120]
-    out.round_trip_ms = [0.5, 2.0]
     out.rotation_seconds = 30
     return out
 
@@ -108,7 +102,6 @@ def _get_azure_limits() -> 'ProfileLimits':
     ]
     out.baseline_cpus = 0.8
     out.failover_delays = [60, 120]
-    out.round_trip_ms = [1.0, 2.0]
     out.rotation_seconds = 30
     return out
 

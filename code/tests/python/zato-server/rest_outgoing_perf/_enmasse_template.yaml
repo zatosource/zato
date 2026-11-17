@@ -1,0 +1,47 @@
+
+security:
+
+  - name: test.perf.outgoing.basic
+    type: basic_auth
+    username: "{{basic_username}}"
+    password: "{{basic_password}}"
+
+outgoing_rest:
+
+  - name: test.perf.outgoing.plain
+    host: "http://127.0.0.1:{{target_port}}"
+    url_path: /api/plain/item
+    data_format: json
+    timeout: 30
+
+  - name: test.perf.outgoing.basic
+    host: "http://127.0.0.1:{{target_port}}"
+    url_path: /api/basic/item
+    data_format: json
+    timeout: 30
+    security: test.perf.outgoing.basic
+
+  # The target endpoint closes the connection after each response, so each invocation opens a new one
+  - name: test.perf.outgoing.new-connection
+    host: "http://127.0.0.1:{{target_port}}"
+    url_path: /api/close/item
+    data_format: json
+    timeout: 30
+    security: test.perf.outgoing.basic
+
+channel_rest:
+
+  - name: test.perf.outgoing.plain
+    service: test.perf.outgoing.plain
+    url_path: /test/perf/outgoing/plain
+    data_format: json
+
+  - name: test.perf.outgoing.basic
+    service: test.perf.outgoing.basic
+    url_path: /test/perf/outgoing/basic
+    data_format: json
+
+  - name: test.perf.outgoing.new-connection
+    service: test.perf.outgoing.new-connection
+    url_path: /test/perf/outgoing/new-connection
+    data_format: json

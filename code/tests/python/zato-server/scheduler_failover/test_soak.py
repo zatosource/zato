@@ -11,6 +11,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import time
+from dataclasses import asdict
+from typing import cast
 
 # pytest
 import pytest
@@ -20,14 +22,16 @@ from checks import check_run_log
 from pair import stop_server
 from resources import get_resource_growth, ResourceMonitor
 from workload import get_count_mismatches, get_repeats_not_in_flight, Topic_Name, Workload
-from zato.common.typing_ import cast_
+from zato.common.test.client import AdminClient
+from zato.common.test.perf_report import report_result, start_measurement
+from zato.common.test.pubsub_database import is_postgresql_mode
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from pair import SchedulerPair
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anydict
 
     SchedulerPair = SchedulerPair
     any_ = any_
@@ -44,11 +48,20 @@ _duration_seconds = 20 * 60
 @pytest.mark.soak
 def test_soak(workload_pair:'SchedulerPair') -> 'None':
     """ No slot runs twice, the run counts equal the run state, the pub/sub workload loses nothing, and the resources
-    of the active server remain bounded.
+    of the active server remain bounded. The figures of the run are recorded with the settings of the active server.
     """
     pair = workload_pair
 
-    workload = Workload(cast_('any_', pair), [pair.a.server])
+    # The server measured is the active one, on the database that the servers share
+    if is_postgresql_mode(pair.database.mode):
+        database = pair.database
+    else:
+        database = None
+
+    client = AdminClient(pair.a.server.base_url, pair.invoke_password)
+    measurement = start_measurement(client, database)
+
+    workload = Workload(cast('any_', pair), [pair.a.server])
 
     monitor = ResourceMonitor()
     monitor.set_active(pair.a)
@@ -75,10 +88,24 @@ def test_soak(workload_pair:'SchedulerPair') -> 'None':
     repeated = get_repeats_not_in_flight(records, workload.fault_windows)
     assert not repeated, repeated[:10]
 
+    # The settings are read while the measured server still runs.
+    resources:'list[anydict]' = []
+
+    for period in monitor.periods:
+        resources.append(asdict(period))
+
+    _ = report_result(measurement, 'scheduler-soak', {
+        'seconds': _duration_seconds,
+        'publications_acknowledged': len(workload.acknowledged),
+        'messages_pulled': len(workload.pulled),
+        'pushes_received': len(records),
+        'resources': resources,
+    })
+
     stop_server(pair.a)
 
     # .. with the stored counts equal to the rows ..
-    mismatches = get_count_mismatches(cast_('any_', pair))
+    mismatches = get_count_mismatches(cast('any_', pair))
     assert not mismatches, mismatches
 
     # .. no slot ran twice and the run counts equal the run state ..

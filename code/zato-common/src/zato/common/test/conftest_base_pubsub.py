@@ -54,6 +54,9 @@ _server_wait_timeout  = 120
 # two thousand objects - ordinary suites finish well within the old 180 seconds.
 _quickstart_timeout   = 600
 
+# How long an import into a running server waits for a service that an object names to be deployed, in seconds
+_enmasse_missing_wait_time = 30
+
 _ping_poll_interval   = 0.5
 
 # The process name of the worker of a server, the process ID returned when a server has no worker,
@@ -511,6 +514,27 @@ def run_quickstart_and_enmasse(
         logger.info('Enmasse import: %.1fs', enmasse_time - quickstart_time)
 
     return server_directory
+
+# ################################################################################################################################
+
+def import_into_running_server(zato_bin:'str', server_directory:'str', yaml_text:'str', directory:'str') -> 'None':
+    """ Imports the enmasse YAML into a running server, which is what objects need when they name services
+    that the server deploys from its pickup directory as it starts.
+    """
+    yaml_path = os.path.join(directory, 'enmasse-running.yaml')
+
+    with open(yaml_path, 'w') as yaml_file:
+        _ = yaml_file.write(yaml_text)
+
+    command = [
+        zato_bin, 'enmasse', server_directory, '--import', '--input', yaml_path,
+        '--missing-wait-time', str(_enmasse_missing_wait_time),
+    ]
+
+    result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=_quickstart_timeout)
+
+    if result.returncode != 0:
+        raise RuntimeError(f'enmasse import failed:\nstdout: {result.stdout}\nstderr: {result.stderr}')
 
 # ################################################################################################################################
 # ################################################################################################################################

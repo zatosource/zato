@@ -17,7 +17,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import shutil
 import subprocess
 import sys
 import time
@@ -57,9 +56,6 @@ _proxy_command_timeout = 10
 
 # The address that the proxy listens on.
 _proxy_host = '127.0.0.1'
-
-# The name under which a container reaches the network of the host.
-_host_gateway_name = 'host.docker.internal'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -466,118 +462,6 @@ def promote_standby(database:'ReplicatedDatabase') -> 'float':
 
     out = time.monotonic() - start
     return out
-
-# ################################################################################################################################
-
-def _rebuild_primary_as_standby(database:'ReplicatedDatabase') -> 'None':
-    """ Replaces the container of the original primary with a standby of the promoted server, built from a base backup
-    of it into the data directory of the original primary, on the port the original primary publishes on the host.
-    """
-    primary = database.primary
-
-    _ = subprocess.run(['docker', 'rm', '-f', primary.container_name], check=True, capture_output=True)
-
-    data_dir = os.path.join(primary.work_dir, 'data')
-    shutil.rmtree(data_dir)
-    os.makedirs(data_dir)
-    os.chmod(data_dir, 0o700)
-
-    # The promoted server listens on the network of the host, which this container reaches through its gateway ..
-    conninfo = _get_conninfo(database, _host_gateway_name, database.standby_port)
-    container_data_dir = '/var/lib/postgresql/data'
-
-    replication_settings = [
-        'hot_standby=on',
-        f'primary_conninfo={conninfo}',
-        f'primary_slot_name={_standby_name}',
-    ]
-
-    settings = get_container_settings(primary, replication_settings)
-
-    postgres_command = ['postgres', '-D', container_data_dir]
-    for setting in settings:
-        postgres_command.append(f'-c "{setting}"')
-
-    script = ' && '.join([
-        f'pg_basebackup -d "{conninfo}" -D {container_data_dir} -X stream -c fast -C -S {_standby_name} -R',
-        'exec ' + ' '.join(postgres_command),
-    ])
-
-    # .. and it keeps the name, the published port and the data directory of the original primary.
-    command = list(primary.docker_args)
-    command.extend(['--add-host', f'{_host_gateway_name}:host-gateway'])
-    command.extend(['--entrypoint', 'bash'])
-    command.append(ModuleCtx.PostgreSQL_Image)
-    command.extend(['-c', script])
-
-    _ = subprocess.run(command, check=True, capture_output=True)
-
-# ################################################################################################################################
-
-def _rebuild_standby(database:'ReplicatedDatabase') -> 'None':
-    """ Replaces the container of the original standby with a new standby of the original primary.
-    """
-    _ = subprocess.run(['docker', 'rm', '-f', database.standby_container], check=True, capture_output=True)
-    shutil.rmtree(database.standby_dir)
-
-    _start_standby(database)
-
-# ################################################################################################################################
-
-def _promote_original_primary(database:'ReplicatedDatabase') -> 'None':
-    """ Promotes the original primary, rebuilt as a standby, and repoints the proxy at it.
-    """
-    connection = connect(database.primary, is_admin=True)
-    connection.autocommit = True
-    cursor = connection.cursor()
-    cursor.execute('select pg_promote(true, %s)', (_promote_timeout,))
-    row:'any_' = cursor.fetchone()
-    is_promoted = row[0]
-    connection.close()
-
-    if not is_promoted:
-        raise Exception(f'Container {database.primary.container_name} was not promoted')
-
-    database.is_promoted = False
-    _ = proxy_command(database, f'upstream/{_proxy_host}/{database.primary.port}')
-
-# ################################################################################################################################
-
-def switch_primary(database:'ReplicatedDatabase') -> 'float':
-    """ Ends the current primary at once, promotes its standby, repoints the proxy at it and rebuilds the ended server
-    as the standby of the new primary. A failover is followed by a failback at the next call. Returns how long
-    the promotion took, in seconds. The managed modes, whose endpoint follows DNS, are not supported.
-    """
-    start = time.monotonic()
-
-    # The original standby is the primary now, so the original primary is promoted back ..
-    if database.is_promoted:
-        _ = subprocess.run(['docker', 'kill', database.standby_container], check=True, capture_output=True)
-        _promote_original_primary(database)
-
-    # .. or the original primary is the primary, so its standby is promoted ..
-    else:
-        kill_primary(database)
-        _ = promote_standby(database)
-
-    promote_seconds = time.monotonic() - start
-
-    # .. the new primary has had no standby since its promotion, and from here on its commits wait for one ..
-    if database.is_sync:
-        _require_synchronous_standby(database)
-        expected_state = 'sync'
-    else:
-        expected_state = 'async'
-
-    # .. which is built from a base backup of it in place of the server that ended.
-    if database.is_promoted:
-        _rebuild_primary_as_standby(database)
-    else:
-        _rebuild_standby(database)
-
-    _wait_until_streaming(database, expected_state)
-
-    return promote_seconds
 
 # ################################################################################################################################
 

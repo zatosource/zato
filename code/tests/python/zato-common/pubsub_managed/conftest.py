@@ -63,7 +63,7 @@ if 0:
 _delivered_max_messages = '10000'
 
 # The parameters that each managed mode gives its own values to.
-_profile_parameters = ['storage_tier', 'failover_delay', 'round_trip_ms']
+_profile_parameters = ['storage_tier', 'failover_delay']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -98,11 +98,8 @@ def pytest_generate_tests(metafunc:'pytest.Metafunc') -> 'None':
                     ids.append(tier.name)
                 metafunc.parametrize(name, values, ids=ids)
 
-            elif name == 'failover_delay':
-                metafunc.parametrize(name, limits.failover_delays)
-
             else:
-                metafunc.parametrize(name, limits.round_trip_ms)
+                metafunc.parametrize(name, limits.failover_delays)
 
 # ################################################################################################################################
 

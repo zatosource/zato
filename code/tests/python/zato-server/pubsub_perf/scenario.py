@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from typing import NamedTuple
 
 # Zato
@@ -14,6 +15,7 @@ from pubsub_perf.clients import get_receipt_key, PublisherGroup, ReceiptReader, 
 from pubsub_perf.config import PerfConfig
 from pubsub_perf.figures import get_rate_figures
 from zato.common.test.perf_report import report_result
+from zato.common.test.pubsub_database import ModuleCtx as DatabaseCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -191,6 +193,10 @@ class ScenarioRun:
             'deliveries': get_rate_figures(delivered_count, settled_seconds),
             'publication_to_delivery': latencies.get_figures(),
         }
+
+        # The round-trip time that the network of the database container was given, if any
+        if DatabaseCtx.Env_Round_Trip_Ms in os.environ:
+            out['database_round_trip_ms'] = float(os.environ[DatabaseCtx.Env_Round_Trip_Ms])
 
         return out
 

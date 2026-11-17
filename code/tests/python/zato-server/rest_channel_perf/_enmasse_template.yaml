@@ -1,0 +1,98 @@
+
+security:
+
+  - name: test.perf.channel.basic
+    type: basic_auth
+    username: "{{basic_username}}"
+    password: "{{basic_password}}"
+
+  - name: test.perf.channel.apikey
+    type: apikey
+    header: X-API-Key
+    password: "{{api_key}}"
+
+  - name: test.perf.channel.bearer.static
+    type: bearer_token
+    static_token: "{{static_token}}"
+
+  - name: test.perf.channel.bearer.jwt
+    type: bearer_token
+    username: test.perf.channel.jwt.client
+    password: "{{jwt_client_password}}"
+    issuer: "{{issuer}}"
+    audience: "{{audience}}"
+    jwks_url: "{{jwks_url}}"
+
+channel_rest:
+
+  - name: test.perf.channel.ping
+    service: test.channel.ping
+    url_path: /test/perf/ping
+    data_format: json
+    is_audit_log_active: false
+
+  - name: test.perf.channel.basic
+    service: test.channel.ping
+    url_path: /test/perf/basic
+    data_format: json
+    security: test.perf.channel.basic
+    is_audit_log_active: false
+
+  - name: test.perf.channel.apikey
+    service: test.channel.ping
+    url_path: /test/perf/apikey
+    data_format: json
+    security: test.perf.channel.apikey
+    is_audit_log_active: false
+
+  - name: test.perf.channel.bearer.static
+    service: test.channel.ping
+    url_path: /test/perf/bearer-static
+    data_format: json
+    security: test.perf.channel.bearer.static
+    is_audit_log_active: false
+
+  - name: test.perf.channel.bearer.jwt
+    service: test.channel.ping
+    url_path: /test/perf/jwt
+    data_format: json
+    security: test.perf.channel.bearer.jwt
+    is_audit_log_active: false
+
+  - name: test.perf.channel.path-params
+    service: test.channel.ping
+    url_path: /test/perf/customers/{customer_id}/orders/{order_id}
+    data_format: json
+    is_audit_log_active: false
+
+  - name: test.perf.channel.input
+    service: test.channel.input.declared
+    url_path: /test/perf/input
+    data_format: json
+    is_audit_log_active: false
+
+  - name: test.perf.channel.model
+    service: test.channel.input.model
+    url_path: /test/perf/model
+    data_format: json
+    is_audit_log_active: false
+
+  - name: test.perf.channel.audit
+    service: test.channel.ping
+    url_path: /test/perf/audit
+    data_format: json
+    is_audit_log_active: true
+
+  - name: test.perf.channel.handle-cost
+    service: test.channel.handle-cost
+    url_path: /test/perf/handle-cost
+    data_format: json
+    is_audit_log_active: false
+
+channel_soap:
+
+  - name: test.perf.channel.soap
+    service: test.channel.soap.echo
+    url_path: /test/perf/soap
+    soap_version: "1.1"
+    is_audit_log_active: false

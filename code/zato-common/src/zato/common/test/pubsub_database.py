@@ -25,6 +25,7 @@ import pg8000.dbapi
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.test.durability.disk import get_disk_dir, verify_disk_dir
 from zato.common.test.pubsub_bouncer import Bouncer_Port, start_bouncer
 from zato.common.test.pubsub_certs import Chain_Plain, generate_certificates
@@ -226,6 +227,19 @@ def get_runtime_dir() -> 'str':
         verify_disk_dir(out)
     else:
         out = get_disk_dir(ModuleCtx.Runtime_Dir_Name)
+
+    return out
+
+# ################################################################################################################################
+
+def new_sqlite_database(directory:'str') -> 'PubSubDatabase':
+    """ Returns a SQLite Zato database whose file is in the given directory, with the variables that select it.
+    """
+    out = PubSubDatabase(mode=PubSubDBMode.SQLite)
+    out.env = {
+        DatabaseEnv.Env_Type: DatabaseEnv.Type_SQLite,
+        DatabaseEnv.Env_Path: os.path.join(directory, DatabaseEnv.File_Name),
+    }
 
     return out
 
