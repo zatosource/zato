@@ -93,13 +93,13 @@ class RuleSQLBackend:
         capture_policy:'CapturePolicy | None' = None,
         config:'DecisionWriterConfig | None' = None,
         ) -> 'DecisionBatchWriter':
-        """ Creates an asynchronous decision writer over this backend's session factory.
+        """ Creates a decision writer over this backend's session factory, whose callers return once their decisions commit.
         """
         # Construct the configured capture policy or its module-level defaults ..
         if capture_policy is None:
             capture_policy = CapturePolicy()
 
-        # .. construct the configured writer bounds or their module-level defaults ..
+        # .. construct the configured commit size or its module-level default ..
         if config is None:
             config = DecisionWriterConfig()
 

@@ -39,20 +39,8 @@ class InvalidStoreInputError(RuleSQLStoreError):
 
 # ################################################################################################################################
 
-class DecisionBufferFullError(RuleSQLStoreError):
-    """ The asynchronous decision buffer is full, no decision was silently discarded.
-    """
-
-# ################################################################################################################################
-
 class DecisionAlreadyExistsError(RuleSQLStoreError):
     """ A decision identifier was submitted more than once.
-    """
-
-# ################################################################################################################################
-
-class DecisionWriterError(RuleSQLStoreError):
-    """ The asynchronous decision writer failed.
     """
 
 # ################################################################################################################################

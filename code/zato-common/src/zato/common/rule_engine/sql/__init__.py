@@ -30,8 +30,6 @@ from .decisions import CapturePolicy as CapturePolicy
 from .errors import ApprovalContentMismatchError as ApprovalContentMismatchError
 from .errors import ApprovalRequiredError as ApprovalRequiredError
 from .errors import DecisionAlreadyExistsError as DecisionAlreadyExistsError
-from .errors import DecisionBufferFullError as DecisionBufferFullError
-from .errors import DecisionWriterError as DecisionWriterError
 from .errors import InvalidDocumentError as InvalidDocumentError
 from .errors import InvalidStoreInputError as InvalidStoreInputError
 from .errors import RecordNotFoundError as RecordNotFoundError

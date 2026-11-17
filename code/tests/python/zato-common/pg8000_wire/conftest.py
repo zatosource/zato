@@ -52,7 +52,7 @@ class ModuleCtx:
     PostgreSQL_Port      = 25576
     PostgreSQL_Container = 'zato-pg8000-wire-postgresql'
 
-    # The data directory is in memory and the container uses at most this many CPUs
+    # The container uses at most this many CPUs
     CPUs = '2'
 
     # Database credentials
@@ -65,7 +65,7 @@ class ModuleCtx:
 
 @pytest.fixture(scope='session')
 def postgresql_server() -> 'servergen':
-    """ A PostgreSQL server whose data directory is in memory, started for the session and removed after it.
+    """ A PostgreSQL server, started for the session and removed after it.
     """
     install_pg8000_wire()
     install_pg8000_copy()
@@ -77,7 +77,6 @@ def postgresql_server() -> 'servergen':
         password=ModuleCtx.Password,
         db_name=ModuleCtx.DB_Name,
         needs_ssl=False,
-        is_in_memory=True,
         cpus=ModuleCtx.CPUs,
     )
     yield server

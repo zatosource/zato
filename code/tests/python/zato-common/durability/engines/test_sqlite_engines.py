@@ -28,6 +28,7 @@ from zato.common.test.durability.barrier import replicated_environment
 from zato.common.test.durability.disk import get_disk_dir
 from zato.common.test.durability.sources import ModuleCtx as SourcesModuleCtx
 from zato.common.test.zato_database import file_database_engine
+from zato.common.typing_ import cast_
 from zato.common.util.api import get_engine
 
 # ################################################################################################################################
@@ -150,11 +151,12 @@ def test_configuration_database_pool(tmp_path:'Path') -> 'None':
     }
 
     pool = SQLConnectionPool(ZATO_ODB_POOL_NAME, config, config)
+    engine = cast_('Engine', pool.engine)
 
     try:
-        _check_engine(pool.engine)
+        _check_engine(engine)
     finally:
-        pool.engine.dispose()
+        engine.dispose()
 
 # ################################################################################################################################
 

@@ -9,16 +9,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import datetime
 from threading import Thread
-from time import monotonic, sleep
+from time import monotonic
 
 # humanize
 from humanize import intcomma
 
 # Local
-from common import Floors, Full_Buffer_Sleep_Seconds, Ingest_Decision_Count, Ingest_Submitter_Count, Measurement, \
+from common import Floors, Ingest_Decision_Count, Ingest_Submitter_Count, Measurement, \
     percentile, PerfDatabase
 from zato.common.rule_engine.sql import CapturePolicy, RuleSQLBackend
-from zato.common.rule_engine.sql.errors import DecisionBufferFullError
 from seeding import count_decision_rows, delete_all_rows
 from traffic import build_decision, create_rulesets
 
@@ -88,8 +87,8 @@ def _submit_share(
     last_index:'int',
     state:'_SubmitterState',
     ) -> 'None':
-    """ What one submitter thread runs - its share of the measured decisions, each submitted
-    with backpressure, retrying while the writer's bounded buffer reports saturation.
+    """ What one submitter thread runs - its share of the measured decisions, each of which is committed
+    before its submit returns.
     """
     for index in range(first_index, last_index):
 
@@ -97,16 +96,9 @@ def _submit_share(
         occurred_at = Ingest_Base_Time.replace(hour=index % 24)
         decision = build_decision(index, ruleset_ids, occurred_at, 'ingest')
 
-        # Submit with backpressure - saturation is the writer's documented contract, not an error here ..
+        # The latency of a submit includes the commit of its decision ..
         submit_start = monotonic()
-
-        while True:
-            try:
-                writer.submit(decision)
-                break
-            except DecisionBufferFullError:
-                sleep(Full_Buffer_Sleep_Seconds)
-
+        writer.submit(decision)
         submit_end = monotonic()
         state.latencies.append(submit_end - submit_start)
 
@@ -146,8 +138,8 @@ def _rollup_totals(backend:'RuleSQLBackend', ruleset_id:'int') -> 'fired_count_d
 # ################################################################################################################################
 
 def run_ingest_scenario(backend:'RuleSQLBackend', database:'PerfDatabase', floors:'Floors') -> 'measurement_list':
-    """ The headline: concurrent submitters push the measured decisions through the live asynchronous
-    writer, the rate must clear the decisions-per-second floor, and afterwards every decision is
+    """ The headline: concurrent submitters push the measured decisions through the group commit
+    of the writer, the rate must clear the decisions-per-second floor, and afterwards every decision is
     durably present with rollups exact to the generated traffic - zero silent loss under concurrency.
     """
     print(f'Ingest: {intcomma(Ingest_Decision_Count)} decisions, {Ingest_Submitter_Count} submitters', flush=True)
@@ -159,7 +151,6 @@ def run_ingest_scenario(backend:'RuleSQLBackend', database:'PerfDatabase', floor
     # .. the writer runs with a production capture dial ..
     capture_policy = CapturePolicy(success_percent=Ingest_Success_Capture_Percent, store_fired_rule_ids=True)
     writer = backend.decision_writer(capture_policy=capture_policy)
-    writer.start()
 
     # .. each submitter gets an equal share of the measured decisions ..
     share = Ingest_Decision_Count // Ingest_Submitter_Count
@@ -174,7 +165,7 @@ def run_ingest_scenario(backend:'RuleSQLBackend', database:'PerfDatabase', floor
         thread = Thread(target=_submit_share, args=(writer, ruleset_ids, first_index, last_index, state))
         threads.append(thread)
 
-    # .. the measured window runs from the first submit to the durable close ..
+    # .. the measured window runs from the first submit to the last commit ..
     start = monotonic()
 
     for thread in threads:
@@ -182,8 +173,6 @@ def run_ingest_scenario(backend:'RuleSQLBackend', database:'PerfDatabase', floor
 
     for thread in threads:
         thread.join()
-
-    writer.close()
 
     now = monotonic()
     elapsed = now - start

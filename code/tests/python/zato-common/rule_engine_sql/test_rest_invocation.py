@@ -117,8 +117,7 @@ def test_live_invocation_lands_with_caller(backend:'RuleSQLBackend') -> 'None':
 
     invoker = new_invoker(backend)
 
-    with invoker.writer:
-        result = invoker.invoke('payments.discounts', {'credit_score': 720}, caller='crm.prod')
+    result = invoker.invoke('payments.discounts', {'credit_score': 720}, caller='crm.prod')
 
     # The invocation completed and reports what ran ..
     assert result.status == InvocationStatus.OK
@@ -143,8 +142,7 @@ def test_unknown_ruleset_is_not_available(backend:'RuleSQLBackend') -> 'None':
     """
     invoker = new_invoker(backend)
 
-    with invoker.writer:
-        result = invoker.invoke('pricing.default', {'credit_score': 720})
+    result = invoker.invoke('pricing.default', {'credit_score': 720})
 
     assert result.status == InvocationStatus.Unknown_Ruleset
     assert 'pricing.default' in result.message
@@ -159,8 +157,7 @@ def test_unpublished_ruleset_has_no_live_version(backend:'RuleSQLBackend') -> 'N
 
     invoker = new_invoker(backend)
 
-    with invoker.writer:
-        result = invoker.invoke('payments.discounts', {'credit_score': 720})
+    result = invoker.invoke('payments.discounts', {'credit_score': 720})
 
     assert result.status == InvocationStatus.No_Live_Version
     assert 'payments.discounts' in result.message
@@ -175,8 +172,7 @@ def test_ambiguous_name_is_refused(backend:'RuleSQLBackend') -> 'None':
 
     invoker = new_invoker(backend)
 
-    with invoker.writer:
-        result = invoker.invoke('payments.discounts', {'credit_score': 720})
+    result = invoker.invoke('payments.discounts', {'credit_score': 720})
 
     assert result.status == InvocationStatus.Ambiguous_Name
     assert 'payments.discounts' in result.message
@@ -199,27 +195,26 @@ def test_vocabulary_validates_input_at_the_boundary(backend:'RuleSQLBackend') ->
 
     invoker = new_invoker(backend)
 
-    with invoker.writer:
 
-        # A score outside the vocabulary's range never reaches the rules ..
-        invalid = invoker.invoke('payments.discounts', {'customer': {'creditScore': 12000}})
-        assert invalid.status == InvocationStatus.Invalid_Input
-        assert invalid.decision is None
+    # A score outside the vocabulary's range never reaches the rules ..
+    invalid = invoker.invoke('payments.discounts', {'customer': {'creditScore': 12000}})
+    assert invalid.status == InvocationStatus.Invalid_Input
+    assert invalid.decision is None
 
-        codes = []
-        for error in invalid.errors:
-            codes.append(error['code'])
+    codes = []
+    for error in invalid.errors:
+        codes.append(error['code'])
 
-        assert ErrorCode.Out_Of_Range in codes
+    assert ErrorCode.Out_Of_Range in codes
 
-        # .. while valid input evaluates normally.
-        valid = invoker.invoke('payments.discounts', {'customer': {'creditScore': 720}})
-        assert valid.status == InvocationStatus.OK
+    # .. while valid input evaluates normally.
+    valid = invoker.invoke('payments.discounts', {'customer': {'creditScore': 720}})
+    assert valid.status == InvocationStatus.OK
 
-        valid_decision = valid.decision
-        assert valid_decision is not None
-        assert valid_decision['outcome'] == Outcome.Matched
-        assert valid_decision['actual'] == {'loan.rate': 2.9}
+    valid_decision = valid.decision
+    assert valid_decision is not None
+    assert valid_decision['outcome'] == Outcome.Matched
+    assert valid_decision['actual'] == {'loan.rate': 2.9}
 
 # ################################################################################################################################
 
@@ -231,8 +226,7 @@ def test_evaluation_error_is_a_logged_decision(backend:'RuleSQLBackend') -> 'Non
 
     invoker = new_invoker(backend)
 
-    with invoker.writer:
-        result = invoker.invoke('payments.discounts', {'amount': 50}, caller='crm.prod')
+    result = invoker.invoke('payments.discounts', {'amount': 50}, caller='crm.prod')
 
     # The evaluation completed as an error decision ..
     assert result.status == InvocationStatus.OK

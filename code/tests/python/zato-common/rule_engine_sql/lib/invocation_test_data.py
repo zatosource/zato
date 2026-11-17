@@ -131,7 +131,6 @@ def publish(backend:'RuleSQLBackend', definition_id:'int', version:'int'=1) -> '
 def new_invoker(backend:'RuleSQLBackend') -> 'RulesetInvoker':
     """ Builds an invoker over the test backend - its caches are correct until `apply_change` evicts,
     exactly as the change stream listener does on a server.
-    The tests enter `invoker.writer` as a context manager, which starts the writer and flushes it on exit.
     """
     writer = backend.decision_writer()
 

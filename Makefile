@@ -21,7 +21,8 @@
 	test-hl7 test-ccda test-documents hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-export test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
-	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-sftp test-file-transfer test-rule-engine test-rule-engine-perf \
+	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-sftp test-file-transfer test-smb-windows-build \
+	test-rule-engine test-rule-engine-perf \
 	test-fabric-live fabric-cleanup fabric-tutorial fabric-loading-tables fabric-lookup-tables fabric-looking-up-data \
 	fabric-api-on-fabric-data fabric-scheduled-reports fabric-files fabric-sending-events fabric-receiving-events \
 	fabric-reading-events fabric-notebook-results fabric-pipelines-and-reports fabric-local-systems \
@@ -1709,6 +1710,9 @@ test-sftp: ## SFTP tests - the outconn and scheduler suites against live OpenSSH
 		-k "SFTP" \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sftp_scheduler -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+test-smb-windows-build: ## Windows Server 2022 and 2025 guests for the live SMB tests - builds the prepared disks that are missing or out of date.
+	cd $(CURDIR)/code/tests/python/zato-common/lib && $(ZATO_PY) -u -m live_windows.cli build
 
 test-file-transfer: test-sftp ## File transfer demo tests - the SFTP suites first, then the demo config set, the local SFTP, FTP, FTPS and SMB servers, a live server polling all of them, and the Dashboard card.
 	$(Zato_Log_Reset)

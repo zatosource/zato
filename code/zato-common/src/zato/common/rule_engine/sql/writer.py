@@ -9,29 +9,26 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from dataclasses import dataclass
 from datetime import datetime
-from queue import Empty, Full, Queue
-from threading import Event, Thread
-from time import monotonic
 from typing import NamedTuple
 
 # SQLAlchemy
 from sqlalchemy import insert, update
 from sqlalchemy.engine import CursorResult
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.exc import IntegrityError
 
 # typing-extensions
 from typing_extensions import TypeAlias
 
 # Zato
+from zato.common.db_env.commit_queue import CommitQueue
 from zato.common.typing_ import cast_
 
 # Local
-from .constants import Day_Bucket_Format, Default_Batch_Size, Default_Buffer_Capacity, \
-    Default_Flush_Interval_Seconds, Event_Type_Rule_Fired_Daily, System_Actor
+from .constants import Day_Bucket_Format, Default_Commit_Max_Decisions, Event_Type_Rule_Fired_Daily, System_Actor
 from .data import decision_write_list, DecisionWrite, rowdict, rowlist
 from .database import SessionFactory
 from .decisions import CapturePolicy, decision_to_row, find_existing_decision_ids, normalize_utc
-from .errors import DecisionBufferFullError, DecisionWriterError, InvalidStoreInputError, RuleSQLStoreError
+from .errors import InvalidStoreInputError
 from .schema import rule_decision_table, rule_event_table
 from .time_ import utc_now
 
@@ -46,10 +43,10 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _StopSignal:
-    """ Private queue marker requesting a final flush and shutdown.
-    """
+# How much of a group commit's capacity each decision takes - the capacity is counted in decisions
+_decision_weight = 1
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _RollupKey(NamedTuple):
@@ -63,8 +60,17 @@ class _RollupKey(NamedTuple):
 
 # ################################################################################################################################
 
-queue_item:TypeAlias = DecisionWrite | _StopSignal
-decision_queue:TypeAlias = Queue[queue_item]
+class _PendingDecision:
+    """ One decision of a group commit, with the failure that its caller receives if it alone could not be written.
+    """
+
+    def __init__(self, decision:'DecisionWrite') -> 'None':
+        self.decision = decision
+        self.error:'Exception | None' = None
+
+# ################################################################################################################################
+
+pending_decision_list:TypeAlias = list[_PendingDecision]
 rollup_count_dict:TypeAlias = dict[_RollupKey, int]
 
 # ################################################################################################################################
@@ -72,41 +78,26 @@ rollup_count_dict:TypeAlias = dict[_RollupKey, int]
 
 @dataclass(init=False)
 class DecisionWriterConfig:
-    """ Batch size, flush cadence and bounded memory capacity.
+    """ How many decisions one group commit writes at most.
     """
 
-    batch_size:             'int'
-    flush_interval_seconds: 'float'
-    buffer_capacity:        'int'
+    commit_max_decisions: 'int'
 
-    def __init__(
-        self,
-        *,
-        batch_size:'int' = Default_Batch_Size,
-        flush_interval_seconds:'float' = Default_Flush_Interval_Seconds,
-        buffer_capacity:'int' = Default_Buffer_Capacity,
-        ) -> 'None':
+    def __init__(self, *, commit_max_decisions:'int' = Default_Commit_Max_Decisions) -> 'None':
 
-        # Require every bound to admit actual work ..
-        if batch_size < 1:
-            raise InvalidStoreInputError('Decision writer batch size must be at least 1')
+        # A commit admits at least the decision of the caller that runs it
+        if commit_max_decisions < 1:
+            raise InvalidStoreInputError('Decision writer commit size must be at least 1')
 
-        if flush_interval_seconds <= 0:
-            raise InvalidStoreInputError('Decision writer flush interval must be greater than zero')
-
-        if buffer_capacity < 1:
-            raise InvalidStoreInputError('Decision writer buffer capacity must be at least 1')
-
-        # .. then retain the validated writer configuration.
-        self.batch_size             = batch_size
-        self.flush_interval_seconds = flush_interval_seconds
-        self.buffer_capacity        = buffer_capacity
+        self.commit_max_decisions = commit_max_decisions
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class DecisionBatchWriter:
-    """ Non-blocking decision submission with timed multi-row inserts and append-only firing rollups.
+    """ Writes the decisions of concurrent callers in shared transactions, together with their firing counters.
+    Each caller returns only once the transaction with its decision is committed, and an exception
+    from that transaction reaches each caller whose decision was part of it.
     """
 
     def __init__(
@@ -116,129 +107,26 @@ class DecisionBatchWriter:
         config:'DecisionWriterConfig',
         ) -> 'None':
 
-        # Retain the write policy and bounds shared with the background thread ..
         self._session_factory = session_factory
         self._capture_policy  = capture_policy
-        self._config          = config
 
-        # .. create the bounded handoff queue and lifecycle state ..
-        self._queue:'decision_queue' = Queue(config.buffer_capacity)
-        self._stop_signal = _StopSignal()
-        self._stopped = Event()
-        self._error:'Exception | None' = None
-        self._started = False
-        self._closing = False
-
-        # .. and build the single writer thread without starting it yet.
-        self._thread = Thread(
-            target=self._run,
-            name='zato-rule-decision-writer',
-            daemon=True,
+        # The decisions of concurrent callers share their commits
+        self._commit_queue = CommitQueue(
+            write_batch=self._flush,
+            max_weight=config.commit_max_decisions,
         )
 
 # ################################################################################################################################
 
-    def __enter__(self) -> 'DecisionBatchWriter':
-        self.start()
-
-        out = self
-        return out
-
-# ################################################################################################################################
-
-    def __exit__(self, exception_type:'object', exception:'object', traceback:'object') -> 'None':
-        _ = exception_type
-        _ = exception
-        _ = traceback
-
-        self.close()
-
-# ################################################################################################################################
-
-    def _raise_if_failed(self) -> 'None':
-        """ Raises the background failure on the caller's next interaction.
-        """
-        if self._error:
-            message = f'Decision writer failed -> {self._error}'
-            raise DecisionWriterError(message) from self._error
-
-# ################################################################################################################################
-
-    def start(self) -> 'None':
-        """ Starts the one background writer thread.
-        """
-        # Reject a second start because a Python thread cannot be restarted ..
-        if self._started:
-            raise DecisionWriterError('Decision writer is already started')
-
-        # .. mark the lifecycle before the thread can observe it ..
-        self._started = True
-
-        # .. and start consuming queued decisions.
-        self._thread.start()
-
-# ################################################################################################################################
-
     def submit(self, decision:'DecisionWrite') -> 'None':
-        """ Enqueues one decision without waiting for database work.
+        """ Writes one decision and returns once the transaction that holds it is committed.
         """
-        # Surface any prior background failure before accepting more work ..
-        self._raise_if_failed()
+        pending = _PendingDecision(decision)
+        self._commit_queue.write(pending, weight=_decision_weight, is_urgent=False)
 
-        if not self._started:
-            raise DecisionWriterError('Decision writer is not started')
-
-        if self._closing:
-            raise DecisionWriterError('Decision writer is closed')
-
-        # .. place the decision in the bounded buffer without waiting ..
-        try:
-            self._queue.put_nowait(decision)
-
-        # .. and reject saturation explicitly rather than silently dropping a mandatory header.
-        except Full as e:
-            raise DecisionBufferFullError('Decision writer buffer is full') from e
-
-# ################################################################################################################################
-
-    def close(self, timeout_seconds:'float | None' = None) -> 'None':
-        """ Flushes all accepted decisions and waits for the writer to stop.
-        """
-        # A writer that never started has no accepted work to flush ..
-        if not self._started:
-            return
-
-        # .. prevent submissions from landing behind the shutdown marker ..
-        self._closing = True
-
-        # .. surface a failure before a full queue could block shutdown ..
-        self._raise_if_failed()
-
-        # .. request shutdown after every previously queued decision, bounding the wait
-        # .. so a full queue over a stuck thread can never block shutdown forever ..
-        try:
-            self._queue.put(self._stop_signal, timeout=timeout_seconds)
-        except Full as e:
-            raise DecisionWriterError('Decision writer buffer stayed full during shutdown') from e
-
-        # .. wait for the final transaction to complete ..
-        self._thread.join(timeout_seconds)
-
-        # .. reject an incomplete shutdown ..
-        thread_is_alive = self._thread.is_alive()
-        if thread_is_alive:
-            raise DecisionWriterError('Decision writer did not stop before the timeout')
-
-        # .. and surface any final background failure.
-        self._raise_if_failed()
-
-# ################################################################################################################################
-
-    def queued_count(self) -> 'int':
-        """ Returns the number of entries currently waiting in memory.
-        """
-        out = self._queue.qsize()
-        return out
+        # The transaction committed, but this one decision could not be written in it
+        if pending.error is not None:
+            raise pending.error
 
 # ################################################################################################################################
 
@@ -321,7 +209,7 @@ class DecisionBatchWriter:
 # ################################################################################################################################
 
     def _flush_batch(self, decisions:'decision_write_list') -> 'None':
-        """ Writes one decision batch and its firing increments atomically.
+        """ Writes decisions and their firing increments in one transaction.
         """
         # Convert every decision before opening the transaction ..
         decision_rows:'rowlist' = []
@@ -363,115 +251,39 @@ class DecisionBatchWriter:
 
 # ################################################################################################################################
 
-    def _flush_each(self, decisions:'decision_write_list') -> 'decision_write_list':
-        """ Inserts decisions one at a time, skipping ids the log already contains.
+    def _flush_each(self, pending_list:'pending_decision_list') -> 'None':
+        """ Writes each decision with its firing increments in a transaction of its own. A decision whose id the log
+        contains already is skipped, and any other failure is stored with the decision for its caller alone.
         """
-        landed:'decision_write_list' = []
+        for pending in pending_list:
 
-        for decision in decisions:
-            row = decision_to_row(decision, self._capture_policy)
-
-            # Insert this one decision in its own transaction ..
+            # Write this one decision with its counters ..
             try:
-                self._session_factory.write(self._insert_one, row)
+                self._flush_batch([pending.decision])
 
-            # .. skip a decision the log already holds, its header was never lost ..
-            except IntegrityError:
-                duplicate = self._is_duplicate(decision.decision_id)
+            # .. skip a decision the log already holds, its row and its counters were committed before ..
+            except IntegrityError as e:
+                is_duplicate = self._is_duplicate(pending.decision.decision_id)
 
-                if duplicate:
-                    continue
-
-                # .. while a structural failure such as a missing ruleset must stop the writer loudly.
-                raise
-
-            landed.append(decision)
-
-        return landed
+                # .. while a structural failure such as a missing ruleset reaches the caller of this decision.
+                if not is_duplicate:
+                    pending.error = e
 
 # ################################################################################################################################
 
-    def _insert_one(self, session:'Session', row:'rowdict') -> 'None':
-        """ Inserts one decision row.
+    def _flush(self, pending_list:'pending_decision_list') -> 'None':
+        """ Writes the decisions of one group commit, one transaction for all of them, or one transaction per decision
+        if any of them violates a constraint, so that a duplicate is skipped and the others are committed.
         """
-        statement = insert(rule_decision_table)
-        _ = session.execute(statement, row)
+        decisions:'decision_write_list' = []
 
-# ################################################################################################################################
+        for pending in pending_list:
+            decisions.append(pending.decision)
 
-    def _flush(self, decisions:'decision_write_list') -> 'None':
-        """ Writes one batch, degrading to row-level inserts so one duplicate never stops the log.
-        """
-        # Try the whole batch and its rollups in one atomic transaction ..
         try:
             self._flush_batch(decisions)
-
-        # .. and on an integrity failure retry row by row, counting rollups only for decisions
-        # .. that actually landed, so a skipped duplicate is never counted twice.
         except IntegrityError:
-            landed = self._flush_each(decisions)
-            rollup_counts = self._rollup_counts(landed)
-
-            if rollup_counts:
-                self._session_factory.write(self._upsert_rollups, rollup_counts)
-
-# ################################################################################################################################
-
-    def _run(self) -> 'None':
-        """ Consumes the buffer until a size, time or shutdown boundary requests a flush.
-        """
-        pending:'decision_write_list' = []
-        current_time = monotonic()
-        deadline = current_time + self._config.flush_interval_seconds
-
-        try:
-            while True:
-
-                # Wait only until the next timed flush boundary ..
-                current_time = monotonic()
-                remaining_seconds = deadline - current_time
-                if remaining_seconds < 0:
-                    remaining_seconds = 0
-
-                try:
-                    item = self._queue.get(timeout=remaining_seconds)
-
-                # .. flush an incomplete batch when its time boundary arrives ..
-                except Empty:
-                    if pending:
-                        self._flush(pending)
-                        pending.clear()
-
-                    current_time = monotonic()
-                    deadline = current_time + self._config.flush_interval_seconds
-                    continue
-
-                # .. flush all accepted work and stop when the shutdown marker arrives ..
-                item_is_stop_signal = isinstance(item, _StopSignal)
-                if item_is_stop_signal:
-                    if pending:
-                        self._flush(pending)
-
-                    break
-
-                # .. otherwise add the decision to the current in-memory batch ..
-                pending.append(item)
-
-                # .. and flush immediately when its size boundary is reached.
-                pending_count = len(pending)
-                if pending_count >= self._config.batch_size:
-                    self._flush(pending)
-                    pending.clear()
-                    current_time = monotonic()
-                    deadline = current_time + self._config.flush_interval_seconds
-
-        # Preserve the complete background failure for the caller ..
-        except (RuleSQLStoreError, SQLAlchemyError) as e:
-            self._error = e
-
-        # .. and mark the thread stopped after either success or failure.
-        finally:
-            self._stopped.set()
+            self._flush_each(pending_list)
 
 # ################################################################################################################################
 # ################################################################################################################################

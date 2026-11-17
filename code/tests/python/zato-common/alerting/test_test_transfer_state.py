@@ -14,7 +14,6 @@ from typing import Generator
 import pytest
 
 # SQLAlchemy
-from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 
@@ -25,10 +24,11 @@ from typing_extensions import TypeAlias
 from zato.common.alerting.config_store import apply_type_config, get_type_definition
 from zato.common.alerting.seed import ensure_alerting_definitions
 from zato.common.api import Alerting
-from zato.common.odb.model import Base, IntervalBasedJob, Job, Service
+from zato.common.odb.model import IntervalBasedJob, Job, Service
 from zato.common.rule_engine.sql import RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
+from zato.common.test.config_database import config_database_engine
 from zato.common.test.zato_database import file_database_engine
 from zato.common.util.scheduler import ensure_test_transfer_job_exists, set_job_active
 
@@ -57,28 +57,25 @@ _test_transfer_full_name = 'alerts_file_transfer_Test_Transfer_Failing'
 # ################################################################################################################################
 
 @pytest.fixture
-def odb_session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database holding
+def odb_session(tmp_path:'Path') -> 'any_':
+    """ A real ODB session over a SQLite database file holding
     the scheduler tables.
     """
-    engine = create_engine('sqlite://')
-
     tables = [
         Service.__table__,
         Job.__table__,
         IntervalBasedJob.__table__,
     ]
-    Base.metadata.create_all(engine, tables=tables)
 
-    session_factory = sessionmaker(bind=engine)
-    session = session_factory()
+    with config_database_engine(tmp_path, tables) as engine:
+        session_factory = sessionmaker(bind=engine)
+        session = session_factory()
 
-    session.commit()
+        session.commit()
 
-    yield session
+        yield session
 
-    session.close()
-    engine.dispose()
+        session.close()
 
 # ################################################################################################################################
 

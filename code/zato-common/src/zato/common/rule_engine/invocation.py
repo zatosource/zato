@@ -492,7 +492,7 @@ class RulesetInvoker:
                 out.errors = errors
                 return out
 
-        # .. evaluate the input and log the complete decision through the non-blocking writer ..
+        # .. evaluate the input and commit the complete decision through the writer ..
         recorder = DecisionRecorder(self.writer, ruleset_id=definition.id, rules_version=version)
         decision = recorder.record(entry.loaded, data, caller)
 

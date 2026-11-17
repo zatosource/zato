@@ -12,24 +12,28 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import json
+from contextlib import contextmanager
+from tempfile import TemporaryDirectory
 
 # SQLAlchemy
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Zato
 from zato.common.alerting.explain.fhir_info import describe_outgoing_fhir
 from zato.common.alerting.explain.mllp_outgoing_info import describe_mllp_outgoing
 from zato.common.api import GENERIC, HTTP_SOAP
-from zato.common.odb.model import Base, GenericConn, SecurityBase
+from zato.common.odb.model import GenericConn, SecurityBase
+from zato.common.test.config_database import config_database_engine
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from collections.abc import Iterator
     from zato.common.typing_ import any_, anydict, anylist, callable_
     any_ = any_
+    sessionmakergen = Iterator[sessionmaker]
     anydict = anydict
     anylist = anylist
     callable_ = callable_
@@ -49,24 +53,24 @@ _describers = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _new_session() -> 'any_':
-    """ A sessionmaker over a fresh in-memory database with the tables the describers read.
+@contextmanager
+def _new_session() -> 'sessionmakergen':
+    """ A sessionmaker over a fresh SQLite database file in a temporary directory with the tables the describers read.
     """
-    engine = create_engine('sqlite://')
-
     tables = [
         SecurityBase.__table__,
         GenericConn.__table__,
     ]
-    Base.metadata.create_all(engine, tables=tables)
 
-    out = sessionmaker(bind=engine)
+    with TemporaryDirectory() as directory:
+        with config_database_engine(directory, tables) as engine:
+            out = sessionmaker(bind=engine)
 
-    session = out()
-    session.commit()
-    session.close()
+            session = out()
+            session.commit()
+            session.close()
 
-    return out
+            yield out
 
 # ################################################################################################################################
 
@@ -123,46 +127,46 @@ class TestQueueLines:
     def test_a_connection_saved_before_the_switches_existed_carries_their_defaults(self) -> 'None':
 
         for type_ in _describers:
-            session_maker = _new_session()
-            _seed_connection(session_maker, type_, {})
+            with _new_session() as session_maker:
+                _seed_connection(session_maker, type_, {})
 
-            lines = _describe(session_maker, type_)
+                lines = _describe(session_maker, type_)
 
-            # The queue is off and the DLQ on by default
-            assert _value(lines, 'Use queue') == 'off', type_
-            assert _value(lines, 'Use DLQ') == 'on', type_
+                # The queue is off and the DLQ on by default
+                assert _value(lines, 'Use queue') == 'off', type_
+                assert _value(lines, 'Use DLQ') == 'on', type_
 
-            # The two sit next to each other, before the audit log and the alert settings
-            labels = _labels(lines)
-            assert labels.index('Use queue') + 1 == labels.index('Use DLQ'), type_
-            assert labels.index('Use DLQ') < labels.index('Audit log') < labels.index('Alert settings of its own'), type_
+                # The two sit next to each other, before the audit log and the alert settings
+                labels = _labels(lines)
+                assert labels.index('Use queue') + 1 == labels.index('Use DLQ'), type_
+                assert labels.index('Use DLQ') < labels.index('Audit log') < labels.index('Alert settings of its own'), type_
 
 # ################################################################################################################################
 
     def test_the_switches_read_as_stored(self) -> 'None':
 
         for type_ in _describers:
-            session_maker = _new_session()
-            _seed_connection(session_maker, type_, {
-                HTTP_SOAP.Queue.Field_Use_Queue: True,
-                HTTP_SOAP.DLQ.Field_Use_DLQ: False,
-            })
+            with _new_session() as session_maker:
+                _seed_connection(session_maker, type_, {
+                    HTTP_SOAP.Queue.Field_Use_Queue: True,
+                    HTTP_SOAP.DLQ.Field_Use_DLQ: False,
+                })
 
-            lines = _describe(session_maker, type_)
+                lines = _describe(session_maker, type_)
 
-            assert _value(lines, 'Use queue') == 'on', type_
-            assert _value(lines, 'Use DLQ') == 'off', type_
+                assert _value(lines, 'Use queue') == 'on', type_
+                assert _value(lines, 'Use DLQ') == 'off', type_
 
 # ################################################################################################################################
 
     def test_a_connection_that_is_not_there_is_none(self) -> 'None':
 
         for type_, describer in _describers.items():
-            session_maker = _new_session()
-            session = session_maker()
+            with _new_session() as session_maker:
+                session = session_maker()
 
-            assert describer(session, 'no.such.connection') is None, type_
-            session.close()
+                assert describer(session, 'no.such.connection') is None, type_
+                session.close()
 
 # ################################################################################################################################
 # ################################################################################################################################

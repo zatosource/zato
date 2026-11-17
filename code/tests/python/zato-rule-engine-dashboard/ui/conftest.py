@@ -121,12 +121,12 @@ def _seed_data() -> 'any_':
     loaded = load_documents(parse_documents(Rules_Text))
     capture_everything = CapturePolicy(success_percent=100, store_fired_rule_ids=True)
 
-    with backend.decision_writer(capture_policy=capture_everything) as writer:
-        recorder = DecisionRecorder(writer, ruleset_id=ruleset.id, rules_version=1, business_key_field='customer')
+    writer = backend.decision_writer(capture_policy=capture_everything)
+    recorder = DecisionRecorder(writer, ruleset_id=ruleset.id, rules_version=1, business_key_field='customer')
 
-        _ = recorder.record(loaded, {'credit_score': 720, 'customer': 'Mary Miller'}, caller='customer portal')
-        _ = recorder.record(loaded, {'credit_score': 660, 'customer': 'James Carter'}, caller='partner API')
-        _ = recorder.record(loaded, {'credit_score': 'not-a-number', 'customer': 'Anna Brooks'}, caller='nightly batch')
+    _ = recorder.record(loaded, {'credit_score': 720, 'customer': 'Mary Miller'}, caller='customer portal')
+    _ = recorder.record(loaded, {'credit_score': 660, 'customer': 'James Carter'}, caller='partner API')
+    _ = recorder.record(loaded, {'credit_score': 'not-a-number', 'customer': 'Anna Brooks'}, caller='nightly batch')
 
     return ruleset
 

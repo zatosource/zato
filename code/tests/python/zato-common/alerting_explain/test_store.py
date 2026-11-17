@@ -6,19 +6,25 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from contextlib import contextmanager
+from tempfile import TemporaryDirectory
+
 # SQLAlchemy
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Zato
 from zato.common.alerting.explain.store import ExplanationStore
-from zato.common.odb.model import Base, GenericObject
+from zato.common.odb.model import GenericObject
+from zato.common.test.config_database import config_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from collections.abc import Iterator
     from zato.common.typing_ import stranydict
+    storegen = Iterator[ExplanationStore]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -26,16 +32,18 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _new_store() -> 'ExplanationStore':
-    """ A store over a fresh in-memory database with just the generic_object table.
+@contextmanager
+def _new_store() -> 'storegen':
+    """ A store over a fresh SQLite database file in a temporary directory with only the generic_object table.
     """
-    engine = create_engine('sqlite://')
-    Base.metadata.create_all(engine, tables=[GenericObject.__table__])
+    tables = [GenericObject.__table__]
 
-    session = sessionmaker(bind=engine)
+    with TemporaryDirectory() as directory:
+        with config_database_engine(directory, tables) as engine:
+            session = sessionmaker(bind=engine)
 
-    out = ExplanationStore(session)
-    return out
+            out = ExplanationStore(session)
+            yield out
 
 # ################################################################################################################################
 
@@ -65,45 +73,42 @@ def _new_details(object_name:'str'='CRM API', created_iso:'str'='2026-08-09T10:0
 class TestExplanationStore:
 
     def test_a_created_explanation_reads_back_in_full(self) -> 'None':
-        store = _new_store()
-        details = _new_details()
+        with _new_store() as store:
+            details = _new_details()
 
-        store.create('alert.123', details)
-        explanation = store.get('alert.123')
+            store.create('alert.123', details)
+            explanation = store.get('alert.123')
 
-        assert explanation is not None
-        assert explanation['name'] == 'alert.123'
-        assert explanation['object_name'] == 'CRM API'
-        assert explanation['explanation'] == details['explanation']
-        assert explanation['remediation'] == {'action': 'resubmit'}
-        assert explanation['alert_id'] == 123
+            assert explanation is not None
+            assert explanation['name'] == 'alert.123'
+            assert explanation['object_name'] == 'CRM API'
+            assert explanation['explanation'] == details['explanation']
+            assert explanation['remediation'] == {'action': 'resubmit'}
+            assert explanation['alert_id'] == 123
 
     def test_an_unknown_name_reads_back_as_none(self) -> 'None':
-        store = _new_store()
+        with _new_store() as store:
+            explanation = store.get('alert.no-such-alert')
 
-        explanation = store.get('alert.no-such-alert')
-
-        assert explanation is None
+            assert explanation is None
 
     def test_the_listing_is_newest_first(self) -> 'None':
-        store = _new_store()
+        with _new_store() as store:
+            store.create('alert.older', _new_details(created_iso='2026-08-09T10:00:00'))
+            store.create('alert.newer', _new_details(created_iso='2026-08-09T11:00:00'))
 
-        store.create('alert.older', _new_details(created_iso='2026-08-09T10:00:00'))
-        store.create('alert.newer', _new_details(created_iso='2026-08-09T11:00:00'))
+            explanations = store.get_list()
 
-        explanations = store.get_list()
-
-        assert len(explanations) == 2
-        assert explanations[0]['name'] == 'alert.newer'
-        assert explanations[1]['name'] == 'alert.older'
+            assert len(explanations) == 2
+            assert explanations[0]['name'] == 'alert.newer'
+            assert explanations[1]['name'] == 'alert.older'
 
     def test_exists_sees_only_stored_explanations(self) -> 'None':
-        store = _new_store()
+        with _new_store() as store:
+            store.create('alert.123', _new_details())
 
-        store.create('alert.123', _new_details())
-
-        assert store.exists('alert.123') is True
-        assert store.exists('alert.456') is False
+            assert store.exists('alert.123') is True
+            assert store.exists('alert.456') is False
 
 # ################################################################################################################################
 # ################################################################################################################################

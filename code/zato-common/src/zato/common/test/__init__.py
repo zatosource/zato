@@ -7,11 +7,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 import subprocess
 from datetime import datetime
 from logging import getLogger
 from time import sleep
 from random import choice, randint
+from shutil import rmtree
+from tempfile import mkdtemp
 from unittest import TestCase
 from uuid import uuid4
 
@@ -21,11 +24,9 @@ from zato.common.ext.bunch import Bunch
 # six
 from six import string_types
 
-# SQLAlchemy
-from sqlalchemy import create_engine
-
 # Zato
 from zato.common.api import CHANNEL, DATA_FORMAT
+from zato.common.db_env.engine import new_zato_engine
 from zato.common.defaults import secret_fields_exact, secret_fields_prefix, secret_fields_suffix
 from zato.common.json_internal import loads
 from zato.common.marshal_.api import MarshalAPI
@@ -59,6 +60,9 @@ if 0:
 
 CID_LENGTH = 24
 test_class_name = '<my-test-class>'
+
+# The name of the file of the database that ODBTestCase creates
+_odb_test_file_name = 'odb.db'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -558,12 +562,18 @@ class ServiceTestCase(TestCase):
 class ODBTestCase(TestCase):
 
     def setUp(self):
-        engine_url = 'sqlite:///:memory:'
+
+        # A temporary directory for the database file, removed after each test
+        directory = mkdtemp()
+        self.addCleanup(rmtree, directory)
+
+        sqlite_path = os.path.join(directory, _odb_test_file_name)
+        engine_url = f'sqlite:///{sqlite_path}'
         pool_name = 'ODBTestCase.pool'
 
         config = {
             'engine': 'sqlite',
-            'sqlite_path': ':memory:',
+            'sqlite_path': sqlite_path,
             'fs_sql_config': {
                 'engine': {
                     'ping_query': 'SELECT 1'
@@ -572,7 +582,7 @@ class ODBTestCase(TestCase):
         }
 
         # Create a standalone engine ..
-        self.engine = create_engine(engine_url)
+        self.engine = new_zato_engine(engine_url)
 
         # .. all ODB objects for that engine..
         model.Base.metadata.create_all(self.engine)
@@ -592,6 +602,7 @@ class ODBTestCase(TestCase):
 
     def tearDown(self):
         model.Base.metadata.drop_all(self.engine)
+        self.engine.dispose()
         self.ODBTestModelClass = None
 
     def get_session(self):

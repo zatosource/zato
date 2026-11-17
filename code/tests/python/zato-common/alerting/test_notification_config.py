@@ -13,14 +13,14 @@ import json
 import pytest
 
 # SQLAlchemy
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Zato
 from zato.common.alerting.notification_config import notification_keys, parse_extra, read_notification_config, \
     set_notification_config
 from zato.common.api import Alerting
-from zato.common.odb.model import Base, IntervalBasedJob, Job, Service
+from zato.common.odb.model import IntervalBasedJob, Job, Service
+from zato.common.test.config_database import config_database_engine
 from zato.common.typing_ import cast_
 from zato.common.util.scheduler import ensure_alerting_job_exists
 
@@ -28,8 +28,10 @@ from zato.common.util.scheduler import ensure_alerting_job_exists
 # ################################################################################################################################
 
 if 0:
+    from pathlib import Path
     from zato.common.typing_ import any_
     any_ = any_
+    Path = Path
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,31 +52,28 @@ _values = {
 # ################################################################################################################################
 
 @pytest.fixture
-def odb_session() -> 'any_':
-    """ A real ODB session over an in-memory SQLite database holding
+def odb_session(tmp_path:'Path') -> 'any_':
+    """ A real ODB session over a SQLite database file holding
     the scheduler tables and the alerting sweep job.
     """
-    engine = create_engine('sqlite://')
-
     tables = [
         Service.__table__,
         Job.__table__,
         IntervalBasedJob.__table__,
     ]
-    Base.metadata.create_all(engine, tables=tables)
 
-    session_factory = sessionmaker(bind=engine)
-    session = session_factory()
+    with config_database_engine(tmp_path, tables) as engine:
+        session_factory = sessionmaker(bind=engine)
+        session = session_factory()
 
-    session.commit()
+        session.commit()
 
-    _ = ensure_alerting_job_exists(session)
-    session.commit()
+        _ = ensure_alerting_job_exists(session)
+        session.commit()
 
-    yield session
+        yield session
 
-    session.close()
-    engine.dispose()
+        session.close()
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -30,11 +30,13 @@ from zato.common.test.pubsub_replication import start_replicated_database, stop_
 # ################################################################################################################################
 
 if 0:
+    from collections.abc import Iterator
     from sqlalchemy.engine import Engine
     from zato.common.test.pubsub_database import PubSubDatabase
     from zato.common.typing_ import strlist
 
     Engine = Engine
+    Iterator = Iterator
     PubSubDatabase = PubSubDatabase
 
 # ################################################################################################################################
@@ -123,7 +125,7 @@ def _get_levels() -> 'tuple[str, str]':
 # ################################################################################################################################
 
 @pytest.fixture(scope='module')
-def database() -> 'any_':
+def database() -> 'Iterator[PubSubDatabase]':
     out = start_pubsub_database('durability-session', PubSubDBMode.PostgreSQL)
 
     try:
@@ -146,9 +148,12 @@ def test_session_level_on_under_relaxed_server(database:'PubSubDatabase') -> 'No
     """ A server configured with a level under which a commit returns before its flush still has each session of Zato
     flush its commits.
     """
-    for level in _get_relaxed_levels():
-        _set_server_level(database, level)
-        assert _get_levels() == (ModuleCtx.Level_On, ModuleCtx.Level_On), level
+    try:
+        for level in _get_relaxed_levels():
+            _set_server_level(database, level)
+            assert _get_levels() == (ModuleCtx.Level_On, ModuleCtx.Level_On), level
+    finally:
+        _set_server_level(database, ModuleCtx.Level_On)
 
 # ################################################################################################################################
 

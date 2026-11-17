@@ -8,14 +8,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-from http.client import BAD_REQUEST, CONFLICT, FORBIDDEN, METHOD_NOT_ALLOWED, NOT_FOUND, OK, SERVICE_UNAVAILABLE
+from http.client import BAD_REQUEST, CONFLICT, FORBIDDEN, METHOD_NOT_ALLOWED, NOT_FOUND, OK
 
 # Zato
 from zato.common.json_internal import dumps, loads
 from zato.common.rule_engine.ingestion import Outcome
 from zato.common.rule_engine.invocation import InvocationStatus, is_ruleset_allowed, Message_Unknown_Ruleset, \
     parse_ruleset_path
-from zato.common.rule_engine.sql.errors import DecisionBufferFullError
 from zato.server.rule_engine_api import get_backend, get_invoker
 from zato.server.service.internal import AdminService
 
@@ -44,7 +43,6 @@ _invoke_method = 'POST'
 _message_needs_authentication = 'This API requires authentication'
 _message_needs_post           = 'Rulesets are invoked with POST'
 _message_needs_json_object    = 'The request body has to be a JSON object'
-_message_log_saturated        = 'The decision log cannot accept work right now, retry shortly'
 
 # How each non-OK invocation status maps to an HTTP status code.
 _status_code_map = {
@@ -211,16 +209,7 @@ class RuleEngineAPIInvoke(AdminService):
 
         # .. run the ruleset, logging the decision under the calling system's name ..
         invoker = get_invoker()
-
-        try:
-            result = invoker.invoke(parsed.name, data, parsed.version, caller=channel_security.name)
-
-        # .. a saturated decision log refuses work rather than dropping decisions silently.
-        except DecisionBufferFullError:
-            logger.warning(
-                'Rule engine API `%s` refused ruleset `%s`, the decision buffer is full', self.channel.name, parsed.name)
-            self._set_error(SERVICE_UNAVAILABLE, parsed.name, _message_log_saturated)
-            return
+        result = invoker.invoke(parsed.name, data, parsed.version, caller=channel_security.name)
 
         # .. and turn the outcome into the response.
         self._set_result(result)

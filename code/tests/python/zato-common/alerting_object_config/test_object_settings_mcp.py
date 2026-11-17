@@ -9,9 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from contextlib import contextmanager
 from datetime import datetime
+from tempfile import TemporaryDirectory
 
 # SQLAlchemy
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Zato
@@ -20,7 +20,8 @@ from zato.common.alerting.object_config import alert_type_channels, alert_type_l
 from zato.common.alerting.object_settings import get_muted_rule_names, get_silence_expected_names, load_object_settings
 from zato.common.api import GENERIC
 from zato.common.json_internal import dumps
-from zato.common.odb.model import Base, GenericConn, HTTPSOAP
+from zato.common.odb.model import GenericConn, HTTPSOAP
+from zato.common.test.config_database import config_database_engine
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -58,25 +59,23 @@ _silence_rule_name = 'Gateway_Silent'
 
 @contextmanager
 def _session() -> 'sessiongen':
-    """ An in-memory SQLite database with the tables the settings are read from.
+    """ A SQLite database file in a temporary directory with the tables the settings are read from.
     """
-    engine = create_engine('sqlite://')
-
     tables = [
         GenericConn.__table__,
         HTTPSOAP.__table__,
     ]
-    Base.metadata.create_all(engine, tables=tables)
 
-    session_factory = sessionmaker(bind=engine)
-    session = session_factory()
+    with TemporaryDirectory() as directory:
+        with config_database_engine(directory, tables) as engine:
+            session_factory = sessionmaker(bind=engine)
+            session = session_factory()
 
-    session.commit()
+            session.commit()
 
-    yield session
+            yield session
 
-    session.close()
-    engine.dispose()
+            session.close()
 
 # ################################################################################################################################
 

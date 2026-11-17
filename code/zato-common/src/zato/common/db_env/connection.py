@@ -190,8 +190,8 @@ def verify_postgresql_server(dbapi_connection:'any_', connection_record:'any_') 
 
     if standby_count:
         if not synchronous_standby_names:
-            raise DatabaseDurabilityError(f'PostgreSQL primary has {standby_count} streaming standby(s) '
-                'and an empty synchronous_standby_names, at least one standby must be synchronous')
+            message = f'PostgreSQL primary has {standby_count} streaming standby(s) and an empty synchronous_standby_names'
+            raise DatabaseDurabilityError(f'{message}, at least one standby must be synchronous')
 
 # ################################################################################################################################
 

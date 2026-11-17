@@ -14,10 +14,10 @@ import pytest
 
 # SQLAlchemy
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 
 # Local
-from zato.common.rule_engine.sql import CapturePolicy, DecisionFilter, DecisionWrite, DecisionWriterConfig, DecisionWriterError, \
-    RuleSQLBackend
+from zato.common.rule_engine.sql import CapturePolicy, DecisionFilter, DecisionWrite, DecisionWriterConfig, RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Event_Type_Rule_Fired_Daily
 from zato.common.rule_engine.sql.data import anydict, strlist
 from zato.common.rule_engine.sql.schema import rule_event_table
@@ -46,16 +46,16 @@ def _rollup_row_count(backend:'RuleSQLBackend') -> 'int':
 # ################################################################################################################################
 
 def _create_ruleset(backend:'RuleSQLBackend') -> 'int':
-    """ Creates the ruleset that owns asynchronously written decisions.
+    """ Creates the ruleset that owns the written decisions.
     """
     # Create one ruleset containing both fired and deliberately unfired stable identifiers ..
     document = {'rules': [{'id': 'preferential-rate'}, {'id': 'insurance-required'}, {'id': 'manual-review'}]}
     definition = backend.definitions.create(
-        name='Asynchronous lending decisions',
+        name='Lending decisions',
         object_type=Definition_Type_Ruleset,
         document=document,
         author='anna.k',
-        comment='Create the asynchronous writer ruleset',
+        comment='Create the decision writer ruleset',
     )
 
     # .. and return its promoted database identity.
@@ -71,7 +71,7 @@ def _decision(
     occurred_at:'datetime',
     fired_rule_ids:'strlist',
     ) -> 'DecisionWrite':
-    """ Builds one complete decision for the asynchronous writer.
+    """ Builds one complete decision for the writer.
     """
     # Build the complete retained story ..
     story:'anydict' = {
@@ -99,7 +99,7 @@ def _decision(
 # ################################################################################################################################
 
 def test_writer_batches_headers_and_daily_rule_counts(backend:'RuleSQLBackend') -> 'None':
-    """ The writer batches decision rows and flushes bounded per-rule daily increments.
+    """ The writer commits decision rows together with bounded per-rule daily increments.
     """
     # Build three decisions whose firing counts overlap ..
     ruleset_id = _create_ruleset(backend)
@@ -108,35 +108,31 @@ def test_writer_batches_headers_and_daily_rule_counts(backend:'RuleSQLBackend') 
     second_rule_ids = ['preferential-rate', 'insurance-required']
     third_rule_ids = ['insurance-required']
     first = _decision(
-        decision_id='asynchronous-decision-2001',
+        decision_id='decision-2001',
         ruleset_id=ruleset_id,
         occurred_at=occurred_at,
         fired_rule_ids=first_rule_ids,
     )
     second = _decision(
-        decision_id='asynchronous-decision-2002',
+        decision_id='decision-2002',
         ruleset_id=ruleset_id,
         occurred_at=occurred_at,
         fired_rule_ids=second_rule_ids,
     )
     third = _decision(
-        decision_id='asynchronous-decision-2003',
+        decision_id='decision-2003',
         ruleset_id=ruleset_id,
         occurred_at=occurred_at,
         fired_rule_ids=third_rule_ids,
     )
 
-    # .. submit without waiting for database writes ..
-    config = DecisionWriterConfig(batch_size=2, flush_interval_seconds=60.0, buffer_capacity=100)
+    # .. each submit returns once its decision is committed ..
+    config = DecisionWriterConfig(commit_max_decisions=2)
     capture_policy = CapturePolicy()
     writer = backend.decision_writer(capture_policy=capture_policy, config=config)
-    writer.start()
     writer.submit(first)
     writer.submit(second)
     writer.submit(third)
-
-    # .. close to flush the final incomplete batch ..
-    writer.close()
 
     # .. verify one persisted header per decision ..
     filters = DecisionFilter(ruleset_id=ruleset_id)
@@ -153,7 +149,7 @@ def test_writer_batches_headers_and_daily_rule_counts(backend:'RuleSQLBackend') 
     assert points[1].firing_count == 2
 
     # .. verify counter storage is one physical row per rule, day and version, despite two
-    # .. separate flushes having incremented the insurance-required counter ..
+    # .. separate commits having incremented the insurance-required counter ..
     rollup_row_count = _rollup_row_count(backend)
     assert rollup_row_count == 2
 
@@ -168,40 +164,33 @@ def test_writer_batches_headers_and_daily_rule_counts(backend:'RuleSQLBackend') 
 # ################################################################################################################################
 
 def test_writer_skips_duplicates_without_stopping(backend:'RuleSQLBackend') -> 'None':
-    """ A duplicate decision id is skipped, everything else in the batch lands and the writer stays alive.
+    """ A duplicate decision id is skipped without an error and every other decision is committed.
     """
-    # Reject submission before the writer thread starts ..
-    config = DecisionWriterConfig(batch_size=2)
+    # Build a decision and a distinct one for the same ruleset ..
+    config = DecisionWriterConfig(commit_max_decisions=2)
     capture_policy = CapturePolicy()
     writer = backend.decision_writer(capture_policy=capture_policy, config=config)
     ruleset_id = _create_ruleset(backend)
     occurred_at = datetime(2026, 7, 21, 15, 30, tzinfo=timezone.utc)
     fired_rule_ids = ['preferential-rate']
     decision = _decision(
-        decision_id='asynchronous-decision-duplicate',
+        decision_id='decision-duplicate',
         ruleset_id=ruleset_id,
         occurred_at=occurred_at,
         fired_rule_ids=fired_rule_ids,
     )
-
-    with pytest.raises(DecisionWriterError):
-        writer.submit(decision)
-
-    # .. submit the same mandatory decision id twice after starting, alongside a distinct decision ..
     other_rule_ids = ['insurance-required']
     other = _decision(
-        decision_id='asynchronous-decision-distinct',
+        decision_id='decision-distinct',
         ruleset_id=ruleset_id,
         occurred_at=occurred_at,
         fired_rule_ids=other_rule_ids,
     )
-    writer.start()
+
+    # .. submit the same decision id twice, alongside the distinct decision, a duplicate being a skip and not a failure ..
     writer.submit(decision)
     writer.submit(decision)
     writer.submit(other)
-
-    # .. close cleanly because a duplicate is a skip, never a writer failure ..
-    writer.close()
 
     # .. verify each distinct decision landed exactly once ..
     filters = DecisionFilter(ruleset_id=ruleset_id)
@@ -220,26 +209,24 @@ def test_writer_skips_duplicates_without_stopping(backend:'RuleSQLBackend') -> '
 # ################################################################################################################################
 
 def test_writer_surfaces_structural_failures(backend:'RuleSQLBackend') -> 'None':
-    """ A missing ruleset is a structural failure that stops the writer loudly, never a silent skip.
+    """ A missing ruleset is a structural failure that reaches the caller of the decision, never a silent skip.
     """
     # Submit one decision against a ruleset id that does not exist ..
-    config = DecisionWriterConfig(batch_size=1)
+    config = DecisionWriterConfig(commit_max_decisions=1)
     capture_policy = CapturePolicy()
     writer = backend.decision_writer(capture_policy=capture_policy, config=config)
     occurred_at = datetime(2026, 7, 21, 15, 30, tzinfo=timezone.utc)
     fired_rule_ids = ['preferential-rate']
     decision = _decision(
-        decision_id='asynchronous-decision-structural',
+        decision_id='decision-structural',
         ruleset_id=987654,
         occurred_at=occurred_at,
         fired_rule_ids=fired_rule_ids,
     )
-    writer.start()
-    writer.submit(decision)
 
-    # .. and verify the referential failure surfaces on close.
-    with pytest.raises(DecisionWriterError):
-        writer.close()
+    # .. and verify the referential failure reaches the caller.
+    with pytest.raises(IntegrityError):
+        writer.submit(decision)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -52,7 +52,7 @@ class ModuleCtx:
     PostgreSQL_Port      = 25587
     PostgreSQL_Container = 'zato-audit-log-read-postgresql'
 
-    # The data directory is in memory and the container uses at most this many CPUs
+    # The container uses at most this many CPUs
     CPUs = '2'
 
     # Database credentials
@@ -77,7 +77,7 @@ def pytest_collection_finish(session:'pytest.Session') -> 'None':
 
 @pytest.fixture(scope='session')
 def postgresql_server() -> 'servergen':
-    """ A PostgreSQL server whose data directory is in memory, started for the session and removed after it.
+    """ A PostgreSQL server, started for the session and removed after it.
     """
     server = start_postgresql(
         container_name=ModuleCtx.PostgreSQL_Container,
@@ -86,7 +86,6 @@ def postgresql_server() -> 'servergen':
         password=ModuleCtx.Password,
         db_name=ModuleCtx.DB_Name,
         needs_ssl=False,
-        is_in_memory=True,
         cpus=ModuleCtx.CPUs,
     )
     yield server

@@ -14,11 +14,11 @@ import sys
 import pytest
 
 # SQLAlchemy
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Zato
-from zato.common.odb.model import Base, HTTPSOAP, SecurityBase, Service
+from zato.common.odb.model import HTTPSOAP, SecurityBase, Service
+from zato.common.test.config_database import config_database_engine
 
 # The test doubles live next to the tests and are imported flat
 sys.path.insert(0, os.path.dirname(__file__))
@@ -30,35 +30,33 @@ from http_soap_stub import Service_Name
 # ################################################################################################################################
 
 if 0:
+    from pathlib import Path
     from zato.common.typing_ import any_
     any_ = any_
+    Path = Path
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @pytest.fixture
-def session_factory() -> 'any_':
-    """ A sessionmaker over a fresh in-memory database with the tables the services touch.
+def session_factory(tmp_path:'Path') -> 'any_':
+    """ A sessionmaker over a fresh SQLite database file with the tables the services touch.
     """
-    engine = create_engine('sqlite://')
-
     tables = [
         Service.__table__,
         SecurityBase.__table__,
         HTTPSOAP.__table__,
     ]
-    Base.metadata.create_all(engine, tables=tables)
 
-    factory = sessionmaker(bind=engine)
+    with config_database_engine(tmp_path, tables) as engine:
+        factory = sessionmaker(bind=engine)
 
-    session = factory()
-    session.add(Service(None, Service_Name, True, 'orders.OrdersGet', False))
-    session.commit()
-    session.close()
+        session = factory()
+        session.add(Service(None, Service_Name, True, 'orders.OrdersGet', False))
+        session.commit()
+        session.close()
 
-    yield factory
-
-    engine.dispose()
+        yield factory
 
 # ################################################################################################################################
 # ################################################################################################################################

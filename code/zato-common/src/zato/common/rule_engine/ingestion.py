@@ -44,7 +44,7 @@ Milliseconds_Per_Second = 1000
 # ################################################################################################################################
 
 class DecisionRecorder:
-    """ Turns rule evaluations into decision-log writes behind one non-blocking writer.
+    """ Turns rule evaluations into decision-log writes, each committed before its evaluation returns.
 
     Every evaluation becomes a complete DecisionWrite - the id, the promoted outcome,
     the duration, the optional business key and the full story with the rules that fired.
@@ -147,7 +147,7 @@ class DecisionRecorder:
             caller=caller,
         )
 
-        # .. hand the decision to the non-blocking writer ..
+        # .. commit the decision ..
         self.writer.submit(decision)
 
         # .. and return the outcome together with the id the log will carry.

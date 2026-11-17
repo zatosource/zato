@@ -36,41 +36,40 @@ def test_publish_becomes_visible_through_its_change_announcement(backend:'RuleSQ
 
     invoker = new_invoker(backend)
 
-    with invoker.writer:
 
-        # Version one needs a 700 score, so 650 does not match ..
-        before = invoker.invoke('payments.discounts', {'credit_score': 650})
-        assert before.version == 1
+    # Version one needs a 700 score, so 650 does not match ..
+    before = invoker.invoke('payments.discounts', {'credit_score': 650})
+    assert before.version == 1
 
-        before_decision = before.decision
-        assert before_decision is not None
-        assert before_decision['outcome'] == Outcome.No_Match
+    before_decision = before.decision
+    assert before_decision is not None
+    assert before_decision['outcome'] == Outcome.No_Match
 
-        # .. store and publish version two with a lower bar ..
-        document = {Documents_Key: documents_of(rules_text_lower_bar)}
-        _ = backend.versions.create(
-            definition_id=definition.id,
-            expected_current_version=1,
-            document=document,
-            author=author,
-            comment='Lower the bar',
-        )
-        publish(backend, definition.id, version=2)
+    # .. store and publish version two with a lower bar ..
+    document = {Documents_Key: documents_of(rules_text_lower_bar)}
+    _ = backend.versions.create(
+        definition_id=definition.id,
+        expected_current_version=1,
+        document=document,
+        author=author,
+        comment='Lower the bar',
+    )
+    publish(backend, definition.id, version=2)
 
-        # .. with no announcement applied yet the cached entry still serves version one ..
-        unapplied = invoker.invoke('payments.discounts', {'credit_score': 650})
-        assert unapplied.version == 1
+    # .. with no announcement applied yet the cached entry still serves version one ..
+    unapplied = invoker.invoke('payments.discounts', {'credit_score': 650})
+    assert unapplied.version == 1
 
-        # .. applying the announcement, as the server's stream listener does, evicts the entry ..
-        invoker.apply_change(definition.id, definition.name, definition.object_type)
+    # .. applying the announcement, as the server's stream listener does, evicts the entry ..
+    invoker.apply_change(definition.id, definition.name, definition.object_type)
 
-        # .. and the same call now runs the new version.
-        after = invoker.invoke('payments.discounts', {'credit_score': 650})
-        assert after.version == 2
+    # .. and the same call now runs the new version.
+    after = invoker.invoke('payments.discounts', {'credit_score': 650})
+    assert after.version == 2
 
-        after_decision = after.decision
-        assert after_decision is not None
-        assert after_decision['outcome'] == Outcome.Matched
+    after_decision = after.decision
+    assert after_decision is not None
+    assert after_decision['outcome'] == Outcome.Matched
 
 # ################################################################################################################################
 
@@ -91,28 +90,27 @@ def test_pinned_version_stays_pinned(backend:'RuleSQLBackend') -> 'None':
 
     invoker = new_invoker(backend)
 
-    with invoker.writer:
 
-        # The live version matches a 650 score ..
-        live = invoker.invoke('payments.discounts', {'credit_score': 650})
-        assert live.version == 2
+    # The live version matches a 650 score ..
+    live = invoker.invoke('payments.discounts', {'credit_score': 650})
+    assert live.version == 2
 
-        live_decision = live.decision
-        assert live_decision is not None
-        assert live_decision['outcome'] == Outcome.Matched
+    live_decision = live.decision
+    assert live_decision is not None
+    assert live_decision['outcome'] == Outcome.Matched
 
-        # .. while pinned version one still needs 700 ..
-        pinned = invoker.invoke('payments.discounts', {'credit_score': 650}, version=1)
-        assert pinned.version == 1
+    # .. while pinned version one still needs 700 ..
+    pinned = invoker.invoke('payments.discounts', {'credit_score': 650}, version=1)
+    assert pinned.version == 1
 
-        pinned_decision = pinned.decision
-        assert pinned_decision is not None
-        assert pinned_decision['outcome'] == Outcome.No_Match
+    pinned_decision = pinned.decision
+    assert pinned_decision is not None
+    assert pinned_decision['outcome'] == Outcome.No_Match
 
-        # .. and a version that does not exist is a readable error.
-        missing = invoker.invoke('payments.discounts', {'credit_score': 650}, version=99)
-        assert missing.status == InvocationStatus.Unknown_Version
-        assert '99' in missing.message
+    # .. and a version that does not exist is a readable error.
+    missing = invoker.invoke('payments.discounts', {'credit_score': 650}, version=99)
+    assert missing.status == InvocationStatus.Unknown_Version
+    assert '99' in missing.message
 
 # ################################################################################################################################
 
@@ -188,32 +186,31 @@ def test_vocabulary_edit_becomes_visible_through_its_change_announcement(backend
 
     invoker = new_invoker(backend)
 
-    with invoker.writer:
 
-        # A score of 800 is legal under the original range ..
-        before = invoker.invoke('payments.discounts', {'customer': {'creditScore': 800}})
-        assert before.status == InvocationStatus.OK
+    # A score of 800 is legal under the original range ..
+    before = invoker.invoke('payments.discounts', {'customer': {'creditScore': 800}})
+    assert before.status == InvocationStatus.OK
 
-        # .. now the vocabulary narrows the range to at most 750 ..
-        narrowed = vocabulary_document()
-        narrowed['entities'][0]['attributes'][0]['domain'] = {'low': 300, 'high': 750}
-        _ = backend.versions.create(
-            definition_id=vocabulary.id,
-            expected_current_version=1,
-            document=narrowed,
-            author=author,
-            comment='Narrow the range',
-        )
+    # .. now the vocabulary narrows the range to at most 750 ..
+    narrowed = vocabulary_document()
+    narrowed['entities'][0]['attributes'][0]['domain'] = {'low': 300, 'high': 750}
+    _ = backend.versions.create(
+        definition_id=vocabulary.id,
+        expected_current_version=1,
+        document=narrowed,
+        author=author,
+        comment='Narrow the range',
+    )
 
-        # .. the cached document still accepts 800 until the announcement is applied ..
-        unapplied = invoker.invoke('payments.discounts', {'customer': {'creditScore': 800}})
-        assert unapplied.status == InvocationStatus.OK
+    # .. the cached document still accepts 800 until the announcement is applied ..
+    unapplied = invoker.invoke('payments.discounts', {'customer': {'creditScore': 800}})
+    assert unapplied.status == InvocationStatus.OK
 
-        # .. and once it is, the same input is rejected in domain terms.
-        invoker.apply_change(vocabulary.id, vocabulary.name, vocabulary.object_type)
+    # .. and once it is, the same input is rejected in domain terms.
+    invoker.apply_change(vocabulary.id, vocabulary.name, vocabulary.object_type)
 
-        after = invoker.invoke('payments.discounts', {'customer': {'creditScore': 800}})
-        assert after.status == InvocationStatus.Invalid_Input
+    after = invoker.invoke('payments.discounts', {'customer': {'creditScore': 800}})
+    assert after.status == InvocationStatus.Invalid_Input
 
 # ################################################################################################################################
 
@@ -226,28 +223,27 @@ def test_evict_all_drops_every_mutable_entry(backend:'RuleSQLBackend') -> 'None'
 
     invoker = new_invoker(backend)
 
-    with invoker.writer:
 
-        # The first request caches the name's resolution ..
-        first = invoker.invoke('payments.discounts', {'credit_score': 720})
-        assert first.version == 1
+    # The first request caches the name's resolution ..
+    first = invoker.invoke('payments.discounts', {'credit_score': 720})
+    assert first.version == 1
 
-        # .. a publish lands with no announcement, as if the listener were down ..
-        document = {Documents_Key: documents_of(rules_text_lower_bar)}
-        _ = backend.versions.create(
-            definition_id=definition.id,
-            expected_current_version=1,
-            document=document,
-            author=author,
-            comment='Lower the bar',
-        )
-        publish(backend, definition.id, version=2)
+    # .. a publish lands with no announcement, as if the listener were down ..
+    document = {Documents_Key: documents_of(rules_text_lower_bar)}
+    _ = backend.versions.create(
+        definition_id=definition.id,
+        expected_current_version=1,
+        document=document,
+        author=author,
+        comment='Lower the bar',
+    )
+    publish(backend, definition.id, version=2)
 
-        # .. dropping everything, as the listener does on recovery, catches the caches up.
-        invoker.evict_all()
+    # .. dropping everything, as the listener does on recovery, catches the caches up.
+    invoker.evict_all()
 
-        after = invoker.invoke('payments.discounts', {'credit_score': 720})
-        assert after.version == 2
+    after = invoker.invoke('payments.discounts', {'credit_score': 720})
+    assert after.version == 2
 
 # ################################################################################################################################
 # ################################################################################################################################

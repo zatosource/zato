@@ -8,6 +8,9 @@
  *   delay_us=20000
  *   error_percent=10
  *   errno=EIO
+ *   calls=sync
+ *
+ * The line calls=sync limits the delays and the failures to fsync and fdatasync, while the pwrite family proceeds.
  */
 
 #define _GNU_SOURCE
@@ -33,6 +36,7 @@ static size_t prefix_len = 0;
 static long delay_us = 0;
 static long error_percent = 0;
 static int error_code = EIO;
+static int is_sync_only = 0;
 static long long last_load_ns = 0;
 static unsigned long long random_state = 0;
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
@@ -78,12 +82,14 @@ static void load_control(void) {
     if (!control) {
         delay_us = 0;
         error_percent = 0;
+        is_sync_only = 0;
         return;
     }
 
     long new_delay = 0;
     long new_percent = 0;
     int new_code = EIO;
+    int new_sync_only = 0;
     char line[LINE_SIZE];
 
     while (fgets(line, sizeof(line), control)) {
@@ -100,6 +106,8 @@ static void load_control(void) {
             new_code = ENOSPC;
         } else if (strcmp(line, "errno=EIO") == 0) {
             new_code = EIO;
+        } else if (strcmp(line, "calls=sync") == 0) {
+            new_sync_only = 1;
         }
     }
 
@@ -108,6 +116,7 @@ static void load_control(void) {
     delay_us = new_delay;
     error_percent = new_percent;
     error_code = new_code;
+    is_sync_only = new_sync_only;
 }
 
 static int is_target(int fd) {
@@ -140,7 +149,7 @@ static unsigned long long next_random(void) {
 }
 
 /* Returns 0 when the call goes ahead, or the errno that it fails with. */
-static int apply_fault(int fd) {
+static int apply_fault(int fd, int is_sync) {
     long delay;
     long percent;
     int code;
@@ -151,6 +160,10 @@ static int apply_fault(int fd) {
     delay = delay_us;
     percent = error_percent;
     code = error_code;
+    if (is_sync_only && !is_sync) {
+        delay = 0;
+        percent = 0;
+    }
     if (delay || percent) {
         if (is_target(fd)) {
             if (percent && (long)(next_random() % 100) < percent) {
@@ -174,35 +187,35 @@ static int apply_fault(int fd) {
 
 int fsync(int fd) {
     if (!real_fsync) real_fsync = dlsym(RTLD_NEXT, "fsync");
-    int code = apply_fault(fd);
+    int code = apply_fault(fd, 1);
     if (code) { errno = code; return -1; }
     return real_fsync(fd);
 }
 
 int fdatasync(int fd) {
     if (!real_fdatasync) real_fdatasync = dlsym(RTLD_NEXT, "fdatasync");
-    int code = apply_fault(fd);
+    int code = apply_fault(fd, 1);
     if (code) { errno = code; return -1; }
     return real_fdatasync(fd);
 }
 
 ssize_t pwrite(int fd, const void *buffer, size_t count, off_t offset) {
     if (!real_pwrite) real_pwrite = dlsym(RTLD_NEXT, "pwrite");
-    int code = apply_fault(fd);
+    int code = apply_fault(fd, 0);
     if (code) { errno = code; return -1; }
     return real_pwrite(fd, buffer, count, offset);
 }
 
 ssize_t pwrite64(int fd, const void *buffer, size_t count, off_t offset) {
     if (!real_pwrite64) real_pwrite64 = dlsym(RTLD_NEXT, "pwrite64");
-    int code = apply_fault(fd);
+    int code = apply_fault(fd, 0);
     if (code) { errno = code; return -1; }
     return real_pwrite64(fd, buffer, count, offset);
 }
 
 ssize_t pwritev(int fd, const struct iovec *vectors, int count, off_t offset) {
     if (!real_pwritev) real_pwritev = dlsym(RTLD_NEXT, "pwritev");
-    int code = apply_fault(fd);
+    int code = apply_fault(fd, 0);
     if (code) { errno = code; return -1; }
     return real_pwritev(fd, vectors, count, offset);
 }

@@ -53,12 +53,18 @@ def get_tools_dir() -> 'str':
 # ################################################################################################################################
 
 def build_fsfault() -> 'str':
-    """ Builds the library that delays and fails the file system calls unless it exists already and returns its path.
+    """ Builds the library that delays and fails the file system calls unless it exists already and is newer
+    than its source, and returns its path.
     """
     tools_dir = get_tools_dir()
     out = os.path.join(tools_dir, _fsfault_name)
 
-    if not os.path.exists(out):
+    if os.path.exists(out):
+        needs_build = os.path.getmtime(_fsfault_source) > os.path.getmtime(out)
+    else:
+        needs_build = True
+
+    if needs_build:
         command = ['gcc', '-O2', '-Wall', '-Wextra', '-shared', '-fPIC', '-o', out, _fsfault_source, '-ldl', '-lpthread']
         _ = subprocess.run(command, check=True, capture_output=True, timeout=_build_timeout)
 

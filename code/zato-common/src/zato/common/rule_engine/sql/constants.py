@@ -55,11 +55,11 @@ Documents_Key = 'documents'
 
 # ################################################################################################################################
 
-Default_Batch_Size              = 200
-Default_Buffer_Capacity         = 10_000
-Default_Flush_Interval_Seconds  = 0.25
 Default_Retention_Chunk_Size    = 500
 Default_Success_Capture_Percent = 100
+
+# How many decisions one group commit of the decision log writes at most.
+Default_Commit_Max_Decisions = 500
 
 Minimum_Capture_Percent = 0
 Maximum_Capture_Percent = 100

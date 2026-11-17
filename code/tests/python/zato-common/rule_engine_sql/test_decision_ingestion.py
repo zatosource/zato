@@ -84,18 +84,17 @@ def test_matched_decision_lands_with_story_and_fired_rules(backend:'RuleSQLBacke
     definition = _create_ruleset(backend)
     loaded = _loaded_rules()
 
-    # Record one decision through the non-blocking writer ..
+    # Record one decision, committed before the call returns ..
     capture_policy = CapturePolicy(success_percent=100, store_fired_rule_ids=True)
     writer = backend.decision_writer(capture_policy=capture_policy)
 
-    with writer:
-        recorder = DecisionRecorder(
-            writer,
-            ruleset_id=definition.id,
-            rules_version=1,
-            business_key_field='customer_id',
-        )
-        result = recorder.record(loaded, {'credit_score': 720, 'customer_id': 'C-1'})
+    recorder = DecisionRecorder(
+        writer,
+        ruleset_id=definition.id,
+        rules_version=1,
+        business_key_field='customer_id',
+    )
+    result = recorder.record(loaded, {'credit_score': 720, 'customer_id': 'C-1'})
 
     # .. the returned outcome names what happened ..
     assert result['outcome'] == Outcome.Matched
@@ -134,9 +133,8 @@ def test_no_match_decision_has_no_fired_rules(backend:'RuleSQLBackend') -> 'None
 
     writer = backend.decision_writer()
 
-    with writer:
-        recorder = DecisionRecorder(writer, ruleset_id=definition.id, rules_version=1)
-        result = recorder.record(loaded, {'credit_score': 500})
+    recorder = DecisionRecorder(writer, ruleset_id=definition.id, rules_version=1)
+    result = recorder.record(loaded, {'credit_score': 500})
 
     assert result['outcome'] == Outcome.No_Match
     assert result['fired'] == []
@@ -160,11 +158,10 @@ def test_error_decision_keeps_its_story_even_with_capture_off(backend:'RuleSQLBa
     capture_policy = CapturePolicy(success_percent=0)
     writer = backend.decision_writer(capture_policy=capture_policy)
 
-    with writer:
-        recorder = DecisionRecorder(writer, ruleset_id=definition.id, rules_version=1)
+    recorder = DecisionRecorder(writer, ruleset_id=definition.id, rules_version=1)
 
-        # .. the rule needs credit_score and the input has none ..
-        result = recorder.record(loaded, {'amount': 50})
+    # .. the rule needs credit_score and the input has none ..
+    result = recorder.record(loaded, {'amount': 50})
 
     assert result['outcome'] == Outcome.Error
     assert 'credit_score' in result['error']
@@ -189,9 +186,8 @@ def test_capture_dial_drops_successful_stories(backend:'RuleSQLBackend') -> 'Non
     capture_policy = CapturePolicy(success_percent=0)
     writer = backend.decision_writer(capture_policy=capture_policy)
 
-    with writer:
-        recorder = DecisionRecorder(writer, ruleset_id=definition.id, rules_version=1)
-        result = recorder.record(loaded, {'credit_score': 720})
+    recorder = DecisionRecorder(writer, ruleset_id=definition.id, rules_version=1)
+    result = recorder.record(loaded, {'credit_score': 720})
 
     decision = backend.decisions.get(result['decision_id'])
 

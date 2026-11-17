@@ -54,7 +54,7 @@ _listener_error_log_interval = 60.0
 # ################################################################################################################################
 
 # The one backend and invoker of this process, shared by every request - the invoker owns
-# the non-blocking decision writer and the RAM caches the change listener keeps correct.
+# the decision writer and the RAM caches the change listener keeps correct.
 _backend:'RuleSQLBackend | None' = None
 _invoker:'RulesetInvoker | None' = None
 _lock = RLock()
@@ -120,10 +120,9 @@ def get_invoker() -> 'RulesetInvoker':
         if _invoker is None:
             backend = get_backend()
 
-            # The writer accepts decisions without blocking the requests that produce them.
+            # A request that produces a decision returns only once the decision is committed.
             capture_policy = _build_capture_policy()
             writer = backend.decision_writer(capture_policy=capture_policy)
-            writer.start()
 
             _invoker = RulesetInvoker(backend, writer)
 

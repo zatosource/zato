@@ -53,6 +53,9 @@ class ModuleCtx:
     # The license status of an activated installation
     License_Licensed = 1
 
+    # How many connections download the installation media at once
+    Download_Connections = 16
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -163,6 +166,7 @@ def _run_container(version:'str', oem_dir:'Path') -> 'None':
         '-e', f'HOST={name}',
         '-e', 'SAMBA=N',
         '-e', 'LOG=Y',
+        '-e', f'CONNECTIONS={ModuleCtx.Download_Connections}',
         '-v', f'{storage}:/storage',
         '-v', f'{oem_dir}:/oem',
         '-p', f'127.0.0.1::{Guest.SMB_Port}',

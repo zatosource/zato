@@ -14,12 +14,12 @@ import sys
 import pytest
 
 # SQLAlchemy
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Zato
-from zato.common.odb.model import Base, GenericConn, GenericConnClient, GenericConnSec, GenericObject, HTTPSOAP, Job, \
+from zato.common.odb.model import GenericConn, GenericConnClient, GenericConnSec, GenericObject, HTTPSOAP, Job, \
     SecurityBase, Service
+from zato.common.test.config_database import config_database_engine
 from zato.server.service.internal.generic import connection as connection_module
 
 # The test doubles live next to the tests and are imported flat
@@ -32,8 +32,10 @@ from generic_stub import Service_Name
 # ################################################################################################################################
 
 if 0:
+    from pathlib import Path
     from zato.common.typing_ import any_
     any_ = any_
+    Path = Path
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,13 +54,11 @@ def without_config_audit(monkeypatch:'any_') -> 'None':
 # ################################################################################################################################
 
 @pytest.fixture
-def session_factory() -> 'any_':
-    """ A sessionmaker over a fresh in-memory database with the tables the services touch - the connections
+def session_factory(tmp_path:'Path') -> 'any_':
+    """ A sessionmaker over a fresh SQLite database file with the tables the services touch - the connections
     themselves, the rows a deletion cascades to, the scheduler jobs their health checks link to, and the channel
     and the group rows an MCP gateway's create hook looks up.
     """
-    engine = create_engine('sqlite://')
-
     tables = [
         Service.__table__,
         SecurityBase.__table__,
@@ -69,16 +69,16 @@ def session_factory() -> 'any_':
         HTTPSOAP.__table__,
         Job.__table__,
     ]
-    Base.metadata.create_all(engine, tables=tables)
 
-    factory = sessionmaker(bind=engine)
+    with config_database_engine(tmp_path, tables) as engine:
+        factory = sessionmaker(bind=engine)
 
-    session = factory()
-    session.add(Service(None, Service_Name, True, 'zato.server.service.internal.connection.HealthCheckRun', True))
-    session.commit()
-    session.close()
+        session = factory()
+        session.add(Service(None, Service_Name, True, 'zato.server.service.internal.connection.HealthCheckRun', True))
+        session.commit()
+        session.close()
 
-    return factory
+        yield factory
 
 # ################################################################################################################################
 # ################################################################################################################################

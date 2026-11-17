@@ -12,23 +12,27 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import json
+from contextlib import contextmanager
+from tempfile import TemporaryDirectory
 
 # SQLAlchemy
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Zato
 from zato.common.alerting.explain.outgoing_info import describe_outgoing_http
 from zato.common.api import CONNECTION, HTTP_SOAP, URL_TYPE
 from zato.common.audit_log.api import AuditSource
-from zato.common.odb.model import Base, HTTPSOAP, SecurityBase
+from zato.common.odb.model import HTTPSOAP, SecurityBase
+from zato.common.test.config_database import config_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from collections.abc import Iterator
     from zato.common.typing_ import any_, anydict, anylist
     any_ = any_
+    sessionmakergen = Iterator[sessionmaker]
     anydict = anydict
     anylist = anylist
 
@@ -46,24 +50,24 @@ _health_check = HTTP_SOAP.HealthCheck
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _new_session() -> 'any_':
-    """ A sessionmaker over a fresh in-memory database with the tables the describer reads.
+@contextmanager
+def _new_session() -> 'sessionmakergen':
+    """ A sessionmaker over a fresh SQLite database file in a temporary directory with the tables the describer reads.
     """
-    engine = create_engine('sqlite://')
-
     tables = [
         SecurityBase.__table__,
         HTTPSOAP.__table__,
     ]
-    Base.metadata.create_all(engine, tables=tables)
 
-    out = sessionmaker(bind=engine)
+    with TemporaryDirectory() as directory:
+        with config_database_engine(directory, tables) as engine:
+            out = sessionmaker(bind=engine)
 
-    session = out()
-    session.commit()
-    session.close()
+            session = out()
+            session.commit()
+            session.close()
 
-    return out
+            yield out
 
 # ################################################################################################################################
 
@@ -125,63 +129,63 @@ def _value(lines:'anylist', wanted:'str') -> 'any_':
 class TestTransportLines:
 
     def test_a_rest_connection_says_rest_and_carries_no_soap_lines(self) -> 'None':
-        session_maker = _new_session()
-        _seed_connection(session_maker, URL_TYPE.PLAIN_HTTP, {})
+        with _new_session() as session_maker:
+            _seed_connection(session_maker, URL_TYPE.PLAIN_HTTP, {})
 
-        lines = _describe(session_maker, AuditSource.REST_Outgoing)
-        labels = _labels(lines)
+            lines = _describe(session_maker, AuditSource.REST_Outgoing)
+            labels = _labels(lines)
 
-        assert _value(lines, 'Transport') == 'REST'
-        assert 'SOAP action' not in labels
-        assert 'SOAP version' not in labels
+            assert _value(lines, 'Transport') == 'REST'
+            assert 'SOAP action' not in labels
+            assert 'SOAP version' not in labels
 
-        # The transport comes right after the name
-        assert labels[:2] == ['Name', 'Transport']
+            # The transport comes right after the name
+            assert labels[:2] == ['Name', 'Transport']
 
 # ################################################################################################################################
 
     def test_a_soap_connection_says_soap_with_its_action_and_version(self) -> 'None':
-        session_maker = _new_session()
-        _seed_connection(session_maker, URL_TYPE.SOAP, {})
+        with _new_session() as session_maker:
+            _seed_connection(session_maker, URL_TYPE.SOAP, {})
 
-        lines = _describe(session_maker, AuditSource.SOAP_Outgoing)
-        labels = _labels(lines)
+            lines = _describe(session_maker, AuditSource.SOAP_Outgoing)
+            labels = _labels(lines)
 
-        assert _value(lines, 'Transport') == 'SOAP'
-        assert _value(lines, 'SOAP action') == _soap_action
-        assert _value(lines, 'SOAP version') == _soap_version
+            assert _value(lines, 'Transport') == 'SOAP'
+            assert _value(lines, 'SOAP action') == _soap_action
+            assert _value(lines, 'SOAP version') == _soap_version
 
-        # The SOAP lines sit between the address and the method
-        assert labels.index('Address') < labels.index('SOAP action') < labels.index('SOAP version') < labels.index('Method')
+            # The SOAP lines sit between the address and the method
+            assert labels.index('Address') < labels.index('SOAP action') < labels.index('SOAP version') < labels.index('Method')
 
 # ################################################################################################################################
 
     def test_each_transport_is_read_from_its_own_row(self) -> 'None':
-        session_maker = _new_session()
-        _seed_connection(session_maker, URL_TYPE.PLAIN_HTTP, {}, url_path='/rest')
-        _seed_connection(session_maker, URL_TYPE.SOAP, {}, url_path='/soap')
+        with _new_session() as session_maker:
+            _seed_connection(session_maker, URL_TYPE.PLAIN_HTTP, {}, url_path='/rest')
+            _seed_connection(session_maker, URL_TYPE.SOAP, {}, url_path='/soap')
 
-        rest_lines = _describe(session_maker, AuditSource.REST_Outgoing)
-        soap_lines = _describe(session_maker, AuditSource.SOAP_Outgoing)
+            rest_lines = _describe(session_maker, AuditSource.REST_Outgoing)
+            soap_lines = _describe(session_maker, AuditSource.SOAP_Outgoing)
 
-        assert _value(rest_lines, 'Address') == f'{_conn_host}/rest'
-        assert _value(soap_lines, 'Address') == f'{_conn_host}/soap'
+            assert _value(rest_lines, 'Address') == f'{_conn_host}/rest'
+            assert _value(soap_lines, 'Address') == f'{_conn_host}/soap'
 
 # ################################################################################################################################
 
     def test_a_health_check_source_reads_the_row_of_its_transport(self) -> 'None':
-        session_maker = _new_session()
-        _seed_connection(session_maker, URL_TYPE.SOAP, {})
+        with _new_session() as session_maker:
+            _seed_connection(session_maker, URL_TYPE.SOAP, {})
 
-        lines = _describe(session_maker, AuditSource.SOAP_Outgoing_Health)
+            lines = _describe(session_maker, AuditSource.SOAP_Outgoing_Health)
 
-        assert _value(lines, 'Transport') == 'SOAP'
-        assert _value(lines, 'SOAP action') == _soap_action
+            assert _value(lines, 'Transport') == 'SOAP'
+            assert _value(lines, 'SOAP action') == _soap_action
 
-        # There is no REST row of that name, so the REST check has nothing to describe
-        session = session_maker()
-        assert describe_outgoing_http(session, AuditSource.REST_Outgoing_Health, _conn_name) is None
-        session.close()
+            # There is no REST row of that name, so the REST check has nothing to describe
+            session = session_maker()
+            assert describe_outgoing_http(session, AuditSource.REST_Outgoing_Health, _conn_name) is None
+            session.close()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -189,53 +193,53 @@ class TestTransportLines:
 class TestHealthCheckLine:
 
     def test_a_connection_without_a_check_says_off(self) -> 'None':
-        session_maker = _new_session()
-        _seed_connection(session_maker, URL_TYPE.PLAIN_HTTP, {})
+        with _new_session() as session_maker:
+            _seed_connection(session_maker, URL_TYPE.PLAIN_HTTP, {})
 
-        lines = _describe(session_maker, AuditSource.REST_Outgoing)
-        assert _value(lines, 'Health check') == 'off'
+            lines = _describe(session_maker, AuditSource.REST_Outgoing)
+            assert _value(lines, 'Health check') == 'off'
 
 # ################################################################################################################################
 
     def test_a_run_every_of_zero_says_off_too(self) -> 'None':
-        session_maker = _new_session()
-        _seed_connection(session_maker, URL_TYPE.PLAIN_HTTP, {
-            _health_check.Field_Run_Every: 0,
-            _health_check.Field_Run_Unit: 'minutes',
-        })
+        with _new_session() as session_maker:
+            _seed_connection(session_maker, URL_TYPE.PLAIN_HTTP, {
+                _health_check.Field_Run_Every: 0,
+                _health_check.Field_Run_Unit: 'minutes',
+            })
 
-        lines = _describe(session_maker, AuditSource.REST_Outgoing)
-        assert _value(lines, 'Health check') == 'off'
+            lines = _describe(session_maker, AuditSource.REST_Outgoing)
+            assert _value(lines, 'Health check') == 'off'
 
 # ################################################################################################################################
 
     def test_a_check_reads_how_often_it_runs_in_the_singular_or_plural(self) -> 'None':
-        session_maker = _new_session()
-        _seed_connection(session_maker, URL_TYPE.SOAP, {
-            _health_check.Field_Run_Every: 1,
-            _health_check.Field_Run_Unit: 'seconds',
-        })
+        with _new_session() as session_maker:
+            _seed_connection(session_maker, URL_TYPE.SOAP, {
+                _health_check.Field_Run_Every: 1,
+                _health_check.Field_Run_Unit: 'seconds',
+            })
 
-        lines = _describe(session_maker, AuditSource.SOAP_Outgoing_Health)
-        assert _value(lines, 'Health check') == 'every 1 second'
+            lines = _describe(session_maker, AuditSource.SOAP_Outgoing_Health)
+            assert _value(lines, 'Health check') == 'every 1 second'
 
-        session_maker = _new_session()
-        _seed_connection(session_maker, URL_TYPE.PLAIN_HTTP, {
-            _health_check.Field_Run_Every: 5,
-            _health_check.Field_Run_Unit: 'minutes',
-        })
+        with _new_session() as session_maker:
+            _seed_connection(session_maker, URL_TYPE.PLAIN_HTTP, {
+                _health_check.Field_Run_Every: 5,
+                _health_check.Field_Run_Unit: 'minutes',
+            })
 
-        lines = _describe(session_maker, AuditSource.REST_Outgoing)
-        assert _value(lines, 'Health check') == 'every 5 minutes'
+            lines = _describe(session_maker, AuditSource.REST_Outgoing)
+            assert _value(lines, 'Health check') == 'every 5 minutes'
 
 # ################################################################################################################################
 
     def test_the_health_check_line_sits_after_the_audit_log_and_before_the_alerts(self) -> 'None':
-        session_maker = _new_session()
-        _seed_connection(session_maker, URL_TYPE.PLAIN_HTTP, {})
+        with _new_session() as session_maker:
+            _seed_connection(session_maker, URL_TYPE.PLAIN_HTTP, {})
 
-        labels = _labels(_describe(session_maker, AuditSource.REST_Outgoing))
-        assert labels.index('Audit log') < labels.index('Health check') < labels.index('Alert settings of its own')
+            labels = _labels(_describe(session_maker, AuditSource.REST_Outgoing))
+            assert labels.index('Audit log') < labels.index('Health check') < labels.index('Alert settings of its own')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -243,33 +247,33 @@ class TestHealthCheckLine:
 class TestQueueLines:
 
     def test_a_connection_saved_before_the_switches_existed_carries_their_defaults(self) -> 'None':
-        session_maker = _new_session()
-        _seed_connection(session_maker, URL_TYPE.PLAIN_HTTP, {})
+        with _new_session() as session_maker:
+            _seed_connection(session_maker, URL_TYPE.PLAIN_HTTP, {})
 
-        lines = _describe(session_maker, AuditSource.REST_Outgoing)
+            lines = _describe(session_maker, AuditSource.REST_Outgoing)
 
-        # The queue is off and the DLQ on by default
-        assert _value(lines, 'Use queue') == 'off'
-        assert _value(lines, 'Use DLQ') == 'on'
+            # The queue is off and the DLQ on by default
+            assert _value(lines, 'Use queue') == 'off'
+            assert _value(lines, 'Use DLQ') == 'on'
 
-        # The two sit after the retries, before the audit log
-        labels = _labels(lines)
-        assert labels.index('Use queue') + 1 == labels.index('Use DLQ')
-        assert labels.index('Use DLQ') < labels.index('Audit log')
+            # The two sit after the retries, before the audit log
+            labels = _labels(lines)
+            assert labels.index('Use queue') + 1 == labels.index('Use DLQ')
+            assert labels.index('Use DLQ') < labels.index('Audit log')
 
 # ################################################################################################################################
 
     def test_the_switches_read_as_stored_for_rest_and_soap_alike(self) -> 'None':
-        session_maker = _new_session()
-        _seed_connection(session_maker, URL_TYPE.SOAP, {
-            HTTP_SOAP.Queue.Field_Use_Queue: True,
-            HTTP_SOAP.DLQ.Field_Use_DLQ: False,
-        })
+        with _new_session() as session_maker:
+            _seed_connection(session_maker, URL_TYPE.SOAP, {
+                HTTP_SOAP.Queue.Field_Use_Queue: True,
+                HTTP_SOAP.DLQ.Field_Use_DLQ: False,
+            })
 
-        lines = _describe(session_maker, AuditSource.SOAP_Outgoing)
+            lines = _describe(session_maker, AuditSource.SOAP_Outgoing)
 
-        assert _value(lines, 'Use queue') == 'on'
-        assert _value(lines, 'Use DLQ') == 'off'
+            assert _value(lines, 'Use queue') == 'on'
+            assert _value(lines, 'Use DLQ') == 'off'
 
 # ################################################################################################################################
 # ################################################################################################################################

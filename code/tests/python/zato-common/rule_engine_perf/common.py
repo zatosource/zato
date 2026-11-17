@@ -77,9 +77,6 @@ Rollup_Rule_Count = 2_000
 # Over how many days those firing counters span.
 Rollup_Day_Count = 90
 
-# How long a submitter sleeps when the writer's bounded buffer reports saturation.
-Full_Buffer_Sleep_Seconds = 0.002
-
 # ################################################################################################################################
 # ################################################################################################################################
 

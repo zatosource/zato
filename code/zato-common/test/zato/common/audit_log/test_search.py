@@ -7,14 +7,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from shutil import rmtree
+from tempfile import mkdtemp
 from unittest import main, TestCase
 
-# SQLAlchemy
-from sqlalchemy import create_engine
-
 # Zato
-from zato.common.audit_log.common import event_attr_table, event_table, metadata, AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.common import event_attr_table, event_table, AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.search import last_seen, search_events
+from zato.common.test.zato_database import file_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,8 +33,13 @@ if 0:
 class SearchEventsTestCase(TestCase):
 
     def setUp(self) -> 'None':
-        self.engine = create_engine('sqlite://')
-        metadata.create_all(self.engine)
+
+        # A temporary directory for the database file, removed after each test ..
+        directory = mkdtemp()
+        self.addCleanup(rmtree, directory)
+
+        # .. and the Zato database in it, with all of its schemas, disposed of after each test.
+        self.engine = self.enterContext(file_database_engine(directory))
 
 # ################################################################################################################################
 
