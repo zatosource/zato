@@ -67,4 +67,16 @@ def ha_pair(ha_session:'any_', request:'any_') -> 'any_':
         yield env
 
 # ################################################################################################################################
+
+@pytest.fixture
+def ha_production_pair(ha_session:'any_', request:'any_') -> 'any_':
+    """ A pair on PostgreSQL with the settings of a production installation that is ready.
+    """
+    timers = Timers()
+    timers.is_production = True
+
+    with ready_pair(ha_session, request.node.name, timers, []) as env:
+        yield env
+
+# ################################################################################################################################
 # ################################################################################################################################

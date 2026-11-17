@@ -8,9 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from pubsub_perf.config import get_scenario_name, Level_Scenarios
-from pubsub_perf.progress import PerfReport, Progress
-from pubsub_perf.runner import new_prefix, run_scenario
-from pubsub_perf.scenario import report_and_verify, ScenarioRun
+from pubsub_perf.progress import Progress
+from pubsub_perf.runner import begin_measurement, new_prefix, run_scenario
+from pubsub_perf.scenario import ScenarioRun, verify_and_report
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -41,10 +41,10 @@ def test_concurrency_levels(zato_server:'any_') -> 'None':
         run = ScenarioRun(scenario, prefix)
         progress = Progress(level_name)
 
+        measurement = begin_measurement()
         timing = run_scenario(progress, run, _level_duration, 0)
 
-        report = PerfReport(level_name)
-        report_and_verify(report, run, timing, progress)
+        verify_and_report(measurement, level_name, run, timing, 0)
 
 # ################################################################################################################################
 # ################################################################################################################################

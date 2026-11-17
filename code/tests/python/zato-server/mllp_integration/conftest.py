@@ -7,9 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import atexit
 import os
-import shutil
 import socket
 import subprocess
 import sys
@@ -17,8 +15,6 @@ import tempfile
 import threading
 import time
 from collections.abc import Generator
-from http.client import OK
-from urllib.request import Request, urlopen
 
 # The shared MLLP helpers, e.g. rest_echo_server, live next to the standalone test server,
 # after this directory itself so that nothing of the same name is shadowed
@@ -29,77 +25,66 @@ sys.path.insert(0, os.path.dirname(__file__))
 import pytest
 
 # Zato
-from zato.common.crypto.api import CryptoManager
 from zato.common.test.client import AdminClient as ZatoClient
-from zato.common.test.process_util import kill_process_tree
-from zato.common.typing_ import cast_
-from zato.common.util.config import get_config_object, update_config_file
+from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
 
 # Zato - test services deployed to the server under test
-from _services import accept_service_source, alert_rule_service_source, demo_import_service_source, \
-    destination_service_source, echo_service_source, error_service_source, fhir_invoke_service_source, \
-    fhir_save_service_source, forward_service_source, inspect_service_source
+from _services import accept_service_source, alert_rule_service_source, audit_counts_service_source, \
+    demo_import_service_source, destination_service_source, echo_service_source, error_service_source, \
+    fhir_invoke_service_source, fhir_save_service_source, forward_service_source, inspect_service_source
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strlist
-    any_ = any_
-    strlist = strlist
+    import logging
+    from zato.common.test.conftest_base_pubsub import SessionState
+    from zato.common.typing_ import anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 _zato_base_dir = os.environ['ZATO_TEST_BASE_DIR']
-_zato_bin      = os.path.join(_zato_base_dir, 'code', 'bin', 'zato')
 _zato_python   = os.path.join(_zato_base_dir, 'code', 'bin', 'python')
 
 _current_dir = os.path.dirname(__file__)
 _mllp_test_server_path = os.path.join(_current_dir, '..', '..', 'zato-common', 'mllp', 'mllp_test_server.py')
 
-# The file-transfer listener that watches the pickup directory for runtime hot-deploy
-_listener_path = os.path.join(
-    _zato_base_dir, 'code', 'zato-common', 'src', 'zato', 'common', 'file_transfer', 'listener.py')
+_logger_name = 'zato.test.mllp_integration.conftest'
 
-_password_suffix = CryptoManager.generate_hex_string()
-_password = 'test.invoke.' + _password_suffix
+_backend_ready_timeout = 10
+_port_wait_timeout     = 10
 
-_server_ready_timeout    = 60
-_backend_ready_timeout   = 10
-_hot_deploy_timeout      = 30
-_listener_settle_seconds = 2
-_port_wait_timeout       = 10
+# The services that the tests invoke, each deployed from the pickup directory when the server starts
+_service_files = {
+    '_test_hl7_mllp_echo.py':         echo_service_source,
+    '_test_hl7_mllp_error.py':        error_service_source,
+    '_test_hl7_mllp_forward.py':      forward_service_source,
+    '_test_hl7_mllp_inspect.py':      inspect_service_source,
+    '_test_hl7_mllp_accept.py':       accept_service_source,
+    '_test_hl7_mllp_destinations.py': destination_service_source,
+    '_test_hl7_fhir_invoke.py':       fhir_invoke_service_source,
+    '_test_hl7_fhir_save.py':         fhir_save_service_source,
+    '_test_alerting_rule.py':         alert_rule_service_source,
+    '_test_demo_import.py':           demo_import_service_source,
+    '_test_hl7_audit_counts.py':      audit_counts_service_source,
+}
 
-_server_process   = None
-_listener_process = None
-_temp_directory   = None
+# The services and the file through which the test services exchange received messages with the test process,
+# in a directory that the session removes when it ends
+_data_dir = tempfile.mkdtemp(prefix='zato_mllp_test_')
+_messages_file = os.path.join(_data_dir, 'mllp_messages.txt')
 
-# Every path the listener reported as deployed, filled by the listener output thread -
-# the hot-deploy fixture waits on the condition until all its files show up here.
-_listener_deployed_paths:'set[str]' = set()
-_listener_deployed_condition = threading.Condition()
+_extra_server_env = {
+    'Zato_Test_MLLP_Messages_File': _messages_file,
+}
+
+# What the tests know of the server once it runs
+_server_info:'anydict' = {}
 
 # Type aliases for generator-based fixtures
-strobj_dict     = dict[str, object]
-strobj_dict_gen = Generator[strobj_dict, None, None]
-backend_gen     = Generator['BackendHandle', None, None]
-none_gen        = Generator[None, None, None]
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _find_free_port() -> 'int':
-    """ Binds to port 0 to get an OS-assigned free port, then releases it.
-    """
-    temporary_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    temporary_socket.bind(('127.0.0.1', 0))
-
-    _, port = temporary_socket.getsockname()
-
-    temporary_socket.close()
-
-    return port
+strobj_dict = dict[str, object]
+backend_gen = Generator['BackendHandle', None, None]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -154,258 +139,79 @@ def wait_for_port_closed(port:'int', timeout:'int'=_port_wait_timeout) -> 'None'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _kill_process(process:'subprocess.Popen[bytes] | None') -> 'None':
-    """ Kills a subprocess along with every descendant it spawned - the server is launched
-    through the zato launcher and a shell wrapper, so terminating the direct child alone
-    would orphan the actual server, which would then run and log forever.
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _build_config(
+    state:'SessionState',
+    logger:'logging.Logger',
+    zato_bin:'str',
+    server_port:'int',
+    invoke_password:'str',
+    ) -> 'anydict':
+    """ Writes the sources of the test services for the server to deploy when it starts, and returns
+    what the tests need once it runs.
     """
-    kill_process_tree(process)
+    state.test_data_directory = _data_dir
+
+    hot_deploy_sources:'list[str]' = []
+
+    for file_name, source in _service_files.items():
+        source_path = os.path.join(_data_dir, file_name)
+
+        with open(source_path, 'w') as source_file:
+            _ = source_file.write(source)
+
+        hot_deploy_sources.append(source_path)
+
+    def _populate(
+        host:'str',
+        server_port:'int',
+        invoke_password:'str',
+        server_directory:'str',
+        zato_bin:'str',
+        ) -> 'None':
+
+        # The audit database is the Zato database of the server, which the session selected for both processes
+        _server_info['host'] = host
+        _server_info['port'] = server_port
+        _server_info['mllp_port'] = state.mllp_port
+        _server_info['password'] = invoke_password
+        _server_info['server_directory'] = server_directory
+        _server_info['temp_directory'] = _data_dir
+        _server_info['audit_db_path'] = os.environ['Zato_Database_Path']
+        _server_info['database'] = state.pubsub_database
+
+    out:'anydict' = {
+        'placeholders': {},
+        'populate_callback': _populate,
+        'hot_deploy_sources': hot_deploy_sources,
+    }
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _kill_server() -> 'None':
-    global _server_process, _listener_process
-
-    # Stop the file listener first so it does not race the server shutdown ..
-    _kill_process(_listener_process)
-    _listener_process = None
-
-    # .. and now the server itself.
-    _kill_process(_server_process)
-    _server_process = None
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _cleanup() -> 'None':
-    _kill_server()
-
-    global _temp_directory
-
-    if _temp_directory:
-        if os.path.isdir(_temp_directory):
-            shutil.rmtree(_temp_directory, ignore_errors=True)
-
-    _temp_directory = None
-
-_ = atexit.register(_cleanup)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _wait_for_server(host:'str', port:'int', timeout:'int'=_server_ready_timeout) -> 'None':
-    """ Polls GET /zato/ping until the server responds with 200 OK.
-    """
-
-    url = f'http://{host}:{port}/zato/ping'
-    start_time = time.monotonic()
-    deadline = start_time + timeout
-    attempt = 0
-
-    while time.monotonic() < deadline:
-
-        attempt += 1
-        elapsed = time.monotonic() - start_time
-
-        try:
-            request = Request(url, method='GET')
-            with urlopen(request, timeout=5) as response:
-                if response.status == OK:
-                    print(f'[TIMING] ping OK after {elapsed:.1f}s (attempt {attempt})')
-                    return
-        except Exception as exception:
-            print(f'[TIMING] ping attempt {attempt} at {elapsed:.1f}s: {exception}')
-
-        time.sleep(0.5)
-
-    raise Exception(f'Server at {host}:{port} did not respond within {timeout}s')
+zato_server_process = create_zato_server_fixture(
+    logger_name=_logger_name,
+    server_log_copy_name='server-logs-mllp-integration.txt',
+    template_path='',
+    quickstart_prefix='zato_mllp_test_qs_',
+    extra_server_env=_extra_server_env,
+    patch_server_conf_bind=True,
+    build_config_callback=_build_config,
+)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def zato_server() -> 'strobj_dict_gen':
-    """ Starts a Zato server in a temporary directory and waits for it to become ready.
+def zato_server(zato_server_process:'None') -> 'strobj_dict':
+    """ Returns the address, the ports, the password and the directories of the server of the session.
     """
-    global _server_process, _temp_directory
-
-    start_time = time.monotonic()
-
-    port = _find_free_port()
-    _temp_directory = tempfile.mkdtemp(prefix='zato_mllp_test_')
-
-    # Create the quickstart environment ..
-    quickstart_environment = os.environ.copy()
-    _ = quickstart_environment.pop('COVERAGE_PROCESS_START', None)
-
-    quickstart_command = [
-        _zato_bin, 'quickstart', 'create', _temp_directory,
-        '--password', _password,
-        '--server-api-client-for-scheduler-password', _password,
-        '--no-scheduler',
-    ]
-
-    result = subprocess.run(quickstart_command, capture_output=True, text=True, timeout=120, env=quickstart_environment)
-
-    if result.returncode != 0:
-        raise Exception(f'quickstart create failed:\nstdout: {result.stdout}\nstderr: {result.stderr}')
-
-    after_quickstart = time.monotonic()
-    print(f'\n[TIMING] quickstart create: {after_quickstart - start_time:.1f}s')
-
-    # .. patch server.conf to use our port ..
-    server_directory = os.path.join(_temp_directory, 'server1')
-    repository_location = os.path.join(server_directory, 'config', 'repo')
-
-    config = get_config_object(repository_location, 'server.conf')
-    config = cast_('any_', config)
-
-    main_config = config['main']
-    main_config['port'] = str(port)
-
-    # The pre-start config check reads the bind address, not the port,
-    # so the default 0.0.0.0:17010 must not linger in there - another
-    # environment on this machine may hold that port.
-    main_config['bind'] = f'0.0.0.0:{port}'
-
-    update_config_file(config, repository_location, 'server.conf')
-
-    after_patch = time.monotonic()
-    print(f'[TIMING] config patch: {after_patch - after_quickstart:.1f}s')
-
-    # .. start the server in foreground mode ..
-    broker_port = _find_free_port()
-
-    # Pick the port for the shared internal MLLP server upfront so tests know it in advance
-    mllp_port = _find_free_port()
-
-    # The file test services use to exchange received messages with the test process
-    messages_file = os.path.join(_temp_directory, 'mllp_messages.txt')
-
-    # The audit database lives in the test's own temporary directory,
-    # so the test process can read what the server wrote.
-    audit_db_path = os.path.join(_temp_directory, 'zato.db')
-
-    server_environment = os.environ.copy()
-    server_environment['Zato_Config_Bind_Port'] = str(port)
-    server_environment['Zato_Broker_HTTP_Port'] = str(broker_port)
-    server_environment['Zato_HL7_MLLP_Port'] = str(mllp_port)
-    server_environment['Zato_Test_MLLP_Messages_File'] = messages_file
-    server_environment['Zato_Database_Type'] = 'sqlite'
-    server_environment['Zato_Database_Path'] = audit_db_path
-    _ = server_environment.pop('COVERAGE_PROCESS_START', None)
-
-    # start_new_session makes the launcher its own process-group leader, so the teardown
-    # can kill the whole group - the shell wrapper and the actual server included.
-    _server_process = subprocess.Popen(
-        [_zato_bin, 'start', server_directory, '--fg'],
-        env=server_environment,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        start_new_session=True,
-    )
-
-    # A detached watchdog kills the server's process group once this pytest process is gone -
-    # the atexit cleanup never runs when pytest is killed hard, and an orphaned server
-    # would otherwise run and log forever.
-    _watchdog_script = (
-        f'while kill -0 {os.getpid()} 2>/dev/null; do sleep 5; done; '
-        f'kill -- -{_server_process.pid} 2>/dev/null'
-    )
-    _ = subprocess.Popen(['/bin/sh', '-c', _watchdog_script], start_new_session=True)
-
-    after_popen = time.monotonic()
-    print(f'[TIMING] Popen started: {after_popen - after_patch:.1f}s')
-
-    # .. stream server stdout in a background thread ..
-    server_process = cast_('any_', _server_process)
-
-    def _stream_server_output() -> 'None':
-        for line in iter(server_process.stdout.readline, b''):
-            text = line.decode('utf-8', errors='replace').rstrip()
-            elapsed = time.monotonic() - after_popen
-            print(f'[SERVER {elapsed:6.1f}s] {text}')
-
-    output_thread = threading.Thread(target=_stream_server_output, daemon=True)
-    output_thread.start()
-
-    # .. wait for the server to come up ..
-    host = '127.0.0.1'
-
-    try:
-        _wait_for_server(host, port)
-        after_ready = time.monotonic()
-        print(f'[TIMING] server ready: {after_ready - after_popen:.1f}s')
-        print(f'[TIMING] total setup: {after_ready - start_time:.1f}s')
-    except Exception:
-        print('\n--- Server did not become ready, stdout was streamed above ---\n')
-        _kill_server()
-        raise
-
-    # .. start the file-transfer listener that watches the pickup directory, so that
-    # files dropped at runtime trigger hot-deploy. The server's own boot scan only
-    # covers files present at startup ..
-    global _listener_process
-
-    pickup_directory = os.path.join(server_directory, 'pickup', 'incoming', 'services')
-    web_admin_repo = os.path.join(_temp_directory, 'web-admin', 'config', 'repo')
-
-    listener_env = os.environ.copy()
-    listener_env['Zato_Config_Bind_Port'] = str(port)
-    listener_env['Zato_Web_Admin_Repo_Dir'] = web_admin_repo
-    _ = listener_env.pop('COVERAGE_PROCESS_START', None)
-
-    _listener_process = subprocess.Popen(
-        [_zato_python, _listener_path, pickup_directory],
-        env=listener_env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        start_new_session=True,
-    )
-
-    # .. stream the listener's output too - it reports each file it picks up and deploys,
-    # and with nothing draining the pipe it would block once the buffer fills up ..
-    listener_process = cast_('any_', _listener_process)
-
-    def _stream_listener_output() -> 'None':
-        for line in iter(listener_process.stdout.readline, b''):
-            text = line.decode('utf-8', errors='replace').rstrip()
-            elapsed = time.monotonic() - after_popen
-            print(f'[LISTENER {elapsed:6.1f}s] {text}')
-
-            # The listener prints this once the server confirmed a file's deployment,
-            # which is what the hot-deploy fixture waits for.
-            if 'Deployed -> ' in text:
-                deployed_path = text.split('Deployed -> ')[1]
-                with _listener_deployed_condition:
-                    _listener_deployed_paths.add(deployed_path)
-                    _listener_deployed_condition.notify_all()
-
-    listener_output_thread = threading.Thread(target=_stream_listener_output, daemon=True)
-    listener_output_thread.start()
-
-    # .. give the listener a moment to initialize its directory watch ..
-    time.sleep(_listener_settle_seconds)
-
-    yield {
-        'host': host,
-        'port': port,
-        'mllp_port': mllp_port,
-        'password': _password,
-        'server_directory': server_directory,
-        'temp_directory': _temp_directory,
-        'audit_db_path': audit_db_path,
-    }
-
-    # .. teardown ..
-    _kill_server()
-
-    if _temp_directory:
-        if os.path.isdir(_temp_directory):
-            shutil.rmtree(_temp_directory, ignore_errors=True)
-
-    _temp_directory = None
+    out = dict(_server_info)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -414,14 +220,9 @@ def zato_server() -> 'strobj_dict_gen':
 def zato_client(zato_server:'strobj_dict') -> 'ZatoClient':
     """ Creates a ZatoClient connected to the test server.
     """
+    base_url = f'http://{zato_server["host"]}:{zato_server["port"]}'
 
-    host     = cast_('str', zato_server['host'])
-    port     = cast_('int', zato_server['port'])
-    password = cast_('str', zato_server['password'])
-
-    base_url = f'http://{host}:{port}'
-
-    out = ZatoClient(base_url, password)
+    out = ZatoClient(base_url, str(zato_server['password']))
     return out
 
 # ################################################################################################################################
@@ -429,14 +230,22 @@ def zato_client(zato_server:'strobj_dict') -> 'ZatoClient':
 
 @pytest.fixture(scope='session')
 def mllp_port(zato_server:'strobj_dict') -> 'int':
-    """ Returns the port the shared internal MLLP server binds to, chosen upfront
-    and exported to the server via the Zato_HL7_MLLP_Port environment variable.
+    """ Returns the port of the internal MLLP server of the server, chosen by the session before the server started.
     """
-    out = cast_('int', zato_server['mllp_port'])
+    out = _server_info['mllp_port']
     return out
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+def _find_free_port() -> 'int':
+    """ Binds to port 0 to get an OS-assigned free port, then releases it.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as temporary_socket:
+        temporary_socket.bind(('127.0.0.1', 0))
+        _, out = temporary_socket.getsockname()
+
+    return out
 
 @pytest.fixture(scope='session')
 def backend_port() -> 'int':
@@ -475,17 +284,19 @@ def _run_backend(port:'int', callback_mode:'str', log_prefix:'str') -> 'backend_
         '--log-messages',
     ]
 
-    handle.process = subprocess.Popen(
+    process = subprocess.Popen(
         command,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
+    handle.process = process
 
     # .. capture stdout lines in a background thread ..
-    process = cast_('any_', handle.process)
+    stdout = process.stdout
+    assert stdout is not None
 
     def _capture_output() -> 'None':
-        for line in iter(process.stdout.readline, b''):
+        for line in iter(stdout.readline, b''):
             text = line.decode('utf-8', errors='replace').rstrip()
             handle.received_lines.append(text)
             print(f'[{log_prefix}] {text}')
@@ -546,61 +357,6 @@ def reply_backend(reply_backend_port:'int') -> 'backend_gen':
     shows a channel relaying the answer of the destination it replies from.
     """
     yield from _run_backend(reply_backend_port, 'reply', 'REPLY BACKEND')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@pytest.fixture(scope='session', autouse=True)
-def hot_deploy_services(zato_server:'strobj_dict', zato_client:'ZatoClient') -> 'none_gen':
-    """ Writes the test service files into the pickup directory and waits for Zato to register them.
-    """
-
-    server_directory = cast_('str', zato_server['server_directory'])
-    pickup_directory = os.path.join(server_directory, 'pickup', 'incoming', 'services')
-    os.makedirs(pickup_directory, exist_ok=True)
-
-    service_files = {
-        '_test_hl7_mllp_echo.py':    echo_service_source,
-        '_test_hl7_mllp_error.py':   error_service_source,
-        '_test_hl7_mllp_forward.py': forward_service_source,
-        '_test_hl7_mllp_inspect.py': inspect_service_source,
-        '_test_hl7_mllp_accept.py':  accept_service_source,
-        '_test_hl7_mllp_destinations.py': destination_service_source,
-        '_test_hl7_fhir_invoke.py':  fhir_invoke_service_source,
-        '_test_hl7_fhir_save.py':    fhir_save_service_source,
-        '_test_alerting_rule.py':    alert_rule_service_source,
-        '_test_demo_import.py':      demo_import_service_source,
-    }
-
-    deployed_paths:'strlist' = []
-
-    for filename, source in service_files.items():
-        file_path = os.path.join(pickup_directory, filename)
-        with open(file_path, 'w') as file_handle:
-            _ = file_handle.write(source)
-        deployed_paths.append(file_path)
-        print(f'[DEPLOY] Wrote {file_path}')
-
-    # .. wait until the listener confirms every file reached the server - it deploys
-    # through inotify the moment a file is closed, so this returns almost immediately ..
-    print('[DEPLOY] Waiting for the listener to deploy all files ...')
-
-    with _listener_deployed_condition:
-        is_all_deployed = _listener_deployed_condition.wait_for(
-            lambda: set(deployed_paths) <= _listener_deployed_paths, timeout=_hot_deploy_timeout)
-
-    if not is_all_deployed:
-        missing = set(deployed_paths) - _listener_deployed_paths
-        raise Exception(f'Listener did not deploy all files within {_hot_deploy_timeout}s, missing: {sorted(missing)}')
-
-    print('[DEPLOY] All files deployed')
-
-    yield None
-
-    # .. teardown: remove the deployed files ..
-    for file_path in deployed_paths:
-        if os.path.exists(file_path):
-            os.remove(file_path)
 
 # ################################################################################################################################
 # ################################################################################################################################

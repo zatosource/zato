@@ -8,59 +8,69 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import random
 import socket
+import threading
 import time
-from time import monotonic
+from statistics import median, quantiles
 
 # pytest
 import pytest
 
-# SQLAlchemy
-from sqlalchemy import func, select
-
 # Zato
-from zato.common.db_env.engine import new_zato_engine
-from zato.common.audit_log.api import event_table, AuditEvent, AuditOutcome
-from zato.common.hl7.feed import run_feed, FeedConfig, FeedItem
-from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
+from zato.common.hl7.mllp.client import HL7MLLPClient
+from zato.common.test.perf_report import report_result, start_measurement
 
 # Zato - test helpers
 from conftest import wait_for_port_open
+from mllp_live_util import sample_adt_a01
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist
-    anylist = anylist
+    from zato.common.test.client import AdminClient
+    from zato.common.typing_ import anydict, stranydict
+
+    AdminClient = AdminClient
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The volume proof is opt-in - it runs for minutes under sustained load,
-# so it only starts when the environment asks for it.
+# The volume measurements are opt-in - they run for minutes under sustained load,
+# so they only start when the environment asks for it.
 _is_volume_enabled = bool(os.environ.get('Zato_Test_HL7_Volume'))
 
-# Per-message trace diagnostics - opt-in through the environment
-_is_trace_enabled = bool(os.environ.get('Zato_HL7_Trace'))
-
-# How hard and how long to push, overridable from the environment -
+# How hard and how long the sustained feed pushes, overridable from the environment -
 # the defaults prove the property in minutes, a full-hour run is one variable away.
 _rate_per_minute  = int(os.environ.get('Zato_Test_HL7_Volume_Rate', '3000'))
 _duration_seconds = int(os.environ.get('Zato_Test_HL7_Volume_Duration', '120'))
 _error_ratio      = float(os.environ.get('Zato_Test_HL7_Volume_Error_Ratio', '0.02'))
 
+# The seed that makes the injected failures of a feed reproducible
+_feed_seed = 12345
+
+# The MSH-3 sending application of the sample messages, and the one that marks a message as an injected failure,
+# which the error channel routes to a service that raises
+_sending_application       = b'|SendApp|'
+_error_sending_application = 'ERROR_FEED_SYSTEM'
+
 _start_sequence   = b'\x0b'
 _end_sequence     = b'\x1c\x0d'
-_socket_timeout   = 10.0
+_socket_timeout   = 30.0
 _recv_buffer_size = 4096
-_max_message_size = 2_000_000
+_host             = '127.0.0.1'
+
+# The positive acknowledgment code
+_ack_accepted = 'AA'
 
 _connection_type_channel = 'channel-hl7-mllp'
 _generic_service_name    = 'zato.generic.connection'
+_audit_counts_service    = 'test.hl7.audit-counts'
 
-# How long to wait for the buffered writer to flush its tail after the run
+# How long to wait for the buffered writer to flush its tail after the run, and how often to look
 _flush_wait_seconds = 15.0
+_flush_poll_seconds = 0.5
 
 # Latency in the last third of the run may not exceed this multiple of the first third -
 # the flat-insert-latency assertion, with margin for measurement noise on small medians.
@@ -73,48 +83,115 @@ _latency_noise_margin_ms = 5.0
 # the bounded-growth assertion, covering the row, its attributes and its body.
 _max_bytes_per_event = 4096
 
+# How many messages each measurement of the throughput of the channel sends
+_sequential_message_count       = 1_000
+_concurrent_thread_count        = 10
+_concurrent_messages_per_thread = 100
+_persistent_message_count       = 2_000
+_size_message_count             = 50
+
+# The sizes of the messages of the measurement of large messages, in bytes, and the OBX segment that pads them
+_message_sizes = (1_000, 10_000, 100_000, 1_000_000)
+_padding_prefix = b'\rOBX|1|TX|PAD^Padding||'
+
+# How many cut points the percentiles are read from, and the cut point of each percentile
+_quantile_count = 100
+_p50_index = 49
+_p95_index = 94
+_p99_index = 98
+
+_milliseconds_per_second = 1000.0
+_seconds_per_minute      = 60.0
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _PersistentMLLPSender:
-    """ Sends framed messages over one long-lived TCP connection and reads each ACK -
-    how a real ADT feed talks to a channel, without per-message connection cost.
+def _new_message(control_id:'str', is_error:'bool') -> 'bytes':
+    """ Returns a sample ADT^A01 message under the given control ID, marked as an injected failure if requested.
+    """
+    out = sample_adt_a01(control_id)
+
+    if is_error:
+        error_application = f'|{_error_sending_application}|'.encode()
+        out = out.replace(_sending_application, error_application, 1)
+
+    return out
+
+# ################################################################################################################################
+
+def _new_padded_message(control_id:'str', size:'int') -> 'bytes':
+    """ Returns a sample message padded with an OBX segment to the given size in bytes.
+    """
+    message = sample_adt_a01(control_id)
+    padding_size = size - len(message) - len(_padding_prefix)
+
+    out = message + _padding_prefix + (b'X' * padding_size)
+    return out
+
+# ################################################################################################################################
+
+def _get_latency_figures(durations:'list[float]') -> 'stranydict':
+    """ Returns the count and the percentiles of durations given in seconds, in milliseconds.
+    """
+    cut_points = quantiles(durations, n=_quantile_count, method='inclusive')
+
+    out:'stranydict' = {
+        'count': len(durations),
+        'p50_ms': cut_points[_p50_index] * _milliseconds_per_second,
+        'p95_ms': cut_points[_p95_index] * _milliseconds_per_second,
+        'p99_ms': cut_points[_p99_index] * _milliseconds_per_second,
+        'max_ms': max(durations) * _milliseconds_per_second,
+    }
+
+    return out
+
+# ################################################################################################################################
+
+def _get_rate_figures(count:'int', seconds:'float') -> 'stranydict':
+    """ Returns how many messages were sent, in how many seconds, and how many per second.
+    """
+    out:'stranydict' = {
+        'count': count,
+        'seconds': seconds,
+        'per_second': count / seconds,
+    }
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _PersistentSender:
+    """ Sends framed messages over one long-lived TCP connection and reads each acknowledgment,
+    which is how a real ADT feed sends to a channel.
     """
 
-    def __init__(self, host:'str', port:'int') -> 'None':
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.settimeout(_socket_timeout)
-        self.socket.connect((host, port))
-        self.decoder = FrameDecoder(_start_sequence, _end_sequence, _max_message_size)
+    def __init__(self, port:'int') -> 'None':
+        self.socket = socket.create_connection((_host, port), timeout=_socket_timeout)
+        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        self.buffer = b''
 
-    def send(self, item:'FeedItem') -> 'bytes':
-        """ Sends one feed item and returns the raw ACK bytes.
+# ################################################################################################################################
+
+    def send(self, message:'bytes') -> 'bytes':
+        """ Sends one message and returns its acknowledgment without the framing.
         """
-        # Trace diagnostics - each send is announced before the socket write so a stall
-        # is attributable to the exact control id that never came back.
-        send_start = monotonic()
+        self.socket.sendall(_start_sequence + message + _end_sequence)
 
-        if _is_trace_enabled:
-            print(f'[CLIENT] sending {item.control_id}', flush=True)
-
-        framed_message = frame_encode(item.text.encode('utf-8'), _start_sequence, _end_sequence)
-        self.socket.sendall(framed_message)
-
-        while True:
+        while _end_sequence not in self.buffer:
             chunk = self.socket.recv(_recv_buffer_size)
 
             if not chunk:
-                raise Exception('Connection closed before receiving a complete ACK')
+                raise Exception('Connection closed before receiving a complete acknowledgment')
 
-            self.decoder.feed(chunk)
-            message = self.decoder.next_message()
+            self.buffer += chunk
 
-            if message is not None:
-                if _is_trace_enabled:
-                    round_trip_ms = (monotonic() - send_start) * 1000
-                    print(f'[CLIENT] ack for {item.control_id} after {round_trip_ms:.1f}ms', flush=True)
-                out = message
-                return out
+        frame, self.buffer = self.buffer.split(_end_sequence, 1)
+
+        out = frame.removeprefix(_start_sequence)
+        return out
+
+# ################################################################################################################################
 
     def close(self) -> 'None':
         self.socket.close()
@@ -122,117 +199,56 @@ class _PersistentMLLPSender:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _ensure_schema(audit_db_path:'str') -> 'None':
-    """ Creates the audit schema if it is not there yet - in a standalone volume run
-    the baseline is read before the server ever wrote an event, and creating
-    from the same metadata is exactly what the server itself would do.
+def _new_client(port:'int') -> 'HL7MLLPClient':
+    """ Returns a client that sends each message on a connection of its own.
     """
-    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
-    event_table.metadata.create_all(engine)
-    engine.dispose()
-
-# ################################################################################################################################
-
-def _median(values:'anylist') -> 'float':
-    """ Returns the median of a list of numbers.
-    """
-    ordered = sorted(values)
-    middle = len(ordered) // 2
-
-    if len(ordered) % 2:
-        out = ordered[middle]
-    else:
-        out = (ordered[middle - 1] + ordered[middle]) / 2
-
+    out = HL7MLLPClient(_host, port, _start_sequence, _end_sequence, receive_timeout=_socket_timeout)
     return out
 
 # ################################################################################################################################
 
-def _count_events(audit_db_path:'str', event_type:'str', outcome:'str'='') -> 'int':
-    """ Returns how many events of one type the audit database holds.
+def _send_accepted(client:'HL7MLLPClient', message:'bytes', control_id:'str') -> 'None':
+    """ Sends one message on a connection of its own and fails unless the channel accepts it.
     """
+    result = client.send(message, control_id)
+    assert result.ack_code == _ack_accepted, (control_id, result.ack_code, result.error_text)
 
-    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
+# ################################################################################################################################
 
-    query = select(func.count()).select_from(event_table)
-    query = query.where(event_table.c.event_type == event_type)
-
-    if outcome:
-        query = query.where(event_table.c.outcome == outcome)
-
-    with engine.connect() as connection:
-        out = connection.execute(query).scalar()
-
-    engine.dispose()
-
-    assert out is not None
+def _get_audit_counts(zato_client:'AdminClient') -> 'anydict':
+    """ Returns how many events of each kind the audit log holds and the size of the Zato database.
+    """
+    out = zato_client.invoke(_audit_counts_service)
     return out
 
 # ################################################################################################################################
 
-def _count_all_events(audit_db_path:'str') -> 'int':
-    """ Returns how many event rows the audit database holds in total.
+def _wait_for_audit_counts(zato_client:'AdminClient', received:'int', acks:'int') -> 'anydict':
+    """ Polls until the audit log holds the expected number of received messages and acknowledgments - the buffered
+    writer flushes on max-wait, so the tail of a run arrives shortly after it ends.
     """
-
-    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
-
-    query = select(func.count()).select_from(event_table)
-
-    with engine.connect() as connection:
-        out = connection.execute(query).scalar()
-
-    engine.dispose()
-
-    assert out is not None
-    return out
-
-# ################################################################################################################################
-
-def _get_db_size(audit_db_path:'str') -> 'int':
-    """ Returns the on-disk size of the audit database - the main file plus
-    the write-ahead log, because under WAL mode recent writes live there
-    until a checkpoint moves them over.
-    """
-
-    out = os.path.getsize(audit_db_path)
-
-    wal_path = audit_db_path + '-wal'
-
-    if os.path.exists(wal_path):
-        out += os.path.getsize(wal_path)
-
-    return out
-
-# ################################################################################################################################
-
-def _wait_for_event_count(audit_db_path:'str', event_type:'str', expected_count:'int') -> 'int':
-    """ Polls until the expected number of events landed - the buffered writer
-    flushes on max-wait, so the tail of the run arrives shortly after it ends.
-    """
-
     deadline = time.monotonic() + _flush_wait_seconds
 
-    while time.monotonic() < deadline:
+    while True:
+        out = _get_audit_counts(zato_client)
 
-        out = _count_events(audit_db_path, event_type)
-
-        if out >= expected_count:
+        if out['received'] >= received and out['acks'] >= acks:
             return out
 
-        time.sleep(0.5)
+        if time.monotonic() > deadline:
+            return out
 
-    out = _count_events(audit_db_path, event_type)
-    return out
+        time.sleep(_flush_poll_seconds)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @pytest.mark.skipif(not _is_volume_enabled, reason='Volume tests run only when Zato_Test_HL7_Volume is set')
 class TestHL7Volume:
-    """ The volume proof - a sustained feed of thousands of messages a minute with
-    an injected error mix, asserting flat insert latency and bounded audit-DB growth.
-    The demonstrated answer to the database-bloat complaint: the audit trail keeps up
-    and its storage stays proportional to what actually happened.
+    """ The volume measurements of a real server over its MLLP channel - a sustained feed with an injected error mix,
+    asserting flat insert latency and bounded growth of the audit log, and the throughput of the channel
+    for senders that connect per message, concurrently, with large messages and over one connection.
+    Each records its figures with the settings of the measured server.
     """
 
     accept_channel_id:'int' = 0
@@ -240,12 +256,11 @@ class TestHL7Volume:
 
 # ################################################################################################################################
 
-    def test_01_create_channels(self, zato_client:'object', mllp_port:'int') -> 'None':
-        """ Creates the audited channels the feed runs against - the default route
-        accepts, and the feed's injected failures route to a service that raises.
+    def test_01_create_channels(self, zato_client:'AdminClient', mllp_port:'int') -> 'None':
+        """ Creates the audited channels that the measurements send to - the default route accepts,
+        and the injected failures route to a service that raises.
         """
-
-        response = zato_client.create( # type: ignore[union-attr]
+        response = zato_client.create(
             f'{_generic_service_name}.create',
             name='test-hl7-volume-accept',
             type_=_connection_type_channel,
@@ -262,10 +277,7 @@ class TestHL7Volume:
         assert 'id' in response
         self.__class__.accept_channel_id = response['id']
 
-        # The feed marks its injected failures with this MSH-3 value
-        config = FeedConfig()
-
-        response = zato_client.create( # type: ignore[union-attr]
+        response = zato_client.create(
             f'{_generic_service_name}.create',
             name='test-hl7-volume-error',
             type_=_connection_type_channel,
@@ -274,7 +286,7 @@ class TestHL7Volume:
             is_channel=True,
             is_outconn=False,
             service='test.hl7.mllp.error',
-            msh3_sending_app=config.error_sending_application,
+            msh3_sending_app=_error_sending_application,
             pool_size=1,
             is_audit_log_active=True,
         )
@@ -286,83 +298,235 @@ class TestHL7Volume:
 
 # ################################################################################################################################
 
-    def test_02_sustained_load(self, zato_server:'dict', mllp_port:'int') -> 'None':
-        """ Runs the sample feed at the configured rate for the configured duration,
-        then reads the proof out of the latency measurements and the audit database.
+    def test_02_sustained_load(self, zato_server:'anydict', zato_client:'AdminClient', mllp_port:'int') -> 'None':
+        """ Runs a feed at the configured rate for the configured duration over one connection, then reads
+        the proof out of the latencies and the audit log, and records the figures of the run.
         """
-        audit_db_path = zato_server['audit_db_path']
+        measurement = start_measurement(zato_client, zato_server['database'])
 
-        # How many messages the configured rate and duration amount to
-        count = int(_rate_per_minute * _duration_seconds / 60)
+        # How many messages the configured rate and duration amount to, and which of them are injected failures
+        count = int(_rate_per_minute * _duration_seconds / _seconds_per_minute)
+        feed_random = random.Random(_feed_seed)
 
-        # The schema must exist before the baseline can be read
-        _ensure_schema(audit_db_path)
+        is_error_list:'list[bool]' = []
 
-        # The baseline the growth assertions measure against - the audit tests
+        for _ in range(count):
+            is_error_list.append(feed_random.random() < _error_ratio)
+
+        error_count = sum(is_error_list)
+
+        # The baseline that the growth assertions measure against - the audit tests
         # that ran earlier in this session left their own rows behind.
-        events_before = _count_all_events(audit_db_path)
-        received_before = _count_events(audit_db_path, AuditEvent.Message_Received)
-        acks_before = _count_events(audit_db_path, AuditEvent.Ack_Sent)
-        error_acks_before = _count_events(audit_db_path, AuditEvent.Ack_Sent, AuditOutcome.Error)
+        before = _get_audit_counts(zato_client)
 
-        db_size_before = _get_db_size(audit_db_path)
+        interval = _seconds_per_minute / _rate_per_minute
+        durations:'list[float]' = []
 
-        config = FeedConfig()
-        config.rate_per_minute = _rate_per_minute
-        config.error_ratio = _error_ratio
-
-        sender = _PersistentMLLPSender('127.0.0.1', mllp_port)
+        sender = _PersistentSender(mllp_port)
 
         try:
-            result = run_feed(sender.send, count, config)
+            run_start = time.monotonic()
+
+            for index, is_error in enumerate(is_error_list):
+
+                # The pacing is drift-free - each send is scheduled off the start of the run, not off the previous send.
+                wait = run_start + (index * interval) - time.monotonic()
+
+                if wait > 0:
+                    time.sleep(wait)
+
+                message = _new_message(f'FEED{index:08d}', is_error)
+
+                send_start = time.monotonic()
+                _ = sender.send(message)
+                durations.append(time.monotonic() - send_start)
+
+            run_seconds = time.monotonic() - run_start
+
         finally:
             sender.close()
 
-        assert result.sent_count == count
-
-        # Flat insert latency: the run's last third may not be meaningfully slower
+        # Flat insert latency: the last third of the run may not be meaningfully slower
         # than its first third - sustained load must not degrade the write path.
         third = count // 3
 
-        first_third_median = _median(result.durations_ms[:third])
-        last_third_median = _median(result.durations_ms[-third:])
+        first_third_median = median(durations[:third]) * _milliseconds_per_second
+        last_third_median = median(durations[-third:]) * _milliseconds_per_second
 
         allowed = max(first_third_median * _latency_growth_factor, first_third_median + _latency_noise_margin_ms)
         assert last_third_median <= allowed, (first_third_median, last_third_median)
 
-        # Every message wrote its receipt and its acknowledgment - the buffered
-        # writer is given time to flush the tail of the run first.
-        received_count = _wait_for_event_count(audit_db_path, AuditEvent.Message_Received, received_before + count)
-        assert received_count == received_before + count, (received_before, received_count)
+        # Every message wrote its receipt and its acknowledgment ..
+        after = _wait_for_audit_counts(zato_client, before['received'] + count, before['acks'] + count)
 
-        acks_count = _wait_for_event_count(audit_db_path, AuditEvent.Ack_Sent, acks_before + count)
-        assert acks_count == acks_before + count, (acks_before, acks_count)
+        assert after['received'] == before['received'] + count, (before, after)
+        assert after['acks'] == before['acks'] + count, (before, after)
 
-        # The injected failures are all visible as negative acknowledgments
-        error_acks_count = _count_events(audit_db_path, AuditEvent.Ack_Sent, AuditOutcome.Error)
-        assert error_acks_count == error_acks_before + result.error_injected_count, \
-            (error_acks_before, error_acks_count, result.error_injected_count)
+        # .. the injected failures are all visible as negative acknowledgments ..
+        assert after['error_acks'] == before['error_acks'] + error_count, (before, after, error_count)
 
-        # Bounded growth: the database grew proportionally to the events written,
-        # with each event's row, attributes and body staying under the cap.
-        events_after = _count_all_events(audit_db_path)
-        db_size_after = _get_db_size(audit_db_path)
-
-        events_written = events_after - events_before
-        bytes_written = db_size_after - db_size_before
+        # .. and the database grew proportionally to the events written, with each event's row,
+        # .. attributes and body staying under the cap.
+        events_written = after['events'] - before['events']
+        bytes_written = after['database_size'] - before['database_size']
 
         bytes_per_event = bytes_written / events_written
         assert bytes_per_event <= _max_bytes_per_event, (bytes_written, events_written, bytes_per_event)
 
+        _ = report_result(measurement, 'hl7-mllp-sustained-feed', {
+            'messages': _get_rate_figures(count, run_seconds),
+            'injected_failures': error_count,
+            'round_trip': _get_latency_figures(durations),
+            'first_third_median_ms': first_third_median,
+            'last_third_median_ms': last_third_median,
+            'audit_events_written': events_written,
+            'database_bytes_per_event': bytes_per_event,
+        })
+
 # ################################################################################################################################
 
-    def test_03_cleanup(self, zato_client:'object') -> 'None':
-        """ Deletes the channels this module created.
+    def test_03_connection_per_message(self, zato_server:'anydict', zato_client:'AdminClient', mllp_port:'int') -> 'None':
+        """ Sends messages one after another, each on a connection of its own, which is the costliest thing
+        that a sender can do, and records the throughput and the round trips.
         """
+        measurement = start_measurement(zato_client, zato_server['database'])
+        client = _new_client(mllp_port)
 
+        durations:'list[float]' = []
+        run_start = time.monotonic()
+
+        for index in range(_sequential_message_count):
+            control_id = f'SEQ{index:06d}'
+
+            send_start = time.monotonic()
+            _send_accepted(client, sample_adt_a01(control_id), control_id)
+            durations.append(time.monotonic() - send_start)
+
+        run_seconds = time.monotonic() - run_start
+
+        _ = report_result(measurement, 'hl7-mllp-connection-per-message', {
+            'messages': _get_rate_figures(_sequential_message_count, run_seconds),
+            'round_trip': _get_latency_figures(durations),
+        })
+
+# ################################################################################################################################
+
+    def test_04_concurrent_senders(self, zato_server:'anydict', zato_client:'AdminClient', mllp_port:'int') -> 'None':
+        """ Sends messages from several threads at once, each message on a connection of its own,
+        and records the aggregate throughput.
+        """
+        measurement = start_measurement(zato_client, zato_server['database'])
+        errors:'list[str]' = []
+
+        def _send_all(thread_index:'int') -> 'None':
+            client = _new_client(mllp_port)
+
+            try:
+                for message_index in range(_concurrent_messages_per_thread):
+                    control_id = f'CON{thread_index:03d}{message_index:04d}'
+                    _send_accepted(client, sample_adt_a01(control_id), control_id)
+            except Exception as exception:
+                errors.append(f'Thread {thread_index}: {exception}')
+
+        threads:'list[threading.Thread]' = []
+
+        for thread_index in range(_concurrent_thread_count):
+            thread = threading.Thread(target=_send_all, args=(thread_index,))
+            threads.append(thread)
+
+        run_start = time.monotonic()
+
+        for thread in threads:
+            thread.start()
+
+        for thread in threads:
+            thread.join()
+
+        run_seconds = time.monotonic() - run_start
+
+        assert not errors, errors
+
+        message_count = _concurrent_thread_count * _concurrent_messages_per_thread
+
+        _ = report_result(measurement, 'hl7-mllp-concurrent-senders', {
+            'threads': _concurrent_thread_count,
+            'messages': _get_rate_figures(message_count, run_seconds),
+        })
+
+# ################################################################################################################################
+
+    def test_05_message_sizes(self, zato_server:'anydict', zato_client:'AdminClient', mllp_port:'int') -> 'None':
+        """ Sends messages of rising sizes, each on a connection of its own, and records the bytes per second
+        and the round trips of each size.
+        """
+        measurement = start_measurement(zato_client, zato_server['database'])
+        client = _new_client(mllp_port)
+
+        figures:'stranydict' = {}
+
+        for size in _message_sizes:
+
+            durations:'list[float]' = []
+            run_start = time.monotonic()
+
+            for index in range(_size_message_count):
+                control_id = f'BIG{size:07d}{index:03d}'
+                message = _new_padded_message(control_id, size)
+
+                send_start = time.monotonic()
+                _send_accepted(client, message, control_id)
+                durations.append(time.monotonic() - send_start)
+
+            run_seconds = time.monotonic() - run_start
+
+            figures[f'bytes_{size}'] = {
+                'bytes': _get_rate_figures(size * _size_message_count, run_seconds),
+                'round_trip': _get_latency_figures(durations),
+            }
+
+        _ = report_result(measurement, 'hl7-mllp-message-sizes', figures)
+
+# ################################################################################################################################
+
+    def test_06_persistent_connection(self, zato_server:'anydict', zato_client:'AdminClient', mllp_port:'int') -> 'None':
+        """ Sends messages one after another over one connection, as fast as the channel acknowledges them,
+        and records the throughput and the round trips.
+        """
+        measurement = start_measurement(zato_client, zato_server['database'])
+        sender = _PersistentSender(mllp_port)
+
+        durations:'list[float]' = []
+
+        try:
+            run_start = time.monotonic()
+
+            for index in range(_persistent_message_count):
+                control_id = f'PERS{index:06d}'
+
+                send_start = time.monotonic()
+                ack = sender.send(sample_adt_a01(control_id))
+                durations.append(time.monotonic() - send_start)
+
+                assert f'MSA|{_ack_accepted}|{control_id}'.encode() in ack, ack
+
+            run_seconds = time.monotonic() - run_start
+
+        finally:
+            sender.close()
+
+        _ = report_result(measurement, 'hl7-mllp-persistent-connection', {
+            'messages': _get_rate_figures(_persistent_message_count, run_seconds),
+            'round_trip': _get_latency_figures(durations),
+        })
+
+# ################################################################################################################################
+
+    def test_07_cleanup(self, zato_client:'AdminClient') -> 'None':
+        """ Deletes the channels that this module created.
+        """
         for channel_id in (self.__class__.error_channel_id, self.__class__.accept_channel_id):
             if channel_id:
-                zato_client.delete(f'{_generic_service_name}.delete', id=channel_id) # type: ignore[union-attr]
+                _ = zato_client.delete(f'{_generic_service_name}.delete', id=channel_id)
 
 # ################################################################################################################################
 # ################################################################################################################################

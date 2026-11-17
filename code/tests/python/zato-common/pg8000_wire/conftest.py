@@ -26,7 +26,7 @@ from sqlalchemy import create_engine
 # Zato
 from gevent_monitor import pytest_pyfunc_call as pytest_pyfunc_call
 from live_sql.containers import start_postgresql, stop_container
-from perf import silence_logging_teardown
+from logging_teardown import silence_logging_teardown
 from zato.common.db_env.pg8000_copy import install as install_pg8000_copy
 from zato.common.db_env.pg8000_wire import install as install_pg8000_wire
 

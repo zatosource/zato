@@ -19,7 +19,7 @@ import shutil
 import socket
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from subprocess import CalledProcessError
 from traceback import format_exc
@@ -54,9 +54,8 @@ logger = logging.getLogger('zato.test.ha_sqlite.soak')
 
 class ModuleCtx:
 
-    # How often a report is produced, in seconds, and how many of the latest reports each table shows
+    # How often a report is produced, in seconds
     Report_Interval = 60
-    Table_Reports = 10
 
     # How many reports after the start of a run are not compared with the bounds of growth
     Warm_Up_Reports = 2
@@ -111,10 +110,6 @@ class ModuleCtx:
     # The results of a minute
     Result_OK = 'ok'
     Result_Error = 'error'
-
-    # The columns of the table of reports, where the roles, lags, WAL sizes and memory list each node in turn
-    Table_Columns = ['Since start', 'Local time', 'Publishes/s', 'Pulls/s', 'Pull backlog', 'Push backlog',
-        'Publish p99', 'Barrier p99', 'Generation', 'Roles', 'Lag', 'WAL MB', 'Memory MB', 'Result', 'Details']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -233,63 +228,14 @@ def humanize_duration(seconds:'float') -> 'str':
 
 # ################################################################################################################################
 
-def _format_row(report:'MinuteReport') -> 'str':
-    roles:'strlist' = []
-    lags:'strlist' = []
-    wal:'strlist' = []
-    memory:'strlist' = []
-
-    for sample in report.nodes:
-        roles.append(sample.role)
-        lags.append(str(sample.lag_frames))
-        memory.append(f'{sample.memory_mb:.0f}')
-        wal.append(f'{sample.wal_bytes / ModuleCtx.Bytes_Per_MB:.1f}')
-
-    cells = [
-        report.since_start,
-        report.local_time,
-        f'{report.publishes_per_second:.1f}',
-        f'{report.pulls_per_second:.1f}',
-        str(report.pull_backlog),
-        str(report.push_backlog),
-        f'{report.publish_p99:.3f}s',
-        f'{report.barrier_p99:.3f}s',
-        str(report.generation),
-        ' / '.join(roles),
-        ' / '.join(lags),
-        ' / '.join(wal),
-        ' / '.join(memory),
-        report.result,
-        ', '.join(report.details),
-    ]
-
-    out = '| ' + ' | '.join(cells) + ' |'
-    return out
-
-# ################################################################################################################################
-
-def format_table(reports:'list[MinuteReport]') -> 'str':
-    """ Returns the latest reports as a table, followed by each report whose result is an error,
-    or by a single row of dashes if there is none.
+def get_report_figures(reports:'list[MinuteReport]') -> 'list[anydict]':
+    """ Returns the figures of each minute of a run, in the form in which the result function records them.
     """
-    separator = '|' + ' --- |' * len(ModuleCtx.Table_Columns)
-    lines = ['| ' + ' | '.join(ModuleCtx.Table_Columns) + ' |', separator]
-
-    for report in reports[-ModuleCtx.Table_Reports:]:
-        lines.append(_format_row(report))
-
-    error_rows:'strlist' = []
+    out:'list[anydict]' = []
 
     for report in reports:
-        if report.result == ModuleCtx.Result_Error:
-            error_rows.append(_format_row(report))
+        out.append(asdict(report))
 
-    if error_rows:
-        lines.extend(error_rows)
-    else:
-        lines.append(separator)
-
-    out = '\n'.join(lines)
     return out
 
 # ################################################################################################################################
@@ -548,7 +494,7 @@ class MinuteReporter:
             report = self._build_report(minute, run_started, started, ended, counts_before, counts_after)
             self.reports.append(report)
 
-            logger.info('Minute %d\n%s', minute, format_table(self.reports))
+            logger.info('Minute %d of the run -> %s', minute, report.result)
 
             # The first minute that exceeds a bound stops the run instead of its end.
             violations = get_bound_violations(self.reports)

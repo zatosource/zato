@@ -12,6 +12,7 @@ import logging
 import os
 import re
 import shutil
+import signal
 import socket
 import subprocess
 import tempfile
@@ -30,6 +31,9 @@ from zato.common.api import PubSub
 from zato.common.db_env.database import database_config
 from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.db_env.fence import ModuleCtx as FenceCtx
+from zato.common.hl7.mllp.haproxy import Env_Port_Name as MLLP_Env_Port_Name
+from zato.common.test.process_util import get_process_tree_pids
+from zato.common.typing_ import cast_
 from zato.common.test.pubsub_database import get_db_mode, is_postgresql_mode, start_pubsub_database, \
     stop_pubsub_database
 
@@ -38,7 +42,7 @@ from zato.common.test.pubsub_database import get_db_mode, is_postgresql_mode, st
 
 if 0:
     from zato.common.test.pubsub_database import PubSubDatabase
-    from zato.common.typing_ import any_, anydict, callable_, strnone, strstrdict
+    from zato.common.typing_ import any_, anydict, callable_, intlist, strnone, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,6 +55,16 @@ _server_wait_timeout  = 120
 _quickstart_timeout   = 600
 
 _ping_poll_interval   = 0.5
+
+# The process name of the worker of a server, the process ID returned when a server has no worker,
+# how long the arbiter is given to start a new worker and how often the processes of a server are read, in seconds
+_worker_process_name  = 'zato-worker'
+_no_worker_pid        = 0
+_worker_timeout       = 120.0
+_worker_poll_interval = 0.2
+
+# The address that a server of a session listens on
+_server_host = '127.0.0.1'
 
 # What the arbiter logs the first time that the worker is ready
 _worker_ready_pattern = re.compile(r'zato\.server\.arbiter:\d+ - Worker is ready')
@@ -96,6 +110,10 @@ class SessionState:
         self.test_data_directory:'str | None' = None
         self.receivers:'list' = []
         self.pubsub_database:'PubSubDatabase | None' = None
+
+        # The internal MLLP port of the server of this session, the same one each time that the server starts
+        self.mllp_port = find_free_port()
+
         self._logger = logging.getLogger(logger_name)
         self._server_log_copy_name = server_log_copy_name
 
@@ -217,6 +235,70 @@ def wait_for_server(logger:'logging.Logger', host:'str', port:'int', timeout:'in
 # ################################################################################################################################
 # ################################################################################################################################
 
+def get_server_pids(state:'SessionState') -> 'intlist':
+    """ Returns the processes of the server of a session, which descend from the process that started it.
+    """
+    server_process = cast_('subprocess.Popen[bytes]', state.server_process)
+
+    out = get_process_tree_pids(server_process.pid)
+    return out
+
+# ################################################################################################################################
+
+def _get_worker_pid(state:'SessionState') -> 'int':
+    """ Returns the process ID of the worker of the server of a session, or zero if the server has no worker.
+    """
+    for pid in get_server_pids(state):
+
+        try:
+            with open(f'/proc/{pid}/comm') as process_name_file:
+                process_name = process_name_file.read()
+        except FileNotFoundError:
+            continue
+
+        if process_name.strip() == _worker_process_name:
+            out = pid
+            break
+
+    else:
+        out = _no_worker_pid
+
+    return out
+
+# ################################################################################################################################
+
+def kill_server_worker(logger:'logging.Logger', state:'SessionState', port:'int') -> 'None':
+    """ Kills the worker of the server of a session with SIGKILL and waits until the arbiter has started a new one
+    that responds.
+    """
+    old_pid = _get_worker_pid(state)
+
+    if old_pid == _no_worker_pid:
+        raise Exception('No worker process of the server found')
+
+    os.kill(old_pid, signal.SIGKILL)
+
+    deadline = time.monotonic() + _worker_timeout
+
+    # Wait for a worker with another process ID ..
+    while True:
+
+        if time.monotonic() > deadline:
+            raise Exception(f'No new worker within {_worker_timeout}s')
+
+        new_pid = _get_worker_pid(state)
+
+        if new_pid not in (_no_worker_pid, old_pid):
+            break
+
+        time.sleep(_worker_poll_interval)
+
+    # .. and until it responds.
+    wait_for_server(logger, _server_host, port)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def render_template(template_path:'str', placeholders:'anydict') -> 'str':
     """ Reads the enmasse YAML template and replaces all {{placeholder}} tokens.
     """
@@ -233,7 +315,12 @@ def render_template(template_path:'str', placeholders:'anydict') -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_server_environment(server_port:'int', broker_port:'int', extra_server_env:'strstrdict') -> 'strstrdict':
+def get_server_environment(
+    server_port:'int',
+    broker_port:'int',
+    mllp_port:'int',
+    extra_server_env:'strstrdict',
+    ) -> 'strstrdict':
     """ Builds the environment of a server process from an explicit mapping - the variables of the operating system,
     those that select the Zato database, the ports of the server and the variables that the caller gives,
     so that no other variable of the environment of the test process reaches the server.
@@ -246,6 +333,7 @@ def get_server_environment(server_port:'int', broker_port:'int', extra_server_en
 
     out['Zato_Config_Bind_Port'] = str(server_port)
     out['Zato_Broker_HTTP_Port'] = str(broker_port)
+    out[MLLP_Env_Port_Name] = str(mllp_port)
 
     out.update(extra_server_env)
 
@@ -266,7 +354,7 @@ def start_server_process(
     """ Starts the Zato server process, streams stdout, and waits for it to be ready.
     Returns the popen timestamp.
     """
-    server_environment = get_server_environment(server_port, broker_port, extra_server_env)
+    server_environment = get_server_environment(server_port, broker_port, state.mllp_port, extra_server_env)
 
     patch_server_conf(server_directory, server_port, patch_server_conf_bind)
 

@@ -26,7 +26,7 @@ import pytest
 from gevent_monitor import pytest_pyfunc_call as pytest_pyfunc_call
 from live_sql.containers import start_postgresql, stop_container
 from live_sql.env import database_env
-from perf import silence_logging_teardown
+from logging_teardown import silence_logging_teardown
 from support import Backend_PostgreSQL, Backend_SQLite, delete_all_rows
 from zato.common.db_env.database import dispose_database_engine
 from zato.common.db_env.database_env import DatabaseEnv

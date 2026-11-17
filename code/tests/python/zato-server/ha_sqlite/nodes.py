@@ -103,11 +103,15 @@ class ModuleCtx:
 
 @dataclass(init=False)
 class Timers:
-    """ The timers of both nodes, in seconds.
+    """ The timers of both nodes, in seconds, which are the defaults of the nodes.
     """
     heartbeat: 'float' = 0.5
     mark_out:  'float' = 3.0
     takeover:  'float' = 6.0
+
+    # Whether the nodes run with the settings of a production installation - their own timers, the default pull lease
+    # and the default retention limits, none of which the nodes are then given
+    is_production: 'bool' = False
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -240,12 +244,8 @@ class Node:
             'Zato_HA_Replication_Port': str(ModuleCtx.Replication_Port),
             'Zato_HA_Role_Port': str(ModuleCtx.Role_Port),
             'Zato_HA_Data_Dir': self.data_dir,
-            'Zato_HA_Heartbeat_Time': str(timers.heartbeat),
-            'Zato_HA_Mark_Out_Time': str(timers.mark_out),
-            'Zato_HA_Takeover_Time': str(timers.takeover),
             'Zato_HA_Log_Level': 'info',
             'Zato_Config_Bind_Port': str(ModuleCtx.Server_Port),
-            'Zato_PubSub_Pull_Lease_Seconds': ModuleCtx.Pull_Lease_Seconds,
             'Zato_Scheduler_Redis_Host': '127.0.0.1',
             'Zato_Scheduler_Redis_Port': str(ModuleCtx.Redis_Port),
             'Zato_Scheduler_HTTP_Port': str(ModuleCtx.Scheduler_HTTP_Port),
@@ -258,6 +258,15 @@ class Node:
             'Zato_Test_Scheduler_Server_Label': self.node_name,
             'Zato_Test_Zato_Binary': ModuleCtx.Zato_Binary,
         })
+
+        # The timers and the pull lease of the tests apply to every pair other than one with production settings.
+        if not timers.is_production:
+            self.env.update({
+                'Zato_HA_Heartbeat_Time': str(timers.heartbeat),
+                'Zato_HA_Mark_Out_Time': str(timers.mark_out),
+                'Zato_HA_Takeover_Time': str(timers.takeover),
+                'Zato_PubSub_Pull_Lease_Seconds': ModuleCtx.Pull_Lease_Seconds,
+            })
 
 # ################################################################################################################################
 

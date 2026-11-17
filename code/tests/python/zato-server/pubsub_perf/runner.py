@@ -8,15 +8,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import random
+import secrets
 import time
 from concurrent.futures import ThreadPoolExecutor
 from threading import Event
 
 # Zato
-from pubsub_exactly_once.server import kill_worker
 from pubsub_perf.clients import get_lease_wait
+from pubsub_perf.config import PerfConfig
 from pubsub_perf.scenario import Timing
-from zato.common.crypto.api import CryptoManager
+from zato.common.test.conftest_base_pubsub import kill_server_worker
+from zato.common.test.perf_report import start_measurement
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -25,6 +27,7 @@ if 0:
     from pubsub_perf.clients import futurelist
     from pubsub_perf.progress import Progress
     from pubsub_perf.scenario import ScenarioRun
+    from zato.common.test.perf_report import Measurement
 
     futurelist = futurelist
 
@@ -45,13 +48,16 @@ _settle_timeout = 1800.0
 # The threads of the runner itself - the progress and the killer of the worker
 _runner_thread_count = 2
 
+# How many random bytes make the prefix of a run unique
+_prefix_bytes = 4
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 def new_prefix() -> 'str':
     """ Returns a prefix of the keys unique to one run.
     """
-    suffix = CryptoManager.generate_hex_string(8)
+    suffix = secrets.token_hex(_prefix_bytes)
 
     out = f'perf.{suffix}.'
     return out
@@ -117,7 +123,18 @@ def _kill_worker_at_random(duration:'float', kill_count:'int') -> 'None':
         if delay > 0:
             time.sleep(delay)
 
-        kill_worker()
+        kill_server_worker(PerfConfig.logger, PerfConfig.session_state, PerfConfig.server_port)
+
+# ################################################################################################################################
+
+def begin_measurement() -> 'Measurement':
+    """ Begins a measurement of the server, which confirms that it runs with the settings of a production installation,
+    and takes the lease of pulled messages from the settings that it reports.
+    """
+    out = start_measurement(PerfConfig.client, PerfConfig.database)
+    PerfConfig.lease_seconds = out.settings_before['pubsub_pull_lease_seconds']
+
+    return out
 
 # ################################################################################################################################
 

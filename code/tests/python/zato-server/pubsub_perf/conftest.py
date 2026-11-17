@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
+import secrets
 import sys
 import tempfile
 
@@ -24,28 +25,23 @@ sys.path.insert(0, _common_lib_dir)
 
 # Zato
 from pubsub_perf.config import All_Scenarios, Credentials, credentialslist, PerfConfig, Receipts_Topic
-from zato.common.crypto.api import CryptoManager
+from zato.common.test.client import AdminClient
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
-from zato.common.test.exactly_once.config import TestConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.test.conftest_base_pubsub import SessionState
-    from zato.common.typing_ import anydict, anylist, strlist, strstrdict
+    from zato.common.typing_ import anydict, anylist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 _logger_name = 'zato.test.pubsub_perf.conftest'
 
-# The lease of a pulled message, in seconds
-_lease_seconds = '5'
-
-_extra_server_env:'strstrdict' = {
-    'Zato_PubSub_Pull_Lease_Seconds': _lease_seconds,
-}
+# How many random bytes each password has
+_password_bytes = 16
 
 # The output of the server is kept in the copy of its logs, the console of the run has the measurements only.
 logging.getLogger(_logger_name).setLevel(logging.INFO)
@@ -59,7 +55,7 @@ def _new_credentials(role:'str', count:'int') -> 'credentialslist':
     out:'credentialslist' = []
 
     for index in range(count):
-        suffix = CryptoManager.generate_hex_string()
+        suffix = secrets.token_hex(_password_bytes)
         username = f'test.perf.{role}.{index:02d}'
         password = f'{username}.{suffix}'
 
@@ -98,7 +94,25 @@ def _get_subscribed_topics(index:'int') -> 'strlist':
 
 # ################################################################################################################################
 
-def _build_definition(publishers:'credentialslist', subscribers:'credentialslist') -> 'anydict':
+def _get_security(credentials:'Credentials') -> 'anydict':
+    """ Returns the enmasse definition of the basic authentication of one API client.
+    """
+    out:'anydict' = {
+        'name': credentials.username,
+        'type': 'basic_auth',
+        'username': credentials.username,
+        'password': credentials.password,
+    }
+
+    return out
+
+# ################################################################################################################################
+
+def _build_definition(
+    publishers:'credentialslist',
+    subscribers:'credentialslist',
+    receipt_reader:'Credentials',
+    ) -> 'anydict':
     """ Returns the enmasse definition of the topics, the API clients, their permissions and their subscriptions.
     """
     security:'anylist' = []
@@ -116,29 +130,19 @@ def _build_definition(publishers:'credentialslist', subscribers:'credentialslist
 
     # Each publisher may publish to the topic of every scenario ..
     for credentials in publishers:
-        security.append({
-            'name': credentials.username,
-            'type': 'basic_auth',
-            'username': credentials.username,
-            'password': credentials.password,
-        })
+        security.append(_get_security(credentials))
         permissions.append({
             'security': credentials.username,
             'pub': scenario_topics,
         })
 
-    # .. and each subscriber has one subscription of its own to the topic of each scenario it takes part in,
-    # .. publishing its receipts to a topic that nobody subscribes to.
+    # .. each subscriber has one subscription of its own to the topic of each scenario it takes part in,
+    # .. publishing its receipts to a topic of their own ..
     for index, credentials in enumerate(subscribers):
 
         subscribed_topics = _get_subscribed_topics(index)
 
-        security.append({
-            'name': credentials.username,
-            'type': 'basic_auth',
-            'username': credentials.username,
-            'password': credentials.password,
-        })
+        security.append(_get_security(credentials))
         permissions.append({
             'security': credentials.username,
             'pub': [Receipts_Topic],
@@ -149,6 +153,18 @@ def _build_definition(publishers:'credentialslist', subscribers:'credentialslist
             'delivery_type': 'pull',
             'topic_list': subscribed_topics,
         })
+
+    # .. and the reader of the receipts has the only subscription to that topic.
+    security.append(_get_security(receipt_reader))
+    permissions.append({
+        'security': receipt_reader.username,
+        'sub': [Receipts_Topic],
+    })
+    subscriptions.append({
+        'security': receipt_reader.username,
+        'delivery_type': 'pull',
+        'topic_list': [Receipts_Topic],
+    })
 
     out:'anydict' = {
         'security': security,
@@ -166,8 +182,9 @@ _publisher_pool_size, _subscriber_pool_size = _get_pool_sizes()
 
 _publishers  = _new_credentials('publisher', _publisher_pool_size)
 _subscribers = _new_credentials('subscriber', _subscriber_pool_size)
+_receipt_reader = _new_credentials('receipts', 1)[0]
 
-_definition = _build_definition(_publishers, _subscribers)
+_definition = _build_definition(_publishers, _subscribers, _receipt_reader)
 _definition_yaml = yaml.safe_dump(_definition, sort_keys=False)
 
 # The definition holds passwords, so it is kept in a directory that the session removes when it ends.
@@ -190,9 +207,6 @@ def _build_config(
 
     state.test_data_directory = _data_dir
 
-    # The test process reads the lease that the server uses.
-    os.environ.update(_extra_server_env)
-
     def _populate(
         host:'str',
         server_port:'int',
@@ -201,22 +215,20 @@ def _build_config(
         zato_bin:'str',
         ) -> 'None':
 
-        # The shared harness kills and restarts the worker of this server ..
-        TestConfig.base_url         = f'http://{host}:{server_port}'
-        TestConfig.password         = invoke_password
-        TestConfig.server_directory = server_directory
-        TestConfig.server_port      = server_port
-        TestConfig.zato_bin         = zato_bin
-        TestConfig.template_path    = _template_path
-        TestConfig.placeholders     = {}
-        TestConfig.extra_server_env = _extra_server_env
-        TestConfig.session_state    = state
-        TestConfig.logger           = logger
+        base_url = f'http://{host}:{server_port}'
 
-        # .. and the clients of the tests use these credentials.
-        PerfConfig.publishers    = _publishers
-        PerfConfig.subscribers   = _subscribers
-        PerfConfig.lease_seconds = float(_lease_seconds)
+        # The tests invoke the services of this server and kill its worker ..
+        PerfConfig.base_url      = base_url
+        PerfConfig.server_port   = server_port
+        PerfConfig.session_state = state
+        PerfConfig.logger        = logger
+        PerfConfig.client        = AdminClient(base_url, invoke_password)
+        PerfConfig.database      = state.pubsub_database
+
+        # .. and their clients use these credentials.
+        PerfConfig.publishers     = _publishers
+        PerfConfig.subscribers    = _subscribers
+        PerfConfig.receipt_reader = _receipt_reader
 
     out:'anydict' = {
         'placeholders': {},
@@ -233,7 +245,7 @@ zato_server = create_zato_server_fixture(
     server_log_copy_name='server-logs-pubsub-perf.txt',
     template_path=_template_path,
     quickstart_prefix='zato_pubsub_perf_qs_',
-    extra_server_env=_extra_server_env,
+    extra_server_env={},
     patch_server_conf_bind=True,
     build_config_callback=_build_config,
 )

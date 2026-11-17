@@ -10,11 +10,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from typing import NamedTuple
 
 # Zato
-from pubsub_exactly_once.harness import get_engine
-from pubsub_perf.clients import get_receipt_key, PublisherGroup, SubscriberGroup
-from pubsub_perf.config import PerfConfig, Receipts_Topic
-from pubsub_perf.progress import count_messages
-from zato.common.test.exactly_once.verify import count_topic_deliveries, read_correl_ids
+from pubsub_perf.clients import get_receipt_key, PublisherGroup, ReceiptReader, SubscriberGroup
+from pubsub_perf.config import PerfConfig
+from pubsub_perf.figures import get_rate_figures
+from zato.common.test.perf_report import report_result
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -24,8 +23,9 @@ if 0:
     from threading import Event
     from pubsub_perf.clients import futurelist
     from pubsub_perf.config import Scenario
-    from pubsub_perf.progress import PerfReport, Progress
-    from zato.common.typing_ import strintdict
+    from pubsub_perf.progress import Progress
+    from zato.common.test.perf_report import Measurement
+    from zato.common.typing_ import stranydict, strintdict
 
     futurelist = futurelist
 
@@ -35,7 +35,6 @@ if 0:
 # The names under which the progress of a scenario is logged
 _published_name = 'published'
 _delivered_name = 'delivered'
-_waiting_name   = 'waiting'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,21 +61,22 @@ class DeliveryCheck(NamedTuple):
 # ################################################################################################################################
 
 class ScenarioRun:
-    """ The publishers and the subscribers of one scenario, publishing to its topic under keys unique to the run.
+    """ The publishers and the subscribers of one scenario, publishing to its topic under keys unique to the run,
+    and the reader of the receipts that the subscribers commit with their acknowledgements.
     """
 
     def __init__(self, scenario:'Scenario', prefix:'str') -> 'None':
         self.scenario = scenario
         self.prefix = prefix
-        self.engine = get_engine()
 
         publisher_credentials = PerfConfig.publishers[:scenario.publisher_count]
         subscriber_credentials = PerfConfig.subscribers[:scenario.subscriber_count]
 
         self.publishers = PublisherGroup(publisher_credentials, scenario.topic_name, prefix)
         self.subscribers = SubscriberGroup(subscriber_credentials)
+        self.receipt_reader = ReceiptReader(PerfConfig.receipt_reader, prefix)
 
-        self.thread_count = scenario.publisher_count + scenario.subscriber_count
+        self.thread_count = scenario.publisher_count + scenario.subscriber_count + 1
 
 # ################################################################################################################################
 
@@ -87,17 +87,11 @@ class ScenarioRun:
 # ################################################################################################################################
 
     def count_delivered(self) -> 'int':
-        """ Returns how many deliveries the subscribers processed, by the receipts that they committed with them.
+        """ Returns how many deliveries the subscribers processed, by the distinct receipts that they committed.
         """
-        out = count_messages(self.engine, Receipts_Topic, self.prefix)
-        return out
+        receipt_keys = self.receipt_reader.get_receipt_keys()
 
-# ################################################################################################################################
-
-    def count_waiting(self) -> 'int':
-        """ Returns how many deliveries wait for their subscribers.
-        """
-        out = count_topic_deliveries(self.engine, self.scenario.topic_name)
+        out = len(set(receipt_keys))
         return out
 
 # ################################################################################################################################
@@ -105,12 +99,17 @@ class ScenarioRun:
     def add_progress(self, progress:'Progress') -> 'None':
         progress.add_count(_published_name, self.count_published)
         progress.add_count(_delivered_name, self.count_delivered)
-        progress.add_level(_waiting_name, self.count_waiting)
 
 # ################################################################################################################################
 
     def submit_subscribers(self, executor:'ThreadPoolExecutor', stop:'Event') -> 'futurelist':
+        """ Starts every subscriber and the reader of their receipts, each of which runs until the test stops it.
+        """
         out = self.subscribers.submit(executor, stop)
+
+        reader_future = executor.submit(self.receipt_reader.run, stop)
+        out.append(reader_future)
+
         return out
 
 # ################################################################################################################################
@@ -122,11 +121,8 @@ class ScenarioRun:
 # ################################################################################################################################
 
     def is_settled(self) -> 'bool':
-        """ Whether each subscriber processed every published message and nothing waits in the queues.
+        """ Whether each subscriber processed every published message.
         """
-        if self.count_waiting():
-            return False
-
         published = self.publishers.count_published()
         expected = published * self.scenario.subscriber_count
 
@@ -141,7 +137,7 @@ class ScenarioRun:
         keys = self.publishers.get_keys()
         names = self.subscribers.get_names()
 
-        found_keys = read_correl_ids(self.engine, Receipts_Topic, self.prefix)
+        found_keys = self.receipt_reader.get_receipt_keys()
         counts:'strintdict' = {}
 
         for key in found_keys:
@@ -175,11 +171,11 @@ class ScenarioRun:
 
 # ################################################################################################################################
 
-    def report(self, report:'PerfReport', timing:'Timing', progress:'Progress', check:'DeliveryCheck') -> 'None':
-        """ Adds the business figures of the run.
+    def get_figures(self, timing:'Timing', worker_kills:'int') -> 'stranydict':
+        """ Returns the business figures of a run in which each subscriber processed each message exactly once.
         """
         published_count = self.publishers.count_published()
-        delivered_count = check.expected_count - check.lost_count
+        delivered_count = published_count * self.scenario.subscriber_count
 
         published_seconds = timing.published_at - timing.start
         settled_seconds = timing.settled_at - timing.start
@@ -187,47 +183,31 @@ class ScenarioRun:
         sent_times = self.publishers.get_sent_times()
         latencies = self.subscribers.get_latencies(sent_times)
 
-        waiting_peak = progress.peaks[_waiting_name]
+        out:'stranydict' = {
+            'publishers': self.scenario.publisher_count,
+            'subscribers': self.scenario.subscriber_count,
+            'worker_kills': worker_kills,
+            'publications': get_rate_figures(published_count, published_seconds),
+            'deliveries': get_rate_figures(delivered_count, settled_seconds),
+            'publication_to_delivery': latencies.get_figures(),
+        }
 
-        report.add_value('Publishers', f'{self.scenario.publisher_count}')
-        subscriber_count = self.scenario.subscriber_count
-
-        if subscriber_count == 1:
-            subscribers = f'{subscriber_count}, with its own subscription'
-        else:
-            subscribers = f'{subscriber_count}, each with its own subscription'
-
-        report.add_value('Subscribers', subscribers)
-        report.add_rate('Publications', published_count, published_seconds, 'publications')
-        report.add_rate('Deliveries', delivered_count, settled_seconds, 'deliveries')
-        report.add_value('Lost deliveries', f'{check.lost_count}')
-        report.add_value('Duplicate deliveries', f'{check.duplicate_count}')
-        report.add_latencies(latencies)
-        report.add_value('Peak deliveries waiting', f'{waiting_peak}')
-
-# ################################################################################################################################
-
-    def verify(self, check:'DeliveryCheck') -> 'None':
-        """ Fails unless each subscriber processed each message exactly once and nothing remains in the queues.
-        """
-        assert check.lost_count == 0, f'{check.lost_count} of {check.expected_count} deliveries lost'
-        assert check.duplicate_count == 0, f'{check.duplicate_count} deliveries processed more than once'
-        assert check.unexpected_count == 0, f'{check.unexpected_count} receipts of messages never published'
-
-        assert self.count_waiting() == 0
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def report_and_verify(report:'PerfReport', run:'ScenarioRun', timing:'Timing', progress:'Progress') -> 'None':
-    """ Logs the figures of a finished run and then verifies that it delivered each message exactly once.
+def verify_and_report(measurement:'Measurement', name:'str', run:'ScenarioRun', timing:'Timing', worker_kills:'int') -> 'None':
+    """ Verifies that a finished run delivered each message exactly once and then records its figures.
     """
     check = run.check()
 
-    run.report(report, timing, progress, check)
-    report.log()
+    assert check.lost_count == 0, f'{check.lost_count} of {check.expected_count} deliveries lost'
+    assert check.duplicate_count == 0, f'{check.duplicate_count} deliveries processed more than once'
+    assert check.unexpected_count == 0, f'{check.unexpected_count} receipts of messages never published'
 
-    run.verify(check)
+    figures = run.get_figures(timing, worker_kills)
+    _ = report_result(measurement, name, figures)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -18,9 +18,6 @@ import threading
 import time
 from pathlib import Path
 
-# colorama
-from colorama import Fore, Style, init as colorama_init
-
 # Zato
 from mllp_proxy_header import build_proxy_header
 from zato.common.typing_ import cast_
@@ -37,11 +34,6 @@ if 0:
 
 # Type aliases
 thread_list = list[threading.Thread]
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-colorama_init(autoreset=True)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -386,56 +378,6 @@ def sample_wellness_oru() -> 'bytes':
 
     out = message.encode('utf-8')
     return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-# Performance logging helper
-# ################################################################################################################################
-# ################################################################################################################################
-
-# How wide the dot-padded label column is
-_perf_label_width = 40
-
-# The minimum number of dots between a label and its value
-_perf_min_dots = 3
-
-# ################################################################################################################################
-
-def perf_log(label:'str', value:'float', unit:'str', threshold:'float'=0.0) -> 'None':
-    """ Prints a colorama-formatted performance result line.
-
-    Format: [PERF] Label ............. Value unit [PASS/FAIL]
-    """
-
-    # Build the dot-padded label ..
-    dots_needed = _perf_label_width - len(label)
-
-    if dots_needed < _perf_min_dots:
-        dots_needed = _perf_min_dots
-
-    dots = '.' * dots_needed
-
-    prefix = f'{Fore.CYAN}{Style.BRIGHT}[PERF]{Style.RESET_ALL}'
-    padded_label = f' {label} {Fore.WHITE}{Style.DIM}{dots}{Style.RESET_ALL} '
-
-    # .. color the value red or green depending on the threshold ..
-    if threshold > 0.0:
-
-        if value < threshold:
-            colored_value = f'{Fore.RED}{Style.BRIGHT}{value:,.1f}{Style.RESET_ALL}'
-            suffix = f' {Fore.RED}{Style.BRIGHT}[FAIL]{Style.RESET_ALL}'
-        else:
-            colored_value = f'{Fore.GREEN}{Style.BRIGHT}{value:,.1f}{Style.RESET_ALL}'
-            suffix = f' {Fore.GREEN}{Style.BRIGHT}[PASS]{Style.RESET_ALL}'
-
-    # .. without a threshold, there is no pass or fail indicator ..
-    else:
-        colored_value = f'{Fore.GREEN}{Style.BRIGHT}{value:,.1f}{Style.RESET_ALL}'
-        suffix = ''
-
-    # .. and now we can print the whole line.
-    unit_display = f' {Fore.WHITE}{unit}{Style.RESET_ALL}'
-    print(f'{prefix}{padded_label}{colored_value}{unit_display}{suffix}')
 
 # ################################################################################################################################
 # ################################################################################################################################

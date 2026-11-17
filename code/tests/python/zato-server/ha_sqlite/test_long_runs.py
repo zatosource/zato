@@ -21,13 +21,15 @@ import pytest
 from ha_checks import check_copies, check_publications_stored, check_scheduler, check_workload
 from ha_long_run import check_replacements, ModuleCtx as LongRunCtx, run_repeated_failover, start_traffic, \
     stop_traffic, wait_until
-from ha_soak import get_bound_violations, wait_for_zero_lag
+from ha_soak import get_bound_violations, get_report_figures, wait_for_zero_lag
+from zato.common.test.client import AdminClient
+from zato.common.test.perf_report import report_result, start_measurement
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from ha_env import HAEnvironment
+    from ha_env import HAEnvironment, HASession
     from ha_soak import MinuteReporter
     from ha_traffic import TimedPublisher
     from nodes import Node
@@ -89,16 +91,25 @@ def test_repeated_failover(ha_pair:'HAEnvironment') -> 'None':
 # ################################################################################################################################
 
 @pytest.mark.soak
-def test_soak(ha_pair:'HAEnvironment') -> 'None':
-    """ One hour of steady traffic, with the resources of both containers and the WAL of each database within
-    their bounds and the replication lag at zero once the traffic stops.
+def test_soak(ha_session:'HASession', ha_production_pair:'HAEnvironment') -> 'None':
+    """ One hour of steady traffic on a pair with the settings of a production installation, with the resources
+    of both containers and the WAL of each database within their bounds and the replication lag at zero once
+    the traffic stops. The figures of each minute are recorded with the settings of the active node.
     """
-    env = ha_pair
+    env = ha_production_pair
+
+    measured = env.wait_for_pair(LongRunCtx.Recovery_Timeout)
+    client = AdminClient(measured.server_url, ha_session.invoke_password)
+    measurement = start_measurement(client, None)
+
     workload, publisher, reporter = start_traffic(env)
 
     wait_until(reporter, time.monotonic() + LongRunCtx.Duration_Seconds)
 
-    _ = _finish(env, workload, publisher, reporter)
+    active = _finish(env, workload, publisher, reporter)
+    assert active is measured, (active.node_name, measured.node_name)
+
+    _ = report_result(measurement, 'ha-sqlite-soak', {'minutes': get_report_figures(reporter.reports)})
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 import pytest
 
 # Zato
-from perf import silence_logging_teardown
+from logging_teardown import silence_logging_teardown
 from zato.common.db_env.database_env import DatabaseEnv
 
 # The late log-handler cleanup would otherwise fail under gevent once the hub is gone.

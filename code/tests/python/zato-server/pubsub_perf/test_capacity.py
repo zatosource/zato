@@ -8,9 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from pubsub_perf.config import Capacity_Scenario, Faults_Scenario, get_scenario_name
-from pubsub_perf.progress import PerfReport, Progress
-from pubsub_perf.runner import new_prefix, run_scenario
-from pubsub_perf.scenario import report_and_verify, ScenarioRun
+from pubsub_perf.progress import Progress
+from pubsub_perf.runner import begin_measurement, new_prefix, run_scenario
+from pubsub_perf.scenario import ScenarioRun, verify_and_report
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,10 +41,10 @@ def test_publishers_to_subscribers(zato_server:'any_') -> 'None':
     run = ScenarioRun(Capacity_Scenario, prefix)
     progress = Progress(test_name)
 
+    measurement = begin_measurement()
     timing = run_scenario(progress, run, _capacity_duration, 0)
 
-    report = PerfReport(test_name)
-    report_and_verify(report, run, timing, progress)
+    verify_and_report(measurement, test_name, run, timing, 0)
 
 # ################################################################################################################################
 
@@ -59,11 +59,10 @@ def test_publishers_to_subscribers_under_worker_kills(zato_server:'any_') -> 'No
     run = ScenarioRun(Faults_Scenario, prefix)
     progress = Progress(test_name)
 
+    measurement = begin_measurement()
     timing = run_scenario(progress, run, _faults_duration, _worker_kills)
 
-    report = PerfReport(test_name)
-    report.add_value('Worker kills', f'{_worker_kills}')
-    report_and_verify(report, run, timing, progress)
+    verify_and_report(measurement, test_name, run, timing, _worker_kills)
 
 # ################################################################################################################################
 # ################################################################################################################################

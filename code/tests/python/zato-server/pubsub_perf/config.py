@@ -9,8 +9,19 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from typing import NamedTuple
 
-# Zato
-from zato.common.util.api import pluralize
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from logging import Logger
+    from zato.common.test.client import AdminClient
+    from zato.common.test.conftest_base_pubsub import SessionState
+    from zato.common.test.pubsub_database import PubSubDatabase
+
+    AdminClient = AdminClient
+    Logger = Logger
+    PubSubDatabase = PubSubDatabase
+    SessionState = SessionState
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -24,11 +35,26 @@ class Scenario(NamedTuple):
 
 scenariolist = list[Scenario]
 
-def get_scenario_name(test_name:'str', scenario:'Scenario') -> 'str':
-    """ Returns the name under which a test logs the progress and the results of a scenario, with its publishers and subscribers.
+# ################################################################################################################################
+
+def _get_count_text(count:'int', noun:'str') -> 'str':
+    """ Returns a count followed by a noun in the singular or in the plural, as the count requires.
     """
-    publishers = pluralize(scenario.publisher_count, 'publisher')
-    subscribers = pluralize(scenario.subscriber_count, 'subscriber')
+    if count == 1:
+        out = f'{count} {noun}'
+    else:
+        out = f'{count} {noun}s'
+
+    return out
+
+# ################################################################################################################################
+
+def get_scenario_name(test_name:'str', scenario:'Scenario') -> 'str':
+    """ Returns the name under which a test logs the progress and records the results of a scenario,
+    with its publishers and subscribers.
+    """
+    publishers = _get_count_text(scenario.publisher_count, 'publisher')
+    subscribers = _get_count_text(scenario.subscriber_count, 'subscriber')
 
     out = f'{test_name} with {publishers} and {subscribers}'
     return out
@@ -72,14 +98,29 @@ credentialslist = list[Credentials]
 # ################################################################################################################################
 
 class PerfConfig:
-    """ The API clients of the performance tests, populated once the server of the session is ready.
+    """ The server of the performance tests and its API clients, populated once the server of the session is ready.
     """
+
+    # The address of the REST interface of the server and the port that it listens on
+    base_url: 'str'
+    server_port: 'int'
+
+    # The session that started the server, and the logger of the session
+    session_state: 'SessionState'
+    logger: 'Logger'
+
+    # The client of the services of the server, and its PostgreSQL database, or None for a SQLite one
+    client: 'AdminClient'
+    database: 'PubSubDatabase | None'
 
     # The publishers and the subscribers that the scenarios take theirs from, in order
     publishers:  'credentialslist'
     subscribers: 'credentialslist'
 
-    # How long a pulled message stays reserved for its subscriber, in seconds
+    # The client that reads the receipts of the subscribers
+    receipt_reader: 'Credentials'
+
+    # How long a pulled message stays reserved for its subscriber, in seconds, as the server reports it
     lease_seconds: 'float'
 
 # ################################################################################################################################

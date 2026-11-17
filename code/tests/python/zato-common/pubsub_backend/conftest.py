@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
 
 # Zato
-from perf import silence_logging_teardown
+from logging_teardown import silence_logging_teardown
 
 # The late log-handler cleanup would otherwise fail under gevent once the hub is gone.
 _ = atexit.register(silence_logging_teardown)

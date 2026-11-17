@@ -27,7 +27,7 @@ import pytest
 
 # Zato
 from certificates import generate_certificates
-from perf import silence_logging_teardown
+from logging_teardown import silence_logging_teardown
 from zato.common.test.rabbitmq_ import RabbitMQProcess
 
 # ################################################################################################################################

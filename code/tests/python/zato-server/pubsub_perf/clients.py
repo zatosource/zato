@@ -11,9 +11,9 @@ import time
 from http.client import CONFLICT, INTERNAL_SERVER_ERROR, OK
 
 # Zato
-from pubsub_exactly_once.traffic_report import Latencies
-from pubsub_exactly_once.rest import post_json
 from pubsub_perf.config import PerfConfig, Receipts_Topic
+from pubsub_perf.figures import Latencies
+from pubsub_perf.rest import post_json
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -22,7 +22,7 @@ if 0:
     from concurrent.futures import Future, ThreadPoolExecutor
     from threading import Event
     from pubsub_perf.config import Credentials, credentialslist
-    from zato.common.typing_ import anydict, anylist, strfloatdict, strlist
+    from zato.common.typing_ import anydict, anylist, strfloatdict, strlist, strstrdict
 
     Credentials = Credentials
     Future = Future
@@ -49,10 +49,35 @@ _idle_seconds = 0.05
 # How long beyond the lease a subscriber waits for messages that a lost response handed out, in seconds
 _lease_margin = 0.5
 
-# How many messages one pull asks for
+# How many messages one pull of a subscriber asks for, and how many receipts one pull of the receipt reader asks for,
+# which is the most that the server hands out at once
 _batch_size = 100
+_receipt_batch_size = 1000
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _pull(credentials:'Credentials', max_messages:'int') -> 'anylist':
+    """ Returns the messages of one pull, or none if the response did not arrive, in which case the messages
+    that it handed out are handed out again once their lease runs out.
+    """
+    payload = {'max_messages': max_messages}
+
+    try:
+        result = post_json('/pubsub/messages/get', credentials.username, credentials.password, payload)
+    except OSError:
+        time.sleep(get_lease_wait())
+        return []
+
+    if result.status_code >= INTERNAL_SERVER_ERROR:
+        time.sleep(get_lease_wait())
+        return []
+
+    assert result.status_code == OK, result
+
+    out = result.body['messages']
+    return out
+
 # ################################################################################################################################
 
 def get_lease_wait() -> 'float':
@@ -150,29 +175,6 @@ class Subscriber:
 
 # ################################################################################################################################
 
-    def _pull(self) -> 'anylist':
-        """ Returns the messages of one pull, or none if the response did not arrive, in which case the messages
-        that it handed out are handed out again once their lease runs out.
-        """
-        payload = {'max_messages': _batch_size}
-
-        try:
-            result = post_json('/pubsub/messages/get', self.credentials.username, self.credentials.password, payload)
-        except OSError:
-            time.sleep(get_lease_wait())
-            return []
-
-        if result.status_code >= INTERNAL_SERVER_ERROR:
-            time.sleep(get_lease_wait())
-            return []
-
-        assert result.status_code == OK, result
-
-        out = result.body['messages']
-        return out
-
-# ################################################################################################################################
-
     def _build_ack(self, messages:'anylist') -> 'anydict':
         """ Returns the acknowledgement of a batch with the delivery attempt of each message and the receipt of each.
         """
@@ -232,7 +234,7 @@ class Subscriber:
             if result.status_code == CONFLICT:
                 break
 
-            # .. and a committed one is complete, with its receipts counted in the database.
+            # .. and a committed one is complete, with its receipts published.
             assert result.status_code == OK, result
 
             break
@@ -244,7 +246,7 @@ class Subscriber:
         """
         while not stop.is_set():
 
-            messages = self._pull()
+            messages = _pull(self.credentials, _batch_size)
 
             if not messages:
                 time.sleep(_idle_seconds)
@@ -380,7 +382,7 @@ class SubscriberGroup:
     def get_latencies(self, sent_times:'strfloatdict') -> 'Latencies':
         """ Returns the time from the publication of each message to its first receipt by each subscriber.
         """
-        out = Latencies('Publication to delivery')
+        out = Latencies()
 
         for subscriber in self.subscribers:
             receipts = subscriber.get_first_receipts()
@@ -388,6 +390,82 @@ class SubscriberGroup:
             for key, received_at in receipts.items():
                 out.add(received_at - sent_times[key])
 
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ReceiptReader:
+    """ An API client subscribed to the receipts of every subscriber. It pulls and acknowledges them throughout
+    a run and keeps those of the run by their message IDs, so that a receipt handed out to it again is counted once.
+    """
+
+    def __init__(self, credentials:'Credentials', prefix:'str') -> 'None':
+        self.credentials = credentials
+        self.prefix = prefix
+
+        # The key of each receipt of the run, by the message ID of the receipt
+        self.receipts:'strstrdict' = {}
+
+# ################################################################################################################################
+
+    def _ack(self, msg_ids:'strlist') -> 'None':
+        """ Acknowledges the receipts of one pull, repeating the request until the server confirms it.
+        """
+        payload = {'msg_ids': msg_ids}
+
+        while True:
+
+            try:
+                result = post_json('/pubsub/messages/ack', self.credentials.username, self.credentials.password, payload)
+            except OSError:
+                time.sleep(_retry_seconds)
+                continue
+
+            if result.status_code >= INTERNAL_SERVER_ERROR:
+                time.sleep(_retry_seconds)
+                continue
+
+            assert result.status_code == OK, result
+
+            break
+
+# ################################################################################################################################
+
+    def run(self, stop:'Event') -> 'None':
+        """ Pulls and acknowledges receipts until the test stops the reader.
+        """
+        while not stop.is_set():
+
+            messages = _pull(self.credentials, _receipt_batch_size)
+
+            if not messages:
+                time.sleep(_idle_seconds)
+                continue
+
+            msg_ids:'strlist' = []
+
+            for message in messages:
+                meta = message['meta']
+                data = message['data']
+
+                msg_id = meta['msg_id']
+                receipt_key = data['key']
+
+                msg_ids.append(msg_id)
+
+                # Receipts of earlier runs are acknowledged and not kept.
+                if receipt_key.startswith(self.prefix):
+                    self.receipts[msg_id] = receipt_key
+
+            self._ack(msg_ids)
+
+# ################################################################################################################################
+
+    def get_receipt_keys(self) -> 'strlist':
+        """ Returns the key of each receipt of the run, once per receipt that the subscribers committed.
+        """
+        out = list(self.receipts.values())
         return out
 
 # ################################################################################################################################

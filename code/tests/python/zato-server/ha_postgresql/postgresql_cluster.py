@@ -135,6 +135,7 @@ class PostgreSQLCluster(Backend):
         # The test process reads the instance accepting writes at its address, over TLS ..
         self.database = PubSubDatabase(
             mode=PubSubDBMode.PostgreSQL_TLS,
+            container_name=self.instances[self.primary_name].container_name,
             host=self.ip,
             port=ModuleCtx.Port,
             password=self.password,

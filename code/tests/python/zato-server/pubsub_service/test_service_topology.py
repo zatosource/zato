@@ -11,9 +11,6 @@ import json
 import time
 import unittest
 
-# pytest
-import pytest
-
 # Zato
 from zato.common.test.client import AdminClient as ZatoClient
 
@@ -182,7 +179,6 @@ class TestServiceTopology(unittest.TestCase):
 
 # ################################################################################################################################
 
-    @pytest.mark.perftest
     def test_parallel_three_hundred_sinks(self) -> 'None':
         """ Publishes one message to each of service-00021 through service-00320 and verifies
         all 300 services receive their message in parallel.
