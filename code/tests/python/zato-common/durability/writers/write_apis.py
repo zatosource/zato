@@ -24,9 +24,9 @@ from zato.common.common_db.store import SharedObjectStore
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.schema import delivery_table, message_table
-from zato.common.rule_engine.sql import DecisionWrite, RuleSQLBackend
+from zato.common.rule_engine.sql import RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset
-from zato.common.rule_engine.sql.schema import rule_decision_table
+from zato.common.rule_engine.sql.schema import rule_version_table
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,7 +54,7 @@ class ModuleCtx:
     Audit_Event_Type = 'durability.write'
     Audit_Object = 'durability-writers'
 
-    # The author of the rulesets and the rule that each decision fires
+    # The author of the rulesets and the rule that each of their versions holds
     Author = 'durability.writers'
     Rule_ID = 'durability-rule'
 
@@ -227,7 +227,7 @@ class AlertAPI(WriteAPI):
 
 # ################################################################################################################################
 
-class DecisionAPI(WriteAPI):
+class RuleVersionAPI(WriteAPI):
 
     def __init__(self, token:'str') -> 'None':
         super().__init__(token)
@@ -238,33 +238,25 @@ class DecisionAPI(WriteAPI):
         self.backend = RuleSQLBackend.from_engine(engine)
 
         definition = self.backend.definitions.create(
-            name=f'Durability decisions {self.token}',
+            name=f'Durability rulesets {self.token}',
             object_type=Definition_Type_Ruleset,
             document={'rules': [{'id': ModuleCtx.Rule_ID}]},
             author=ModuleCtx.Author,
-            comment='Ruleset of the durability decisions',
+            comment='Ruleset of the durability versions',
         )
         self.ruleset_id = definition.id
 
     def write(self) -> 'None':
-        decision = DecisionWrite(
-            decision_id=self.token,
-            ruleset_id=self.ruleset_id,
-            rules_version=1,
-            occurred_at=datetime.now(timezone.utc),
-            business_key=self.token,
-            outcome='matched',
-            is_error=False,
-            duration_ms=1,
-            story={'input': {'token': self.token}},
-            fired_rule_ids=[ModuleCtx.Rule_ID],
+        _ = self.backend.versions.create(
+            definition_id=self.ruleset_id,
+            expected_current_version=1,
+            document={'rules': [{'id': ModuleCtx.Rule_ID}]},
+            author=ModuleCtx.Author,
+            comment=self.token,
         )
 
-        writer = self.backend.decision_writer()
-        writer.submit(decision)
-
     def get_check(self) -> 'WriteCheck':
-        out = WriteCheck(rule_decision_table.name, rule_decision_table.c.decision_id.name, self.token, True)
+        out = WriteCheck(rule_version_table.name, rule_version_table.c.comment.name, self.token, True)
         return out
 
 # ################################################################################################################################
@@ -277,7 +269,7 @@ Write_APIs:'dict[str, type[WriteAPI]]' = {
     'audit-insert': AuditInsertAPI,
     'shared-object': SharedObjectAPI,
     'alert': AlertAPI,
-    'decision': DecisionAPI,
+    'rule-version': RuleVersionAPI,
 }
 
 # ################################################################################################################################

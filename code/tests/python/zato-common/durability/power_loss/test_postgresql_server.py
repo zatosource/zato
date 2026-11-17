@@ -113,7 +113,7 @@ def base_dir() -> 'any_':
 # ################################################################################################################################
 
 def test_postgresql_server_power_loss(database:'any_', base_dir:'str') -> 'None':
-    """ Every publication, acknowledgement, audit event and decision that the server acknowledged before the database
+    """ Every publication, acknowledgement, audit event that the server acknowledged before the database
     lost its power is stored once the database starts again, no acknowledged message is delivered again
     and no message is stored twice.
     """

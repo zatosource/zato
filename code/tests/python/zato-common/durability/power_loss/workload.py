@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The clients that publish, pull and acknowledge, invoke an audited channel and invoke a ruleset while a server
+# The clients that publish, pull and acknowledge and invoke an audited channel while a server
 # runs and loses its power, with what the server acknowledged to each of them.
 
 # stdlib
@@ -49,13 +49,9 @@ class ModuleCtx:
     Pull_Path = '/pubsub/messages/get'
     Ack_Path = '/pubsub/messages/ack'
     Audited_Path = '/test/durability/power-loss/audited'
-    Rules_Path = '/test/durability/power-loss/rules/alerts_common'
 
     # The name of the audited channel, under which the audit log records its events
     Audited_Channel_Name = 'test.durability.power-loss.audited'
-
-    # The input of each ruleset invocation
-    Rules_Input = {'alert': {'outstanding': 5}}
 
     # How many clients publish at the same time
     Publisher_Count = 4
@@ -149,11 +145,10 @@ class Workload:
         self._threads:'list[threading.Thread]' = []
 
         # The msg_id of each acknowledged publication by its correlation ID, the messages whose acknowledgement
-        # was acknowledged, the correlation IDs of the acknowledged audited invocations and the acknowledged decisions
+        # was acknowledged and the correlation IDs of the acknowledged audited invocations
         self.published:'strstrdict' = {}
         self.acked:'set[str]' = set()
         self.audited_cids:'strlist' = []
-        self.decision_ids:'strlist' = []
 
         # What the puller received once the server was back, in the order received
         self.drained:'strlist' = []
@@ -261,27 +256,6 @@ class Workload:
 
 # ################################################################################################################################
 
-    def _decision_loop(self) -> 'None':
-
-        url = self._url(ModuleCtx.Rules_Path)
-
-        while self.is_running.is_set():
-
-            try:
-                result = post_json(url, self.caller_auth, ModuleCtx.Rules_Input)
-            except Exception:
-                self._record_failure('decision')
-                continue
-
-            # A response without a decision ID reports an error that left no decision behind.
-            if decision_id := result.body.get('decision_id'):
-                with self.lock:
-                    self.decision_ids.append(decision_id)
-            else:
-                self._record_failure('decision')
-
-# ################################################################################################################################
-
     def start(self) -> 'None':
         self.is_running.set()
 
@@ -292,7 +266,6 @@ class Workload:
 
         targets.append((self._pull_loop, ()))
         targets.append((self._audited_loop, ()))
-        targets.append((self._decision_loop, ()))
 
         for target, args in targets:
             thread = threading.Thread(target=target, args=args, daemon=True)

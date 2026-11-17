@@ -14,6 +14,7 @@ from zato.common.test.durability.linked import get_linked_entries, ModuleCtx as 
 from zato.common.test.durability.python_ast import get_calls, get_dotted_name, get_import_aliases, get_module_name, \
     get_package_name, get_references, parse
 from zato.common.test.durability.sources import get_python_files, get_source_files
+from zato.common.typing_ import cast_
 
 # Local
 from registry import Audit_Log_Schema_Path, Audit_Tables_Name, Audit_Tables_Not_Guarded, Mechanism_Functions, \
@@ -153,7 +154,8 @@ def _get_schema_tables() -> 'set[str]':
         if call.name in ModuleCtx.Table_Constructors:
             first_argument = call.node.args[0]
             if isinstance(first_argument, ast.Constant):
-                out.add(first_argument.value)
+                table_name = cast_('str', first_argument.value)
+                out.add(table_name)
 
     return out
 

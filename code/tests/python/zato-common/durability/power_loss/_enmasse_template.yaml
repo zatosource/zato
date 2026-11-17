@@ -15,12 +15,6 @@ security:
     username: test.durability.power-loss.caller
     password: "{{caller_password}}"
 
-groups:
-
-  - name: test.durability.power-loss.rules
-    members:
-      - test.durability.power-loss.caller
-
 pubsub_topic:
 
   - name: durability.power-loss
@@ -49,12 +43,3 @@ channel_rest:
     url_path: /test/durability/power-loss/audited
     data_format: json
     is_audit_log_active: true
-
-rule_engine_api:
-
-  - name: test.durability.power-loss.rules
-    url_path: /test/durability/power-loss/rules
-    rulesets:
-      - alerts_common
-    security_groups:
-      - test.durability.power-loss.rules

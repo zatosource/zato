@@ -39,7 +39,7 @@ class ModuleCtx:
 
     # A statement given as a literal to a method that runs it
     Statement_Call = re.compile(
-        r'\.(?:execute|execute_batch|query|query_row|query_one|query_opt|prepare|prepare_cached|batch_execute|simple_query)'
+        r'\.(?:execute|execute_batch|query|query_row|query_one|query_opt|prepare|prepare_cached|batch_execute|simple_query)' +
         r'\s*\(\s*"((?:[^"\\]|\\.)*)"')
 
     # A statement kept in a constant
@@ -47,7 +47,7 @@ class ModuleCtx:
 
     # The first keyword of an SQL statement
     SQL_Keyword = re.compile(
-        r'^\s*(insert|update|delete|replace|create|drop|alter|truncate|copy|merge|upsert|vacuum|reindex|begin|commit|end|'
+        r'^\s*(insert|update|delete|replace|create|drop|alter|truncate|copy|merge|upsert|vacuum|reindex|begin|commit|end|' +
         r'rollback|savepoint|release|attach|detach|pragma|select|show|with|set|analyze|lock|do|call)\b', re.IGNORECASE)
 
     # The statements that the node may run - pragmas, which include the checkpoint, the write lock of the takeover

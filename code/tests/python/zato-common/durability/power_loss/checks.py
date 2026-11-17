@@ -73,7 +73,6 @@ def check_traffic(workload:'Workload') -> 'None':
     assert workload.published, f'No publication acknowledged, failures -> {workload.failures}'
     assert workload.acked, f'No acknowledgement acknowledged, failures -> {workload.failures}'
     assert workload.audited_cids, f'No audited invocation acknowledged, failures -> {workload.failures}'
-    assert workload.decision_ids, f'No decision acknowledged, failures -> {workload.failures}'
 
 # ################################################################################################################################
 
@@ -150,26 +149,6 @@ def check_audit_events(workload:'Workload', reader:'DatabaseReader') -> 'None':
             missing.append(cid)
 
     assert not missing, f'Audit events of acknowledged invocations lost -> {_describe(missing)}'
-
-# ################################################################################################################################
-
-def check_decisions(workload:'Workload', reader:'DatabaseReader') -> 'None':
-    """ Asserts that every acknowledged decision is in the decision log.
-    """
-    rows = reader.read_rows('select decision_id from rule_decision')
-
-    stored:'set[str]' = set()
-
-    for row in rows:
-        stored.add(row[0])
-
-    missing:'strlist' = []
-
-    for decision_id in workload.decision_ids:
-        if decision_id not in stored:
-            missing.append(decision_id)
-
-    assert not missing, f'Acknowledged decisions lost -> {_describe(missing)}'
 
 # ################################################################################################################################
 

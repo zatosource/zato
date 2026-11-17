@@ -15,8 +15,8 @@ import os
 import time
 
 # Zato
-from checks import check_acknowledgements, check_audit_events, check_decisions, check_publications, check_redelivery, \
-    check_traffic, DatabaseReader
+from checks import check_acknowledgements, check_audit_events, check_publications, check_redelivery, check_traffic, \
+    DatabaseReader
 from workload import ModuleCtx as WorkloadCtx, Workload
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.durability.power_loss import PowerLossServer
@@ -94,8 +94,8 @@ def run_power_loss(server:'PowerLossServer', power_loss:'PowerLoss', reader:'Dat
     power_loss.cut()
     workload.stop()
 
-    logger.info('Power cut after %d publications, %d acknowledgements, %d audited invocations and %d decisions',
-        len(workload.published), len(workload.acked), len(workload.audited_cids), len(workload.decision_ids))
+    logger.info('Power cut after %d publications, %d acknowledgements and %d audited invocations',
+        len(workload.published), len(workload.acked), len(workload.audited_cids))
 
     check_traffic(workload)
 
@@ -106,7 +106,6 @@ def run_power_loss(server:'PowerLossServer', power_loss:'PowerLoss', reader:'Dat
     check_publications(workload, reader)
     check_acknowledgements(workload, reader)
     check_audit_events(workload, reader)
-    check_decisions(workload, reader)
 
     # .. and the queue hands out every publication that was not acknowledged and none that was.
     workload.drain()

@@ -22,11 +22,10 @@
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-export test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
 	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-sftp test-file-transfer test-smb test-smb-windows-build \
-	test-rule-engine test-rule-engine-perf \
+	test-rule-engine \
 	test-fabric-live fabric-cleanup fabric-tutorial fabric-loading-tables fabric-lookup-tables fabric-looking-up-data \
 	fabric-api-on-fabric-data fabric-scheduled-reports fabric-files fabric-sending-events fabric-receiving-events \
 	fabric-reading-events fabric-notebook-results fabric-pipelines-and-reports fabric-local-systems \
-	rule-engine-notify rule-engine-retention rule-engine-spike-alerts rule-engine-dashboard \
 	test-all test-all-no-static test test-all-reset test-all-no-static-reset test-clean-test-all test-clean test-perf \
 	health-ruff health-clippy \
 	format format-zato \
@@ -272,15 +271,6 @@ server:
 	cd ~/env/qs-1/ && Zato_SSL_Dir=$(HAPROXY_DEV_DIR) Zato_Lets_Encrypt_HAProxy_Config=$(HAPROXY_DEV_DIR)/haproxy.cfg \
 		zato start server1/ --fg --verbose
 
-# The password the admin account is created with on the first start against a new database,
-# the same one the rest of the environment uses
-Zato_Rule_Engine_Dashboard_Admin_Password ?= $(Zato_Password)
-
-rule-engine-dashboard:
-	clear
-	Zato_Rule_Engine_Dashboard_Admin_Password=$(Zato_Rule_Engine_Dashboard_Admin_Password) \
-		$(ZATO_PY) -m zato.rule_engine_dashboard.app.run
-
 scheduler:
 	clear
 	cd ~/env/qs-1/ && zato start scheduler/ --fg --verbose
@@ -464,8 +454,6 @@ pyright:
 		zato-common/src/zato/common/hl7/fhir/fields.py \
 		zato-common/src/zato/common/pubsub/outgoing.py \
 		zato-common/src/zato/common/pubsub/sql/ \
-		zato-common/src/zato/common/rule_engine/jobs/ \
-		zato-common/src/zato/common/rule_engine/notify/ \
 		zato-common/src/zato/common/test/config_pubsub_outgoing.py \
 		zato-common/src/zato/common/test/rabbitmq_.py \
 		zato-server/src/zato/server/connection/outgoing_delivery/ \
@@ -485,7 +473,6 @@ Zato_Pyright_All_Paths := \
 	zato-common/src \
 	zato-distlock/src \
 	zato-openapi/src \
-	zato-rule-engine-dashboard/src \
 	zato-server/src \
 	zato-testing/src \
 	zato-web-admin/src \
@@ -512,7 +499,6 @@ test-static-js: ## Every JS static check - a node --check syntax pass over all f
 	$(Zato_Log_Reset)
 	find $(CURDIR)/code/zato-web-admin/src/zato/admin/static/js \
 		$(CURDIR)/code/zato-web-admin/src/zato/admin/static/message-viewer-src \
-		$(CURDIR)/code/zato-rule-engine-dashboard/src \
 		$(CURDIR)/code/tests/js \
 		-name '*.js' -type f -not -path '*/node_modules/*' -print0 | xargs -0 -n1 node --check $(Zato_Log)
 
@@ -586,15 +572,6 @@ update-on-prem-gateway:
 
 analytics: ## Aggregate new audit log events into the analytics store.
 	$(CURDIR)/code/bin/zato analytics rollup --verbose
-
-rule-engine-notify: ## Rule engine notification dispatcher - a resident loop running advisory suites and delivering to Slack and Teams.
-	$(ZATO_PY) -m zato.common.rule_engine.jobs.notify $(Zato_Rule_Engine_Job_Args)
-
-rule-engine-retention: ## Rule engine retention sweep - one pass deleting decisions past the retention window.
-	$(ZATO_PY) -m zato.common.rule_engine.jobs.retention $(Zato_Rule_Engine_Job_Args)
-
-rule-engine-spike-alerts: ## Rule engine spike sweep - one pass comparing the current hour's decisions against the typical rate.
-	$(ZATO_PY) -m zato.common.rule_engine.jobs.spikes $(Zato_Rule_Engine_Job_Args)
 
 stop-server:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py stop-server
@@ -1653,7 +1630,7 @@ test-hl7: ## Every HL7 test - parsing, FHIR, MLLP channels, outgoing connections
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_fhir -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-ui: ## Every dashboard test - the UI kit, the rule engine screens, the audit log, the whole Playwright suite and the web-admin access checks.
+test-ui: ## Every dashboard test - the UI kit, the audit log, the whole Playwright suite and the web-admin access checks.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/webapp_ui/ \
@@ -1662,11 +1639,6 @@ test-ui: ## Every dashboard test - the UI kit, the rule engine screens, the audi
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-dashboard/audit_log_views/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_audit_log_views -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	cd $(CURDIR)/code/tests/js/zato-rule-engine-dashboard && npm install --no-audit --no-fund $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-rule-engine-dashboard/ui/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_dashboard_ui \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	$(ZATO_PY) $(CURDIR)/code/tests/python/zato-common/audit_log/run_matrix.py $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -1892,7 +1864,7 @@ test-es: ## Elasticsearch connection tests against a live server, plain and TLS.
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_es \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-rule-engine: ## Rule engine tests - grammar, matching, SQL, dashboard views and jobs.
+test-rule-engine: ## Rule engine tests - grammar, matching, the SQL store, invocation and the API portal.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/zato-common/test/zato/common/rule_engine/ \
@@ -1903,30 +1875,8 @@ test-rule-engine: ## Rule engine tests - grammar, matching, SQL, dashboard views
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_engine_sql \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-rule-engine-dashboard/rule_views/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_views \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-rule-engine-dashboard/user_management/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_engine_user_management -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-common/rule_engine_jobs/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_engine_jobs \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-
-test-rule-engine-perf: ## Rule engine SQL backend performance tests.
-	$(Zato_Log_Reset)
-	$(MAKE) test-durability-static $(Zato_Log)
-	basetemp="$${TMPDIR:-/tmp}/zato-rule-engine-perf-$$USER"; \
-	trap 'rm -rf "$$basetemp"' EXIT INT TERM; \
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-common/rule_engine_perf/test_rule_engine_perf_sqlite.py \
-		$(CURDIR)/code/tests/python/zato-common/rule_engine_perf/test_rule_engine_perf_postgresql.py \
-		$(CURDIR)/code/tests/python/zato-common/rule_engine_perf/test_rule_engine_perf_postgresql_ssl.py \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_engine_perf \
-		-o log_cli=false \
-		--basetemp="$$basetemp" \
+		$(CURDIR)/code/tests/python/zato-common/rule_engine_webapi/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_engine_webapi \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 test-analytics: ## Analytics rollup, view and baseline tests on SQLite, with the rollup reading audit logs held in SQLite and PostgreSQL.
@@ -2031,7 +1981,7 @@ Zato_Test_Live := \
 Zato_Test_Heavy := test-rest test-server
 
 # Standalone performance suites, left out of test-all
-Zato_Test_Perf := test-pubsub-perf test-pubsub-perf-latency test-rule-engine-perf
+Zato_Test_Perf := test-pubsub-perf test-pubsub-perf-latency
 
 Zato_Test_Fuzz := test-rest-fuzz test-server-fuzz
 

@@ -97,7 +97,7 @@ def mount(base_dir:'str') -> 'any_':
 # ################################################################################################################################
 
 def test_sqlite_server_power_loss(base_dir:'str', mount:'LazyFSMount') -> 'None':
-    """ Every publication, acknowledgement, audit event and decision that the server acknowledged before the loss
+    """ Every publication, acknowledgement, audit event that the server acknowledged before the loss
     of power is stored once it starts again, no acknowledged message is delivered again and no message is stored twice.
     """
     db_path = os.path.join(mount.mount_dir, DatabaseEnv.File_Name)
