@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import os
+import sqlite3
 import subprocess
 import sys
 from uuid import uuid4
@@ -18,7 +19,7 @@ import pytest
 
 # Zato
 from tools import build_fsfault
-from write_apis import count_rows, is_written, Write_APIs
+from write_apis import Write_APIs
 from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
@@ -44,6 +45,9 @@ class ModuleCtx:
     Env_Preload = 'LD_PRELOAD'
     Env_Control = 'ZATO_FSFAULT_CONTROL'
 
+    # What the integrity check of SQLite returns for a sound database
+    Integrity_OK = 'ok'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -66,13 +70,29 @@ def _get_runner_env(control_path:'str') -> 'dict[str, str]':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _check_integrity(db_path:'str') -> 'str':
+    """ Returns the result of the integrity check of a SQLite file, as a new connection runs it.
+    """
+    connection = sqlite3.connect(db_path)
+
+    try:
+        row = connection.execute('pragma integrity_check').fetchone()
+    finally:
+        connection.close()
+
+    out = row[0]
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @pytest.mark.parametrize('name', sorted(Write_APIs))
-def test_failed_sync_raises_and_writes_nothing(tmp_path:'Path', name:'str') -> 'None':
-    """ A write API whose commit cannot be synced raises, and once the fault is cleared and the process
-    is started again, nothing of what it was to write is found in the database.
+def test_failed_sync_raises(tmp_path:'Path', name:'str') -> 'None':
+    """ A write API whose commit cannot be synced raises rather than acknowledges, and once the fault is cleared
+    and the process is started again, the database is sound. The frames of the failed commit were written before
+    the sync failed, so whether the restarted process finds the write is not determined, as for any database.
     """
     token = uuid4().hex
-    check = Write_APIs[name](token).get_check()
 
     database_dir = os.path.join(tmp_path, 'database')
     os.makedirs(database_dir)
@@ -94,8 +114,9 @@ def test_failed_sync_raises_and_writes_nothing(tmp_path:'Path', name:'str') -> '
 
     assert outcome['is_raised'], f'{name} returned while every sync of its commit failed'
 
-    # .. and this process, which opens the database anew, finds nothing of the write.
-    assert not is_written(db_path, check), f'{name} -> {check} -> {count_rows(db_path, check)}'
+    # .. and this process, which opens the database anew, finds it sound.
+    integrity = _check_integrity(db_path)
+    assert integrity == ModuleCtx.Integrity_OK, f'{name} -> {integrity}'
 
 # ################################################################################################################################
 # ################################################################################################################################

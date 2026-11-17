@@ -1157,6 +1157,10 @@ Zato_Test_Durability_Step = \
 			$(Zato_Test_Durability_Stepwise) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
 	fi;
 
+# The durability targets of the repositories linked to this installation, which each makefile in links/ may extend
+# and which test-durability runs after its own steps.
+Zato_Durability_Linked_Targets :=
+
 test-durability: ## Durability - static scans, engine settings, write acknowledgments, the settings gate of performance figures, loss of power to a single server and to each pair, resuming from the step that last failed or was interrupted. RESTART=1 to start from scratch.
 	@if [ -n "$(RESTART)" ]; then rm -f $(Zato_Test_Durability_Resume_File); fi
 	$(Zato_Log_Reset)
@@ -1169,6 +1173,7 @@ test-durability: ## Durability - static scans, engine settings, write acknowledg
 	fi; \
 	$(foreach step,$(Zato_Test_Durability_Steps),$(call Zato_Test_Durability_Step,$(step))) \
 	rm -f $(Zato_Test_Durability_Resume_File)
+	$(foreach target,$(Zato_Durability_Linked_Targets),$(MAKE) $(target) $(Zato_Log) &&) true
 
 test-durability-fast: ## The static scans and the engine settings of durability, which test-pubsub and test-ha run first.
 	$(Zato_Log_Reset)

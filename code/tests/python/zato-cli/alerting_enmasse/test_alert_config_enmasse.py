@@ -79,6 +79,8 @@ alert_rules:
     connection_failures_window: 600
     max_latency: 7000
     latency_window: 1800
+    queue_depth: 500
+    dlq_messages: 3
     use_llm: false
   - type: file_transfer
     is_active: true

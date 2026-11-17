@@ -60,9 +60,12 @@ class ModuleCtx:
         _new_value('full_page_writes', ('off', 'false', 'no', '0')),
     )
 
+    # The statement that creates a table which writes no WAL, which only the scratch tables of a seed may use
+    Unlogged_Table = r'\bunlogged\s+table\b'
+
     # The PostgreSQL statements that relax durability whatever value they set
     PostgreSQL_Statements = (
-        r'\bunlogged\s+table\b',
+        Unlogged_Table,
         r'\bset\s+unlogged\b',
         r'\bset\s+local\s+synchronous_commit\b',
         r'\balter\s+system\s+set\s+synchronous_commit\b',
