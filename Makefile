@@ -966,19 +966,19 @@ Zato_Test_Exactly_Once_Tests_relay    := $(Zato_Test_Exactly_Once_Dir)/test_rela
 Zato_Test_Exactly_Once_Tests_pull     := $(Zato_Test_Exactly_Once_Dir)/test_pull.py
 Zato_Test_Exactly_Once_Tests_crash    := $(Zato_Test_Exactly_Once_Dir)/test_crash.py
 Zato_Test_Exactly_Once_Tests_takeover := $(Zato_Test_Exactly_Once_Takeover)/
-Zato_Test_Exactly_Once_Tests_load     := $(Zato_Test_Exactly_Once_Dir)/test_load.py
+Zato_Test_Exactly_Once_Tests_traffic  := $(Zato_Test_Exactly_Once_Dir)/test_traffic.py
 
 Zato_Test_Exactly_Once_Runner_backend  := $(Zato_Test_Exactly_Once_Gevent)
 Zato_Test_Exactly_Once_Runner_relay    := $(Zato_Test_Exactly_Once_Live)
 Zato_Test_Exactly_Once_Runner_pull     := $(Zato_Test_Exactly_Once_Live)
 Zato_Test_Exactly_Once_Runner_crash    := $(Zato_Test_Exactly_Once_Live)
 Zato_Test_Exactly_Once_Runner_takeover := $(Zato_Test_Exactly_Once_Live)
-Zato_Test_Exactly_Once_Runner_load     := $(Zato_Test_Exactly_Once_Live)
+Zato_Test_Exactly_Once_Runner_traffic  := $(Zato_Test_Exactly_Once_Live)
 
 # The steps in the order they run, each a group of tests on one pub/sub database, the step that the target is currently on,
 # and the pytest option that resumes each step from the test that failed or was interrupted, or starts it over under RESTART.
 Zato_Test_Exactly_Once_Steps := backend \
-	$(foreach group,relay pull crash takeover load,$(foreach mode,sqlite postgresql,$(group):$(mode)))
+	$(foreach group,relay pull crash takeover traffic,$(foreach mode,sqlite postgresql,$(group):$(mode)))
 Zato_Test_Exactly_Once_Resume_File := $(CURDIR)/code/tests/.test-pubsub-exactly-once-resume
 Zato_Test_Exactly_Once_Stepwise     = $(if $(RESTART),--sw-reset,--sw)
 
@@ -996,7 +996,7 @@ Zato_Test_Exactly_Once_Run = \
 
 Zato_Test_Exactly_Once_Step = $(call Zato_Test_Exactly_Once_Run,$(1),$(word 1,$(subst :, ,$(1))),$(word 2,$(subst :, ,$(1))))
 
-test-pubsub-exactly-once: ## Exactly-once delivery of pub/sub - the backend, a single server without and with faults, pull clients, takeovers and load, on SQLite and PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+test-pubsub-exactly-once: ## Exactly-once delivery of pub/sub - the backend, a single server without and with faults, pull clients, takeovers and steady traffic, on SQLite and PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	@if [ -n "$(RESTART)" ]; then rm -f $(Zato_Test_Exactly_Once_Resume_File); fi
 	$(Zato_Log_Reset)
 	$(MAKE) ha-node-build $(Zato_Log)
