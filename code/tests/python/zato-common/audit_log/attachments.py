@@ -15,7 +15,7 @@ from sqlalchemy import func, select
 
 # Zato
 from common import delete_all_events
-from zato.common.audit_log.api import event_body_table, event_table, AuditBody, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_body_table, AuditBody, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import build_attachment, get_attachment, list_attachments, Env_Max_Attachment_Size
 from zato.common.audit_log.body import resolve_body
