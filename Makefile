@@ -744,12 +744,16 @@ Zato_Test_HA_Resume_File := $(CURDIR)/code/tests/.test-ha-resume
 # The suites of each HA target in the order they run, the suite that each target is currently on, and the pytest option
 # that resumes each suite from the test that failed or was interrupted, or that starts it from the beginning under RESTART.
 Zato_Test_HA_SQLite                 := ha_sqlite ha_sqlite_kubernetes ha_control_plane
+Zato_Test_HA_SQLite_Soak            := ha_sqlite
 Zato_Test_HA_SQLite_Resume_File     := $(CURDIR)/code/tests/.test-ha-sqlite-resume
 Zato_Test_HA_PostgreSQL             := ha_postgresql ha_postgresql_kubernetes
+Zato_Test_HA_PostgreSQL_Soak        := ha_postgresql
 Zato_Test_HA_PostgreSQL_Resume_File := $(CURDIR)/code/tests/.test-ha-postgresql-resume
 Zato_Test_HA_Stepwise                = $(if $(RESTART),--sw-reset,--sw)
+Zato_Test_HA_Soak_Prefix            := soak-
 
-# Runs the HA suites in $(1) in order, resuming from the one named in the resume file $(2).
+# Runs the HA suites in $(1) in order without their soak tests and then the soak tests of the suites in $(3),
+# resuming from the step named in the resume file $(2).
 define Zato_Test_HA_Suites
 	@if [ -n "$(RESTART)" ]; then rm -f $(2); fi
 	$(Zato_Log_Reset)
@@ -760,14 +764,16 @@ define Zato_Test_HA_Suites
 		resume=$$(cat $(2)); \
 		echo ">>> Resuming from $$resume" $(Zato_Log); \
 	fi; \
-	for suite in $(1); do \
+	for step in $(1) $(addprefix $(Zato_Test_HA_Soak_Prefix),$(3)); do \
 		if [ -n "$$resume" ]; then \
-			if [ "$$suite" != "$$resume" ]; then continue; fi; \
+			if [ "$$step" != "$$resume" ]; then continue; fi; \
 			resume=''; \
 		fi; \
-		echo "$$suite" > $(2); \
-		ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/$$suite/ \
-			-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_$$suite -W ignore::DeprecationWarning \
+		echo "$$step" > $(2); \
+		suite=$${step#$(Zato_Test_HA_Soak_Prefix)}; \
+		if [ "$$step" = "$$suite" ]; then marker='$(Zato_Test_Without_Soak_Marker)'; else marker='$(Zato_Test_Soak_Only_Marker)'; fi; \
+		ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/$$suite/ -m "$$marker" \
+			-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_$$step -W ignore::DeprecationWarning \
 			$(Zato_Test_HA_Stepwise) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
 	done; \
 	rm -f $(2)
@@ -781,10 +787,10 @@ test-ha: ## Active-standby pair under the lease referee - the SQLite and the Pos
 	$(call Zato_Test_Walk,$(Zato_Test_HA),$(Zato_Test_HA_Resume_File))
 
 test-ha-sqlite: ## Active-standby pair on SQLite - the pair, Kubernetes and control-plane suites, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
-	$(call Zato_Test_HA_Suites,$(Zato_Test_HA_SQLite),$(Zato_Test_HA_SQLite_Resume_File))
+	$(call Zato_Test_HA_Suites,$(Zato_Test_HA_SQLite),$(Zato_Test_HA_SQLite_Resume_File),$(Zato_Test_HA_SQLite_Soak))
 
 test-ha-postgresql: ## Active-standby pair on PostgreSQL - the pair and Kubernetes suites, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
-	$(call Zato_Test_HA_Suites,$(Zato_Test_HA_PostgreSQL),$(Zato_Test_HA_PostgreSQL_Resume_File))
+	$(call Zato_Test_HA_Suites,$(Zato_Test_HA_PostgreSQL),$(Zato_Test_HA_PostgreSQL_Resume_File),$(Zato_Test_HA_PostgreSQL_Soak))
 
 # The unit tests of the arbiter, the config process, the control channel and the region that the worker
 # and the config process of the server share.
@@ -816,6 +822,13 @@ test-rate-limiting: rust-target-prune ## All rate limiting tests.
 # The managed PostgreSQL profiles and the databases of the stability suites that test-pubsub runs.
 Zato_Test_PubSub_Managed_Modes   := postgresql-rds postgresql-azure
 Zato_Test_PubSub_Stability_Modes := sqlite postgresql
+
+# The marker expressions that run a suite without its soak tests and then its soak tests alone, after every other suite
+# of the target.
+Zato_Test_Without_Soak_Marker := not perftest and not soak
+Zato_Test_Soak_Only_Marker    := not perftest and soak
+Zato_Test_Without_Soak        := -m '$(Zato_Test_Without_Soak_Marker)'
+Zato_Test_Soak_Only           := -m '$(Zato_Test_Soak_Only_Marker)'
 
 # The resolver library that the managed profiles require, in a directory of its own, which the server containers mount.
 Zato_Test_Resolver_Source  := $(CURDIR)/code/zato-common/src/zato/common/test/native/resolver.c
@@ -867,7 +880,7 @@ test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing del
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_replication -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	Zato_Test_PubSub_DB_Mode=postgresql ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_faults/ \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_faults/ $(Zato_Test_Without_Soak) \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_faults -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	mkdir -p $(Zato_Test_Resolver_Dir)
@@ -881,7 +894,7 @@ test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing del
 	done
 	for mode in $(Zato_Test_PubSub_Stability_Modes); do \
 		Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
-			$(CURDIR)/code/tests/python/zato-common/pubsub_stability/ \
+			$(CURDIR)/code/tests/python/zato-common/pubsub_stability/ $(Zato_Test_Without_Soak) \
 			-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_stability_$$mode -W ignore::DeprecationWarning \
 			$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
 	done
@@ -919,6 +932,16 @@ test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing del
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend_amqp \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	$(MAKE) test-pubsub-exactly-once $(Zato_Log)
+	Zato_Test_PubSub_DB_Mode=postgresql ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_faults/ $(Zato_Test_Soak_Only) \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_faults_soak -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	for mode in $(Zato_Test_PubSub_Stability_Modes); do \
+		Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
+			$(CURDIR)/code/tests/python/zato-common/pubsub_stability/ $(Zato_Test_Soak_Only) \
+			-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_stability_soak_$$mode -W ignore::DeprecationWarning \
+			$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
+	done
 
 test-queue-delivery-rest: ## Queue delivery of outgoing REST connections, live, on every pub/sub backend.
 	$(Zato_Log_Reset)

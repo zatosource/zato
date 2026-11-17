@@ -16,6 +16,9 @@ from time import monotonic
 # gevent
 from gevent import sleep, spawn
 
+# pytest
+import pytest
+
 # Zato
 from faults import Fault, Total_Loss
 from run import FaultPhases, FaultRun
@@ -164,6 +167,7 @@ class RepeatedFailoverFault(Fault):
 # ################################################################################################################################
 # ################################################################################################################################
 
+@pytest.mark.soak
 def test_failover_during_soak(failover_database:'ReplicatedDatabase') -> 'None':
     """ Item 14.7 - the primary is lost during the production traffic of a soak and the standby is promoted.
     The phases come from the Zato_Test_Fault_* variables, which a soak sets to its hours.
@@ -182,6 +186,7 @@ def test_failover_during_soak(failover_database:'ReplicatedDatabase') -> 'None':
 
 # ################################################################################################################################
 
+@pytest.mark.soak
 def test_repeated_failover(failover_database:'ReplicatedDatabase') -> 'None':
     """ Item 14.8 - failover and failback alternate at the interval that the Zato_Test_Failover_Interval_Seconds
     variable sets during the production traffic of a soak, whose length the Zato_Test_Fault_Seconds variable sets.

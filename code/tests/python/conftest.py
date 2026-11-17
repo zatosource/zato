@@ -47,6 +47,9 @@ class ModuleCtx:
     Test_Lib_Dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'zato-common', 'lib')
     Failure_Reports_Plugin = 'failure_reports'
 
+    # The marker of the tests that run after every other test of their run
+    Soak_Marker = 'soak'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -73,6 +76,23 @@ def pytest_configure(config:'pytest.Config') -> 'None':
     """
     sys.path.append(ModuleCtx.Test_Lib_Dir)
     config.pluginmanager.import_plugin(ModuleCtx.Failure_Reports_Plugin)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def pytest_collection_modifyitems(items:'list[pytest.Item]') -> 'None':
+    """ Moves the soak tests behind every other test of the run, each group in the order of its collection.
+    """
+    other_items:'list[pytest.Item]' = []
+    soak_items:'list[pytest.Item]' = []
+
+    for item in items:
+        if item.get_closest_marker(ModuleCtx.Soak_Marker):
+            soak_items.append(item)
+        else:
+            other_items.append(item)
+
+    items[:] = other_items + soak_items
 
 # ################################################################################################################################
 # ################################################################################################################################

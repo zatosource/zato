@@ -12,6 +12,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import time
 
+# pytest
+import pytest
+
 # Zato
 from checks import check_run_log
 from pair import stop_server
@@ -38,6 +41,7 @@ _duration_seconds = 20 * 60
 # ################################################################################################################################
 # ################################################################################################################################
 
+@pytest.mark.soak
 def test_soak(workload_pair:'SchedulerPair') -> 'None':
     """ No slot runs twice, the run counts equal the run state, the pub/sub workload loses nothing, and the resources
     of the active server remain bounded.

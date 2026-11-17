@@ -3,6 +3,7 @@ markers = [
     "perftest: long-running performance tests, skipped by default",
     "expect_log_errors: test intentionally triggers server log errors matching the given patterns",
     "slow: tests that wait on the scheduler firing or move a lot of files, deselected with -m 'not slow'",
+    "soak: soak tests, which run after every other test of their run and of their make target",
 ]
 addopts = "-m 'not perftest' --import-mode=importlib"
 log_cli = true

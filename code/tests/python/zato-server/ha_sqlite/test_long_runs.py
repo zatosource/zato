@@ -14,6 +14,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import time
 
+# pytest
+import pytest
+
 # Zato
 from ha_checks import check_copies, check_publications_stored, check_scheduler, check_workload
 from ha_long_run import check_replacements, ModuleCtx as LongRunCtx, run_repeated_failover, start_traffic, \
@@ -85,6 +88,7 @@ def test_repeated_failover(ha_pair:'HAEnvironment') -> 'None':
 
 # ################################################################################################################################
 
+@pytest.mark.soak
 def test_soak(ha_pair:'HAEnvironment') -> 'None':
     """ One hour of steady traffic, with the resources of both containers and the WAL of each database within
     their bounds and the replication lag at zero once the traffic stops.

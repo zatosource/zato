@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# pytest
+import pytest
+
 # Zato
 from monitor import Limits, Monitor
 from runner import get_count_mismatches, get_duration, get_report_path, run_for, start_cleanup_process, \
@@ -36,6 +39,7 @@ _cleanup_interval_seconds = 60
 # ################################################################################################################################
 # ################################################################################################################################
 
+@pytest.mark.soak
 def test_soak(stability_env:'strstrdict') -> 'None':
     """ Steady production traffic for two hours. Every minute must stay within the p99 limits, the table sizes
     that the retention bounds, the WAL and the pace of autovacuum, and the resources of the process must remain bounded.
