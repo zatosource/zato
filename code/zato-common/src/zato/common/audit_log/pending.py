@@ -13,11 +13,12 @@ from dataclasses import dataclass
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist, stranydict
+    from zato.common.typing_ import anylist, stranydict, strnone
 
     # Dummy assignments to satisfy type checkers
     anylist = anylist
     stranydict = stranydict
+    strnone = strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,6 +56,15 @@ class PendingEvent:
 
     # The id the database gave the event once it was written
     event_id: 'int' = 0
+
+    # Whether the digest and the search text of the payload were computed before the write
+    is_payload_prepared: 'bool' = False
+
+    # The digest the payload is stored under, None for an empty payload
+    payload_digest: 'strnone' = None
+
+    # The words of the payload that the search index holds
+    search_text: 'str' = ''
 
 # ################################################################################################################################
 # ################################################################################################################################

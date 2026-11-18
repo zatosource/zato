@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from collections import OrderedDict
+from functools import partial
 from logging import getLogger
 from time import monotonic
 
@@ -27,6 +28,7 @@ from zato.common.audit_log.common import AuditBody, AuditClassification, AuditEv
     event_link_table, event_table, get_commit_max_events, get_retention_days, get_source_env_suffix, metadata, \
     Status_Outstanding
 from zato.common.audit_log.export.api import get_audit_export
+from zato.common.audit_log.payload import prepare_payloads
 from zato.common.audit_log.pending import PendingEvent
 from zato.common.audit_log.retention import Env_Archive_Dir, Env_Content_Retention_Days, \
     Env_Content_Retention_Days_Prefix, get_content_retention_days, register_prunability, run_retention
@@ -496,12 +498,15 @@ class AuditLog:
 
         self.prepare_commit()
 
+        # The payloads of the batch are prepared before the write lock is taken ..
+        prepare = partial(prepare_payloads, batch)
+
         try:
-            out = call_database(self.engine, self._insert_batch, batch)
+            out = call_database(self.engine, self._insert_batch, batch, prepare=prepare)
         except OperationalError:
 
-            # A pooled connection that opened the file while it was read-only stays read-only
-            # after the permissions come back, which a fresh engine does not.
+            # .. and a pooled connection that opened the file while it was read-only stays read-only
+            # after the permissions come back, which a fresh engine does not, while the payloads remain prepared.
             dispose_database_engine()
             out = call_database(self.engine, self._insert_batch, batch)
 

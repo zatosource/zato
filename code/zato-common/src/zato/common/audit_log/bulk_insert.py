@@ -154,10 +154,12 @@ def insert_pending_events(connection:'Connection', batch:'pending_event_list') -
 
     # The payloads of the batch, each once, are stored before the events that reference them ..
     payloads:'strstrdict' = {}
-    event_rows = get_event_rows(batch, payloads)
+    search_texts:'strstrdict' = {}
+
+    event_rows = get_event_rows(batch, payloads, search_texts)
 
     if payloads:
-        store_payloads(connection, payloads)
+        store_payloads(connection, payloads, search_texts)
 
     # The companion rows of all the events, one list per table
     attr_rows:'anylist' = []

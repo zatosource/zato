@@ -105,6 +105,9 @@ _default_admin_channel = MISC.DefaultAdminInvokeChannel
 _http_options = 'OPTIONS'
 _queue = HTTP_SOAP.Queue
 
+# Response bodies are serialized without indentation, which the C encoder of the json module requires
+_response_indent = None
+
 # ################################################################################################################################
 
 stack_format = None
@@ -293,7 +296,7 @@ def _serialize_payload(payload:'any_') -> 'any_':
         out = payload.getvalue()
 
         if isinstance(out, (dict, list)):
-            out = dumps(out)
+            out = dumps(out, indent=_response_indent)
 
     # .. a list of models is turned into dicts element by element, json knowing nothing
     # .. about a model ..
@@ -303,11 +306,11 @@ def _serialize_payload(payload:'any_') -> 'any_':
         for item in payload:
             rows.append(item.to_dict())
 
-        out = dumps(rows)
+        out = dumps(rows, indent=_response_indent)
 
     # .. and anything else is left to json.
     else:
-        out = dumps(payload)
+        out = dumps(payload, indent=_response_indent)
 
     return out
 

@@ -27,6 +27,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 # Zato
 from zato.common.audit_log.common import event_payload_table, event_table
 from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
+from zato.common.db_env.plain_sql import PlainStatement
 
 # Zato - Rust
 from zato_common_core.zato_common_core import extract_search_text
@@ -59,7 +60,7 @@ _payload_inserts:'anydict' = {}
 
 for _dialect_name, _insert in ((Type_SQLite, sqlite_insert), (Type_PostgreSQL, postgresql_insert)):
     _payload_insert = _insert(event_payload_table).on_conflict_do_nothing(index_elements=[event_payload_table.c.digest])
-    _payload_inserts[_dialect_name] = _payload_insert
+    _payload_inserts[_dialect_name] = PlainStatement(_payload_insert)
 
 # The payloads of the given digests that are stored already, locked on PostgreSQL against a concurrent deletion.
 # Every transaction locks payloads in the order of their digests, so that no two of them wait for each other.
@@ -102,15 +103,50 @@ def get_payload_digest(data:'str') -> 'strnone':
 
 # ################################################################################################################################
 
-def get_event_rows(batch:'pending_event_list', payloads:'strstrdict') -> 'dictlist':
+def prepare_payloads(batch:'pending_event_list') -> 'None':
+    """ Computes the digest and the search text of the payload of each event of a batch, before the write
+    that stores them, so that the write holds the lock of the database for less time. Each distinct payload
+    of the batch is processed once, however many events carry it.
+    """
+
+    # The digest of each payload of the batch, by the payload, and the search text of each digest
+    digest_by_data:'anydict' = {}
+    search_text_by_digest:'strstrdict' = {}
+
+    for pending in batch:
+
+        data = pending.values['data']
+
+        # A payload already seen in this batch is reused ..
+        if data in digest_by_data:
+            digest = digest_by_data[data]
+
+        # .. while any other one is digested and its words are extracted.
+        else:
+            digest = get_payload_digest(data)
+            digest_by_data[data] = digest
+
+            if digest:
+                search_text_by_digest[digest] = extract_search_text(data)
+
+        pending.payload_digest = digest
+
+        if digest:
+            pending.search_text = search_text_by_digest[digest]
+
+        pending.is_payload_prepared = True
+
+# ################################################################################################################################
+
+def get_event_rows(batch:'pending_event_list', payloads:'strstrdict', search_texts:'strstrdict') -> 'dictlist':
     """ Returns the rows of the event table of a batch of events, which reference their payloads by digest,
-    and adds each payload to the given dict under its digest. The digests are computed here, by the writer,
-    rather than by the callers of the audit log, which run in the thread of the event loop,
-    and each distinct payload of the batch is digested once, however many events carry it.
+    adds each payload to the given dict under its digest, and adds the search text of each prepared payload
+    to the other dict under its digest. The digests of the events that were not prepared are computed here,
+    each distinct payload of the batch once, however many events carry it.
     """
     out:'dictlist' = []
 
-    # The digest of each payload of the batch, by the payload
+    # The digest of each payload of the batch that was not prepared, by the payload
     digest_by_data:'anydict' = {}
 
     for pending in batch:
@@ -118,8 +154,17 @@ def get_event_rows(batch:'pending_event_list', payloads:'strstrdict') -> 'dictli
         event_row = dict(pending.values)
         data = event_row.pop('data')
 
-        if data in digest_by_data:
+        # A prepared event carries its digest and search text ..
+        if pending.is_payload_prepared:
+            digest = pending.payload_digest
+
+            if digest:
+                search_texts[digest] = pending.search_text
+
+        # .. while the digest of any other one is computed now.
+        elif data in digest_by_data:
             digest = digest_by_data[data]
+
         else:
             digest = get_payload_digest(data)
             digest_by_data[data] = digest
@@ -134,8 +179,10 @@ def get_event_rows(batch:'pending_event_list', payloads:'strstrdict') -> 'dictli
 
 # ################################################################################################################################
 
-def store_payloads(connection:'Connection', payloads:'strstrdict') -> 'None':
-    """ Stores the given payloads, keyed by their digests, that are not stored yet, in the transaction of the connection.
+def store_payloads(connection:'Connection', payloads:'strstrdict', search_texts:'strstrdict') -> 'None':
+    """ Stores the given payloads, keyed by their digests, that are not stored yet, in the transaction of the connection,
+    with the search texts of the given dict, keyed by the same digests, and with search texts extracted here
+    for the payloads that dict has none for.
     """
     digests = sorted(payloads)
 
@@ -144,22 +191,29 @@ def store_payloads(connection:'Connection', payloads:'strstrdict') -> 'None':
     result = connection.execute(_stored_payloads_query, {'payload_digests': digests})
     stored_digests = set(result.scalars())
 
-    # .. the words of each of the other ones are extracted ..
+    # .. the words of each of the other ones are extracted, unless they were extracted before the write ..
     rows:'dictlist' = []
 
     for digest in digests:
         if digest not in stored_digests:
             data = payloads[digest]
+
+            if digest in search_texts:
+                search_text = search_texts[digest]
+            else:
+                search_text = extract_search_text(data)
+
             rows.append({
                 'digest': digest,
                 'data': data,
-                'search_text': extract_search_text(data),
+                'search_text': search_text,
             })
 
-    # .. and they are inserted, unless a concurrent transaction on PostgreSQL inserted one of them first.
+    # .. and they are inserted with multi-row statements, unless a concurrent transaction
+    # on PostgreSQL inserted one of them first.
     if rows:
         insert_statement = _payload_inserts[connection.dialect.name]
-        _ = connection.execute(insert_statement, rows)
+        _ = insert_statement.insert_rows(connection, rows)
 
 # ################################################################################################################################
 
@@ -170,7 +224,7 @@ def store_payload(connection:'Connection', data:'str') -> 'strnone':
     out = get_payload_digest(data)
 
     if out:
-        store_payloads(connection, {out: data})
+        store_payloads(connection, {out: data}, {})
 
     return out
 

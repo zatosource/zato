@@ -165,7 +165,7 @@ def _insert_event_rows(connection:'Connection', rows:'dictlist') -> 'None':
 
     # The payloads go to the payload table first, so that the event rows can reference them by their digests ..
     if payloads:
-        store_payloads(connection, payloads)
+        store_payloads(connection, payloads, {})
 
     # .. and the event rows follow them.
     _ = connection.execute(event_table.insert(), event_rows)
@@ -179,7 +179,7 @@ def _insert_event_row(connection:'Connection', values:'stranydict') -> 'any_':
 
     # The payload, if the event has one, goes to the payload table first ..
     if payloads:
-        store_payloads(connection, payloads)
+        store_payloads(connection, payloads, {})
 
     # .. and the event row follows it.
     out = _insert_row(connection, event_table, event_row)

@@ -369,10 +369,12 @@ class _BulkAuditLog(AuditLog):
         # The payloads and the event rows referencing them go first, so everything else can reference their ids
         if to_write:
             payloads:'strstrdict' = {}
-            event_rows = get_event_rows(to_write, payloads)
+            search_texts:'strstrdict' = {}
+
+            event_rows = get_event_rows(to_write, payloads, search_texts)
 
             if payloads:
-                store_payloads(connection, payloads)
+                store_payloads(connection, payloads, search_texts)
 
             _ = connection.execute(event_table.insert(), event_rows)
 

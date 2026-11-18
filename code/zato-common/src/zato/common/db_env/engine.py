@@ -596,9 +596,20 @@ def _get_process_queue(write_key:'str') -> 'ProcessQueue | None':
 
 # ################################################################################################################################
 
-def call_database(engine:'Engine', func:'callable_', *args:'any_') -> 'any_':
+def _prepare_and_run(prepare:'callable_', run:'callable_', run_args:'anytuple') -> 'any_':
+    """ Runs the preparation of a database call and then the call itself, in a thread of the pool.
+    """
+    prepare()
+
+    out = run(*run_args)
+    return out
+
+# ################################################################################################################################
+
+def call_database(engine:'Engine', func:'callable_', *args:'any_', prepare:'callable_ | None'=None) -> 'any_':
     """ Runs one blocking database call, in the thread pool of the gevent hub if the engine needs it, as the work
-    of the mechanism of its caller or as a serialized write if its caller runs within none.
+    of the mechanism of its caller or as a serialized write if its caller runs within none. The preparation,
+    if given, runs in the same thread before the call and outside of the write lock.
     """
     mechanism = get_write_path()
 
@@ -619,12 +630,24 @@ def call_database(engine:'Engine', func:'callable_', *args:'any_') -> 'any_':
         hub = get_hub()
         threadpool = hub.threadpool
 
-        # The thread that waits for the turn of this process blocks in the pool, while the greenlet of the caller is suspended
+        # The thread that waits for the turn of this process blocks in the pool, while the greenlet of the caller is suspended ..
         if process_queue := _get_process_queue(write_key):
-            out = threadpool.apply(process_queue.run_under_lock, (write_lock, run_in_write_path, call_args))
+            run = process_queue.run_under_lock
+            run_args = (write_lock, run_in_write_path, call_args)
         else:
-            out = threadpool.apply(_call_under_lock, (write_lock, run_in_write_path, call_args))
+            run = _call_under_lock
+            run_args = (write_lock, run_in_write_path, call_args)
+
+        # .. and the preparation runs in that thread before it waits for the lock.
+        if prepare:
+            out = threadpool.apply(_prepare_and_run, (prepare, run, run_args))
+        else:
+            out = threadpool.apply(run, run_args)
+
     else:
+        if prepare:
+            prepare()
+
         out = run_in_write_path(*call_args)
 
     return out

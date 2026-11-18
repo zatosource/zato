@@ -6,12 +6,15 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# Zato
+from zato.common.audit_log.payload import prepare_payloads
+from zato.common.pubsub.sql.pending import PendingAtomic, PendingPublication
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.pubsub.sql.pending import PendingPublication, pending_atomic_list, pending_lease_list, \
-        pending_publication_list
+    from zato.common.pubsub.sql.pending import pending_atomic_list, pending_lease_list, pending_publication_list
     from zato.common.typing_ import anylist
 
     # Dummy assignments to satisfy type checkers
@@ -59,6 +62,27 @@ def collect_audit_events(
         out.extend(lease.audit_events)
 
     return out
+
+# ################################################################################################################################
+
+def prepare_audit_payloads(batch:'anylist') -> 'None':
+    """ Prepares the payloads of the audit events that the items of a batch carry before the batch is written,
+    which are those of the publications and of the fenced acknowledgements with their publications.
+    The audit events of a pull are built in the transaction that leases its messages.
+    """
+    events:'anylist' = []
+
+    for item in batch:
+        if isinstance(item, PendingPublication):
+            events.extend(item.audit_events)
+
+        elif isinstance(item, PendingAtomic):
+            events.extend(item.audit_events)
+
+            for pending in item.publications:
+                events.extend(pending.audit_events)
+
+    prepare_payloads(events)
 
 # ################################################################################################################################
 # ################################################################################################################################
