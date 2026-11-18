@@ -541,7 +541,10 @@ mod tests {
         ];
 
         let ordered = to_proxied(merged, "example.com:8080", Some(b"Basic dTpw"));
-        let names: Vec<(&str, &[u8])> = ordered.iter().map(|header| (header.name.as_str(), header.value.as_slice())).collect();
+        let names: Vec<(&str, &[u8])> = ordered
+            .iter()
+            .map(|header| (header.name.as_str(), header.value.as_slice()))
+            .collect();
 
         assert_eq!(
             names,

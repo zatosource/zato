@@ -626,7 +626,11 @@ fn encode_base64(input: &[u8]) -> String {
         out.push(base64_char(joined >> (BASE64_CHAR_BITS * 2)));
 
         // A group short of its second or third byte is padded in place of the characters they would have produced
-        out.push(if second.is_some() { base64_char(joined >> BASE64_CHAR_BITS) } else { BASE64_PADDING });
+        out.push(if second.is_some() {
+            base64_char(joined >> BASE64_CHAR_BITS)
+        } else {
+            BASE64_PADDING
+        });
         out.push(if third.is_some() { base64_char(joined) } else { BASE64_PADDING });
     }
 

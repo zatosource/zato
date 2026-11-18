@@ -253,12 +253,7 @@ fn establish(
 
 /// Sends the `CONNECT` request of a tunnel to the proxy and reads the head of its response, returning
 /// the connection once the proxy opened the tunnel.
-fn open_tunnel(
-    ctx: &IoContext<'_, '_>,
-    peer: &Peer<'_>,
-    mut tcp: TcpStream,
-    connect_request: &[u8],
-) -> Result<TcpStream, TransportError> {
+fn open_tunnel(ctx: &IoContext<'_, '_>, peer: &Peer<'_>, mut tcp: TcpStream, connect_request: &[u8]) -> Result<TcpStream, TransportError> {
     write_all_plain(ctx, &mut tcp, connect_request).map_err(|err| tunnel_io_error(peer, err))?;
 
     let mut buffer = Vec::with_capacity(READ_CHUNK_SIZE);

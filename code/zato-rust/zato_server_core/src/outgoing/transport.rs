@@ -17,9 +17,7 @@ use rustls::ClientConfig;
 use super::address::{self, Target};
 use super::error::{RequestsExceptions, TransportError};
 use super::exchange::{OutgoingRequest, Peer, RawResponse, connect, exchange};
-use super::headers::{
-    HeadInput, HeadLayout, PROXY_AUTHORIZATION_HEADER, build_head, encode_text_value, is_valid_method, is_valid_name,
-};
+use super::headers::{HeadInput, HeadLayout, PROXY_AUTHORIZATION_HEADER, build_head, encode_text_value, is_valid_method, is_valid_name};
 use super::pool::{OriginKey, Pool, ProxyKey};
 use super::stream::IoContext;
 use super::tls::{TlsSettings, build_config};
@@ -432,9 +430,7 @@ impl HTTPTransport {
                 netloc: target.netloc(),
                 proxy_authorization: proxy.authorization.as_deref(),
             },
-            _ => HeadLayout::Origin {
-                host_header: &host_header,
-            },
+            _ => HeadLayout::Origin { host_header: &host_header },
         };
 
         let input = HeadInput {
@@ -459,10 +455,7 @@ impl HTTPTransport {
         };
 
         let route = match (&proxy, &connect_request) {
-            (Some(proxy), Some(connect_request)) => Route::Tunnel {
-                proxy,
-                connect_request,
-            },
+            (Some(proxy), Some(connect_request)) => Route::Tunnel { proxy, connect_request },
             (Some(proxy), None) => Route::Proxied(proxy),
             (None, _) => Route::Direct,
         };
@@ -613,10 +606,7 @@ impl HTTPTransport {
             ),
 
             // urllib3 keeps one pool per https endpoint and proxy, and verifies the endpoint's certificate
-            Route::Tunnel {
-                proxy,
-                connect_request,
-            } => (
+            Route::Tunnel { proxy, connect_request } => (
                 Peer {
                     is_tls: true,
                     host: &proxy.host,

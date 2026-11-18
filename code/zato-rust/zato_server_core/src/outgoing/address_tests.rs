@@ -147,7 +147,10 @@ fn credentials() {
 
     assert!(prepared("http://user@example.com/").authorization.is_none());
     assert!(prepared("http://:@example.com/").authorization.is_none());
-    assert_eq!(prepared("http://user:@example.com/").authorization, Some(b"Basic dXNlcjo=".to_vec()));
+    assert_eq!(
+        prepared("http://user:@example.com/").authorization,
+        Some(b"Basic dXNlcjo=".to_vec())
+    );
 
     assert!(parse("http://u:%C5%81@example.com/").is_none());
 }
