@@ -51,9 +51,17 @@ _default_ports = {
 # error instead of taking turns. Writes are bounded batches, so the wait is short.
 SQLite_Busy_Timeout_Ms = 5000
 
+# The size of a page of a new SQLite database, in bytes. A commit writes each page it changes in full to the write-ahead log,
+# and a commit of one event changes a leaf page of each of the some forty tables and indexes of the audit log.
+SQLite_Page_Size = 1024
+
 # How much of an SQLite database file is read through memory mapping rather than copied in with a read call per page,
 # in bytes. SQLite lowers it to the maximum its build allows.
 SQLite_MMAP_Size = 1024 ** 4
+
+# The size of a page of a new SQLite database, in bytes. A commit writes each page that it modifies to the write-ahead log
+# in full, and a commit of one event modifies a leaf page of each of the tables and indexes of the audit log.
+SQLite_Page_Size = 1024
 
 # How long a PostgreSQL connection stays idle before it sends its first keepalive probe, in seconds - below
 # the idle limits of cloud load balancers and NAT gateways, which drop idle flows silently after 240 to 350 seconds.
@@ -119,9 +127,12 @@ def set_sqlite_pragmas(dbapi_connection:'any_', connection_record:'any_') -> 'No
     each freed page of a large payload again, which doubles the cost of every commit that removes message bodies.
     Foreign keys are enforced, as on PostgreSQL. The file is read through memory mapping, which shares the pages
     of the operating system's cache among all the connections and processes instead of copying each page
-    into the cache of each connection.
+    into the cache of each connection. A new database uses small pages, which reduces the bytes that each commit
+    writes to the write-ahead log.
     """
     cursor = dbapi_connection.cursor()
+    _ = cursor.execute(f'pragma page_size={SQLite_Page_Size}')
+    _ = cursor.execute(f'pragma page_size={SQLite_Page_Size}')
     _ = cursor.execute('pragma journal_mode=wal')
     _ = cursor.execute('pragma synchronous=full')
     _ = cursor.execute('pragma secure_delete=fast')

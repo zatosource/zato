@@ -31,6 +31,7 @@ from zato.common.api import PubSub
 from zato.common.db_env.database import database_config
 from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.db_env.fence import ModuleCtx as FenceCtx
+from zato.common.db_env.sqlite_stats import Env_Stats_Dir as SQLite_Env_Stats_Dir
 from zato.common.hl7.mllp.haproxy import Env_Port_Name as MLLP_Env_Port_Name
 from zato.common.test.process_util import get_process_tree_pids
 from zato.common.typing_ import cast_
@@ -101,6 +102,9 @@ _database_env_names = (
     database_config.env_ssl_verify,
     FenceCtx.Env_Generation_File,
 )
+
+# The variables that configure the monitoring of the databases of a server, which the test process passes on to it
+_monitoring_env_names = (SQLite_Env_Stats_Dir,)
 
 # The logs that are copied out of an environment before it is torn down
 _server_log_file_name        = 'server.log'
@@ -333,7 +337,7 @@ def get_process_environment() -> 'strstrdict':
     """
     out:'strstrdict' = {}
 
-    for name in _system_env_names + _database_env_names:
+    for name in _system_env_names + _database_env_names + _monitoring_env_names:
         if name in os.environ:
             out[name] = os.environ[name]
 

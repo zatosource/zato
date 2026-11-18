@@ -35,6 +35,7 @@ from zato.common.db_env.pg8000_copy import install as install_pg8000_copy
 from zato.common.db_env.pg8000_wire import install as install_pg8000_wire
 from zato.common.db_env.process_queue import ProcessQueue
 from zato.common.db_env.sqlite_checkpoint import set_background_checkpoint_limit, WALCheckpointer
+from zato.common.db_env.sqlite_stats import collect_sqlite_stats, Env_Stats_Dir
 from zato.common.db_env.write_path import check_write_path, get_write_path, Mechanism, run_in_write_path, write_path
 from zato.common.ha.sqlite import holds_log_for_node, ReplicatedConnection, set_replicated_pragmas
 from zato.common.worker_slot import is_config_owner
@@ -185,6 +186,10 @@ def _new_sqlite_file_engine(
         sa_event.listen(engine, 'connect', set_replicated_pragmas)
 
     sa_event.listen(engine, 'connect', set_sqlite_pragmas)
+
+    # .. the statistics of the connections are collected when the environment names a directory for them ..
+    if os.environ.get(Env_Stats_Dir, ''):
+        sa_event.listen(engine, 'checkin', collect_sqlite_stats)
 
     # .. every write runs within one of the mechanisms of the Zato database ..
     sa_event.listen(engine, 'before_cursor_execute', check_write_path)
