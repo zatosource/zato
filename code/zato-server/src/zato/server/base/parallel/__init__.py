@@ -53,6 +53,7 @@ from zato.common.pubsub.subscriptions_store import SubscriptionsStore
 from zato.common.rate_limiting.common import client_address_headers
 from zato.common.rate_limiting.manager import RateLimitingManager
 from zato.common.rule_engine.api import RulesManager
+from zato.common.startup_services import get_startup_services
 from zato.common.typing_ import cast_, intnone, optional, tuple_
 from zato.common.user_config import UserConfig, UserConfigFile
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
@@ -2628,6 +2629,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     def invoke_startup_services(self) -> 'None':
         stanza = 'startup_services'
         _invoke_startup_services('Parallel', stanza, self.fs_server_config, self.repo_location, self.config_dispatcher, None)
+
+        # The services that linked repositories register are invoked the same way as those that server.conf lists
+        registered_services = dict.fromkeys(get_startup_services(), '')
+        registered_config = {stanza: registered_services}
+
+        _invoke_startup_services('Parallel', stanza, registered_config, self.repo_location, self.config_dispatcher, None)
 
 # ################################################################################################################################
 

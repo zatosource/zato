@@ -44,8 +44,9 @@ class CommitQueue:
     while fewer than the maximum number of commits are in progress commits its own item at once. Callers that arrive
     when all of them are in progress wait, and once a commit completes, one of the waiting callers commits
     the items of the next batch, each kind in the order of arrival, for as long as the total weight of the batch
-    is within the maximum per commit. Without a reservation, a batch takes the urgent items first and the other items
-    after them, so that both kinds share one commit. A queue may reserve commits for urgent items in addition
+    is within the maximum per commit. Without a reservation, a batch takes the oldest waiting item, then the urgent items
+    and the other items after them, so that both kinds share one commit and no item waits behind a steady arrival
+    of urgent ones. A queue may reserve commits for urgent items in addition
     to the maximum, and these commit urgent items only, so that an urgent item never waits for a commit of the other
     items in progress. The regular commits of such a queue take the other items only, or the urgent ones if no other
     item is waiting.
@@ -190,9 +191,10 @@ class CommitQueue:
     def _take_batch(self, is_urgent_lane:'bool') -> 'commit_ticket_list':
         """ Takes the tickets of the next commit of a lane out of the waiting ones, until the next ticket would take
         the total weight above the maximum. The reserved lane takes urgent tickets only. Without a reserved lane,
-        the regular lane takes the urgent tickets first and the others after them, and with one, it takes the others
-        if any are waiting and the urgent ones otherwise, so that urgent items arriving without a pause do not
-        hold back the others. The first ticket is always taken, whatever its weight.
+        the regular lane takes the oldest waiting ticket, then the urgent tickets and the others after them, and with one,
+        it takes the others if any are waiting and the urgent ones otherwise, so that urgent items arriving without
+        a pause do not hold back the others. The first ticket is always taken, whatever its weight, and the tickets
+        of a batch are written with the urgent ones first.
         """
         urgent:'commit_ticket_list' = []
         other:'commit_ticket_list' = []
@@ -203,11 +205,24 @@ class CommitQueue:
             else:
                 other.append(ticket)
 
+        taken:'commit_ticket_list' = []
+        total_weight = 0
+
         if is_urgent_lane:
             candidates = urgent
 
+        # Without a reserved lane, the oldest waiting ticket is always committed next, so that an item heavier
+        # than the room left by the urgent items waiting before each commit is committed in turn ..
         elif self.max_urgent_in_flight == 0:
-            candidates = urgent + other
+            oldest = self._waiting[0]
+            taken.append(oldest)
+            total_weight = oldest.weight
+
+            candidates:'commit_ticket_list' = []
+
+            for ticket in urgent + other:
+                if ticket is not oldest:
+                    candidates.append(ticket)
 
         elif other:
             candidates = other
@@ -215,20 +230,24 @@ class CommitQueue:
         else:
             candidates = urgent
 
-        out:'commit_ticket_list' = []
-        total_weight = 0
-
         for ticket in candidates:
 
-            # A ticket that does not fit waits for the next commit, and so do all the tickets behind it ..
-            if out:
+            # .. a ticket that does not fit waits for the next commit, and so do all the tickets behind it ..
+            if taken:
                 if total_weight + ticket.weight > self.max_weight:
                     break
 
-            out.append(ticket)
+            taken.append(ticket)
             total_weight += ticket.weight
 
-        # .. and the tickets taken are not waiting anymore.
+        # .. the tickets taken are written with the urgent ones first ..
+        out:'commit_ticket_list' = []
+
+        for ticket in urgent + other:
+            if ticket in taken:
+                out.append(ticket)
+
+        # .. and they are not waiting anymore.
         for ticket in out:
             self._waiting.remove(ticket)
 

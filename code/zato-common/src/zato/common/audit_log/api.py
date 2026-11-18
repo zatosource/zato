@@ -439,8 +439,11 @@ class AuditLog:
 
     def _write_batch(self, batch:'pending_event_list') -> 'intnone':
         """ Writes one batch of events in a single transaction, along with their attributes,
-        bodies and lineage links. Returns the id of the last event written.
+        bodies and lineage links. Returns the id of the last event written, or None if the audit log was turned off
+        after the events were accepted, in which case none of them is written.
         """
+        if not self.prepare_commit():
+            return None
 
         # Trace point 9: every database transaction with its size and duration
         write_start = monotonic()
@@ -459,11 +462,18 @@ class AuditLog:
 
 # ################################################################################################################################
 
-    def prepare_commit(self) -> 'None':
-        """ Runs what precedes a commit of events, in this process or in the transaction of another writer.
+    def prepare_commit(self) -> 'bool':
+        """ Runs what precedes a commit of events, in this process or in the transaction of another writer,
+        and returns whether the audit log is turned on. The switch is read on each commit, and the writer
+        of a commit for which it is off writes none of its events.
         """
+        out = is_audit_log_enabled()
+
         # The search indexes of the database the events go to are merged in the background
-        _ = get_search_index_merger(self.engine)
+        if out:
+            _ = get_search_index_merger(self.engine)
+
+        return out
 
 # ################################################################################################################################
 
@@ -495,8 +505,6 @@ class AuditLog:
         """
         # A deleted or read-only database file is only visible to a fresh engine
         dispose_stale_sqlite_engine()
-
-        self.prepare_commit()
 
         # The payloads of the batch are prepared before the write lock is taken ..
         prepare = partial(prepare_payloads, batch)

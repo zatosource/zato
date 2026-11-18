@@ -85,4 +85,21 @@ def prepare_audit_payloads(batch:'anylist') -> 'None':
     prepare_payloads(events)
 
 # ################################################################################################################################
+
+def drop_audit_events(batch:'anylist') -> 'None':
+    """ Removes the audit events that the publications and the fenced acknowledgements of a batch were built with,
+    for a batch that commits after the audit log was turned off. The audit events of a pull are built
+    in the transaction that leases its messages, which reads the switch itself.
+    """
+    for item in batch:
+        if isinstance(item, PendingPublication):
+            item.audit_events.clear()
+
+        elif isinstance(item, PendingAtomic):
+            item.audit_events.clear()
+
+            for pending in item.publications:
+                pending.audit_events.clear()
+
+# ################################################################################################################################
 # ################################################################################################################################

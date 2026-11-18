@@ -127,7 +127,8 @@ def is_content_prunable(row:'any_') -> 'bool':
 # ################################################################################################################################
 
 # Sources that keep rows of their own next to their events register a function here that performs their retention
-# in place of the generic one. The function takes the engine, the current time and the source.
+# in place of the generic one. The function takes the engine, the current time, the source and the archiver of the run,
+# through which archive_events archives the events before the function deletes them.
 _source_retention_registry:'strcalldict' = {}
 
 # ################################################################################################################################
@@ -154,7 +155,7 @@ def _archive_value(value:'datetime | bytes') -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _Archiver:
+class Archiver:
     """ Writes rows to a JSON Lines archive file before they are deleted -
     active only when the archive directory is configured in the environment.
     """
@@ -266,7 +267,7 @@ def _get_expired_ids(engine:'Engine', source:'str', cutoff:'datetime') -> 'intli
 
 # ################################################################################################################################
 
-def _archive_events(engine:'Engine', archiver:'_Archiver', ids:'intlist') -> 'None':
+def _archive_events(engine:'Engine', archiver:'Archiver', ids:'intlist') -> 'None':
     """ Archives full event rows, with their payloads, and their bodies before deletion.
     """
     is_wanted_event = event_table.c.id.in_(ids)
@@ -293,6 +294,15 @@ def _archive_events(engine:'Engine', archiver:'_Archiver', ids:'intlist') -> 'No
 
     archiver.write_rows('event', event_rows)
     archiver.write_rows('body', body_rows)
+
+# ################################################################################################################################
+
+def archive_events(engine:'Engine', archiver:'Archiver', ids:'intlist') -> 'None':
+    """ Archives the full rows of the given events with their bodies when the archive directory is configured,
+    for a source with a retention of its own, which calls it before it deletes the events.
+    """
+    if archiver.is_active():
+        _archive_events(engine, archiver, ids)
 
 # ################################################################################################################################
 
@@ -351,7 +361,7 @@ def _delete_events(engine:'Engine', ids:'intlist') -> 'None':
 
 # ################################################################################################################################
 
-def _run_row_retention(engine:'Engine', archiver:'_Archiver', source:'str', cutoff:'datetime') -> 'int':
+def _run_row_retention(engine:'Engine', archiver:'Archiver', source:'str', cutoff:'datetime') -> 'int':
     """ Deletes one source's events older than its row-retention cutoff, chunk by chunk,
     archiving them first when an archive directory is configured.
     """
@@ -415,7 +425,7 @@ def _get_content_candidates(engine:'Engine', source:'str', cutoff:'datetime', la
 
 # ################################################################################################################################
 
-def _archive_content(engine:'Engine', archiver:'_Archiver', ids:'intlist') -> 'None':
+def _archive_content(engine:'Engine', archiver:'Archiver', ids:'intlist') -> 'None':
     """ Archives the content of events whose payloads are about to be pruned.
     """
     is_wanted_event = event_table.c.id.in_(ids)
@@ -472,7 +482,7 @@ def _prune_content(engine:'Engine', ids:'intlist') -> 'None':
 
 # ################################################################################################################################
 
-def _run_content_retention(engine:'Engine', archiver:'_Archiver', source:'str', cutoff:'datetime') -> 'int':
+def _run_content_retention(engine:'Engine', archiver:'Archiver', source:'str', cutoff:'datetime') -> 'int':
     """ Prunes the content of one source's events older than its content cutoff, keeping their
     metadata rows. The source's prunability predicate decides what is safe - unacknowledged
     or failed messages keep their content regardless of age.
@@ -519,7 +529,7 @@ def _run_content_retention(engine:'Engine', archiver:'_Archiver', source:'str', 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _run_source_retention(engine:'Engine', archiver:'_Archiver', source:'str', now:'datetime') -> 'None':
+def _run_source_retention(engine:'Engine', archiver:'Archiver', source:'str', now:'datetime') -> 'None':
     """ Enforces both retention tiers for one source - content is pruned early while event rows,
     attributes and lineage survive until the row cutoff, so the audit trail outlives the payloads.
     """
@@ -555,7 +565,7 @@ def run_retention(engine:'Engine', now:'datetime') -> 'None':
     """ Enforces retention source by source, because each source is kept for its own number of days -
     a health check's pings age out well before the traffic events do.
     """
-    archiver = _Archiver(now)
+    archiver = Archiver(now)
     sources = _get_sources(engine)
 
     # A source with a retention of its own keeps rows outside the event table too, so it runs even without events.
@@ -568,7 +578,7 @@ def run_retention(engine:'Engine', now:'datetime') -> 'None':
 
             # A source with a retention of its own runs it ..
             if source_retention := _source_retention_registry.get(source):
-                source_retention(engine, now, source)
+                source_retention(engine, now, source, archiver)
 
             # .. and any other source has its events deleted the generic way.
             else:

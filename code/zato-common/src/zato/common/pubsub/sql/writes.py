@@ -26,7 +26,7 @@ from zato.common.db_env.outage import OutageTracker
 from zato.common.db_env.pg8000_copy import copy_rows
 from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.db_env.database import get_database_engine
-from zato.common.pubsub.sql.audit_events import collect_audit_events, prepare_audit_payloads
+from zato.common.pubsub.sql.audit_events import collect_audit_events, drop_audit_events, prepare_audit_payloads
 from zato.common.pubsub.sql.config import get_commit_max_messages, get_commits_in_flight, get_urgent_commits_in_flight
 from zato.common.pubsub.sql.fenced_ack import check_fenced, delete_fenced, PubSubAckConflict
 from zato.common.pubsub.sql.payloads import drop_payloads, get_chunks, get_message_ids
@@ -222,9 +222,11 @@ class PubSubWriter:
         """
         engine = get_database_engine()
 
-        # The audit events of the batch commit in its transaction, with the payloads of those built already
-        # prepared before the write lock is taken ..
-        self.audit_log.prepare_commit()
+        # The audit events of the batch commit in its transaction, unless the audit log was turned off after they were built ..
+        if not self.audit_log.prepare_commit():
+            drop_audit_events(batch)
+
+        # .. with the payloads of those built already prepared before the write lock is taken ..
         prepare = partial(prepare_audit_payloads, batch)
 
         try:

@@ -484,6 +484,28 @@ class TestCommitQueue:
         assert queue._take_batch(False) == [urgent, other]
         assert queue._waiting == []
 
+    def test_heavy_event_is_not_held_back_by_urgent_ones(self) -> 'None':
+        writer = _QueueWriter()
+        queue = CommitQueue(write_batch=writer.write_batch, max_weight=_max_events)
+
+        # A heavy event that is not urgent waits first, and urgent ones wait behind it ..
+        heavy = CommitTicket(_new_pending(0), _max_events, False)
+        first_urgent = CommitTicket(_new_pending(1), _event_weight, True)
+        second_urgent = CommitTicket(_new_pending(2), _event_weight, True)
+        queue._waiting.extend([heavy, first_urgent, second_urgent])
+
+        # .. the next commit takes the heavy one alone, because no urgent event fits next to it ..
+        assert queue._take_batch(False) == [heavy]
+
+        # .. and a heavy event that waits behind urgent ones is committed once it is the oldest one waiting.
+        another_heavy = CommitTicket(_new_pending(3), _max_events, False)
+        third_urgent = CommitTicket(_new_pending(4), _event_weight, True)
+        queue._waiting.extend([another_heavy, third_urgent])
+
+        assert queue._take_batch(False) == [first_urgent, second_urgent, third_urgent]
+        assert queue._take_batch(False) == [another_heavy]
+        assert queue._waiting == []
+
     def test_abandoned_waiter_is_not_written(self) -> 'None':
         writer = _QueueWriter()
         writer.release_event = Event()
