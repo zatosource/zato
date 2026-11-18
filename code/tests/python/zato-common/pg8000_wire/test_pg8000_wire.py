@@ -24,7 +24,7 @@ from zato_pg_wire.zato_pg_wire import RowDecoder
 
 # Zato
 from zato.common.db_env import pg8000_wire
-from zato.common.db_env.pg8000_wire import deferred_replies
+from zato.common.db_env.pg8000_deferred import deferred_replies
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################

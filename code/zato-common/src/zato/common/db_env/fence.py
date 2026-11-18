@@ -23,6 +23,7 @@ from weakref import WeakKeyDictionary
 from sqlalchemy import event
 
 # Zato
+from zato.common.db_env.pg8000_deferred import check_rows
 from zato.common.db_env.write_path import get_write_path, Mechanism
 from zato.common.defaults import default_env_base_dir
 from zato.common.pubsub.sql.replaced import raise_replaced
@@ -67,9 +68,9 @@ _state_key = 'zato_pubsub_generation_state'
 _state_checked = 'checked'
 _state_locked = 'locked'
 
-# The statements that a read begins with - everything else writes.
+# The statements that a read begins with - everything else writes, as does a read that locks the rows it selects.
 _read_prefix = 'SELECT'
-_write_clause = 'FOR UPDATE'
+_locking_clauses = (' FOR UPDATE', ' FOR NO KEY UPDATE', ' FOR SHARE', ' FOR KEY SHARE')
 
 # What a transaction runs before its first read and before its first write.
 _check_query = 'SELECT 1 FROM zato_active WHERE id = 1 AND generation = %s AND owner = %s'
@@ -145,8 +146,14 @@ def _is_write(statement:'str') -> 'bool':
 
     if prefix.upper() != _read_prefix:
         out = True
+
     else:
-        out = _write_clause in statement
+        out = False
+
+        for clause in _locking_clauses:
+            if clause in statement:
+                out = True
+                break
 
     return out
 
@@ -245,15 +252,21 @@ class GenerationGuard:
             query = _check_query
             new_state = _state_checked
 
+        # Within deferred_replies, the row is confirmed once the reply is read, which precedes the commit.
         cursor.execute(query, (self.generation, self.owner))
-        row = cursor.fetchone()
+        check_rows(connection, cursor, self._confirm_rows)
 
-        if row is None:
+        connection.info[_state_key] = new_state
+
+# ################################################################################################################################
+
+    def _confirm_rows(self, row_count:'int') -> 'None':
+        """ Confirms that the row of the generation and the owner of this server was found.
+        """
+        if not row_count:
             self.is_replaced = True
             logger.warning('Pub/sub generation %s was replaced, this server stops its pub/sub work', self.generation)
             self._raise_replaced()
-
-        connection.info[_state_key] = new_state
 
 # ################################################################################################################################
 # ################################################################################################################################

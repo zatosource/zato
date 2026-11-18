@@ -36,13 +36,15 @@ from zato_common_core.zato_common_core import extract_search_text
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.engine import Connection
+    from sqlalchemy.engine import Connection, CursorResult
     from zato.common.audit_log.pending import pending_event_list
-    from zato.common.typing_ import anydict, dictlist, strlist, strnone, strstrdict
+    from zato.common.typing_ import any_, anydict, dictlist, strlist, strnone, strstrdict
 
     # Dummy assignments to satisfy type checkers
+    any_ = any_
     anydict = anydict
     Connection = Connection
+    CursorResult = CursorResult
     pending_event_list = pending_event_list
     dictlist = dictlist
     strstrdict = strstrdict
@@ -60,6 +62,7 @@ _payload_inserts:'anydict' = {}
 
 for _dialect_name, _insert in ((Type_SQLite, sqlite_insert), (Type_PostgreSQL, postgresql_insert)):
     _payload_insert = _insert(event_payload_table).on_conflict_do_nothing(index_elements=[event_payload_table.c.digest])
+    _payload_insert = _payload_insert.inline()
     _payload_inserts[_dialect_name] = PlainStatement(_payload_insert)
 
 # The payloads of the given digests that are stored already, locked on PostgreSQL against a concurrent deletion.
@@ -185,14 +188,37 @@ def store_payloads(connection:'Connection', payloads:'strstrdict', search_texts:
     with the search texts of the given dict, keyed by the same digests, and with search texts extracted here
     for the payloads that dict has none for.
     """
+    stored = find_stored_payloads(connection, payloads)
+    insert_new_payloads(connection, stored, payloads, search_texts)
+
+# ################################################################################################################################
+
+def find_stored_payloads(connection:'Connection', payloads:'strstrdict') -> 'CursorResult[any_]':
+    """ Finds which of the given payloads, keyed by their digests, are stored already, and on PostgreSQL locks them,
+    so that no deletion removes them before this transaction commits the events that reference them.
+    The rows of the result are read by insert_new_payloads.
+    """
     digests = sorted(payloads)
 
-    # The payloads stored already are found first, and on PostgreSQL they are locked,
-    # so that no deletion removes them before this transaction commits the events that reference them ..
-    result = _stored_payloads_statement.execute(connection, {'payload_digests': digests})
-    stored_digests = set(result.scalars())
+    out = _stored_payloads_statement.execute(connection, {'payload_digests': digests})
+    return out
 
-    # .. the words of each of the other ones are extracted, unless they were extracted before the write ..
+# ################################################################################################################################
+
+def insert_new_payloads(
+    connection:'Connection',
+    stored:'CursorResult[any_]',
+    payloads:'strstrdict',
+    search_texts:'strstrdict',
+    ) -> 'None':
+    """ Inserts the given payloads, keyed by their digests, that the result of find_stored_payloads does not list,
+    with the search texts of the given dict, keyed by the same digests, and with search texts extracted here
+    for the payloads that dict has none for.
+    """
+    digests = sorted(payloads)
+    stored_digests = set(stored.scalars())
+
+    # The words of each payload not stored yet are extracted, unless they were extracted before the write ..
     rows:'dictlist' = []
 
     for digest in digests:

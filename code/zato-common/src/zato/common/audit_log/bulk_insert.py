@@ -15,7 +15,7 @@ from sqlalchemy import aggregate_order_by, bindparam, func, select
 from zato.common.audit_log.attachment import build_attachment_rows
 from zato.common.audit_log.attr_rows import build_attr_rows
 from zato.common.audit_log.common import event_attr_table, event_body_table, event_link_table, event_table
-from zato.common.audit_log.payload import get_event_rows, store_payloads
+from zato.common.audit_log.payload import find_stored_payloads, get_event_rows, insert_new_payloads
 from zato.common.crypto.api import CryptoManager
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.pg8000_copy import copy_rows
@@ -26,13 +26,15 @@ from zato.common.json_internal import loads
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.engine import Connection, Dialect
+    from sqlalchemy.engine import Connection, CursorResult, Dialect
     from sqlalchemy.sql.schema import Table
     from zato.common.audit_log.pending import pending_event_list
-    from zato.common.typing_ import anydict, anylist, dictlist, intlist, strstrdict
+    from zato.common.typing_ import any_, anydict, anylist, dictlist, intlist, strstrdict
 
     # Dummy assignments to satisfy type checkers
+    any_ = any_
     anylist = anylist
+    CursorResult = CursorResult
     strstrdict = strstrdict
     Connection = Connection
     Dialect = Dialect
@@ -74,14 +76,23 @@ def reserves_ids(dialect:'Dialect') -> 'bool':
 
 # ################################################################################################################################
 
-def _insert_with_reserved_ids(connection:'Connection', rows:'dictlist') -> 'intlist':
-    """ Reserves one id for each event row from the sequence of the table, assigns them to the rows in ascending order
-    and inserts the rows with the ids they were assigned.
+def _reserve_ids(connection:'Connection', row_count:'int') -> 'CursorResult[any_] | None':
+    """ Reserves the given number of ids from the sequence of the event table, on a database that reserves them,
+    and returns the result whose rows are the ids, which _insert_with_reserved_ids reads.
     """
-    row_count = len(rows)
-    result = _reserve_event_ids_statement.execute(connection, {'row_count': row_count})
+    if reserves_ids(connection.dialect):
+        out = _reserve_event_ids_statement.execute(connection, {'row_count': row_count})
+    else:
+        out = None
 
-    out:'intlist' = list(result.scalars())
+    return out
+
+# ################################################################################################################################
+
+def _insert_with_reserved_ids(connection:'Connection', rows:'dictlist', reserved:'CursorResult[any_]') -> 'intlist':
+    """ Assigns the reserved ids to the event rows in ascending order and inserts the rows with the ids they were assigned.
+    """
+    out:'intlist' = list(reserved.scalars())
     out.sort()
 
     id_rows:'dictlist' = []
@@ -122,23 +133,55 @@ def _insert_by_commit_id(connection:'Connection', rows:'dictlist', commit_id:'st
 
 # ################################################################################################################################
 
-def insert_events(connection:'Connection', rows:'dictlist', commit_id:'str') -> 'intlist':
+def _insert_events(
+    connection:'Connection',
+    rows:'dictlist',
+    reserved:'CursorResult[any_] | None',
+    commit_id:'str',
+    ) -> 'intlist':
     """ Inserts the event rows of one batch and returns their ids in the order of the rows.
     """
 
-    # A single event receives its id from the insert itself ..
-    if len(rows) == 1:
+    # A database with sequences inserts the rows with the ids it reserved ..
+    if reserved is not None:
+        out = _insert_with_reserved_ids(connection, rows, reserved)
+
+    # .. a single event receives its id from the insert itself on any other one ..
+    elif len(rows) == 1:
         inserted = _insert_event_statement.insert_rows(connection, rows)
         out = [inserted[0].id]
 
-    # .. a database with sequences reserves the ids before the insert ..
-    elif reserves_ids(connection.dialect):
-        out = _insert_with_reserved_ids(connection, rows)
-
-    # .. and any other one selects them by the id of the commit.
+    # .. and more events select their ids by the id of the commit.
     else:
         out = _insert_by_commit_id(connection, rows, commit_id)
 
+    return out
+
+# ################################################################################################################################
+
+def insert_events(
+    connection:'Connection',
+    rows:'dictlist',
+    payloads:'strstrdict',
+    search_texts:'strstrdict',
+    commit_id:'str',
+    ) -> 'intlist':
+    """ Stores the payloads of a batch, keyed by their digests, that are not stored yet, then inserts the event rows
+    that reference them, and returns the ids of the events in the order of the rows. Within deferred_replies,
+    the lookup of the stored payloads and the reservation of the ids are sent before either result is read,
+    so their replies arrive together.
+    """
+    if payloads:
+        stored = find_stored_payloads(connection, payloads)
+    else:
+        stored = None
+
+    reserved = _reserve_ids(connection, len(rows))
+
+    if stored is not None:
+        insert_new_payloads(connection, stored, payloads, search_texts)
+
+    out = _insert_events(connection, rows, reserved, commit_id)
     return out
 
 # ################################################################################################################################
@@ -153,7 +196,7 @@ def insert_rows(connection:'Connection', table:'Table', rows:'dictlist') -> 'Non
         copy_rows(connection, table, rows)
     else:
         if not (insert_statement := _insert_statements.get(table.name)):
-            insert_statement = PlainStatement(table.insert())
+            insert_statement = PlainStatement(table.insert().inline())
             _insert_statements[table.name] = insert_statement
 
         _ = insert_statement.insert_rows(connection, rows)
@@ -174,16 +217,13 @@ def insert_pending_events(connection:'Connection', batch:'pending_event_list') -
 
     event_rows = get_event_rows(batch, payloads, search_texts)
 
-    if payloads:
-        store_payloads(connection, payloads, search_texts)
-
     # The companion rows of all the events, one list per table
     attr_rows:'anylist' = []
     body_rows:'anylist' = []
     link_rows:'anylist' = []
 
     # .. the event rows come next, so everything else can reference their ids ..
-    out = insert_events(connection, event_rows, commit_id)
+    out = insert_events(connection, event_rows, payloads, search_texts, commit_id)
 
     for pending, event_id in zip(batch, out):
 
