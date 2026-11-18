@@ -280,6 +280,8 @@ spec:
               value: ${zato_binary}
             - name: Zato_Test_Server_Directory
               value: ${server_directory}
+            - name: Zato_Deploy_From
+              value: ${deploy_dir}
           ports:
             - name: http
               containerPort: ${server_port}

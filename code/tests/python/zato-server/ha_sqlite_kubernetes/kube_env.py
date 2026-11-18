@@ -428,6 +428,7 @@ def create_cluster_session() -> 'KubeSession':
         'run_dir': run_dir,
         'volume_dir': ClusterCtx.Volume_Dir,
         'data_mount': data_mount,
+        'deploy_dir': base.deploy_dir,
         'template_dir': base.template_dir,
         'start_script': NodesCtx.Start_Script,
         'pubsub_db_secret': ModuleCtx.PubSub_DB_Secret,

@@ -653,7 +653,6 @@ test-rest-outgoing: ## Outgoing REST invocation tests, in-process and through a 
 
 test-rest-perf: ## Outgoing REST invocations measured as server CPU time per invocation.
 	$(Zato_Log_Reset)
-	$(MAKE) test-durability-static $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/rest_outgoing_perf/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest_outgoing_perf -W ignore::DeprecationWarning \
@@ -668,7 +667,6 @@ test-rest-channel: ## REST and SOAP channel invocation tests through a running s
 
 test-rest-channel-perf: ## REST and SOAP channels measured as server CPU time per request.
 	$(Zato_Log_Reset)
-	$(MAKE) test-durability-static $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/rest_channel_perf/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest_channel_perf -W ignore::DeprecationWarning \
@@ -919,7 +917,6 @@ Zato_Test_Soak_Resume_File := $(CURDIR)/code/tests/.test-soak-resume
 
 test-soak-pubsub: ## The pub/sub soak tests - the stability suite on every database mode.
 	$(Zato_Log_Reset)
-	$(MAKE) test-durability-static $(Zato_Log)
 	for mode in $(Zato_Test_PubSub_Stability_Modes); do \
 		Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 			$(CURDIR)/code/tests/python/zato-server/pubsub_stability/ $(Zato_Test_Soak_Only) \
@@ -929,7 +926,6 @@ test-soak-pubsub: ## The pub/sub soak tests - the stability suite on every datab
 
 test-soak-scheduler-failover: ## The soak test of the active-passive scheduler failover.
 	$(Zato_Log_Reset)
-	$(MAKE) test-durability-static $(Zato_Log)
 	$(MAKE) scheduler-build $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/scheduler_failover/ $(Zato_Test_Soak_Only) \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_scheduler_failover_soak -W ignore::DeprecationWarning \
@@ -937,7 +933,6 @@ test-soak-scheduler-failover: ## The soak test of the active-passive scheduler f
 
 test-soak-ha-sqlite: ## The soak test of the active-standby pair on SQLite.
 	$(Zato_Log_Reset)
-	$(MAKE) test-durability-static $(Zato_Log)
 	$(MAKE) ha-node-build $(Zato_Log)
 	$(MAKE) scheduler-build $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/ha_sqlite/ $(Zato_Test_Soak_Only) \
@@ -946,7 +941,6 @@ test-soak-ha-sqlite: ## The soak test of the active-standby pair on SQLite.
 
 test-soak-ha-postgresql: ## The soak test of the active-standby pair on PostgreSQL.
 	$(Zato_Log_Reset)
-	$(MAKE) test-durability-static $(Zato_Log)
 	$(MAKE) ha-node-build $(Zato_Log)
 	$(MAKE) scheduler-build $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/ha_postgresql/ $(Zato_Test_Soak_Only) \
@@ -1030,7 +1024,6 @@ Zato_Test_PubSub_Perf_Step = \
 test-pubsub-perf: ## Pub/sub performance through a live server - concurrent publishers and subscribers, each subscriber with its own subscription, with exactly-once delivery, worker kills and rising concurrency, on SQLite and PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	@if [ -n "$(RESTART)" ]; then rm -f $(Zato_Test_PubSub_Perf_Resume_File); fi
 	$(Zato_Log_Reset)
-	$(MAKE) test-durability-static $(Zato_Log)
 	@resume=''; \
 	if [ -f $(Zato_Test_PubSub_Perf_Resume_File) ]; then \
 		resume=$$(cat $(Zato_Test_PubSub_Perf_Resume_File)); \
@@ -1044,7 +1037,6 @@ Zato_Test_PubSub_Perf_Round_Trips := 0.5 1.0 2.0
 
 test-pubsub-perf-latency: ## Pub/sub capacity through a live server on PostgreSQL, with each round-trip time of a managed database added to the network of the database container.
 	$(Zato_Log_Reset)
-	$(MAKE) test-durability-static $(Zato_Log)
 	for round_trip in $(Zato_Test_PubSub_Perf_Round_Trips); do \
 		Zato_Test_PubSub_DB_Mode=postgresql Zato_Test_PubSub_DB_Round_Trip_Ms=$$round_trip ZATO_TEST_BASE_DIR=$(CURDIR) \
 		$(ZATO_PY) -m pytest -W ignore::DeprecationWarning \
@@ -1179,7 +1171,7 @@ test-durability-fast: ## The static scans and the engine settings of durability,
 	$(Zato_Log_Reset)
 	@$(foreach step,$(Zato_Test_Durability_Fast_Steps),$(call Zato_Test_Durability_Run_Once,$(step)))
 
-test-durability-static: ## The static scans of durability, which every performance and soak target runs before its suites.
+test-durability-static: ## The static scans of durability.
 	$(Zato_Log_Reset)
 	@$(call Zato_Test_Durability_Run_Once,static)
 

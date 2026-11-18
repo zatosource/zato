@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 # Zato
 from ha_authority import Authority
 from nodes import ModuleCtx as NodesCtx, Node, NodeHook, Timers
-from pair import add_service_row, import_jobs, ModuleCtx as PairCtx, render_job_file
+from pair import ModuleCtx as PairCtx, render_job_file
 from topology import Backend, create_network, HAProxy, Lease, ModuleCtx as TopologyCtx, prepare_runtime_dir, Referee, \
     remove_network, save_container_logs
 from zato.common.crypto.api import CryptoManager
@@ -84,6 +84,16 @@ class ModuleCtx:
     # The roles of a pair that is ready
     Role_Standby_In_Sync = 'StandbyInSync'
 
+    # The variable through which zato start receives the directory that the server deploys from each time it starts -
+    # the services of its code directory first and then the enmasse files of its enmasse directory.
+    Env_Deploy_From = 'Zato_Deploy_From'
+
+    # The directory that both nodes deploy from, its directories and the enmasse file with the scheduler jobs
+    Deploy_Dir_Name     = 'deploy'
+    Deploy_Code_Dir     = 'code'
+    Deploy_Enmasse_Dir  = 'enmasse'
+    Jobs_File_Name      = 'jobs.yaml'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -100,6 +110,7 @@ class HASession:
     invoke_password: 'str'
     receivers: 'anydict'
     server_directories: 'strstrdict'
+    deploy_dir: 'str'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -227,8 +238,8 @@ def create_quickstart_environment(
     rendered_yaml:'str',
     invoke_password:'str',
 ) -> 'str':
-    """ Creates a quickstart environment in a directory, with the given home directory, the objects of pub/sub,
-    the scheduler jobs and the service that the jobs invoke, and returns its server directory.
+    """ Creates a quickstart environment in a directory, with the given home directory and the objects of pub/sub,
+    and returns its server directory.
     """
     os.makedirs(os.path.join(home_dir, 'env', 'qs-1'), exist_ok=True)
 
@@ -240,22 +251,11 @@ def create_quickstart_environment(
         logger=logger,
         zato_bin=NodesCtx.Zato_Binary,
         invoke_password=invoke_password,
-        rendered_yaml='',
+        rendered_yaml=rendered_yaml,
         quickstart_prefix='quickstart-',
         extra_env=extra_env,
         quickstart_parent_dir=directory,
     )
-
-    quickstart_directory = os.path.dirname(out)
-
-    # The service of the jobs is deployed from the pickup directory as the server starts,
-    # and its row exists before the jobs that invoke it are imported.
-    pickup_dir = os.path.join(out, 'pickup', 'incoming', 'services')
-    service_path = os.path.join(ModuleCtx.Scheduler_Failover_Dir, PairCtx.Service_File_Name)
-    _ = shutil.copy(service_path, pickup_dir)
-
-    add_service_row(quickstart_directory)
-    import_jobs(quickstart_directory, out, rendered_yaml, extra_env)
 
     patch_server_conf(out, NodesCtx.Server_Port, True)
 
@@ -264,9 +264,34 @@ def create_quickstart_environment(
 # ################################################################################################################################
 # ################################################################################################################################
 
+def create_deploy_dir(run_dir:'str', job_yaml:'str') -> 'str':
+    """ Creates the directory that both nodes deploy from each time their servers start - the service of the jobs
+    in its code directory and the jobs in its enmasse directory, which the server imports once the service is deployed.
+    """
+    out = os.path.join(run_dir, ModuleCtx.Deploy_Dir_Name)
+
+    code_dir = os.path.join(out, ModuleCtx.Deploy_Code_Dir)
+    enmasse_dir = os.path.join(out, ModuleCtx.Deploy_Enmasse_Dir)
+
+    os.makedirs(code_dir)
+    os.makedirs(enmasse_dir)
+
+    service_path = os.path.join(ModuleCtx.Scheduler_Failover_Dir, PairCtx.Service_File_Name)
+    _ = shutil.copy2(service_path, code_dir)
+
+    jobs_path = os.path.join(enmasse_dir, ModuleCtx.Jobs_File_Name)
+
+    with open(jobs_path, 'w') as jobs_file:
+        _ = jobs_file.write(job_yaml)
+
+    return out
+
+# ################################################################################################################################
+
 def start_receivers(session:'HASession', host:'str') -> 'tuple[str, str]':
-    """ Creates the credentials of a session and starts its receivers on the given address, returning the enmasse file
-    with the objects of pub/sub and the scheduler jobs, and the password of the service that the jobs invoke.
+    """ Creates the credentials of a session, starts its receivers on the given address and creates the directory
+    that the nodes deploy the scheduler jobs from, returning the enmasse file with the objects of pub/sub
+    and the password of the service that the jobs invoke.
     """
     session.publisher_password = 'test.pub.' + CryptoManager.generate_hex_string()
     session.puller_password = 'test.pull.' + CryptoManager.generate_hex_string()
@@ -296,13 +321,13 @@ def start_receivers(session:'HASession', host:'str') -> 'tuple[str, str]':
     pubsub_yaml = render_template(ModuleCtx.Template_Path, placeholders)
     pubsub_yaml = pubsub_yaml.replace(ModuleCtx.Template_Receiver_Host, f'http://{host}:')
 
-    # .. and both nodes import one file with the objects of pub/sub and the scheduler jobs.
+    # .. both nodes import the objects of pub/sub with their environments, and the scheduler jobs as their servers start.
     job_yaml, _ = render_job_file(placeholders)
-    rendered_yaml = pubsub_yaml + '\n' + job_yaml
+    session.deploy_dir = create_deploy_dir(session.run_dir, job_yaml)
 
     invoke_password = 'test.invoke.' + CryptoManager.generate_hex_string()
 
-    out = (rendered_yaml, invoke_password)
+    out = (pubsub_yaml, invoke_password)
     return out
 
 # ################################################################################################################################
@@ -423,6 +448,8 @@ def start_pair(
     node_ips:'list[str]' = []
 
     for node in node_list:
+        node.env[ModuleCtx.Env_Deploy_From] = session.deploy_dir
+
         for hook in hooks:
             hook.before_start(node)
 
