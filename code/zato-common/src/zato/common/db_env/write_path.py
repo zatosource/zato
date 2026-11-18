@@ -84,6 +84,7 @@ class ModuleCtx:
         'event_dedup',
         'event_link',
         'event_open',
+        'event_payload',
     })
 
     Audit_Mechanisms = frozenset({

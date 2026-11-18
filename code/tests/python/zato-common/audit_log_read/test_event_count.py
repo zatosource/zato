@@ -131,7 +131,7 @@ def _direct_inserts() -> 'None':
 # ################################################################################################################################
 
 def _updates_in_place() -> 'None':
-    """ Changes events in place, one by one and many at once, in counted columns and in the data alone.
+    """ Changes events in place, one by one and many at once, in counted columns and in the payload alone.
     """
     rng = Random(20261101)
 
@@ -159,11 +159,11 @@ def _updates_in_place() -> 'None':
     _update(changed_ids, source=AuditSource.Scheduler, event_type=AuditEvent.Job_Executed, object_name=None)
     _ = run_blocking(_assert_counts_exact)
 
-    # .. and the data alone.
+    # .. and the payload alone.
     data_ids = rng.sample(ids, 300)
     count_rows_before = run_blocking(read_count_rows)
 
-    _update(data_ids, data='')
+    _update(data_ids, payload_digest=None)
     _ = run_blocking(_assert_counts_exact)
 
     count_rows_after = run_blocking(read_count_rows)

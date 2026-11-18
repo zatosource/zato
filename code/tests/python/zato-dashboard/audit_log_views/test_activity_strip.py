@@ -112,7 +112,7 @@ def _strip_events(tmp_path:'any_') -> 'envgen':
             _new_event_row(_other_channel_name, _middle_time, AuditOutcome.OK),
         ]
 
-        _ = seed_event_rows(engine, event_rows)
+        seed_event_rows(engine, event_rows)
 
         yield
 

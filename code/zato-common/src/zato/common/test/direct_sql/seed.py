@@ -16,7 +16,7 @@ from typing import NamedTuple
 # Zato
 from zato.common.audit_log.api import AuditLog, event_table
 from zato.common.audit_log.bulk_insert import insert_pending_events
-from zato.common.audit_log.payload import store_payload
+from zato.common.audit_log.payload import get_payload_digest, store_payloads
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.database import get_database_engine
 from zato.common.db_env.engine import call_database
@@ -33,13 +33,14 @@ if 0:
     from sqlalchemy.engine import Connection, Engine
     from sqlalchemy.orm import Session
     from zato.common.audit_log.pending import pending_event_list
-    from zato.common.typing_ import any_, anylist, anytuple, callable_, dictlist, intlist, stranydict, strtuple
+    from zato.common.typing_ import any_, anylist, anytuple, callable_, dictlist, intlist, stranydict, strstrdict, strtuple
 
     any_ = any_
     anylist = anylist
     datetime = datetime
     anytuple = anytuple
     stranydict = stranydict
+    strstrdict = strstrdict
     strtuple = strtuple
     intlist = intlist
     pending_event_list = pending_event_list
@@ -134,43 +135,71 @@ def seed_row(engine:'Engine', table:'Table', values:'stranydict') -> 'any_':
 
 # ################################################################################################################################
 
-def _insert_event_rows(connection:'Connection', rows:'dictlist') -> 'anylist':
+def _get_event_row(values:'stranydict', payloads:'strstrdict') -> 'stranydict':
+    """ Returns the row of the event table of the given values, which references its payload, if the values have one,
+    by its digest, and adds the payload to the given dict under that digest.
+    """
+    out = dict(values)
+    digest = None
 
-    out:'anylist' = []
+    if 'data' in out:
+        data = out.pop('data')
+        digest = get_payload_digest(data)
 
-    for values in rows:
+        if digest:
+            payloads[digest] = data
 
-        # The payload, if the event has one, goes to the payload table and the event row references it by its digest ..
-        event_row = dict(values)
-
-        if 'data' in event_row:
-            data = event_row.pop('data')
-            event_row['payload_digest'] = store_payload(connection, data)
-
-        # .. and the event row follows it.
-        event_id = _insert_row(connection, event_table, event_row)
-        out.append(event_id)
-
+    out['payload_digest'] = digest
     return out
 
 # ################################################################################################################################
 
-def seed_event_rows(engine:'Engine', rows:'dictlist') -> 'anylist':
-    """ Inserts rows of the event table, each with its payload under data stored in the payload table, in one transaction,
-    in turn with the other writes to the database, and returns their primary keys in the order of the rows.
-    """
-    out = run_seed(engine, _insert_event_rows, rows)
+def _insert_event_rows(connection:'Connection', rows:'dictlist') -> 'None':
+
+    payloads:'strstrdict' = {}
+    event_rows:'dictlist' = []
+
+    for values in rows:
+        event_row = _get_event_row(values, payloads)
+        event_rows.append(event_row)
+
+    # The payloads go to the payload table first, so that the event rows can reference them by their digests ..
+    if payloads:
+        store_payloads(connection, payloads)
+
+    # .. and the event rows follow them.
+    _ = connection.execute(event_table.insert(), event_rows)
+
+# ################################################################################################################################
+
+def _insert_event_row(connection:'Connection', values:'stranydict') -> 'any_':
+
+    payloads:'strstrdict' = {}
+    event_row = _get_event_row(values, payloads)
+
+    # The payload, if the event has one, goes to the payload table first ..
+    if payloads:
+        store_payloads(connection, payloads)
+
+    # .. and the event row follows it.
+    out = _insert_row(connection, event_table, event_row)
     return out
+
+# ################################################################################################################################
+
+def seed_event_rows(engine:'Engine', rows:'dictlist') -> 'None':
+    """ Inserts rows of the event table, each with its payload under data, if it has one, stored in the payload table,
+    in one transaction, in turn with the other writes to the database.
+    """
+    _ = run_seed(engine, _insert_event_rows, rows)
 
 # ################################################################################################################################
 
 def seed_event_row(engine:'Engine', values:'stranydict') -> 'any_':
-    """ Inserts one row of the event table, with its payload under data stored in the payload table, in a transaction
-    of its own, in turn with the other writes to the database, and returns its primary key.
+    """ Inserts one row of the event table, with its payload under data, if it has one, stored in the payload table,
+    in a transaction of its own, in turn with the other writes to the database, and returns its primary key.
     """
-    event_ids = seed_event_rows(engine, [values])
-
-    out = event_ids[0]
+    out = run_seed(engine, _insert_event_row, values)
     return out
 
 # ################################################################################################################################

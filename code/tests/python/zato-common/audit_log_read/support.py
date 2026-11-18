@@ -32,7 +32,7 @@ from zato.common.audit_log.search_index import register_search_indexes
 from zato.common.audit_log.writes import execute_audit_write
 from zato.common.db_env.engine import call_database, create_schemas
 from zato.common.test.direct_sql.reset import reset_table_rows
-from zato.common.test.direct_sql.seed import seed_rows
+from zato.common.test.direct_sql.seed import seed_event_rows
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -127,7 +127,7 @@ def delete_all_rows() -> 'None':
     """
     engine = get_database_engine()
     tables = [event_attr_table, event_body_table, event_link_table, event_dedup_table, event_table, event_count_table,
-        event_open_table]
+        event_open_table, event_payload_table]
 
     reset_table_rows(engine, tables)
 
@@ -205,7 +205,7 @@ def new_event_rows(rng:'Random', count:'int', first_index:'int') -> 'anylist':
 # ################################################################################################################################
 
 def insert_rows(rows:'anylist') -> 'None':
-    """ Seeds event rows in one transaction, in statements of at most _rows_per_statement rows each.
+    """ Seeds event rows, with their payloads, in one transaction.
     """
     engine = get_database_engine()
     insert_rows_into(engine, rows)
@@ -213,15 +213,9 @@ def insert_rows(rows:'anylist') -> 'None':
 # ################################################################################################################################
 
 def insert_rows_into(engine:'Engine', rows:'anylist') -> 'None':
-    """ Seeds event rows in one transaction of a given engine, in statements of at most _rows_per_statement rows each.
+    """ Seeds event rows, with their payloads, in one transaction of a given engine.
     """
-    table_rows:'anylist' = []
-
-    for start in range(0, len(rows), _rows_per_statement):
-        end = start + _rows_per_statement
-        table_rows.append((event_table, rows[start:end]))
-
-    seed_rows(engine, table_rows)
+    seed_event_rows(engine, rows)
 
 # ################################################################################################################################
 

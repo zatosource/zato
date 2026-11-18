@@ -40,6 +40,8 @@ _child_skipped_columns = ('id',)
 
 # The statements that write one batch on each database, as their verbs and tables
 _postgresql_statements = [
+    ('SELECT', 'event_payload'),
+    ('INSERT', 'event_payload'),
     ('INSERT', 'event'),
     ('COPY', 'event_attr'),
     ('COPY', 'event_body'),
@@ -47,6 +49,8 @@ _postgresql_statements = [
 ]
 
 _sqlite_statements = [
+    ('SELECT', 'event_payload'),
+    ('INSERT', 'event_payload'),
     ('INSERT', 'event'),
     ('SELECT', 'event'),
     ('INSERT', 'event_attr'),
@@ -103,7 +107,8 @@ def _child_rows(table:'Table', event_column:'str', positions:'intdict') -> 'anyl
 # ################################################################################################################################
 
 def test_one_statement_per_table(audit_backend:'str') -> 'None':
-    """ A batch of events is written with one statement per table, plus the select of the event ids on SQLite.
+    """ A batch of events is written with one statement per table, plus the select of the payloads stored already
+    and, on SQLite, the select of the event ids.
     """
     audit_log = AuditLog(Server_Name)
     seed_event_id = insert_seed_event(audit_log)
@@ -112,7 +117,7 @@ def test_one_statement_per_table(audit_backend:'str') -> 'None':
     engine = get_database_engine()
 
     with record_statements(engine) as recorder:
-        last_event_id = audit_log._write_batch(batch)
+        audit_log.write_pending(batch)
 
     if audit_backend == Backend_PostgreSQL:
         expected = _postgresql_statements
@@ -128,7 +133,6 @@ def test_one_statement_per_table(audit_backend:'str') -> 'None':
     for pending in batch:
         event_ids.append(pending.event_id)
 
-    assert last_event_id == event_ids[-1]
     assert event_ids == sorted(event_ids)
     assert len(set(event_ids)) == _event_count
 
@@ -154,10 +158,10 @@ def test_same_rows_as_single_event_batches(audit_backend:'str') -> 'None':
     singles = new_batch(single_audit_log, _event_count, seed_event_id)
 
     # .. are written in one batch and one at a time ..
-    _ = batch_audit_log._write_batch(batch)
+    batch_audit_log.write_pending(batch)
 
     for pending in singles:
-        _ = single_audit_log._write_batch([pending])
+        single_audit_log.write_pending([pending])
 
     # .. and each event id stands for the position of its event within its write.
     positions:'intdict' = {seed_event_id: -1}
@@ -224,7 +228,7 @@ def test_batch_of_copies_is_written_once_each(audit_backend:'str') -> 'None':
         copy = deepcopy(first)
         batch.append(copy)
 
-    _ = audit_log._write_batch(batch)
+    audit_log.write_pending(batch)
 
     event_ids:'anylist' = []
 

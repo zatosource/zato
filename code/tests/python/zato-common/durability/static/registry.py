@@ -142,6 +142,8 @@ Direct_SQL_Purposes = (
     ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'run_seed',                    'Seeding test data in bulk'),
     ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_rows',                   'Seeding test data in bulk'),
     ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_row',                    'Seeding test data in bulk'),
+    ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_event_rows',             'Seeding test data in bulk'),
+    ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_event_row',              'Seeding test data in bulk'),
     ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_bulk',                   'Seeding test data in bulk'),
     ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'refresh_statistics',          'Seeding test data in bulk'),
     ('code/zato-common/src/zato/common/test/direct_sql/seed.py',  'seed_config_row',             'Seeding test data in bulk'),

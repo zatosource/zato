@@ -74,14 +74,14 @@ _retention_thread_name = 'audit-log-retention'
 # The message of the exception a failing commit raises
 _error_message = 'Test error message'
 
-# The trigram indexes of PostgreSQL the merger covers
-_index_names = ('idx_event_search', 'idx_event_attr_search_value')
+# The word and trigram indexes of PostgreSQL the merger covers
+_index_names = ('idx_event_search', 'idx_event_payload_search', 'idx_event_attr_search_value')
 
 # The storage options of the indexes given
 _reloptions_query = text('select relname, reloptions from pg_class where relname = any(:index_names)')
 
-# The statements that write one event with one attribute, the same on each database, as their verbs and tables
-_single_statements = [('INSERT', 'event'), ('INSERT', 'event_attr')]
+# The statements that write one event with a payload and one attribute, the same on each database, as their verbs and tables
+_single_statements = [('SELECT', 'event_payload'), ('INSERT', 'event_payload'), ('INSERT', 'event'), ('INSERT', 'event_attr')]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -322,7 +322,7 @@ def test_search_indexes_are_merged(audit_backend:'str') -> 'None':
     # The pending lists can be merged ..
     merger.merge()
 
-    # .. and both indexes have the same limit on them.
+    # .. and all the indexes have the same limit on them.
     index_names = list(_index_names)
 
     with engine.connect() as connection:
