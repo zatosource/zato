@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The inserts of the audit log that write all the rows of one table in a batch with a single statement.
 
 # SQLAlchemy
-from sqlalchemy import select
+from sqlalchemy import aggregate_order_by, func, select
 
 # Zato
 from zato.common.audit_log.attachment import build_attachment_rows
@@ -20,6 +20,7 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.pg8000_copy import copy_rows
 from zato.common.db_env.plain_sql import PlainStatement
+from zato.common.json_internal import loads
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -82,6 +83,9 @@ def _insert_returning(connection:'Connection', rows:'dictlist') -> 'intlist':
 
 def _insert_by_commit_id(connection:'Connection', rows:'dictlist', commit_id:'str') -> 'intlist':
     """ Inserts the event rows stamped with the id of their commit and selects their ids by it, in insertion order.
+    The driver releases the GIL around each step of a statement and waits for it again after the step,
+    so the rows are inserted with multi-row statements and their ids are read as a single aggregated row,
+    which keeps the number of steps independent of the number of rows.
     """
     commit_rows:'dictlist' = []
 
@@ -90,16 +94,14 @@ def _insert_by_commit_id(connection:'Connection', rows:'dictlist', commit_id:'st
         commit_row['commit_id'] = commit_id
         commit_rows.append(commit_row)
 
-    insert_statement = event_table.insert()
-    _ = connection.execute(insert_statement, commit_rows)
+    insert_rows(connection, event_table, commit_rows)
 
-    query = select(event_table.c.id)
+    ids = aggregate_order_by(func.json_group_array(event_table.c.id), event_table.c.id)
+
+    query = select(ids)
     query = query.where(event_table.c.commit_id == commit_id)
-    query = query.order_by(event_table.c.id)
 
-    result = connection.execute(query)
-
-    out = list(result.scalars())
+    out = loads(connection.execute(query).scalar_one())
     return out
 
 # ################################################################################################################################
