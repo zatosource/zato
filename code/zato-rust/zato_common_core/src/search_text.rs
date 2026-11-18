@@ -6,6 +6,7 @@
 
 use foldhash::HashSet;
 use pyo3::prelude::*;
+use pyo3::pybacked::PyBackedStr;
 
 /// The shortest word that a trigram index can match.
 const MIN_WORD_CHARS: usize = 3;
@@ -146,9 +147,16 @@ impl Extraction {
 ///
 /// Spans of encoded data, such as documents in base64, are left out whole, and so are punctuation
 /// and the syntax of JSON and XML.
+///
+/// The words are extracted after the GIL is released, so the other threads of the interpreter run in the meantime.
 #[pyfunction]
 #[must_use]
-pub fn extract_search_text(data: &str) -> String {
+pub fn extract_search_text(py: Python<'_>, data: PyBackedStr) -> String {
+    py.detach(|| search_text_of(&data))
+}
+
+/// Returns the words, integers and decimal numbers of a payload, each once, in lower case, separated by spaces.
+fn search_text_of(data: &str) -> String {
     let mut extraction = Extraction {
         seen: HashSet::default(),
         text: String::new(),
@@ -199,36 +207,36 @@ pub fn extract_search_text(data: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::extract_search_text;
+    use super::search_text_of;
 
     #[test]
     fn keeps_words_integers_and_decimal_numbers() {
-        let text = extract_search_text(r#"{"order": "ORD12345", "total": 1234.50, "city": "Springfield"}"#);
+        let text = search_text_of(r#"{"order": "ORD12345", "total": 1234.50, "city": "Springfield"}"#);
         assert_eq!(text, "order ord12345 total 1234.50 city springfield");
     }
 
     #[test]
     fn splits_identifiers_into_their_words() {
-        let text = extract_search_text("INV-2026-00000001 Rechnung_00000001_Berlin.pdf");
+        let text = search_text_of("INV-2026-00000001 Rechnung_00000001_Berlin.pdf");
         assert_eq!(text, "inv 2026 00000001 rechnung berlin pdf");
     }
 
     #[test]
     fn leaves_out_encoded_data() {
         let encoded = "JVBERi0xLjQKJcfsj6IKNSAwIG9iago8PC9MZW5ndGggNiAwIFIvRmlsdGVyIC9GbGF0ZURlY29kZT4+CnN0cmVhbQp4nCvkcgrhMlQwtTTVszRUMFAwMjDQszQ1BQAw";
-        let text = extract_search_text(&format!("<content>{encoded}</content>"));
+        let text = search_text_of(&format!("<content>{encoded}</content>"));
         assert_eq!(text, "content");
     }
 
     #[test]
     fn indexes_each_word_once() {
-        let text = extract_search_text("<Name>John</Name><Name>JOHN</Name><Name>Smith</Name>");
+        let text = search_text_of("<Name>John</Name><Name>JOHN</Name><Name>Smith</Name>");
         assert_eq!(text, "name john smith");
     }
 
     #[test]
     fn leaves_out_words_shorter_than_a_trigram() {
-        let text = extract_search_text("PID|1||42^^^MRN||Doe^Jane");
+        let text = search_text_of("PID|1||42^^^MRN||Doe^Jane");
         assert_eq!(text, "pid mrn doe jane");
     }
 }

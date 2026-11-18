@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import json
 from dataclasses import dataclass
 from logging import getLogger
 from time import monotonic
@@ -643,15 +642,9 @@ class SQLPubSubBackend(SQLAdminAPI):
 
         for message in messages:
 
-            data_raw = message['data']
-
-            # Deserialize JSON data if possible ..
-            try:
-                data = json.loads(data_raw)
-            except (json.JSONDecodeError, TypeError):
-                data = data_raw
-
-            data_size = len(data_raw)
+            # The payload stays the text that the database stored, the encoder of the response places it in the response as it stands ..
+            data = message['data']
+            data_size = len(data)
 
             pub_time_iso = message['pub_time_iso']
             recv_time_iso = message['recv_time_iso']

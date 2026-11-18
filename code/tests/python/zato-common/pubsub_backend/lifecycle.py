@@ -213,7 +213,7 @@ def _run_fetch_limits_flow(backend:'SQLPubSubBackend') -> 'None':
 # ################################################################################################################################
 
 def _run_rest_formatting_flow(backend:'SQLPubSubBackend') -> 'None':
-    """ The REST pull leases the messages it hands over, and the formatting parses JSON payloads
+    """ The REST pull leases the messages it hands over, and the formatting keeps the stored payload text
     and fills in the meta envelope.
     """
     delete_all_rows()
@@ -229,8 +229,8 @@ def _run_rest_formatting_flow(backend:'SQLPubSubBackend') -> 'None':
     assert len(formatted) == 1
     entry = formatted[0]
 
-    # JSON payloads come back parsed ..
-    assert entry['data'] == dict_data
+    # The payload is the text that the database stored ..
+    assert entry['data'] == json.dumps(dict_data)
 
     # .. with the meta envelope fully filled in ..
     meta = entry['meta']

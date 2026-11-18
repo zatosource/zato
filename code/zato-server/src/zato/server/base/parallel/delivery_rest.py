@@ -6,11 +6,14 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from json import dumps
+# gevent
+from gevent import get_hub
 
 # requests
 from requests.exceptions import HTTPError
+
+# Zato - Rust
+from zato_common_core.zato_common_core import encode_push_envelope
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -107,7 +110,10 @@ def deliver_to_rest(config_store:'ConfigStore', message:'anydict', sub_config:'a
         _header_delivery_attempt: str(message['delivery_attempt']),
     }
 
-    body = dumps(envelope).encode('utf8')
+    # The body is encoded in a thread of the pool, which writes the JSON without the GIL,
+    # so that the event loop serves other requests while the payload is escaped.
+    hub = get_hub()
+    body = hub.threadpool.apply(encode_push_envelope, (envelope,))
 
     status_code, reason, header_store, response_body, _, _ = outconn.conn.invoke_pubsub_push(url, headers, body)
 

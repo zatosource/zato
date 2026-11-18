@@ -11,6 +11,9 @@ from base64 import b64decode
 from http.client import BAD_REQUEST, CONFLICT, UNAUTHORIZED
 from logging import getLogger
 
+# gevent
+from gevent import get_hub
+
 # Zato
 from zato.common.api import PubSub
 from zato.common.pubsub.sql.writes import PubSubDuplicateMsgID
@@ -18,6 +21,9 @@ from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.auth import check_basic_auth
 from zato.server.service import AsIs, Int, Service
 from zato.server.service.internal.pubsub.rest_publication import parse_publication, PublicationError
+
+# Zato - Rust
+from zato_common_core.zato_common_core import encode_pull_response
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -278,15 +284,13 @@ class GetMessages(PubSubRESTService):
             max_len=max_len
         )
 
-        # .. and format them for the REST pull path.
+        # .. format them for the REST pull path ..
         messages = self.server.pubsub_backend.format_messages_for_rest(raw_messages, sub_key)
 
-        # Build response
-        self.response.payload.is_ok = True
-        self.response.payload.cid = cid
-        self.response.payload.messages = messages
-        self.response.payload.message_count = len(messages)
-        self.response.payload.status = _status_ok
+        # .. and encode the response in a thread of the pool, which writes the JSON without the GIL,
+        # .. so that the event loop serves other requests while megabytes of payloads are encoded.
+        hub = get_hub()
+        self.response.payload = hub.threadpool.apply(encode_pull_response, (cid, _status_ok, messages))
 
 # ################################################################################################################################
 
