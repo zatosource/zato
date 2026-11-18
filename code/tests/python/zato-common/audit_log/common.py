@@ -167,12 +167,14 @@ def run_audit_log_scenario() -> 'None':
     newest_row = first_page[0]
     assert newest_row[1] == 'cid-2'
 
-    # .. free-text search matches LIKE wildcards literally - a query with a percent sign
-    # .. matches only the row with a literal percent sign in its payload ..
-    assert _count_events(AuditSource.REST_Channel, _channel_name, '100%') == 1
+    # .. free-text search matches the words of a query, so a percent sign is not part of the number before it ..
+    assert _count_events(AuditSource.REST_Channel, _channel_name, '100%') == 2
 
-    # .. same for underscores - value_a must not match valuexa ..
-    assert _count_events(AuditSource.REST_Channel, _channel_name, 'value_a') == 1
+    # .. each word of a query is a prefix, so value_a matches value_a and valuexa alike ..
+    assert _count_events(AuditSource.REST_Channel, _channel_name, 'value_a') == 2
+
+    # .. and every word of a query must be found, which tells one invoice from another ..
+    assert _count_events(AuditSource.REST_Channel, _channel_name, 'INV-2026-002') == 1
 
     # .. retention deletes events older than the window and keeps the recent ones ..
     expired_row = dict(

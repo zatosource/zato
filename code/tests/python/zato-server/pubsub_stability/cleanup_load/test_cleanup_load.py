@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from logging import getLogger
 from time import monotonic
 
 # gevent
@@ -28,6 +29,8 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # How many times the cleanup process is killed in the middle of a sweep, and what part of the traces
 # each of its lives removes before it is killed.
@@ -79,7 +82,24 @@ class _CleanupChaos:
         self.initial = self.count_traces()
         self.removed_at_start = self.initial
 
+        # The previous count of the traces and when it was taken, from which the rate of their removal is computed.
+        self.last_count = self.initial
+        self.last_count_time = monotonic()
+
         self.log:'strlist' = []
+
+    def report_progress(self, count:'int') -> 'None':
+        """ Logs how many traces were removed and how many are left, and the rate of their removal since the previous count.
+        """
+        now = monotonic()
+        rate = (self.last_count - count) / (now - self.last_count_time)
+        removed = self.initial - count
+
+        logger.info('Cleanup -> removed %d of %d traces, %d left, %.0f traces/s, kills %d',
+            removed, self.initial, count, rate, self.kills)
+
+        self.last_count = count
+        self.last_count_time = now
 
     def count_traces(self) -> 'int':
         out = self.server.get_topic_rows(self.trace_topic)['messages']
@@ -138,6 +158,7 @@ def test_cleanup_load(server:'PubSubServer') -> 'None':
 
     def is_done() -> 'bool':
         count = chaos.count_traces()
+        chaos.report_progress(count)
         chaos.on_count(count)
         out = count == 0
         return out

@@ -6,6 +6,11 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# gevent - the API clients, the partners and the push receiver of the traffic share one process as greenlets,
+# so the patching runs before the modules of the suite are imported.
+from gevent import monkey
+_ = monkey.patch_all()
+
 # stdlib
 import os
 import sys

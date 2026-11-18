@@ -151,13 +151,13 @@ def build_search_conditions(
         if search_words:
             any_column_match = match_event_search(dialect_name, event_table, search_words)
 
-        # .. and a query without a word as long as a trigram is matched by LIKE, with wildcards matched literally.
+        # .. and a query without a word of three characters is matched by LIKE, in any case, with wildcards matched literally.
         else:
             like_parts:'anylist' = []
 
             for column_name in search_columns:
                 column = event_table.c[column_name]
-                is_like_pattern = column.like(pattern, escape='\\')
+                is_like_pattern = column.ilike(pattern, escape='\\')
 
                 like_parts.append(is_like_pattern)
 

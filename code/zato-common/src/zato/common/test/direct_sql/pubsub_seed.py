@@ -12,6 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime, timezone
+from logging import getLogger
 from time import monotonic
 from typing import NamedTuple
 from zlib import crc32
@@ -41,7 +42,15 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ModuleCtx:
+
+    # How many seeded messages each line of the progress of a seed stands for
+    Progress_Every = 100_000
 
     # The publications of a backlog are spread backwards from the time of the seed by this many milliseconds each
     Pub_Time_Step_MS = 3540
@@ -164,6 +173,14 @@ def _load(engine:'Engine', message_rows:'anytuplegen', delivery_rows:'anytuplege
 
 # ################################################################################################################################
 
+def _log_progress(kind:'str', seeded:'int', total:'int') -> 'None':
+    """ Logs how many messages of a seed were generated for insertion, once per a given number of them.
+    """
+    if seeded % ModuleCtx.Progress_Every == 0:
+        logger.info('Seed of %s -> %d of %d messages', kind, seeded, total)
+
+# ################################################################################################################################
+
 def _ms_to_iso(value_ms:'int') -> 'str':
     seconds = value_ms / ModuleCtx.MS_Per_Second
     value = datetime.fromtimestamp(seconds, tz=timezone.utc)
@@ -207,12 +224,17 @@ def seed_queues(queues:'seeded_queue_list') -> 'float':
         sub_rows.append((sub_key, queue.topic_name))
 
     # .. the messages of the queues follow one another, with identifiers counting up from one ..
+    total = 0
+    for queue in queues:
+        total += queue.message_count
+
     def iter_messages() -> 'anytuplegen':
         message_id = 0
 
         for queue_index, queue in enumerate(queues):
             for number in range(queue.message_count):
                 message_id += 1
+                _log_progress('backlogs', message_id, total)
                 msg_id = f'{ModuleCtx.Msg_ID_Prefix}.{queue_index:04d}.{number}'
                 pub_time_ms = now_ms - number * ModuleCtx.Pub_Time_Step_MS
 
@@ -259,6 +281,7 @@ def seed_traces(topic_name:'str', message_count:'int', age_days:'int') -> 'float
     def iter_messages() -> 'anytuplegen':
         for number in range(message_count):
             message_id = number + 1
+            _log_progress('traces', message_id, message_count)
             msg_id = f'{ModuleCtx.Msg_ID_Prefix}.trace.{number}'
             pub_time_ms = aged_ms - number
 

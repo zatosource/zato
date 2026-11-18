@@ -14,6 +14,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from logging import getLogger
 from shutil import disk_usage
 from time import monotonic
 
@@ -38,6 +39,8 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # How long one measured interval lasts, in seconds.
 Minute_Seconds = 60
@@ -376,6 +379,10 @@ class Monitor:
             report.failures.append(f'free disk {free_gb:.1f} GB below {_min_free_disk_gb} GB, the run stops')
 
         self.reports.append(report)
+
+        logger.info('Minute %d (%s) -> published %.1f/s, delivered %.1f/s, publish p99 %.3f s, delivery p99 %.3f s, ' +
+            'message rows %d, failures %s', report.index, report.since_start, report.publish_rate, report.delivery_rate,
+            report.publish_p99, report.delivery_p99, report.message_rows, report.failures)
 
         return report
 

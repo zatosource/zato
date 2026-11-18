@@ -8,7 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The native column types and the search index every backend must agree on - timestamps given at any
 # offset come back as the same moments in UTC and sort as moments, hourly periods are computed
-# by the database in UTC, and the free-text search returns through the index what LIKE returns.
+# by the database in UTC, and the free-text search returns through the index the events with words
+# that the words of a query are prefixes of.
 
 # stdlib
 from datetime import datetime, timedelta, timezone
@@ -24,6 +25,9 @@ from zato.common.audit_log.search import build_search_conditions
 from zato.common.audit_log.writes import execute_audit_write
 from zato.common.test.direct_sql.seed import seed_row, seed_rows
 from zato.common.db_env.common import hour_period, Type_SQLite
+
+# Zato - Rust
+from zato_common_core.zato_common_core import extract_search_text
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -80,6 +84,7 @@ def _insert_event(engine:'Engine', cid:'str', event_time:'datetime', data:'str')
         msg_id=f'msg-{cid}',
         event_time=event_time,
         data=data,
+        search_text=extract_search_text(data),
     )
 
     out = seed_row(engine, event_table, event_row)
@@ -209,8 +214,9 @@ def run_hour_period_scenario() -> 'None':
 # ################################################################################################################################
 
 def run_search_scenario() -> 'None':
-    """ The free-text search finds through the index of each database what LIKE alone would find,
-    for terms in several scripts, with LIKE wildcards and quotes, and for terms shorter than the index tokens.
+    """ The free-text search finds through the index of each database the events with words that the words of a query
+    are prefixes of, for terms in several scripts, with LIKE wildcards and quotes, and finds by LIKE the events
+    for terms shorter than the words of the index.
     """
     delete_all_events()
     engine = get_database_engine()
@@ -236,16 +242,16 @@ def run_search_scenario() -> 'None':
     assert _search(engine, 'τιμολόγιο') == {'scripts'}
     assert _search(engine, 'Zamówienie') == {'scripts'}
 
-    # .. LIKE wildcards matched literally ..
+    # .. LIKE wildcards are not part of a word, and each word of a query is a prefix ..
     assert _search(engine, '100%') == {'percent'}
-    assert _search(engine, 'value_a') == {'percent'}
+    assert _search(engine, 'value_a') == {'percent', 'updated'}
 
     # .. a term with double quotes in it ..
     assert _search(engine, '"inner"') == {'quoted'}
 
-    # .. terms shorter than the tokens of an index ..
+    # .. terms shorter than the words of an index, which LIKE finds in the indexed words ..
     assert _search(engine, 'AB') == {'scripts'}
-    assert _search(engine, 'x') == {'updated', 'quoted', 'deleted'}
+    assert _search(engine, 'x') == {'updated', 'quoted'}
 
     # .. and an attribute value, which returns the whole trace.
     assert _search(engine, '778899') == {'trace'}
@@ -256,7 +262,9 @@ def run_search_scenario() -> 'None':
         assert marker not in _search_sql(engine, 'x')
 
     # The index follows updates ..
-    update = event_table.update().where(event_table.c.id == updated_id).values(data='item replaced')
+    replaced_data = 'item replaced'
+    replaced_values = {'data': replaced_data, 'search_text': extract_search_text(replaced_data)}
+    update = event_table.update().where(event_table.c.id == updated_id).values(replaced_values)
     _ = execute_audit_write(engine, update)
 
     assert _search(engine, 'valuexa') == set()
