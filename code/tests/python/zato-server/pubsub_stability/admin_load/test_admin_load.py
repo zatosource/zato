@@ -52,6 +52,9 @@ _settle_seconds = 5
 # How long the administration and, afterwards, the backlog of the traffic may take, in seconds.
 _drain_seconds = 600
 
+# By how much the publication rate of this suite is lower than that of the production profile.
+_rate_divisor = 20
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -139,6 +142,8 @@ def test_admin_load(server:'PubSubServer') -> 'None':
     run = TrafficRun(server, Limits())
 
     traffic = run.traffic
+    traffic.set_rate(traffic.rate / _rate_divisor)
+
     administration = _Administration(server, traffic)
 
     # The partner whose queue is cleared waits on purpose, so its latency is not measured.

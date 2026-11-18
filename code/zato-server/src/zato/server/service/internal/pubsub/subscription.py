@@ -854,6 +854,7 @@ class _BaseModifyTopicList(AdminService):
                 request.sec_base_id = sec_base_id
                 request.delivery_type = current_sub.delivery_type
                 request.is_delivery_active = current_sub.is_delivery_active
+                request.is_pub_active = current_sub.is_pub_active
                 request.push_service_name = current_sub.push_service_name
                 request.push_type = current_sub.push_type
                 request.rest_push_endpoint_id = current_sub.rest_push_endpoint_id

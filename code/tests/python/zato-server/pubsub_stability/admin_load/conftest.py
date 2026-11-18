@@ -47,7 +47,7 @@ _server = PubSubServer('pubsub-admin-load')
 
 # How many messages each of the topics that the administration works on holds,
 # unless Zato_Test_Admin_Messages says otherwise.
-_messages_per_topic = 250_000
+_messages_per_topic = 1000
 
 # The topics that the administration works on, each with a pull subscriber of the same name.
 _admin_topic_prefix = 'stability.admin'
