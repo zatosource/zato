@@ -14,7 +14,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import fcntl
 import os
 import sqlite3
-from functools import partial
 from typing import NamedTuple
 
 # gevent
@@ -27,7 +26,6 @@ from sqlalchemy import event as sa_event
 from sqlalchemy.pool import QueuePool
 
 # Zato
-from zato.common.db_env.commit_queue import CommitQueue
 from zato.common.db_env.common import get_env_values, Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.connection import build_connect_args_from_values, build_engine_url_from_values, \
     DatabaseDurabilityError, set_postgresql_keepalive, set_postgresql_no_delay, set_postgresql_session, \
@@ -48,12 +46,11 @@ if 0:
     from sqlalchemy import MetaData
     from sqlalchemy.engine import Engine
     from zato.common.db_env.common import EnvDBConfig
-    from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, strintdict, strlist, stranydict, strtuple
+    from zato.common.typing_ import any_, anydict, anytuple, callable_, strintdict, strlist, stranydict, strtuple
     from zato_ipc_core.zato_ipc_core import SharedRegion
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
-    anylist = anylist
     callable_ = callable_
     Engine = Engine
     EnvDBConfig = EnvDBConfig
@@ -102,18 +99,6 @@ _process_queues:'anydict' = {}
 
 # The lock of the threads of the operating system, which the threads of the gevent pool require.
 _allocate_thread_lock = get_original('_thread', 'allocate_lock')
-
-# The queue of the shared commits of each SQLite engine in the thread pool, by the engine, and the thread lock
-# under which a queue is created.
-_shared_commit_queues:'anydict' = {}
-_shared_commit_lock = _allocate_thread_lock()
-
-# How many functions of group commits one shared commit runs at most. Each writer of a process waits for one commit
-# of its own at a time, so a shared commit holds at most one function of each writer.
-_shared_commit_max_calls = 1000
-
-# The weight of one function of a group commit in the queue of the shared commits
-_shared_commit_call_weight = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -664,89 +649,6 @@ def call_database(engine:'Engine', func:'callable_', *args:'any_', prepare:'call
             prepare()
 
         out = run_in_write_path(*call_args)
-
-    return out
-
-# ################################################################################################################################
-
-class _SharedCommitCall:
-    """ The function of one group commit, which receives the connection of a transaction shared with the functions
-    of the group commits of the other writers of the same engine, its preparation, and what it returned.
-    """
-
-    def __init__(self, func:'callable_', args:'anytuple', prepare:'callable_ | None') -> 'None':
-        self.func = func
-        self.args = args
-        self.prepare = prepare
-        self.result:'any_' = None
-
-# ################################################################################################################################
-
-def _prepare_calls(calls:'anylist') -> 'None':
-    """ Runs the preparation of each function of a shared commit that has one, outside of the write lock.
-    """
-    for call in calls:
-        if call.prepare:
-            call.prepare()
-
-# ################################################################################################################################
-
-def _run_calls(engine:'Engine', calls:'anylist') -> 'None':
-    """ Runs the functions of a shared commit in one transaction and stores in each function what it returned.
-    """
-    with engine.begin() as connection:
-        for call in calls:
-            call.result = call.func(connection, *call.args)
-
-# ################################################################################################################################
-
-def _commit_calls(engine:'Engine', calls:'anylist') -> 'None':
-    """ Commits the functions of the group commits of one batch of the queue of an engine in one transaction.
-    """
-    prepare = partial(_prepare_calls, calls)
-    _ = call_database(engine, _run_calls, engine, calls, prepare=prepare)
-
-# ################################################################################################################################
-
-def _get_shared_commit_queue(engine:'Engine') -> 'CommitQueue':
-    """ Returns the queue of the shared commits of an engine, creating it with the first call.
-    """
-    with _shared_commit_lock:
-
-        if engine not in _shared_commit_queues:
-            write_batch = partial(_commit_calls, engine)
-            _shared_commit_queues[engine] = CommitQueue(write_batch=write_batch, max_weight=_shared_commit_max_calls)
-
-        out = _shared_commit_queues[engine]
-
-    return out
-
-# ################################################################################################################################
-
-def _run_in_transaction(engine:'Engine', func:'callable_', args:'anytuple') -> 'any_':
-    with engine.begin() as connection:
-        out = func(connection, *args)
-    return out
-
-# ################################################################################################################################
-
-def call_shared_commit(engine:'Engine', func:'callable_', *args:'any_', prepare:'callable_ | None'=None) -> 'any_':
-    """ Runs the function of one group commit, which receives a connection, and returns what it returned once its
-    transaction is committed. With SQLite in the thread pool, the functions of the group commits of all the writers
-    of a process to one engine wait in one queue, and those that wait together run in one transaction, because
-    SQLite commits them one at a time regardless, and a commit of each one alone would repeat the flush
-    of the write-ahead log and the writes of the pages that all of them change, e.g. those of the indexes
-    of the audit log. An exception of a shared transaction reaches the caller of each function in it.
-    The preparation, if given, runs before the transaction, outside of the write lock.
-    """
-    if needs_thread_pool(engine):
-        call = _SharedCommitCall(func, args, prepare)
-        queue = _get_shared_commit_queue(engine)
-        queue.write(call, weight=_shared_commit_call_weight, is_urgent=False)
-        out = call.result
-
-    else:
-        out = call_database(engine, _run_in_transaction, engine, func, args, prepare=prepare)
 
     return out
 

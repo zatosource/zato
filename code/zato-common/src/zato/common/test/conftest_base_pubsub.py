@@ -80,7 +80,7 @@ _worker_ready_pattern = re.compile(r'zato\.server\.arbiter:\d+ - Worker is ready
 
 # The variables of the operating system that a server process needs, the only ones that it receives
 # from the environment of the test process apart from those that select the Zato database
-_system_env_names = ('HOME', 'LANG', 'LC_ALL', 'LOGNAME', 'PATH', 'TMPDIR', 'TZ', 'USER')
+_system_env_names = ('HOME', 'LANG', 'LC_ALL', 'LD_LIBRARY_PATH', 'LOGNAME', 'PATH', 'TMPDIR', 'TZ', 'USER')
 
 # The variables that select the Zato database and the file of the generation of the active server, which the session
 # sets for the test process and the server alike. The size of the pool is not one of them, it reaches the server

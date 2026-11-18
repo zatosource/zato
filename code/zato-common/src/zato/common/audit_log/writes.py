@@ -13,7 +13,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.audit_log.common import get_commit_max_events
 from zato.common.db_env.commit_queue import CommitQueue
-from zato.common.db_env.engine import call_shared_commit
+from zato.common.db_env.engine import call_database
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,11 +49,12 @@ class _AuditWrite:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _run_writes(connection:'Connection', writes:'list[_AuditWrite]') -> 'None':
-    """ Runs the writes of one engine in the transaction of a connection.
+def _run_writes(engine:'Engine', writes:'list[_AuditWrite]') -> 'None':
+    """ Runs the writes of one engine in a single transaction.
     """
-    for write in writes:
-        write.result = write.func(connection, *write.args)
+    with engine.begin() as connection:
+        for write in writes:
+            write.result = write.func(connection, *write.args)
 
 # ################################################################################################################################
 
@@ -68,7 +69,7 @@ def _write_batch(batch:'anylist') -> 'None':
         writes_by_engine[write.engine].append(write)
 
     for engine, writes in writes_by_engine.items():
-        call_shared_commit(engine, _run_writes, writes)
+        call_database(engine, _run_writes, engine, writes)
 
 # ################################################################################################################################
 # ################################################################################################################################

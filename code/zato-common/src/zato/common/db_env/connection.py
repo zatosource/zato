@@ -55,10 +55,6 @@ SQLite_Busy_Timeout_Ms = 5000
 # in bytes. SQLite lowers it to the maximum its build allows.
 SQLite_MMAP_Size = 1024 ** 4
 
-# Where SQLite keeps its temporary content - the statement journal of a statement that modifies more pages
-# than its in-memory buffer of 64 KiB holds, as well as transient indexes and sorts.
-SQLite_Temp_Store = 'memory'
-
 # How long a PostgreSQL connection stays idle before it sends its first keepalive probe, in seconds - below
 # the idle limits of cloud load balancers and NAT gateways, which drop idle flows silently after 240 to 350 seconds.
 _keepalive_idle_seconds = 30
@@ -123,9 +119,7 @@ def set_sqlite_pragmas(dbapi_connection:'any_', connection_record:'any_') -> 'No
     each freed page of a large payload again, which doubles the cost of every commit that removes message bodies.
     Foreign keys are enforced, as on PostgreSQL. The file is read through memory mapping, which shares the pages
     of the operating system's cache among all the connections and processes instead of copying each page
-    into the cache of each connection. Temporary content is kept in memory, because a multi-row insert into a table
-    with triggers and many indexes modifies more pages than the statement journal buffers, and a journal spilled
-    to a temporary file is written back to the device along with the write-ahead log, although no recovery reads it.
+    into the cache of each connection.
     """
     cursor = dbapi_connection.cursor()
     _ = cursor.execute('pragma journal_mode=wal')
@@ -134,7 +128,6 @@ def set_sqlite_pragmas(dbapi_connection:'any_', connection_record:'any_') -> 'No
     _ = cursor.execute('pragma foreign_keys=on')
     _ = cursor.execute(f'pragma busy_timeout={SQLite_Busy_Timeout_Ms}')
     _ = cursor.execute(f'pragma mmap_size={SQLite_MMAP_Size}')
-    _ = cursor.execute(f'pragma temp_store={SQLite_Temp_Store}')
     cursor.close()
 
 # ################################################################################################################################

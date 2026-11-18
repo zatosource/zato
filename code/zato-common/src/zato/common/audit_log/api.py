@@ -39,7 +39,7 @@ from zato.common.config_db import Default_Enabled, Env_Audit_Log_Enabled
 from zato.common.db_env.commit_queue import CommitQueue
 from zato.common.db_env.database import dispose_database_engine, get_database_engine
 from zato.common.audit_log.writes import write_audit
-from zato.common.db_env.engine import call_shared_commit
+from zato.common.db_env.engine import call_database
 from zato.common.pubsub.delivery_scope import get_delivery_scope
 from zato.common.util.api import as_bool, utcnow
 
@@ -510,23 +510,24 @@ class AuditLog:
         prepare = partial(prepare_payloads, batch)
 
         try:
-            out = call_shared_commit(self.engine, self._insert_batch, batch, prepare=prepare)
+            out = call_database(self.engine, self._insert_batch, batch, prepare=prepare)
         except OperationalError:
 
             # .. and a pooled connection that opened the file while it was read-only stays read-only
             # after the permissions come back, which a fresh engine does not, while the payloads remain prepared.
             dispose_database_engine()
-            out = call_shared_commit(self.engine, self._insert_batch, batch)
+            out = call_database(self.engine, self._insert_batch, batch)
 
         return out
 
 # ################################################################################################################################
 
-    def _insert_batch(self, connection:'Connection', batch:'pending_event_list') -> 'int':
-        """ Inserts one batch of events in the transaction of a connection, with one statement per table,
+    def _insert_batch(self, batch:'pending_event_list') -> 'int':
+        """ Inserts one batch of events in a single transaction, with one statement per table,
         and returns the id of the last event written.
         """
-        event_ids = insert_pending_events(connection, batch)
+        with self.engine.begin() as connection:
+            event_ids = insert_pending_events(connection, batch)
 
         out = event_ids[-1]
         return out
