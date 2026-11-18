@@ -31,6 +31,7 @@ from zato.common.alerting.explain.store import ExplanationStore
 from zato.common.alerting.names import get_notification_conn_name
 from zato.common.api import Alerting, EMAIL
 from zato.common.audit_log.api import AuditEvent, AuditSource, event_table
+from zato.common.audit_log.common import event_data
 from zato.common.test.client import AdminClient
 
 # Test helpers
@@ -430,7 +431,7 @@ def _get_channel_responses(channel:'_ChannelDescription') -> 'anylist':
     """
     engine = _server_audit_engine()
 
-    query = select(event_table).\
+    query = select(event_table, event_data).\
         where(event_table.c.source == channel.source).\
         where(event_table.c.object_name == channel.name).\
         where(event_table.c.event_type == AuditEvent.Response_Sent)

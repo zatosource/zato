@@ -19,11 +19,11 @@ from json import dumps, loads
 # Zato
 from zato.admin.web.views.audit_log import strip
 from zato.admin.web.views.audit_log.poll import _strip_max_buckets, _strip_min_buckets
-from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.ext.bunch import Bunch
-from zato.common.test.direct_sql.seed import seed_rows
+from zato.common.test.direct_sql.seed import seed_event_rows
 
 # Test support
 from live_sql.env import database_env
@@ -112,7 +112,7 @@ def _strip_events(tmp_path:'any_') -> 'envgen':
             _new_event_row(_other_channel_name, _middle_time, AuditOutcome.OK),
         ]
 
-        seed_rows(engine, [(event_table, event_rows)])
+        _ = seed_event_rows(engine, event_rows)
 
         yield
 

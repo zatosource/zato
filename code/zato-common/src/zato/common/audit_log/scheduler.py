@@ -25,11 +25,9 @@ from zato.common.audit_log.api import AuditEvent, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import event_attr_table, event_body_table, event_table
 from zato.common.audit_log.export.api import get_audit_export
+from zato.common.audit_log.payload import update_event_payload
 from zato.common.audit_log.writes import execute_audit_write, write_audit
 from zato.common.util.api import utcnow
-
-# Zato - Rust
-from zato_common_core.zato_common_core import extract_search_text
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -167,12 +165,8 @@ def record_job_complete(event_id:'int', *, outcome:'str', duration_ms:'int', err
     """
     engine = get_database_engine()
 
-    update_statement = event_table.update()
-    update_statement = update_statement.where(event_table.c.id == event_id)
-    update_statement = update_statement.values(outcome=outcome, duration_ms=duration_ms, data=error,
-        search_text=extract_search_text(error))
-
-    _ = execute_audit_write(engine, update_statement)
+    values = {'outcome': outcome, 'duration_ms': duration_ms}
+    _ = write_audit(engine, update_event_payload, event_id, values, error)
 
     # The run closes with its own system entry, mirroring the one it opened with.
     duration_human = format_duration_ms(duration_ms)
@@ -230,12 +224,8 @@ def _mark_run_timed_out(connection:'Connection', event_query:'any_', elapsed_ms:
     if out is None:
         return None
 
-    update_statement = event_table.update()
-    update_statement = update_statement.where(event_table.c.id == out)
-    update_statement = update_statement.values(outcome=SCHEDULER.OUTCOME.TIMEOUT, duration_ms=elapsed_ms, data=error,
-        search_text=extract_search_text(error))
-
-    _ = connection.execute(update_statement)
+    values = {'outcome': SCHEDULER.OUTCOME.TIMEOUT, 'duration_ms': elapsed_ms}
+    update_event_payload(connection, out, values, error)
 
     return out
 

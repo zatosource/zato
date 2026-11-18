@@ -23,6 +23,7 @@ from zato.admin.web.views.audit_log.sources import _source_parse, render_schedul
 from zato.common.audit_log.api import event_table, AuditLog, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import get_attachment, list_attachments
+from zato.common.audit_log.common import event_data
 from zato.common.audit_log.body import resolve_body
 from zato.common.audit_log.config_audit import record_view_event
 from zato.common.audit_log.export.api import ModuleCtx as ExportCtx, start_audit_export, stop_audit_export
@@ -120,7 +121,7 @@ def details(req:'any_') -> 'HttpResponse':
 
     # Read the full payload of this one event from the shared audit log database.
     details_query = select(
-        event_table.c.source, event_table.c.object_name, event_table.c.data,
+        event_table.c.source, event_table.c.object_name, event_data,
         event_table.c.event_time).where(event_table.c.id == event_id)
     engine = get_database_engine()
 

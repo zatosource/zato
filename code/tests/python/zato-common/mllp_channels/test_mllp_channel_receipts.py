@@ -21,6 +21,7 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditLog, event_table
+from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
 from zato.common.hl7.mllp.reply import Unmatched_Object_Name
 from zato.common.hl7.mllp.router import HL7MessageRouter
@@ -151,7 +152,7 @@ def _get_events(event_type:'str') -> 'dictlist':
     """
     engine = get_database_engine()
 
-    query = select(event_table)
+    query = select(event_table, event_data)
     query = query.where(event_table.c.event_type == event_type)
     query = query.order_by(event_table.c.id)
 

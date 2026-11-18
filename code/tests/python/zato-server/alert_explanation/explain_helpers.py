@@ -38,6 +38,7 @@ from zato.common.alerting.explain.store import ExplanationStore
 from zato.common.alerting.model import Default_Dedup_Window_Seconds
 from zato.common.api import SMTPMessage
 from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
 from zato.common.crypto.api import CryptoManager
 from zato.common.odb.model import GenericConn, GenericObject, HTTPBasicAuth, HTTPSOAP, SecurityBase, Service
@@ -444,7 +445,7 @@ def get_explained_events() -> 'anylist':
     """
     engine = get_database_engine()
 
-    query = select(event_table).where(event_table.c.event_type == AuditEvent.Alert_Explained)
+    query = select(event_table, event_data).where(event_table.c.event_type == AuditEvent.Alert_Explained)
 
     with engine.connect() as connection:
         out = [dict(row._mapping) for row in connection.execute(query)]

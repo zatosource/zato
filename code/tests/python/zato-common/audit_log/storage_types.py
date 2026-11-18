@@ -21,13 +21,11 @@ from sqlalchemy import func, select
 from common import delete_all_events
 from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditSource
 from zato.common.db_env.database import get_database_engine
+from zato.common.audit_log.payload import update_event_payload
 from zato.common.audit_log.search import build_search_conditions
-from zato.common.audit_log.writes import execute_audit_write
-from zato.common.test.direct_sql.seed import seed_row, seed_rows
+from zato.common.audit_log.writes import execute_audit_write, write_audit
+from zato.common.test.direct_sql.seed import seed_event_row, seed_rows
 from zato.common.db_env.common import hour_period, Type_SQLite
-
-# Zato - Rust
-from zato_common_core.zato_common_core import extract_search_text
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -84,10 +82,9 @@ def _insert_event(engine:'Engine', cid:'str', event_time:'datetime', data:'str')
         msg_id=f'msg-{cid}',
         event_time=event_time,
         data=data,
-        search_text=extract_search_text(data),
     )
 
-    out = seed_row(engine, event_table, event_row)
+    out = seed_event_row(engine, event_row)
     return out
 
 # ################################################################################################################################
@@ -263,9 +260,7 @@ def run_search_scenario() -> 'None':
 
     # The index follows updates ..
     replaced_data = 'item replaced'
-    replaced_values = {'data': replaced_data, 'search_text': extract_search_text(replaced_data)}
-    update = event_table.update().where(event_table.c.id == updated_id).values(replaced_values)
-    _ = execute_audit_write(engine, update)
+    _ = write_audit(engine, update_event_payload, updated_id, {}, replaced_data)
 
     assert _search(engine, 'valuexa') == set()
     assert _search(engine, 'replaced') == {'updated'}

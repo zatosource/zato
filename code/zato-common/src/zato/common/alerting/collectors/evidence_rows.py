@@ -20,6 +20,7 @@ from sqlalchemy import and_, select
 # Zato
 from zato.common.alerting.collectors.common import Default_Window_Seconds
 from zato.common.audit_log.api import event_table
+from zato.common.audit_log.common import event_data
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,7 +51,7 @@ row_columns = (
     event_table.c.outcome,
     event_table.c.status,
     event_table.c.duration_ms,
-    event_table.c.data,
+    event_data,
     event_table.c.ext_client_id,
     event_table.c.application_outcome,
 )

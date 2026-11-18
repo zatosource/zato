@@ -29,6 +29,7 @@ from sqlalchemy import select
 # Zato
 from zato.common.db_env.engine import new_zato_engine
 from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.common import event_data
 from zato.common.destination.constants import DeliveryMode, DestinationType, Respond_From_Service
 from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
 
@@ -213,7 +214,7 @@ def _get_events(audit_db_path:'str', object_name:'str', event_type:'str', msg_id
     """
     engine = new_zato_engine(f'sqlite:///{audit_db_path}')
 
-    query = select(event_table)
+    query = select(event_table, event_data)
     query = query.where(event_table.c.object_name == object_name)
     query = query.where(event_table.c.event_type == event_type)
 
@@ -278,7 +279,7 @@ def _get_hops(audit_db_path:'str', cid:'str') -> 'anylist':
     """
     engine = new_zato_engine(f'sqlite:///{audit_db_path}')
 
-    query = select(event_table)
+    query = select(event_table, event_data)
     query = query.where(event_table.c.event_type == AuditEvent.Request_Sent)
     query = query.where(event_table.c.cid == cid)
     query = query.order_by(event_table.c.id)

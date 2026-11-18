@@ -28,6 +28,7 @@ from zato.common.alerting.explain.settings_info import Label_Alerts, On
 from zato.common.alerting.explain.store import ExplanationStore
 from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditEvent, AuditSource, event_table
+from zato.common.audit_log.common import event_data
 from zato.common.soap.common import FaultCode
 from zato.common.test.client import AdminClient
 
@@ -296,7 +297,7 @@ def _get_fault_responses() -> 'anylist':
     """
     engine = _server_audit_engine()
 
-    query = select(event_table).\
+    query = select(event_table, event_data).\
         where(event_table.c.source == AuditSource.SOAP_Outgoing).\
         where(event_table.c.object_name == _faulting_name).\
         where(event_table.c.event_type == AuditEvent.Response_Received)

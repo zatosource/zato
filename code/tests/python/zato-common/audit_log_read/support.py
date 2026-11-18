@@ -24,7 +24,8 @@ from zato.common.audit_log.api import event_attr_table, event_body_table, event_
 from zato.common.db_env.database import database_config, dispose_database_engine, get_database_engine, \
     new_unshared_database_engine
 from zato.common.db_env.database_env import DatabaseEnv
-from zato.common.audit_log.common import event_count_table, event_dedup_table, event_open_table, Status_Outstanding
+from zato.common.audit_log.common import event_count_table, event_dedup_table, event_open_table, event_payload_table, \
+    Status_Outstanding
 from zato.common.audit_log.event_count import compact_event_counts, count_key_columns
 from zato.common.audit_log.listing import new_search_filters
 from zato.common.audit_log.search_index import register_search_indexes
@@ -428,9 +429,10 @@ def _previous_metadata() -> 'MetaData':
 
     # A copy of a table carries no hooks of the creation of the original
     previous_event_table = out.tables[event_table.name]
+    previous_payload_table = out.tables[event_payload_table.name]
     previous_attr_table = out.tables[event_attr_table.name]
 
-    register_search_indexes(previous_event_table, previous_attr_table)
+    register_search_indexes(previous_event_table, previous_payload_table, previous_attr_table)
 
     return out
 

@@ -22,6 +22,7 @@ from sqlalchemy import select
 from zato.common.db_env.engine import new_zato_engine
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
     AuditEvent, AuditLink, AuditOutcome, AuditSource
+from zato.common.audit_log.common import event_data
 from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
 
 # Zato - test helpers
@@ -169,7 +170,7 @@ def _get_events(audit_db_path:'str', object_name:'str', event_type:'str'='') -> 
 
     engine = new_zato_engine(f'sqlite:///{audit_db_path}')
 
-    query = select(event_table)
+    query = select(event_table, event_data)
     query = query.where(event_table.c.object_name == object_name)
 
     if event_type:

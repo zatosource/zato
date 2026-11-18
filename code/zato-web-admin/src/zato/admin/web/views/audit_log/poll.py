@@ -24,6 +24,7 @@ from zato.admin.web.views.audit_log.query import hydrate_rows, normalize_row
 from zato.admin.web.views.audit_log.trace import attach_trace_lines
 from zato.common.audit_log.activity import count_by_bucket, get_match_window
 from zato.common.audit_log.api import event_table, AuditSource
+from zato.common.audit_log.common import get_event_column
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.flow import get_flow_ids, resolve_seed
 from zato.common.audit_log.listing import count_matching, event_conditions, new_search_filters
@@ -92,7 +93,7 @@ def poll(req:'any_') -> 'HttpResponse':
     select_columns:'anylist' = []
 
     for column_name in _row_columns:
-        column = event_table.c[column_name]
+        column = get_event_column(column_name)
         select_columns.append(column)
 
     # Outstanding items are shown oldest first - the longest-waiting exchange is the most
@@ -310,7 +311,7 @@ def _read_flow_rows(connection:'any_', seed_id:'int') -> 'anylist':
     select_columns:'anylist' = []
 
     for column_name in _flow_columns:
-        column = event_table.c[column_name]
+        column = get_event_column(column_name)
         select_columns.append(column)
 
     # A flow reads the way the list does, newest first, and two events of one moment are told

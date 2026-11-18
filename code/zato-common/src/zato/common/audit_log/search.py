@@ -13,9 +13,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from sqlalchemy import func, or_, select, union
 
 # Zato
-from zato.common.audit_log.common import event_attr_table, event_table, source_attr_names, Status_Outstanding
+from zato.common.audit_log.common import event_attr_table, event_payload_table, event_table, get_event_column, \
+    source_attr_names, Status_Outstanding
 from zato.common.audit_log.query import outstanding_conditions, source_outstanding
-from zato.common.audit_log.search_index import match_event_search, narrow_attr_search, search_columns
+from zato.common.audit_log.search_index import match_event_search, narrow_attr_search, payload_search_columns, \
+    search_columns
 from zato.common.db_env.common import Type_PostgreSQL
 
 # Zato - Rust
@@ -149,9 +151,10 @@ def build_search_conditions(
         search_words = extract_search_text(query).split()
 
         if search_words:
-            any_column_match = match_event_search(dialect_name, event_table, search_words)
+            any_column_match = match_event_search(dialect_name, event_table, event_payload_table, search_words)
 
-        # .. and a query without a word of three characters is matched by LIKE, in any case, with wildcards matched literally.
+        # .. and a query without a word of three characters is matched by LIKE, in any case, with wildcards matched literally,
+        # in the searched columns of the event or in the words of its payload.
         else:
             like_parts:'anylist' = []
 
@@ -159,6 +162,16 @@ def build_search_conditions(
                 column = event_table.c[column_name]
                 is_like_pattern = column.ilike(pattern, escape='\\')
 
+                like_parts.append(is_like_pattern)
+
+            for column_name in payload_search_columns:
+                column = event_payload_table.c[column_name]
+                is_matching_payload = column.ilike(pattern, escape='\\')
+
+                matching_digests = select(event_payload_table.c.digest)
+                matching_digests = matching_digests.where(is_matching_payload)
+
+                is_like_pattern = event_table.c.payload_digest.in_(matching_digests)
                 like_parts.append(is_like_pattern)
 
             any_column_match = or_(*like_parts)
@@ -293,7 +306,7 @@ def search_events(
     columns:'anylist' = []
 
     for column_name in result_columns:
-        column = event_table.c[column_name]
+        column = get_event_column(column_name)
         columns.append(column)
 
     statement = select(*columns)

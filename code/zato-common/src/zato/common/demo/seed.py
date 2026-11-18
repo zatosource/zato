@@ -36,6 +36,7 @@ from zato.common.audit_log.api import event_attr_table, event_body_table, event_
 from zato.common.audit_log.common import alert_table, event_dedup_table
 from zato.common.audit_log.config_audit import record_config_change, record_view_event
 from zato.common.audit_log.dedup import build_dedup_key
+from zato.common.audit_log.payload import get_event_rows, store_payloads
 from zato.common.db_env.engine import call_database
 from zato.common.db_env.write_path import Mechanism, write_path
 from zato.common.hl7.audit import audit_ack_received, audit_ack_sent, audit_batch_received, audit_message_received, \
@@ -52,9 +53,10 @@ if 0:
     from sqlalchemy.engine import Connection, Engine
     from zato.common.alerting.model import AlertRule, Finding
     from zato.common.audit_log.pending import pending_event_list
-    from zato.common.typing_ import anydict, anylist, anytuple, dictlist, intanydict, intnone
+    from zato.common.typing_ import anydict, anylist, anytuple, dictlist, intanydict, intnone, strstrdict
 
     anydict = anydict
+    strstrdict = strstrdict
     anylist = anylist
     anytuple = anytuple
     AlertRule = AlertRule
@@ -364,9 +366,14 @@ class _BulkAuditLog(AuditLog):
 
         to_write = self.pending_events[self.written_count:]
 
-        # The event rows go first, so everything else can reference their ids
+        # The payloads and the event rows referencing them go first, so everything else can reference their ids
         if to_write:
-            event_rows = [pending.values for pending in to_write]
+            payloads:'strstrdict' = {}
+            event_rows = get_event_rows(to_write, payloads)
+
+            if payloads:
+                store_payloads(connection, payloads)
+
             _ = connection.execute(event_table.insert(), event_rows)
 
         # The real ids come from one read-back - (cid, cid_sequence) is unique

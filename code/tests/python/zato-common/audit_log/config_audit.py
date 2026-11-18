@@ -15,6 +15,7 @@ from sqlalchemy import select
 # Zato
 from common import delete_all_events
 from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.config_audit import build_change_summary, is_secret_field, mask_secrets, \
     record_config_change, record_view_event, ConfigScope, Secret_Mask
@@ -54,7 +55,7 @@ def _get_event_row(event_id:'int') -> 'anydict':
     """
     engine = get_database_engine()
 
-    query = select(event_table)
+    query = select(event_table, event_data)
     query = query.where(event_table.c.id == event_id)
 
     with engine.connect() as connection:

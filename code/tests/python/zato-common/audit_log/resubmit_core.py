@@ -18,7 +18,7 @@ from resubmit_context import run_hop_ack_checks, run_request_context_checks, run
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, AuditEvent, AuditLog, \
     AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
-from zato.common.audit_log.common import event_dedup_table, AuditBody, AuditClassification
+from zato.common.audit_log.common import event_data, event_dedup_table, AuditBody, AuditClassification
 from zato.common.audit_log.dedup import acquire_dedup_key, build_dedup_key, complete_dedup_key, get_in_doubt, \
     release_dedup_key
 from zato.common.audit_log.resubmit import bulk_resubmit, find_event_ids, get_resubmit_handler, get_stored_payload, \
@@ -61,7 +61,7 @@ def _get_event_row(event_id:'int') -> 'anydict':
     """
     engine = get_database_engine()
 
-    query = select(event_table)
+    query = select(event_table, event_data)
     query = query.where(event_table.c.id == event_id)
 
     with engine.connect() as connection:
@@ -379,7 +379,7 @@ def _run_hop_resend_checks(audit_log:'AuditLog') -> 'None':
 
     engine = get_database_engine()
 
-    query = select(event_table)
+    query = select(event_table, event_data)
     query = query.where(event_table.c.cid == 'cid-core-hop-fail')
 
     with engine.connect() as connection:
@@ -409,7 +409,7 @@ def _run_hop_resend_checks(audit_log:'AuditLog') -> 'None':
     else:
         raise Exception('A rejected send was expected to be reported as a failed resend')
 
-    query = select(event_table)
+    query = select(event_table, event_data)
     query = query.where(event_table.c.cid == 'cid-core-hop-rejected-send')
 
     with engine.connect() as connection:

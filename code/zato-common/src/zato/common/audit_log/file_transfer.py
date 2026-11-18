@@ -25,7 +25,7 @@ from sqlalchemy import select
 from zato.common.audit_log.api import event_body_table, event_table, AuditEvent, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import build_attachment, build_attachment_from_file
-from zato.common.audit_log.common import AuditBody
+from zato.common.audit_log.common import AuditBody, event_data
 from zato.common.audit_log.resubmit import ResubmitException
 
 # ################################################################################################################################
@@ -246,7 +246,7 @@ def load_transfer_content(cid:'str') -> 'bytes':
     # when the connection keeps file contents.
     statement = select(
         event_table.c.id,
-        event_table.c.data,
+        event_data,
     ).where(event_table.c.cid == cid
     ).where(event_table.c.source == AuditSource.File_Outgoing
     ).where(event_table.c.event_type == AuditEvent.Request_Sent

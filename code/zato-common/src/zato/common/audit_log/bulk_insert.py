@@ -15,6 +15,7 @@ from sqlalchemy import select
 from zato.common.audit_log.attachment import build_attachment_rows
 from zato.common.audit_log.attr_rows import build_attr_rows
 from zato.common.audit_log.common import event_attr_table, event_body_table, event_link_table, event_table
+from zato.common.audit_log.payload import get_event_rows, store_payloads
 from zato.common.crypto.api import CryptoManager
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.pg8000_copy import copy_rows
@@ -27,10 +28,11 @@ if 0:
     from sqlalchemy.engine import Connection, Dialect
     from sqlalchemy.sql.schema import Table
     from zato.common.audit_log.pending import pending_event_list
-    from zato.common.typing_ import anydict, anylist, dictlist, intlist
+    from zato.common.typing_ import anydict, anylist, dictlist, intlist, strstrdict
 
     # Dummy assignments to satisfy type checkers
     anylist = anylist
+    strstrdict = strstrdict
     Connection = Connection
     Dialect = Dialect
     dictlist = dictlist
@@ -148,17 +150,19 @@ def insert_pending_events(connection:'Connection', batch:'pending_event_list') -
     # The id of the commit identifies the event rows of this batch on the databases that need it
     commit_id = CryptoManager.generate_hex_string()
 
-    event_rows:'anylist' = []
+    # The payloads of the batch, each once, are stored before the events that reference them ..
+    payloads:'strstrdict' = {}
+    event_rows = get_event_rows(batch, payloads)
 
-    for pending in batch:
-        event_rows.append(pending.values)
+    if payloads:
+        store_payloads(connection, payloads)
 
     # The companion rows of all the events, one list per table
     attr_rows:'anylist' = []
     body_rows:'anylist' = []
     link_rows:'anylist' = []
 
-    # The event rows come first, so everything else can reference their ids ..
+    # .. the event rows come next, so everything else can reference their ids ..
     out = insert_events(connection, event_rows, commit_id)
 
     for pending, event_id in zip(batch, out):

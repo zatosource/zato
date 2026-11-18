@@ -17,18 +17,20 @@ from logging import getLogger
 from sqlalchemy import or_, select, update
 
 # Zato
-from zato.common.audit_log.common import AuditOutcome, event_attr_table, event_body_table, event_link_table, \
+from zato.common.audit_log.common import AuditOutcome, event_attr_table, event_body_table, event_data, event_link_table, \
     event_table, get_retention_days, get_source_env_suffix
+from zato.common.audit_log.payload import delete_unreferenced_payloads
 from zato.common.db_env.write_path import Mechanism, write_path
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.engine import Engine
+    from sqlalchemy.engine import Connection, Engine
     from zato.common.typing_ import any_, anylist, callable_, intlist, strcalldict, strlist, strnone
 
     # Dummy assignments to satisfy type checkers
+    Connection = Connection
     Engine = Engine
     any_ = any_
     anylist = anylist
@@ -265,12 +267,12 @@ def _get_expired_ids(engine:'Engine', source:'str', cutoff:'datetime') -> 'intli
 # ################################################################################################################################
 
 def _archive_events(engine:'Engine', archiver:'_Archiver', ids:'intlist') -> 'None':
-    """ Archives full event rows and their bodies before deletion.
+    """ Archives full event rows, with their payloads, and their bodies before deletion.
     """
     is_wanted_event = event_table.c.id.in_(ids)
     is_body_of_event = event_body_table.c.event_id.in_(ids)
 
-    event_query = select(event_table)
+    event_query = select(event_table, event_data)
     event_query = event_query.where(is_wanted_event)
 
     body_query = select(event_body_table)
@@ -294,8 +296,24 @@ def _archive_events(engine:'Engine', archiver:'_Archiver', ids:'intlist') -> 'No
 
 # ################################################################################################################################
 
+def _get_payload_digests(connection:'Connection', ids:'intlist') -> 'strlist':
+    """ Returns the distinct digests of the payloads of the given events.
+    """
+    query = select(event_table.c.payload_digest)
+    query = query.where(event_table.c.id.in_(ids))
+    query = query.where(event_table.c.payload_digest.is_not(None))
+    query = query.distinct()
+
+    result = connection.execute(query)
+
+    out = list(result.scalars())
+    return out
+
+# ################################################################################################################################
+
 def _delete_events(engine:'Engine', ids:'intlist') -> 'None':
-    """ Deletes one chunk of events along with their attributes, bodies and lineage links.
+    """ Deletes one chunk of events along with their attributes, bodies and lineage links,
+    and the payloads that no other event references.
     """
     is_child_event = event_link_table.c.child_event_id.in_(ids)
     is_parent_event = event_link_table.c.parent_event_id.in_(ids)
@@ -318,10 +336,18 @@ def _delete_events(engine:'Engine', ids:'intlist') -> 'None':
     delete_events = delete_events.where(is_wanted_event)
 
     with engine.begin() as connection:
+
+        # The payloads of the events are read before the events are gone ..
+        payload_digests = _get_payload_digests(connection, ids)
+
+        # .. everything that references the events is deleted along with them ..
         _ = connection.execute(delete_attrs)
         _ = connection.execute(delete_bodies)
         _ = connection.execute(delete_links)
         _ = connection.execute(delete_events)
+
+        # .. and so are the payloads that no other event references.
+        delete_unreferenced_payloads(connection, payload_digests)
 
 # ################################################################################################################################
 
@@ -358,7 +384,7 @@ def _run_row_retention(engine:'Engine', archiver:'_Archiver', source:'str', cuto
 
 def _get_content_candidates(engine:'Engine', source:'str', cutoff:'datetime', last_id:'int') -> 'anylist':
     """ Returns up to one chunk of one source's events older than the content cutoff that still
-    carry content - a non-empty data column or rows in the body table.
+    carry content - a payload or rows in the body table.
     """
     has_body = select(event_body_table.c.id)
     has_body = has_body.where(event_body_table.c.event_id == event_table.c.id)
@@ -366,7 +392,7 @@ def _get_content_candidates(engine:'Engine', source:'str', cutoff:'datetime', la
     has_any_body = has_body.exists()
 
     content_condition = or_(
-        event_table.c.data != '',
+        event_table.c.payload_digest.is_not(None),
         has_any_body,
     )
 
@@ -395,9 +421,9 @@ def _archive_content(engine:'Engine', archiver:'_Archiver', ids:'intlist') -> 'N
     is_wanted_event = event_table.c.id.in_(ids)
     is_body_of_event = event_body_table.c.event_id.in_(ids)
 
-    content_query = select(event_table.c.id, event_table.c.data)
+    content_query = select(event_table.c.id, event_data)
     content_query = content_query.where(is_wanted_event)
-    content_query = content_query.where(event_table.c.data != '')
+    content_query = content_query.where(event_table.c.payload_digest.is_not(None))
 
     body_query = select(event_body_table)
     body_query = body_query.where(is_body_of_event)
@@ -421,15 +447,15 @@ def _archive_content(engine:'Engine', archiver:'_Archiver', ids:'intlist') -> 'N
 # ################################################################################################################################
 
 def _prune_content(engine:'Engine', ids:'intlist') -> 'None':
-    """ Prunes the content of one chunk of events - the data column and the words extracted from it are emptied
-    and their body rows are deleted, while the event rows themselves stay.
+    """ Prunes the content of one chunk of events - the events stop referencing their payloads, the payloads
+    that no other event references are deleted and so are the body rows, while the event rows themselves stay.
     """
     is_wanted_event = event_table.c.id.in_(ids)
     is_body_of_event = event_body_table.c.event_id.in_(ids)
 
     prune_statement = update(event_table)
     prune_statement = prune_statement.where(is_wanted_event)
-    prune_statement = prune_statement.values(data='', search_text='')
+    prune_statement = prune_statement.values(payload_digest=None)
 
     delete_bodies = event_body_table.delete()
     delete_bodies = delete_bodies.where(is_body_of_event)
@@ -438,7 +464,11 @@ def _prune_content(engine:'Engine', ids:'intlist') -> 'None':
     # because the retention of another server may delete the same events at the same time.
     with engine.begin() as connection:
         _ = connection.execute(delete_bodies)
+
+        payload_digests = _get_payload_digests(connection, ids)
         _ = connection.execute(prune_statement)
+
+        delete_unreferenced_payloads(connection, payload_digests)
 
 # ################################################################################################################################
 

@@ -23,7 +23,7 @@ from sqlalchemy import select
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource, event_body_table, event_table
 from zato.common.db_env.database import get_database_engine
-from zato.common.audit_log.common import AuditBody
+from zato.common.audit_log.common import AuditBody, event_data
 from zato.common.audit_log.dedup import acquire_dedup_key, build_dedup_key, complete_dedup_key, release_dedup_key
 from zato.common.audit_log.request_context import Key_Payload, Key_Payload_Kind, Key_Redacted, Payload_Kind_Described
 from zato.common.hl7.audit import interpret_ack
@@ -229,7 +229,7 @@ def load_event(event_id:'int', *, is_raw_payload:'bool'=False) -> 'StoredEvent':
         event_table.c.event_type,
         event_table.c.object_name,
         event_table.c.msg_id,
-        event_table.c.data,
+        event_data,
     ).where(event_table.c.id == event_id)
 
     engine = get_database_engine()

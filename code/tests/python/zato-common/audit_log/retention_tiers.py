@@ -19,6 +19,7 @@ from sqlalchemy import func, select
 from common import delete_all_events
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, get_source_env_suffix, \
     register_prunability, AuditEvent, AuditLink, AuditLog, AuditOutcome, AuditSource, Env_Retention_Days_Prefix
+from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log import retention
 from zato.common.audit_log.query import outstanding_conditions
@@ -104,7 +105,7 @@ def _get_event_row(event_id:'int') -> 'anydictnone':
     """
     engine = get_database_engine()
 
-    query = select(event_table)
+    query = select(event_table, event_data)
     query = query.where(event_table.c.id == event_id)
 
     with engine.connect() as connection:

@@ -12,7 +12,7 @@ from sqlalchemy import select
 # Zato
 from zato.common.audit_log.api import event_table, AuditEvent, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
-from zato.common.audit_log.common import AuditClassification
+from zato.common.audit_log.common import event_data, AuditClassification
 from zato.common.audit_log.request_context import Key_Headers, Key_Payload, Key_Payload_Kind, Key_Redacted, \
     Payload_Kind_Described, Redacted_Value
 from zato.common.audit_log.resubmit import load_event, require_resendable_request, resend_hop, run_once, \
@@ -59,7 +59,7 @@ def get_event_rows(cid:'str', event_type:'str') -> 'anylist':
     """
     engine = get_database_engine()
 
-    query = select(event_table)
+    query = select(event_table, event_data)
     query = query.where(event_table.c.cid == cid)
     query = query.where(event_table.c.event_type == event_type)
     query = query.order_by(event_table.c.id)

@@ -18,6 +18,7 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditLog
+from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
 from zato.common.destination.constants import DestinationType
 from zato.common.destination.coordinator import new_context, new_transports
@@ -256,7 +257,7 @@ def get_hop_rows() -> 'anylist':
     """
     engine = get_database_engine()
 
-    query = select(event_table)
+    query = select(event_table, event_data)
     query = query.where(event_table.c.event_type == AuditEvent.Request_Sent)
     query = query.where(event_table.c.cid == CID)
     query = query.order_by(event_table.c.id)

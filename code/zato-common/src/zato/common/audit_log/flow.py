@@ -25,7 +25,7 @@ from sqlalchemy import and_, or_, select
 
 # Zato
 from zato.common.audit_log.api import event_link_table, event_table
-from zato.common.audit_log.common import AuditEvent, AuditSource
+from zato.common.audit_log.common import AuditEvent, AuditSource, event_data
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -589,7 +589,7 @@ def _refine_same_content(connection:'any_', flow_ids:'FlowIds', events:'anylist'
     if not delivered_ids:
         return
 
-    statement = select(event_table.c.id, event_table.c.data)
+    statement = select(event_table.c.id, event_data)
     statement = statement.where(event_table.c.id.in_(delivered_ids))
 
     result = connection.execute(statement)

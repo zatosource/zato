@@ -126,7 +126,6 @@ def _insert_event(
         outcome=AuditOutcome.OK,
         status=status,
         duration_ms=duration_ms,
-        data='',
     )
 
     engine = get_database_engine()

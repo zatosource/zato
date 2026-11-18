@@ -18,7 +18,7 @@ from sqlalchemy import select
 # Zato
 from zato.admin.web.views.audit_log.columns import _source_event_label
 from zato.common.audit_log.api import event_table
-from zato.common.audit_log.common import event_attr_table, event_body_table, AuditBody
+from zato.common.audit_log.common import event_attr_table, event_body_table, event_data, AuditBody
 from zato.common.audit_log.query import source_outstanding
 from zato.common.audit_log.resubmit import source_resubmit_actions
 from zato.common.audit_log.scheduler import format_duration_ms, Attr_Current_Run, Attr_Delay_Ms, Log_Kinds
@@ -267,7 +267,7 @@ def render_scheduler_record(engine:'any_', event_id:'int', kind:'str') -> 'str':
     # The run's own row - what ran, when, and how it ended
     run_query = select(
         event_table.c.object_name, event_table.c.endpoint, event_table.c.outcome,
-        event_table.c.duration_ms, event_table.c.event_time, event_table.c.data).where(
+        event_table.c.duration_ms, event_table.c.event_time, event_data).where(
         event_table.c.id == event_id)
 
     # The run number and delay ride in the attrs

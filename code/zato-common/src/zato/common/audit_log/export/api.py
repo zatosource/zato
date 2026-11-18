@@ -21,7 +21,7 @@ from opentelemetry.proto.common.v1.common_pb2 import InstrumentationScope
 from opentelemetry.proto.resource.v1.resource_pb2 import Resource
 
 # Zato
-from zato.common.audit_log.common import event_attr_table, event_table
+from zato.common.audit_log.common import event_attr_table, event_data, event_table
 from zato.common.audit_log.export.config import get_export_config
 from zato.common.audit_log.export.data import has_data_export
 from zato.common.audit_log.export.mapping import QueuedEvent, to_key_values
@@ -195,7 +195,7 @@ class AuditExport:
     def emit_row(self, engine:'Engine', event_id:'int') -> 'None':
         """ Reads an event updated in place back from the database and hands it to the export again.
         """
-        event_query = select(event_table).where(event_table.c.id == event_id)
+        event_query = select(event_table, event_data).where(event_table.c.id == event_id)
         attr_query = select(event_attr_table).where(event_attr_table.c.event_id == event_id)
 
         with engine.begin() as connection:

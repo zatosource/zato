@@ -31,7 +31,7 @@ from zato.common.alerting.explain.settings_info import Label_Alerts, On
 from zato.common.alerting.explain.store import ExplanationStore
 from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditEvent, AuditSource, event_table
-from zato.common.audit_log.common import TransportStatus
+from zato.common.audit_log.common import event_data, TransportStatus
 from zato.common.test.client import AdminClient
 
 # Test helpers
@@ -500,7 +500,7 @@ def _get_outgoing_responses(outgoing:'_OutgoingDescription') -> 'anylist':
     """
     engine = _server_audit_engine()
 
-    query = select(event_table).\
+    query = select(event_table, event_data).\
         where(event_table.c.source == AuditSource.REST_Outgoing).\
         where(event_table.c.object_name == outgoing.name).\
         where(event_table.c.event_type == AuditEvent.Response_Received)
@@ -589,7 +589,7 @@ def _get_soap_pings() -> 'anylist':
     if not inspect(engine).has_table(event_table.name):
         return []
 
-    query = select(event_table).\
+    query = select(event_table, event_data).\
         where(event_table.c.source == AuditSource.SOAP_Outgoing_Health).\
         where(event_table.c.object_name == _soap_name).\
         where(event_table.c.event_type == AuditEvent.Response_Received).\

@@ -20,13 +20,12 @@ from sqlalchemy import and_, func, select
 # Zato
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_table, AuditBody, AuditEvent, AuditOutcome, \
     AuditSource
+from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.export.api import get_audit_export
-from zato.common.audit_log.writes import execute_audit_write
+from zato.common.audit_log.payload import update_event_payload
+from zato.common.audit_log.writes import execute_audit_write, write_audit
 from zato.common.util.api import utcnow
-
-# Zato - Rust
-from zato_common_core.zato_common_core import extract_search_text
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -198,20 +197,23 @@ def update_run_event(
     if duration_ms is not None:
         values['duration_ms'] = duration_ms
 
+    engine = get_database_engine()
+
+    # A new payload replaces the previous one of the run ..
     if data is not None:
         data_json = dumps(data)
-        values['data'] = data_json
-        values['search_text'] = extract_search_text(data_json)
+        _ = write_audit(engine, update_event_payload, event_id, values, data_json)
 
-    if not values:
-        return
+    # .. while an update of the other columns alone keeps it.
+    else:
+        if not values:
+            return
 
-    statement = event_table.update()
-    statement = statement.where(event_table.c.id == event_id)
-    statement = statement.values(**values)
+        statement = event_table.update()
+        statement = statement.where(event_table.c.id == event_id)
+        statement = statement.values(**values)
 
-    engine = get_database_engine()
-    _ = execute_audit_write(engine, statement)
+        _ = execute_audit_write(engine, statement)
 
     # The collector sees the updated run as another record of the same event
     if export := get_audit_export():
@@ -285,7 +287,7 @@ def load_attempt_memory(conn_name:'str', schedule_name:'str', since:'datetime') 
     is_remembered = event_table.c.event_type.in_(remembered_types)
     is_recent = event_table.c.event_time >= since
 
-    statement = select(event_table.c.event_type, event_table.c.event_time, event_table.c.data)
+    statement = select(event_table.c.event_type, event_table.c.event_time, event_data)
     statement = statement.where(and_(is_source, is_conn, is_remembered, is_recent))
     statement = statement.order_by(event_table.c.id)
 
@@ -339,7 +341,7 @@ def find_seen_before(conn_name:'str', schedule_name:'str', checksum:'str', since
 
     newest_first = event_table.c.id.desc()
 
-    statement = select(event_table.c.id, event_table.c.event_time, event_table.c.data)
+    statement = select(event_table.c.id, event_table.c.event_time, event_data)
     statement = statement.select_from(attr_join)
     statement = statement.where(and_(is_source, is_conn, is_delivered, is_recent, is_checksum_attr, is_same_checksum))
     statement = statement.order_by(newest_first)
@@ -411,7 +413,7 @@ def find_running_runs(conn_name:'str', schedule_name:'str', server_name:'str') -
     is_running = event_table.c.outcome == AuditOutcome.Running
     is_server = event_table.c.server_name == server_name
 
-    statement = select(event_table.c.id, event_table.c.data)
+    statement = select(event_table.c.id, event_data)
     statement = statement.where(and_(is_source, is_conn, is_run, is_running, is_server))
     statement = statement.order_by(event_table.c.id)
 

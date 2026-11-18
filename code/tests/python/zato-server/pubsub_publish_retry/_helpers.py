@@ -15,6 +15,7 @@ from sqlalchemy import select
 # Zato
 from zato.common.api import PubSub
 from zato.common.audit_log.api import event_table
+from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
 from zato.common.test.client import AdminClient
 
@@ -199,7 +200,7 @@ def get_audit_events(msg_id:'str', event_type:'strnone'=None) -> 'anylist':
     """
     engine = get_database_engine()
 
-    query = select(event_table)
+    query = select(event_table, event_data)
     query = query.where(event_table.c.msg_id == msg_id)
 
     if event_type:

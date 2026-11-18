@@ -19,6 +19,7 @@ from sqlalchemy import select
 # Zato
 from live_sql.env import database_env
 from zato.common.audit_log.api import event_link_table, event_table
+from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
 from zato.common.db_env.database_env import DatabaseEnv
 
@@ -61,7 +62,7 @@ def get_events() -> 'anylist':
     """
     engine = get_database_engine()
 
-    query = select(event_table)
+    query = select(event_table, event_data)
     query = query.order_by(event_table.c.id)
 
     out:'anylist' = []

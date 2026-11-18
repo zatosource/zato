@@ -19,6 +19,7 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.audit_log.api import event_table, AuditEvent, AuditSource
+from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
 from zato.common.destination.model import DestinationException
 from zato.common.json_internal import loads
@@ -109,7 +110,7 @@ def _get_stored_call() -> 'stranydict':
     """
     engine = get_database_engine()
 
-    query = select(event_table.c.data)
+    query = select(event_data)
     query = query.where(event_table.c.event_type == AuditEvent.Request_Sent)
     query = query.order_by(event_table.c.id.desc())
 

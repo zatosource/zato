@@ -18,6 +18,7 @@ from sqlalchemy import select
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource, event_attr_table, event_link_table, \
     event_table
+from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.resubmit import get_resubmit_handler, load_event, Action_Reprocess, Action_Resend, \
     ResubmitException
@@ -119,7 +120,7 @@ def _get_event_row(event_id:'int') -> 'anydict':
     """
     engine = get_database_engine()
 
-    query = select(event_table)
+    query = select(event_table, event_data)
     query = query.where(event_table.c.id == event_id)
 
     with engine.connect() as connection:
@@ -173,7 +174,7 @@ def _get_events(event_type:'str') -> 'anylist':
     """
     engine = get_database_engine()
 
-    query = select(event_table)
+    query = select(event_table, event_data)
     query = query.where(event_table.c.event_type == event_type)
     query = query.order_by(event_table.c.id)
 

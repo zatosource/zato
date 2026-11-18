@@ -30,7 +30,7 @@ from sqlalchemy import select
 # Zato
 from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditSource
 from zato.common.db_env.database import get_database_engine
-from zato.common.audit_log.common import LLMAttr, LLMFinish, TransportStatus
+from zato.common.audit_log.common import event_data, LLMAttr, LLMFinish, TransportStatus
 from zato.common.ext.bunch import Bunch
 from zato.common.typing_ import cast_
 from zato.distlock import LockManager
@@ -143,7 +143,7 @@ def _rows_of(conn_name:'str') -> 'list':
     """
     engine = get_database_engine()
 
-    query = select(event_table).where(
+    query = select(event_table, event_data).where(
         event_table.c.source == AuditSource.LLM,
         event_table.c.object_name == conn_name,
     ).order_by(event_table.c.id)

@@ -19,6 +19,7 @@ import lxml.etree as etree
 # Zato
 from channel_client import ChannelClient
 from channel_definitions import build_yaml
+from zato.common.audit_log.common import get_event_select_list
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -167,7 +168,7 @@ def read_audit_events(db_path:'str', cid:'str') -> 'anylist':
     if not os.path.exists(db_path):
         return out
 
-    column_list = ', '.join(_audit_columns)
+    column_list = get_event_select_list(_audit_columns)
     query = f'select {column_list} from event where cid = ? order by id'
 
     connection = sqlite3.connect(f'file:{db_path}?mode=ro', uri=True)

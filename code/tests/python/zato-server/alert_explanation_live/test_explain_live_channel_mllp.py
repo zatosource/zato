@@ -28,6 +28,7 @@ from zato.common.alerting.explain.settings_info import Label_Alerts, On
 from zato.common.alerting.explain.store import ExplanationStore
 from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditEvent, AuditSource, event_table
+from zato.common.audit_log.common import event_data
 from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
 from zato.common.hl7.mllp.reply import Rejection_Ack_Code
 
@@ -303,7 +304,7 @@ def _get_acks_sent() -> 'anylist':
     if not inspect(engine).has_table(event_table.name):
         return []
 
-    query = select(event_table).\
+    query = select(event_table, event_data).\
         where(event_table.c.source == AuditSource.MLLP_Channel).\
         where(event_table.c.object_name == _channel_name).\
         where(event_table.c.event_type == AuditEvent.Ack_Sent).\

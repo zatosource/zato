@@ -33,7 +33,8 @@ class PendingEvent:
     """ One audit event that is not written yet, with everything that is written alongside it.
     """
 
-    # The values of the event row itself
+    # The values of the event row itself, with its payload under data, which is stored in the payload table
+    # under the digest the event row references
     values: 'stranydict'
 
     # Searchable attributes, name to value

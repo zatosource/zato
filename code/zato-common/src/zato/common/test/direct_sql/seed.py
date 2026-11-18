@@ -14,8 +14,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from typing import NamedTuple
 
 # Zato
-from zato.common.audit_log.api import AuditLog
+from zato.common.audit_log.api import AuditLog, event_table
 from zato.common.audit_log.bulk_insert import insert_pending_events
+from zato.common.audit_log.payload import store_payload
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.database import get_database_engine
 from zato.common.db_env.engine import call_database
@@ -129,6 +130,47 @@ def seed_row(engine:'Engine', table:'Table', values:'stranydict') -> 'any_':
     and returns its primary key.
     """
     out = run_seed(engine, _insert_row, table, values)
+    return out
+
+# ################################################################################################################################
+
+def _insert_event_rows(connection:'Connection', rows:'dictlist') -> 'anylist':
+
+    out:'anylist' = []
+
+    for values in rows:
+
+        # The payload, if the event has one, goes to the payload table and the event row references it by its digest ..
+        event_row = dict(values)
+
+        if 'data' in event_row:
+            data = event_row.pop('data')
+            event_row['payload_digest'] = store_payload(connection, data)
+
+        # .. and the event row follows it.
+        event_id = _insert_row(connection, event_table, event_row)
+        out.append(event_id)
+
+    return out
+
+# ################################################################################################################################
+
+def seed_event_rows(engine:'Engine', rows:'dictlist') -> 'anylist':
+    """ Inserts rows of the event table, each with its payload under data stored in the payload table, in one transaction,
+    in turn with the other writes to the database, and returns their primary keys in the order of the rows.
+    """
+    out = run_seed(engine, _insert_event_rows, rows)
+    return out
+
+# ################################################################################################################################
+
+def seed_event_row(engine:'Engine', values:'stranydict') -> 'any_':
+    """ Inserts one row of the event table, with its payload under data stored in the payload table, in a transaction
+    of its own, in turn with the other writes to the database, and returns its primary key.
+    """
+    event_ids = seed_event_rows(engine, [values])
+
+    out = event_ids[0]
     return out
 
 # ################################################################################################################################

@@ -18,7 +18,7 @@ from zato.common.audit_log.api import event_attr_table, event_body_table, event_
     AuditLink, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import build_attachment
-from zato.common.audit_log.common import event_dedup_table
+from zato.common.audit_log.common import event_dedup_table, event_payload_table
 from zato.common.test.direct_sql.reset import reset_table_rows
 from zato.common.typing_ import cast_
 
@@ -126,7 +126,8 @@ def delete_all_rows() -> 'None':
     """ Starts a test from empty tables because the PostgreSQL container is shared by all the tests.
     """
     engine = get_database_engine()
-    reset_table_rows(engine, [event_attr_table, event_body_table, event_link_table, event_dedup_table, event_table])
+    reset_table_rows(engine, [event_attr_table, event_body_table, event_link_table, event_dedup_table, event_table,
+        event_payload_table])
 
 # ################################################################################################################################
 

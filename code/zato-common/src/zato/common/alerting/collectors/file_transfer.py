@@ -20,6 +20,7 @@ from sqlalchemy import and_, func, select
 # Zato
 from zato.common.alerting.collectors.common import new_fact, Default_Window_Seconds
 from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.common import event_data
 from zato.common.audit_log.file_transfer_run import Run_Status_Interrupted, Run_Status_List_Failed
 
 # ################################################################################################################################
@@ -263,7 +264,7 @@ def _collect_run_facts(
     is_recent = event_table.c.event_time >= since
     newest_first = event_table.c.id.desc()
 
-    query = select(event_table.c.status, event_table.c.outcome, event_table.c.event_time, event_table.c.data)
+    query = select(event_table.c.status, event_table.c.outcome, event_table.c.event_time, event_data)
     query = query.where(and_(is_source, is_run, is_recent))
     query = query.order_by(newest_first)
 

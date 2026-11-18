@@ -15,6 +15,7 @@ from zato.common.alerting.model import new_finding, new_rule, AlertAction, Alert
 from zato.common.alerting.object_config import Email_Connection_Config_Key
 from zato.common.api import Alerting
 from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditSource
+from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
 from zato.common.json_internal import loads
 from zato.common.util.api import utcnow
@@ -127,7 +128,7 @@ def _new_finding(*, severity:'str'=AlertSeverity.Warning) -> 'Finding':
 def _count_alert_events() -> 'int':
     engine = get_database_engine()
 
-    query = select(event_table).where(event_table.c.event_type == AuditEvent.Alert_Raised)
+    query = select(event_table, event_data).where(event_table.c.event_type == AuditEvent.Alert_Raised)
 
     with engine.connect() as connection:
         rows = connection.execute(query).fetchall()
@@ -547,7 +548,7 @@ class TestAuditTrail:
 
         engine = get_database_engine()
 
-        query = select(event_table).where(event_table.c.event_type == AuditEvent.Alert_Raised)
+        query = select(event_table, event_data).where(event_table.c.event_type == AuditEvent.Alert_Raised)
 
         with engine.connect() as connection:
             rows = connection.execute(query).fetchall()

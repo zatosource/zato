@@ -18,7 +18,7 @@ from sqlalchemy import select
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, AuditBody, AuditEvent, \
     AuditLink, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
-from zato.common.audit_log.common import alert_table, event_dedup_table
+from zato.common.audit_log.common import alert_table, event_data, event_dedup_table
 from zato.common.audit_log.reports import Range_Week
 from zato.common.audit_log.usage import get_usage
 from zato.common.demo.seed import get_demo_rule_defs, purge_demo_data, seed_demo_data, \
@@ -76,7 +76,7 @@ def _run_seed() -> 'any_':
 def _get_events(**where:'any_') -> 'anylist':
     engine = get_database_engine()
 
-    statement = select(event_table)
+    statement = select(event_table, event_data)
 
     for name, value in where.items():
         statement = statement.where(event_table.c[name] == value)
@@ -517,7 +517,7 @@ class TestSeedBehaviour:
         purge_demo_data(engine)
 
         with engine.connect() as connection:
-            events = connection.execute(select(event_table)).fetchall()
+            events = connection.execute(select(event_table, event_data)).fetchall()
             alerts = connection.execute(select(alert_table)).fetchall()
             dedups = connection.execute(select(event_dedup_table)).fetchall()
 

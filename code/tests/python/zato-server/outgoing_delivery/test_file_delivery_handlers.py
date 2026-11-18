@@ -27,6 +27,7 @@ from sqlalchemy import select
 # Zato
 from zato.common.api import GENERIC
 from zato.common.audit_log.api import event_table, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
 from zato.common.ext.bunch import Bunch
 from zato.common.file_transfer.api import Default_Verify_How
@@ -101,7 +102,7 @@ def _get_events() -> 'anylist':
     """
     engine = get_database_engine()
 
-    query = select(event_table)
+    query = select(event_table, event_data)
     query = query.order_by(event_table.c.id)
 
     out:'anylist' = []

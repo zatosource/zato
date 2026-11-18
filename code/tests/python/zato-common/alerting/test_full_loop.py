@@ -52,6 +52,7 @@ from zato.common.alerting.model import new_finding, new_rule, AlertAction
 from zato.common.alerting.seed import build_ruleset_document, ensure_alerting_definitions
 from zato.common.alerting.sweep import load_alert_rules, run_sweep
 from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
 from zato.common.rule_engine.sql import RuleSQLBackend
 from zato.common.test.zato_database import file_database_engine
@@ -365,7 +366,7 @@ def _get_raised_events() -> 'list':
     """
     engine = get_database_engine()
 
-    query = select(event_table).where(event_table.c.event_type == AuditEvent.Alert_Raised)
+    query = select(event_table, event_data).where(event_table.c.event_type == AuditEvent.Alert_Raised)
 
     with engine.connect() as connection:
         out = [dict(row._mapping) for row in connection.execute(query)]

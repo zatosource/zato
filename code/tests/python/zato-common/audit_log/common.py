@@ -19,10 +19,10 @@ from live_sql.env import database_env
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, AuditEvent, AuditLog, \
     AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
-from zato.common.audit_log.common import event_dedup_table
+from zato.common.audit_log.common import event_data, event_dedup_table, event_payload_table
 from zato.common.audit_log.search import build_search_conditions
 from zato.common.test.direct_sql.reset import reset_table_rows
-from zato.common.test.direct_sql.seed import seed_rows
+from zato.common.test.direct_sql.seed import seed_event_row
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -65,7 +65,8 @@ def delete_all_events() -> 'None':
     """ Starts a scenario from empty tables because containers can be reused between test runs.
     """
     engine = get_database_engine()
-    reset_table_rows(engine, [event_attr_table, event_body_table, event_link_table, event_dedup_table, event_table])
+    reset_table_rows(engine, [event_attr_table, event_body_table, event_link_table, event_dedup_table, event_table,
+        event_payload_table])
 
 # ################################################################################################################################
 
@@ -95,7 +96,7 @@ def _get_page(source:'str', object_name:'str', page:'int', page_size:'int') -> '
 
     offset = (page - 1) * page_size
 
-    page_query = select(event_table.c.id, event_table.c.cid, event_table.c.data)
+    page_query = select(event_table.c.id, event_table.c.cid, event_data)
     page_query = page_query.where(event_table.c.source == source, event_table.c.object_name == object_name)
     page_query = page_query.order_by(event_table.c.id.desc())
     page_query = page_query.limit(page_size)
@@ -195,7 +196,7 @@ def run_audit_log_scenario() -> 'None':
         data='{"note": "this event is old enough to be deleted by retention"}',
     )
 
-    seed_rows(engine, [(event_table, [expired_row])])
+    _ = seed_event_row(engine, expired_row)
 
     assert _count_events(AuditSource.REST_Channel, _channel_name) == 4
 

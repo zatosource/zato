@@ -19,7 +19,7 @@ import requests
 
 # Zato
 from zato.common.api import MCP
-from zato.common.audit_log.common import AuditSource
+from zato.common.audit_log.common import AuditSource, get_event_select_list
 from zato.common.audit_log.export.config import ModuleCtx as ExportCtx
 from zato.common.util.time_ import parse_utc
 
@@ -343,7 +343,7 @@ def read_events(audit_db_path:'str', source:'str', object_name:'str', min_id:'in
     if not os.path.isfile(audit_db_path):
         return []
 
-    column_list = ', '.join(_event_columns)
+    column_list = get_event_select_list(_event_columns)
     query = f'select {column_list} from event where source = ? and object_name = ? and id > ? order by id'
     attr_query = 'select name, value, value_number from event_attr where event_id = ?'
 

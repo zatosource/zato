@@ -23,7 +23,7 @@ from support import attributes_of, build_config, decode_records, wait_for_bodies
 from zato.common.api import SCHEDULER
 from zato.common.audit_log.api import event_table, AuditLog, ModuleCtx as AuditLogCtx
 from zato.common.db_env.database import get_database_engine
-from zato.common.audit_log.common import AuditBody, AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.common import event_data, AuditBody, AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.export.api import get_audit_export, set_audit_export, AuditExport, ModuleCtx as APICtx
 from zato.common.audit_log.export.data import ModuleCtx as DataCtx
 from zato.common.audit_log.export.mapping import ModuleCtx as MappingCtx
@@ -72,7 +72,7 @@ def _read_row(event_id:'int') -> 'stranydict':
     """ The event's row as the database holds it.
     """
     engine = get_database_engine()
-    query = select(event_table).where(event_table.c.id == event_id)
+    query = select(event_table, event_data).where(event_table.c.id == event_id)
 
     with engine.connect() as connection:
         row = connection.execute(query).mappings().first()

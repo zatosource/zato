@@ -29,6 +29,7 @@ from live_sql.containers import connect_mssql
 from live_sql.env import database_env
 from zato.common.api import MS_SQL
 from zato.common.audit_log.api import event_table, AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
 from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.odb.api import PoolStore
@@ -364,7 +365,7 @@ def _get_events() -> 'anylist':
     """
     engine = get_database_engine()
 
-    query = select(event_table)
+    query = select(event_table, event_data)
     query = query.order_by(event_table.c.id)
 
     with engine.connect() as connection:

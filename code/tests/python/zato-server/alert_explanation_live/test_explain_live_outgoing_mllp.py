@@ -27,6 +27,7 @@ from zato.common.alerting.explain.settings_info import Label_Alerts, Off, On
 from zato.common.alerting.explain.store import ExplanationStore
 from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditEvent, AuditSource, event_table
+from zato.common.audit_log.common import event_data
 from zato.common.hl7.mllp.reply import Rejection_Ack_Code
 from zato.common.test.client import AdminClient
 
@@ -280,7 +281,7 @@ def _get_acks_received() -> 'anylist':
     if not inspect(engine).has_table(event_table.name):
         return []
 
-    query = select(event_table).\
+    query = select(event_table, event_data).\
         where(event_table.c.source == AuditSource.MLLP_Outgoing).\
         where(event_table.c.object_name == _conn_name).\
         where(event_table.c.event_type == AuditEvent.Ack_Received).\

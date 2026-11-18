@@ -25,7 +25,7 @@ import yaml
 
 # Zato
 from zato.common.api import HL7
-from zato.common.audit_log.common import AuditOutcome, AuditSource
+from zato.common.audit_log.common import AuditOutcome, AuditSource, get_event_select_list
 
 from conftest import CCDA_Channel_Name, CCDA_Channel_Path, Convert_Service_Name, Plain_Channel_Name, Plain_Channel_Path, \
     read_sample, Receive_Service_Name, run_enmasse, run_enmasse_export
@@ -51,6 +51,9 @@ _audit_poll_interval = 0.5
 # What the CCD sample is about
 _ccd_patient_family = 'Jones'
 
+# The columns of an audit event the tests read
+_event_columns = ('id', 'cid', 'duration_ms', 'data')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -72,9 +75,10 @@ def _audit_events(zato_server:'stranydict', object_name:'str', outcome:'str') ->
     connection.row_factory = sqlite3.Row
 
     try:
-        events = connection.execute(
-            'select id, cid, duration_ms, data from event where source = ? and object_name = ? and outcome = ? order by id',
-            (AuditSource.CCDA, object_name, outcome)).fetchall()
+        column_list = get_event_select_list(_event_columns)
+        query = f'select {column_list} from event where source = ? and object_name = ? and outcome = ? order by id'
+
+        events = connection.execute(query, (AuditSource.CCDA, object_name, outcome)).fetchall()
 
         for event in events:
             attrs = {}

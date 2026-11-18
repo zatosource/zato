@@ -14,7 +14,7 @@ from requests.exceptions import ConnectionError as RequestsConnectionError, SSLE
     Timeout as RequestsTimeout
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Column, Index, Integer, MetaData, Numeric, String, Table, Text
+from sqlalchemy import BigInteger, Column, func, Index, Integer, literal, MetaData, Numeric, select, String, Table, Text
 
 # Zato
 from zato.common.audit_log.event_count import register_event_count
@@ -22,6 +22,17 @@ from zato.common.audit_log.event_open import new_exchange_pair, register_event_o
 from zato.common.audit_log.search_index import register_search_indexes
 from zato.common.db_env.common import Binary_Type, UTC_DateTime
 from zato.common.exception import BackendInvocationError
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, strlist, strtuple
+
+    # Dummy assignments to satisfy type checkers
+    any_ = any_
+    strlist = strlist
+    strtuple = strtuple
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -517,11 +528,9 @@ _event_columns = [
     Column('classification', _short_column),
     Column('status', _short_column),
     Column('duration_ms', Integer),
-    Column('data', Text),
 
-    # The words, integers and decimal numbers of the data column, each once and in lower case,
-    # which the free-text search covers in place of the data column itself.
-    Column('search_text', Text),
+    # The digest of the payload of the event in the payload table, or none for an event without a payload.
+    Column('payload_digest', _short_column),
 
     # What the product reads back from an event and the free-text search does not cover, e.g. the digests of payloads.
     Column('internal_data', Text),
@@ -551,11 +560,72 @@ _event_columns = [
     Index('idx_event_source_type_time', 'source', 'event_type', 'event_time'),
 
     Index('idx_event_commit_id', 'commit_id', 'id'),
+
+    # The events of one payload are found when the free-text search matches the payload
+    # and when retention decides whether any event still references it.
+    Index('idx_event_payload_digest', 'payload_digest'),
 ]
 
 _event_columns.extend(_ordered_indexes)
 
 event_table = Table('event', metadata, *_event_columns)
+
+# ################################################################################################################################
+
+# Each distinct payload of the events, stored once under its digest however many events carry it.
+_event_payload_columns = [
+    _new_id_column(),
+    Column('digest', _short_column),
+    Column('data', Text),
+
+    # The words, integers and decimal numbers of the payload, each once and in lower case,
+    # which the free-text search covers in place of the payload itself.
+    Column('search_text', Text),
+
+    Index('idx_event_payload_digest_unique', 'digest', unique=True),
+]
+
+event_payload_table = Table('event_payload', metadata, *_event_payload_columns)
+
+# The payload of an event, selected under this name by its digest along with the columns of the event,
+# and empty for an event without a payload.
+_event_data_name = 'data'
+
+_event_payload_data = select(event_payload_table.c.data)
+_event_payload_data = _event_payload_data.where(event_payload_table.c.digest == event_table.c.payload_digest)
+
+event_data = func.coalesce(_event_payload_data.scalar_subquery(), literal('')).label(_event_data_name)
+
+# The payload of an event in plain SQL over the event table
+_event_data_sql = "coalesce((select event_payload.data from event_payload where event_payload.digest = event.payload_digest), '')"
+
+def get_event_select_list(names:'strtuple') -> 'str':
+    """ Returns the select list of plain SQL over the event table that reads the given names in their order -
+    the payload of the event under data and a column of the event table under any other name.
+    """
+    items:'strlist' = []
+
+    for name in names:
+        if name == _event_data_name:
+            items.append(f'{_event_data_sql} as {_event_data_name}')
+        else:
+            items.append(name)
+
+    out = ', '.join(items)
+    return out
+
+# ################################################################################################################################
+
+def get_event_column(name:'str') -> 'any_':
+    """ Returns what a select of an event reads under the given name - the payload of the event under data
+    and a column of the event table under any other name.
+    """
+    if name == _event_data_name:
+        out = event_data
+    else:
+        out = event_table.c[name]
+
+    return out
 
 # ################################################################################################################################
 
@@ -621,7 +691,7 @@ _event_attr_columns = [
 
 event_attr_table = Table('event_attr', metadata, *_event_attr_columns)
 
-register_search_indexes(event_table, event_attr_table)
+register_search_indexes(event_table, event_payload_table, event_attr_table)
 
 # ################################################################################################################################
 

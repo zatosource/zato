@@ -6,19 +6,21 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The native text indexes behind the free-text search of the audit log. The payload of an event is indexed
-# through its search_text column, which holds the words, integers and decimal numbers of the payload,
-# and each word of a query matches the indexed words it is a prefix of.
+# The native text indexes behind the free-text search of the audit log. The searched event columns are indexed
+# per event, and each payload is indexed once in the payload table through its search_text column, which holds
+# the words, integers and decimal numbers of the payload. Each word of a query matches the indexed words it is
+# a prefix of, in the event columns or in the payload of the event.
 #
-# SQLite keeps an FTS5 table of the words of the searched event columns and an FTS5 table of the trigrams
-# of attribute values, both maintained by triggers in the transaction that writes the event. PostgreSQL keeps
-# a GIN index over the words of the searched event columns joined into a single text, and a pg_trgm GIN index
-# over attribute values, which serves LIKE patterns directly.
+# SQLite keeps an FTS5 table of the words of the searched event columns, an FTS5 table of the words of the payloads
+# and an FTS5 table of the trigrams of attribute values, all maintained by triggers in the transaction that writes
+# their rows. PostgreSQL keeps a GIN index over the words of the searched event columns joined into a single text,
+# a GIN index over the words of the payloads, and a pg_trgm GIN index over attribute values, which serves LIKE
+# patterns directly.
 
 from __future__ import annotations
 
 # SQLAlchemy
-from sqlalchemy import and_, column, DDL, event, func, literal_column, select, table
+from sqlalchemy import and_, column, DDL, event, func, literal_column, or_, select, table
 
 # Zato
 from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
@@ -28,10 +30,11 @@ from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 
 if 0:
     from sqlalchemy import Table
-    from zato.common.typing_ import any_, strlist, strtuple
+    from zato.common.typing_ import any_, anylist, strlist, strtuple
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
+    anylist = anylist
     strlist = strlist
     strtuple = strtuple
     Table = Table
@@ -41,37 +44,41 @@ if 0:
 
 # The FTS5 tables of SQLite, each indexing the text of one table under its rowid
 Event_Search_Table      = 'event_search'
+Payload_Search_Table    = 'event_payload_search'
 Event_Attr_Search_Table = 'event_attr_search'
 
 # The shortest term the trigram tokenizer of SQLite indexes
 SQLite_Min_Term_Length = 3
 
-# The tokenizer of each FTS5 table of SQLite - the event table indexes words, with the prefixes of three characters
-# indexed as well, so that the shortest prefix a query has is looked up directly, and attribute values are indexed by trigrams.
-_sqlite_event_tokenizer = "tokenize='unicode61', prefix='3'"
-_sqlite_attr_tokenizer  = "tokenize='trigram'"
+# The tokenizer of each FTS5 table of SQLite - the event and payload tables index words, with the prefixes
+# of three characters indexed as well, so that the shortest prefix a query has is looked up directly,
+# and attribute values are indexed by trigrams.
+_sqlite_word_tokenizer = "tokenize='unicode61', prefix='3'"
+_sqlite_attr_tokenizer = "tokenize='trigram'"
 
-# The word index of PostgreSQL over the searched event columns
-PostgreSQL_Event_Index = 'idx_event_search'
+# The word indexes of PostgreSQL over the searched event columns and over the words of the payloads
+PostgreSQL_Event_Index   = 'idx_event_search'
+PostgreSQL_Payload_Index = 'idx_event_payload_search'
 
 # How many kilobytes the pending list of a GIN index of PostgreSQL holds before an insert merges it into the index
 # within its own statement. The search index merger merges the pending lists every ten seconds, well before they reach it.
 PostgreSQL_Pending_List_Limit_KB = 65536
 
-# The text search configuration of PostgreSQL that splits the searched event columns into words,
+# The text search configuration of PostgreSQL that splits the searched columns into words,
 # lower-cased and with no stemming and no stop words, as the search text of SQLite has them.
 _postgresql_text_config = "'simple'"
 
-# What separates two columns in the text the word index of PostgreSQL covers
+# What separates two columns in the text a word index of PostgreSQL covers
 _postgresql_column_separator = "' '"
 
-# What marks a word of a query of PostgreSQL as a prefix, and what joins the words, each of which must be found
+# What marks a word of a query of PostgreSQL as a prefix
 _postgresql_prefix_marker = ':*'
-_postgresql_word_separator = ' & '
 
 # The event columns the free-text search covers
-search_columns = ('search_text', 'event_type', 'msg_id', 'correl_id', 'endpoint', 'ext_client_id',
-    'status', 'classification', 'sub_key')
+search_columns = ('event_type', 'msg_id', 'correl_id', 'endpoint', 'ext_client_id', 'status', 'classification', 'sub_key')
+
+# The payload column the free-text search covers
+payload_search_columns = ('search_text',)
 
 # The attribute column the attribute search covers
 _attr_search_columns = ('value',)
@@ -116,43 +123,31 @@ def _sqlite_statements(table_name:'str', search_table:'str', columns:'strtuple',
 
 # ################################################################################################################################
 
-def _postgresql_search_text(prefix:'str') -> 'str':
-    """ The searched event columns joined into one text, with each column name preceded by the given prefix.
+def _postgresql_search_words(prefix:'str', columns:'strtuple') -> 'str':
+    """ The words of the given columns joined into one text, with each column name preceded by the given prefix.
     The index is created over this expression and a search matches the same expression, so that PostgreSQL
     finds the index for it.
     """
     parts:'strlist' = []
 
-    for name in search_columns:
+    for name in columns:
         parts.append(f"coalesce({prefix}{name}, '')")
 
     separator = f' || {_postgresql_column_separator} || '
     joined = separator.join(parts)
 
-    out = f'({joined})'
+    out = f'to_tsvector({_postgresql_text_config}, ({joined}))'
     return out
 
 # ################################################################################################################################
 
-def _postgresql_search_words(prefix:'str') -> 'str':
-    """ The words of the searched event columns, with each column name preceded by the given prefix.
-    The index is created over this expression and a search matches the same expression, so that PostgreSQL
-    finds the index for it.
-    """
-    search_text = _postgresql_search_text(prefix)
-
-    out = f'to_tsvector({_postgresql_text_config}, {search_text})'
-    return out
-
-# ################################################################################################################################
-
-def _postgresql_event_statements(table_name:'str') -> 'strlist':
-    """ One GIN index over the words of the searched columns of the event table. One index instead of one per column,
+def _postgresql_word_statements(table_name:'str', index_name:'str', columns:'strtuple') -> 'strlist':
+    """ One GIN index over the words of the given columns of a table. One index instead of one per column,
     because each GIN index adds its entries and its pending list to the log of every insert.
     """
-    search_words = _postgresql_search_words('')
+    search_words = _postgresql_search_words('', columns)
     storage = f'WITH (gin_pending_list_limit = {PostgreSQL_Pending_List_Limit_KB})'
-    create_index = f'CREATE INDEX {PostgreSQL_Event_Index} ON {table_name} USING gin ({search_words}) {storage}'
+    create_index = f'CREATE INDEX {index_name} ON {table_name} USING gin ({search_words}) {storage}'
 
     out = [create_index]
     return out
@@ -168,7 +163,7 @@ def _postgresql_attr_index_name(table_name:'str', column_name:'str') -> 'str':
 # ################################################################################################################################
 
 def _postgresql_attr_statements(table_name:'str') -> 'strlist':
-    """ One trigram GIN index over the attribute values, with the pending list limit of the event index.
+    """ One trigram GIN index over the attribute values, with the pending list limit of the word indexes.
     """
     storage = f'WITH (gin_pending_list_limit = {PostgreSQL_Pending_List_Limit_KB})'
 
@@ -183,9 +178,9 @@ def _postgresql_attr_statements(table_name:'str') -> 'strlist':
 # ################################################################################################################################
 
 def get_postgresql_index_names(attr_table_name:'str') -> 'strtuple':
-    """ The names of all the GIN indexes of PostgreSQL, the event index first.
+    """ The names of all the GIN indexes of PostgreSQL, the word indexes first.
     """
-    names:'strlist' = [PostgreSQL_Event_Index]
+    names:'strlist' = [PostgreSQL_Event_Index, PostgreSQL_Payload_Index]
 
     for name in _attr_search_columns:
         index_name = _postgresql_attr_index_name(attr_table_name, name)
@@ -206,26 +201,32 @@ def _listen(target:'Table', when:'str', statements:'strlist', dialect_name:'str'
 
 # ################################################################################################################################
 
-def register_search_indexes(event_table:'Table', event_attr_table:'Table') -> 'None':
-    """ Attaches the native text indexes of each database to the creation of the event and attribute tables.
+def register_search_indexes(event_table:'Table', event_payload_table:'Table', event_attr_table:'Table') -> 'None':
+    """ Attaches the native text indexes of each database to the creation of the event, payload and attribute tables.
     """
     event_table_name = event_table.name
+    payload_table_name = event_payload_table.name
     attr_table_name = event_attr_table.name
 
     # SQLite ..
-    event_sqlite = _sqlite_statements(event_table_name, Event_Search_Table, search_columns, _sqlite_event_tokenizer)
+    event_sqlite = _sqlite_statements(event_table_name, Event_Search_Table, search_columns, _sqlite_word_tokenizer)
+    payload_sqlite = _sqlite_statements(payload_table_name, Payload_Search_Table, payload_search_columns,
+        _sqlite_word_tokenizer)
     attr_sqlite = _sqlite_statements(attr_table_name, Event_Attr_Search_Table, _attr_search_columns, _sqlite_attr_tokenizer)
 
     _listen(event_table, 'after_create', event_sqlite, Type_SQLite)
+    _listen(event_payload_table, 'after_create', payload_sqlite, Type_SQLite)
     _listen(event_attr_table, 'after_create', attr_sqlite, Type_SQLite)
 
     # .. and PostgreSQL, which needs its trigram extension before the index of attribute values.
     extension = ['CREATE EXTENSION IF NOT EXISTS pg_trgm']
-    event_postgresql = _postgresql_event_statements(event_table_name)
+    event_postgresql = _postgresql_word_statements(event_table_name, PostgreSQL_Event_Index, search_columns)
+    payload_postgresql = _postgresql_word_statements(payload_table_name, PostgreSQL_Payload_Index, payload_search_columns)
     attr_postgresql = _postgresql_attr_statements(attr_table_name)
 
     _listen(event_table, 'before_create', extension, Type_PostgreSQL)
     _listen(event_table, 'after_create', event_postgresql, Type_PostgreSQL)
+    _listen(event_payload_table, 'after_create', payload_postgresql, Type_PostgreSQL)
     _listen(event_attr_table, 'after_create', attr_postgresql, Type_PostgreSQL)
 
 # ################################################################################################################################
@@ -271,54 +272,67 @@ def _sqlite_narrowed(search_table:'str', query:'str', condition:'any_', row_id:'
 
 # ################################################################################################################################
 
-def _sqlite_event_match(event_table:'Table', words:'strlist') -> 'any_':
-    """ The rows whose indexed event columns have, for each of the words, a word it is a prefix of, found by the FTS5 table.
+def _sqlite_word_match(event_table:'Table', event_payload_table:'Table', word:'str') -> 'any_':
+    """ The events whose indexed columns or payload have a word the given word is a prefix of, found by the FTS5 tables.
     """
-    prefix_phrases:'strlist' = []
+    phrase = _fts5_phrase(word)
+    match_expression = f'{phrase}*'
 
-    for word in words:
-        phrase = _fts5_phrase(word)
-        prefix_phrases.append(f'{phrase}*')
+    # The events matching through their own columns ..
+    matching_event_ids = _sqlite_matching_ids(Event_Search_Table, match_expression)
+    is_event_match = event_table.c.id.in_(matching_event_ids)
 
-    match_expression = ' AND '.join(prefix_phrases)
-    matching_ids = _sqlite_matching_ids(Event_Search_Table, match_expression)
+    # .. and the ones matching through their payload.
+    matching_payload_ids = _sqlite_matching_ids(Payload_Search_Table, match_expression)
+    matching_digests = select(event_payload_table.c.digest)
+    matching_digests = matching_digests.where(event_payload_table.c.id.in_(matching_payload_ids))
+    is_payload_match = event_table.c.payload_digest.in_(matching_digests)
 
-    out = event_table.c.id.in_(matching_ids)
+    out = or_(is_event_match, is_payload_match)
     return out
 
 # ################################################################################################################################
 
-def _postgresql_event_match(event_table:'Table', words:'strlist') -> 'any_':
-    """ The rows whose joined searched columns have, for each of the words, a word it is a prefix of, found by the GIN index.
-    The words consist of letters, digits and decimal points, none of which is an operator of a text search query.
+def _postgresql_word_match(event_table:'Table', event_payload_table:'Table', word:'str') -> 'any_':
+    """ The events whose joined searched columns or payload have a word the given word is a prefix of,
+    found by the GIN indexes. The word consists of letters, digits and decimal points, none of which
+    is an operator of a text search query.
     """
-    prefix = f'{event_table.name}.'
-    search_words = _postgresql_search_words(prefix)
-    search_column = literal_column(search_words)
+    text_query = func.to_tsquery(literal_column(_postgresql_text_config), f'{word}{_postgresql_prefix_marker}')
 
-    prefix_words:'strlist' = []
+    # The events matching through their own columns ..
+    event_words = _postgresql_search_words(f'{event_table.name}.', search_columns)
+    is_event_match = literal_column(event_words).op('@@')(text_query)
 
-    for word in words:
-        prefix_words.append(f'{word}{_postgresql_prefix_marker}')
+    # .. and the ones matching through their payload.
+    payload_words = _postgresql_search_words(f'{event_payload_table.name}.', payload_search_columns)
+    is_matching_payload = literal_column(payload_words).op('@@')(text_query)
 
-    query_text = _postgresql_word_separator.join(prefix_words)
-    text_query = func.to_tsquery(literal_column(_postgresql_text_config), query_text)
+    matching_digests = select(event_payload_table.c.digest)
+    matching_digests = matching_digests.where(is_matching_payload)
+    is_payload_match = event_table.c.payload_digest.in_(matching_digests)
 
-    out = search_column.op('@@')(text_query)
+    out = or_(is_event_match, is_payload_match)
     return out
 
 # ################################################################################################################################
 
-def match_event_search(dialect_name:'str', event_table:'Table', words:'strlist') -> 'any_':
-    """ The rows whose searched event columns have, for each of the words of a query, a word it is a prefix of,
-    found by the native index of the database.
+def match_event_search(dialect_name:'str', event_table:'Table', event_payload_table:'Table', words:'strlist') -> 'any_':
+    """ The events that have, for each of the words of a query, a word it is a prefix of, in their searched columns
+    or in their payload, found by the native indexes of the database.
     """
     if dialect_name == Type_SQLite:
-        out = _sqlite_event_match(event_table, words)
-
+        word_match = _sqlite_word_match
     else:
-        out = _postgresql_event_match(event_table, words)
+        word_match = _postgresql_word_match
 
+    word_conditions:'anylist' = []
+
+    for word in words:
+        condition = word_match(event_table, event_payload_table, word)
+        word_conditions.append(condition)
+
+    out = and_(*word_conditions)
     return out
 
 # ################################################################################################################################

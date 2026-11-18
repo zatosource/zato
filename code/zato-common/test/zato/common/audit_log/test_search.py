@@ -7,14 +7,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from datetime import datetime, timezone
 from shutil import rmtree
 from tempfile import mkdtemp
 from unittest import main, TestCase
 
 # Zato
-from zato.common.audit_log.common import event_attr_table, event_table, AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.common import event_attr_table, AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.search import last_seen, search_events
-from zato.common.test.direct_sql.seed import seed_row, seed_rows
+from zato.common.test.direct_sql.seed import seed_event_row, seed_rows
 from zato.common.test.zato_database import file_database_engine
 
 # ################################################################################################################################
@@ -27,6 +28,17 @@ if 0:
     # Dummy assignments to satisfy type checkers
     any_ = any_
     Engine = Engine
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _event_time(iso:'str') -> 'datetime':
+    """ Returns the moment in UTC that a time in ISO 8601 without an offset names.
+    """
+    out = datetime.fromisoformat(iso)
+    out = out.replace(tzinfo=timezone.utc)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,7 +59,7 @@ class SearchEventsTestCase(TestCase):
     def _insert_event(self, **values:'any_') -> 'int':
         """ Writes one event row and returns its id.
         """
-        out = seed_row(self.engine, event_table, values)
+        out = seed_event_row(self.engine, values)
         return out
 
 # ################################################################################################################################
@@ -70,7 +82,7 @@ class SearchEventsTestCase(TestCase):
             event_type=AuditEvent.Message_Received,
             object_name='ADT from Registration',
             msg_id='MSG-0001',
-            event_time_iso='2026-08-29T10:00:00',
+            event_time=_event_time('2026-08-29T10:00:00'),
             outcome=AuditOutcome.OK,
             data='MSH|^~\\&|REGISTRATION|MAIN|ZATO|HL7|20260829100000||ADT^A01|MSG-0001|P|2.4',
         )
@@ -81,7 +93,7 @@ class SearchEventsTestCase(TestCase):
             event_type=AuditEvent.Message_Received,
             object_name='ADT from Registration',
             msg_id='MSG-0002',
-            event_time_iso='2026-08-29T11:00:00',
+            event_time=_event_time('2026-08-29T11:00:00'),
             outcome=AuditOutcome.Error,
             status='Field EVN-2 is missing',
             data='MSH|^~\\&|REGISTRATION|MAIN|ZATO|HL7|20260829110000||ADT^A01|MSG-0002|P|2.4',
@@ -93,7 +105,7 @@ class SearchEventsTestCase(TestCase):
             event_type=AuditEvent.Message_Received,
             object_name='ADT from Registration',
             msg_id='MSG-0003',
-            event_time_iso='2026-08-29T12:00:00',
+            event_time=_event_time('2026-08-29T12:00:00'),
             outcome=AuditOutcome.OK,
             data='MSH|^~\\&|REGISTRATION|MAIN|ZATO|HL7|20260829120000||ADT^A03|MSG-0003|P|2.4',
         )
@@ -104,7 +116,7 @@ class SearchEventsTestCase(TestCase):
             event_type=AuditEvent.Message_Received,
             object_name='Results from Lab',
             msg_id='MSG-0004',
-            event_time_iso='2026-08-29T11:30:00',
+            event_time=_event_time('2026-08-29T11:30:00'),
             outcome=AuditOutcome.OK,
             data='MSH|^~\\&|LAB|MAIN|ZATO|HL7|20260829113000||ORU^R01|MSG-0004|P|2.4',
         )
@@ -177,7 +189,10 @@ class SearchEventsTestCase(TestCase):
     def test_search_time_window(self) -> 'None':
         self._insert_arrivals()
 
-        rows = search_events(self.engine, time_from='2026-08-29T10:30:00', time_to='2026-08-29T11:45:00')
+        time_from = _event_time('2026-08-29T10:30:00')
+        time_to = _event_time('2026-08-29T11:45:00')
+
+        rows = search_events(self.engine, time_from=time_from, time_to=time_to)
 
         row_count = len(rows)
         self.assertEqual(row_count, 2)
@@ -212,7 +227,7 @@ class SearchEventsTestCase(TestCase):
             event_type=AuditEvent.Message_Received,
             object_name='ADT from Registration',
             msg_id='MSG-0005',
-            event_time_iso='2026-08-29T14:00:00',
+            event_time=_event_time('2026-08-29T14:00:00'),
             outcome=AuditOutcome.OK,
         )
         self._insert_attr(arrival_id, 'mrn', '12345678')
@@ -224,7 +239,7 @@ class SearchEventsTestCase(TestCase):
             event_type=AuditEvent.Ack_Sent,
             object_name='ADT from Registration',
             msg_id='MSG-0005',
-            event_time_iso='2026-08-29T14:00:01',
+            event_time=_event_time('2026-08-29T14:00:01'),
             outcome=AuditOutcome.OK,
         )
 
@@ -253,7 +268,7 @@ class SearchEventsTestCase(TestCase):
             event_type=AuditEvent.Message_Received,
             object_name='ADT from Registration',
             msg_id='MSG-0006',
-            event_time_iso='2026-08-29T15:00:00',
+            event_time=_event_time('2026-08-29T15:00:00'),
             outcome=AuditOutcome.OK,
         )
         self._insert_attr(arrival_id, 'mrn', '87654321')
@@ -301,8 +316,8 @@ class SearchEventsTestCase(TestCase):
         object_count = len(out)
         self.assertEqual(object_count, 2)
 
-        self.assertEqual(out['ADT from Registration'], '2026-08-29T12:00:00')
-        self.assertEqual(out['Results from Lab'], '2026-08-29T11:30:00')
+        self.assertEqual(out['ADT from Registration'], _event_time('2026-08-29T12:00:00'))
+        self.assertEqual(out['Results from Lab'], _event_time('2026-08-29T11:30:00'))
 
 # ################################################################################################################################
 
@@ -315,7 +330,7 @@ class SearchEventsTestCase(TestCase):
             event_type=AuditEvent.Request_Sent,
             object_name='Patient Registry',
             msg_id='MSG-0007',
-            event_time_iso='2026-08-29T16:00:00',
+            event_time=_event_time('2026-08-29T16:00:00'),
             outcome=AuditOutcome.OK,
         )
 
@@ -324,7 +339,7 @@ class SearchEventsTestCase(TestCase):
         object_count = len(out)
         self.assertEqual(object_count, 1)
 
-        self.assertEqual(out['Patient Registry'], '2026-08-29T16:00:00')
+        self.assertEqual(out['Patient Registry'], _event_time('2026-08-29T16:00:00'))
 
 # ################################################################################################################################
 # ################################################################################################################################

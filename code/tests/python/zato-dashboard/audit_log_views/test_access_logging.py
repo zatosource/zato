@@ -29,6 +29,7 @@ from zato.admin.web.views.outgoing import delivery
 from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import build_attachment, list_attachments
+from zato.common.audit_log.common import event_data
 from zato.common.ext.bunch import Bunch, bunchify
 from zato.common.pubsub.outgoing import Body_Mode_HL7, Key_CID, Key_Conn_Name, Key_Data, Key_Msg_ID, Key_Request
 from zato.common.db_env.database_env import DatabaseEnv
@@ -304,7 +305,7 @@ def test_a_queued_message_read_or_downloaded_writes_one_content_viewed_row_each(
         # The record reads by the message's coordinates, there being no event to resolve it against
         engine = get_database_engine()
 
-        data_query = select(event_table.c.data, event_table.c.event_time)
+        data_query = select(event_data, event_table.c.event_time)
         data_query = data_query.where(event_table.c.id == view_events[0]['id'])
 
         with engine.connect() as connection:

@@ -14,6 +14,7 @@ from json import loads
 
 # Zato
 from zato.common.audit_log.api import AuditSource
+from zato.common.audit_log.common import get_event_select_list
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,7 +53,7 @@ def read_events(
     if not os.path.isfile(audit_db_path):
         return []
 
-    column_list = ', '.join(_event_columns)
+    column_list = get_event_select_list(_event_columns)
 
     query = f'select {column_list} from event where source = ? and id > ?'
     query_args:'anylist' = [AuditSource.MCP, min_id]
@@ -97,7 +98,7 @@ def read_events_page(
     and the offset arithmetic the listings use.
     """
 
-    column_list = ', '.join(_event_columns)
+    column_list = get_event_select_list(_event_columns)
 
     query_filter = f'select {column_list} from event where source = ? and id > ? and object_name = ?'
     query = query_filter + ' order by id desc limit ? offset ?'
