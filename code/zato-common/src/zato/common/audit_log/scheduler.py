@@ -28,6 +28,9 @@ from zato.common.audit_log.export.api import get_audit_export
 from zato.common.audit_log.writes import execute_audit_write, write_audit
 from zato.common.util.api import utcnow
 
+# Zato - Rust
+from zato_common_core.zato_common_core import extract_search_text
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -166,7 +169,8 @@ def record_job_complete(event_id:'int', *, outcome:'str', duration_ms:'int', err
 
     update_statement = event_table.update()
     update_statement = update_statement.where(event_table.c.id == event_id)
-    update_statement = update_statement.values(outcome=outcome, duration_ms=duration_ms, data=error)
+    update_statement = update_statement.values(outcome=outcome, duration_ms=duration_ms, data=error,
+        search_text=extract_search_text(error))
 
     _ = execute_audit_write(engine, update_statement)
 
@@ -228,7 +232,8 @@ def _mark_run_timed_out(connection:'Connection', event_query:'any_', elapsed_ms:
 
     update_statement = event_table.update()
     update_statement = update_statement.where(event_table.c.id == out)
-    update_statement = update_statement.values(outcome=SCHEDULER.OUTCOME.TIMEOUT, duration_ms=elapsed_ms, data=error)
+    update_statement = update_statement.values(outcome=SCHEDULER.OUTCOME.TIMEOUT, duration_ms=elapsed_ms, data=error,
+        search_text=extract_search_text(error))
 
     _ = connection.execute(update_statement)
 

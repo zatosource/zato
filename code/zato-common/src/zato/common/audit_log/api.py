@@ -41,6 +41,9 @@ from zato.common.db_env.engine import call_database
 from zato.common.pubsub.delivery_scope import get_delivery_scope
 from zato.common.util.api import as_bool, utcnow
 
+# Zato - Rust
+from zato_common_core.zato_common_core import extract_search_text
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -343,6 +346,7 @@ class AuditLog:
             'status': status,
             'duration_ms': duration_ms,
             'data': data,
+            'search_text': extract_search_text(data),
             'internal_data': internal_data,
         }
 

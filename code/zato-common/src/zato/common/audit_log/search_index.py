@@ -9,8 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The native text indexes behind the free-text search of the audit log. SQLite keeps FTS5 tables
 # with the trigram tokenizer, maintained by triggers in the transaction that writes the event.
 # PostgreSQL keeps pg_trgm GIN indexes, one over the searched event columns joined into a single text
-# and one over attribute values, which serve LIKE patterns directly. A search narrows the rows through
-# the index and confirms each one with LIKE, so every database returns what LIKE alone would return.
+# and one over attribute values, which serve LIKE patterns directly. The payload of an event is indexed
+# through its search_text column, which holds the words, integers and decimal numbers of the payload,
+# and a search of the event columns matches the words of the query in the index alone.
 
 from __future__ import annotations
 
@@ -25,10 +26,11 @@ from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 
 if 0:
     from sqlalchemy import Table
-    from zato.common.typing_ import any_, strlist, strtuple
+    from zato.common.typing_ import any_, anylist, strlist, strtuple
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
+    anylist = anylist
     strlist = strlist
     strtuple = strtuple
     Table = Table
@@ -54,7 +56,7 @@ PostgreSQL_Pending_List_Limit_KB = 65536
 _postgresql_column_separator = "' '"
 
 # The event columns the free-text search covers
-search_columns = ('data', 'event_type', 'msg_id', 'correl_id', 'endpoint', 'ext_client_id',
+search_columns = ('search_text', 'event_type', 'msg_id', 'correl_id', 'endpoint', 'ext_client_id',
     'status', 'classification', 'sub_key')
 
 # The attribute column the attribute search covers
@@ -213,18 +215,27 @@ def _fts5_phrase(query:'str') -> 'str':
 
 # ################################################################################################################################
 
+def _sqlite_matching_ids(search_table:'str', match_expression:'str') -> 'any_':
+    """ The rowids of the rows that an FTS5 table finds for a match expression.
+    """
+    fts_table = table(search_table, column('rowid'), column(search_table))
+    fts_match_column = fts_table.c[search_table]
+
+    out = select(fts_table.c.rowid)
+    out = out.where(fts_match_column.match(match_expression))
+
+    return out
+
+# ################################################################################################################################
+
 def _sqlite_narrowed(search_table:'str', query:'str', condition:'any_', row_id:'any_') -> 'any_':
     """ The condition, narrowed down to the rows the FTS5 table finds, when the term is long enough to be indexed.
     """
     if len(query) < SQLite_Min_Term_Length:
         return condition
 
-    fts_table = table(search_table, column('rowid'), column(search_table))
-    fts_match_column = fts_table.c[search_table]
     phrase = _fts5_phrase(query)
-
-    matching_ids = select(fts_table.c.rowid)
-    matching_ids = matching_ids.where(fts_match_column.match(phrase))
+    matching_ids = _sqlite_matching_ids(search_table, phrase)
 
     is_indexed_match = row_id.in_(matching_ids)
 
@@ -233,29 +244,50 @@ def _sqlite_narrowed(search_table:'str', query:'str', condition:'any_', row_id:'
 
 # ################################################################################################################################
 
-def _postgresql_narrowed(event_table:'Table', pattern:'str', condition:'any_') -> 'any_':
-    """ The condition, narrowed down to the rows whose joined searched columns the trigram index finds the pattern in.
-    The joined text can match across two columns, which is why the condition confirms each row.
+def _sqlite_event_match(event_table:'Table', words:'strlist') -> 'any_':
+    """ The rows whose indexed event columns contain each of the words, found by the FTS5 table.
+    """
+    phrases:'strlist' = []
+
+    for word in words:
+        phrase = _fts5_phrase(word)
+        phrases.append(phrase)
+
+    match_expression = ' AND '.join(phrases)
+    matching_ids = _sqlite_matching_ids(Event_Search_Table, match_expression)
+
+    out = event_table.c.id.in_(matching_ids)
+    return out
+
+# ################################################################################################################################
+
+def _postgresql_event_match(event_table:'Table', words:'strlist') -> 'any_':
+    """ The rows whose joined searched columns contain each of the words, found by the trigram index.
+    The words consist of letters, digits and decimal points, none of which is a LIKE wildcard.
     """
     prefix = f'{event_table.name}.'
     search_text = _postgresql_search_text(prefix)
     search_column = literal_column(search_text)
 
-    is_indexed_match = search_column.like(pattern, escape='\\')
+    conditions:'anylist' = []
 
-    out = and_(is_indexed_match, condition)
+    for word in words:
+        is_word_found = search_column.ilike(f'%{word}%')
+        conditions.append(is_word_found)
+
+    out = and_(*conditions)
     return out
 
 # ################################################################################################################################
 
-def narrow_event_search(dialect_name:'str', event_table:'Table', query:'str', pattern:'str', condition:'any_') -> 'any_':
-    """ The LIKE condition over the searched event columns, served by the native index of the database.
+def match_event_search(dialect_name:'str', event_table:'Table', words:'strlist') -> 'any_':
+    """ The rows whose searched event columns contain each of the words of a query, found by the native index of the database.
     """
     if dialect_name == Type_SQLite:
-        out = _sqlite_narrowed(Event_Search_Table, query, condition, event_table.c.id)
+        out = _sqlite_event_match(event_table, words)
 
     else:
-        out = _postgresql_narrowed(event_table, pattern, condition)
+        out = _postgresql_event_match(event_table, words)
 
     return out
 

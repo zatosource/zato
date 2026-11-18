@@ -421,7 +421,7 @@ def _archive_content(engine:'Engine', archiver:'_Archiver', ids:'intlist') -> 'N
 # ################################################################################################################################
 
 def _prune_content(engine:'Engine', ids:'intlist') -> 'None':
-    """ Prunes the content of one chunk of events - the data column is emptied
+    """ Prunes the content of one chunk of events - the data column and the words extracted from it are emptied
     and their body rows are deleted, while the event rows themselves stay.
     """
     is_wanted_event = event_table.c.id.in_(ids)
@@ -429,7 +429,7 @@ def _prune_content(engine:'Engine', ids:'intlist') -> 'None':
 
     prune_statement = update(event_table)
     prune_statement = prune_statement.where(is_wanted_event)
-    prune_statement = prune_statement.values(data='')
+    prune_statement = prune_statement.values(data='', search_text='')
 
     delete_bodies = event_body_table.delete()
     delete_bodies = delete_bodies.where(is_body_of_event)

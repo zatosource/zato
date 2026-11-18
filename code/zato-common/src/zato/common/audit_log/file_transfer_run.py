@@ -25,6 +25,9 @@ from zato.common.audit_log.export.api import get_audit_export
 from zato.common.audit_log.writes import execute_audit_write
 from zato.common.util.api import utcnow
 
+# Zato - Rust
+from zato_common_core.zato_common_core import extract_search_text
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -196,7 +199,9 @@ def update_run_event(
         values['duration_ms'] = duration_ms
 
     if data is not None:
-        values['data'] = dumps(data)
+        data_json = dumps(data)
+        values['data'] = data_json
+        values['search_text'] = extract_search_text(data_json)
 
     if not values:
         return

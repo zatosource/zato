@@ -519,6 +519,10 @@ _event_columns = [
     Column('duration_ms', Integer),
     Column('data', Text),
 
+    # The words, integers and decimal numbers of the data column, each once and in lower case,
+    # which the free-text search covers in place of the data column itself.
+    Column('search_text', Text),
+
     # What the product reads back from an event and the free-text search does not cover, e.g. the digests of payloads.
     Column('internal_data', Text),
 

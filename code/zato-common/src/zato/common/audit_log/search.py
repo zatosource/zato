@@ -15,8 +15,11 @@ from sqlalchemy import func, or_, select, union
 # Zato
 from zato.common.audit_log.common import event_attr_table, event_table, source_attr_names, Status_Outstanding
 from zato.common.audit_log.query import outstanding_conditions, source_outstanding
-from zato.common.audit_log.search_index import narrow_attr_search, narrow_event_search, search_columns
+from zato.common.audit_log.search_index import match_event_search, narrow_attr_search, search_columns
 from zato.common.db_env.common import Type_PostgreSQL
+
+# Zato - Rust
+from zato_common_core.zato_common_core import extract_search_text
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -137,24 +140,30 @@ def build_search_conditions(
     if time_to:
         out.append(event_table.c.event_time < time_to)
 
-    # The free-text search covers several columns, matching wildcards literally
+    # The free-text search covers several columns ..
     if query:
         escaped = _escape_like(query)
         pattern = f'%{escaped}%'
 
-        like_parts:'anylist' = []
+        # .. through the words of the query, which the native text index of the database matches ..
+        search_words = extract_search_text(query).split()
 
-        for column_name in search_columns:
-            column = event_table.c[column_name]
-            is_like_pattern = column.like(pattern, escape='\\')
+        if search_words:
+            any_column_match = match_event_search(dialect_name, event_table, search_words)
 
-            like_parts.append(is_like_pattern)
+        # .. and a query without a word as long as a trigram is matched by LIKE, with wildcards matched literally.
+        else:
+            like_parts:'anylist' = []
 
-        # The native text index of the database finds the candidate rows and LIKE confirms them.
-        any_column_like = or_(*like_parts)
-        any_column_like = narrow_event_search(dialect_name, event_table, query, pattern, any_column_like)
+            for column_name in search_columns:
+                column = event_table.c[column_name]
+                is_like_pattern = column.like(pattern, escape='\\')
 
-        matching_parts:'anylist' = [any_column_like]
+                like_parts.append(is_like_pattern)
+
+            any_column_match = or_(*like_parts)
+
+        matching_parts:'anylist' = [any_column_match]
 
         # Sources with searchable attributes also search through them, with the attr-to-cid
         # shape - the cids of the events whose attr matches, then every event on those cids,
@@ -200,7 +209,7 @@ def build_search_conditions(
                 any_matching_part = or_(*matching_parts)
 
         else:
-            any_matching_part = any_column_like
+            any_matching_part = any_column_match
 
         out.append(any_matching_part)
 
