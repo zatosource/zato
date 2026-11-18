@@ -72,9 +72,6 @@ import pytz
 # SQLAlchemy
 from sqlalchemy import orm
 
-# Texttable
-from texttable import Texttable
-
 # requests
 import requests
 
@@ -108,7 +105,7 @@ if 0:
     from importlib.machinery import ModuleSpec
     from typing import Iterable as iterable
     from zato.client import ZatoClient
-    from zato.common.typing_ import any_, anydict, anylist, anytuple, byteslist, callable_, intnone, strbytes, strdict, \
+    from zato.common.typing_ import any_, anydict, anytuple, byteslist, callable_, intnone, strbytes, strdict, \
         stranydict, strlist, strlistnone, strnone, strset, strtuple
     anytuple = anytuple
     callable_ = callable_
@@ -935,7 +932,7 @@ def get_threads_traceback(pid:'int') -> 'strdict':
 
     for thread_id, frame in sys._current_frames().items():
         key = '{}:{}'.format(pid, id_name.get(thread_id, '(No name)'))
-        result[key] = get_stack(frame, True)
+        result[key] = get_stack(frame)
 
     return result
 
@@ -950,31 +947,32 @@ def get_greenlets_traceback(pid:'int') -> 'strdict':
             continue
 
         key = '{}:{}'.format(pid, repr(item))
-        result[key] = ''.join(get_stack(item.gr_frame, True))
+        result[key] = get_stack(item.gr_frame)
 
     return result
 
 # ################################################################################################################################
 
 def dump_stacks(*ignored:'any_') -> 'None':
+    """ Logs the stack of each thread and each greenlet of this process, without their local variables, since the dump
+    runs in a signal handler that holds the GIL and the hub of the process until it completes.
+    """
     pid = os.getpid()
-
-    table = Texttable()
-    _ = table.set_cols_width([30, 90])
-    _ = table.set_cols_dtype(['t', 't'])
-
-    rows:'anylist' = [['Proc:Thread/Greenlet', 'Traceback']]
 
     threads_traceback = get_threads_traceback(pid)
     greenlets_traceback = get_greenlets_traceback(pid)
 
-    rows.extend(sorted(threads_traceback.items()))
-    rows.extend(sorted(greenlets_traceback.items()))
+    # Each thread and greenlet is a heading followed by its stack ..
+    lines:'strlist' = []
 
-    _ = table.add_rows(rows)
+    for tracebacks in (threads_traceback, greenlets_traceback):
+        for key, stack in sorted(tracebacks.items()):
+            lines.append(f'== {key}')
+            lines.append(stack)
 
-    table_text = table.draw()
-    logger.info('\n%s', table_text)
+    # .. and the whole dump is one entry of the log.
+    dump_text = '\n'.join(lines)
+    logger.info('Stacks of threads and greenlets\n%s', dump_text)
 
 # ################################################################################################################################
 
