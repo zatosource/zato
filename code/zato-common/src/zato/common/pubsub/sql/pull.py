@@ -185,18 +185,24 @@ def lease_messages(
     if not candidates:
         return [], attempts
 
-    # .. keep those within the size budget, except that a message larger than the budget
-    # .. is handed out alone rather than holding up the queue ..
+    # .. keep those within the size budget, in the order of the queue, except that a message larger than the budget
+    # .. is handed out by the pull that reaches it, after the messages ahead of it, and ends that pull,
+    # .. so that it never holds up the queue ..
     delivery_ids:'intlist' = []
     total_len = 0
 
     for row in candidates:
 
-        if delivery_ids and total_len + row.data_size > max_len:
+        is_oversized = row.data_size > max_len
+
+        if delivery_ids and total_len + row.data_size > max_len and not is_oversized:
             break
 
         total_len += row.data_size
         delivery_ids.append(row.id)
+
+        if is_oversized:
+            break
 
     # .. lease them, which only the first of two concurrent pulls succeeds in for any one row ..
     lease_parameters:'anydict' = {

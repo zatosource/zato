@@ -72,6 +72,9 @@ _worker_poll_interval = 0.2
 # The address that a server of a session listens on
 _server_host = '127.0.0.1'
 
+# The variable that keeps the quickstart directory of a session, with its database, after the session ends
+Env_Keep_Quickstart = 'Zato_Test_Keep_Quickstart'
+
 # What the arbiter logs the first time that the worker is ready
 _worker_ready_pattern = re.compile(r'zato\.server\.arbiter:\d+ - Worker is ready')
 
@@ -182,10 +185,13 @@ class SessionState:
         # .. then stop all receivers ..
         self.stop_all_receivers()
 
-        # .. then clean up the temporary directories.
+        # .. then clean up the temporary directories, unless the quickstart one is to be kept for an analysis.
         if self.quickstart_directory:
-            shutil.rmtree(self.quickstart_directory, ignore_errors=True)
-            self._logger.info('Removed quickstart directory %s', self.quickstart_directory)
+            if os.environ.get(Env_Keep_Quickstart, ''):
+                self._logger.info('Kept quickstart directory %s', self.quickstart_directory)
+            else:
+                shutil.rmtree(self.quickstart_directory, ignore_errors=True)
+                self._logger.info('Removed quickstart directory %s', self.quickstart_directory)
 
         if self.test_data_directory:
             shutil.rmtree(self.test_data_directory, ignore_errors=True)

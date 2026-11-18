@@ -42,8 +42,9 @@ if 0:
 
 logger = getLogger(__name__)
 
-# How long one measured interval lasts, in seconds.
+# How long one measured interval lasts, in seconds, unless the variable says otherwise.
 Minute_Seconds = 60
+_env_interval = 'Zato_Test_Stability_Interval_Seconds'
 
 # How long the last interval of a run must be for it to be reported, in seconds.
 _min_final_interval_seconds = 1
@@ -178,9 +179,15 @@ class Monitor:
         # once the minute is recorded.
         self.allows_errors = False
 
+        # How long one measured interval lasts, in seconds
+        if interval := os.environ.get(_env_interval, ''):
+            self.interval_seconds = int(interval)
+        else:
+            self.interval_seconds = Minute_Seconds
+
         self._start = monotonic()
         self._minute_start = self._start
-        self._next_minute = self._start + Minute_Seconds
+        self._next_minute = self._start + self.interval_seconds
 
         self._last_checkpoints = -1
         self._last_autovacuums = -1
@@ -380,7 +387,7 @@ class Monitor:
 
         self.reports.append(report)
 
-        logger.info('Minute %d (%s) -> published %.1f/s, delivered %.1f/s, publish p99 %.3f s, delivery p99 %.3f s, ' +
+        logger.info('Interval %d (%s) -> published %.1f/s, delivered %.1f/s, publish p99 %.3f s, delivery p99 %.3f s, ' +
             'message rows %d, failures %s', report.index, report.since_start, report.publish_rate, report.delivery_rate,
             report.publish_p99, report.delivery_p99, report.message_rows, report.failures)
 
@@ -389,7 +396,7 @@ class Monitor:
 # ################################################################################################################################
 
     def _run(self) -> 'None':
-        self._next_minute = monotonic() + Minute_Seconds
+        self._next_minute = monotonic() + self.interval_seconds
 
         while self.is_running:
             sleep(max(self._next_minute - monotonic(), 0))
@@ -401,7 +408,7 @@ class Monitor:
                 continue
 
             _ = self.record_minute()
-            self._next_minute += Minute_Seconds
+            self._next_minute += self.interval_seconds
 
 # ################################################################################################################################
 
@@ -415,7 +422,7 @@ class Monitor:
             self.is_minute_exempt = False
             self.allows_errors = False
 
-        self._next_minute = monotonic() + Minute_Seconds
+        self._next_minute = monotonic() + self.interval_seconds
 
 # ################################################################################################################################
 

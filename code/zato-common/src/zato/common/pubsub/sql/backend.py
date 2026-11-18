@@ -509,16 +509,18 @@ class SQLPubSubBackend(SQLAdminAPI):
                 if event.wait(wait_seconds):
                     rows, payloads = self._fetch_rows(sub_key, max_messages)
 
-        # .. convert the rows into message dicts, keeping within the total size budget,
-        # .. except that a message larger than the budget goes out alone rather than holding up its queue.
+        # .. convert the rows into message dicts, keeping within the total size budget, in the order of the queue,
+        # .. except that a message larger than the budget goes out with the batch that reaches it, after the messages
+        # .. ahead of it, and ends that batch, so that it never holds up its queue.
         out:'anylist' = []
         total_len = 0
 
         for row in rows:
 
             data_len = row.data_size
+            is_oversized = data_len > max_len
 
-            if out and total_len + data_len > max_len:
+            if out and total_len + data_len > max_len and not is_oversized:
                 break
 
             total_len += data_len
@@ -530,6 +532,9 @@ class SQLPubSubBackend(SQLAdminAPI):
             message['delivery_attempt'] = row.attempt
 
             out.append(message)
+
+            if is_oversized:
+                break
 
         return out
 
