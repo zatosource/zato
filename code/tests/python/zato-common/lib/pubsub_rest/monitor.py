@@ -79,7 +79,8 @@ class Limits:
     """ What each minute of a suite must stay within.
     """
     publish_p99_seconds: 'float' = 1.0
-    delivery_p99_seconds: 'float' = 10.0
+    pull_p99_seconds: 'float' = 10.0
+    push_p99_seconds: 'float' = 10.0
     min_rate_ratio: 'float' = 0.9
     max_message_rows: 'int' = 2_000_000
     max_wal_bytes: 'int' = 20 * _bytes_per_gb
@@ -100,9 +101,11 @@ class MinuteReport:
     since_start: 'str'
     local_time: 'str'
     publish_rate: 'float'
-    delivery_rate: 'float'
+    pull_rate: 'float'
+    push_rate: 'float'
     publish_p99: 'float'
-    delivery_p99: 'float'
+    pull_p99: 'float'
+    push_p99: 'float'
     message_rows: 'int' = 0
     delivery_rows: 'int' = 0
     wal_mb: 'float' = 0.0
@@ -308,8 +311,11 @@ class Monitor:
             if report.publish_p99 > limits.publish_p99_seconds:
                 report.failures.append(f'publish p99 {report.publish_p99:.3f}s above {limits.publish_p99_seconds}s')
 
-            if report.delivery_p99 > limits.delivery_p99_seconds:
-                report.failures.append(f'delivery p99 {report.delivery_p99:.3f}s above {limits.delivery_p99_seconds}s')
+            if report.pull_p99 > limits.pull_p99_seconds:
+                report.failures.append(f'pull p99 {report.pull_p99:.3f}s above {limits.pull_p99_seconds}s')
+
+            if report.push_p99 > limits.push_p99_seconds:
+                report.failures.append(f'push p99 {report.push_p99:.3f}s above {limits.push_p99_seconds}s')
 
         if self.checks_rate and not report.is_exempt:
             min_rate = self.traffic.rate * limits.min_rate_ratio
@@ -348,9 +354,11 @@ class Monitor:
         report.since_start = _humanize_duration(elapsed)
         report.local_time = datetime.now().strftime('%H:%M:%S')
         report.publish_rate = counters.published / interval_seconds
-        report.delivery_rate = (counters.pulled + counters.pushed) / interval_seconds
+        report.pull_rate = counters.pulled / interval_seconds
+        report.push_rate = counters.pushed / interval_seconds
         report.publish_p99 = _p99(counters.publish_seconds)
-        report.delivery_p99 = _p99(counters.delivery_seconds)
+        report.pull_p99 = _p99(counters.pull_seconds)
+        report.push_p99 = _p99(counters.push_seconds)
         report.drive_flush = self._max_drive_flush
         report.details = []
         report.failures = []
@@ -387,9 +395,10 @@ class Monitor:
 
         self.reports.append(report)
 
-        logger.info('Interval %d (%s) -> published %.1f/s, delivered %.1f/s, publish p99 %.3f s, delivery p99 %.3f s, ' +
-            'message rows %d, failures %s', report.index, report.since_start, report.publish_rate, report.delivery_rate,
-            report.publish_p99, report.delivery_p99, report.message_rows, report.failures)
+        logger.info('Interval %d (%s) -> published %.1f/s, pulled %.1f/s, pushed %.1f/s, publish p99 %.3f s, ' +
+            'pull p99 %.3f s, push p99 %.3f s, message rows %d, failures %s', report.index, report.since_start,
+            report.publish_rate, report.pull_rate, report.push_rate, report.publish_p99, report.pull_p99, report.push_p99,
+            report.message_rows, report.failures)
 
         return report
 

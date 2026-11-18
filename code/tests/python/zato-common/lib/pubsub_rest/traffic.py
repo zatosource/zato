@@ -104,7 +104,8 @@ class MinuteCounters:
     pushed: 'int' = 0
     errors: 'int' = 0
     publish_seconds: 'floatlist' = field(default_factory=list)
-    delivery_seconds: 'floatlist' = field(default_factory=list)
+    pull_seconds: 'floatlist' = field(default_factory=list)
+    push_seconds: 'floatlist' = field(default_factory=list)
     error_messages: 'strlist' = field(default_factory=list)
 
 # ################################################################################################################################
@@ -129,7 +130,8 @@ def _weight_documents(documents:'strlist') -> 'strlist':
 def _new_minute() -> 'MinuteCounters':
     out = MinuteCounters()
     out.publish_seconds = []
-    out.delivery_seconds = []
+    out.pull_seconds = []
+    out.push_seconds = []
     out.error_messages = []
 
     return out
@@ -166,6 +168,12 @@ class Traffic:
 
         # When each message for a pull partner was published, by its identifier.
         self.publish_times:'anydict' = {}
+
+        # When each broadcast began to be published and how many of its pushes are still to arrive, by its key.
+        # The time is taken before the publication, because the server may push a broadcast before its publisher
+        # receives the response, and a broadcast leaves the dict once each of its subscribers received it.
+        self.broadcast_times:'anydict' = {}
+        self.broadcast_pending:'strcounter' = Counter()
 
         # The partners that do not pull for now, those whose delivery latency is not measured,
         # and the deliveries that a suite placed in the queues itself less those it removed, apart from the publications.
@@ -270,15 +278,30 @@ class Traffic:
 # ################################################################################################################################
 
     def on_push(self, push:'Push') -> 'bool':
-        """ Counts a broadcast that the server pushed, which each broadcast subscriber accepts.
+        """ Counts a broadcast that the server pushed, which each broadcast subscriber accepts,
+        and records the time the broadcast took to reach the subscriber.
         """
+        now = monotonic()
+
+        data = push.envelope['data']
+        key = data.split(_broadcast_key_separator, 1)[0]
+
         with self.lock:
             self.minute.pushed += 1
             self.total_pushed += 1
 
+            # A push that repeats a delivery after each subscriber already received the broadcast is not measured again ..
+            if key in self.broadcast_times:
+                started = self.broadcast_times[key]
+                self.minute.push_seconds.append(now - started)
+
+                # .. and the broadcast stops being tracked once its last subscriber received it.
+                self.broadcast_pending[key] -= 1
+                if self.broadcast_pending[key] == 0:
+                    del self.broadcast_times[key]
+                    del self.broadcast_pending[key]
+
             if self.tracks_deliveries:
-                data = push.envelope['data']
-                key = data.split(_broadcast_key_separator, 1)[0]
                 self.pushed_broadcast_keys[key] += 1
 
         return True
@@ -339,6 +362,10 @@ class Traffic:
             if is_broadcast:
                 document = broadcast_key + _broadcast_key_separator + document
 
+                with self.lock:
+                    self.broadcast_times[broadcast_key] = started
+                    self.broadcast_pending[broadcast_key] = profile.broadcast_subscriber_count
+
             payload:'anydict' = {
                 'data': document,
                 'priority': priority,
@@ -397,7 +424,7 @@ class Traffic:
                 if msg_id in self.publish_times:
                     started = self.publish_times.pop(msg_id)
                     if is_measured:
-                        self.minute.delivery_seconds.append(now - started)
+                        self.minute.pull_seconds.append(now - started)
 
             self.minute.pulled += len(msg_ids)
             self.total_pulled += len(msg_ids)
