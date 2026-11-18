@@ -15,28 +15,11 @@ pub struct OriginKey {
     /// Whether the connection uses TLS.
     pub is_tls: bool,
 
-    /// The host name or IP address - the endpoint's, or for a connection that serves requests sent through
-    /// an HTTP proxy to any endpoint, the proxy's.
+    /// The host name or IP address.
     pub host: String,
 
     /// The port.
     pub port: u16,
-
-    /// The proxy the connection goes through, if any, as urllib3 keeps a pool of its own per proxy.
-    pub proxy: Option<ProxyKey>,
-}
-
-/// The proxy a pooled connection goes through.
-#[derive(Clone, Hash, PartialEq, Eq)]
-pub struct ProxyKey {
-    /// The host name or IP address of the proxy.
-    pub host: String,
-
-    /// The port of the proxy.
-    pub port: u16,
-
-    /// The value of the `Proxy-Authorization` header the credentials of the proxy produce, if it has any.
-    pub authorization: Option<Vec<u8>>,
 }
 
 /// The idle connections of a transport, per endpoint.

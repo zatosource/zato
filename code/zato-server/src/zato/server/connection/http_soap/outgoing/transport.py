@@ -17,9 +17,9 @@ from typing import NamedTuple
 from requests.auth import _basic_auth_str
 from requests.cookies import MockRequest, MockResponse, RequestsCookieJar
 from requests.exceptions import ContentDecodingError
-from requests.models import Request
+from requests.models import Request, RequestEncodingMixin
 from requests.structures import CaseInsensitiveDict
-from requests.utils import DEFAULT_CA_BUNDLE_PATH, get_encoding_from_headers, get_netrc_auth
+from requests.utils import DEFAULT_CA_BUNDLE_PATH, get_encoding_from_headers, get_environ_proxies, get_netrc_auth
 
 # urllib3
 from urllib3.exceptions import DecodeError
@@ -29,8 +29,6 @@ from urllib3.response import HTTPResponse, _get_decoder
 from zato.common.api import NotGiven, URL_TYPE
 from zato.common.typing_ import cast_
 from zato.server.connection.http_soap.outgoing.common import logger, Response
-from zato.server.connection.http_soap.outgoing.transport_request import build_url, CookieRequest, get_body, \
-    get_session_cookie, has_environ_proxies, has_header, params_key, parse_proxy, prepare_url, select_session_proxy
 
 # Rust core
 from zato_server_core.zato_server_core import log_rest_line
@@ -57,17 +55,20 @@ Transport_Requests = 'requests'
 # The environment variables requests reads its CA bundle from, in the order it reads them
 _ca_bundle_env_keys = ('REQUESTS_CA_BUNDLE', 'CURL_CA_BUNDLE')
 
+# The keyword argument of invoke_http the transport accepts, besides the ones invoke_http consumes itself
+_params_key = 'params'
+
 # The methods requests sends without a Content-Length header when they have no body
 _methods_without_length = ('GET', 'HEAD')
 
 # The response header that sets a cookie, as the cookie jar reads it
 _set_cookie_header = 'Set-Cookie'
 
-# The request header the cookies of the session are sent in, as requests sets it
-_cookie_header = 'Cookie'
-
 # How urllib3 reports a body it could not decode
 _decode_error_message = 'Received response with content-encoding: {}, but failed to decode it.'
+
+# How requests encodes the params of a call as a query string
+_encode_params = cast_('any_', RequestEncodingMixin)._encode_params
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -105,6 +106,19 @@ def get_basic_authorization(auth:'anytuple') -> 'strnone':
 
 # ################################################################################################################################
 
+def has_header(headers:'stranydict', name:'str') -> 'bool':
+    """ Says whether a call gives a header, its name compared case-insensitively, with a value other than None,
+    which requests treats as no header at all.
+    """
+    for key, value in headers.items():
+        if value is not None:
+            if key.lower() == name:
+                return True
+
+    return False
+
+# ################################################################################################################################
+
 def get_ca_path(tls_verify:'any_', trust_env:'bool') -> 'any_':
     """ Returns what requests verifies TLS against with a given verify argument - None when it verifies nothing,
     otherwise the CA bundle from the environment or the certifi bundle for True, or the argument itself.
@@ -126,12 +140,15 @@ def get_ca_path(tls_verify:'any_', trust_env:'bool') -> 'any_':
 
 def is_ca_path_supported(ca_path:'any_') -> 'bool':
     """ Says whether the transport verifies TLS against what get_ca_path returned, which it does for no verification
-    and for the path of a CA bundle or of a CA directory.
+    and for a path that is not a directory of certificates.
     """
     if ca_path is None:
         return True
 
-    out = isinstance(ca_path, str)
+    if not isinstance(ca_path, str):
+        return False
+
+    out = not os.path.isdir(ca_path)
     return out
 
 # ################################################################################################################################
@@ -148,6 +165,27 @@ def get_client_cert(tls_client_cert:'any_') -> 'anytuple':
 
     else:
         out = (tls_client_cert, None)
+
+    return out
+
+# ################################################################################################################################
+
+def build_url(address:'str', params:'any_') -> 'str':
+    """ Returns the address with the query string requests builds from params appended to it.
+    """
+    if not params:
+        return address
+
+    query = _encode_params(params)
+
+    if not query:
+        return address
+
+    # A query string already in the address is extended rather than replaced
+    if '?' in address:
+        out = address + '&' + query
+    else:
+        out = address + '?' + query
 
     return out
 
@@ -199,7 +237,7 @@ def extract_cookies(jar:'RequestsCookieJar', url:'str', headers:'stranydict', se
     for value in set_cookie_list:
         message[_set_cookie_header] = value
 
-    request = CookieRequest(url, CaseInsensitiveDict(headers))
+    request = _CookieRequest(url, CaseInsensitiveDict(headers))
 
     cookie_response = cast_('any_', MockResponse(message))
     cookie_request = cast_('any_', MockRequest(cast_('any_', request)))
@@ -209,18 +247,23 @@ def extract_cookies(jar:'RequestsCookieJar', url:'str', headers:'stranydict', se
 # ################################################################################################################################
 # ################################################################################################################################
 
+class _CookieRequest:
+    """ What the cookie jar of requests reads of the request a response with cookies was received for.
+    """
+    def __init__(self, url:'str', headers:'CaseInsensitiveDict[any_]') -> 'None':
+        self.url = url
+        self.headers = headers
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class TransportCall(NamedTuple):
-    """ What the Rust transport sends for one invocation, with the arguments the request is built from when it is read.
+    """ What the Rust transport sends for one invocation.
     """
     method: 'str'
     url: 'str'
     headers: 'stranydict'
-    sent_headers: 'stranydict'
     body: 'bytesnone'
-    content_type: 'strnone'
-    proxy: 'anytuple | None'
-    data: 'any_'
-    json: 'any_'
     is_authorized: 'bool'
 
 # ################################################################################################################################
@@ -232,9 +275,8 @@ class TransportResponse(Response):
     and the text is computed once for each body and encoding.
     """
 
-    # The cookies the response set, as received, and the prepared address the cookie jar stores them for
+    # The cookies the response set, as received
     _set_cookie_list:'anytuple' = ()
-    _cookie_url:'str' = ''
 
     # The session and the call the request is built from when it is read
     _session:'RequestsSession | None' = None
@@ -309,7 +351,7 @@ class TransportResponse(Response):
 
         if self._set_cookie_list:
             call = cast_('TransportCall', self._call)
-            extract_cookies(out, self._cookie_url, call.headers, self._set_cookie_list)
+            extract_cookies(out, call.url, call.headers, self._set_cookie_list)
 
         return out
 
@@ -321,7 +363,7 @@ class TransportResponse(Response):
         session = cast_('RequestsSession', self._session)
         call = cast_('TransportCall', self._call)
 
-        request = Request(call.method, call.url, headers=call.headers, data=call.data, json=call.json, auth=self._auth)
+        request = Request(call.method, call.url, headers=call.headers, data=call.body, auth=self._auth)
 
         out = session.prepare_request(request)
         return out
@@ -353,7 +395,7 @@ def build_response(
 ) -> 'TransportResponse':
     """ Builds a response from what the Rust transport returned and stores its cookies in the session.
     """
-    status_code, reason, header_store, body, elapsed_us, set_cookie_list, url = result
+    status_code, reason, header_store, body, elapsed_us, set_cookie_list = result
 
     # The headers arrive in the form a CaseInsensitiveDict keeps them in, so none is copied
     headers = cast_('any_', CaseInsensitiveDict.__new__(CaseInsensitiveDict))
@@ -368,7 +410,7 @@ def build_response(
     out.status_code = status_code
     out.reason = reason
     out.headers = headers
-    out.url = url
+    out.url = call.url
     out.elapsed = timedelta(microseconds=elapsed_us)
     out.history = []
     out.raw = None
@@ -383,8 +425,7 @@ def build_response(
     # The session keeps the cookies of each response, as requests keeps them
     if set_cookie_list:
         out._set_cookie_list = set_cookie_list
-        out._cookie_url = url
-        extract_cookies(session.cookies, url, call.headers, set_cookie_list)
+        extract_cookies(session.cookies, call.url, call.headers, set_cookie_list)
 
     return out
 
@@ -416,10 +457,6 @@ class TransportMixin:
         self._transport_tls:'any_' = None
         self._transport_tls_supported = False
 
-        # Whether the environment names proxies, and each proxy as the transport receives it, per address of the proxy
-        self._transport_env_proxies = has_environ_proxies()
-        self._transport_proxies:'stranydict' = {}
-
         self.can_use_transport = self._can_use_transport()
 
 # ################################################################################################################################
@@ -435,8 +472,11 @@ class TransportMixin:
         if self.config['transport'] == URL_TYPE.SOAP:
             return False
 
-        # .. and so are invocations requests would send with credentials from a netrc file.
+        # .. and so are invocations requests would send through a proxy or with credentials from a netrc file.
         address_host = self.config['address_host']
+
+        if get_environ_proxies(address_host):
+            return False
 
         if get_netrc_auth(address_host):
             return False
@@ -445,7 +485,7 @@ class TransportMixin:
 
 # ################################################################################################################################
 
-    def _session_needs_requests(self) -> 'bool':
+    def _session_needs_requests(self, headers:'stranydict') -> 'bool':
         """ Says whether the state of the requests session changes what requests would send, in a way the transport
         does not reproduce.
         """
@@ -464,6 +504,9 @@ class TransportMixin:
         if session.params:
             return True
 
+        if session.proxies:
+            return True
+
         if session.stream:
             return True
 
@@ -473,7 +516,7 @@ class TransportMixin:
         if tuple(session.adapters.values()) != self._transport_adapters:
             return True
 
-        # .. while the default headers of the session are sent by the transport too, once it accepts them.
+        # .. the default headers of the session are sent by the transport too, once it accepts them ..
         if type(session.headers) is not CaseInsensitiveDict:
             return True
 
@@ -486,28 +529,12 @@ class TransportMixin:
         if not self._transport_headers_accepted:
             return True
 
+        # .. and the cookies of the session are sent by requests, unless the call gives a Cookie header of its own.
+        if session.cookies:
+            if not has_header(headers, 'cookie'):
+                return True
+
         return False
-
-# ################################################################################################################################
-
-    def _get_transport_proxy(self, url:'str') -> 'any_':
-        """ Returns the proxy requests sends a request to a prepared address through as the transport receives it,
-        None if requests sends it directly, or NotGiven if requests sends it through a proxy the transport does not use.
-        """
-        proxy = select_session_proxy(self.session, url, self._transport_env_proxies)
-
-        if not proxy:
-            return None
-
-        if proxy in self._transport_proxies:
-            out = self._transport_proxies[proxy]
-        else:
-            out = parse_proxy(self.session, url, proxy)
-            if out is None:
-                out = NotGiven
-            self._transport_proxies[proxy] = out
-
-        return out
 
 # ################################################################################################################################
 
@@ -530,6 +557,9 @@ class TransportMixin:
             return None
 
         # Arguments the transport does not implement leave the invocation to requests ..
+        if json is not None:
+            return None
+
         if hooks:
             return None
 
@@ -540,7 +570,7 @@ class TransportMixin:
             return None
 
         for name in kwargs:
-            if name != params_key:
+            if name != _params_key:
                 return None
 
         # .. as do credentials other than Basic Auth ..
@@ -551,49 +581,29 @@ class TransportMixin:
         else:
             return None
 
-        # .. and bodies requests streams or rejects ..
-        body_and_type = get_body(data, json)
-        if body_and_type is None:
-            return None
+        # .. and bodies other than bytes and text that Latin-1 encodes, which is how http.client encodes text ..
+        if not data:
+            body = None
 
-        body, content_type = body_and_type
+        elif isinstance(data, bytes):
+            body = data
 
-        if self._session_needs_requests():
-            return None
-
-        # .. whereas a query string is appended to the address the way requests appends it ..
-        url = build_url(address, kwargs.get(params_key))
-
-        # .. and the cookies and the proxies of the session are applied to the address as requests prepares it.
-        session = self.session
-        sent_headers = headers
-        proxy = None
-
-        has_session_cookies = bool(session.cookies) and not has_header(headers, 'cookie')
-        has_proxies = bool(session.proxies) or (session.trust_env and self._transport_env_proxies)
-
-        if has_session_cookies or has_proxies:
-
-            prepared_url = prepare_url(url)
-            if prepared_url is None:
+        elif isinstance(data, str):
+            try:
+                body = data.encode('latin-1')
+            except UnicodeEncodeError:
                 return None
 
-            if has_session_cookies:
-                if cookie := get_session_cookie(session, prepared_url, headers):
+        else:
+            return None
 
-                    # A call that removes a Cookie header leaves it to requests, which applies the cookies after the removal
-                    for key in headers:
-                        if key.lower() == 'cookie':
-                            return None
+        if self._session_needs_requests(headers):
+            return None
 
-                    sent_headers = {**headers, _cookie_header: cookie}
+        # .. whereas a query string is appended to the address the way requests appends it.
+        url = build_url(address, kwargs.get(_params_key))
 
-            if has_proxies:
-                proxy = self._get_transport_proxy(prepared_url)
-                if proxy is NotGiven:
-                    return None
-
-        out = TransportCall(method, url, headers, sent_headers, body, content_type, proxy, data, json, is_authorized)
+        out = TransportCall(method, url, headers, body, is_authorized)
         return out
 
 # ################################################################################################################################
@@ -652,11 +662,10 @@ class TransportMixin:
 
         if call.is_authorized:
             auth = self.requests_auth
-            result = transport.invoke_with_auth(
-                call.method, call.url, call.sent_headers, call.body, call.content_type, call.proxy)
+            result = transport.invoke_with_auth(call.method, call.url, call.headers, call.body)
         else:
             auth = None
-            result = transport.invoke(call.method, call.url, call.sent_headers, call.body, call.content_type, call.proxy)
+            result = transport.invoke(call.method, call.url, call.headers, call.body)
 
         if result is None:
             return None

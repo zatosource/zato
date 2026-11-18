@@ -5,8 +5,6 @@
 //! One configuration serves every TLS connection of a transport, so the sessions it establishes
 //! are resumed by the new connections that follow them.
 
-use std::fs;
-use std::path::Path;
 use std::sync::Arc;
 
 use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
@@ -15,13 +13,10 @@ use rustls::pki_types::pem::PemObject;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, ServerName, UnixTime};
 use rustls::{ClientConfig, DigitallySignedStruct, RootCertStore, SignatureScheme};
 
-/// The length of the hexadecimal subject hash that names a file in a CA directory.
-const SUBJECT_HASH_LEN: usize = 8;
-
 /// How the TLS connections of a transport are established.
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct TlsSettings {
-    /// The CA bundle or CA directory the certificate of the endpoint is verified against, or `None` to not verify it at all.
+    /// The CA bundle the certificate of the endpoint is verified against, or `None` to not verify it at all.
     pub ca_path: Option<String>,
 
     /// The client certificate presented to the endpoint, a PEM file that may also hold its key.
@@ -78,63 +73,16 @@ fn load_certificates(path: &str) -> Result<Vec<CertificateDer<'static>>, String>
     Ok(out)
 }
 
-/// Reads the CA certificates of a PEM bundle, or of a directory of PEM files as OpenSSL reads one, into a trust store.
+/// Reads the CA certificates of a PEM bundle into a trust store.
 fn load_roots(path: &str) -> Result<RootCertStore, String> {
-    let certificates = if Path::new(path).is_dir() {
-        load_directory_certificates(path)?
-    } else {
-        load_certificates(path)?
-    };
-
     let mut roots = RootCertStore::empty();
-    let (added, _ignored) = roots.add_parsable_certificates(certificates);
+    let (added, _ignored) = roots.add_parsable_certificates(load_certificates(path)?);
 
     if added == 0 {
         return Err(format!("No usable CA certificate found in {path}"));
     }
 
     Ok(roots)
-}
-
-/// Reads the certificates of a CA directory - the files named by the hash of their subject, as `openssl rehash`
-/// names them, which are the only files OpenSSL looks up in such a directory.
-fn load_directory_certificates(path: &str) -> Result<Vec<CertificateDer<'static>>, String> {
-    let entries = fs::read_dir(path).map_err(|err| format!("Could not read {path}: {err}"))?;
-
-    let mut out = Vec::new();
-    for entry in entries {
-        let entry = entry.map_err(|err| format!("Could not read {path}: {err}"))?;
-
-        let file_name = entry.file_name();
-        let Some(name) = file_name.to_str() else {
-            continue;
-        };
-
-        if !is_hashed_certificate_name(name) {
-            continue;
-        }
-
-        let file_path = entry.path();
-        let Some(file_path) = file_path.to_str() else {
-            continue;
-        };
-
-        out.extend(load_certificates(file_path)?);
-    }
-
-    Ok(out)
-}
-
-/// Whether a file name is the hash of a certificate subject followed by a sequence number, e.g. `9d66eef0.0`.
-fn is_hashed_certificate_name(name: &str) -> bool {
-    let Some((hash, sequence)) = name.split_once('.') else {
-        return false;
-    };
-
-    let is_hash = hash.len() == SUBJECT_HASH_LEN && hash.bytes().all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f'));
-    let is_sequence = !sequence.is_empty() && sequence.bytes().all(|byte| byte.is_ascii_digit());
-
-    is_hash && is_sequence
 }
 
 /// The name the certificate of the endpoint is issued for, a DNS name or an IP address.
@@ -182,22 +130,5 @@ impl ServerCertVerifier for NoVerification {
 
     fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
         self.algorithms.supported_schemes()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn hashed_certificate_names() {
-        assert!(is_hashed_certificate_name("9d66eef0.0"));
-        assert!(is_hashed_certificate_name("9d66eef0.12"));
-        assert!(!is_hashed_certificate_name("9D66EEF0.0"));
-        assert!(!is_hashed_certificate_name("9d66eef0.r0"));
-        assert!(!is_hashed_certificate_name("9d66eef0."));
-        assert!(!is_hashed_certificate_name("9d66eef.0"));
-        assert!(!is_hashed_certificate_name("ca-bundle.pem"));
-        assert!(!is_hashed_certificate_name("9d66eef0"));
     }
 }

@@ -30,10 +30,6 @@ pub enum TransportError {
 
     /// The connection was closed or reset while the body of the response was being read.
     ChunkedEncoding(String),
-
-    /// The connection to a proxy could not be established, the proxy refused to open a tunnel,
-    /// or the connection through the proxy was closed or reset before the response arrived.
-    Proxy(String),
 }
 
 /// The requests exception classes the errors are raised as, imported once per transport.
@@ -52,9 +48,6 @@ pub struct RequestsExceptions {
 
     /// `requests.exceptions.ChunkedEncodingError`.
     chunked_encoding_error: Py<PyAny>,
-
-    /// `requests.exceptions.ProxyError`.
-    proxy_error: Py<PyAny>,
 }
 
 impl RequestsExceptions {
@@ -68,7 +61,6 @@ impl RequestsExceptions {
             read_timeout: module.getattr("ReadTimeout")?.unbind(),
             ssl_error: module.getattr("SSLError")?.unbind(),
             chunked_encoding_error: module.getattr("ChunkedEncodingError")?.unbind(),
-            proxy_error: module.getattr("ProxyError")?.unbind(),
         })
     }
 
@@ -84,7 +76,6 @@ impl RequestsExceptions {
             TransportError::Connection(message) => (&self.connection_error, message),
             TransportError::Tls(message) => (&self.ssl_error, message),
             TransportError::ChunkedEncoding(message) => (&self.chunked_encoding_error, message),
-            TransportError::Proxy(message) => (&self.proxy_error, message),
         };
 
         // Instantiating a requests exception does not fail for a message argument, but if it ever did,

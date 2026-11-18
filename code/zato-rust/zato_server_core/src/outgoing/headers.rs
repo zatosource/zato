@@ -2,10 +2,8 @@
 //!
 //! The default headers of the connection's session come first, the headers of the call replace them
 //! regardless of case and keep their position, a header whose value is `None` is removed, and the
-//! `Content-Length` and `Content-Type` headers are set the way requests sets them. The headers urllib3
-//! and `http.client` add of their own are added as they add them, and a request sent through a proxy
-//! has the headers urllib3 sets for a proxy. A header requests would reject makes the invocation go
-//! through requests, which then rejects it.
+//! `Content-Length` header is set the way requests sets it. A header requests would reject, or one
+//! the transport does not implement, makes the invocation go through requests.
 
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyString};
@@ -15,43 +13,6 @@ const METHODS_WITHOUT_LENGTH: [&str; 2] = ["GET", "HEAD"];
 
 /// The header the credentials of a connection are sent in.
 const AUTHORIZATION_HEADER: &str = "Authorization";
-
-/// The header the credentials of a proxy are sent in.
-pub const PROXY_AUTHORIZATION_HEADER: &str = "Proxy-Authorization";
-
-/// The header urllib3 names itself in when the request names no client.
-const USER_AGENT_HEADER: &str = "User-Agent";
-
-/// The header `http.client` asks for an unencoded body in when the request asks for no encoding.
-const ACCEPT_ENCODING_HEADER: &str = "Accept-Encoding";
-
-/// The encoding `http.client` asks for when the request asks for none.
-const IDENTITY_ENCODING: &[u8] = b"identity";
-
-/// The header urllib3 accepts any media type in for a request sent through a proxy.
-const ACCEPT_HEADER: &str = "Accept";
-
-/// The media types urllib3 accepts for a request sent through a proxy, unless the request names its own.
-const ANY_MEDIA_TYPE: &[u8] = b"*/*";
-
-/// Where a request is sent, which decides the headers added to it.
-pub enum HeadLayout<'call> {
-    /// To the endpoint, directly or through a tunnel, with the `Host` header `http.client` builds
-    /// unless the caller gives one.
-    Origin {
-        /// The value of the `Host` header.
-        host_header: &'call str,
-    },
-
-    /// To an HTTP proxy, with the `Accept` and `Host` headers and the credentials of the proxy that urllib3 sets.
-    Proxied {
-        /// The host and the port of the endpoint, as the `Host` header names them.
-        netloc: &'call str,
-
-        /// The value of the `Proxy-Authorization` header the credentials of the proxy produce, if it has any.
-        proxy_authorization: Option<&'call [u8]>,
-    },
-}
 
 /// One header of a request, its name as the caller spelled it and its value as sent.
 struct Header {
@@ -67,12 +28,11 @@ pub struct HeadInput<'call, 'py> {
     /// The method, already in uppercase.
     pub method: &'call str,
 
-    /// The request target of the request line - the path and the query string, or the whole address
-    /// for a request sent through an HTTP proxy.
+    /// The path and the query string of the request line.
     pub request_target: &'call str,
 
-    /// Where the request is sent.
-    pub layout: HeadLayout<'call>,
+    /// The value of the `Host` header, sent unless the caller gives one.
+    pub host_header: &'call str,
 
     /// The default headers of the connection's session, in their order.
     pub defaults: &'call [(String, Vec<u8>)],
@@ -83,15 +43,8 @@ pub struct HeadInput<'call, 'py> {
     /// The length of the body, if the request has a body that is not empty.
     pub body_len: Option<usize>,
 
-    /// The media type requests gives a body it encodes itself, sent unless the request names its own.
-    pub content_type: Option<&'call [u8]>,
-
-    /// The value of the `Authorization` header, if the call uses the credentials of the connection
-    /// or the address has credentials of its own.
+    /// The value of the `Authorization` header the credentials of the connection produce, if the call uses them.
     pub authorization: Option<&'call [u8]>,
-
-    /// The value of the `User-Agent` header urllib3 sends when the request names no client.
-    pub user_agent: &'call [u8],
 }
 
 /// Builds the head of a request, or returns `None` if the request is to go through requests.
@@ -123,94 +76,26 @@ pub fn build_head(input: &HeadInput<'_, '_>) -> PyResult<Option<Vec<u8>>> {
         set_header(&mut merged, name, encoded);
     }
 
-    // .. a body the caller frames with its own transfer encoding is left to requests ..
+    // .. requests sends its defaults whatever the caller removed, which is left to requests ..
+    for (name, _) in input.defaults {
+        if find_header(&merged, name).is_none() {
+            return Ok(None);
+        }
+    }
+
+    // .. a body the caller frames with its own transfer encoding is left to requests too ..
     if find_header(&merged, "Transfer-Encoding").is_some() {
         return Ok(None);
     }
 
-    // .. the length and the media type of the body follow, as requests prepares the body after the headers ..
     set_content_length(&mut merged, input.method, input.body_len);
 
-    if let Some(value) = input.content_type
-        && find_header(&merged, "Content-Type").is_none()
-    {
-        merged.push(Header {
-            name: String::from("Content-Type"),
-            value: value.to_vec(),
-        });
-    }
-
-    // .. the credentials come after the length, as requests applies its auth object last ..
+    // .. and the credentials are applied last, after the length, as requests applies its auth object.
     if let Some(value) = input.authorization {
         set_header(&mut merged, String::from(AUTHORIZATION_HEADER), value.to_vec());
     }
 
-    // .. a request sent through a proxy has the headers urllib3 sets for the proxy ..
-    let mut ordered = match &input.layout {
-        HeadLayout::Origin { .. } => merged,
-        HeadLayout::Proxied {
-            netloc,
-            proxy_authorization,
-        } => to_proxied(merged, netloc, *proxy_authorization),
-    };
-
-    // .. and urllib3 names itself as the client of a request that names none.
-    add_user_agent(&mut ordered, input.user_agent);
-
-    Ok(Some(serialize(input.method, input.request_target, &input.layout, &ordered)))
-}
-
-/// Appends the `User-Agent` urllib3 sends in a request that has none of its own.
-fn add_user_agent(headers: &mut Vec<Header>, user_agent: &[u8]) {
-    if find_header(headers, USER_AGENT_HEADER).is_none() {
-        headers.push(Header {
-            name: String::from(USER_AGENT_HEADER),
-            value: user_agent.to_vec(),
-        });
-    }
-}
-
-/// Arranges the headers of a request sent through an HTTP proxy the way urllib3 arranges them - its `Accept`
-/// and `Host` headers first, then the headers of the request and the credentials of the proxy, each replacing
-/// a header of exactly the same name, because urllib3 merges them into a plain dictionary.
-fn to_proxied(merged: Vec<Header>, netloc: &str, proxy_authorization: Option<&[u8]>) -> Vec<Header> {
-    let mut out = Vec::with_capacity(merged.len() + 3);
-
-    out.push(Header {
-        name: String::from(ACCEPT_HEADER),
-        value: ANY_MEDIA_TYPE.to_vec(),
-    });
-
-    out.push(Header {
-        name: String::from("Host"),
-        value: netloc.as_bytes().to_vec(),
-    });
-
-    for header in merged {
-        set_exact_header(&mut out, header);
-    }
-
-    if let Some(value) = proxy_authorization {
-        set_exact_header(
-            &mut out,
-            Header {
-                name: String::from(PROXY_AUTHORIZATION_HEADER),
-                value: value.to_vec(),
-            },
-        );
-    }
-
-    out
-}
-
-/// Sets a header the way a plain dictionary does, replacing the value of a header whose name is spelled exactly
-/// the same and keeping its position, or appending the header otherwise.
-fn set_exact_header(headers: &mut Vec<Header>, header: Header) {
-    if let Some(existing) = headers.iter_mut().find(|existing| existing.name == header.name) {
-        existing.value = header.value;
-    } else {
-        headers.push(header);
-    }
+    Ok(Some(serialize(input, &merged)))
 }
 
 /// Extracts the name of a header, returning `None` for a name requests would reject or `http.client` could not encode.
@@ -304,7 +189,7 @@ const fn is_python_space(character: char) -> bool {
 }
 
 /// Encodes text as Latin-1, returning `None` if it has a character Latin-1 cannot encode.
-pub fn encode_latin1(text: &str) -> Option<Vec<u8>> {
+fn encode_latin1(text: &str) -> Option<Vec<u8>> {
     let mut out = Vec::with_capacity(text.len());
 
     for character in text.chars() {
@@ -349,41 +234,31 @@ fn set_content_length(headers: &mut Vec<Header>, method: &str, body_len: Option<
     }
 }
 
-/// Writes the request line, the `Host` and `Accept-Encoding` headers `http.client` puts first unless
-/// the request has them already, and the headers of the request.
-fn serialize(method: &str, request_target: &str, layout: &HeadLayout<'_>, headers: &[Header]) -> Vec<u8> {
+/// Writes the request line, the `Host` header unless the caller gave one, and the merged headers.
+fn serialize(input: &HeadInput<'_, '_>, headers: &[Header]) -> Vec<u8> {
     let mut out = Vec::with_capacity(512);
 
-    out.extend_from_slice(method.as_bytes());
+    out.extend_from_slice(input.method.as_bytes());
     out.push(b' ');
-    out.extend_from_slice(request_target.as_bytes());
+    out.extend_from_slice(input.request_target.as_bytes());
     out.extend_from_slice(b" HTTP/1.1\r\n");
 
-    // A request sent through a proxy always has the Host header urllib3 set for it
-    if let HeadLayout::Origin { host_header } = layout
-        && find_header(headers, "Host").is_none()
-    {
-        write_header(&mut out, "Host", host_header.as_bytes());
-    }
-
-    if find_header(headers, ACCEPT_ENCODING_HEADER).is_none() {
-        write_header(&mut out, ACCEPT_ENCODING_HEADER, IDENTITY_ENCODING);
+    // http.client puts its own Host header first, unless the caller gave one
+    if find_header(headers, "Host").is_none() {
+        out.extend_from_slice(b"Host: ");
+        out.extend_from_slice(input.host_header.as_bytes());
+        out.extend_from_slice(b"\r\n");
     }
 
     for header in headers {
-        write_header(&mut out, &header.name, &header.value);
+        out.extend_from_slice(header.name.as_bytes());
+        out.extend_from_slice(b": ");
+        out.extend_from_slice(&header.value);
+        out.extend_from_slice(b"\r\n");
     }
 
     out.extend_from_slice(b"\r\n");
     out
-}
-
-/// Writes one header line.
-fn write_header(out: &mut Vec<u8>, name: &str, value: &[u8]) {
-    out.extend_from_slice(name.as_bytes());
-    out.extend_from_slice(b": ");
-    out.extend_from_slice(value);
-    out.extend_from_slice(b"\r\n");
 }
 
 /// Whether a method consists of the token characters `http.client` sends, i.e. ASCII letters, digits and marks.
@@ -470,107 +345,6 @@ mod tests {
         assert_eq!(
             headers.first().map(|header| header.value.clone()),
             Some(b"application/xml".to_vec())
-        );
-    }
-
-    /// A header with the given name and value.
-    fn header(name: &str, value: &str) -> Header {
-        Header {
-            name: String::from(name),
-            value: value.as_bytes().to_vec(),
-        }
-    }
-
-    /// The text of a serialized head, which the tests build from ASCII only.
-    fn text(head: &[u8]) -> String {
-        String::from_utf8_lossy(head).into_owned()
-    }
-
-    #[test]
-    fn origin_head_has_host_and_identity_encoding_first() {
-        let headers = vec![header("Accept", "*/*")];
-        let layout = HeadLayout::Origin {
-            host_header: "example.com:8080",
-        };
-
-        let head = serialize("GET", "/api", &layout, &headers);
-
-        assert_eq!(
-            text(&head),
-            "GET /api HTTP/1.1\r\nHost: example.com:8080\r\nAccept-Encoding: identity\r\nAccept: */*\r\n\r\n"
-        );
-    }
-
-    #[test]
-    fn origin_head_keeps_host_and_encoding_of_the_call() {
-        let headers = vec![header("accept-encoding", "gzip"), header("host", "other.example.com")];
-        let layout = HeadLayout::Origin {
-            host_header: "example.com",
-        };
-
-        let head = serialize("GET", "/", &layout, &headers);
-
-        assert_eq!(
-            text(&head),
-            "GET / HTTP/1.1\r\naccept-encoding: gzip\r\nhost: other.example.com\r\n\r\n"
-        );
-    }
-
-    #[test]
-    fn user_agent_appended_only_when_missing() {
-        let mut headers = vec![header("Accept", "*/*")];
-        add_user_agent(&mut headers, b"python-urllib3/1.26.20");
-
-        assert_eq!(
-            headers.last().map(|header| (header.name.as_str(), header.value.clone())),
-            Some(("User-Agent", b"python-urllib3/1.26.20".to_vec()))
-        );
-
-        let mut headers = vec![header("user-agent", "Zato")];
-        add_user_agent(&mut headers, b"python-urllib3/1.26.20");
-
-        assert_eq!(headers.len(), 1);
-    }
-
-    #[test]
-    fn proxied_headers_follow_the_dictionary_of_urllib3() {
-        let merged = vec![
-            header("User-Agent", "Zato"),
-            header("Accept", "application/json"),
-            header("host", "caller.example.com"),
-        ];
-
-        let ordered = to_proxied(merged, "example.com:8080", Some(b"Basic dTpw"));
-        let names: Vec<(&str, &[u8])> = ordered
-            .iter()
-            .map(|header| (header.name.as_str(), header.value.as_slice()))
-            .collect();
-
-        assert_eq!(
-            names,
-            vec![
-                ("Accept", b"application/json".as_slice()),
-                ("Host", b"example.com:8080".as_slice()),
-                ("User-Agent", b"Zato".as_slice()),
-                ("host", b"caller.example.com".as_slice()),
-                ("Proxy-Authorization", b"Basic dTpw".as_slice()),
-            ]
-        );
-    }
-
-    #[test]
-    fn proxied_head_has_no_host_of_its_own() {
-        let headers = vec![header("Accept", "*/*"), header("Host", "example.com")];
-        let layout = HeadLayout::Proxied {
-            netloc: "example.com",
-            proxy_authorization: None,
-        };
-
-        let head = serialize("GET", "http://example.com/", &layout, &headers);
-
-        assert_eq!(
-            text(&head),
-            "GET http://example.com/ HTTP/1.1\r\nAccept-Encoding: identity\r\nAccept: */*\r\nHost: example.com\r\n\r\n"
         );
     }
 }
