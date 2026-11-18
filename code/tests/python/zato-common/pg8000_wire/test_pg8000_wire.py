@@ -16,11 +16,16 @@ from pg8000.dbapi import ProgrammingError
 # pytest
 import pytest
 
+# SQLAlchemy
+from sqlalchemy.exc import IntegrityError
+
 # zato_pg_wire
 from zato_pg_wire.zato_pg_wire import RowDecoder
 
 # Zato
 from zato.common.db_env import pg8000_wire
+from zato.common.db_env.pg8000_wire import deferred_replies
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -76,6 +81,10 @@ _many_rows = 5000
 
 # The sizes of the bytea values sent as parameters, one of them larger than a part of a message kept inline.
 _bytea_sizes = (0, 1, 1000, pg8000_wire.Max_Inline_Size + 4464, 5_000_000)
+
+# The insert of one customer and the count of the customers with an id above the one given.
+_insert_customer = 'insert into customer values (%s)'
+_count_customers = 'select count(*) from customer where id > %s'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -342,6 +351,82 @@ class TestParameters:
             assert rows == [[idx, idx % 2]]
 
         connection.close()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestDeferredReplies:
+    """ Within deferred_replies, a statement that returns no rows travels to the server with the next statement
+    whose reply is read, and an error of such a statement is raised by that statement.
+    """
+
+    def test_one_round_trip(self, engine:'Engine', monkeypatch:'MonkeyPatch') -> 'None':
+        with engine.connect() as connection:
+
+            # The table exists and both statements are prepared within the open transaction ..
+            _ = connection.exec_driver_sql('create temporary table customer (id int4 primary key)')
+            _ = connection.exec_driver_sql(_insert_customer, (0,))
+            _ = connection.exec_driver_sql(_count_customers, (0,))
+
+            flushes:'anylist' = []
+            core_flush = core._flush
+
+            def count_flush(sock:'any_') -> 'None':
+                flushes.append(sock)
+                core_flush(sock)
+
+            monkeypatch.setattr(core, '_flush', count_flush)
+
+            # .. the inserts are sent without their replies being read ..
+            with deferred_replies(connection):
+                for idx in range(1, 4):
+                    _ = connection.exec_driver_sql(_insert_customer, (idx,))
+
+                assert not flushes
+
+                # .. and they travel to the server with the select, in one round trip.
+                count = connection.exec_driver_sql(_count_customers, (0,)).scalar_one()
+
+            assert count == 3
+            assert len(flushes) == 1
+
+    def test_error_raised_by_next_read(self, engine:'Engine') -> 'None':
+        with engine.connect() as connection:
+
+            _ = connection.exec_driver_sql('create temporary table customer (id int4 primary key)')
+            _ = connection.exec_driver_sql(_insert_customer, (1,))
+
+            # The duplicate key is reported by the select that follows the insert ..
+            with deferred_replies(connection):
+                _ = connection.exec_driver_sql(_insert_customer, (1,))
+
+                with pytest.raises(IntegrityError) as error_info:
+                    _ = connection.exec_driver_sql(_count_customers, (0,))
+
+            driver_error = cast_('BaseException', error_info.value.orig)
+            error = driver_error.args[0]
+            assert error['C'] == '23505'
+
+            connection.rollback()
+
+            # .. and the connection reads each reply as usual afterwards.
+            value = connection.exec_driver_sql('select %s::text', ('Anna Miller',)).scalar_one()
+            assert value == 'Anna Miller'
+
+    def test_rows_read_at_once(self, engine:'Engine') -> 'None':
+        with engine.connect() as connection:
+
+            _ = connection.exec_driver_sql('create temporary table customer (id int4 primary key)')
+
+            # A statement that returns rows reads its reply at once, within the block as well.
+            with deferred_replies(connection):
+                _ = connection.exec_driver_sql(_insert_customer, (1,))
+                inserted = connection.exec_driver_sql('insert into customer values (%s) returning id', (2,)).all()
+
+            assert inserted == [(2,)]
+
+            count = connection.exec_driver_sql(_count_customers, (0,)).scalar_one()
+            assert count == 2
 
 # ################################################################################################################################
 # ################################################################################################################################

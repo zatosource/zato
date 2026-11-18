@@ -69,6 +69,7 @@ _stored_payloads_query = _stored_payloads_query.where(
     event_payload_table.c.digest.in_(bindparam('payload_digests', expanding=True)))
 _stored_payloads_query = _stored_payloads_query.order_by(event_payload_table.c.digest)
 _stored_payloads_query = _stored_payloads_query.with_for_update(read=True, key_share=True)
+_stored_payloads_statement = PlainStatement(_stored_payloads_query)
 
 # The payloads of the given digests, locked against a concurrent reference, in the same order
 _deleted_payloads_query = select(event_payload_table.c.digest)
@@ -188,7 +189,7 @@ def store_payloads(connection:'Connection', payloads:'strstrdict', search_texts:
 
     # The payloads stored already are found first, and on PostgreSQL they are locked,
     # so that no deletion removes them before this transaction commits the events that reference them ..
-    result = connection.execute(_stored_payloads_query, {'payload_digests': digests})
+    result = _stored_payloads_statement.execute(connection, {'payload_digests': digests})
     stored_digests = set(result.scalars())
 
     # .. the words of each of the other ones are extracted, unless they were extracted before the write ..

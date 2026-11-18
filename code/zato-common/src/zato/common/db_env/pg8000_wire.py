@@ -7,14 +7,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The functions below change how the connections of pg8000 use the extended query protocol of PostgreSQL.
-# Each statement is prepared once per connection and executed by its name afterwards, bytea parameters are sent
-# in the binary format, the rows of a result are decoded by zato_pg_wire, which receives the columns of its native
-# types in the binary format, the messages of each round trip leave in one send and their replies are parsed out
-# of the bytes that each read of the socket returns, and the begin of each transaction travels to the server together
-# with the first statement of the transaction.
+# Each statement is prepared once per connection and executed by its name afterwards, its Bind message is encoded
+# by zato_pg_wire, bytea parameters are sent in the binary format, the rows of a result are decoded by zato_pg_wire,
+# which receives the columns of its native types in the binary format, the messages of each round trip leave in one send
+# and their replies are parsed out of the bytes that each read of the socket returns, and the begin of each transaction
+# travels to the server together with the first statement of the transaction. Within deferred_replies, a statement
+# that returns no rows travels to the server together with the next statement whose reply is read.
 
 # stdlib
 from collections import OrderedDict
+from contextlib import contextmanager
 from functools import lru_cache
 from itertools import count
 from struct import Struct
@@ -23,12 +25,12 @@ from typing import NamedTuple
 # pg8000
 from pg8000 import converters, core, legacy
 from pg8000.converters import make_params
-from pg8000.core import BIND, CLOSE, EXECUTE_MSG, H_pack, i_pack, NULL_BYTE, READY_FOR_QUERY, STATEMENT, SYNC_MSG
+from pg8000.core import CLOSE, EXECUTE_MSG, i_pack, NULL_BYTE, READY_FOR_QUERY, STATEMENT, SYNC_MSG
 from pg8000.dbapi import convert_paramstyle
 from pg8000.exceptions import DatabaseError, InterfaceError
 
 # zato_pg_wire
-from zato_pg_wire.zato_pg_wire import RowDecoder
+from zato_pg_wire.zato_pg_wire import encode_bind, RowDecoder
 
 # Zato
 from zato.common.typing_ import cast_
@@ -37,13 +39,19 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 
 if 0:
+    from collections.abc import Iterator
+    from sqlalchemy.engine import Connection
     from zato.common.typing_ import any_, anydict, anylist, anylistnone, anytuple, intlist
     any_ = any_
     anydict = anydict
     anylist = anylist
     anylistnone = anylistnone
     anytuple = anytuple
+    Connection = Connection
     intlist = intlist
+    noneiter = Iterator[None]
+
+deferred_reply_list = list['DeferredReply']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,12 +65,8 @@ Max_Statements = 512
 # How many statement texts the conversion of their placeholders is kept for.
 _max_statement_texts = 2048
 
-# The format codes of the extended query protocol.
-_text_format   = 0
-_binary_format = 1
-
-# The length of a value that is NULL.
-_null_length = i_pack(-1)
+# The driver whose connections this module changes.
+_driver_name = 'pg8000'
 
 # The size of the length in the header of each message.
 _length_size = 4
@@ -75,10 +79,6 @@ _statement_prefix = 'zato_'
 
 # The Python types that are sent as bytea.
 _binary_types = (bytes, bytearray, memoryview)
-
-# The format codes of a parameter as they are sent in a Bind message.
-_text_format_bin   = H_pack(_text_format)
-_binary_format_bin = H_pack(_binary_format)
 
 # The SQLSTATE codes of a prepared statement the server no longer has, or whose result changed with the schema.
 _stale_statement_codes = {'26000', '0A000'}
@@ -113,6 +113,15 @@ class PreparedStatement(NamedTuple):
     input_funcs: 'anylist'
     decoder: 'RowDecoder | None'
     result_formats: 'intlist'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DeferredReply(NamedTuple):
+    """ A statement that was sent without its reply being read, with the key of its prepared statement.
+    """
+    context: 'any_'
+    key: 'anytuple'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -171,6 +180,8 @@ def _init(self:'any_', *args:'any_', **kwargs:'any_') -> 'None':
     self._zato_statements = OrderedDict()
     self._zato_statement_ids = count()
     self._zato_pending_begin = None
+    self._zato_defers_replies = False
+    self._zato_deferred = []
     self._zato_received = b''
     self._zato_received_pos = 0
 
@@ -189,15 +200,10 @@ def _init(self:'any_', *args:'any_', **kwargs:'any_') -> 'None':
 
 # ################################################################################################################################
 
-def _write_message(self:'any_', code:'bytes', parts:'anylist', length:'int') -> 'None':
-    """ Writes one message to the socket of a connection, its header first and then each of its parts as they are.
+def _write_parts(self:'any_', parts:'anylist') -> 'None':
+    """ Writes the parts of one message to the socket of a connection as they are.
     """
-    message_length = length + _length_size
-    header = code + i_pack(message_length)
-
     try:
-        core._write(self._sock, header)
-
         for part in parts:
             core._write(self._sock, part)
 
@@ -215,10 +221,13 @@ def _write_message(self:'any_', code:'bytes', parts:'anylist', length:'int') -> 
 # ################################################################################################################################
 
 def _send_message(self:'any_', code:'bytes', data:'bytes') -> 'None':
-    """ Writes one message without copying its data into a buffer of its own.
+    """ Writes one message, its header first and then its data, without copying the data into a buffer of its own.
     """
     data_length = len(data)
-    _write_message(self, code, [data], data_length)
+    message_length = data_length + _length_size
+    header = code + i_pack(message_length)
+
+    _write_parts(self, [header, data])
 
 # ################################################################################################################################
 
@@ -328,22 +337,56 @@ def _execute_simple(self:'any_', statement:'str') -> 'any_':
 
 # ################################################################################################################################
 
-def _read_replies(self:'any_', context:'any_') -> 'None':
-    """ Reads the reply to a pending begin, if one was written before the statement, and then the reply to the statement.
+def _forget_stale_statement(self:'any_', key:'anytuple', error:'DatabaseError') -> 'None':
+    """ Removes a prepared statement that the server no longer has, or whose result changed with the schema,
+    so that it is prepared anew next time.
     """
+    error_fields = error.args[0]
+
+    if error_fields['C'] in _stale_statement_codes:
+        if key in self._zato_statements:
+            del self._zato_statements[key]
+
+# ################################################################################################################################
+
+def _read_replies(self:'any_', context:'any_') -> 'None':
+    """ Reads the reply to a pending begin, if one was written before the statement, then the replies to the statements
+    sent before it without their replies being read, and then the reply to the statement. Every reply is read before
+    the first error among them is raised, so that the socket holds no reply of a statement sent before.
+    """
+    first_error:'DatabaseError | None' = None
+
+    # The begin was written first ..
     begin_context = self._zato_pending_begin
 
     if begin_context is not None:
         self._zato_pending_begin = None
 
-        # A begin that failed still leaves the reply to the statement on the socket, which is read before the error is raised.
         try:
             self.handle_messages(begin_context)
-        except DatabaseError:
-            self.handle_messages(context)
-            raise
+        except DatabaseError as e:
+            first_error = e
 
-    self.handle_messages(context)
+    # .. the deferred statements followed it ..
+    deferred:'deferred_reply_list' = self._zato_deferred
+
+    if deferred:
+        self._zato_deferred = []
+
+        for reply in deferred:
+            try:
+                self.handle_messages(reply.context)
+            except DatabaseError as e:
+                _forget_stale_statement(self, reply.key, e)
+                if first_error is None:
+                    first_error = e
+
+    # .. and the statement itself was written last.
+    try:
+        self.handle_messages(context)
+    finally:
+        if first_error is not None:
+            raise first_error
 
 # ################################################################################################################################
 
@@ -354,64 +397,10 @@ def _send_bind(
     result_formats:'intlist' = _no_result_formats,
     ) -> 'None':
     """ Sends a Bind message in which bytea parameters are binary and the columns of the result have the formats given.
-    Large parameters are written to the socket as they are.
+    The connection encodes text in UTF-8, as zato_pg_wire does.
     """
-    # The portal is unnamed and each parameter has a format code of its own ..
-    head = bytearray(NULL_BYTE + statement_name_bin)
-    param_count = H_pack(len(params))
-    head.extend(param_count)
-
-    for value in params:
-        if isinstance(value, bytes):
-            head.extend(_binary_format_bin)
-        else:
-            head.extend(_text_format_bin)
-
-    head.extend(param_count)
-
-    # .. each value follows its length ..
-    parts:'anylist' = [head]
-    current = head
-
-    for value in params:
-
-        if value is None:
-            current.extend(_null_length)
-
-        elif isinstance(value, bytes):
-            value_length = len(value)
-            length_bin = i_pack(value_length)
-            current.extend(length_bin)
-
-            # .. a large bytea value becomes a part of the message of its own ..
-            if value_length < Max_Inline_Size:
-                current.extend(value)
-            else:
-                parts.append(value)
-                current = bytearray()
-                parts.append(current)
-
-        # .. any other value is text ..
-        else:
-            data = value.encode(self._client_encoding)
-            length_bin = i_pack(len(data))
-            current.extend(length_bin)
-            current.extend(data)
-
-    # .. and each column of the result has a format code too.
-    format_count = H_pack(len(result_formats))
-    current.extend(format_count)
-
-    for result_format in result_formats:
-        format_bin = H_pack(result_format)
-        current.extend(format_bin)
-
-    length = 0
-
-    for part in parts:
-        length += len(part)
-
-    _write_message(self, BIND, parts, length)
+    message = encode_bind(statement_name_bin, params, result_formats)
+    _write_parts(self, [message])
 
 # ################################################################################################################################
 
@@ -475,26 +464,47 @@ def _execute_unnamed(self:'any_', statement:'str', vals:'anytuple'=(), oids:'any
         prepared = _prepare(self, statement, oids)
         statements[key] = prepared
 
-    # .. and it is bound and executed in one round trip.
+    # .. it is bound and executed ..
     context = DecodedContext(statement, stream, prepared)
     params = make_params(self.py_types, vals)
 
     self.send_BIND(prepared.name_bin, params, prepared.result_formats)
     core._write(self._sock, EXECUTE_MSG)
     core._write(self._sock, SYNC_MSG)
-    core._flush(self._sock)
 
-    try:
-        _read_replies(self, context)
+    # .. a statement whose reply can wait leaves it to be read with the reply of a later statement ..
+    if _can_defer_reply(self, prepared, stream):
+        reply = DeferredReply(context, key)
+        self._zato_deferred.append(reply)
 
-    # A statement the server no longer has, or whose result changed with the schema, is prepared anew next time.
-    except DatabaseError as e:
-        error = e.args[0]
-        if error['C'] in _stale_statement_codes:
-            del statements[key]
-        raise
+    # .. and any other one is sent and its reply is read in one round trip.
+    else:
+        core._flush(self._sock)
+
+        try:
+            _read_replies(self, context)
+        except DatabaseError as e:
+            _forget_stale_statement(self, key, e)
+            raise
 
     return context
+
+# ################################################################################################################################
+
+def _can_defer_reply(self:'any_', prepared:'PreparedStatement', stream:'any_') -> 'bool':
+    """ Whether the reply to a statement can be read with the reply of a later statement - only within deferred_replies,
+    only for a statement that returns no rows and streams nothing, and only within a transaction whose begin was read,
+    so that the status of the transaction is known before the statement is sent.
+    """
+    out = False
+
+    if self._zato_defers_replies:
+        if prepared.columns is None:
+            if stream is None:
+                if self._zato_pending_begin is None:
+                    out = self._in_transaction
+
+    return out
 
 # ################################################################################################################################
 
@@ -533,6 +543,26 @@ def _convert_paramstyle(style:'str', query:'str', args:'any_') -> 'anytuple':
         out = convert_paramstyle(style, query, args)
 
     return out
+
+# ################################################################################################################################
+
+@contextmanager
+def deferred_replies(connection:'Connection') -> 'noneiter':
+    """ Within the block, each statement of the connection that returns no rows is sent without its reply being read,
+    and its reply is read with that of the next statement whose result is needed, e.g. the commit. An error of such
+    a statement is raised by that later statement. A connection of a driver other than pg8000 reads each reply as usual.
+    """
+    if connection.dialect.driver == _driver_name:
+        dbapi_connection = connection.connection.dbapi_connection
+        dbapi_connection._zato_defers_replies = True
+
+        try:
+            yield
+        finally:
+            dbapi_connection._zato_defers_replies = False
+
+    else:
+        yield
 
 # ################################################################################################################################
 

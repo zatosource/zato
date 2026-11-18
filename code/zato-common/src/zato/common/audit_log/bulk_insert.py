@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The inserts of the audit log that write all the rows of one table in a batch with a single statement.
 
 # SQLAlchemy
-from sqlalchemy import aggregate_order_by, func, select
+from sqlalchemy import aggregate_order_by, bindparam, func, select
 
 # Zato
 from zato.common.audit_log.attachment import build_attachment_rows
@@ -54,29 +54,45 @@ _copy_min_rows = 16
 # The insert of a single event, which returns its id
 _insert_event_statement = PlainStatement(event_table.insert().returning(event_table.c.id))
 
+# The given number of new ids from the sequence of the event table on PostgreSQL
+_event_id_sequence = func.pg_get_serial_sequence(event_table.name, event_table.c.id.name)
+_reserve_event_ids = select(func.nextval(_event_id_sequence))
+_reserve_event_ids = _reserve_event_ids.select_from(func.generate_series(1, bindparam('row_count')))
+_reserve_event_ids_statement = PlainStatement(_reserve_event_ids)
+
 # The multi-row insert of each table, by the name of the table
 _insert_statements:'anydict' = {}
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def returns_ordered_ids(dialect:'Dialect') -> 'bool':
-    """ Whether a multi-row insert on this database returns the ids of the rows in the order of the rows.
+def reserves_ids(dialect:'Dialect') -> 'bool':
+    """ Whether this database reserves the ids of the event rows from the sequence of the table before they are inserted.
     """
     out = dialect.name == Type_PostgreSQL
     return out
 
 # ################################################################################################################################
 
-def _insert_returning(connection:'Connection', rows:'dictlist') -> 'intlist':
-    """ Inserts the event rows with one statement that returns their ids in the order of the rows.
+def _insert_with_reserved_ids(connection:'Connection', rows:'dictlist') -> 'intlist':
+    """ Reserves one id for each event row from the sequence of the table, assigns them to the rows in ascending order
+    and inserts the rows with the ids they were assigned.
     """
-    statement = event_table.insert()
-    statement = statement.returning(event_table.c.id, sort_by_parameter_order=True)
+    row_count = len(rows)
+    result = _reserve_event_ids_statement.execute(connection, {'row_count': row_count})
 
-    result = connection.execute(statement, rows)
+    out:'intlist' = list(result.scalars())
+    out.sort()
 
-    out = list(result.scalars())
+    id_rows:'dictlist' = []
+
+    for row, event_id in zip(rows, out):
+        id_row = dict(row)
+        id_row['id'] = event_id
+        id_rows.append(id_row)
+
+    insert_rows(connection, event_table, id_rows)
+
     return out
 
 # ################################################################################################################################
@@ -115,9 +131,9 @@ def insert_events(connection:'Connection', rows:'dictlist', commit_id:'str') -> 
         inserted = _insert_event_statement.insert_rows(connection, rows)
         out = [inserted[0].id]
 
-    # .. a database that returns the ids of a multi-row insert in order receives them with the insert ..
-    elif returns_ordered_ids(connection.dialect):
-        out = _insert_returning(connection, rows)
+    # .. a database with sequences reserves the ids before the insert ..
+    elif reserves_ids(connection.dialect):
+        out = _insert_with_reserved_ids(connection, rows)
 
     # .. and any other one selects them by the id of the commit.
     else:

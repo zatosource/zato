@@ -46,6 +46,9 @@ class PlainSource:
     # The position of the value in the list of an expanding parameter, or -1 for a parameter that does not expand
     index: 'int'
 
+    # The position of the value in a tuple of the list of an expanding parameter, or -1 for a list of scalar values
+    position: 'int'
+
     # The value fixed in the statement, already converted for the driver
     constant: 'any_'
 
@@ -67,10 +70,11 @@ class PlainPlan:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _new_source(name:'str', index:'int', constant:'any_', processor:'callable_ | None') -> 'PlainSource':
+def _new_source(name:'str', index:'int', constant:'any_', processor:'callable_ | None', position:'int'=-1) -> 'PlainSource':
     out = PlainSource()
     out.name = name
     out.index = index
+    out.position = position
     out.constant = constant
     out.processor = processor
     return out
@@ -108,6 +112,20 @@ def _get_values_expr(sql:'str') -> 'str':
 
 # ################################################################################################################################
 
+def _get_tuple_size(values:'anylist') -> 'int':
+    """ Returns the size of the tuples of the values of an expanding parameter, or 0 for a list of scalar values.
+    """
+    out = 0
+
+    if values:
+        first_value = values[0]
+        if isinstance(first_value, tuple):
+            out = len(first_value)
+
+    return out
+
+# ################################################################################################################################
+
 def _convert(sources:'plain_source_list', parameters:'anydict', out:'anylist') -> 'None':
     """ Appends to a list the values of the positional parameters of one statement or of one row.
     """
@@ -123,6 +141,10 @@ def _convert(sources:'plain_source_list', parameters:'anydict', out:'anylist') -
 
         if source.index >= 0:
             value = value[source.index]
+
+        # .. a value of a tuple is one of its elements ..
+        if source.position >= 0:
+            value = value[source.position]
 
         if source.processor:
             value = source.processor(value)
@@ -176,12 +198,19 @@ class PlainStatement:
         # SQLAlchemy replaces the expanding parameters in the dict it receives with their expanded names
         expanded = compiled._process_parameters_for_postcompile(dict(parameters))
 
-        # Each positional parameter of an expanding parameter is one of its values ..
+        # Each positional parameter of an expanding parameter is one of its values, or one element of one of its tuples,
+        # whose positional parameters SQLAlchemy names one after another, tuple by tuple ..
         expansion_of:'anydict' = {}
 
         for name, expanded_names in expanded.parameter_expansion.items():
-            for index, expanded_name in enumerate(expanded_names):
-                expansion_of[expanded_name] = (name, index)
+            tuple_size = _get_tuple_size(parameters[name])
+
+            for flat_index, expanded_name in enumerate(expanded_names):
+                if tuple_size:
+                    index, position = divmod(flat_index, tuple_size)
+                else:
+                    index, position = flat_index, -1
+                expansion_of[expanded_name] = (name, index, position)
 
         sources:'plain_source_list' = []
 
@@ -191,8 +220,8 @@ class PlainStatement:
 
             # .. any other is given by the caller ..
             if name in expansion_of:
-                original_name, index = expansion_of[name]
-                source = _new_source(original_name, index, None, processor)
+                original_name, index, position = expansion_of[name]
+                source = _new_source(original_name, index, None, processor, position)
 
             elif name in parameters:
                 source = _new_source(name, -1, None, processor)

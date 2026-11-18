@@ -40,6 +40,7 @@ from zato.common.db_env.commit_queue import CommitQueue
 from zato.common.db_env.database import dispose_database_engine, get_database_engine
 from zato.common.audit_log.writes import write_audit
 from zato.common.db_env.engine import call_database
+from zato.common.db_env.pg8000_wire import deferred_replies
 from zato.common.pubsub.delivery_scope import get_delivery_scope
 from zato.common.util.api import as_bool, utcnow
 
@@ -526,7 +527,7 @@ class AuditLog:
         """ Inserts one batch of events in a single transaction, with one statement per table,
         and returns the id of the last event written.
         """
-        with self.engine.begin() as connection:
+        with self.engine.begin() as connection, deferred_replies(connection):
             event_ids = insert_pending_events(connection, batch)
 
         out = event_ids[-1]
