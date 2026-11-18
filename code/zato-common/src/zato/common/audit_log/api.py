@@ -27,7 +27,6 @@ from zato.common.audit_log.common import AuditBody, AuditClassification, AuditEv
     event_link_table, event_table, get_commit_max_events, get_retention_days, get_source_env_suffix, metadata, \
     Status_Outstanding
 from zato.common.audit_log.export.api import get_audit_export
-from zato.common.audit_log.payload import get_payload_digest
 from zato.common.audit_log.pending import PendingEvent
 from zato.common.audit_log.retention import Env_Archive_Dir, Env_Content_Retention_Days, \
     Env_Content_Retention_Days_Prefix, get_content_retention_days, register_prunability, run_retention
@@ -344,7 +343,6 @@ class AuditLog:
             'status': status,
             'duration_ms': duration_ms,
             'data': data,
-            'payload_digest': get_payload_digest(data),
             'internal_data': internal_data,
         }
 

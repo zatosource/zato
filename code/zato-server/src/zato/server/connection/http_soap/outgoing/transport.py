@@ -608,14 +608,15 @@ class TransportMixin:
 
 # ################################################################################################################################
 
-    def _invoke_with_transport(
+    def _configure_transport_call(
         self,
         call:'TransportCall',
         tls_verify:'any_',
         tls_client_cert:'any_',
         timeout:'any_',
-    ) -> 'TransportResponse | None':
-        """ Sends an invocation through the transport, returning None if requests is to send it after all.
+    ) -> 'bool':
+        """ Passes the timeout and the TLS settings of an invocation to the transport, returning whether the transport
+        verifies TLS as the invocation needs it to.
         """
         transport = self.transport
 
@@ -639,7 +640,25 @@ class TransportMixin:
                     transport.set_tls(ca_path, client_cert, client_key)
 
             if not self._transport_tls_supported:
-                return None
+                return False
+
+        return True
+
+# ################################################################################################################################
+
+    def _invoke_with_transport(
+        self,
+        call:'TransportCall',
+        tls_verify:'any_',
+        tls_client_cert:'any_',
+        timeout:'any_',
+    ) -> 'TransportResponse | None':
+        """ Sends an invocation through the transport, returning None if requests is to send it after all.
+        """
+        transport = self.transport
+
+        if not self._configure_transport_call(call, tls_verify, tls_client_cert, timeout):
+            return None
 
         if call.is_authorized:
             auth = self.requests_auth

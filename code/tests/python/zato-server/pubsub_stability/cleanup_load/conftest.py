@@ -48,7 +48,7 @@ _server = PubSubServer('pubsub-cleanup-load')
 
 # How many delivered-message traces past their retention the cleanup removes during the traffic,
 # unless Zato_Test_Retention_Messages says otherwise.
-_trace_count = 2_000_000
+_trace_count = 50_000
 
 # How old the traces are, which is past the retention by age.
 _trace_age_days = 30

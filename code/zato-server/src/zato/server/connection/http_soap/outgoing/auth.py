@@ -124,6 +124,7 @@ class AuthMixin:
     sec_type: 'str'
     https_adapter: 'HTTPSAdapter'
     transport: 'HTTPTransport'
+    pubsub_transport: 'HTTPTransport'
     server: 'ParallelServer'
 
     def _check_password(self) -> 'None':
@@ -216,6 +217,7 @@ class AuthMixin:
             # a pooled connection lasted.
             self.https_adapter.clear_pool()
             self.transport.clear_pool()
+            self.pubsub_transport.clear_pool()
 
         # #######################################
         #
@@ -284,6 +286,7 @@ class AuthMixin:
         # Pooled connections keep presenting the material they were opened with ..
         self.https_adapter.clear_pool()
         self.transport.clear_pool()
+        self.pubsub_transport.clear_pool()
 
         # .. and the SOAP client keeps a session of its own, with a pool of its own.
         if self._soap_client:

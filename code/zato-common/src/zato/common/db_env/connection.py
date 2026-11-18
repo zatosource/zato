@@ -51,6 +51,10 @@ _default_ports = {
 # error instead of taking turns. Writes are bounded batches, so the wait is short.
 SQLite_Busy_Timeout_Ms = 5000
 
+# How much of an SQLite database file is read through memory mapping rather than copied in with a read call per page,
+# in bytes. SQLite lowers it to the maximum its build allows.
+SQLite_MMAP_Size = 1024 ** 4
+
 # How long a PostgreSQL connection stays idle before it sends its first keepalive probe, in seconds - below
 # the idle limits of cloud load balancers and NAT gateways, which drop idle flows silently after 240 to 350 seconds.
 _keepalive_idle_seconds = 30
@@ -113,7 +117,9 @@ def set_sqlite_pragmas(dbapi_connection:'any_', connection_record:'any_') -> 'No
     Secure deletion in its fast form zeroes deleted content on the pages a delete writes anyway and leaves freed
     overflow pages as they are, because SQLite builds that enable full secure deletion by default otherwise write
     each freed page of a large payload again, which doubles the cost of every commit that removes message bodies.
-    Foreign keys are enforced, as on PostgreSQL.
+    Foreign keys are enforced, as on PostgreSQL. The file is read through memory mapping, which shares the pages
+    of the operating system's cache among all the connections and processes instead of copying each page
+    into the cache of each connection.
     """
     cursor = dbapi_connection.cursor()
     _ = cursor.execute('pragma journal_mode=wal')
@@ -121,6 +127,7 @@ def set_sqlite_pragmas(dbapi_connection:'any_', connection_record:'any_') -> 'No
     _ = cursor.execute('pragma secure_delete=fast')
     _ = cursor.execute('pragma foreign_keys=on')
     _ = cursor.execute(f'pragma busy_timeout={SQLite_Busy_Timeout_Ms}')
+    _ = cursor.execute(f'pragma mmap_size={SQLite_MMAP_Size}')
     cursor.close()
 
 # ################################################################################################################################

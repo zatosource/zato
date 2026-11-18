@@ -37,7 +37,8 @@ from zato.server.connection.http_soap.outgoing.metrics import push_metrics, push
 from zato.server.connection.http_soap.outgoing.ping import ping, Default_Ping_Path
 from zato.server.connection.http_soap.outgoing.rest_call import RESTCallMixin
 from zato.server.connection.http_soap.outgoing.soap import SOAPMixin
-from zato.server.connection.http_soap.outgoing.transport import is_requests_selected, log_rest, TransportMixin
+from zato.server.connection.http_soap.outgoing.transport import get_ca_path, get_client_cert, is_requests_selected, log_rest, \
+    TransportMixin
 
 # Rust core
 from zato_server_core.zato_server_core import HTTPTransport
@@ -46,9 +47,16 @@ from zato_server_core.zato_server_core import HTTPTransport
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, dictnone, stranydict, strlist, strstrdict
+    from zato.common.typing_ import any_, anytuple, dictnone, stranydict, strlist, strstrdict
     from zato.server.base.parallel import ParallelServer
     ParallelServer = ParallelServer
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# How long one pub/sub push may take, in seconds, so that an endpoint that never responds fails the attempt
+# rather than holding up the queue of its subscriber.
+_pubsub_push_timeout = MISC.DEFAULT_HTTP_TIMEOUT
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -86,6 +94,12 @@ class BaseHTTPSOAPWrapper(AuthMixin, TransportMixin):
         # The Rust transport keeps a pool of the same size, and it exists before the credentials are configured,
         # because configuring them passes their Authorization header to it.
         self.transport = HTTPTransport(pool_size)
+
+        # Pub/sub pushes to this connection have a transport of their own, with the timeout of a push
+        self.pubsub_transport = HTTPTransport(pool_size)
+        self.pubsub_transport.set_timeout(_pubsub_push_timeout)
+        self._pubsub_tls:'anytuple' = ()
+
         self._component_name = get_component_name()
         self.default_content_type = self.get_default_content_type()
 
@@ -407,6 +421,34 @@ class BaseHTTPSOAPWrapper(AuthMixin, TransportMixin):
                 raise
 
             raise BackendInvocationError(cid, msg, needs_msg=True, transport_status=transport_status)
+
+# ################################################################################################################################
+
+    def invoke_pubsub_push(self, url:'str', headers:'stranydict', body:'bytes') -> 'anytuple':
+        """ Sends one push of a pub/sub message through the pub/sub transport of the connection, verifying TLS
+        as the connection is configured to, and returns what the transport returned.
+        """
+        transport = self.pubsub_transport
+
+        # The TLS settings are passed on only when they change ..
+        if url.startswith('https:'):
+            tls_verify = resolve_tls_verify(self.config)
+            ca_path = get_ca_path(tls_verify, self.session.trust_env)
+            client_cert, client_key = get_client_cert(self._get_tls_client_cert())
+
+            tls = (ca_path, client_cert, client_key)
+
+            if tls != self._pubsub_tls:
+                transport.set_tls(ca_path, client_cert, client_key)
+                self._pubsub_tls = tls
+
+        # .. and a push the transport does not send is a failed attempt.
+        out = transport.invoke('POST', url, headers, body)
+
+        if out is None:
+            raise Exception(f'Push to `{url}` of connection `{self.config["name"]}` not sent by the transport')
+
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################

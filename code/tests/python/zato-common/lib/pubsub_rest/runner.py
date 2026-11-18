@@ -63,11 +63,14 @@ def run_for(
     is_done:'callable_ | None' = None,
     is_done_interval:'float' = 1.0,
     ) -> 'None':
-    """ Lets the traffic run for the given time, calling on_tick with the elapsed seconds once a second,
+    """ Lets the traffic run for the given time, calling on_tick with the elapsed seconds once a tick,
     and stops early when the disk runs low or when is_done, called every is_done_interval seconds, returns True.
     """
     start = monotonic()
     next_is_done = start + is_done_interval
+
+    # A run that checks whether it is done more often than once a tick sleeps as long as the check interval instead
+    tick_seconds = min(_tick_seconds, is_done_interval)
 
     while True:
         now = monotonic()
@@ -84,7 +87,7 @@ def run_for(
         if on_tick:
             on_tick(elapsed)
 
-        sleep(_tick_seconds)
+        sleep(tick_seconds)
 
 # ################################################################################################################################
 

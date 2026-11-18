@@ -54,7 +54,7 @@ _locked_trace_count = 10_000
 _retention_seconds = 60 * 60
 
 # How often the traces are counted, in seconds.
-_count_interval_seconds = 10
+_count_interval_seconds = 0.5
 
 # How long the backlog of the traffic may take to drain after the API clients stop, in seconds.
 _drain_seconds = 600

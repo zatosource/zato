@@ -104,18 +104,30 @@ def get_payload_digest(data:'str') -> 'strnone':
 
 def get_event_rows(batch:'pending_event_list', payloads:'strstrdict') -> 'dictlist':
     """ Returns the rows of the event table of a batch of events, which reference their payloads by digest,
-    and adds each payload to the given dict under its digest.
+    and adds each payload to the given dict under its digest. The digests are computed here, by the writer,
+    rather than by the callers of the audit log, which run in the thread of the event loop,
+    and each distinct payload of the batch is digested once, however many events carry it.
     """
     out:'dictlist' = []
+
+    # The digest of each payload of the batch, by the payload
+    digest_by_data:'anydict' = {}
 
     for pending in batch:
 
         event_row = dict(pending.values)
         data = event_row.pop('data')
 
-        if digest := event_row['payload_digest']:
+        if data in digest_by_data:
+            digest = digest_by_data[data]
+        else:
+            digest = get_payload_digest(data)
+            digest_by_data[data] = digest
+
+        if digest:
             payloads[digest] = data
 
+        event_row['payload_digest'] = digest
         out.append(event_row)
 
     return out
