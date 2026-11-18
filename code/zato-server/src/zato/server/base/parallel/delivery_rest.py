@@ -115,7 +115,7 @@ def deliver_to_rest(config_store:'ConfigStore', message:'anydict', sub_config:'a
     hub = get_hub()
     body = hub.threadpool.apply(encode_push_envelope, (envelope,))
 
-    status_code, reason, header_store, response_body, _, _ = outconn.conn.invoke_pubsub_push(url, headers, body)
+    status_code, reason, header_store, response_body, _, _, _ = outconn.conn.invoke_pubsub_push(url, headers, body)
 
     _raise_for_status(url, status_code, reason)
 

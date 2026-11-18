@@ -1,8 +1,10 @@
 //! `HTTPTransport`, the transport an outgoing REST connection sends its requests through.
 //!
 //! One transport belongs to one outgoing connection and keeps its pool of connections, its timeout,
-//! the default headers of its requests session and its TLS configuration. An invocation the transport
-//! does not implement returns `None` before anything is sent, and the connection then sends it through requests.
+//! the default headers of its requests session and its TLS configuration. A request reaches its endpoint
+//! directly, through an HTTP proxy in absolute form for an `http` address, or through a tunnel the proxy opens
+//! with `CONNECT` for an `https` address. An invocation the transport does not implement returns `None` before
+//! anything is sent, and the connection then sends it through requests.
 
 use std::sync::Arc;
 use std::time::Instant;
@@ -15,8 +17,10 @@ use rustls::ClientConfig;
 use super::address::{self, Target};
 use super::error::{RequestsExceptions, TransportError};
 use super::exchange::{OutgoingRequest, Peer, RawResponse, connect, exchange};
-use super::headers::{HeadInput, build_head, encode_text_value, is_valid_method, is_valid_name};
-use super::pool::{OriginKey, Pool};
+use super::headers::{
+    HeadInput, HeadLayout, PROXY_AUTHORIZATION_HEADER, build_head, encode_text_value, is_valid_method, is_valid_name,
+};
+use super::pool::{OriginKey, Pool, ProxyKey};
 use super::stream::IoContext;
 use super::tls::{TlsSettings, build_config};
 use super::wait::Gevent;
@@ -26,6 +30,67 @@ const MAX_INLINE_BODY_LEN: usize = 64 * 1024;
 
 /// The lowercase name of the response header that sets a cookie.
 const SET_COOKIE_HEADER: &str = "set-cookie";
+
+/// The proxy of a call as Python passes it - the host, the port, and the value of the `Proxy-Authorization`
+/// header the credentials of the proxy produce, if it has any.
+type ProxyArgument = (String, u16, Option<String>);
+
+/// The HTTP proxy a request is sent through.
+struct Proxy {
+    /// The host name or IP address of the proxy.
+    host: String,
+
+    /// The port of the proxy.
+    port: u16,
+
+    /// The value of the `Proxy-Authorization` header, as sent.
+    authorization: Option<Vec<u8>>,
+}
+
+impl Proxy {
+    /// The proxy of a call, or `NeedsRequests` if its credentials produce a header the transport does not send.
+    fn from_argument(argument: &ProxyArgument) -> Result<Self, TransportError> {
+        let (host, port, authorization) = argument;
+
+        let authorization = match authorization {
+            Some(text) => Some(encode_text_value(text).ok_or(TransportError::NeedsRequests)?),
+            None => None,
+        };
+
+        Ok(Self {
+            host: host.clone(),
+            port: *port,
+            authorization,
+        })
+    }
+
+    /// The part of the key of a pooled connection that tells connections through different proxies apart.
+    fn key(&self) -> ProxyKey {
+        ProxyKey {
+            host: self.host.clone(),
+            port: self.port,
+            authorization: self.authorization.clone(),
+        }
+    }
+}
+
+/// How a request reaches its endpoint.
+enum Route<'call> {
+    /// Over a connection to the endpoint itself.
+    Direct,
+
+    /// Over a connection to an HTTP proxy, with the address of the endpoint in the request line.
+    Proxied(&'call Proxy),
+
+    /// Over a tunnel to the endpoint an HTTP proxy opens in response to a `CONNECT` request.
+    Tunnel {
+        /// The proxy.
+        proxy: &'call Proxy,
+
+        /// The `CONNECT` request, its head complete.
+        connect_request: &'call [u8],
+    },
+}
 
 /// The default headers of a requests session, the name and the value as sent.
 type DefaultHeaders = Arc<Vec<(String, Vec<u8>)>>;
@@ -92,6 +157,12 @@ struct Call<'call, 'py> {
     /// The body, if any.
     body: Option<&'call Bound<'py, PyBytes>>,
 
+    /// The `Content-Type` requests gives the body it encoded itself, sent unless the headers have one.
+    content_type: Option<&'call str>,
+
+    /// The HTTP proxy the request is sent through, if any.
+    proxy: Option<&'call ProxyArgument>,
+
     /// Whether the request carries the `Authorization` header the credentials of the connection produce.
     is_authorized: bool,
 }
@@ -110,6 +181,9 @@ pub struct HTTPTransport {
 
     /// The requests exception classes errors are raised as.
     exceptions: RequestsExceptions,
+
+    /// The `User-Agent` urllib3 sends in a request that has none of its own.
+    user_agent: Vec<u8>,
 }
 
 #[pymethods]
@@ -118,7 +192,14 @@ impl HTTPTransport {
     /// without default headers and with TLS verified against no CA bundle until it is configured.
     #[new]
     fn new(py: Python<'_>, pool_size: usize) -> PyResult<Self> {
+        let user_agent: String = py
+            .import("urllib3.connection")?
+            .getattr("_get_default_user_agent")?
+            .call0()?
+            .extract()?;
+
         Ok(Self {
+            user_agent: user_agent.into_bytes(),
             pool: Pool::new(pool_size),
             settings: Mutex::new(Settings {
                 timeout: None,
@@ -220,21 +301,28 @@ impl HTTPTransport {
     }
 
     /// Sends a request and returns its response as a tuple of the status code, the reason phrase, the headers
-    /// keyed by their lowercase names, the body, the elapsed time in microseconds and the values of each Set-Cookie
-    /// header, or `None` if the request is to be sent through requests instead.
-    #[pyo3(signature = (method, url, headers, body))]
+    /// keyed by their lowercase names, the body, the elapsed time in microseconds, the values of each Set-Cookie
+    /// header and the address as requests prepares it, or `None` if the request is to be sent through requests instead.
+    ///
+    /// `content_type` is the `Content-Type` of a body requests would encode itself, and `proxy` is the HTTP proxy
+    /// the request is sent through, as the host, the port and the value of its `Proxy-Authorization` header.
+    #[pyo3(signature = (method, url, headers, body, content_type = None, proxy = None))]
     fn invoke<'py>(
         &self,
         method: &str,
         url: &str,
         headers: &Bound<'py, PyDict>,
         body: Option<&Bound<'py, PyBytes>>,
+        content_type: Option<&str>,
+        proxy: Option<ProxyArgument>,
     ) -> PyResult<Option<Bound<'py, PyTuple>>> {
         let call = Call {
             method,
             url,
             headers,
             body,
+            content_type,
+            proxy: proxy.as_ref(),
             is_authorized: false,
         };
 
@@ -243,19 +331,23 @@ impl HTTPTransport {
 
     /// Sends a request with the `Authorization` header the credentials of the connection produce, applied
     /// after all the other headers, and returns what `invoke` returns.
-    #[pyo3(signature = (method, url, headers, body))]
+    #[pyo3(signature = (method, url, headers, body, content_type = None, proxy = None))]
     fn invoke_with_auth<'py>(
         &self,
         method: &str,
         url: &str,
         headers: &Bound<'py, PyDict>,
         body: Option<&Bound<'py, PyBytes>>,
+        content_type: Option<&str>,
+        proxy: Option<ProxyArgument>,
     ) -> PyResult<Option<Bound<'py, PyTuple>>> {
         let call = Call {
             method,
             url,
             headers,
             body,
+            content_type,
+            proxy: proxy.as_ref(),
             is_authorized: true,
         };
 
@@ -265,8 +357,14 @@ impl HTTPTransport {
 
 /// One invocation, its request already validated.
 struct Invocation<'call> {
-    /// The address split into the endpoint and the request target.
-    target: Target<'call>,
+    /// The prepared address of the endpoint.
+    target: &'call Target,
+
+    /// How the request reaches the endpoint.
+    route: Route<'call>,
+
+    /// The request target, as the messages of errors name it.
+    request_target: &'call str,
 
     /// The request as written to the connection.
     request: OutgoingRequest<'call>,
@@ -281,14 +379,14 @@ impl HTTPTransport {
         let py = call.headers.py();
 
         match self.send(call) {
-            Ok(response) => Ok(Some(build_response_tuple(py, response)?)),
+            Ok((response, url)) => Ok(Some(build_response_tuple(py, response, &url)?)),
             Err(TransportError::NeedsRequests) => Ok(None),
             Err(error) => Err(self.exceptions.to_py_err(py, error)),
         }
     }
 
-    /// Validates and sends a request.
-    fn send(&self, call: &Call<'_, '_>) -> Result<RawResponse, TransportError> {
+    /// Validates and sends a request, returning its response and the address as requests prepares it.
+    fn send(&self, call: &Call<'_, '_>) -> Result<(RawResponse, String), TransportError> {
         let start = Instant::now();
         let py = call.headers.py();
 
@@ -299,24 +397,75 @@ impl HTTPTransport {
         }
 
         let target = address::parse(call.url).ok_or(TransportError::NeedsRequests)?;
+        let proxy = call.proxy.map(Proxy::from_argument).transpose()?;
         let settings = self.call_settings(target.is_tls, call.is_authorized)?;
+
+        // requests reads the credentials in the address only for a call that has none of its own
+        let authorization = match &settings.authorization {
+            Some(value) => Some(value.as_slice()),
+            None => target.authorization.as_deref(),
+        };
+
+        let content_type = match call.content_type {
+            Some(text) => Some(encode_text_value(text).ok_or(TransportError::NeedsRequests)?),
+            None => None,
+        };
 
         // requests sends an empty body as no body at all
         let body = call.body.map(PyBytesMethods::as_bytes).filter(|body| !body.is_empty());
 
+        // A request to an http endpoint goes to the proxy whole, and one to an https endpoint through a tunnel
+        let is_proxied = proxy.is_some() && !target.is_tls;
+        let is_tunneled = proxy.is_some() && target.is_tls;
+
+        let absolute_form = is_proxied.then(|| target.absolute_form());
+        let request_target = absolute_form.as_deref().unwrap_or(&target.path_and_query);
+
+        let host_header = if is_tunneled {
+            target.tunneled_host_header()
+        } else {
+            target.host_header()
+        };
+
+        let layout = match &proxy {
+            Some(proxy) if is_proxied => HeadLayout::Proxied {
+                netloc: target.netloc(),
+                proxy_authorization: proxy.authorization.as_deref(),
+            },
+            _ => HeadLayout::Origin {
+                host_header: &host_header,
+            },
+        };
+
         let input = HeadInput {
             method: &method,
-            request_target: target.path_and_query,
-            host_header: &target.host_header,
+            request_target,
+            layout,
             defaults: &settings.defaults,
             headers: call.headers,
             body_len: body.map(<[u8]>::len),
-            authorization: settings.authorization.as_ref().map(|value| value.as_slice()),
+            content_type: content_type.as_deref(),
+            authorization,
+            user_agent: &self.user_agent,
         };
 
         let mut head = build_head(&input)
             .map_err(TransportError::Python)?
             .ok_or(TransportError::NeedsRequests)?;
+
+        let connect_request = match &proxy {
+            Some(proxy) if is_tunneled => Some(build_connect_request(&target, proxy)),
+            _ => None,
+        };
+
+        let route = match (&proxy, &connect_request) {
+            (Some(proxy), Some(connect_request)) => Route::Tunnel {
+                proxy,
+                connect_request,
+            },
+            (Some(proxy), None) => Route::Proxied(proxy),
+            (None, _) => Route::Direct,
+        };
 
         // A small body is written together with the head, so the request takes a single write
         let separate_body = match body {
@@ -328,7 +477,9 @@ impl HTTPTransport {
         };
 
         let invocation = Invocation {
-            target,
+            target: &target,
+            route,
+            request_target,
             request: OutgoingRequest {
                 head: &head,
                 body: separate_body,
@@ -338,7 +489,8 @@ impl HTTPTransport {
             settings,
         };
 
-        self.run(py, &invocation)
+        let response = self.run(py, &invocation)?;
+        Ok((response, target.url))
     }
 
     /// Takes what an invocation needs of the settings, building the TLS configuration if a TLS request needs it.
@@ -408,7 +560,7 @@ impl HTTPTransport {
     /// Sends the request on a pooled connection or a new one and reads its response, repeating it once
     /// on a new connection if a pooled connection turns out to have been closed by the endpoint.
     fn run(&self, py: Python<'_>, invocation: &Invocation<'_>) -> Result<RawResponse, TransportError> {
-        let target = &invocation.target;
+        let target = invocation.target;
 
         let ctx = IoContext {
             py,
@@ -416,18 +568,74 @@ impl HTTPTransport {
             timeout: invocation.settings.timeout,
         };
 
-        let peer = Peer {
-            is_tls: target.is_tls,
-            host: target.host,
-            port: target.port,
-            request_target: target.path_and_query,
-            timeout: invocation.settings.timeout,
-        };
+        let (peer, key) = match &invocation.route {
+            Route::Direct => (
+                Peer {
+                    is_tls: target.is_tls,
+                    host: &target.host,
+                    port: target.port,
+                    pool_host: &target.host,
+                    pool_port: target.port,
+                    server_name: target.server_name(),
+                    request_target: invocation.request_target,
+                    timeout: invocation.settings.timeout,
+                    tunnel: None,
+                    is_proxied: false,
+                },
+                OriginKey {
+                    is_tls: target.is_tls,
+                    host: target.host.clone(),
+                    port: target.port,
+                    proxy: None,
+                },
+            ),
 
-        let key = OriginKey {
-            is_tls: target.is_tls,
-            host: target.host.to_owned(),
-            port: target.port,
+            // urllib3 keeps one pool per proxy for all http endpoints and names the proxy in its messages
+            Route::Proxied(proxy) => (
+                Peer {
+                    is_tls: false,
+                    host: &proxy.host,
+                    port: proxy.port,
+                    pool_host: &proxy.host,
+                    pool_port: proxy.port,
+                    server_name: &proxy.host,
+                    request_target: invocation.request_target,
+                    timeout: invocation.settings.timeout,
+                    tunnel: None,
+                    is_proxied: true,
+                },
+                OriginKey {
+                    is_tls: false,
+                    host: proxy.host.clone(),
+                    port: proxy.port,
+                    proxy: Some(proxy.key()),
+                },
+            ),
+
+            // urllib3 keeps one pool per https endpoint and proxy, and verifies the endpoint's certificate
+            Route::Tunnel {
+                proxy,
+                connect_request,
+            } => (
+                Peer {
+                    is_tls: true,
+                    host: &proxy.host,
+                    port: proxy.port,
+                    pool_host: &target.host,
+                    pool_port: target.port,
+                    server_name: target.tunnel_server_name(),
+                    request_target: invocation.request_target,
+                    timeout: invocation.settings.timeout,
+                    tunnel: Some(connect_request),
+                    is_proxied: true,
+                },
+                OriginKey {
+                    is_tls: true,
+                    host: target.host.clone(),
+                    port: target.port,
+                    proxy: Some(proxy.key()),
+                },
+            ),
         };
 
         let tls_config = invocation.settings.tls_config.as_ref();
@@ -460,8 +668,26 @@ impl HTTPTransport {
     }
 }
 
+/// Builds the `CONNECT` request that asks a proxy for a tunnel to the endpoint, as `http.client` builds it.
+fn build_connect_request(target: &Target, proxy: &Proxy) -> Vec<u8> {
+    let mut request = target.connect_line().into_bytes();
+
+    if let Some(authorization) = &proxy.authorization {
+        request.extend_from_slice(PROXY_AUTHORIZATION_HEADER.as_bytes());
+        request.extend_from_slice(b": ");
+        request.extend_from_slice(authorization);
+        request.extend_from_slice(b"\r\n");
+    }
+
+    request.extend_from_slice(b"Host: ");
+    request.extend_from_slice(target.connect_host_header().as_bytes());
+    request.extend_from_slice(b"\r\n\r\n");
+
+    request
+}
+
 /// Builds the tuple a response is returned to Python as.
-fn build_response_tuple(py: Python<'_>, response: RawResponse) -> PyResult<Bound<'_, PyTuple>> {
+fn build_response_tuple<'py>(py: Python<'py>, response: RawResponse, url: &str) -> PyResult<Bound<'py, PyTuple>> {
     let header_store = PyDict::new(py);
 
     // Repeated headers are joined with a comma, under the name the first of them was sent with, as urllib3 joins them
@@ -494,13 +720,14 @@ fn build_response_tuple(py: Python<'_>, response: RawResponse) -> PyResult<Bound
 
     let set_cookies = PyTuple::new(py, set_cookie_list)?;
 
-    let items: [Bound<'_, PyAny>; 6] = [
+    let items: [Bound<'_, PyAny>; 7] = [
         response.head.status.into_pyobject(py)?.into_any(),
         PyString::new(py, &response.head.reason).into_any(),
         header_store.into_any(),
         body.into_any(),
         elapsed_us.into_pyobject(py)?.into_any(),
         set_cookies.into_any(),
+        PyString::new(py, url).into_any(),
     ];
 
     PyTuple::new(py, items)

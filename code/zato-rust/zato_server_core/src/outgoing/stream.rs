@@ -105,7 +105,7 @@ impl Stream {
 }
 
 /// Writes all of the data to a plain TCP connection.
-fn write_all_plain(ctx: &IoContext<'_, '_>, tcp: &mut TcpStream, data: &[u8]) -> Result<(), IoError> {
+pub fn write_all_plain(ctx: &IoContext<'_, '_>, tcp: &mut TcpStream, data: &[u8]) -> Result<(), IoError> {
     let mut offset = 0;
 
     while let Some(remaining) = data.get(offset..) {
@@ -128,7 +128,7 @@ fn write_all_plain(ctx: &IoContext<'_, '_>, tcp: &mut TcpStream, data: &[u8]) ->
 }
 
 /// Reads what is available from a plain TCP connection.
-fn read_plain(ctx: &IoContext<'_, '_>, tcp: &mut TcpStream, buffer: &mut [u8]) -> Result<usize, IoError> {
+pub fn read_plain(ctx: &IoContext<'_, '_>, tcp: &mut TcpStream, buffer: &mut [u8]) -> Result<usize, IoError> {
     loop {
         match tcp.read(buffer) {
             Ok(count) => return Ok(count),

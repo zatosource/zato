@@ -1,4 +1,4 @@
-//! New connections to an endpoint, and one request and its response on a connection.
+//! New connections to an endpoint, directly or through a proxy, and one request and its response on a connection.
 //!
 //! The messages of the errors follow the messages urllib3 and requests produce for the same failures.
 
@@ -12,7 +12,7 @@ use socket2::{Domain, Protocol, SockAddr, Socket, Type};
 
 use super::error::TransportError;
 use super::response::{ChunkedDecoder, Framing, HeadStatus, ResponseHead, parse_head};
-use super::stream::{IoContext, IoError, Stream};
+use super::stream::{IoContext, IoError, Stream, read_plain, write_all_plain};
 use super::tls::server_name;
 use super::wait::ResolveError;
 
@@ -22,29 +22,64 @@ const READ_CHUNK_SIZE: usize = 16 * 1024;
 /// The longest response head accepted, beyond which the response is rejected as `http.client` rejects it.
 const MAX_HEAD_LEN: usize = 1024 * 1024;
 
-/// The endpoint of a request, as the messages of its errors describe it.
+/// The only status of a response to `CONNECT` that `http.client` accepts as an open tunnel.
+const TUNNEL_ESTABLISHED: u16 = 200;
+
+/// The endpoint of a request and how it is reached, as the messages of its errors describe it.
 pub struct Peer<'call> {
-    /// Whether the connection uses TLS.
+    /// Whether the connection to the endpoint uses TLS.
     pub is_tls: bool,
 
-    /// The host name or IP address.
+    /// The host name or IP address the connection is opened to - the endpoint's, or the proxy's.
     pub host: &'call str,
 
-    /// The port.
+    /// The port the connection is opened to.
     pub port: u16,
 
-    /// The path and the query string of the request.
+    /// The host of the pool of connections the messages of errors name - the endpoint's, or for a request
+    /// sent through an HTTP proxy, the proxy's.
+    pub pool_host: &'call str,
+
+    /// The port of the pool of connections the messages of errors name.
+    pub pool_port: u16,
+
+    /// The name the certificate of the endpoint is verified against.
+    pub server_name: &'call str,
+
+    /// The request target of the request, as the messages of errors name it.
     pub request_target: &'call str,
 
     /// The timeout of the connection, in seconds, or `None` if it has none.
     pub timeout: Option<f64>,
+
+    /// The `CONNECT` request that opens a tunnel to the endpoint, for a TLS endpoint reached through a proxy.
+    pub tunnel: Option<&'call [u8]>,
+
+    /// Whether the connection is opened to a proxy, which makes urllib3 report the errors of the connection
+    /// as errors of the proxy.
+    pub is_proxied: bool,
 }
 
 impl Peer<'_> {
     /// The name urllib3 gives the pool of connections to the endpoint, as it appears in its messages.
     fn pool_name(&self) -> String {
         let kind = if self.is_tls { "HTTPSConnectionPool" } else { "HTTPConnectionPool" };
-        format!("{kind}(host='{}', port={})", self.host, self.port)
+        format!("{kind}(host='{}', port={})", self.pool_host, self.pool_port)
+    }
+
+    /// The class of the connections of the pool, as it appears in the messages of urllib3.
+    const fn connection_class(&self) -> &'static str {
+        if self.is_tls { "HTTPSConnection" } else { "HTTPConnection" }
+    }
+
+    /// The error of a connection that failed in a way urllib3 reports as a failure of the proxy,
+    /// for a connection opened to a proxy, or as the given error otherwise.
+    fn proxy_or(&self, cause: &str, otherwise: TransportError) -> TransportError {
+        if self.is_proxied {
+            TransportError::Proxy(self.max_retries(&format!("ProxyError('Cannot connect to proxy.', {cause})")))
+        } else {
+            otherwise
+        }
     }
 
     /// The timeout as Python prints it.
@@ -151,10 +186,11 @@ fn resolve(ctx: &IoContext<'_, '_>, peer: &Peer<'_>) -> Result<Vec<SocketAddr>, 
 /// The error of a host name that does not resolve.
 fn name_resolution_error(peer: &Peer<'_>, message: &str) -> TransportError {
     let cause = format!(
-        "NameResolutionError(\"<urllib3.connection.HTTPConnection object>: Failed to resolve '{}' ({message})\")",
+        "NameResolutionError(\"<urllib3.connection.{} object>: Failed to resolve '{}' ({message})\")",
+        peer.connection_class(),
         peer.host
     );
-    TransportError::Connection(peer.max_retries(&cause))
+    peer.proxy_or(&cause, TransportError::Connection(peer.max_retries(&cause)))
 }
 
 /// Opens a non-blocking TCP connection to one address, waiting for the connect to complete.
@@ -182,27 +218,97 @@ fn connect_address(ctx: &IoContext<'_, '_>, address: SocketAddr) -> Result<TcpSt
     Ok(TcpStream::from(socket))
 }
 
-/// Completes a new connection - starts its TLS session if it uses TLS.
+/// Completes a new connection - opens its tunnel if it goes through one, and starts its TLS session if it uses TLS.
 fn establish(
     ctx: &IoContext<'_, '_>,
     peer: &Peer<'_>,
     tcp: TcpStream,
     tls_config: Option<&Arc<ClientConfig>>,
 ) -> Result<Stream, TransportError> {
+    let tcp = match peer.tunnel {
+        Some(connect_request) => open_tunnel(ctx, peer, tcp, connect_request)?,
+        None => tcp,
+    };
+
     let Some(config) = tls_config else {
         return Ok(Stream::Plain(tcp));
     };
 
-    let name = server_name(peer.host).map_err(|message| peer.tls_error(&message))?;
+    let name = server_name(peer.server_name).map_err(|message| peer.tls_error(&message))?;
     let session = ClientConnection::new(Arc::clone(config), name).map_err(|err| peer.tls_error(&err.to_string()))?;
 
     Stream::new_tls(ctx, tcp, session).map_err(|err| match err {
+        // urllib3 completes a tunneled connection before the request, where a timeout is an error of the proxy
+        IoError::TimedOut if peer.tunnel.is_some() => peer.proxy_or("TimeoutError('timed out')", peer.read_timeout()),
         IoError::TimedOut => peer.read_timeout(),
         IoError::Tls(err) => peer.tls_error(&err.to_string()),
         IoError::HandshakeEof => peer.tls_error("EOF occurred in violation of protocol"),
-        IoError::System(err) => TransportError::Connection(connection_aborted(&os_error_text(&err))),
+        IoError::System(err) => peer.proxy_or(
+            &os_error_repr(&err),
+            TransportError::Connection(connection_aborted(&os_error_text(&err))),
+        ),
         IoError::Python(err) => TransportError::Python(err),
     })
+}
+
+/// Sends the `CONNECT` request of a tunnel to the proxy and reads the head of its response, returning
+/// the connection once the proxy opened the tunnel.
+fn open_tunnel(
+    ctx: &IoContext<'_, '_>,
+    peer: &Peer<'_>,
+    mut tcp: TcpStream,
+    connect_request: &[u8],
+) -> Result<TcpStream, TransportError> {
+    write_all_plain(ctx, &mut tcp, connect_request).map_err(|err| tunnel_io_error(peer, err))?;
+
+    let mut buffer = Vec::with_capacity(READ_CHUNK_SIZE);
+    let mut chunk = [0_u8; READ_CHUNK_SIZE];
+
+    let head = loop {
+        if !buffer.is_empty() {
+            match parse_head(&buffer) {
+                Ok(HeadStatus::Complete(head)) => break head,
+                Ok(HeadStatus::Partial) => {}
+                Err(message) => return Err(TransportError::Connection(connection_aborted(&message))),
+            }
+
+            if buffer.len() > MAX_HEAD_LEN {
+                return Err(TransportError::Connection(connection_aborted("LineTooLong('header line')")));
+            }
+        }
+
+        let count = read_plain(ctx, &mut tcp, &mut chunk).map_err(|err| tunnel_io_error(peer, err))?;
+
+        // A proxy that closed the connection before it answered never opens the tunnel
+        if count == 0 {
+            let cause = "RemoteDisconnected('Remote end closed connection without response')";
+            return Err(peer.proxy_or(cause, TransportError::Connection(connection_aborted(cause))));
+        }
+
+        buffer.extend_from_slice(chunk.get(..count).unwrap_or_default());
+    };
+
+    // http.client accepts no other status as an open tunnel, and the proxy's response to it is discarded
+    if head.status != TUNNEL_ESTABLISHED {
+        let cause = format!("OSError('Tunnel connection failed: {} {}')", head.status, head.reason.trim());
+        return Err(peer.proxy_or(&cause, TransportError::Connection(connection_aborted(&cause))));
+    }
+
+    Ok(tcp)
+}
+
+/// The error of a connection to a proxy that failed while the tunnel was being opened.
+fn tunnel_io_error(peer: &Peer<'_>, err: IoError) -> TransportError {
+    match err {
+        IoError::TimedOut => peer.proxy_or("TimeoutError('timed out')", peer.read_timeout()),
+        IoError::System(err) => peer.proxy_or(
+            &os_error_repr(&err),
+            TransportError::Connection(connection_aborted(&os_error_text(&err))),
+        ),
+        IoError::Python(err) => TransportError::Python(err),
+        IoError::Tls(err) => peer.tls_error(&err.to_string()),
+        IoError::HandshakeEof => peer.tls_error("EOF occurred in violation of protocol"),
+    }
 }
 
 /// The error of a connection that could not be established.
@@ -210,7 +316,8 @@ fn connect_failure(peer: &Peer<'_>, error: Option<IoError>) -> TransportError {
     match error {
         Some(IoError::TimedOut) => {
             let cause = format!(
-                "ConnectTimeoutError(<urllib3.connection.HTTPConnection object>, 'Connection to {} timed out. (connect timeout={})')",
+                "ConnectTimeoutError(<urllib3.connection.{} object>, 'Connection to {} timed out. (connect timeout={})')",
+                peer.connection_class(),
                 peer.host,
                 peer.timeout_text()
             );
@@ -218,16 +325,37 @@ fn connect_failure(peer: &Peer<'_>, error: Option<IoError>) -> TransportError {
         }
         Some(IoError::System(err)) => {
             let cause = format!(
-                "NewConnectionError('<urllib3.connection.HTTPConnection object>: Failed to establish a new connection: {}')",
+                "NewConnectionError('<urllib3.connection.{} object>: Failed to establish a new connection: {}')",
+                peer.connection_class(),
                 os_error_text(&err)
             );
-            TransportError::Connection(peer.max_retries(&cause))
+            peer.proxy_or(&cause, TransportError::Connection(peer.max_retries(&cause)))
         }
         Some(IoError::Python(err)) => TransportError::Python(err),
         Some(IoError::Tls(_) | IoError::HandshakeEof) | None => {
-            TransportError::Connection(peer.max_retries("NewConnectionError('Failed to establish a new connection')"))
+            let cause = "NewConnectionError('Failed to establish a new connection')";
+            peer.proxy_or(cause, TransportError::Connection(peer.max_retries(cause)))
         }
     }
+}
+
+/// Describes an OS error the way Python's `repr` prints the exception it is raised as,
+/// e.g. `ConnectionResetError(104, 'Connection reset by peer')`.
+fn os_error_repr(err: &std::io::Error) -> String {
+    let Some(code) = err.raw_os_error() else {
+        return format!("OSError({:?})", err.to_string());
+    };
+
+    let class = match code {
+        libc::ECONNRESET => "ConnectionResetError",
+        libc::ECONNREFUSED => "ConnectionRefusedError",
+        libc::ECONNABORTED => "ConnectionAbortedError",
+        libc::EPIPE => "BrokenPipeError",
+        libc::ETIMEDOUT => "TimeoutError",
+        _ => "OSError",
+    };
+
+    format!("{class}({code}, '{}')", os_error_reason(err, code))
 }
 
 /// Describes an OS error the way Python prints it, e.g. `[Errno 111] Connection refused`.
@@ -236,12 +364,19 @@ fn os_error_text(err: &std::io::Error) -> String {
         return err.to_string();
     };
 
-    // The description of the standard library ends with the code, which Python puts in front instead
+    // Python puts the code in front of the reason
+    format!("[Errno {code}] {}", os_error_reason(err, code))
+}
+
+/// The reason of an OS error without the code the standard library appends to its description.
+fn os_error_reason(err: &std::io::Error, code: i32) -> String {
     let description = err.to_string();
     let suffix = format!(" (os error {code})");
-    let reason = description.strip_suffix(&suffix).unwrap_or(&description);
 
-    format!("[Errno {code}] {reason}")
+    match description.strip_suffix(&suffix) {
+        Some(reason) => reason.to_owned(),
+        None => description,
+    }
 }
 
 /// The message of a connection that was closed or reset before the response arrived.
@@ -253,7 +388,10 @@ fn connection_aborted(cause: &str) -> String {
 fn before_response_error(peer: &Peer<'_>, err: IoError) -> TransportError {
     match err {
         IoError::TimedOut => peer.read_timeout(),
-        IoError::System(err) => TransportError::Connection(connection_aborted(&os_error_text(&err))),
+        IoError::System(err) => peer.proxy_or(
+            &os_error_repr(&err),
+            TransportError::Connection(connection_aborted(&os_error_text(&err))),
+        ),
         IoError::Tls(err) => peer.tls_error(&err.to_string()),
         IoError::HandshakeEof => peer.tls_error("EOF occurred in violation of protocol"),
         IoError::Python(err) => TransportError::Python(err),
@@ -412,7 +550,7 @@ impl Exchange<'_, '_, '_> {
                 let cause = "RemoteDisconnected('Remote end closed connection without response')";
 
                 return Err(ExchangeFailure {
-                    error: TransportError::Connection(connection_aborted(cause)),
+                    error: self.peer.proxy_or(cause, TransportError::Connection(connection_aborted(cause))),
                     is_before_response: was_empty,
                 });
             }
