@@ -321,8 +321,8 @@ def serialize_response_payload(payload:'any_', data_format:'str') -> 'any_':
     assigned to its response. REST channels and the API portal relay both build response bodies
     through this function, so that the two always produce the same body.
     """
-    # Strings go on the wire as they are ..
-    if isinstance(payload, str):
+    # Strings and bytes go on the wire as they are ..
+    if isinstance(payload, (str, bytes)):
         out = payload
 
     # .. a dict behind a channel whose data format is dict-like is serialised as it is ..

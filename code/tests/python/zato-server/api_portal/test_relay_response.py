@@ -612,6 +612,11 @@ class RESTChannelBodyTestCase(TestCase):
         self.assertEqual(serialize_response_payload('plain text', DATA_FORMAT.JSON), 'plain text')
 
 # ################################################################################################################################
+
+    def test_bytes_are_left_as_they_are(self) -> 'None':
+        self.assertEqual(serialize_response_payload(b'--boundary\r\n', ''), b'--boundary\r\n')
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
