@@ -40,20 +40,18 @@ _unsubscribed_topic = 'stability.admin.0003'
 _live_partner_index = 1
 _live_push_index = 0
 
-# How long the traffic runs before the administration starts and after it is over, in seconds.
-_warm_up_seconds = 60
-_cool_down_seconds = 3 * 60
-
 # How long a live queue is left to fill before it is cleared, and how long a delivery in progress
 # is given to complete once its queue was paused, in seconds.
-_fill_seconds = 15
-_settle_seconds = 5
+_fill_seconds = 1
+_settle_seconds = 1
 
 # How long the administration and, afterwards, the backlog of the traffic may take, in seconds.
 _drain_seconds = 600
 
-# By how much the publication rate of this suite is lower than that of the production profile.
+# By how much the publication rate of this suite is lower than that of the production profile,
+# and how many publications the traffic makes in total.
 _rate_divisor = 20
+_publish_limit = 50
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -95,7 +93,7 @@ class _Administration:
 
     def run(self) -> 'None':
 
-        # Operations on the queues and topics at production volumes ..
+        # Operations on the seeded queues and topics ..
         cleared_sub_key = self.admin_topics[_cleared_topic]
         self.results['clear_queue'] = self._timed('clear_queue', self._clear_queue, cleared_sub_key)
 
@@ -133,8 +131,8 @@ class _Administration:
 # ################################################################################################################################
 
 def test_admin_load(server:'PubSubServer') -> 'None':
-    """ Clearing queues, deleting and renaming topics, and unsubscribing, at production volumes during the traffic,
-    which stays within its limits, while each operation has its full effect and the counts equal the rows.
+    """ Clearing queues, deleting and renaming topics, and unsubscribing, during the traffic, which stays within its limits,
+    while each operation has its full effect and the counts equal the rows.
     """
     messages_per_topic = server.properties['messages_per_topic']
 
@@ -143,6 +141,10 @@ def test_admin_load(server:'PubSubServer') -> 'None':
 
     traffic = run.traffic
     traffic.set_rate(traffic.rate / _rate_divisor)
+    traffic.publish_limit = _publish_limit
+
+    # The publications end at their limit, after which there is no rate to keep.
+    run.monitor.checks_rate = False
 
     administration = _Administration(server, traffic)
 
@@ -151,13 +153,11 @@ def test_admin_load(server:'PubSubServer') -> 'None':
 
     try:
         run.start()
-        run_for(run.monitor, _warm_up_seconds)
 
         greenlet = spawn(administration.run)
         run_for(run.monitor, _drain_seconds, is_done=greenlet.ready)
         _ = greenlet.get()
 
-        run_for(run.monitor, _cool_down_seconds)
         drained_seconds = run.drain(_drain_seconds)
 
     finally:

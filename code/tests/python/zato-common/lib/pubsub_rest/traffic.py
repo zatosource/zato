@@ -147,6 +147,10 @@ class Traffic:
 
         self.rate = profile.publish_rate
         self.expirations = Production_Expirations
+
+        # How many publications the API clients make in total, if a suite limits them, and how many they began.
+        self.publish_limit:'int | None' = None
+        self.publish_started = 0
         self.is_publishing = False
         self.is_consuming = False
 
@@ -306,7 +310,14 @@ class Traffic:
 
         while self.is_publishing:
 
-            # Each client publishes at its share of the current rate ..
+            # A client stops once all the API clients together began as many publications as the suite allows ..
+            if self.publish_limit is not None:
+                with self.lock:
+                    if self.publish_started == self.publish_limit:
+                        break
+                    self.publish_started += 1
+
+            # .. and otherwise it publishes at its share of the current rate ..
             interval = profile.publisher_count / self.rate
             started = monotonic()
 
