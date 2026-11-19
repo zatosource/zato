@@ -13,6 +13,7 @@ from http.client import CONFLICT, INTERNAL_SERVER_ERROR, OK
 # Zato
 from pubsub_perf.config import PerfConfig, Receipts_Topic
 from pubsub_perf.figures import Latencies
+from pubsub_perf.payloads import build_documents
 from pubsub_perf.rest import post_json
 
 # ################################################################################################################################
@@ -22,7 +23,7 @@ if 0:
     from concurrent.futures import Future, ThreadPoolExecutor
     from threading import Event
     from pubsub_perf.config import Credentials, credentialslist
-    from zato.common.typing_ import anydict, anylist, strfloatdict, strlist, strstrdict
+    from zato.common.typing_ import anydict, anylist, dictlist, strfloatdict, strlist, strstrdict
 
     Credentials = Credentials
     Future = Future
@@ -88,6 +89,22 @@ def get_lease_wait() -> 'float':
 
 # ################################################################################################################################
 
+def _get_key_prefix(prefix:'str', index:'int') -> 'str':
+    """ Returns the prefix of the keys of the publisher of the given index.
+    """
+    out = f'{prefix}{index:03d}.'
+    return out
+
+# ################################################################################################################################
+
+def _get_key(key_prefix:'str', sequence:'int') -> 'str':
+    """ Returns the key of the message of the given sequence number of a publisher.
+    """
+    out = f'{key_prefix}{sequence:07d}'
+    return out
+
+# ################################################################################################################################
+
 def get_receipt_key(key:'str', subscriber_name:'str') -> 'str':
     """ Returns the key of the receipt that a subscriber publishes for one message.
     """
@@ -100,12 +117,22 @@ def get_receipt_key(key:'str', subscriber_name:'str') -> 'str':
 class Publisher:
     """ An API client that publishes messages under its own keys, one after another, as fast as the server confirms them.
     Each message has its key as the message ID, so a request sent again after an error stores nothing new.
+    Each message carries the next of the documents of the run, starting from the offset of the publisher.
     """
 
-    def __init__(self, credentials:'Credentials', topic_name:'str', key_prefix:'str') -> 'None':
+    def __init__(
+        self,
+        credentials:'Credentials',
+        topic_name:'str',
+        key_prefix:'str',
+        documents:'dictlist',
+        offset:'int',
+        ) -> 'None':
         self.credentials = credentials
         self.key_prefix = key_prefix
         self.path = f'/pubsub/topic/{topic_name}'
+        self.documents = documents
+        self.offset = offset
 
         self.keys:'strlist' = []
         self.sent_times:'floatlist' = []
@@ -115,11 +142,11 @@ class Publisher:
 
 # ################################################################################################################################
 
-    def _publish_until_stored(self, key:'str') -> 'None':
+    def _publish_until_stored(self, key:'str', document:'anydict') -> 'None':
         """ Publishes one message, repeating the request until the server confirms it.
         """
         payload:'anydict' = {
-            'data': {'key': key},
+            'data': {'key': key, 'document': document},
             'msg_id': key,
             'correl_id': key,
         }
@@ -155,10 +182,15 @@ class Publisher:
         """ Publishes messages until the deadline.
         """
         sequence = 0
+        document_count = len(self.documents)
 
         while time.monotonic() < deadline:
-            key = f'{self.key_prefix}{sequence:07d}'
-            self._publish_until_stored(key)
+            key = _get_key(self.key_prefix, sequence)
+
+            document_index = (self.offset + sequence) % document_count
+            document = self.documents[document_index]
+
+            self._publish_until_stored(key, document)
             sequence += 1
 
 # ################################################################################################################################
@@ -283,16 +315,25 @@ class Subscriber:
 # ################################################################################################################################
 
 class PublisherGroup:
-    """ Publishers that publish to one topic concurrently, each under its own credentials and its own keys.
+    """ Publishers that publish to one topic concurrently, each under its own credentials and its own keys,
+    and each with the documents of the run from an offset of its own, spread evenly over the documents.
     """
 
     def __init__(self, credentials_list:'credentialslist', topic_name:'str', prefix:'str') -> 'None':
 
         self.publishers:'publisherlist' = []
 
+        # Every key of the run has the same length, which the size of each message accounts for.
+        first_key = _get_key(_get_key_prefix(prefix, 0), 0)
+        documents = build_documents(len(first_key))
+
+        document_count = len(documents)
+        publisher_count = len(credentials_list)
+
         for index, credentials in enumerate(credentials_list):
-            key_prefix = f'{prefix}{index:03d}.'
-            publisher = Publisher(credentials, topic_name, key_prefix)
+            key_prefix = _get_key_prefix(prefix, index)
+            offset = index * document_count // publisher_count
+            publisher = Publisher(credentials, topic_name, key_prefix, documents, offset)
             self.publishers.append(publisher)
 
 # ################################################################################################################################

@@ -81,6 +81,9 @@ struct Database {
 
     /// The node's connections, opened while the node is active.
     connections: Option<DatabaseConnections>,
+
+    /// The end of the log at the last checkpoint that copied every frame of the log into the database file.
+    checkpointed: LogPosition,
 }
 
 impl Database {
@@ -90,6 +93,7 @@ impl Database {
             cursor: WalCursor::of_database(path),
             path: path.to_owned(),
             connections: None,
+            checkpointed: LogPosition::default(),
         }
     }
 
@@ -107,6 +111,7 @@ impl Database {
 
         // A log read under another role describes files that may have been replaced since.
         self.cursor = WalCursor::of_database(&self.path);
+        self.checkpointed = LogPosition::default();
         Ok(())
     }
 
@@ -646,7 +651,11 @@ impl Shipper {
         // and a checkpoint would hold the write lock while it waited.
         let end = self.database.end();
         let has_backlog = self.session.as_ref().is_some_and(|session| session.database.sent < end);
-        if self.database.is_long() && !has_backlog {
+
+        // A log whose every frame is in the database file already gains nothing from another checkpoint, which would
+        // only take the write lock again before the next writer could restart the log.
+        let is_checkpointed = self.database.checkpointed == end;
+        if self.database.is_long() && !has_backlog && !is_checkpointed {
             self.checkpoint(role)?;
         }
         Ok(())
@@ -705,14 +714,20 @@ impl Shipper {
             drop(state);
         }
 
-        if let Some(connections) = database.connections.as_ref() {
-            let (busy, log_frames, checkpointed): (i64, i64, i64) = connections
-                .checkpoint
-                .query_row("pragma wal_checkpoint(passive)", [], |row| {
-                    Ok((row.get(0)?, row.get(1)?, row.get(2)?))
-                })
-                .map_err(Error::other)?;
-            tracing::debug!("Checkpoint: busy {busy}, log frames {log_frames}, checkpointed {checkpointed}");
+        let Some(connections) = database.connections.as_ref() else {
+            return Ok(());
+        };
+        let (busy, log_frames, checkpointed): (i64, i64, i64) = connections
+            .checkpoint
+            .query_row("pragma wal_checkpoint(passive)", [], |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+            })
+            .map_err(Error::other)?;
+        tracing::debug!("Checkpoint: busy {busy}, log frames {log_frames}, checkpointed {checkpointed}");
+
+        // A checkpoint that a reader held back leaves frames for the next one to copy.
+        if checkpointed == log_frames {
+            self.database.checkpointed = end;
         }
         Ok(())
     }
