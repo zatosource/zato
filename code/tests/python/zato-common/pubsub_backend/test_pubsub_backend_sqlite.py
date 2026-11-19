@@ -12,6 +12,7 @@ import os
 # Zato
 from cleanup_lock import run_cleanup_lock_scenario
 from common import pubsub_path_env
+from rust_writer import run_rust_writer_scenario
 from scenarios import run_common_scenarios
 
 # ################################################################################################################################
@@ -25,6 +26,7 @@ def test_pubsub_backend_sqlite(tmp_path:'os.PathLike') -> 'None':
     with pubsub_path_env(db_path):
         run_common_scenarios()
         run_cleanup_lock_scenario()
+        run_rust_writer_scenario()
 
     # The database file was created under the path the environment pointed at.
     assert os.path.exists(db_path)

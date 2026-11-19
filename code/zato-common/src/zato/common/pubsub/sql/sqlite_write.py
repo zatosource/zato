@@ -12,6 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from logging import getLogger
 from sqlite3 import Error as SQLiteError, sqlite_version
+from typing import NamedTuple
 
 # SQLAlchemy
 from sqlalchemy import and_, bindparam, exists, false, literal_column, null, select
@@ -38,10 +39,11 @@ if 0:
     from sqlalchemy.sql.expression import ClauseElement
     from zato.common.pubsub.sql.pending import pending_ack_list, pending_atomic_list, pending_attempts_list, \
         pending_lease_list, pending_publication_list
-    from zato.common.typing_ import any_, strlist
+    from zato.common.typing_ import any_, anylist, strlist
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
+    anylist = anylist
     ClauseElement = ClauseElement
     Connection = Connection
     pending_ack_list = pending_ack_list
@@ -77,9 +79,14 @@ for _column in message_table.c:
 
 # The columns of a leased message, in the order in which the messages of a pull are built from them
 _lease_column_names:'strlist' = []
+_lease_fields:'anylist' = []
 
 for _column in message_columns:
     _lease_column_names.append(_column.name)
+    _lease_fields.append((_column.name, object))
+
+# The row of a leased message, whose values are read by position and by the name of their column, as those of a query are
+LeasedMessageRow = NamedTuple('LeasedMessageRow', _lease_fields)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -228,6 +235,7 @@ _writer = SQLitePubSubWriter({
     'priority_column': message_table.c.priority.name,
     'duplicate_error': PubSubDuplicateMsgID,
     'conflict_error': PubSubAckConflict,
+    'lease_row_class': LeasedMessageRow,
 })
 
 # ################################################################################################################################

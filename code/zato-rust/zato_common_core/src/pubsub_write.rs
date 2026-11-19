@@ -44,6 +44,9 @@ pub struct SqlitePubSubWriter {
 
     /// The exception of a fenced acknowledgement whose messages were handed out again or concluded.
     conflict_error: Py<PyAny>,
+
+    /// The class of the row of a leased message, whose values are read by position and by the name of their column.
+    lease_row_class: Py<PyAny>,
 }
 
 #[pymethods]
@@ -111,6 +114,7 @@ impl SqlitePubSubWriter {
             connection_type: py.import(SQLITE_MODULE)?.getattr("Connection")?.unbind(),
             duplicate_error: config.get_item("duplicate_error")?.unbind(),
             conflict_error: config.get_item("conflict_error")?.unbind(),
+            lease_row_class: config.get_item("lease_row_class")?.unbind(),
         })
     }
 
@@ -217,8 +221,8 @@ impl SqlitePubSubWriter {
             msg_id: message_values.get_item(intern!(py, "msg_id"))?.extract()?,
             topic_name: message_values.get_item(intern!(py, "topic_name"))?.extract()?,
             payload_crc32: message_values.get_item(intern!(py, "payload_crc32"))?.extract()?,
-            priority: message_values.get_item(intern!(py, "priority"))?.extract()?,
-            expiration_ms: message_values.get_item(intern!(py, "expiration_ms"))?.extract()?,
+            priority: bound_value(&message_values.get_item(intern!(py, "priority"))?)?,
+            expiration_ms: bound_value(&message_values.get_item(intern!(py, "expiration_ms"))?)?,
         })
     }
 
@@ -318,6 +322,7 @@ impl SqlitePubSubWriter {
     fn apply_lease(&self, pending: &Bound<'_, PyAny>, result: LeaseResult) -> PyResult<()> {
         let py = pending.py();
         let encrypted_index = self.layout.lease_payload_encrypted_index;
+        let row_class = self.lease_row_class.bind(py);
 
         let rows = PyList::empty(py);
 
@@ -326,7 +331,7 @@ impl SqlitePubSubWriter {
             for (index, value) in columns.into_iter().enumerate() {
                 objects.push(value_object(py, value, index == encrypted_index)?);
             }
-            rows.append(PyTuple::new(py, objects)?)?;
+            rows.append(row_class.call1(PyTuple::new(py, objects)?)?)?;
         }
 
         let attempts = PyDict::new(py);

@@ -96,11 +96,11 @@ pub struct PublicationInput {
     /// The checksum of the payload, which tells a repeated publication from a different message.
     pub payload_crc32: i64,
 
-    /// The priority of the message, which its delivery rows are ordered by.
-    pub priority: i64,
+    /// The priority of the message, which its delivery rows are ordered by, bound as the driver binds it.
+    pub priority: Value,
 
-    /// When the message expires, in milliseconds since the epoch.
-    pub expiration_ms: i64,
+    /// When the message expires, in milliseconds since the epoch, bound as the driver binds it.
+    pub expiration_ms: Value,
 }
 
 /// One acknowledgement of a subscriber's messages.
