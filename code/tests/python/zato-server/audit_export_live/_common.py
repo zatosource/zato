@@ -21,6 +21,7 @@ import requests
 from zato.common.api import MCP
 from zato.common.audit_log.common import AuditSource, get_event_select_list
 from zato.common.audit_log.export.config import ModuleCtx as ExportCtx
+from zato.common.db_env.connection import register_sqlite_functions
 from zato.common.util.time_ import parse_utc
 
 # Test support
@@ -348,6 +349,7 @@ def read_events(audit_db_path:'str', source:'str', object_name:'str', min_id:'in
     attr_query = 'select name, value, value_number from event_attr where event_id = ?'
 
     connection = sqlite3.connect(audit_db_path)
+    register_sqlite_functions(connection)
 
     try:
         cursor = connection.execute(query, (source, object_name, min_id))

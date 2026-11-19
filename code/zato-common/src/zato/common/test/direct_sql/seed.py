@@ -16,7 +16,7 @@ from typing import NamedTuple
 # Zato
 from zato.common.audit_log.api import AuditLog, event_table
 from zato.common.audit_log.bulk_insert import insert_pending_events
-from zato.common.audit_log.payload import get_payload_digest, store_payloads
+from zato.common.audit_log.payload import assign_payload_ids, get_payload_digest, Payload_Digest_Key, store_payloads
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.database import get_database_engine
 from zato.common.db_env.engine import call_database
@@ -136,8 +136,8 @@ def seed_row(engine:'Engine', table:'Table', values:'stranydict') -> 'any_':
 # ################################################################################################################################
 
 def _get_event_row(values:'stranydict', payloads:'strstrdict') -> 'stranydict':
-    """ Returns the row of the event table of the given values, which references its payload, if the values have one,
-    by its digest, and adds the payload to the given dict under that digest.
+    """ Returns the row of the event table of the given values, with the digest of its payload, if the values have one,
+    under Payload_Digest_Key, and adds the payload to the given dict under that digest.
     """
     out = dict(values)
     digest = None
@@ -149,8 +149,20 @@ def _get_event_row(values:'stranydict', payloads:'strstrdict') -> 'stranydict':
         if digest:
             payloads[digest] = data
 
-    out['payload_digest'] = digest
+    out[Payload_Digest_Key] = digest
     return out
+
+# ################################################################################################################################
+
+def _store_event_payloads(connection:'Connection', event_rows:'dictlist', payloads:'strstrdict') -> 'None':
+    """ Stores the payloads of the given event rows and gives each row the id of its payload's row.
+    """
+    if payloads:
+        payload_ids = store_payloads(connection, payloads, {})
+    else:
+        payload_ids = {}
+
+    assign_payload_ids(event_rows, payload_ids)
 
 # ################################################################################################################################
 
@@ -163,9 +175,8 @@ def _insert_event_rows(connection:'Connection', rows:'dictlist') -> 'None':
         event_row = _get_event_row(values, payloads)
         event_rows.append(event_row)
 
-    # The payloads go to the payload table first, so that the event rows can reference them by their digests ..
-    if payloads:
-        store_payloads(connection, payloads, {})
+    # The payloads go to the payload table first, so that the event rows can reference their rows ..
+    _store_event_payloads(connection, event_rows, payloads)
 
     # .. and the event rows follow them.
     _ = connection.execute(event_table.insert(), event_rows)
@@ -178,8 +189,7 @@ def _insert_event_row(connection:'Connection', values:'stranydict') -> 'any_':
     event_row = _get_event_row(values, payloads)
 
     # The payload, if the event has one, goes to the payload table first ..
-    if payloads:
-        store_payloads(connection, payloads, {})
+    _store_event_payloads(connection, [event_row], payloads)
 
     # .. and the event row follows it.
     out = _insert_row(connection, event_table, event_row)

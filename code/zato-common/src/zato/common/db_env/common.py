@@ -11,16 +11,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import zlib
 from datetime import timezone
 
 # SQLAlchemy
-from sqlalchemy import DateTime, LargeBinary, String
+from sqlalchemy import DateTime, LargeBinary, String, Text
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.sql.functions import FunctionElement
+from sqlalchemy.sql.functions import Function, FunctionElement
 from sqlalchemy.types import TypeDecorator
 
 # Zato
 from zato.common.defaults import default_env_base_dir
+from zato.common.typing_ import cast_
 from zato.common.util.api import as_bool
 
 # ################################################################################################################################
@@ -71,6 +73,15 @@ Default_Pool_Size = 80
 
 # Binary content, raw bytes on every database.
 Binary_Type = LargeBinary()
+
+# The SQL function of each SQLite connection of Zato that returns the text of a value of CompressedText
+SQLite_Decompress_Function = 'zato_decompress'
+
+# The zlib level of the text that SQLite stores compressed, the fastest one
+_compression_level = 1
+
+# The encoding of the text that SQLite stores compressed
+_compressed_text_encoding = 'utf8'
 
 # The hour a timestamp falls in, in the form YYYY-MM-DDTHH, as Python and each database format it.
 Hour_Period_Format = '%Y-%m-%dT%H'
@@ -126,6 +137,107 @@ class UTC_DateTime(TypeDecorator):
         # .. while SQLite returns it in UTC without a time zone.
         else:
             out = value.replace(tzinfo=timezone.utc)
+
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def compress_text(value:'str') -> 'bytes':
+    """ Returns the text compressed as SQLite stores a value of CompressedText.
+    """
+    encoded = value.encode(_compressed_text_encoding)
+
+    out = zlib.compress(encoded, _compression_level)
+    return out
+
+# ################################################################################################################################
+
+def decompress_text(value:'bytes') -> 'str':
+    """ Returns the text of a value of CompressedText as SQLite stores it.
+    """
+    decompressed = zlib.decompress(value)
+
+    out = decompressed.decode(_compressed_text_encoding)
+    return out
+
+# ################################################################################################################################
+
+def sqlite_decompress(value:'bytes | None') -> 'strnone':
+    """ The SQL function SQLite_Decompress_Function, which returns the text of a value of CompressedText,
+    or NULL for NULL.
+    """
+    if value is None:
+        return None
+
+    out = decompress_text(value)
+    return out
+
+# ################################################################################################################################
+
+def text_of_compressed(column:'any_', dialect_name:'str') -> 'any_':
+    """ The SQL expression of the text of a column of CompressedText, for a select that applies SQL functions to the text,
+    which on SQLite calls SQLite_Decompress_Function and on PostgreSQL is the column itself.
+    """
+    if dialect_name == Type_SQLite:
+        out = Function(SQLite_Decompress_Function, column, type_=Text())
+    else:
+        out = column
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CompressedText(TypeDecorator):
+    """ Text that SQLite stores compressed with zlib, as a BLOB, and PostgreSQL stores as text,
+    which PostgreSQL compresses itself once a value exceeds its threshold for compression.
+    """
+    impl = Text
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect:'Dialect') -> 'TypeEngine':
+
+        if dialect.name == Type_SQLite:
+            out = LargeBinary()
+        else:
+            out = Text()
+
+        return out
+
+# ################################################################################################################################
+
+    def process_bind_param(self, value:'strnone', dialect:'Dialect') -> 'str | bytes | None':
+
+        # A column that is not set stays NULL ..
+        if value is None:
+            return None
+
+        # .. SQLite receives the text compressed ..
+        if dialect.name == Type_SQLite:
+            out = compress_text(value)
+
+        # .. and PostgreSQL receives it as it is.
+        else:
+            out = value
+
+        return out
+
+# ################################################################################################################################
+
+    def process_result_value(self, value:'str | bytes | None', dialect:'Dialect') -> 'strnone':
+
+        # A column that is not set is returned as None ..
+        if value is None:
+            return None
+
+        # .. SQLite returns the compressed text ..
+        if dialect.name == Type_SQLite:
+            out = decompress_text(cast_('bytes', value))
+
+        # .. and PostgreSQL returns the text itself.
+        else:
+            out = cast_('str', value)
 
         return out
 

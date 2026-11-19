@@ -50,11 +50,13 @@ Event_Attr_Search_Table = 'event_attr_search'
 # The shortest term the trigram tokenizer of SQLite indexes
 SQLite_Min_Term_Length = 3
 
-# The tokenizer of each FTS5 table of SQLite - the event and payload tables index words, with the prefixes
-# of three characters indexed as well, so that the shortest prefix a query has is looked up directly,
-# and attribute values are indexed by trigrams.
-_sqlite_word_tokenizer = "tokenize='unicode61', prefix='3'"
+# The tokenizer of each FTS5 table of SQLite - the event and payload tables index words, which a query of a prefix
+# reads as the range of the words that begin with it, and attribute values are indexed by trigrams.
+_sqlite_word_tokenizer = "tokenize='unicode61'"
 _sqlite_attr_tokenizer = "tokenize='trigram'"
+
+# How many segments of one level an FTS5 table of SQLite holds before an insert merges them into the next level
+_sqlite_automerge = 16
 
 # The word indexes of PostgreSQL over the searched event columns and over the words of the payloads
 PostgreSQL_Event_Index   = 'idx_event_search'
@@ -104,9 +106,13 @@ def _sqlite_statements(table_name:'str', search_table:'str', columns:'strtuple',
     new_list = ', '.join(new_values)
     old_list = ', '.join(old_values)
 
-    # The index keeps no copy of the text - it reads it from the table it indexes ..
-    fts5_options = f"content='{table_name}', content_rowid='id', {tokenizer}"
+    # The index keeps no copy of the text - it reads it from the table it indexes - and no sizes of the documents,
+    # which only ranking reads ..
+    fts5_options = f"content='{table_name}', content_rowid='id', {tokenizer}, columnsize=0"
     create_table = f'CREATE VIRTUAL TABLE {search_table} USING fts5({column_list}, {fts5_options})'
+
+    # .. it merges its segments once there are this many of them at one level ..
+    set_automerge = f"INSERT INTO {search_table} ({search_table}, rank) VALUES ('automerge', {_sqlite_automerge})"
 
     # .. so an indexed row is added with the values of a new row ..
     add_new = f'INSERT INTO {search_table} (rowid, {column_list}) VALUES (new.id, {new_list});'
@@ -118,7 +124,7 @@ def _sqlite_statements(table_name:'str', search_table:'str', columns:'strtuple',
     after_delete = f'CREATE TRIGGER {search_table}_delete AFTER DELETE ON {table_name} BEGIN {remove_old} END'
     after_update = f'CREATE TRIGGER {search_table}_update AFTER UPDATE ON {table_name} BEGIN {remove_old} {add_new} END'
 
-    out = [create_table, after_insert, after_delete, after_update]
+    out = [create_table, set_automerge, after_insert, after_delete, after_update]
     return out
 
 # ################################################################################################################################
@@ -282,11 +288,9 @@ def _sqlite_word_match(event_table:'Table', event_payload_table:'Table', word:'s
     matching_event_ids = _sqlite_matching_ids(Event_Search_Table, match_expression)
     is_event_match = event_table.c.id.in_(matching_event_ids)
 
-    # .. and the ones matching through their payload.
+    # .. and the ones matching through their payload, whose rowids in the payload index are the ids of the payloads.
     matching_payload_ids = _sqlite_matching_ids(Payload_Search_Table, match_expression)
-    matching_digests = select(event_payload_table.c.digest)
-    matching_digests = matching_digests.where(event_payload_table.c.id.in_(matching_payload_ids))
-    is_payload_match = event_table.c.payload_digest.in_(matching_digests)
+    is_payload_match = event_table.c.payload_id.in_(matching_payload_ids)
 
     out = or_(is_event_match, is_payload_match)
     return out
@@ -308,9 +312,9 @@ def _postgresql_word_match(event_table:'Table', event_payload_table:'Table', wor
     payload_words = _postgresql_search_words(f'{event_payload_table.name}.', payload_search_columns)
     is_matching_payload = literal_column(payload_words).op('@@')(text_query)
 
-    matching_digests = select(event_payload_table.c.digest)
-    matching_digests = matching_digests.where(is_matching_payload)
-    is_payload_match = event_table.c.payload_digest.in_(matching_digests)
+    matching_payload_ids = select(event_payload_table.c.id)
+    matching_payload_ids = matching_payload_ids.where(is_matching_payload)
+    is_payload_match = event_table.c.payload_id.in_(matching_payload_ids)
 
     out = or_(is_event_match, is_payload_match)
     return out

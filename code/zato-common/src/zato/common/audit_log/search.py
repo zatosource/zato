@@ -168,10 +168,10 @@ def build_search_conditions(
                 column = event_payload_table.c[column_name]
                 is_matching_payload = column.ilike(pattern, escape='\\')
 
-                matching_digests = select(event_payload_table.c.digest)
-                matching_digests = matching_digests.where(is_matching_payload)
+                matching_payload_ids = select(event_payload_table.c.id)
+                matching_payload_ids = matching_payload_ids.where(is_matching_payload)
 
-                is_like_pattern = event_table.c.payload_digest.in_(matching_digests)
+                is_like_pattern = event_table.c.payload_id.in_(matching_payload_ids)
                 like_parts.append(is_like_pattern)
 
             any_column_match = or_(*like_parts)

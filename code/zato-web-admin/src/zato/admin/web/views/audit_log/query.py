@@ -23,7 +23,7 @@ from zato.common.audit_log.common import AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.request_context import Key_Payload, Key_Payload_Kind, Key_Redacted, Payload_Kind_Described
 from zato.common.audit_log.resubmit import Resend_Hop_Service
 from zato.common.audit_log.service import Attribute_Channel
-from zato.common.db_env.common import Type_SQLite
+from zato.common.db_env.common import text_of_compressed, Type_SQLite
 from zato.common.json_internal import loads
 
 # ################################################################################################################################
@@ -452,7 +452,8 @@ def _attach_body_previews(connection:'any_', source:'str', rows:'anylist') -> 'N
     if not row_by_event_id:
         return
 
-    data_preview = func.substr(event_body_table.c.data, 1, _data_preview_length)
+    body_data = text_of_compressed(event_body_table.c.data, connection.dialect.name)
+    data_preview = func.substr(body_data, 1, _data_preview_length)
     is_wanted_event = event_body_table.c.event_id.in_(row_by_event_id)
 
     statement = select(event_body_table.c.event_id, data_preview)

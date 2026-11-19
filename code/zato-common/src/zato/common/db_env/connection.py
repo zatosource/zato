@@ -18,7 +18,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import URL
 
 # Zato
-from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
+from zato.common.db_env.common import sqlite_decompress, SQLite_Decompress_Function, Type_PostgreSQL, Type_SQLite
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -140,6 +140,16 @@ def set_sqlite_pragmas(dbapi_connection:'any_', connection_record:'any_') -> 'No
     _ = cursor.execute(f'pragma busy_timeout={SQLite_Busy_Timeout_Ms}')
     _ = cursor.execute(f'pragma mmap_size={SQLite_MMAP_Size}')
     cursor.close()
+
+    register_sqlite_functions(dbapi_connection)
+
+# ################################################################################################################################
+
+def register_sqlite_functions(dbapi_connection:'any_') -> 'None':
+    """ Registers the SQL functions of Zato on a connection of the sqlite3 module, the one that returns the text
+    of a value of CompressedText among them.
+    """
+    dbapi_connection.create_function(SQLite_Decompress_Function, 1, sqlite_decompress, deterministic=True)
 
 # ################################################################################################################################
 

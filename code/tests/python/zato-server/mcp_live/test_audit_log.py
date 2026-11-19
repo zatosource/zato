@@ -22,6 +22,7 @@ from _client import MCPClient
 from zato.common.api import GENERIC
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.common import get_event_select_list
+from zato.common.db_env.connection import register_sqlite_functions
 from zato.common.util.gateway import mcp_gateway_name
 
 # ################################################################################################################################
@@ -128,6 +129,7 @@ def _read_events(zato_server:'anydict', min_id:'int' = 0) -> 'dictlist':
     query = f'select {column_list} from event where source = ? and object_name = ? and id > ? order by id'
 
     connection = sqlite3.connect(audit_db_path)
+    register_sqlite_functions(connection)
 
     try:
         cursor = connection.execute(query, (AuditSource.MCP, mcp_gateway_name, min_id))

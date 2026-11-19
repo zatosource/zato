@@ -20,6 +20,7 @@ import lxml.etree as etree
 from channel_client import ChannelClient
 from channel_definitions import build_yaml
 from zato.common.audit_log.common import get_event_select_list
+from zato.common.db_env.connection import register_sqlite_functions
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -172,6 +173,7 @@ def read_audit_events(db_path:'str', cid:'str') -> 'anylist':
     query = f'select {column_list} from event where cid = ? order by id'
 
     connection = sqlite3.connect(f'file:{db_path}?mode=ro', uri=True)
+    register_sqlite_functions(connection)
 
     try:
         rows = connection.execute(query, (cid,)).fetchall()

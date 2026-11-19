@@ -9,18 +9,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The inserts of the audit log that write all the rows of one table in a batch with a single statement.
 
 # SQLAlchemy
-from sqlalchemy import aggregate_order_by, bindparam, func, select
+from sqlalchemy import bindparam, func, select
 
 # Zato
 from zato.common.audit_log.attachment import build_attachment_rows
 from zato.common.audit_log.attr_rows import build_attr_rows
 from zato.common.audit_log.common import event_attr_table, event_body_table, event_link_table, event_table
-from zato.common.audit_log.payload import find_stored_payloads, get_event_rows, insert_new_payloads
-from zato.common.crypto.api import CryptoManager
+from zato.common.audit_log.payload import assign_payload_ids, find_stored_payloads, get_event_rows, insert_new_payloads
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.pg8000_copy import copy_rows
 from zato.common.db_env.plain_sql import PlainStatement
-from zato.common.json_internal import loads
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -61,6 +59,9 @@ _event_id_sequence = func.pg_get_serial_sequence(event_table.name, event_table.c
 _reserve_event_ids = select(func.nextval(_event_id_sequence))
 _reserve_event_ids = _reserve_event_ids.select_from(func.generate_series(1, bindparam('row_count')))
 _reserve_event_ids_statement = PlainStatement(_reserve_event_ids)
+
+# The rowid of the last row that the connection inserted on SQLite, outside of the triggers of that row
+_last_rowid_query = 'SELECT last_insert_rowid()'
 
 # The multi-row insert of each table, by the name of the table
 _insert_statements:'anydict' = {}
@@ -108,37 +109,22 @@ def _insert_with_reserved_ids(connection:'Connection', rows:'dictlist', reserved
 
 # ################################################################################################################################
 
-def _insert_by_commit_id(connection:'Connection', rows:'dictlist', commit_id:'str') -> 'intlist':
-    """ Inserts the event rows stamped with the id of their commit and selects their ids by it, in insertion order.
-    The driver releases the GIL around each step of a statement and waits for it again after the step,
-    so the rows are inserted with multi-row statements and their ids are read as a single aggregated row,
-    which keeps the number of steps independent of the number of rows.
+def _insert_by_rowid(connection:'Connection', rows:'dictlist') -> 'intlist':
+    """ Inserts the event rows with multi-row statements and returns their ids in insertion order, computed from
+    the rowid of the last row. The transaction holds the write lock of SQLite and the id of the event table is an alias
+    of the rowid, so each row of the batch receives the rowid that follows the one of the row before it.
     """
-    commit_rows:'dictlist' = []
+    insert_rows(connection, event_table, rows)
 
-    for row in rows:
-        commit_row = dict(row)
-        commit_row['commit_id'] = commit_id
-        commit_rows.append(commit_row)
+    last_id = connection.exec_driver_sql(_last_rowid_query).scalar_one()
+    first_id = last_id - len(rows) + 1
 
-    insert_rows(connection, event_table, commit_rows)
-
-    ids = aggregate_order_by(func.json_group_array(event_table.c.id), event_table.c.id)
-
-    query = select(ids)
-    query = query.where(event_table.c.commit_id == commit_id)
-
-    out = loads(connection.execute(query).scalar_one())
+    out = list(range(first_id, last_id + 1))
     return out
 
 # ################################################################################################################################
 
-def _insert_events(
-    connection:'Connection',
-    rows:'dictlist',
-    reserved:'CursorResult[any_] | None',
-    commit_id:'str',
-    ) -> 'intlist':
+def _insert_events(connection:'Connection', rows:'dictlist', reserved:'CursorResult[any_] | None') -> 'intlist':
     """ Inserts the event rows of one batch and returns their ids in the order of the rows.
     """
 
@@ -151,25 +137,19 @@ def _insert_events(
         inserted = _insert_event_statement.insert_rows(connection, rows)
         out = [inserted[0].id]
 
-    # .. and more events select their ids by the id of the commit.
+    # .. and more events receive the ids that follow from the rowid of the last one.
     else:
-        out = _insert_by_commit_id(connection, rows, commit_id)
+        out = _insert_by_rowid(connection, rows)
 
     return out
 
 # ################################################################################################################################
 
-def insert_events(
-    connection:'Connection',
-    rows:'dictlist',
-    payloads:'strstrdict',
-    search_texts:'strstrdict',
-    commit_id:'str',
-    ) -> 'intlist':
+def insert_events(connection:'Connection', rows:'dictlist', payloads:'strstrdict', search_texts:'strstrdict') -> 'intlist':
     """ Stores the payloads of a batch, keyed by their digests, that are not stored yet, then inserts the event rows
-    that reference them, and returns the ids of the events in the order of the rows. Within deferred_replies,
-    the lookup of the stored payloads and the reservation of the ids are sent before either result is read,
-    so their replies arrive together.
+    of get_event_rows with the ids of their payloads' rows, and returns the ids of the events in the order of the rows.
+    Within deferred_replies, the lookup of the stored payloads and the reservation of the ids are sent before
+    either result is read, so their replies arrive together.
     """
     if payloads:
         stored = find_stored_payloads(connection, payloads)
@@ -178,10 +158,15 @@ def insert_events(
 
     reserved = _reserve_ids(connection, len(rows))
 
+    # The events reference the rows of their payloads, which exist once the payloads are stored.
     if stored is not None:
-        insert_new_payloads(connection, stored, payloads, search_texts)
+        payload_ids = insert_new_payloads(connection, stored, payloads, search_texts)
+    else:
+        payload_ids = {}
 
-    out = _insert_events(connection, rows, reserved, commit_id)
+    assign_payload_ids(rows, payload_ids)
+
+    out = _insert_events(connection, rows, reserved)
     return out
 
 # ################################################################################################################################
@@ -208,9 +193,6 @@ def insert_pending_events(connection:'Connection', batch:'pending_event_list') -
     of the connection, with one statement per table, and returns the ids of the events in the order of the batch.
     """
 
-    # The id of the commit identifies the event rows of this batch on the databases that need it
-    commit_id = CryptoManager.generate_hex_string()
-
     # The payloads of the batch, each once, are stored before the events that reference them ..
     payloads:'strstrdict' = {}
     search_texts:'strstrdict' = {}
@@ -223,7 +205,7 @@ def insert_pending_events(connection:'Connection', batch:'pending_event_list') -
     link_rows:'anylist' = []
 
     # .. the event rows come next, so everything else can reference their ids ..
-    out = insert_events(connection, event_rows, payloads, search_texts, commit_id)
+    out = insert_events(connection, event_rows, payloads, search_texts)
 
     for pending, event_id in zip(batch, out):
 

@@ -35,7 +35,7 @@ if 0:
 _event_count = 50
 
 # The columns that differ between two writes of the same events by design
-_event_skipped_columns = ('id', 'commit_id')
+_event_skipped_columns = ('id',)
 _child_skipped_columns = ('id',)
 
 # The statements that write one batch on each database, as their verbs and tables
@@ -53,7 +53,7 @@ _sqlite_statements = [
     ('SELECT', 'event_payload'),
     ('INSERT', 'event_payload'),
     ('INSERT', 'event'),
-    ('SELECT', 'event'),
+    ('SELECT', 'last_insert_rowid'),
     ('INSERT', 'event_attr'),
     ('INSERT', 'event_body'),
     ('INSERT', 'event_link'),

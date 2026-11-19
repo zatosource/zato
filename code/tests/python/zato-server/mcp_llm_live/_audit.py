@@ -15,6 +15,7 @@ from json import loads
 # Zato
 from zato.common.audit_log.api import AuditSource
 from zato.common.audit_log.common import get_event_select_list
+from zato.common.db_env.connection import register_sqlite_functions
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -69,6 +70,7 @@ def read_events(
     query += ' order by id'
 
     connection = sqlite3.connect(audit_db_path)
+    register_sqlite_functions(connection)
 
     try:
         cursor = connection.execute(query, query_args)
@@ -105,6 +107,7 @@ def read_events_page(
     query_args:'anylist' = [AuditSource.MCP, min_id, object_name, limit, offset]
 
     connection = sqlite3.connect(audit_db_path)
+    register_sqlite_functions(connection)
 
     try:
         cursor = connection.execute(query, query_args)

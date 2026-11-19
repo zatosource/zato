@@ -163,7 +163,7 @@ def _updates_in_place() -> 'None':
     data_ids = rng.sample(ids, 300)
     count_rows_before = run_blocking(read_count_rows)
 
-    _update(data_ids, payload_digest=None)
+    _update(data_ids, payload_id=None)
     _ = run_blocking(_assert_counts_exact)
 
     count_rows_after = run_blocking(read_count_rows)

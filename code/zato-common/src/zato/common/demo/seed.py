@@ -36,7 +36,7 @@ from zato.common.audit_log.api import event_attr_table, event_body_table, event_
 from zato.common.audit_log.common import alert_table, event_dedup_table
 from zato.common.audit_log.config_audit import record_config_change, record_view_event
 from zato.common.audit_log.dedup import build_dedup_key
-from zato.common.audit_log.payload import get_event_rows, store_payloads
+from zato.common.audit_log.payload import assign_payload_ids, get_event_rows, store_payloads
 from zato.common.db_env.engine import call_database
 from zato.common.db_env.write_path import Mechanism, write_path
 from zato.common.hl7.audit import audit_ack_received, audit_ack_sent, audit_batch_received, audit_message_received, \
@@ -374,7 +374,11 @@ class _BulkAuditLog(AuditLog):
             event_rows = get_event_rows(to_write, payloads, search_texts)
 
             if payloads:
-                store_payloads(connection, payloads, search_texts)
+                payload_ids = store_payloads(connection, payloads, search_texts)
+            else:
+                payload_ids = {}
+
+            assign_payload_ids(event_rows, payload_ids)
 
             _ = connection.execute(event_table.insert(), event_rows)
 

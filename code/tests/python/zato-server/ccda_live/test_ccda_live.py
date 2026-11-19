@@ -26,6 +26,7 @@ import yaml
 # Zato
 from zato.common.api import HL7
 from zato.common.audit_log.common import AuditOutcome, AuditSource, get_event_select_list
+from zato.common.db_env.connection import register_sqlite_functions
 
 from conftest import CCDA_Channel_Name, CCDA_Channel_Path, Convert_Service_Name, Plain_Channel_Name, Plain_Channel_Path, \
     read_sample, Receive_Service_Name, run_enmasse, run_enmasse_export
@@ -72,6 +73,7 @@ def _audit_events(zato_server:'stranydict', object_name:'str', outcome:'str') ->
     out = []
 
     connection = sqlite3.connect(zato_server['audit_db_path'])
+    register_sqlite_functions(connection)
     connection.row_factory = sqlite3.Row
 
     try:

@@ -93,11 +93,16 @@ class StatementRecorder:
             table_name = words[2]
         elif verb == 'COPY':
             table_name = words[1]
+
+        # A select of a function alone is recorded under the name of the function ..
+        elif 'FROM' not in words:
+            table_name = words[1].split('(')[0]
+
         else:
             from_index = words.index('FROM')
             table_name = words[from_index + 1]
 
-            # A select from a set-returning function is recorded under the name of the function.
+            # .. and a select from a set-returning function is recorded under the name of the function as well.
             table_name = table_name.split('(')[0]
 
         self.statements.append((verb, table_name))

@@ -20,6 +20,7 @@ import requests
 from zato.common.api import MCP
 from zato.common.audit_log.api import AuditSource
 from zato.common.audit_log.common import get_event_select_list
+from zato.common.db_env.connection import register_sqlite_functions
 from zato.common.util.time_ import parse_utc
 
 # ################################################################################################################################
@@ -275,6 +276,7 @@ def read_events(audit_db_path:'str', gateway_name:'str', min_id:'int'=0) -> 'dic
     attr_query = 'select name, value from event_attr where event_id = ?'
 
     connection = sqlite3.connect(audit_db_path)
+    register_sqlite_functions(connection)
 
     try:
         cursor = connection.execute(query, (AuditSource.MCP, gateway_name, min_id))

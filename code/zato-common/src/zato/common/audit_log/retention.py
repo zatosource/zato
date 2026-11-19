@@ -306,12 +306,12 @@ def archive_events(engine:'Engine', archiver:'Archiver', ids:'intlist') -> 'None
 
 # ################################################################################################################################
 
-def _get_payload_digests(connection:'Connection', ids:'intlist') -> 'strlist':
-    """ Returns the distinct digests of the payloads of the given events.
+def _get_payload_ids(connection:'Connection', ids:'intlist') -> 'intlist':
+    """ Returns the distinct ids of the payloads of the given events.
     """
-    query = select(event_table.c.payload_digest)
+    query = select(event_table.c.payload_id)
     query = query.where(event_table.c.id.in_(ids))
-    query = query.where(event_table.c.payload_digest.is_not(None))
+    query = query.where(event_table.c.payload_id.is_not(None))
     query = query.distinct()
 
     result = connection.execute(query)
@@ -348,7 +348,7 @@ def _delete_events(engine:'Engine', ids:'intlist') -> 'None':
     with engine.begin() as connection:
 
         # The payloads of the events are read before the events are gone ..
-        payload_digests = _get_payload_digests(connection, ids)
+        payload_ids = _get_payload_ids(connection, ids)
 
         # .. everything that references the events is deleted along with them ..
         _ = connection.execute(delete_attrs)
@@ -357,7 +357,7 @@ def _delete_events(engine:'Engine', ids:'intlist') -> 'None':
         _ = connection.execute(delete_events)
 
         # .. and so are the payloads that no other event references.
-        delete_unreferenced_payloads(connection, payload_digests)
+        delete_unreferenced_payloads(connection, payload_ids)
 
 # ################################################################################################################################
 
@@ -402,7 +402,7 @@ def _get_content_candidates(engine:'Engine', source:'str', cutoff:'datetime', la
     has_any_body = has_body.exists()
 
     content_condition = or_(
-        event_table.c.payload_digest.is_not(None),
+        event_table.c.payload_id.is_not(None),
         has_any_body,
     )
 
@@ -433,7 +433,7 @@ def _archive_content(engine:'Engine', archiver:'Archiver', ids:'intlist') -> 'No
 
     content_query = select(event_table.c.id, event_data)
     content_query = content_query.where(is_wanted_event)
-    content_query = content_query.where(event_table.c.payload_digest.is_not(None))
+    content_query = content_query.where(event_table.c.payload_id.is_not(None))
 
     body_query = select(event_body_table)
     body_query = body_query.where(is_body_of_event)
@@ -465,7 +465,7 @@ def _prune_content(engine:'Engine', ids:'intlist') -> 'None':
 
     prune_statement = update(event_table)
     prune_statement = prune_statement.where(is_wanted_event)
-    prune_statement = prune_statement.values(payload_digest=None)
+    prune_statement = prune_statement.values(payload_id=None)
 
     delete_bodies = event_body_table.delete()
     delete_bodies = delete_bodies.where(is_body_of_event)
@@ -475,10 +475,10 @@ def _prune_content(engine:'Engine', ids:'intlist') -> 'None':
     with engine.begin() as connection:
         _ = connection.execute(delete_bodies)
 
-        payload_digests = _get_payload_digests(connection, ids)
+        payload_ids = _get_payload_ids(connection, ids)
         _ = connection.execute(prune_statement)
 
-        delete_unreferenced_payloads(connection, payload_digests)
+        delete_unreferenced_payloads(connection, payload_ids)
 
 # ################################################################################################################################
 

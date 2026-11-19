@@ -14,13 +14,13 @@ from requests.exceptions import ConnectionError as RequestsConnectionError, SSLE
     Timeout as RequestsTimeout
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Column, func, Index, Integer, literal, MetaData, Numeric, select, String, Table, Text
+from sqlalchemy import BigInteger, Column, func, Index, Integer, literal, MetaData, Numeric, select, String, Table, text, Text
 
 # Zato
 from zato.common.audit_log.event_count import register_event_count
 from zato.common.audit_log.event_open import new_exchange_pair, register_event_open
 from zato.common.audit_log.search_index import register_search_indexes
-from zato.common.db_env.common import Binary_Type, UTC_DateTime
+from zato.common.db_env.common import Binary_Type, CompressedText, SQLite_Decompress_Function, UTC_DateTime
 from zato.common.exception import BackendInvocationError
 
 # ################################################################################################################################
@@ -495,6 +495,10 @@ _short_column = String(_short_column_len)
 _endpoint_column = String(_endpoint_column_len)
 _attr_number_column = Numeric(20, 6, asdecimal=False)
 _time_column = UTC_DateTime()
+_compressed_text_column = CompressedText()
+
+# The condition of the index of numeric attribute values
+_has_number = text('value_number IS NOT NULL')
 
 # A page of the listing is one window of the events ordered by the time they happened, newest first,
 # with ids breaking ties, and these indexes hold that order for all events, for one source and for one outcome.
@@ -529,15 +533,11 @@ _event_columns = [
     Column('status', _short_column),
     Column('duration_ms', Integer),
 
-    # The digest of the payload of the event in the payload table, or none for an event without a payload.
-    Column('payload_digest', _short_column),
+    # The id of the row of the payload of the event in the payload table, or none for an event without a payload.
+    Column('payload_id', _id_column_type),
 
     # What the product reads back from an event and the free-text search does not cover, e.g. the digests of payloads.
     Column('internal_data', Text),
-
-    # The transaction a group commit wrote the event in, on the databases whose drivers return
-    # no identifiers from a multi-row insert, so that one select by it returns them in insertion order.
-    Column('commit_id', _short_column),
 
     Index('idx_event_source_object', 'source', 'object_name', 'id'),
 
@@ -559,11 +559,9 @@ _event_columns = [
     # lookup of the closing event, leaving the outer half of that question a full scan.
     Index('idx_event_source_type_time', 'source', 'event_type', 'event_time'),
 
-    Index('idx_event_commit_id', 'commit_id', 'id'),
-
     # The events of one payload are found when the free-text search matches the payload
     # and when retention decides whether any event still references it.
-    Index('idx_event_payload_digest', 'payload_digest'),
+    Index('idx_event_payload_id', 'payload_id'),
 ]
 
 _event_columns.extend(_ordered_indexes)
@@ -576,7 +574,7 @@ event_table = Table('event', metadata, *_event_columns)
 _event_payload_columns = [
     _new_id_column(),
     Column('digest', _short_column),
-    Column('data', Text),
+    Column('data', _compressed_text_column),
 
     # The words, integers and decimal numbers of the payload, each once and in lower case,
     # which the free-text search covers in place of the payload itself.
@@ -587,21 +585,27 @@ _event_payload_columns = [
 
 event_payload_table = Table('event_payload', metadata, *_event_payload_columns)
 
-# The payload of an event, selected under this name by its digest along with the columns of the event,
+# The payload of an event, selected under this name by the id of its row along with the columns of the event,
 # and empty for an event without a payload.
 _event_data_name = 'data'
 
 _event_payload_data = select(event_payload_table.c.data)
-_event_payload_data = _event_payload_data.where(event_payload_table.c.digest == event_table.c.payload_digest)
+_event_payload_data = _event_payload_data.where(event_payload_table.c.id == event_table.c.payload_id)
 
-event_data = func.coalesce(_event_payload_data.scalar_subquery(), literal('')).label(_event_data_name)
+# The empty payload has the type of the stored ones, so that the type of the result reads both alike.
+_empty_event_data = literal('', _compressed_text_column)
 
-# The payload of an event in plain SQL over the event table
-_event_data_sql = "coalesce((select event_payload.data from event_payload where event_payload.digest = event.payload_digest), '')"
+event_data = func.coalesce(_event_payload_data.scalar_subquery(), _empty_event_data).label(_event_data_name)
+
+# The payload of an event in plain SQL over the event table of SQLite, whose connection
+# has the functions of register_sqlite_functions
+_event_data_sql = f"coalesce((select {SQLite_Decompress_Function}(event_payload.data) from event_payload " + \
+    "where event_payload.id = event.payload_id), '')"
 
 def get_event_select_list(names:'strtuple') -> 'str':
-    """ Returns the select list of plain SQL over the event table that reads the given names in their order -
+    """ Returns the select list of plain SQL over the event table of SQLite that reads the given names in their order -
     the payload of the event under data and a column of the event table under any other name.
+    The connection that runs it has the functions of register_sqlite_functions.
     """
     items:'strlist' = []
 
@@ -686,7 +690,9 @@ _event_attr_columns = [
     Column('value_number', _attr_number_column),
     Index('idx_event_attr_event', 'event_id'),
     Index('idx_event_attr_name_value', 'name', 'value'),
-    Index('idx_event_attr_name_number', 'name', 'value_number'),
+
+    # Only numeric values are indexed by number, which every comparison with a number implies.
+    Index('idx_event_attr_name_number', 'name', 'value_number', sqlite_where=_has_number, postgresql_where=_has_number),
 ]
 
 event_attr_table = Table('event_attr', metadata, *_event_attr_columns)
@@ -704,10 +710,9 @@ _event_body_columns = [
     Column('event_id', BigInteger),
     Column('kind', _short_column),
     Column('event_time', _time_column),
-    Column('data', Text),
+    Column('data', _compressed_text_column),
     Column('content', Binary_Type),
     Index('idx_event_body_event', 'event_id'),
-    Index('idx_event_body_time', 'event_time'),
 ]
 
 event_body_table = Table('event_body', metadata, *_event_body_columns)

@@ -7,8 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The payloads of the audit log, each stored once in the payload table under the digest of its content,
-# however many events carry it. An event references its payload by the digest, and a payload is deleted
-# when the last event referencing it is deleted or pruned.
+# however many events have it. An event references its payload by the id of the payload's row, and a payload
+# is deleted when the last event referencing it is deleted or pruned.
 #
 # On PostgreSQL, a writer locks the payload rows it references before it inserts the missing ones,
 # and a deletion locks them for update before it checks for references in a statement of its own,
@@ -38,7 +38,7 @@ from zato_common_core.zato_common_core import extract_search_text
 if 0:
     from sqlalchemy.engine import Connection, CursorResult
     from zato.common.audit_log.pending import pending_event_list
-    from zato.common.typing_ import any_, anydict, dictlist, strlist, strnone, strstrdict
+    from zato.common.typing_ import any_, anydict, dictlist, intlist, intnone, strintdict, strlist, strnone, strstrdict
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
@@ -47,9 +47,12 @@ if 0:
     CursorResult = CursorResult
     pending_event_list = pending_event_list
     dictlist = dictlist
-    strstrdict = strstrdict
+    intlist = intlist
+    intnone = intnone
+    strintdict = strintdict
     strlist = strlist
     strnone = strnone
+    strstrdict = strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,38 +60,44 @@ if 0:
 # How many bytes a digest of a payload has
 _digest_size = 16
 
-# The insert of each database, which skips a payload that is stored already
+# The key of an event row under which get_event_rows gives the digest of the event's payload, which insert_events
+# replaces with the id of the payload's row.
+Payload_Digest_Key = 'payload_digest'
+
+# The insert of each database, which skips a payload that is stored already and returns the id and the digest
+# of each row it inserted
 _payload_inserts:'anydict' = {}
 
 for _dialect_name, _insert in ((Type_SQLite, sqlite_insert), (Type_PostgreSQL, postgresql_insert)):
     _payload_insert = _insert(event_payload_table).on_conflict_do_nothing(index_elements=[event_payload_table.c.digest])
-    _payload_insert = _payload_insert.inline()
+    _payload_insert = _payload_insert.returning(event_payload_table.c.id, event_payload_table.c.digest)
     _payload_inserts[_dialect_name] = PlainStatement(_payload_insert)
 
-# The payloads of the given digests that are stored already, locked on PostgreSQL against a concurrent deletion.
-# Every transaction locks payloads in the order of their digests, so that no two of them wait for each other.
-_stored_payloads_query = select(event_payload_table.c.digest)
+# The ids and the digests of the payloads of the given digests that are stored already, locked on PostgreSQL
+# against a concurrent deletion. Every transaction locks payloads in the order of their digests,
+# so that no two of them wait for each other.
+_stored_payloads_query = select(event_payload_table.c.id, event_payload_table.c.digest)
 _stored_payloads_query = _stored_payloads_query.where(
     event_payload_table.c.digest.in_(bindparam('payload_digests', expanding=True)))
 _stored_payloads_query = _stored_payloads_query.order_by(event_payload_table.c.digest)
 _stored_payloads_query = _stored_payloads_query.with_for_update(read=True, key_share=True)
 _stored_payloads_statement = PlainStatement(_stored_payloads_query)
 
-# The payloads of the given digests, locked against a concurrent reference, in the same order
-_deleted_payloads_query = select(event_payload_table.c.digest)
+# The payloads of the given ids, locked against a concurrent reference, in the order of their digests
+_deleted_payloads_query = select(event_payload_table.c.id)
 _deleted_payloads_query = _deleted_payloads_query.where(
-    event_payload_table.c.digest.in_(bindparam('payload_digests', expanding=True)))
+    event_payload_table.c.id.in_(bindparam('payload_ids', expanding=True)))
 _deleted_payloads_query = _deleted_payloads_query.order_by(event_payload_table.c.digest)
 _deleted_payloads_query = _deleted_payloads_query.with_for_update()
 
-# The deletion of the payloads of the given digests that no event references
+# The deletion of the payloads of the given ids that no event references
 _is_referenced = select(event_table.c.id)
-_is_referenced = _is_referenced.where(event_table.c.payload_digest == event_payload_table.c.digest)
+_is_referenced = _is_referenced.where(event_table.c.payload_id == event_payload_table.c.id)
 _is_referenced = _is_referenced.exists()
 
 _unreferenced_payloads_delete = event_payload_table.delete()
 _unreferenced_payloads_delete = _unreferenced_payloads_delete.where(
-    event_payload_table.c.digest.in_(bindparam('payload_digests', expanding=True)))
+    event_payload_table.c.id.in_(bindparam('payload_ids', expanding=True)))
 _unreferenced_payloads_delete = _unreferenced_payloads_delete.where(~_is_referenced)
 
 # ################################################################################################################################
@@ -143,10 +152,10 @@ def prepare_payloads(batch:'pending_event_list') -> 'None':
 # ################################################################################################################################
 
 def get_event_rows(batch:'pending_event_list', payloads:'strstrdict', search_texts:'strstrdict') -> 'dictlist':
-    """ Returns the rows of the event table of a batch of events, which reference their payloads by digest,
-    adds each payload to the given dict under its digest, and adds the search text of each prepared payload
-    to the other dict under its digest. The digests of the events that were not prepared are computed here,
-    each distinct payload of the batch once, however many events carry it.
+    """ Returns the rows of the event table of a batch of events, each with the digest of its payload
+    under Payload_Digest_Key, adds each payload to the given dict under its digest, and adds the search text
+    of each prepared payload to the other dict under its digest. The digests of the events that were not prepared
+    are computed here, each distinct payload of the batch once, however many events have it.
     """
     out:'dictlist' = []
 
@@ -176,20 +185,34 @@ def get_event_rows(batch:'pending_event_list', payloads:'strstrdict', search_tex
         if digest:
             payloads[digest] = data
 
-        event_row['payload_digest'] = digest
+        event_row[Payload_Digest_Key] = digest
         out.append(event_row)
 
     return out
 
 # ################################################################################################################################
 
-def store_payloads(connection:'Connection', payloads:'strstrdict', search_texts:'strstrdict') -> 'None':
+def assign_payload_ids(rows:'dictlist', payload_ids:'strintdict') -> 'None':
+    """ Replaces the digest of the payload of each event row of get_event_rows with the id of the payload's row,
+    or with None for an event without a payload.
+    """
+    for row in rows:
+        if digest := row.pop(Payload_Digest_Key):
+            row['payload_id'] = payload_ids[digest]
+        else:
+            row['payload_id'] = None
+
+# ################################################################################################################################
+
+def store_payloads(connection:'Connection', payloads:'strstrdict', search_texts:'strstrdict') -> 'strintdict':
     """ Stores the given payloads, keyed by their digests, that are not stored yet, in the transaction of the connection,
     with the search texts of the given dict, keyed by the same digests, and with search texts extracted here
-    for the payloads that dict has none for.
+    for the payloads that dict has none for. Returns the id of the row of each payload by its digest.
     """
     stored = find_stored_payloads(connection, payloads)
-    insert_new_payloads(connection, stored, payloads, search_texts)
+
+    out = insert_new_payloads(connection, stored, payloads, search_texts)
+    return out
 
 # ################################################################################################################################
 
@@ -210,19 +233,24 @@ def insert_new_payloads(
     stored:'CursorResult[any_]',
     payloads:'strstrdict',
     search_texts:'strstrdict',
-    ) -> 'None':
+    ) -> 'strintdict':
     """ Inserts the given payloads, keyed by their digests, that the result of find_stored_payloads does not list,
     with the search texts of the given dict, keyed by the same digests, and with search texts extracted here
-    for the payloads that dict has none for.
+    for the payloads that dict has none for. Returns the id of the row of each payload by its digest.
     """
     digests = sorted(payloads)
-    stored_digests = set(stored.scalars())
 
-    # The words of each payload not stored yet are extracted, unless they were extracted before the write ..
+    # The ids of the payloads stored already ..
+    out:'strintdict' = {}
+
+    for row in stored:
+        out[row.digest] = row.id
+
+    # .. the words of each payload not stored yet are extracted, unless they were extracted before the write ..
     rows:'dictlist' = []
 
     for digest in digests:
-        if digest not in stored_digests:
+        if digest not in out:
             data = payloads[digest]
 
             if digest in search_texts:
@@ -236,34 +264,53 @@ def insert_new_payloads(
                 'search_text': search_text,
             })
 
-    # .. and they are inserted with multi-row statements, unless a concurrent transaction
-    # on PostgreSQL inserted one of them first.
+    # .. they are inserted with multi-row statements, which return their ids, unless a concurrent transaction
+    # on PostgreSQL inserted one of them first ..
     if rows:
         insert_statement = _payload_inserts[connection.dialect.name]
-        _ = insert_statement.insert_rows(connection, rows)
+        inserted = insert_statement.insert_rows(connection, rows)
 
-# ################################################################################################################################
+        for row in inserted:
+            out[row.digest] = row.id
 
-def store_payload(connection:'Connection', data:'str') -> 'strnone':
-    """ Stores one payload, unless it is stored already or empty, in the transaction of the connection,
-    and returns the digest it is stored under, or None for an empty payload.
-    """
-    out = get_payload_digest(data)
+        # .. in which case the payloads it inserted are read and locked like the ones stored already.
+        concurrent_digests:'strlist' = []
 
-    if out:
-        store_payloads(connection, {out: data}, {})
+        for digest in digests:
+            if digest not in out:
+                concurrent_digests.append(digest)
+
+        if concurrent_digests:
+            concurrent = _stored_payloads_statement.execute(connection, {'payload_digests': concurrent_digests})
+
+            for row in concurrent:
+                out[row.digest] = row.id
 
     return out
 
 # ################################################################################################################################
 
-def delete_unreferenced_payloads(connection:'Connection', digests:'strlist') -> 'None':
-    """ Deletes the payloads of the given digests that no event references, in the transaction of the connection.
+def store_payload(connection:'Connection', data:'str') -> 'intnone':
+    """ Stores one payload, unless it is stored already or empty, in the transaction of the connection,
+    and returns the id of its row, or None for an empty payload.
     """
-    if not digests:
+    if digest := get_payload_digest(data):
+        payload_ids = store_payloads(connection, {digest: data}, {})
+        out = payload_ids[digest]
+    else:
+        out = None
+
+    return out
+
+# ################################################################################################################################
+
+def delete_unreferenced_payloads(connection:'Connection', payload_ids:'intlist') -> 'None':
+    """ Deletes the payloads of the given ids that no event references, in the transaction of the connection.
+    """
+    if not payload_ids:
         return
 
-    parameters = {'payload_digests': digests}
+    parameters = {'payload_ids': payload_ids}
 
     # On PostgreSQL, the payloads are locked first, which waits for the writers that reference them to commit,
     # and the references are checked in a statement of its own, which sees what those writers committed ..
@@ -280,25 +327,25 @@ def update_event_payload(connection:'Connection', event_id:'int', values:'anydic
     and deletes the payload it replaced if no other event references it.
     """
 
-    # The payload the event carries now ..
-    previous_query = select(event_table.c.payload_digest)
+    # The payload the event has now ..
+    previous_query = select(event_table.c.payload_id)
     previous_query = previous_query.where(event_table.c.id == event_id)
 
-    previous_digest = connection.execute(previous_query).scalar()
+    previous_payload_id = connection.execute(previous_query).scalar()
 
     # .. is replaced with the new one ..
-    payload_digest = store_payload(connection, data)
+    payload_id = store_payload(connection, data)
 
     update_statement = event_table.update()
     update_statement = update_statement.where(event_table.c.id == event_id)
-    update_statement = update_statement.values(payload_digest=payload_digest, **values)
+    update_statement = update_statement.values(payload_id=payload_id, **values)
 
     _ = connection.execute(update_statement)
 
     # .. and the previous one is deleted unless another event references it.
-    if previous_digest:
-        if previous_digest != payload_digest:
-            delete_unreferenced_payloads(connection, [previous_digest])
+    if previous_payload_id:
+        if previous_payload_id != payload_id:
+            delete_unreferenced_payloads(connection, [previous_payload_id])
 
 # ################################################################################################################################
 # ################################################################################################################################
