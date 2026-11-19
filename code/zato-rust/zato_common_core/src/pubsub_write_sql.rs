@@ -21,6 +21,19 @@ pub struct Statements {
     /// The subscribers of one topic.
     pub select_subscribers: String,
 
+    /// The upsert of the dedup record of one message identifier, returning the identifier unless a dedup record
+    /// within its window remains.
+    pub upsert_dedup_record: String,
+
+    /// The fingerprint of the dedup record of one message identifier and when the dedup record expires.
+    pub select_dedup_record: String,
+
+    /// The rewrite of the fingerprint of the dedup record of one message identifier with that of its stored message.
+    pub update_dedup_fingerprint: String,
+
+    /// The kind and the scope of the dedup records that the statements of dedup records bind.
+    pub dedup_key: DedupKey,
+
     /// The insert of one message, returning its id unless its identifier exists already.
     pub insert_message: String,
 
@@ -56,6 +69,15 @@ pub struct Statements {
 
     /// The drop of the payload of one message that no delivery row references anymore, returning its id.
     pub drop_payload: String,
+}
+
+/// The kind and the scope of the dedup records of publications, within which their message identifiers are unique.
+pub struct DedupKey {
+    /// The kind of the messages of the dedup records.
+    pub kind: String,
+
+    /// The scope within which the message identifiers of the kind are unique.
+    pub scope: String,
 }
 
 /// The positions of the columns that the transaction itself reads or changes.
@@ -95,6 +117,15 @@ pub struct PublicationInput {
 
     /// The checksum of the payload, which tells a repeated publication from a different message.
     pub payload_crc32: i64,
+
+    /// The topic and the checksum of the payload as one value, which the dedup record of the identifier stores.
+    pub fingerprint: String,
+
+    /// When the publication was received, in milliseconds since the epoch.
+    pub received_ms: i64,
+
+    /// Until when the identifier is recognized as a repeat, in milliseconds since the epoch.
+    pub dedup_expires_ms: i64,
 
     /// The priority of the message, which its delivery rows are ordered by, bound as the driver binds it.
     pub priority: Value,
@@ -180,11 +211,38 @@ pub struct BatchInput {
 
 /// How a publication whose message was not inserted repeats an earlier one.
 pub enum Repeat {
-    /// The message existed when the insert met it and was removed afterwards.
+    /// The message or its dedup record existed when the write met it and was removed afterwards.
     Removed,
 
     /// The message exists with the same topic and payload.
     Existing,
+
+    /// The dedup record of the identifier remains within its window with the same topic and payload.
+    WithinWindow,
+}
+
+impl Repeat {
+    /// Returns the name under which Python logs the repeat.
+    pub const fn name(&self) -> &'static str {
+        match *self {
+            Self::Removed => "removed",
+            Self::Existing => "existing",
+            Self::WithinWindow => "window",
+        }
+    }
+}
+
+/// What the first write of one publication did.
+#[derive(Clone, Copy)]
+enum Written {
+    /// The dedup record was written and the message was inserted with this id.
+    Inserted(i64),
+
+    /// The dedup record was written, while a stored message has the same identifier.
+    MessageExists,
+
+    /// The dedup record of an earlier publication remains within its window, so nothing was written.
+    DedupRemains,
 }
 
 /// What became of one publication.
@@ -436,14 +494,44 @@ impl Writer<'_> {
         }
 
         // .. a topic without subscribers has its messages stored without their payloads ..
+        let dedup_key = &self.statements.dedup_key;
+        let mut upsert_dedup = self.sqlite.prepare_cached(&self.statements.upsert_dedup_record)?;
         let mut insert = self.sqlite.prepare_cached(&self.statements.insert_message)?;
         let no_payload = Value::Null;
         let not_encrypted = Value::Integer(0);
-        let mut inserted = Vec::with_capacity(publications.len());
+        let mut dedup_outcomes: HashMap<&str, bool> = HashMap::new();
+        let mut written = Vec::with_capacity(publications.len());
 
         self.begin()?;
 
         for (publication, sub_keys) in publications.iter().zip(&subscribers) {
+            // .. the first publication of an identifier writes its dedup record, and the later ones share its outcome,
+            // .. so they either go on to the insert of the message, which resolves them as it does on PostgreSQL,
+            // .. or are compared with the dedup record that remains ..
+            let is_dedup_written = match dedup_outcomes.entry(publication.msg_id.as_str()) {
+                Entry::Occupied(entry) => *entry.get(),
+                Entry::Vacant(entry) => {
+                    let mut rows = upsert_dedup.query(params![
+                        dedup_key.kind,
+                        dedup_key.scope,
+                        publication.msg_id,
+                        publication.fingerprint,
+                        publication.received_ms,
+                        publication.dedup_expires_ms,
+                    ])?;
+
+                    // .. no row returned means a dedup record within its window remains from an earlier publication ..
+                    let is_written = rows.next()?.is_some();
+                    *entry.insert(is_written)
+                }
+            };
+
+            // .. a dedup record that remains means nothing is inserted for this publication ..
+            if !is_dedup_written {
+                written.push(Written::DedupRemains);
+                continue;
+            }
+
             let drops_payload = sub_keys.is_empty();
             let mut values = Vec::with_capacity(publication.values.len());
 
@@ -459,29 +547,41 @@ impl Writer<'_> {
 
             // .. a message whose identifier exists already is not inserted ..
             let mut rows = insert.query(params_from_iter(values))?;
-            let message_id = match rows.next()? {
-                Some(row) => Some(row.get::<_, i64>(0)?),
-                None => None,
+            let outcome = match rows.next()? {
+                Some(row) => Written::Inserted(row.get::<_, i64>(0)?),
+                None => Written::MessageExists,
             };
-            inserted.push(message_id);
+            written.push(outcome);
         }
 
         // .. which tells a repeated publication from a different message, only once all of the messages are inserted ..
         let mut select_existing = self.sqlite.prepare_cached(&self.statements.select_existing_message)?;
+        let mut select_dedup = self.sqlite.prepare_cached(&self.statements.select_dedup_record)?;
+        let mut update_fingerprint = self.sqlite.prepare_cached(&self.statements.update_dedup_fingerprint)?;
 
-        for ((publication, message_id), result) in publications.iter().zip(&inserted).zip(results.iter_mut()) {
-            if message_id.is_none() {
-                resolve_duplicate(&mut select_existing, publication, result)?;
+        for ((publication, outcome), result) in publications.iter().zip(&written).zip(results.iter_mut()) {
+            match *outcome {
+                Written::Inserted(_) => {}
+                Written::MessageExists => {
+                    resolve_duplicate(&mut select_existing, publication, result)?;
+
+                    // A dedup record that expired while its message remained receives the fingerprint of the message,
+                    // so that the two never disagree
+                    update_fingerprint.execute(params![dedup_key.kind, dedup_key.scope, publication.msg_id])?;
+                }
+                Written::DedupRemains => {
+                    resolve_dedup(&mut select_dedup, dedup_key, publication, result)?;
+                }
             }
         }
 
         // .. and each inserted message receives one delivery row per subscriber.
         let mut insert_delivery = self.sqlite.prepare_cached(&self.statements.insert_delivery)?;
 
-        for (((publication, message_id), sub_keys), result) in publications.iter().zip(&inserted).zip(subscribers).zip(results.iter_mut()) {
+        for (((publication, outcome), sub_keys), result) in publications.iter().zip(&written).zip(subscribers).zip(results.iter_mut()) {
             result.drops_payload = sub_keys.is_empty();
 
-            let Some(message_id) = *message_id else {
+            let Written::Inserted(message_id) = *outcome else {
                 continue;
             };
 
@@ -671,17 +771,35 @@ impl Writer<'_> {
     /// Fails a strict item if the identifier of a publication stands for a different message, either one that exists
     /// already or one published earlier in the same item. Returns whether any publication inserts a new message.
     fn check_atomic_publications(&self, atomic: &AtomicInput) -> rusqlite::Result<Result<bool, ItemError>> {
+        let dedup_key = &self.statements.dedup_key;
         let mut select = self.sqlite.prepare_cached(&self.statements.select_existing_message)?;
-        let mut existing: HashMap<&str, (String, i64)> = HashMap::new();
+        let mut select_dedup = self.sqlite.prepare_cached(&self.statements.select_dedup_record)?;
+        let mut existing: HashMap<&str, String> = HashMap::new();
         let mut looked_up = HashSet::new();
 
         for publication in &atomic.publications {
-            if !looked_up.insert(publication.msg_id.as_str()) {
+            let msg_id = publication.msg_id.as_str();
+
+            if !looked_up.insert(msg_id) {
                 continue;
             }
-            let mut rows = select.query([&publication.msg_id])?;
+
+            // An identifier stands for the fingerprint of its dedup record within its window ..
+            let mut dedup_rows = select_dedup.query(params![dedup_key.kind, dedup_key.scope, msg_id])?;
+            if let Some(row) = dedup_rows.next()? {
+                let expires_ms: i64 = row.get(1)?;
+
+                // .. a dedup record that expired by the time of the publication is replaced by it ..
+                if expires_ms > publication.received_ms {
+                    existing.insert(msg_id, row.get(0)?);
+                    continue;
+                }
+            }
+
+            // .. and otherwise for that of its stored message, if there is one.
+            let mut rows = select.query([msg_id])?;
             if let Some(row) = rows.next()? {
-                existing.insert(publication.msg_id.as_str(), (row.get(0)?, row.get(1)?));
+                existing.insert(msg_id, row.get(2)?);
             }
         }
 
@@ -691,14 +809,14 @@ impl Writer<'_> {
             let msg_id = publication.msg_id.as_str();
 
             // An identifier that nothing stands for yet inserts a new message ..
-            let Some((topic_name, payload_crc32)) = existing.get(msg_id) else {
-                existing.insert(msg_id, (publication.topic_name.clone(), publication.payload_crc32));
+            let Some(fingerprint) = existing.get(msg_id) else {
+                existing.insert(msg_id, publication.fingerprint.clone());
                 out = true;
                 continue;
             };
 
             // .. and one that stands for different content fails a strict item.
-            let is_same = *topic_name == publication.topic_name && *payload_crc32 == publication.payload_crc32;
+            let is_same = *fingerprint == publication.fingerprint;
 
             if !is_same && atomic.is_strict {
                 return Ok(Err(ItemError::Duplicate(duplicate_message(msg_id))));
@@ -943,9 +1061,43 @@ fn resolve_duplicate(
     Ok(())
 }
 
+/// Decides whether a publication whose dedup record was not written repeats the message of the dedup record that remains
+/// or fails as a different one.
+fn resolve_dedup(
+    select_dedup: &mut rusqlite::CachedStatement<'_>,
+    dedup_key: &DedupKey,
+    publication: &PublicationInput,
+    result: &mut PublicationResult,
+) -> rusqlite::Result<()> {
+    let mut rows = select_dedup.query(params![dedup_key.kind, dedup_key.scope, publication.msg_id])?;
+
+    // The transaction holds the write lock of the database, so no sweep removes the dedup record that the upsert met,
+    // and its absence is treated as on PostgreSQL, where a sweep may remove an expired one in the meantime
+    let Some(row) = rows.next()? else {
+        result.repeat = Some(Repeat::Removed);
+        return Ok(());
+    };
+
+    let fingerprint: String = row.get(0)?;
+
+    if fingerprint == publication.fingerprint {
+        result.repeat = Some(Repeat::WithinWindow);
+    } else {
+        result.duplicate = Some(dedup_duplicate_message(&publication.msg_id));
+    }
+
+    Ok(())
+}
+
 /// Returns the message of the error of a publication whose identifier belongs to a different message.
 fn duplicate_message(msg_id: &str) -> String {
     format!("Message ID `{msg_id}` belongs to a different message that exists already")
+}
+
+/// Returns the message of the error of a publication whose identifier belongs to a different message
+/// received within the dedup window.
+fn dedup_duplicate_message(msg_id: &str) -> String {
+    format!("Message ID `{msg_id}` belongs to a different message received within the dedup window")
 }
 
 // ################################################################################################################################

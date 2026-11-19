@@ -19,7 +19,7 @@ from datetime import timedelta
 from sqlalchemy import event
 
 # Zato
-from common import delete_all_rows, delete_audit_rows, get_delivery_rows, get_dialect_name, get_message_rows, \
+from common import delete_all_rows, delete_audit_rows, env_value, get_delivery_rows, get_dialect_name, get_message_rows, \
     get_trace_rows, write_in_one_commit
 from zato.common.crypto.api import CryptoManager
 from zato.common.db_env.common import Type_PostgreSQL
@@ -51,6 +51,7 @@ if 0:
 # ################################################################################################################################
 
 Env_Delivered_Max_Messages = ModuleCtx.Env_Delivered_Max_Messages
+Env_Dedup_Window_Days = ModuleCtx.Env_Dedup_Window_Days
 
 # The topics and subscribers of the scenario
 _topic_fields    = 'pubsub.backend.test.publish-values.fields'
@@ -122,6 +123,9 @@ _time_columns:'strset' = {'id', 'recv_time_iso', 'expiration_time_iso', 'expirat
 
 # How many fully delivered messages each topic retains while the cleanup removes the repeated message
 _no_delivered_messages = '0'
+
+# The dedup window of a publication whose dedup record expires the moment it is written
+_no_dedup_window_days = '0'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -594,6 +598,8 @@ def _run_repeats_in_one_commit(backend:'SQLPubSubBackend') -> 'None':
 def _run_repeat_of_removed_message(backend:'SQLPubSubBackend') -> 'None':
     """ A repeat of a message that the cleanup removed after the insert of the repeat met it is a repeat that writes
     nothing. The cleanup can run between the two statements only on PostgreSQL, which has concurrent writers.
+    The original has a dedup record that expires the moment it is written, so the repeat replaces it
+    and goes on to the insert of its message.
     """
     if get_dialect_name() != Type_PostgreSQL:
         return
@@ -601,7 +607,9 @@ def _run_repeat_of_removed_message(backend:'SQLPubSubBackend') -> 'None':
     backend.subscribe(_sub_key_first, _topic_repeat)
 
     # The original message is fully delivered, which makes it a trace that the cleanup may remove ..
-    original = _build(backend, _topic_repeat, _data_repeat)
+    with env_value(Env_Dedup_Window_Days, _no_dedup_window_days):
+        original = _build(backend, _topic_repeat, _data_repeat)
+
     backend._writer.publish(original.pending)
 
     _ = backend.ack_messages(_sub_key_first, [_msg_id_repeat])

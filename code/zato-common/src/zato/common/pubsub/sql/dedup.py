@@ -85,15 +85,14 @@ def new_fingerprint_rewrite(message_id_condition:'any_') -> 'any_':
 # ################################################################################################################################
 
 # The rewrite of the fingerprints of the dedup records of given message IDs.
-_fingerprint_rewrite = new_fingerprint_rewrite(
-    message_dedup_table.c.message_id.in_(bindparam('dedup_message_ids', expanding=True)))
-_fingerprint_rewrite = PlainStatement(_fingerprint_rewrite)
+_fingerprint_rewrite = PlainStatement(new_fingerprint_rewrite(
+    message_dedup_table.c.message_id.in_(bindparam('dedup_message_ids', expanding=True))))
 
 # The fingerprints of the stored messages of given message IDs.
-_message_fingerprints_query = select(message_table.c.msg_id, message_fingerprint.label('fingerprint'))
-_message_fingerprints_query = _message_fingerprints_query.where(
+_message_fingerprints_select = select(message_table.c.msg_id, message_fingerprint.label('fingerprint'))
+_message_fingerprints_select = _message_fingerprints_select.where(
     message_table.c.msg_id.in_(bindparam('write_msg_ids', expanding=True)))
-_message_fingerprints_query = PlainStatement(_message_fingerprints_query)
+_message_fingerprints_query = PlainStatement(_message_fingerprints_select)
 
 # ################################################################################################################################
 # ################################################################################################################################

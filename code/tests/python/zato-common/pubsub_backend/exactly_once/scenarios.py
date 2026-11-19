@@ -14,7 +14,8 @@ from exactly_once.pull import run_ack_with_publications_scenario, run_concluded_
     run_concluded_with_same_publications_scenario, run_different_content_scenario, run_lease_ran_out_scenario, \
     run_repeated_call_scenario, run_stale_attempt_scenario
 from exactly_once.push import run_atomic_rollback_scenario, run_batch_committed_twice_scenario, run_repeat_in_batch_scenario
-from exactly_once.retention import run_deduplication_window_scenario, run_removed_by_expiry_scenario
+from exactly_once.retention import run_deduplication_window_scenario, run_different_content_after_removal_scenario, \
+    run_removed_by_expiry_scenario, run_window_after_over_cap_scenario
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,6 +45,8 @@ Scenarios = [
     run_lease_ran_out_scenario,
     run_concurrent_copies_scenario,
     run_deduplication_window_scenario,
+    run_window_after_over_cap_scenario,
+    run_different_content_after_removal_scenario,
     run_conflict_isolated_in_batch_scenario,
     run_strict_duplicate_isolated_in_batch_scenario,
     run_lease_after_ack_in_batch_scenario,

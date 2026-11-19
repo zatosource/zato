@@ -353,9 +353,10 @@ class SOAPTestServer:
         require_client_cert:'bool'=False,
         host:'str'=_Default_Host,
         tls_material:'TLSMaterial | None'=None,
+        port:'int'=0,
         ) -> 'None':
         self.host = host
-        self.port = 0
+        self.port = port
         self.tls = tls
         self.require_client_cert = require_client_cert
         self.scheme = 'https' if tls else 'http'
@@ -370,10 +371,10 @@ class SOAPTestServer:
 # ################################################################################################################################
 
     def start(self) -> 'None':
-        """ Binds to an ephemeral port and serves in a background thread, wrapping the socket
-        in TLS - optionally requiring a client certificate - when configured to.
+        """ Binds to its port, or to an ephemeral one if the port is 0, and serves in a background thread,
+        wrapping the socket in TLS - optionally requiring a client certificate - when configured to.
         """
-        self._httpd = _Server((self.host, 0), _Handler)
+        self._httpd = _Server((self.host, self.port), _Handler)
         self.port = self._httpd.server_address[1]
 
         if self.tls:

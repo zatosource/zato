@@ -19,6 +19,7 @@ from sqlalchemy import and_, select, text
 from sqlalchemy.exc import DBAPIError
 
 # Zato
+from zato.common.common_db.message_dedup import sweep_expired
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.errors import is_transient
 from zato.common.db_env.fence import follow_environment_generation, get_generation_file_path
@@ -164,6 +165,7 @@ class PubSubCleanup:
             'expired': 0,
             'aged': 0,
             'over_cap': 0,
+            'dedup': 0,
             'empty_counts': 0,
         }
 
@@ -311,6 +313,21 @@ class PubSubCleanup:
 
 # ################################################################################################################################
 
+    def _sweep_dedup_records(self) -> 'int':
+        """ Deletes the dedup records of message IDs whose windows ended. Returns how many dedup records were deleted.
+        """
+        batch_size = get_batch_size()
+        now_ms = self._database_now_ms()
+
+        out = sweep_expired(self.engine, now_ms, batch_size, self._pause_after_batch)
+
+        if out:
+            logger.info('Dedup sweep -> deleted:%d', out)
+
+        return out
+
+# ################################################################################################################################
+
     def _get_trace_topics(self) -> 'strlist':
         """ Returns the names of all the topics that have any delivered-message traces.
         """
@@ -450,19 +467,22 @@ class PubSubCleanup:
 
     def sweep_once(self) -> 'strintdict':
         """ Runs one full cleanup sweep - expired messages first, then the delivered-trace
-        retention by age and by per-topic cap, then the count rows that the deletions left at zero.
+        retention by age and by per-topic cap, then the dedup records whose windows ended,
+        then the count rows that the deletions left at zero.
         Returns the per-sweep deletion counts.
         """
         with write_path(Mechanism.Maintenance):
             expired = self._sweep_expired()
             aged = self._sweep_aged_traces()
             over_cap = self._sweep_over_cap_traces()
+            dedup = self._sweep_dedup_records()
             empty_counts = self._sweep_empty_counts()
 
         out = {
             'expired': expired,
             'aged': aged,
             'over_cap': over_cap,
+            'dedup': dedup,
             'empty_counts': empty_counts,
         }
 
@@ -512,8 +532,8 @@ class PubSubCleanup:
         while not self._should_stop:
 
             counts = self.run_guarded_sweep()
-            logger.info('Sweep completed -> expired:%d, aged:%d, over_cap:%d, empty_counts:%d',
-                counts['expired'], counts['aged'], counts['over_cap'], counts['empty_counts'])
+            logger.info('Sweep completed -> expired:%d, aged:%d, over_cap:%d, dedup:%d, empty_counts:%d',
+                counts['expired'], counts['aged'], counts['over_cap'], counts['dedup'], counts['empty_counts'])
 
             # Sleep in short slices so a stop request does not wait out the whole interval.
             slept_seconds = 0
@@ -588,8 +608,8 @@ def main() -> 'int':
     # .. run.
     if args.once:
         counts = cleanup.run_guarded_sweep()
-        logger.info('Single sweep completed -> expired:%d, aged:%d, over_cap:%d, empty_counts:%d',
-            counts['expired'], counts['aged'], counts['over_cap'], counts['empty_counts'])
+        logger.info('Single sweep completed -> expired:%d, aged:%d, over_cap:%d, dedup:%d, empty_counts:%d',
+            counts['expired'], counts['aged'], counts['over_cap'], counts['dedup'], counts['empty_counts'])
         return 0
 
     cleanup.run()

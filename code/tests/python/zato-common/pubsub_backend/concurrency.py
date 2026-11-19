@@ -17,13 +17,14 @@ from gevent.event import Event
 from sqlalchemy.exc import DBAPIError
 
 # Zato
-from common import delete_all_rows, get_delivery_rows, get_message_rows
+from common import delete_all_rows, get_delivery_rows, get_dialect_name, get_message_rows, write_in_one_commit
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.engine import _get_write_key, _sqlite_write_locks
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.config import ModuleCtx
 from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.pending import new_pending_ack
+from zato.common.pubsub.sql.publication import build_publication
 from zato.common.pubsub.sql.writes import PubSubDuplicateMsgID, PubSubWriter
 from zato.common.typing_ import cast_
 
@@ -68,6 +69,13 @@ _single_commit_in_flight = '1'
 
 # The message that the held acknowledgement of that flow is about, which no subscriber has.
 _missing_msg_id = 'zpsm.test.concurrency.missing'
+
+# How many message IDs the two overlapping commits share, and the prefix of the IDs
+_overlap_count = 50
+_overlap_msg_id_prefix = 'zpsm.test.concurrency.overlap'
+
+# How many commits the two overlapping commits are written in when neither is rolled back and run again
+_overlap_commit_count = 2
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -521,11 +529,64 @@ def _run_concurrent_clear_flow() -> 'None':
 
 # ################################################################################################################################
 
+def _run_overlapping_batches_flow() -> 'None':
+    """ On PostgreSQL, two concurrent commits that publish the same message IDs in opposite orders write the dedup records
+    in the order of their keys, so neither waits for a lock that the other waits for. Both commit on their first attempt,
+    each message is stored once, and the commit that follows the other repeats each of its messages.
+    """
+    if get_dialect_name() != Type_PostgreSQL:
+        return
+
+    backend, writer = _new_backend()
+
+    msg_ids:'strlist' = []
+
+    for index in range(_overlap_count):
+        msg_ids.append(f'{_overlap_msg_id_prefix}.{index}')
+
+    forward:'anylist' = []
+    backward:'anylist' = []
+
+    for msg_id in msg_ids:
+        built = build_publication(backend, _topic, f'overlap-message-{msg_id}', msg_id=msg_id)
+        forward.append(built.pending)
+
+    for msg_id in reversed(msg_ids):
+        built = build_publication(backend, _topic, f'overlap-message-{msg_id}', msg_id=msg_id)
+        backward.append(built.pending)
+
+    greenlets = [
+        gevent.spawn(write_in_one_commit, backend, forward),
+        gevent.spawn(write_in_one_commit, backend, backward),
+    ]
+    _ = gevent.joinall(greenlets, raise_error=True)
+
+    # Neither commit was rolled back on a deadlock and run again ..
+    assert len(writer.transaction_sizes) == _overlap_commit_count, writer.transaction_sizes
+
+    # .. each message is stored once with one delivery row per subscriber ..
+    assert len(get_message_rows(_topic)) == _overlap_count
+    assert len(get_delivery_rows(_sub_key_1)) == _overlap_count
+    assert len(get_delivery_rows(_sub_key_2)) == _overlap_count
+
+    # .. and each publication of the commit that followed is a repeat.
+    repeat_count = 0
+
+    for pending in forward + backward:
+        assert pending.exception is None
+        if pending.is_repeat:
+            repeat_count += 1
+
+    assert repeat_count == _overlap_count
+
+# ################################################################################################################################
+
 def run_concurrency_scenario() -> 'None':
     """ Concurrent publications and acknowledgements, written in shared commits.
     """
     _run_concurrent_publish_flow()
     _run_duplicate_flow()
+    _run_overlapping_batches_flow()
     _run_rejected_value_flow()
     _run_concurrent_ack_flow()
     _run_disjoint_ack_flow()

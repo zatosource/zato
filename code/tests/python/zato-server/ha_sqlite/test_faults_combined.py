@@ -137,7 +137,7 @@ def test_slow_standby_and_lossy_link_during_sweep(ha_session:'HASession', reques
         degrade_link(standby, [active.ip], ModuleCtx.Link_Loss)
 
         started = time.time()
-        result = active.run_retention_sweep()
+        result = active.run_retention_sweep({})
 
         restore_link(active)
         restore_link(standby)

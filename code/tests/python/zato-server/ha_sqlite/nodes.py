@@ -365,11 +365,19 @@ class Node:
 
 # ################################################################################################################################
 
-    def run_retention_sweep(self) -> 'subprocess.CompletedProcess[str]':
-        """ Runs one retention sweep of pub/sub inside the container of the node, as cron does.
+    def run_retention_sweep(self, environment:'strstrdict') -> 'subprocess.CompletedProcess[str]':
+        """ Runs one retention sweep of pub/sub inside the container of the node, as cron does, with the given
+        environment variables in addition to those of the container.
         """
-        out = docker('exec', self.container_name, ModuleCtx.Python_Binary, '-m', ModuleCtx.Retention_Sweep_Module, '--once',
-            check=False)
+        args:'strlist' = ['exec']
+
+        for name, value in environment.items():
+            args.append('-e')
+            args.append(f'{name}={value}')
+
+        args.extend([self.container_name, ModuleCtx.Python_Binary, '-m', ModuleCtx.Retention_Sweep_Module, '--once'])
+
+        out = docker(*args, check=False)
         return out
 
 # ################################################################################################################################

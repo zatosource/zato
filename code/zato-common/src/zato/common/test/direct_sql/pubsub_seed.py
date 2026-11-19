@@ -18,6 +18,7 @@ from typing import NamedTuple
 from zlib import crc32
 
 # Zato
+from zato.common.common_db.schema import message_dedup_table
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.schema import active_table, delivery_table, message_table, metadata, topic_sub_table
@@ -107,9 +108,9 @@ seeded_queue_list = list[SeededQueue]
 # ################################################################################################################################
 
 def _get_seeded_tables() -> 'tablelist':
-    """ Every pub/sub table except the table of the generation.
+    """ Every pub/sub table except the table of the generation, and the dedup records of the message IDs.
     """
-    out:'tablelist' = []
+    out:'tablelist' = [message_dedup_table]
 
     for table in reversed(metadata.sorted_tables):
         if table is not active_table:

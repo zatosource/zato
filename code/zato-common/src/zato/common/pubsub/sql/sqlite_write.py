@@ -21,7 +21,11 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import DBAPIError
 
 # Zato
+from zato.common.common_db.message_dedup import dedup_record_query, Kind, new_dedup_upsert
+from zato.common.common_db.schema import message_dedup_table
+from zato.common.db_env.common import Type_SQLite
 from zato.common.db_env.write_path import check_write_path
+from zato.common.pubsub.sql.dedup import Dedup_Scope, message_fingerprint, new_fingerprint_rewrite
 from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID
 from zato.common.pubsub.sql.fenced_ack import PubSubAckConflict
 from zato.common.pubsub.sql.pull import message_columns
@@ -67,6 +71,13 @@ _begin_statement = 'BEGIN'
 # The dialect that the statements are compiled for
 _dialect = sqlite.dialect()
 
+# What is logged for a repeated publication, by the name of how it repeats an earlier one
+_repeat_log_messages = {
+    'removed': 'Repeated publication of a removed message -> msg_id:%s',
+    'existing': 'Repeated publication of an existing message -> msg_id:%s',
+    'window': 'Repeated publication within the dedup window -> msg_id:%s',
+}
+
 # The prefix of the parameters of the message insert, whose names may not be those of the columns
 _value_prefix = 'value_'
 
@@ -110,6 +121,19 @@ def _compile(statement:'ClauseElement', parameter_names:'strlist') -> 'str':
 _select_subscribers = select(topic_sub_table.c.sub_key)
 _select_subscribers = _select_subscribers.where(topic_sub_table.c.topic_name == bindparam('topic_name'))
 
+# The upsert of the dedup record of one message ID, which returns the ID unless a dedup record within its window remains.
+_dedup_values = {}
+_dedup_parameter_names:'strlist' = []
+
+for _column in message_dedup_table.c:
+    _dedup_values[_column.name] = bindparam('dedup_' + _column.name)
+    _dedup_parameter_names.append('dedup_' + _column.name)
+
+_upsert_dedup_record = new_dedup_upsert(Type_SQLite).values(_dedup_values)
+
+# The rewrite of the fingerprint of the dedup record of one message ID with that of its stored message.
+_update_dedup_fingerprint = new_fingerprint_rewrite(message_dedup_table.c.message_id == bindparam('dedup_message_id'))
+
 # The insert of one message, which returns its id unless its identifier exists already.
 _message_values = {}
 _message_parameter_names:'strlist' = []
@@ -122,8 +146,8 @@ _insert_message = sqlite_insert(message_table).values(_message_values)
 _insert_message = _insert_message.on_conflict_do_nothing(index_elements=[message_table.c.msg_id])
 _insert_message = _insert_message.returning(message_table.c.id)
 
-# What a message that exists already was published with.
-_select_existing_message = select(message_table.c.topic_name, message_table.c.payload_crc32)
+# What a message that exists already was published with, and its fingerprint.
+_select_existing_message = select(message_table.c.topic_name, message_table.c.payload_crc32, message_fingerprint)
 _select_existing_message = _select_existing_message.where(message_table.c.msg_id == bindparam('msg_id'))
 
 # The insert of one delivery row.
@@ -208,6 +232,9 @@ _drop_payload = _drop_payload.returning(message_table.c.id)
 # The statements of the transaction, each with the parameters in the order in which the writer binds them,
 # and each checked against the mechanism of the write before a batch is written.
 _select_subscribers = _compile(_select_subscribers, ['topic_name'])
+_upsert_dedup_record = _compile(_upsert_dedup_record, _dedup_parameter_names)
+_select_dedup_record = _compile(dedup_record_query, ['dedup_kind', 'dedup_scope', 'dedup_message_id'])
+_update_dedup_fingerprint = _compile(_update_dedup_fingerprint, ['dedup_kind', 'dedup_scope', 'dedup_message_id'])
 _insert_message = _compile(_insert_message, _message_parameter_names)
 _select_existing_message = _compile(_select_existing_message, ['msg_id'])
 _insert_delivery = _compile(_insert_delivery, [
@@ -223,9 +250,9 @@ _select_fenced_delivery = _compile(_select_fenced_delivery, ['sub_key', 'msg_id'
 _drop_payload = _compile(_drop_payload, ['message_id'])
 
 _write_statements = [
-    _begin_statement, _select_subscribers, _insert_message, _select_existing_message, _insert_delivery, _select_message_id,
-    _select_ack_delivery, _delete_delivery, _record_attempt, _select_lease_candidates, _lease_delivery,
-    _select_leased_message, _select_fenced_delivery, _drop_payload,
+    _begin_statement, _select_subscribers, _upsert_dedup_record, _select_dedup_record, _update_dedup_fingerprint,
+    _insert_message, _select_existing_message, _insert_delivery, _select_message_id, _select_ack_delivery, _delete_delivery,
+    _record_attempt, _select_lease_candidates, _lease_delivery, _select_leased_message, _select_fenced_delivery, _drop_payload,
 ]
 
 _writer = SQLitePubSubWriter({
@@ -233,6 +260,9 @@ _writer = SQLitePubSubWriter({
     'statements': {
         'begin': _begin_statement,
         'select_subscribers': _select_subscribers,
+        'upsert_dedup_record': _upsert_dedup_record,
+        'select_dedup_record': _select_dedup_record,
+        'update_dedup_fingerprint': _update_dedup_fingerprint,
         'insert_message': _insert_message,
         'select_existing_message': _select_existing_message,
         'insert_delivery': _insert_delivery,
@@ -246,6 +276,8 @@ _writer = SQLitePubSubWriter({
         'select_fenced_delivery': _select_fenced_delivery,
         'drop_payload': _drop_payload,
     },
+    'dedup_kind': Kind.Pubsub,
+    'dedup_scope': Dedup_Scope,
     'message_columns': _message_column_names,
     'lease_columns': _lease_column_names,
     'payload_column': message_table.c.payload.name,
@@ -296,11 +328,8 @@ def write_items_sqlite(
         raise DBAPIError.instance(None, None, error, SQLiteError) from error
 
     # .. a repeated publication receives the result of the original one ..
-    for msg_id, is_removed in repeats:
-        if is_removed:
-            logger.info('Repeated publication of a removed message -> msg_id:%s', msg_id)
-        else:
-            logger.info('Repeated publication of an existing message -> msg_id:%s', msg_id)
+    for msg_id, repeat_name in repeats:
+        logger.info(_repeat_log_messages[repeat_name], msg_id)
 
     # .. and each pull builds its messages, whose receptions commit with its lease.
     for lease in leases:

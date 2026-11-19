@@ -18,10 +18,10 @@ import time
 import pytest
 
 # Zato
-from ha_checks import check_copies, check_no_runs_after, check_scheduler, check_workload
+from ha_checks import check_copies, check_no_runs_after, check_scheduler, check_workload, has_message
 from ha_env import ready_pair
 from ha_lazyfs import LazyFSHook
-from ha_takeover import ModuleCtx, take_over
+from ha_takeover import check_repeat_across_takeover, ModuleCtx, take_over
 from nodes import Timers
 from workload import Workload
 from zato.common.typing_ import cast_
@@ -110,6 +110,21 @@ def test_takeover_with_lost_writes(ha_session:'HASession', request:'any_') -> 'N
         # The killed node leaves the claim it committed before the run began in the copy of the standby without a run.
         _ = check_scheduler(env, new_active, ModuleCtx.Unrun_Claims_After_Takeover)
         check_copies(env, new_active)
+
+# ################################################################################################################################
+
+def test_repeat_across_takeover(ha_pair:'HAEnvironment') -> 'None':
+    """ A message that a retention sweep removed on the former active node keeps its msg_id taken after the takeover,
+    so its repeat to the new active node stores and delivers nothing, and both copies are intact and equal.
+    """
+    env = ha_pair
+
+    check_repeat_across_takeover(env, has_message)
+
+    new_active = env.get_active()
+    assert new_active is not None, 'No active node'
+
+    check_copies(env, new_active)
 
 # ################################################################################################################################
 # ################################################################################################################################

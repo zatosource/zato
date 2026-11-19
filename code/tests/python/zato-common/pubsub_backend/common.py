@@ -17,6 +17,7 @@ from sqlalchemy import select
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, AuditEvent, \
     AuditSource
 from zato.common.audit_log.common import event_count_table, event_dedup_table, event_open_table, event_payload_table
+from zato.common.common_db.schema import message_dedup_table
 from zato.common.db_env.commit_ticket import CommitTicket
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
@@ -63,11 +64,29 @@ def pubsub_path_env(db_path:'str') -> 'envgen':
 
 # ################################################################################################################################
 
+@contextmanager
+def env_value(name:'str', value:'str') -> 'envgen':
+    """ Sets one environment variable for the duration of a block.
+    """
+    old_value = os.environ.get(name)
+    os.environ[name] = value
+
+    try:
+        yield
+    finally:
+        if old_value is None:
+            del os.environ[name]
+        else:
+            os.environ[name] = old_value
+
+# ################################################################################################################################
+
 def delete_all_rows() -> 'None':
     """ Starts a scenario from empty tables because containers can be reused between test runs.
     """
     engine = get_database_engine()
-    tables = [delivery_table, message_table, topic_sub_table, queue_count_table, topic_count_table, publish_count_table]
+    tables = [delivery_table, message_table, message_dedup_table, topic_sub_table, queue_count_table, topic_count_table,
+        publish_count_table]
 
     reset_table_rows(engine, tables)
 

@@ -230,9 +230,9 @@ class HTTPTestServer:
     and responds according to per-path configuration, which lets tests assert exactly what Zato sent.
     """
 
-    def __init__(self) -> 'None':
+    def __init__(self, port:'int'=0) -> 'None':
         self.host = _Default_Host
-        self.port = 0
+        self.port = port
         self.scheme = 'http'
         self._httpd:'any_' = None
         self._thread:'any_' = None
@@ -240,11 +240,11 @@ class HTTPTestServer:
 # ################################################################################################################################
 
     def start(self) -> 'None':
-        """ Binds the server to an ephemeral port and starts serving in a background thread.
+        """ Binds the server to its port, or to an ephemeral one if the port is 0, and starts serving in a background thread.
         """
 
-        # Bind to an ephemeral port ..
-        self._httpd = _RecordingServer((self.host, 0), _RecordingHandler)
+        # Bind to the port ..
+        self._httpd = _RecordingServer((self.host, self.port), _RecordingHandler)
 
         # .. remember which port was assigned ..
         address = self._httpd.server_address

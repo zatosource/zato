@@ -14,6 +14,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from sqlalchemy import func, select
 
 # Zato
+from zato.common.common_db.schema import message_dedup_table
 from zato.common.db_env.database import get_database_engine
 from zato.common.test.direct_sql.reset import reset_table_rows
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
@@ -229,11 +230,11 @@ def count_empty_count_rows() -> 'int':
 # ################################################################################################################################
 
 def delete_all_messages() -> 'None':
-    """ Removes every message and delivery row so no in-flight deliveries carry over
+    """ Removes every message, delivery row and dedup record so no in-flight deliveries and no message IDs carry over
     across tests, while the subscription state stays as the server knows it.
     """
     engine = get_database_engine()
-    reset_table_rows(engine, [delivery_table, message_table])
+    reset_table_rows(engine, [delivery_table, message_table, message_dedup_table])
 
 # ################################################################################################################################
 # ################################################################################################################################

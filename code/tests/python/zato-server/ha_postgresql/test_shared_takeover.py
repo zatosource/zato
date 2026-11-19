@@ -13,14 +13,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from functools import partial
 
 # pytest
 import pytest
 
 # Zato
 from ha_checks import check_no_runs_after, check_scheduler, check_workload
-from ha_takeover import ModuleCtx, take_over
-from postgresql_checks import check_active_server
+from ha_takeover import check_repeat_across_takeover, ModuleCtx, take_over
+from postgresql_checks import check_active_server, has_shared_message
 from workload import Workload
 from zato.common.typing_ import cast_
 
@@ -59,6 +60,21 @@ def test_takeover(ha_pair:'HAEnvironment', fault:'str') -> 'None':
 
     # An active node that fails leaves the claim it committed before the run began without a run.
     _ = check_scheduler(env, new_active, ModuleCtx.Unrun_Claims_After_Takeover)
+    check_active_server(env, new_active)
+
+# ################################################################################################################################
+
+def test_repeat_across_takeover(ha_pair:'HAEnvironment') -> 'None':
+    """ A message that a retention sweep removed on the former active node keeps its msg_id taken after the takeover,
+    so its repeat to the new active node stores and delivers nothing.
+    """
+    env = ha_pair
+
+    check_repeat_across_takeover(env, partial(has_shared_message, env))
+
+    new_active = env.get_active()
+    assert new_active is not None, 'No active node'
+
     check_active_server(env, new_active)
 
 # ################################################################################################################################

@@ -52,6 +52,16 @@ def read_active_server(env:'HAEnvironment') -> 'tuple[int, str]':
 
 # ################################################################################################################################
 
+def has_shared_message(env:'HAEnvironment', node:'Node', msg_id:'str') -> 'bool':
+    """ Tells whether the database that both nodes share holds a message, which is the same whichever node is given.
+    """
+    rows = read_rows(cast_('any_', env), f"select 1 from pubsub_message where msg_id = '{msg_id}'")
+
+    out = bool(rows)
+    return out
+
+# ################################################################################################################################
+
 def wait_for_raised_generation(env:'HAEnvironment', generation:'int', timeout:'float') -> 'float':
     """ Waits until a server raised the pub/sub generation above the given one and returns the first time,
     in seconds since the epoch, at which the database was seen holding the higher one.

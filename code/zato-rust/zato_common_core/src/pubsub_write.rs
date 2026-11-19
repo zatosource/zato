@@ -11,8 +11,8 @@ use rusqlite::types::Value;
 
 use crate::audit_insert::{bound_value, check_library_version, open_handle, sqlite_py_err};
 use crate::pubsub_write_sql::{
-    AckInput, AckResult, AtomicInput, AtomicResult, BatchError, BatchInput, BatchResults, FencedEntry, ItemError, Layout, LeaseInput,
-    LeaseResult, PublicationInput, PublicationResult, Repeat, Statements, write_batch,
+    AckInput, AckResult, AtomicInput, AtomicResult, BatchError, BatchInput, BatchResults, DedupKey, FencedEntry, ItemError, Layout,
+    LeaseInput, LeaseResult, PublicationInput, PublicationResult, Statements, write_batch,
 };
 
 /// The module of the `SQLite` driver of Python.
@@ -66,6 +66,13 @@ impl SqlitePubSubWriter {
         let statements = Statements {
             begin: statement("begin")?,
             select_subscribers: statement("select_subscribers")?,
+            upsert_dedup_record: statement("upsert_dedup_record")?,
+            select_dedup_record: statement("select_dedup_record")?,
+            update_dedup_fingerprint: statement("update_dedup_fingerprint")?,
+            dedup_key: DedupKey {
+                kind: config.get_item("dedup_kind")?.extract()?,
+                scope: config.get_item("dedup_scope")?.extract()?,
+            },
             insert_message: statement("insert_message")?,
             select_existing_message: statement("select_existing_message")?,
             insert_delivery: statement("insert_delivery")?,
@@ -119,8 +126,13 @@ impl SqlitePubSubWriter {
     }
 
     /// Writes the items of a batch, given by kind, in the transaction of the connection and stores on each item
-    /// what became of it. Returns the identifier of each repeated publication, with whether its message was removed.
-    fn write_items(&self, py: Python<'_>, connection: &Bound<'_, PyAny>, items: &Bound<'_, PyDict>) -> PyResult<Vec<(String, bool)>> {
+    /// what became of it. Returns the identifier of each repeated publication, with the name of how it repeats an earlier one.
+    fn write_items(
+        &self,
+        py: Python<'_>,
+        connection: &Bound<'_, PyAny>,
+        items: &Bound<'_, PyDict>,
+    ) -> PyResult<Vec<(String, &'static str)>> {
         let items = items.as_any();
         let publications = items.get_item("publications")?.cast_into::<PyList>()?;
         let acks = items.get_item("acks")?.cast_into::<PyList>()?;
@@ -221,6 +233,9 @@ impl SqlitePubSubWriter {
             msg_id: message_values.get_item(intern!(py, "msg_id"))?.extract()?,
             topic_name: message_values.get_item(intern!(py, "topic_name"))?.extract()?,
             payload_crc32: message_values.get_item(intern!(py, "payload_crc32"))?.extract()?,
+            fingerprint: pending.getattr(intern!(py, "fingerprint"))?.extract()?,
+            received_ms: pending.getattr(intern!(py, "received_ms"))?.extract()?,
+            dedup_expires_ms: pending.getattr(intern!(py, "dedup_expires_ms"))?.extract()?,
             priority: bound_value(&message_values.get_item(intern!(py, "priority"))?)?,
             expiration_ms: bound_value(&message_values.get_item(intern!(py, "expiration_ms"))?)?,
         })
@@ -271,7 +286,12 @@ impl SqlitePubSubWriter {
     }
 
     /// Stores on a `PendingPublication` what became of it and records it if it repeats an earlier one.
-    fn apply_publication(&self, pending: &Bound<'_, PyAny>, result: PublicationResult, repeats: &mut Vec<(String, bool)>) -> PyResult<()> {
+    fn apply_publication(
+        &self,
+        pending: &Bound<'_, PyAny>,
+        result: PublicationResult,
+        repeats: &mut Vec<(String, &'static str)>,
+    ) -> PyResult<()> {
         let py = pending.py();
         let message_values = pending.getattr(intern!(py, "message_values"))?;
 
@@ -284,7 +304,7 @@ impl SqlitePubSubWriter {
 
         if let Some(repeat) = result.repeat {
             let msg_id: String = message_values.get_item(intern!(py, "msg_id"))?.extract()?;
-            repeats.push((msg_id, matches!(repeat, Repeat::Removed)));
+            repeats.push((msg_id, repeat.name()));
             pending.setattr(intern!(py, "is_repeat"), true)?;
         }
 
@@ -297,7 +317,7 @@ impl SqlitePubSubWriter {
     }
 
     /// Stores on a `PendingAtomic` what became of it and of its publications.
-    fn apply_atomic(&self, pending: &Bound<'_, PyAny>, result: AtomicResult, repeats: &mut Vec<(String, bool)>) -> PyResult<()> {
+    fn apply_atomic(&self, pending: &Bound<'_, PyAny>, result: AtomicResult, repeats: &mut Vec<(String, &'static str)>) -> PyResult<()> {
         let py = pending.py();
         let publications = pending.getattr(intern!(py, "publications"))?;
 

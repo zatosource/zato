@@ -66,6 +66,9 @@ class ModuleCtx:
     Expiration = 3600
     Time_ISO = '2026-11-19T10:00:00+00:00'
 
+    # For how long the message IDs of those publications are recognized as repeats, in milliseconds
+    Dedup_Window_Ms = 7 * 24 * 60 * 60 * 1000
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -150,7 +153,7 @@ def _new_publication(msg_id:'str') -> 'PendingPublication':
         'retry_backoff_multiplier': None,
     }
 
-    out = new_pending_publication(message_values)
+    out = new_pending_publication(message_values, now_ms, ModuleCtx.Dedup_Window_Ms)
     return out
 
 # ################################################################################################################################
