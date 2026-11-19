@@ -6,11 +6,14 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# pytest
+import pytest
+
 # Zato
 from live_windows.docker_ import remove_container
 from live_windows.enmasse import exchange_connection_name, partner_connection_name
 from live_windows.layout import Hub, Shares
-from live_windows.settings import Versions
+from live_windows.settings import Partners, Versions
 
 # Local
 from _smb_windows_flows import hub_outbox, start_hub, verify_hub, wait_produced
@@ -36,7 +39,7 @@ class ModuleCtx:
 
     # The guest that goes away in a switchover and the one that takes over from it
     Primary = Versions.Server_2025
-    Standby = Versions.Server_2022
+    Standby = Partners[Primary]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,6 +67,7 @@ def test_server_restart(smb_suite:'SMBWindowsSuite', version:'str', run:'str', m
 
 # ################################################################################################################################
 
+@pytest.mark.guests(ModuleCtx.Primary, ModuleCtx.Standby)
 def test_switchover(smb_suite:'SMBWindowsSuite', run:'str', monitor:'Monitor') -> 'None':
     """ The primary file server goes away, its connections are pointed to the standby one, and the flows continue there,
     with each file routed exactly once even though the connections of both guests now poll the same outboxes.

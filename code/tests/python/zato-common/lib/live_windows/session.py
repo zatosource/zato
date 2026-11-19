@@ -125,6 +125,11 @@ class GuestHandle:
 
         self.task_sequence = 0
 
+        # The Windows events that the previous test on this guest expected, and when that test ended, in seconds
+        # since the epoch, because Windows may record an event that a test provoked only after the test ended
+        self.previous_windows_events:'strlist' = []
+        self.previous_end = 0.0
+
 # ################################################################################################################################
 
     def _next_task(self, kind:'str') -> 'str':
@@ -335,8 +340,8 @@ def missing_guest_requirements(versions:'strlist') -> 'strlist':
 # ################################################################################################################################
 
 def open_guests(versions:'strlist') -> 'tuple[handledict, strlist]':
-    """ Returns a handle to each guest, reusing the guests that already run and booting the others,
-    together with the versions that it booted.
+    """ Returns a handle to each guest, reusing the guests that already run and resuming the others,
+    together with the versions that it resumed.
     """
     out:'handledict' = {}
 
@@ -350,9 +355,10 @@ def open_guests(versions:'strlist') -> 'tuple[handledict, strlist]':
         handle = GuestHandle(info)
 
         # A reused guest may still run the tasks of a session that was interrupted before it stopped them,
-        # and its shares may still hold the files of that session
-        handle.stop_all(ModuleCtx.Takeover_Run)
-        handle.clear_data(ModuleCtx.Takeover_Run)
+        # and its shares may still hold the files of that session, whereas a guest resumed from its ready state runs none
+        if info.version not in started_versions:
+            handle.stop_all(ModuleCtx.Takeover_Run)
+            handle.clear_data(ModuleCtx.Takeover_Run)
 
         out[info.version] = handle
 

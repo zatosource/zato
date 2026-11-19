@@ -14,6 +14,7 @@ from pathlib import Path
 from live_windows.containers import GuestInfo
 from live_windows.enmasse import build_yaml
 from live_windows.progress import Monitor
+from live_windows.settle import SettleBarrier
 from live_windows.session import Sequences
 from live_windows.settings import Accounts
 
@@ -130,8 +131,9 @@ class SMBWindowsSuite:
 
     def new_monitor(self, name:'str') -> 'Monitor':
         handles = list(self.handles.values())
+        barrier = SettleBarrier()
 
-        out = Monitor(name, handles, self.server_log_path)
+        out = Monitor(name, handles, self.server_log_path, barrier)
         return out
 
 # ################################################################################################################################

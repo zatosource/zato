@@ -4,6 +4,8 @@ markers = [
     "expect_log_errors: test intentionally triggers server log errors matching the given patterns",
     "slow: tests that wait on the scheduler firing or move a lot of files, deselected with -m 'not slow'",
     "soak: soak tests, which run after every other test of their run and of their make target",
+    "guests: the Windows guests that a live SMB test without a version parameter runs against",
+    "partner_guest: a live SMB test that runs against the partner guest of its version as well",
 ]
 addopts = "-m 'not perftest' --import-mode=importlib"
 log_cli = true

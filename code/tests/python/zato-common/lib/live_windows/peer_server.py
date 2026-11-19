@@ -185,7 +185,7 @@ class _ServiceContext:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _ScheduleRunner:
+class ScheduleRunner:
     """ Runs one schedule of one connection the way the scheduler of a server does - it lists the directory, keeps
     the candidates that match and stopped changing, claims each one, hands it to its service and moves it out of the way.
     The peer keeps no memory of earlier attempts, so a failed file is quarantined when the schedule allows one attempt
@@ -203,7 +203,12 @@ class _ScheduleRunner:
         # the claim path of a file to its original path, as the server keeps them
         self.unconfirmed_claims:'strdict' = {}
 
+        # How many runs started and how many ended, so that a test knows when a run that started after a point in time ended
+        self.started_runs = 0
+        self.completed_runs = 0
+
         self.stopping = Event()
+        self.waking = Event()
         self.thread = Thread(target=self._run, daemon=True, name=f'peer-{self.name}-{conn_name}')
 
 # ################################################################################################################################
@@ -213,7 +218,13 @@ class _ScheduleRunner:
 
     def stop(self) -> 'None':
         self.stopping.set()
+        self.waking.set()
         self.thread.join(ModuleCtx.Join_Timeout)
+
+    def wake(self) -> 'None':
+        """ Starts the next run at once, or as soon as the current one ends, rather than after the interval of the schedule.
+        """
+        self.waking.set()
 
 # ################################################################################################################################
 
@@ -224,6 +235,7 @@ class _ScheduleRunner:
         while not self.stopping.is_set():
 
             started = monotonic()
+            self.started_runs += 1
 
             # A run that fails is logged as an error, the way the server logs a failed job, and the next one follows ..
             try:
@@ -231,11 +243,14 @@ class _ScheduleRunner:
             except Exception:
                 error = format_exc()
                 self.peer.log(ModuleCtx.Level_Error, f'Run of schedule `{self.name}` of `{self.conn_name}` failed -> {error}')
+            finally:
+                self.completed_runs += 1
 
-            # .. at the interval of the schedule.
+            # .. at the interval of the schedule, or earlier if it is woken.
             elapsed = monotonic() - started
             wait = max(interval - elapsed, 0)
-            _ = self.stopping.wait(wait)
+            _ = self.waking.wait(wait)
+            self.waking.clear()
 
 # ################################################################################################################################
 
@@ -520,7 +535,7 @@ class PeerServer:
 
             if 'schedules' in definition:
                 for schedule in definition['schedules']:
-                    schedule_runner = _ScheduleRunner(self, name, schedule)
+                    schedule_runner = ScheduleRunner(self, name, schedule)
                     runners.append(schedule_runner)
 
         # .. and only the active jobs run.
@@ -571,6 +586,39 @@ class PeerServer:
 
         for wrapper in self.wrappers.values():
             wrapper.close()
+
+# ################################################################################################################################
+
+    def schedule_runners(self) -> 'list[ScheduleRunner]':
+        out:'list[ScheduleRunner]' = []
+
+        for runners in self.runners.values():
+            for runner in runners:
+                if isinstance(runner, ScheduleRunner):
+                    out.append(runner)
+
+        return out
+
+# ################################################################################################################################
+
+    def wake(self) -> 'None':
+        """ Starts the next run of each schedule without waiting for its interval.
+        """
+        for runner in self.schedule_runners():
+            runner.wake()
+
+# ################################################################################################################################
+
+    def ping_all(self) -> 'None':
+        """ Has each client connect again if its connection was closed, and logs the clients that cannot connect,
+        e.g. those of a guest that a test removed.
+        """
+        for name, wrapper in self.wrappers.items():
+            try:
+                wrapper.ping()
+            except Exception:
+                error = format_exc()
+                self.log(ModuleCtx.Level_Info, f'Could not ping `{name}` -> {error}')
 
 # ################################################################################################################################
 # ################################################################################################################################

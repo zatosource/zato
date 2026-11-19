@@ -10,8 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from live_windows.layout import Folders, Hub, Shares
 
 # Local
-from _smb_windows_flows import assert_appeared_once, assert_consumed_once, assert_no_leftovers, file_key, \
-     ModuleCtx as FlowsCtx, share_path, wait_appeared, wait_consumed
+from _smb_windows_flows import assert_appeared_once, assert_consumed_once, assert_no_leftovers, file_key, share_path, \
+     wait_appeared, wait_consumed
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -98,7 +98,7 @@ def test_both_directions(smb_suite:'SMBWindowsSuite', version:'str', run:'str', 
     wait_consumed(monitor, version, run, expected, 'files relayed in both directions')
     wait_appeared(monitor, version, run, processed, 'relayed files moved to processed')
 
-    monitor.pause(FlowsCtx.Settle_Seconds)
+    monitor.settle()
 
     assert_consumed_once(monitor, version, run, expected, 'relayed files')
     assert_appeared_once(monitor, version, run, processed, 'processed relayed files')

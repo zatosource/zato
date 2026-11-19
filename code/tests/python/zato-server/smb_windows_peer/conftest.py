@@ -27,20 +27,27 @@ from live_windows.session import missing_guest_requirements, open_guests
 from live_windows.settings import Suite, Versions
 
 # Local
+from _shards import current_shard, is_sharded, needed_versions, shard_items
 from _smb_windows_peer_suite import ModuleCtx, PeerSuite
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from pytest import Config, Item
     from live_windows.progress import Monitor
     from zato.common.typing_ import any_, iterator_, strlist
+
+    itemlist = list[Item]
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 # The guests every test that takes a version runs against, one after the other
 _versions = list(Versions.All)
+
+# The versions of the guests that the tests of the session run against
+_versions_key = pytest.StashKey['strlist']()
 
 _version_ids:'strlist' = []
 for _version in _versions:
@@ -49,13 +56,39 @@ for _version in _versions:
 # ################################################################################################################################
 # ################################################################################################################################
 
+@pytest.hookimpl(trylast=True)
+def pytest_collection_modifyitems(config:'Config', items:'itemlist') -> 'None':
+    """ Keeps the tests of the shard of this process, if the tests are divided into shards, and records the versions
+    of the guests that the remaining tests run against. It runs after the selection by keywords and markers,
+    so that a session resumes only the guests of the tests it runs.
+    """
+    if is_sharded():
+        index, count = current_shard()
+
+        selected = shard_items(items, index, count)
+        deselected:'itemlist' = []
+
+        for item in items:
+            if item not in selected:
+                deselected.append(item)
+
+        config.hook.pytest_deselected(items=deselected)
+        items[:] = selected
+
+    config.stash[_versions_key] = needed_versions(items)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @pytest.fixture(scope='session')
-def smb_suite() -> 'iterator_':
+def smb_suite(request:'any_') -> 'iterator_':
     """ The guests and the peer in place of a Zato server, with the definitions of each guest, for the whole session.
     """
-    skip_or_fail(missing_guest_requirements(_versions), Suite.Required_Variable)
+    versions = request.config.stash[_versions_key]
 
-    handles, started_versions = open_guests(_versions)
+    skip_or_fail(missing_guest_requirements(versions), Suite.Required_Variable)
+
+    handles, started_versions = open_guests(versions)
 
     descriptor, log_path = tempfile.mkstemp(prefix=ModuleCtx.Log_Prefix, suffix='.log')
     os.close(descriptor)
@@ -109,14 +142,21 @@ def monitor(smb_suite:'PeerSuite', run:'str', request:'any_') -> 'iterator_':
 
     finally:
 
-        # The monitor is stopped even if a guest fails to stop the tasks of the test
+        # The monitor is stopped even if a guest fails to stop the tasks of the test ..
         try:
             for version, handle in smb_suite.handles.items():
                 watch = out.watches[version]
                 if not watch.may_stop:
                     handle.stop_run(run)
+
         finally:
-            out.stop()
+            try:
+                out.stop()
+
+            # .. and each client of the peer whose connection a fault closed connects again, so that the next test
+            # begins with the same connections as this one.
+            finally:
+                smb_suite.peer.ping_all()
 
 # ################################################################################################################################
 # ################################################################################################################################

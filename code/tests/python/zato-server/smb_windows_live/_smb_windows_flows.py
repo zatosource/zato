@@ -23,9 +23,6 @@ if 0:
 
 class ModuleCtx:
 
-    # How long a test waits after its last file arrived, so that a file processed twice has the time to arrive again, in seconds
-    Settle_Seconds = 2
-
     # The pattern of the files the hub writes into each inbox
     Hub_Pattern = f'*{Hub.Out_Suffix}'
 
@@ -263,7 +260,7 @@ def verify_hub(monitor:'Monitor', version:'str', run:'str', sources:'strstrdict'
     wait_consumed(monitor, version, run, expected, f'{what} routed')
     wait_appeared(monitor, version, run, processed, f'{what} moved to processed')
 
-    monitor.pause(ModuleCtx.Settle_Seconds)
+    monitor.settle()
 
     assert_consumed_once(monitor, version, run, expected, what)
     assert_appeared_once(monitor, version, run, processed, what)

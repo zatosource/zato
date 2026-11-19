@@ -9,8 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import re
+from datetime import datetime
 from threading import Event, Lock, Thread
-from time import monotonic, sleep
+from time import monotonic, sleep, time
+from uuid import uuid4
 
 # Zato
 from live_windows.docker_ import container_is_running
@@ -20,7 +22,8 @@ from live_windows.docker_ import container_is_running
 
 if 0:
     from live_windows.session import GuestHandle
-    from zato.common.typing_ import anydict, callable_, dictlist, strlist
+    from live_windows.settle import SettleBarrier
+    from zato.common.typing_ import anydict, callable_, dictlist, strlist, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,21 +60,15 @@ class ModuleCtx:
     # The Windows logs whose every event fails a test - the logon failures
     Failure_Logs = 'Security',
 
-    # How long a test that provokes Windows events is still watched after it ends, so that the events it provoked last,
-    # which the agent forwards once a second, are matched against its own expectations and not against the next test's,
-    # in seconds
-    Windows_Events_Drain = 3
-
-    # The drain also lasts until no expected Windows event has arrived for this long, because a guest that logs many events
-    # forwards them with a delay, but never longer than the second value, in seconds
-    Windows_Events_Quiet     = 2
-    Windows_Events_Drain_Max = 20
-
-    # How often the drain checks whether the expected Windows events stopped arriving, in seconds
-    Windows_Events_Drain_Poll = 0.2
+    # Windows may record an event that a test provoked after the test ended, so an event created up to this long
+    # after the end of the previous test on the same guest is matched against the expectations of that test too, in seconds
+    Carry_Over_Seconds = 20
 
     # The kinds of agent events whose number is reported
     Counted_Kinds = 'produced', 'consumed', 'appeared', 'disappeared', 'marked-failed'
+
+    # The kinds of agent events that report a file which a schedule may pick up
+    Activity_Kinds = 'produced', 'appeared'
 
     # The server log lines that every environment without these components produces
     Server_Log_Noise = (
@@ -124,9 +121,10 @@ class Monitor:
     and fails the test at the first agent error, Windows error, stopped container, stale heartbeat or server error,
     and once the time of the test is up.
     """
-    def __init__(self, name:'str', handles:'list[GuestHandle]', server_log_path:'str') -> 'None':
+    def __init__(self, name:'str', handles:'list[GuestHandle]', server_log_path:'str', barrier:'SettleBarrier') -> 'None':
         self.name = name
         self.server_log_path = server_log_path
+        self.barrier = barrier
         self.server_log_offset = 0
         self.server_log_partial = ''
 
@@ -136,9 +134,6 @@ class Monitor:
 
         self.expected_server_errors:'strlist' = list(ModuleCtx.Server_Log_Noise)
         self.expected_windows_events:'strlist' = []
-
-        # When the most recent expected Windows event arrived, on the monotonic clock
-        self.last_expected_event_at = 0.0
 
         self.failures:'strlist' = []
         self.raised_count = 0
@@ -170,25 +165,39 @@ class Monitor:
 
 # ################################################################################################################################
 
-    def _drain_windows_events(self) -> 'None':
-        """ Keeps watching after the test ends, for at least the drain period and until the expected Windows events
-        stop arriving, but never longer than the longest drain.
+    def _checkpoint(self, kind:'str', what:'str') -> 'None':
+        """ Sends a command to the agent of each guest that can be reached, and waits until the monitor read that the agent
+        ran it, and with it every event that the agent wrote before it.
         """
-        drain_start = monotonic()
+        runs:'strstrdict' = {}
 
-        while True:
+        for version, watch in self.watches.items():
+            if not watch.is_suspended:
+                run = f'{kind}-{uuid4().hex[:8]}'
+                watch.handle.sender.send(kind, run)
+                runs[version] = run
 
-            now = monotonic()
-            drained_for = now - drain_start
-            quiet_for = now - self.last_expected_event_at
+        def _is_reached() -> 'bool':
+            for version, run in runs.items():
+                if not self.has_event(version, 'command-done', run):
+                    return False
+            return True
 
-            if drained_for >= ModuleCtx.Windows_Events_Drain_Max:
-                return
+        self.wait_until(_is_reached, what)
 
-            if drained_for >= ModuleCtx.Windows_Events_Drain and quiet_for >= ModuleCtx.Windows_Events_Quiet:
-                return
+# ################################################################################################################################
 
-            sleep(ModuleCtx.Windows_Events_Drain_Poll)
+    def settle(self) -> 'None':
+        """ Waits until no more files can arrive from what the test produced, and until the guests reported each file
+        that did arrive.
+        """
+        is_settled = self.barrier.begin()
+        self.wait_until(is_settled, self.barrier.what)
+
+        # The agent reports a file in the step that follows the reading of the commands, so a file that arrived
+        # just before the first checkpoint is reported before the second one at the latest
+        self._checkpoint('ping', 'the guests reported the files that arrived')
+        self._checkpoint('ping', 'the guests reported the files that arrived')
 
 # ################################################################################################################################
 
@@ -200,13 +209,22 @@ class Monitor:
         if elapsed > ModuleCtx.Test_Timeout:
             self._fail(f'The test took {elapsed:.1f}s, more than the limit of {ModuleCtx.Test_Timeout}s')
 
-        if self.expected_windows_events:
-            self._drain_windows_events()
+        # The agents forward the Windows events recorded so far, which are matched against the expectations of this test ..
+        try:
+            self._checkpoint('flush-events', 'the Windows events forwarded')
 
-        self.stopping.set()
+        # .. and those that Windows records later are matched against them in the next test on the same guest.
+        finally:
+            self.stopping.set()
 
-        for thread in self.threads:
-            thread.join(ModuleCtx.Join_Timeout)
+            for thread in self.threads:
+                thread.join(ModuleCtx.Join_Timeout)
+
+            end = time()
+
+            for watch in self.watches.values():
+                watch.handle.previous_windows_events = list(self.expected_windows_events)
+                watch.handle.previous_end = end
 
         self._poll_server()
         self._report()
@@ -452,6 +470,9 @@ class Monitor:
             if kind in watch.counts:
                 watch.counts[kind] += 1
 
+        if kind in ModuleCtx.Activity_Kinds:
+            self.barrier.on_activity()
+
         if kind == 'error':
             self._fail(f'{watch.handle.prefix} Agent error -> {event}')
 
@@ -463,15 +484,25 @@ class Monitor:
     def _handle_windows_event(self, watch:'_GuestWatch', event:'anydict') -> 'None':
         """ Fails on an error, a critical event or a logon failure, unless the test declared it, and reports the warnings.
         """
-        prefix = watch.handle.prefix
+        handle = watch.handle
+        prefix = handle.prefix
         text = f'{event["log"]} {event["provider"]} {event["event_id"]} {event["message"]}'
 
         for pattern in self.expected_windows_events:
             if pattern in text:
-                self.last_expected_event_at = monotonic()
                 print(f'[SMB {self.name}] {prefix} Expected Windows event -> {text}', flush=True)
                 return
 
+        # An event that the previous test on this guest provoked may have been recorded after that test ended ..
+        created = datetime.fromisoformat(event['created']).timestamp()
+
+        if created <= handle.previous_end + ModuleCtx.Carry_Over_Seconds:
+            for pattern in handle.previous_windows_events:
+                if pattern in text:
+                    print(f'[SMB {self.name}] {prefix} Windows event expected by the previous test -> {text}', flush=True)
+                    return
+
+        # .. and any other one is reported or fails the test.
         is_failure = event['level'] in ModuleCtx.Failure_Levels
 
         if event['log'] in ModuleCtx.Failure_Logs:

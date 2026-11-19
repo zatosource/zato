@@ -9,12 +9,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import datetime, timezone
 
+# pytest
+import pytest
+
 # Zato
 from live_windows.layout import Folders, Hub, Shares
+from live_windows.settings import Partners
 
 # Local
 from _smb_windows_flows import archive_path, assert_appeared_once, assert_consumed_once, assert_no_leftovers, \
-     document_name, file_key, ModuleCtx as FlowsCtx, share_path, wait_appeared, wait_consumed, wait_produced
+     document_name, file_key, share_path, wait_appeared, wait_consumed, wait_produced
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,15 +43,6 @@ class ModuleCtx:
     Drop_Folder = ''
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _other_version(smb_suite:'SMBWindowsSuite', version:'str') -> 'str':
-    for other in smb_suite.handles:
-        if other != version:
-            return other
-
-    raise Exception(f'No guest other than win{version}')
-
 # ################################################################################################################################
 
 def _distribute(smb_suite:'SMBWindowsSuite', version:'str', partner_version:'str', run:'str', monitor:'Monitor') -> 'None':
@@ -95,7 +90,7 @@ def _distribute(smb_suite:'SMBWindowsSuite', version:'str', partner_version:'str
     wait_appeared(monitor, version, run, processed, 'documents moved to processed')
     wait_consumed(monitor, partner_version, run, expected, 'documents in the partner drop')
 
-    monitor.pause(FlowsCtx.Settle_Seconds)
+    monitor.settle()
 
     assert_appeared_once(monitor, version, run, archived, 'archive')
     assert_appeared_once(monitor, version, run, processed, 'processed documents')
@@ -112,10 +107,11 @@ def test_archive_and_partner_drop(smb_suite:'SMBWindowsSuite', version:'str', ru
 
 # ################################################################################################################################
 
+@pytest.mark.partner_guest
 def test_partner_on_other_guest(smb_suite:'SMBWindowsSuite', version:'str', run:'str', monitor:'Monitor') -> 'None':
-    """ Documents are archived on one guest and handed to the partner drop on the other one.
+    """ Documents are archived on one guest and handed to the partner drop on the guest of its partner version.
     """
-    partner_version = _other_version(smb_suite, version)
+    partner_version = Partners[version]
     smb_suite.import_guest(version, partner_version=partner_version)
 
     try:

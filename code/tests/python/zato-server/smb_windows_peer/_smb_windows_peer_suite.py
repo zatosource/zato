@@ -13,6 +13,7 @@ from pathlib import Path
 from live_windows.containers import GuestInfo
 from live_windows.enmasse import build_definitions
 from live_windows.progress import Monitor
+from live_windows.settle import RunBarrier
 from live_windows.session import Sequences
 from live_windows.settings import Accounts
 
@@ -109,8 +110,9 @@ class PeerSuite:
 
     def new_monitor(self, name:'str') -> 'Monitor':
         handles = list(self.handles.values())
+        barrier = RunBarrier(self.peer)
 
-        out = Monitor(name, handles, self.peer.log_path)
+        out = Monitor(name, handles, self.peer.log_path, barrier)
         return out
 
 # ################################################################################################################################

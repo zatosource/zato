@@ -562,6 +562,15 @@ function Stop-AllRuns($Command) {
     Write-AgentEvent ([ordered]@{ kind = 'run-stopped'; run = $Command.run })
 }
 
+function Set-Clock($Command) {
+
+    # A guest resumed from its ready state keeps the time at which the state was saved until the harness sets it
+    $time = [DateTimeOffset]::FromUnixTimeMilliseconds([long]$Command.unix_ms)
+    $null = Set-Date -Date $time.LocalDateTime
+
+    Write-AgentEvent ([ordered]@{ kind = 'clock-set'; run = $Command.run })
+}
+
 function Clear-DataFiles($Command) {
 
     # The files are removed and the directories of the layout are kept
@@ -587,6 +596,8 @@ $CommandHandlers = @{
     'stop-all'            = { param($Command) Stop-AllRuns $Command }
     'clear-data'          = { param($Command) Clear-DataFiles $Command }
     'ping'                = { param($Command) Write-AgentEvent ([ordered]@{ kind = 'pong'; run = $Command.run }) }
+    'set-clock'           = { param($Command) Set-Clock $Command }
+    'flush-events'        = { param($Command) Send-AllWindowsEvents }
 }
 
 $StepHandlers = @{

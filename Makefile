@@ -23,7 +23,7 @@
 	test-hl7 test-ccda test-documents hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-export test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
-	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-sftp test-file-transfer test-smb test-smb-windows-build \
+	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-sftp test-file-transfer test-smb test-smb-peer test-smb-windows-build \
 	test-rule-engine test-hot-deployment \
 	test-fabric-live fabric-cleanup fabric-tutorial fabric-loading-tables fabric-lookup-tables fabric-looking-up-data \
 	fabric-api-on-fabric-data fabric-scheduled-reports fabric-files fabric-sending-events fabric-receiving-events \
@@ -1825,9 +1825,18 @@ test-sftp: ## SFTP tests - the outconn and scheduler suites against live OpenSSH
 
 Zato_SMB_Windows_CLI   = PYTHONPATH=$(CURDIR)/code/tests/python/zato-common/lib $(ZATO_PY) -u -m live_windows.cli
 Zato_SMB_Windows_Tests = $(CURDIR)/code/tests/python/zato-server/smb_windows_live
+Zato_SMB_Windows_Peer_Tests = $(CURDIR)/code/tests/python/zato-server/smb_windows_peer
+Zato_SMB_Windows_Shards     = PYTHONPATH=$(CURDIR)/code/tests/python/zato-common/lib $(ZATO_PY) -u -m live_windows.shards
 
-test-smb-windows-build: ## Windows Server 2025, 2022 and 2019 guests and a Japanese Windows Server 2025 guest for the live SMB tests - builds the prepared disks that are missing or out of date.
+test-smb-windows-build: ## Windows Server 2025, 2022 and 2019 guests and a Japanese Windows Server 2025 guest for the live SMB tests - builds the prepared disks and the ready states that are missing or out of date.
 	$(Zato_SMB_Windows_CLI) build
+
+test-smb-peer: ## Live SMB tests against Windows Server 2025, 2022 and 2019 guests and a Japanese Windows Server 2025 guest, with the peer in place of a Zato server - the tests are divided into shards, set by Zato_Test_SMB_Shards, that run at the same time, each against guests of its own resumed from their ready states.
+	$(Zato_Log_Reset)
+	Zato_Test_SMB_Windows=1 ZATO_TEST_BASE_DIR=$(CURDIR) $(Zato_SMB_Windows_Shards) \
+		$(Zato_SMB_Windows_Peer_Tests) \
+		-x -v -s -p no:cacheprovider -o faulthandler_timeout=120 -W ignore::DeprecationWarning \
+		$(PYTEST_ARGS) $(Zato_Log)
 
 test-smb: ## Live SMB tests against Windows Server 2025, 2022 and 2019 guests and a Japanese Windows Server 2025 guest - the offline checks, the file exchange flows, reliability, the Dashboard and failover, in that order.
 	$(Zato_Log_Reset)

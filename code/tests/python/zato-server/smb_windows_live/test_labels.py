@@ -11,7 +11,7 @@ from live_windows.layout import Folders, Hub, Shares
 
 # Local
 from _smb_windows_flows import assert_appeared_once, assert_consumed_once, assert_no_leftovers, file_key, label_name, \
-     label_site, ModuleCtx as FlowsCtx, share_path, shipment_name, wait_appeared, wait_consumed, wait_produced
+     label_site, share_path, shipment_name, wait_appeared, wait_consumed, wait_produced
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -99,7 +99,7 @@ def test_labels_per_site(smb_suite:'SMBWindowsSuite', version:'str', run:'str', 
     # .. and the trigger files that failed are moved out of the way.
     wait_appeared(monitor, version, run, failed, 'failed trigger files moved to the failed directories')
 
-    monitor.pause(FlowsCtx.Settle_Seconds)
+    monitor.settle()
 
     assert_consumed_once(monitor, version, run, expected, 'label trigger files')
     assert_appeared_once(monitor, version, run, processed, 'processed shipment notices')

@@ -18,7 +18,7 @@ from live_windows.settings import Accounts
 
 # Local
 from _smb_windows_flows import assert_appeared_once, assert_nothing_under, document_name, hub_expected, hub_outbox, \
-     ModuleCtx as FlowsCtx, share_path, start_hub, verify_hub, wait_appeared, wait_consumed, wait_produced
+     share_path, start_hub, verify_hub, wait_appeared, wait_consumed, wait_produced
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,9 +44,10 @@ class ModuleCtx:
     Contention_Count       = 30
     Contention_Interval_Ms = 20
 
-    # How long the SMB port is blocked and how long a guest is paused, in milliseconds and seconds
-    Block_Ms      = 5000
-    Pause_Seconds = 5
+    # How long the SMB port is blocked and how long a guest is paused, in milliseconds and seconds,
+    # each longer than the interval of the schedules, so that at least one run meets the fault
+    Block_Ms      = 2000
+    Pause_Seconds = 2
 
     # How many files are sent before and after a password change
     Rotation_Batch = 5
@@ -268,7 +269,7 @@ def test_share_removed(smb_suite:'SMBWindowsSuite', version:'str', run:'str', mo
 
     wait_appeared(monitor, version, run, processed, 'documents processed once their share is back')
 
-    monitor.pause(FlowsCtx.Settle_Seconds)
+    monitor.settle()
     assert_appeared_once(monitor, version, run, processed, 'documents processed once their share is back')
 
 # ################################################################################################################################

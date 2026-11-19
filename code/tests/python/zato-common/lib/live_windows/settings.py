@@ -34,6 +34,14 @@ class Versions:
 
     All = Server_2025, Server_2022, Server_2019, Server_2025_Japanese
 
+# The guest that a test of each version uses as its second guest
+Partners = {
+    Versions.Server_2025:          Versions.Server_2022,
+    Versions.Server_2022:          Versions.Server_2025,
+    Versions.Server_2019:          Versions.Server_2025_Japanese,
+    Versions.Server_2025_Japanese: Versions.Server_2019,
+}
+
 class Language:
 
     # The installation languages, in the form the container image accepts them
@@ -107,8 +115,11 @@ class Paths:
     # Where the installation media are kept, one ISO file per Windows version
     ISO_Dir = Path(os.path.expanduser('~/files/iso'))
 
-    # Where the names and ports of running guests are recorded
-    State_Path = Path('/tmp/zato-test-windows/state.json')
+    # Where the names and ports of running guests are recorded, one file per instance
+    State_Dir = Path('/tmp/zato-test-windows')
+
+    # Where the storage directory of each running guest is kept, one directory per guest
+    Instances_Dir = Cache_Dir / 'instances'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -143,6 +154,26 @@ class Suite:
     # The device that QEMU runs the guests with
     KVM_Device = '/dev/kvm'
 
+class Instance:
+
+    # The variable that names the guests of one test process, so that processes that run at the same time
+    # each run guests of their own. The guests of a process without it have the names of their versions only.
+    Variable = 'Zato_Test_SMB_Instance'
+
+    # The name of the guests of a process without the variable
+    Unnamed = ''
+
+class Shards:
+
+    # The variable that names the shard of the tests that a test process runs, as its index and the number of shards, e.g. 3/8
+    Variable = 'Zato_Test_SMB_Shard'
+    Separator = '/'
+
+    # The variable with the number of shards that the driver runs, a multiple of the number of versions,
+    # and the number it runs without the variable
+    Count_Variable = 'Zato_Test_SMB_Shards'
+    Default_Count  = 8
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -158,6 +189,59 @@ def container_name(version:'str') -> 'str':
     """ Returns the name of the container that runs one Windows version.
     """
     out = f'{Guest.Name_Prefix}{version}'
+    return out
+
+# ################################################################################################################################
+
+def current_instance() -> 'str':
+    """ Returns the name of the guests of this process.
+    """
+    if name := os.environ.get(Instance.Variable):
+        out = name
+    else:
+        out = Instance.Unnamed
+
+    return out
+
+# ################################################################################################################################
+
+def _instance_suffix(instance:'str') -> 'str':
+    if instance:
+        out = f'-{instance}'
+    else:
+        out = Instance.Unnamed
+
+    return out
+
+# ################################################################################################################################
+
+def guest_name(version:'str', instance:'str') -> 'str':
+    """ Returns the name of the container that runs the guest of one Windows version for one instance.
+    """
+    name = container_name(version)
+    suffix = _instance_suffix(instance)
+
+    out = f'{name}{suffix}'
+    return out
+
+# ################################################################################################################################
+
+def instance_dir(version:'str', instance:'str') -> 'Path':
+    """ Returns the storage directory of the guest of one Windows version for one instance.
+    """
+    suffix = _instance_suffix(instance)
+
+    out = Paths.Instances_Dir / f'{version}{suffix}'
+    return out
+
+# ################################################################################################################################
+
+def state_path(instance:'str') -> 'Path':
+    """ Returns the file that records the running guests of one instance.
+    """
+    suffix = _instance_suffix(instance)
+
+    out = Paths.State_Dir / f'state{suffix}.json'
     return out
 
 # ################################################################################################################################

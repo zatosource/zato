@@ -10,8 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from live_windows.layout import Hub, Shares
 
 # Local
-from _smb_windows_flows import assert_nothing_under, hub_outbox, hub_rejected_path, ModuleCtx as FlowsCtx, start_hub, \
-     verify_hub, wait_appeared, wait_produced
+from _smb_windows_flows import assert_nothing_under, hub_outbox, hub_rejected_path, start_hub, verify_hub, wait_appeared, \
+     wait_produced
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -101,7 +101,7 @@ def test_empty_file_rejected(smb_suite:'SMBWindowsSuite', version:'str', run:'st
     rejected = hub_rejected_path(Hub.Plant, name)
     wait_appeared(monitor, version, run, [rejected], 'empty file quarantined')
 
-    monitor.pause(FlowsCtx.Settle_Seconds)
+    monitor.settle()
 
     consumed = monitor.names(version, 'consumed', run)
     assert not consumed, f'An empty file must reach no inbox, got {consumed}'

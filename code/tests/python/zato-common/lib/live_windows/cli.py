@@ -12,7 +12,7 @@ from pathlib import Path
 
 # Zato
 from live_windows.build import build_missing
-from live_windows.containers import acquire_guests, running_guests, stop_guests
+from live_windows.containers import acquire_guests, build_ready_states, running_guests, stop_guests
 from live_windows.enmasse import build_yaml
 from live_windows.settings import Versions
 
@@ -27,6 +27,7 @@ if 0:
 
 def _build(arguments:'Namespace') -> 'None':
     build_missing(arguments.versions, arguments.force)
+    build_ready_states(arguments.versions)
 
 # ################################################################################################################################
 
@@ -75,10 +76,10 @@ def main() -> 'None':
     parser = argparse.ArgumentParser(description='Windows Server guests for the live SMB tests')
     subparsers = parser.add_subparsers(dest='command', required=True)
 
-    build_parser = subparsers.add_parser('build', help='Build the prepared disks that are missing or out of date')
+    build_parser = subparsers.add_parser('build', help='Build the prepared disks and the ready states that are missing or out of date')
     _ = build_parser.add_argument('--force', action='store_true')
 
-    start_parser = subparsers.add_parser('start', help='Boot the guests from their prepared disks')
+    start_parser = subparsers.add_parser('start', help='Resume the guests from their ready states')
     stop_parser = subparsers.add_parser('stop', help='Remove the guests and everything written to them')
 
     _ = subparsers.add_parser('status', help='List the running guests')
