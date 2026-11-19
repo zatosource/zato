@@ -523,7 +523,14 @@ impl Shipper {
 
         // Under the write lock, no frame is appended while the end of the log is recorded,
         // and with no checkpoint running, neither file changes below that end afterwards.
-        connections.lock.execute_batch("begin immediate").map_err(Error::other)?;
+        // Writers wait at their barriers until the lock is taken, so that their commits leave it free ..
+        self.shared.state.lock().taking_snapshot_lock = true;
+        let locked = connections.lock.execute_batch("begin immediate");
+
+        // .. and they go on once it is taken or the attempt gives up.
+        self.shared.state.lock().taking_snapshot_lock = false;
+        self.shared.changed.notify_all();
+        locked.map_err(Error::other)?;
         let scanned = scan_to_end(&mut database.cursor, &connections.checkpoint);
         connections.lock.execute_batch("rollback").map_err(Error::other)?;
         let _ = scanned?;

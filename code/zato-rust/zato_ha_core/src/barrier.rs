@@ -63,7 +63,9 @@ pub fn wait(shared: &Shared) -> BarrierOutcome {
 
     loop {
         match state.role {
-            Role::ActiveSolo if !state.admitting => {
+            // A writer that would go on to its next commit at once waits while the shipper needs the write lock,
+            // which a steady stream of commits would otherwise keep from it.
+            Role::ActiveSolo if !state.admitting && !state.taking_snapshot_lock => {
                 drop(state);
                 return sync_locally(db_path);
             }
@@ -91,7 +93,7 @@ pub fn wait(shared: &Shared) -> BarrierOutcome {
 
             // A mark-out syncs the log before it moves the node to this role, and an admission in progress
             // holds the barrier until the standby is in sync.
-            Role::ActiveSolo if !state.admitting => {
+            Role::ActiveSolo if !state.admitting && !state.taking_snapshot_lock => {
                 drop(state);
                 return sync_locally(db_path);
             }

@@ -170,6 +170,9 @@ pub struct NodeState {
     /// Whether barriers are held during an admission.
     pub admitting: bool,
 
+    /// Whether barriers are held while the shipper waits for the write lock to take a snapshot.
+    pub taking_snapshot_lock: bool,
+
     /// Whether the active node lost both the standby and the referee, which stops the Zato server.
     pub isolated: bool,
 
@@ -264,6 +267,7 @@ impl Shared {
             role: Role::Down,
             generation: 0,
             admitting: false,
+            taking_snapshot_lock: false,
             isolated: false,
             needs_mark_out: false,
             database: DatabaseProgress::default(),
