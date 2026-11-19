@@ -29,8 +29,8 @@ if 0:
 
 class ModuleCtx:
 
-    # The opening of a SQLite file by rusqlite
-    Rust_SQLite_Open = re.compile(r'\bConnection::open\w*\s*\(')
+    # The opening of a SQLite file, or of a connection over the handle of another library, by rusqlite
+    Rust_SQLite_Open = re.compile(r'\bConnection::(?:open|from_handle)\w*\s*\(')
 
     # The functions of SQLAlchemy that build an engine, which the tests leave to the engine factory
     Test_Engine_Constructors = frozenset({
@@ -44,8 +44,9 @@ class ModuleCtx:
     Rust_PostgreSQL_Connect = re.compile(r'(?<!\bself)\.connect\s*\(')
 
     # The Rust functions that may open a database, each by its file and its name - the two that open the SQLite file
-    # of the active-standby node with its settings and the probe of the PostgreSQL primary, which only reads.
-    Rust_Engine_Functions = RegistryModuleCtx.Rust_Setting_Functions + (
+    # of the active-standby node with its settings, the one that opens a connection over the handle of the SQLite driver
+    # of Python for the writer of the audit log, and the probe of the PostgreSQL primary, which only reads.
+    Rust_Engine_Functions = RegistryModuleCtx.Rust_Setting_Functions + RegistryModuleCtx.Rust_Handle_Functions + (
         ('code/zato-rust/zato_ha_core/src/postgresql.rs', 'connect'),
     )
 
@@ -120,7 +121,8 @@ def test_python_customer_sites_exist() -> 'None':
 
 def test_rust_connections_only_in_their_functions() -> 'None':
     """ The Rust code opens a database only in the functions that open the SQLite file of the active-standby node
-    with its settings and in the probe of the PostgreSQL primary.
+    with its settings, in the function that opens a connection over the handle of the SQLite driver of Python
+    for the writer of the audit log, and in the probe of the PostgreSQL primary.
     """
     findings:'strlist' = []
 

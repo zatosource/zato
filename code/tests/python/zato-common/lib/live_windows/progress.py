@@ -371,27 +371,38 @@ class Monitor:
 
         try:
             events = handle.reader.read_events()
-
-            if should_check:
-                watch.last_check = now
-                self._check_agent(watch)
-
-        # .. a guest that is expected to be unreachable gets a new connection on the next attempt ..
         except Exception as e:
-            if watch.is_suspended:
-                handle.reader.client.close()
-                return
-
-            self._fail(f'{handle.prefix} The control share could not be read -> {e.__class__.__name__}: {e}')
+            self._on_read_error(watch, e)
             return
 
         watch.last_poll = monotonic()
 
+        # .. the events that were read are handled even if the check of the agent that follows fails ..
         for event in events:
             self._handle_event(watch, event)
 
         if should_check:
+            watch.last_check = now
+
+            try:
+                self._check_agent(watch)
+            except Exception as e:
+                self._on_read_error(watch, e)
+                return
+
             self._check_container(watch)
+
+# ################################################################################################################################
+
+    def _on_read_error(self, watch:'_GuestWatch', e:'Exception') -> 'None':
+        """ Gives a guest that is expected to be unreachable a new connection on the next attempt, and fails the test otherwise.
+        """
+        handle = watch.handle
+
+        if watch.is_suspended:
+            handle.reader.client.close()
+        else:
+            self._fail(f'{handle.prefix} The control share could not be read -> {e.__class__.__name__}: {e}')
 
 # ################################################################################################################################
 

@@ -26,6 +26,12 @@ class ModuleCtx:
         ('code/zato-rust/zato_ha_core/src/copy.rs', 'open_for_checkpoint'),
     )
 
+    # The Rust functions that open a connection over the handle of a connection of the SQLite driver of Python,
+    # each by its file and its name
+    Rust_Handle_Functions = (
+        ('code/zato-rust/zato_common_core/src/audit_insert.rs', 'open_handle'),
+    )
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -123,6 +129,21 @@ Audit_Log_Schema_Path = 'code/zato-common/src/zato/common/audit_log/common.py'
 Write_Path_Path = 'code/zato-common/src/zato/common/db_env/write_path.py'
 Audit_Tables_Name = 'Audit_Tables'
 Audit_Tables_Not_Guarded = ('alert',)
+
+# The writer of the audit log on SQLite, which writes in Rust through the handle of the connection of the driver,
+# outside the guard of the write path that SQLAlchemy runs. The module that defines it alone builds it, under the name
+# given, and the entry function of that module alone calls its method that writes, after the entry function checks
+# each statement of the list given against the guard. The keys are those under which the writer receives its statements,
+# and the Rust source is the file whose code runs them.
+Rust_Writer_Class = 'zato_common_core.zato_common_core.SQLiteAuditWriter'
+Rust_Writer_Path = 'code/zato-common/src/zato/common/audit_log/sqlite_insert.py'
+Rust_Writer_Instance = 'zato.common.audit_log.sqlite_insert._writer'
+Rust_Writer_Entry = 'insert_pending_events_sqlite'
+Rust_Writer_Method = 'insert_events'
+Rust_Writer_Guard = 'zato.common.db_env.write_path.check_write_path'
+Rust_Writer_Statements_Name = '_write_statements'
+Rust_Writer_Statement_Keys = ('insert_event', 'select_payload', 'insert_payload', 'insert_attr', 'insert_body', 'insert_link')
+Rust_Writer_Source = 'code/zato-rust/zato_common_core/src/audit_insert.rs'
 
 # ################################################################################################################################
 # ################################################################################################################################

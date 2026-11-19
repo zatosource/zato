@@ -187,20 +187,17 @@ def no_thread_outlives_its_test() -> 'nonegen':
     if remaining_names:
         import gc
         from smbprotocol.connection import Connection
-        print('DIAG before', sorted(threads_before.elements()))
+        print('DIAG before', sorted(name for name in threads_before.elements() if name.startswith('msg_')))
+        print('DIAG after', sorted(name for name in threads_after.elements() if name.startswith('msg_')))
+        caches = []
         for obj in gc.get_objects():
-            if type(obj) is Connection and obj._t_worker is not None and obj._t_worker.is_alive():
-                owners = []
-                for ref in gc.get_referrers(obj):
-                    if isinstance(ref, dict):
-                        for ref2 in gc.get_referrers(ref):
-                            if hasattr(ref2, '__dict__') and getattr(ref2, 'connection_cache', None) is ref:
-                                owners.append(f'{type(ref2).__name__}:{getattr(ref2, "name", getattr(ref2, "username", "?"))}')
-                            elif hasattr(ref2, '__dict__'):
-                                owners.append(f'other:{type(ref2).__name__}')
-                    else:
-                        owners.append(f'ref:{type(ref).__name__}')
-                print('DIAG conn', obj._t_worker.name, id(obj), obj.transport.connected, owners)
+            if type(obj).__name__ in ('SMBClient', 'ShareClient'):
+                caches.append((f'{type(obj).__name__}:{getattr(obj, "name", getattr(obj, "username", "?"))}:{id(obj)}', obj.connection_cache))
+        for thread in threading.enumerate():
+            if thread.name.startswith('msg_'):
+                conn = thread._target.__self__
+                owners = [label for label, cache in caches if any(value is conn for value in cache.values())]
+                print('DIAG conn', thread.name, id(conn), conn.transport.connected, owners)
 
     assert remaining_names == []
 
