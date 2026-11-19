@@ -107,9 +107,28 @@ def get_process_tree_pids(root_pid:'int') -> 'intlist':
 
 # ################################################################################################################################
 
+def _has_exited(pid:'int') -> 'bool':
+    """ Returns whether a process has exited, which a process that only waits to be reaped by its parent has as well.
+    """
+    try:
+        with open(f'/proc/{pid}/stat') as stat_file:
+            stat = stat_file.read()
+    except FileNotFoundError:
+        return True
+
+    # The state follows the process name, which is in parentheses and may contain spaces.
+    _, _, remainder = stat.rpartition(')')
+    fields = remainder.split()
+    state = fields[0]
+
+    out = state == _Zombie_State
+    return out
+
+# ################################################################################################################################
+
 def kill_process_tree_at_once(process:'any_') -> 'None':
     """ Kills a subprocess and every process that descends from it with SIGKILL, without a chance to exit cleanly,
-    as a host that lost its power stops them, and waits until the subprocess has exited.
+    as a host that lost its power stops them, and waits until each of them has exited and closed its files.
     """
     pids = get_process_tree_pids(process.pid)
 
@@ -120,6 +139,14 @@ def kill_process_tree_at_once(process:'any_') -> 'None':
             pass
 
     _ = process.wait(timeout=_Kill_Timeout)
+
+    deadline = time.monotonic() + _Kill_Timeout
+
+    for pid in pids:
+        while not _has_exited(pid):
+            if time.monotonic() > deadline:
+                raise Exception(f'Process {pid} did not exit within {_Kill_Timeout}s of SIGKILL')
+            time.sleep(_Exit_Poll_Seconds)
 
 # ################################################################################################################################
 # ################################################################################################################################

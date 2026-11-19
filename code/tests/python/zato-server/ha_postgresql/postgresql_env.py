@@ -77,7 +77,13 @@ def build_environment(
 
     # .. and with a database without data.
     cluster = PostgreSQLCluster(session.run_dir)
-    cluster.start(is_synchronous, lazyfs_names)
+
+    # A cluster that does not start is removed at once, because no environment owns it yet.
+    try:
+        cluster.start(is_synchronous, lazyfs_names)
+    except BaseException:
+        cluster.remove()
+        raise
 
     node_list = new_nodes(session)
 

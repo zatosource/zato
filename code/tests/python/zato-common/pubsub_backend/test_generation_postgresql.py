@@ -379,8 +379,8 @@ def test_equal_ha_generation_replaces_the_earlier_server(pubsub_database:'PubSub
 
 def test_replaced_server_after_engine_disposal(pubsub_database:'PubSubDatabase') -> 'None':
     """ Once another server raises the generation and the replaced server disposes of the engine of the Zato database,
-    the engine that the replaced server builds next carries the fence of its generation, so an audit insert through it
-    is rejected, as are a publication and an acknowledgment of its backend.
+    the engine that the replaced server builds next carries the fence of its generation, so the creation of its schema
+    is rejected, as are an audit insert, a publication and an acknowledgment of its backend.
     """
     env = _new_server_env(pubsub_database, _pool_size_disposed)
 
@@ -406,13 +406,14 @@ def test_replaced_server_after_engine_disposal(pubsub_database:'PubSubDatabase')
         assert other_guard is not None
         assert other_guard.generation == guard.generation + 1
 
-        # .. the replaced server disposes of its engine, so the next one is built anew ..
+        # .. the replaced server disposes of its engine, and the next one confirms the generation
+        # .. in the transaction that creates the schema, which rejects it ..
         dispose_database_engine()
 
-        new_engine = get_database_engine()
-        assert new_engine is not disposed_engine
+        with pytest.raises(PubSubReplaced):
+            _ = get_database_engine()
 
-        # .. an audit insert through the new engine is rejected ..
+        # .. an audit insert, which builds the engine anew, is rejected ..
         with pytest.raises(PubSubReplaced):
             _ = backend.audit_log.insert(AuditSource.PubSub, AuditEvent.Published, _disposed_object_name)
 

@@ -19,7 +19,9 @@ import shutil
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.conftest_base_pubsub import find_free_port, render_template, run_quickstart_and_enmasse, \
     SessionState, start_server_process
+from zato.common.test.pickup_listener import PickupListener
 from zato.common.test.process_util import kill_process_tree_at_once
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -86,10 +88,14 @@ class PowerLossServer:
         self.server_directory = ''
         self.server_env:'strstrdict' = {}
 
+        # The listener of the pickup directory, a process of the environment that runs from its creation to its removal
+        self.listener:'PickupListener | None' = None
+
 # ################################################################################################################################
 
     def create(self) -> 'None':
-        """ Creates the quickstart environment of the server, imports its enmasse file and deploys its services.
+        """ Creates the quickstart environment of the server, imports its enmasse file, deploys its services
+        and starts the file-transfer listener of its pickup directory.
         """
         rendered_yaml = render_template(self.template_path, self.placeholders)
 
@@ -113,6 +119,14 @@ class PowerLossServer:
         self.server_env = dict(self.database_env)
         self.server_env[ModuleCtx.Env_Generation_File] = generation_file_path
 
+        quickstart_directory = self.state.quickstart_directory
+        quickstart_directory = cast_('str', quickstart_directory)
+
+        web_admin_repo_dir = os.path.join(quickstart_directory, 'web-admin', 'config', 'repo')
+
+        self.listener = PickupListener(self.name, self.server_directory, web_admin_repo_dir, self.server_port)
+        self.listener.start()
+
 # ################################################################################################################################
 
     def start(self) -> 'None':
@@ -133,6 +147,14 @@ class PowerLossServer:
 
 # ################################################################################################################################
 
+    def deploy(self, file_name:'str', data:'bytes') -> 'None':
+        """ Writes a file into the pickup directory and waits until the listener reports that the server deployed it.
+        """
+        listener = cast_('PickupListener', self.listener)
+        listener.deploy(file_name, data)
+
+# ################################################################################################################################
+
     def kill(self) -> 'None':
         """ Kills the server and every process that it started with SIGKILL.
         """
@@ -144,8 +166,11 @@ class PowerLossServer:
 # ################################################################################################################################
 
     def remove(self) -> 'None':
-        """ Stops the server and removes its quickstart environment.
+        """ Stops the listener and the server and removes the quickstart environment of the server.
         """
+        if self.listener:
+            self.listener.stop()
+
         self.state.cleanup()
 
 # ################################################################################################################################

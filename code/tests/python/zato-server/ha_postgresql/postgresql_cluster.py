@@ -213,19 +213,28 @@ class PostgreSQLCluster(Backend):
 # ################################################################################################################################
 
     def _prepare_data_dir(self, instance:'Instance') -> 'None':
-        """ Creates the empty data directory of an instance, with LazyFS over it if a test cuts the power of the instance.
+        """ Creates the empty data directory of an instance.
         """
         os.makedirs(instance.data_dir)
         os.chmod(instance.data_dir, 0o700)
 
-        if instance.name in self.lazyfs_names:
-            container_name = ModuleCtx.LazyFS_Container_Prefix + instance.name
-            work_dir = instance.data_dir + ModuleCtx.LazyFS_Dir_Suffix
+# ################################################################################################################################
 
-            mount = LazyFSMount(container_name, self.host_data_dir, work_dir, instance.data_dir)
-            mount.mount()
+    def _move_to_lazyfs(self, instance:'Instance') -> 'None':
+        """ Stops an instance, makes the data that it created the content of LazyFS, and starts it again on LazyFS.
+        """
+        _ = docker('stop', instance.container_name)
 
-            self.mounts[instance.name] = mount
+        container_name = ModuleCtx.LazyFS_Container_Prefix + instance.name
+        work_dir = instance.data_dir + ModuleCtx.LazyFS_Dir_Suffix
+
+        mount = LazyFSMount(container_name, self.host_data_dir, work_dir, instance.data_dir)
+        mount.mount()
+
+        self.mounts[instance.name] = mount
+
+        _ = docker('start', instance.container_name)
+        self._wait_until_ready(instance)
 
 # ################################################################################################################################
 
@@ -281,8 +290,10 @@ class PostgreSQLCluster(Backend):
         for setting in self._settings(replication_settings):
             postgres_command.append(f'-c "{setting}"')
 
+        # The base backup is taken at the first start only, and each later start of the container keeps the data it has.
         script = ' && '.join([
-            f'pg_basebackup -d "{conninfo}" -D {data_dir} -X stream -c fast -C -S {instance.name} -R',
+            f'{{ [ -f {data_dir}/PG_VERSION ] || ' +
+            f'pg_basebackup -d "{conninfo}" -D {data_dir} -X stream -c fast -C -S {instance.name} -R; }}',
             'exec ' + ' '.join(postgres_command),
         ])
 
@@ -313,6 +324,22 @@ class PostgreSQLCluster(Backend):
         if is_synchronous:
             self.set_synchronous_standby_names(ModuleCtx.Synchronous_Standby_Names)
             self._wait_until_streaming(ModuleCtx.Standby_Names[0], 'sync')
+
+        # The data that each instance on LazyFS created during the initialization becomes the content of LazyFS ..
+        for name in lazyfs_names:
+            self._move_to_lazyfs(self.instances[name])
+
+        # .. and the standbys stream again in the state that they had before.
+        if lazyfs_names:
+            if is_synchronous:
+                first_state = 'sync'
+                second_state = 'potential'
+            else:
+                first_state = 'async'
+                second_state = 'async'
+
+            self._wait_until_streaming(ModuleCtx.Standby_Names[0], first_state)
+            self._wait_until_streaming(ModuleCtx.Standby_Names[1], second_state)
 
         logger.info('PostgreSQL ready with primary %s at %s, synchronous: %s', self.primary_name, self.ip, is_synchronous)
 
