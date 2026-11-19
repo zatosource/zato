@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import time
 
 # SQLAlchemy
 from sqlalchemy import inspect, text
@@ -15,9 +16,11 @@ from sqlalchemy.pool import QueuePool
 
 # Zato
 from common import pubsub_path_env
+from zato.common.common_db.store import SharedObjectStore
 from zato.common.defaults import default_env_base_dir
 from zato.common.db_env.database import database_config, get_database_engine, get_database_sqlite_path
 from zato.common.db_env.database_env import DatabaseEnv
+from zato.common.pubsub.sql.clock import DatabaseClock, Floor_Key, Floor_Object_Name, Floor_Object_Type
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,6 +32,17 @@ if 0:
     # Dummy assignments to satisfy type checkers
     MonkeyPatch = MonkeyPatch
     strset = strset
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ModuleCtx:
+
+    # How far ahead of the time of the host an earlier clock persisted the floor, in milliseconds
+    Floor_Ahead_Ms = 3_600_000
+
+    # Milliseconds in one second
+    Ms_Per_Second = 1000
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -120,6 +134,36 @@ def test_engine_is_cached_per_path(tmp_path:'os.PathLike') -> 'None':
         second_engine = get_database_engine()
 
     assert second_engine is first_engine
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def test_clock_starts_from_floor(tmp_path:'os.PathLike') -> 'None':
+    """ A clock whose host is behind the floor that an earlier clock persisted issues no time below that floor,
+    and it persists a floor ahead of the time it issues.
+    """
+    db_path = os.path.join(str(tmp_path), 'pubsub-floor.db')
+
+    with pubsub_path_env(db_path):
+        engine = get_database_engine()
+        store = SharedObjectStore(engine)
+
+        host_ms = int(time.time() * ModuleCtx.Ms_Per_Second)
+        floor_ms = host_ms + ModuleCtx.Floor_Ahead_Ms
+
+        is_written = store.compare_and_set(Floor_Object_Type, Floor_Object_Name, {Floor_Key: floor_ms}, None)
+        assert is_written, 'Floor not written'
+
+        clock = DatabaseClock(engine)
+        issued_ms = clock.now_ms()
+
+        assert issued_ms >= floor_ms, f'Issued {issued_ms} below the floor {floor_ms}'
+
+        floor = store.get(Floor_Object_Type, Floor_Object_Name)
+        assert floor is not None, 'No floor'
+
+        persisted_ms = floor.data[Floor_Key]
+        assert persisted_ms > issued_ms, f'Floor {persisted_ms} not ahead of {issued_ms}'
 
 # ################################################################################################################################
 # ################################################################################################################################
