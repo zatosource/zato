@@ -26,12 +26,16 @@ import pytest
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.test.pickup_listener import PickupListener
+from zato.common.test.process_util import kill_process_tree, kill_processes_in_directories
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import generator_
+
+    listenergen = generator_[PickupListener, None, None]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,13 +47,21 @@ logger = logging.getLogger('zato.test.hot_deploy.conftest')
 
 _zato_base = os.environ['ZATO_TEST_BASE_DIR']
 _zato_bin  = os.path.join(_zato_base, 'code', 'bin', 'zato')
-_listener_script = os.path.join(_zato_base, 'code', 'zato-common', 'src', 'zato', 'common', 'file_transfer', 'listener.py')
-_python_bin = os.path.join(_zato_base, 'code', 'bin', 'py')
 
 _process_kill_timeout = 5
 _server_wait_timeout  = 120
 _quickstart_timeout   = 180
 _ping_poll_interval   = 0.5
+
+# The prefixes of the temporary directories of the environment, which no process other than those of this suite refers to
+_quickstart_prefix = 'zato_hot_deploy_qs_'
+_project_prefix    = 'zato_hot_deploy_proj_'
+
+# The directories of the project that exist before the listener starts, because it watches only those it finds then
+_project_subdirectories = ('services', 'user-conf', 'common')
+
+# The environment variable with the root directory of a project, which the server adds to sys.path and deploys from
+_project_root_variable = 'Zato_Project_Root'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,7 +70,7 @@ class _SessionState:
 
     def __init__(self) -> 'None':
         self.server_process:'subprocess.Popen[bytes] | None' = None
-        self.listener_process:'subprocess.Popen[bytes] | None' = None
+        self.listener:'PickupListener | None' = None
         self.quickstart_directory:'str | None' = None
         self.project_directory:'str | None' = None
 
@@ -66,24 +78,19 @@ class _SessionState:
 
     def kill_server(self) -> 'None':
         if self.server_process:
-            if self.server_process.poll() is None:
-                self.server_process.kill()
-                _ = self.server_process.wait(timeout=_process_kill_timeout)
-                logger.info('Killed server process')
+            kill_process_tree(self.server_process)
+            logger.info('Stopped server process')
 
         self.server_process = None
-        _ = subprocess.run(['pkill', '-f', 'zato.server.main'], capture_output=True)
 
 # ################################################################################################################################
 
     def kill_listener(self) -> 'None':
-        if self.listener_process:
-            if self.listener_process.poll() is None:
-                self.listener_process.kill()
-                _ = self.listener_process.wait(timeout=_process_kill_timeout)
-                logger.info('Killed listener process')
+        if self.listener:
+            self.listener.stop()
+            logger.info('Stopped listener process')
 
-        self.listener_process = None
+        self.listener = None
 
 # ################################################################################################################################
 
@@ -94,11 +101,6 @@ class _SessionState:
             if os.path.exists(server_log_path):
                 _ = shutil.copy(server_log_path, '/tmp/hot-deploy-test-server.log')
                 logger.info('Copied server logs to /tmp/hot-deploy-test-server.log')
-
-            listener_log_path = os.path.join(self.quickstart_directory, 'listener.log')
-            if os.path.exists(listener_log_path):
-                _ = shutil.copy(listener_log_path, '/tmp/hot-deploy-test-listener.log')
-                logger.info('Copied listener logs to /tmp/hot-deploy-test-listener.log')
 
         self.kill_listener()
         self.kill_server()
@@ -165,13 +167,17 @@ def _wait_for_server(host:'str', port:'int', timeout:'int'=_server_wait_timeout)
 # ################################################################################################################################
 
 @pytest.fixture(scope='session', autouse=True)
-def zato_server() -> 'any_':
-    """ Spins up a quickstart environment, starts server and file listener, yields config.
+def zato_server() -> 'listenergen':
+    """ Spins up a quickstart environment, starts its server and a file listener of a project, yields the listener.
     """
     from zato.common.test.config_hot_deploy import TestConfig
 
-    _ = subprocess.run(['pkill', '-f', 'zato.server.main'], capture_output=True)
-    time.sleep(2)
+    # A server or a listener that an interrupted run of this suite left behind is stopped, and no other process is
+    temp_directory = tempfile.gettempdir()
+    quickstart_prefix = os.path.join(temp_directory, _quickstart_prefix)
+    project_prefix = os.path.join(temp_directory, _project_prefix)
+
+    kill_processes_in_directories([quickstart_prefix, project_prefix])
 
     start_time = time.monotonic()
 
@@ -179,7 +185,7 @@ def zato_server() -> 'any_':
     invoke_password = 'test.hotdeploy.' + random_suffix
 
     # Create quickstart
-    _state.quickstart_directory = tempfile.mkdtemp(prefix='zato_hot_deploy_qs_')
+    _state.quickstart_directory = tempfile.mkdtemp(prefix=_quickstart_prefix)
 
     quickstart_environment = os.environ.copy()
     _ = quickstart_environment.pop('COVERAGE_PROCESS_START', None)
@@ -206,12 +212,11 @@ def zato_server() -> 'any_':
     server_directory = os.path.join(_state.quickstart_directory, 'server1')
 
     # Create the project directory that the listener will watch
-    _state.project_directory = tempfile.mkdtemp(prefix='zato_hot_deploy_proj_')
+    _state.project_directory = tempfile.mkdtemp(prefix=_project_prefix)
     project_dir = _state.project_directory
 
-    # Create the subdirectories the listener expects
-    os.makedirs(os.path.join(project_dir, 'src', 'services'), exist_ok=True)
-    os.makedirs(os.path.join(project_dir, 'src', 'user-conf'), exist_ok=True)
+    for subdirectory in _project_subdirectories:
+        os.makedirs(os.path.join(project_dir, 'src', subdirectory), exist_ok=True)
 
     # Start the server
     server_port = _find_free_port()
@@ -220,13 +225,16 @@ def zato_server() -> 'any_':
     server_environment = os.environ.copy()
     server_environment['Zato_Config_Bind_Port'] = str(server_port)
     server_environment['Zato_Broker_HTTP_Port'] = str(broker_port)
+    server_environment[_project_root_variable] = project_dir
     _ = server_environment.pop('COVERAGE_PROCESS_START', None)
 
+    # The server runs in a session of its own, so that stopping it reaches each of its processes and no other server
     _state.server_process = subprocess.Popen(
         [_zato_bin, 'start', server_directory, '--fg'],
         env=server_environment,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        start_new_session=True,
     )
 
     popen_time = time.monotonic()
@@ -257,34 +265,10 @@ def zato_server() -> 'any_':
         raise
 
     # Start the file listener pointed at the project directory
-    listener_environment = os.environ.copy()
-    _ = listener_environment.pop('COVERAGE_PROCESS_START', None)
-
     web_admin_repo_dir = os.path.join(_state.quickstart_directory, 'web-admin', 'config', 'repo')
-    listener_environment['Zato_Web_Admin_Repo_Dir'] = web_admin_repo_dir
-    listener_environment['Zato_Config_Bind_Port'] = str(server_port)
 
-    listener_log_path = os.path.join(_state.quickstart_directory, 'listener.log')
-    listener_log_file = open(listener_log_path, 'w')
-
-    _state.listener_process = subprocess.Popen(
-        [_python_bin, _listener_script, project_dir, '--observer', 'inotify'],
-        env=listener_environment,
-        stdout=listener_log_file,
-        stderr=subprocess.STDOUT,
-    )
-
-    # Give the listener a moment to start
-    time.sleep(3)
-
-    # Check if the listener started successfully
-    if _state.listener_process.poll() is not None:
-        listener_log_file.close()
-        with open(listener_log_path, 'r') as f:
-            listener_output = f.read()
-        raise RuntimeError(f'Listener process died immediately:\n{listener_output}')
-
-    logger.info('Listener started (pid=%d)', _state.listener_process.pid)
+    _state.listener = PickupListener('hot-deploy', server_directory, web_admin_repo_dir, server_port, project_dir)
+    _state.listener.start()
 
     setup_time = time.monotonic()
     total_elapsed = setup_time - start_time
@@ -296,7 +280,7 @@ def zato_server() -> 'any_':
     TestConfig.server_port = server_port
     TestConfig.project_directory = project_dir
 
-    yield
+    yield _state.listener
 
     _state.cleanup()
 

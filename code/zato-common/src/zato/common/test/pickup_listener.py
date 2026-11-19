@@ -57,10 +57,22 @@ class PickupListener:
     """ The file-transfer listener of the pickup directory of one server.
     """
 
-    def __init__(self, name:'str', server_directory:'str', web_admin_repo_dir:'str', server_port:'int') -> 'None':
+    def __init__(
+        self,
+        name:'str',
+        server_directory:'str',
+        web_admin_repo_dir:'str',
+        server_port:'int',
+        watched_directory:'str | None'=None,
+    ) -> 'None':
 
         self.name = name
-        self.pickup_directory = os.path.join(server_directory, 'pickup', 'incoming', 'services')
+
+        # A project directory is watched instead of the pickup directory of the server when one is given
+        if watched_directory is None:
+            watched_directory = os.path.join(server_directory, 'pickup', 'incoming', 'services')
+
+        self.pickup_directory = watched_directory
         self.web_admin_repo_dir = web_admin_repo_dir
         self.server_port = server_port
 
@@ -131,9 +143,13 @@ class PickupListener:
 # ################################################################################################################################
 
     def deploy(self, file_name:'str', data:'bytes') -> 'None':
-        """ Writes a file into the pickup directory and waits until the listener reports that the server deployed it.
+        """ Writes a file into the watched directory, under a path relative to it, and waits until the listener reports
+        that the server deployed it.
         """
         file_path = os.path.join(self.pickup_directory, file_name)
+
+        file_directory = os.path.dirname(file_path)
+        os.makedirs(file_directory, exist_ok=True)
 
         # A path deployed shortly before is written again only after the listener stops ignoring its events ..
         if deployed_at := self.deployed_times.get(file_path):

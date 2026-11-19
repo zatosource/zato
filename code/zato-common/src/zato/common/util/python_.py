@@ -23,12 +23,18 @@ from zato.common.typing_ import cast_, module_
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import intnone
+    from importlib.abc import Loader
+    from zato.common.typing_ import intnone, strlist
+
+    Loader = Loader
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger('zato')
+
+# Separates the parts of a dotted module name
+_name_separator = '.'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -168,28 +174,100 @@ def get_module_name_by_path(path:'str | Path') -> 'str':
 
 # ################################################################################################################################
 
-def import_module_by_path(path:'str') -> 'ModuleInfo | None':
+def _copy_submodule_attributes(mod_name:'str', module:'module_') -> 'None':
+    """ Makes the submodules already imported from a package attributes of the package's new module object.
+    """
+    prefix = mod_name + _name_separator
+    prefix_length = len(prefix)
+
+    for name, submodule in list(sys.modules.items()):
+        if name.startswith(prefix):
+            child_name = name[prefix_length:]
+            if _name_separator not in child_name:
+                setattr(module, child_name, submodule)
+
+# ################################################################################################################################
+
+def _import_parent_packages(mod_name:'str') -> 'None':
+    """ Imports the packages that a module is in, from the top one down, as Python does before it imports a submodule,
+    so that each package exists before the module becomes its attribute.
+    """
+    parts = mod_name.split(_name_separator)
+    parent_parts = parts[:-1]
+
+    for idx in range(1, len(parent_parts) + 1):
+        current_parts = parent_parts[:idx]
+        parent_name = _name_separator.join(current_parts)
+
+        if parent_name not in sys.modules:
+
+            # A module from a directory that is not in sys.path has no packages that can be imported
+            try:
+                _ = importlib.import_module(parent_name)
+            except ModuleNotFoundError:
+                return
+
+# ################################################################################################################################
+
+def _set_parent_attribute(mod_name:'str', module:'module_') -> 'None':
+    """ Makes a module an attribute of its parent package, which is what `from package import module` reads.
+    """
+    parent_name, _, child_name = mod_name.rpartition(_name_separator)
+
+    if parent_name:
+        if parent := sys.modules.get(parent_name):
+            setattr(parent, child_name, module)
+
+# ################################################################################################################################
+
+def import_module_by_path(path:'str', names:'strlist') -> 'ModuleInfo | None':
+    """ Executes the module at the given path anew under the first of the names, which is its primary one,
+    and puts it in effect under each of the other names that it was already imported by.
+    """
+
+    # Our response to produce
+    out = None
 
     # Local aliases
     mod_path = Path(path)
+    mod_name = names[0]
 
-    # .. turn the path into its corresponding module name ..
-    mod_name = get_module_name_by_path(mod_path)
+    # The packages of the module exist before it does ..
+    _import_parent_packages(mod_name)
 
     # .. we have both the name of a module and its path so we can import it now ..
     if spec := spec_from_file_location(mod_name, path):
         module = module_from_spec(spec)
-        sys.modules[mod_name] = module
-        spec.loader.exec_module(module) # type: ignore
+        loader = cast_('Loader', spec.loader)
 
-        # .. build an object encapsulating what we know about the module
+        # .. these are the names that the module will be known by ..
+        effective_names:'strlist' = [mod_name]
+
+        for name in names[1:]:
+            if name in sys.modules:
+                effective_names.append(name)
+
+        # .. a package that is executed anew keeps the submodules that were imported from it ..
+        if spec.submodule_search_locations is not None:
+            _copy_submodule_attributes(mod_name, module)
+
+        # .. the module is registered before it executes, so that what it imports while it executes finds it ..
+        for name in effective_names:
+            sys.modules[name] = module
+
+        loader.exec_module(module)
+
+        # .. the packages that the module is in refer to the new object ..
+        for name in effective_names:
+            _set_parent_attribute(name, module)
+
+        # .. and we build an object encapsulating what we know about the module.
         out = ModuleInfo()
         out.name = mod_name
         out.path = mod_path
         out.module = module
 
-        # .. finally, we can return it to our caller.
-        return out
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

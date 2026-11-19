@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import importlib
 import inspect
 import logging
 import os
@@ -63,7 +62,7 @@ if 0:
     from zato.common.hot_deploy_ import HotDeployProject
     from zato.common.odb.api import ODBManager
     from zato.common.typing_ import any_, anydict, anylist, callable_, intstrdict, module_, stranydict, \
-        strdictdict, strint, strintdict, strlist, stroriter, tuple_
+        strdictdict, strint, strintdict, strlist, stroriter, strset, tuple_
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.config_manager import ConfigManager
     from zato.server.config import ConfigStore
@@ -1274,133 +1273,29 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _has_module_import(self, source_code:'str', mod_name:'str') -> bool:
-
-        processed_code = source_code.replace('\\\n', '')
-
-        for line in processed_code.splitlines():
-            # Strip comments and whitespace
-            line = line.split('#', 1)[0].strip()
-
-            if not line:
-                continue
-
-            # `import api` or `import api as ...`
-            if line.startswith('import '):
-                rest_of_line = line.split('import ', 1)[1]
-                modules = rest_of_line.split(',')
-                for mod_spec in modules:
-                    mod_name_part = mod_spec.strip().split(' as ')[0].strip()
-                    if mod_name_part == mod_name:
-                        return True
-
-            # `from api import foo`
-            elif line.startswith('from '):
-                parts = line.split()
-                if len(parts) >= 3 and parts[0] == 'from' and parts[2] == 'import':
-                    imported_module = parts[1]
-                    if imported_module == mod_name:
-                        return True
-
-        return False
-
-# ################################################################################################################################
-
-    def _get_service_module_imports(self, mod_name:'str') -> 'strlist':
-        """ Returns a list of paths pointing to modules with services that import the module given on input.
+    def has_objects_from_path(self, path:'str') -> 'bool':
+        """ Returns whether any service or model was deployed from the file at the given path.
         """
-        # Local aliases
-        out = []
-        modules_visited = set()
+        path = os.path.realpath(path)
+        known_paths:'strset' = set()
 
-        # Go through all the services that we are aware of ..
+        # Collect the files that services and models were deployed from ..
         for service_data in self.services.values():
+            known_paths.add(service_data['path'])
 
-            # .. this is the Python class representing a service ..
-            service_class = service_data['service_class']
-
-            # .. get the module of this class based on the module's name ..
-            mod = importlib.import_module(service_class.__module__)
-
-            # .. get the source of the module that this class is in, ..
-            # .. but not if we have already visited this module before ..
-            if mod in modules_visited:
-                continue
-            else:
-                # .. get the actual source code ..
-                source_code = service_data['source_code']
-
-                # .. this module can be ignored if it does not import the input one ..
-                if not self._has_module_import(source_code, mod_name):
-                    continue
-
-                # .. otherwise, extract the path of this module ..
-                path = service_data['path']
-
-                # .. store that module's path for later use ..
-                out.append(path)
-
-                # .. cache that item so that we do not have to visit it more than once ..
-                modules_visited.add(mod)
-
-        # .. now, we can return our result to the caller.
-        return out
-
-# ################################################################################################################################
-
-    def _get_model_module_imports(self, mod_name:'str') -> 'strlist':
-        """ Returns a list of paths pointing to modules with services that import the module given on input.
-        """
-        # Local aliases
-        out = []
-        modules_visited = set()
-
-        # Go through all the models that we are aware of ..
         for model in self.models.values():
-
-            # .. add type hints ..
             model = cast_('ModelInfo', model)
+            known_paths.add(model.path)
 
-            # .. ignore this module if we have already visited this module before ..
-            if model.mod_name in modules_visited:
-                continue
-            else:
-                # .. this module can be ignored if it does not import the input one ..
-                if not self._has_module_import(model.source, mod_name):
-                    continue
+        # .. and check whether the file is among them.
+        for known_path in known_paths:
+            known_path = os.path.realpath(known_path)
+            if known_path == path:
+                out = True
+                break
+        else:
+            out = False
 
-                # .. otherwise, store that module's path for later use ..
-                out.append(model.path)
-
-                # .. cache that item so that we do not have to visit it more than once ..
-                modules_visited.add(model.mod_name)
-
-        # .. now, we can return our result to the caller.
-        return out
-
-# ################################################################################################################################
-
-    def get_module_importers(self, mod_name:'str') -> 'strlist':
-        """ Returns a list of paths pointing to modules that import the one given on input.
-        """
-
-        # Local aliases
-        out = []
-
-        # .. get files with services that import this module ..
-        service_path_list = self._get_service_module_imports(mod_name)
-
-        # .. get files with models that import this module ..
-        model_path_list = self._get_model_module_imports(mod_name)
-
-        # .. add everything found to the result ..
-        out.extend(service_path_list)
-        out.extend(model_path_list)
-
-        # .. make it unique and sorted ..
-        out = sorted(set(out))
-
-        # .. now, we can return our result to the caller.
         return out
 
 # ################################################################################################################################

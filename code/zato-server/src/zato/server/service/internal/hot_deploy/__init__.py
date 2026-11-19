@@ -25,6 +25,7 @@ from zato.common.typing_ import cast_
 from zato.common.broker_message import HOT_DEPLOY
 from zato.common.util.api import import_module_from_path, is_python_file, is_archive_file
 from zato.common.util.file_system import fs_safe_now
+from zato.common.util.import_graph import ImportGraph
 from zato.common.util.open_ import open_r, open_w
 from zato.common.util.python_ import import_module_by_path
 from zato.server.generic.api.outconn_sdk import extract_connector_classes, register_connector_type
@@ -88,18 +89,28 @@ class Create(AdminService):
     """ Creates all the filesystem directories and files out of a deployment package stored in the ODB.
     """
     changes_config = True
-    input = '-payload', '-payload_name', '-is_startup', '-is_relayed'
+    input = '-payload', '-payload_name', '-is_startup', '-is_relayed', '-is_importer'
     output = AsIs('-services_deployed'), '-zato_ide_deploy_create_response'
 
 # ################################################################################################################################
 
     def is_config_change(self) -> 'bool':
 
-        # A relayed deployment puts in effect in this process a file that the config process deployed already
-        raw = self.request.raw
+        # The raw request of a REST channel is the body as it was received, while the payload is parsed on every channel
+        payload = self.request.payload
 
-        if 'is_relayed' in raw:
-            is_relayed = raw['is_relayed']
+        # A request with nothing to deploy is a connection test from an IDE plugin, which changes no configuration ..
+        if 'payload_name' in payload:
+            payload_name = payload['payload_name']
+        else:
+            payload_name = ''
+
+        if not payload_name:
+            return False
+
+        # .. and a relayed deployment puts in effect in this process a file that the config process deployed already.
+        if 'is_relayed' in payload:
+            is_relayed = payload['is_relayed']
         else:
             is_relayed = False
 
@@ -221,23 +232,64 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
+    def _get_import_roots(self) -> 'strlist':
+        """ Returns the directories whose Python files may import one another, the ones in sys.path first.
+        """
+        out:'strlist' = []
+        plain_directories:'strlist' = []
+
+        # A project contributes the directory that it adds to sys.path, while a plain directory contributes itself ..
+        for source in self.server.service_sources:
+            if isinstance(source, list):
+                for project in source:
+                    sys_path_entry = str(project.sys_path_entry)
+                    out.append(sys_path_entry)
+            else:
+                plain_directories.append(source)
+
+        # .. and so does the directory that files uploaded from an IDE are written to.
+        out.extend(plain_directories)
+        out.append(self.server.hot_deploy_config.pickup_dir)
+
+        return out
+
+# ################################################################################################################################
+
     def _redeploy_module_dependencies(self, file_name:'str') -> 'None':
 
-        # Reload the module so its newest contents is in sys path ..
-        mod_info = import_module_by_path(file_name)
+        # The import graph of every hot-deployment root of this server ..
+        roots = self._get_import_roots()
+        graph = ImportGraph.build(roots)
 
-        # .. we enter here if the reload succeeded ..
-        if mod_info:
+        # .. the module deployed is put in effect under each of its names ..
+        names = graph.get_module_names(file_name)
+        _ = import_module_by_path(file_name, names)
 
-            # .. get all the files with that are making use of this module ..
-            # .. which may mean both files with services or models ..
-            file_name_list = self.server.service_store.get_module_importers(mod_info.name)
+        # .. every module that imports it, directly or through other modules, follows the modules that it imports ..
+        importer_list = graph.get_ordered_importers(file_name)
+        service_store = self.server.service_store
 
-            # .. and redeploy all such files in this process, because every other process deploys the module
-            # from the event of its own deployment and then redeploys the files that import it in turn.
-            # The server invokes the deployment, because a service may not invoke itself.
-            for item in file_name_list:
-                _ = self.server.invoke('zato.hot-deploy.create', {'payload_name': item, 'payload': '', 'is_relayed': True})
+        for importer in importer_list:
+
+            # .. a file with services or models is deployed again in this process, because every other process
+            # deploys the module from the event of its own deployment and then takes care of the importers in turn.
+            # The server invokes the deployment, because a service may not invoke itself ..
+            if service_store.has_objects_from_path(importer):
+                _ = self.server.invoke('zato.hot-deploy.create', {
+                    'payload_name': importer,
+                    'payload': '',
+                    'is_relayed': True,
+                    'is_importer': True,
+                })
+
+            # .. and each one is put in effect under each of its names, so that the next ones import it as it is now.
+            importer_names = graph.get_module_names(importer)
+            _ = import_module_by_path(importer, importer_names)
+
+        if importer_list:
+            importer_count = len(importer_list)
+            suffix = 'module' if importer_count == 1 else 'modules'
+            self.logger.info('Reloaded %d %s importing `%s` -> %s', importer_count, suffix, file_name, importer_list)
 
 # ################################################################################################################################
 
@@ -316,7 +368,8 @@ class Create(AdminService):
         current_work_dir, # type: str
         payload,          # type: any_
         file_name,        # type: str
-        should_deploy_in_place # type: bool
+        should_deploy_in_place, # type: bool
+        is_importer,      # type: bool
     ) -> 'DeploymentCtx':
 
         if not should_deploy_in_place:
@@ -328,9 +381,11 @@ class Create(AdminService):
         service_id_list = self._deploy_services(current_work_dir, file_name)
 
         # A Python file is imported by other modules whether or not it defines services or models,
-        # and each of them is redeployed after it, so that they use its current version.
+        # and each of them is redeployed after it, so that they use its current version,
+        # unless the file is itself an importer, which the deployment of the module it imports takes care of.
         if is_python_file(file_name):
-            self._redeploy_module_dependencies(file_name)
+            if not is_importer:
+                self._redeploy_module_dependencies(file_name)
 
         ctx = DeploymentCtx()
         ctx.connector_type_list = connector_type_list
@@ -346,6 +401,7 @@ class Create(AdminService):
         self,
         payload,      # type: str
         payload_name, # type: str
+        is_importer,  # type: bool
     ) -> 'anylistnone':
         """ Deploy a package, either a plain Python file or an archive, and update
         the deployment status.
@@ -362,7 +418,7 @@ class Create(AdminService):
         file_name = os.path.join(work_dir, payload_name)
 
         # Deploy some objects of interest from the file ..
-        ctx = self._deploy_file(work_dir, payload, file_name, should_deploy_in_place)
+        ctx = self._deploy_file(work_dir, payload, file_name, should_deploy_in_place, is_importer)
 
         # We enter here if there were some connectors, models or services that we deployed ..
         if ctx.connector_type_list or ctx.model_name_list or ctx.service_name_list:
@@ -562,7 +618,7 @@ class Create(AdminService):
         out:'intlist' = []
 
         for module_path in sorted(module_paths):
-            service_id_list = self._deploy_package('', module_path)
+            service_id_list = self._deploy_package('', module_path, False)
 
             if service_id_list:
                 out.extend(service_id_list)
@@ -571,13 +627,13 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def deploy_package(self, payload:'str', payload_name:'str') -> 'any_':
+    def deploy_package(self, payload:'str', payload_name:'str', is_importer:'bool') -> 'any_':
 
         if is_archive_file(payload_name):
             return self._deploy_archive(payload_name)
 
         elif is_python_file(payload_name):
-            return self._deploy_package(payload, payload_name)
+            return self._deploy_package(payload, payload_name, is_importer)
 
         elif self._is_enmasse_file(payload_name):
             self._deploy_enmasse(payload_name)
@@ -597,6 +653,9 @@ class Create(AdminService):
 
         # A deployment that another process relayed is deployed in this process only
         is_relayed = self.request.input.is_relayed
+
+        # A file deployed again because it imports a module that was just deployed
+        is_importer = self.request.input.is_importer
 
         # A request with nothing to deploy is a connection test from an IDE plugin,
         # so we confirm that we are reachable and return early.
@@ -656,7 +715,7 @@ class Create(AdminService):
 
             try:
                 self.backup_current_work_dir()
-                services_deployed = self.deploy_package(payload, payload_name) or []
+                services_deployed = self.deploy_package(payload, payload_name, is_importer) or []
 
                 # Go through all services deployed, check if any needs post-processing
                 # and if does, call the relevant function and clear the flag.

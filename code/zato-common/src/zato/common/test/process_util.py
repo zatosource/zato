@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 import os
 import signal
 import subprocess
@@ -16,7 +17,12 @@ import time
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, intdict, intlist
+    from zato.common.typing_ import any_, intdict, intlist, intset, strlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -132,6 +138,89 @@ def _has_exited(pid:'int') -> 'bool':
 
     out = state == _Zombie_State
     return out
+
+# ################################################################################################################################
+
+def _refers_to_prefixes(pid:'int', prefixes:'strlist') -> 'bool':
+    """ Returns whether the working directory or an argument of the command line of a process contains one of the prefixes.
+    """
+    try:
+        working_directory = os.readlink(f'/proc/{pid}/cwd')
+
+        with open(f'/proc/{pid}/cmdline', 'rb') as cmdline_file:
+            cmdline = cmdline_file.read()
+
+    # The process exited in the meantime, or it belongs to another user, in which case it was not started by this user's tests.
+    except (FileNotFoundError, ProcessLookupError, PermissionError):
+        return False
+
+    # The arguments of the command line are separated with null bytes
+    text = cmdline.decode('utf8', errors='replace')
+    values = text.split('\0')
+    values.append(working_directory)
+
+    for value in values:
+        for prefix in prefixes:
+            if prefix in value:
+                return True
+
+    return False
+
+# ################################################################################################################################
+
+def _send_signal(pid:'int', signal_number:'int') -> 'None':
+    try:
+        os.kill(pid, signal_number)
+
+    # The process exited already
+    except ProcessLookupError:
+        pass
+
+# ################################################################################################################################
+
+def kill_processes_in_directories(prefixes:'strlist') -> 'None':
+    """ Kills every process whose working directory or command line refers to a path under one of the prefixes,
+    together with every process that descends from it, e.g. a server and a listener that an interrupted run left behind.
+    """
+    pids:'intset' = set()
+    current_pid = os.getpid()
+
+    for name in os.listdir('/proc'):
+
+        if not name.isdigit():
+            continue
+
+        pid = int(name)
+
+        # The process that runs the tests never kills itself
+        if pid == current_pid:
+            continue
+
+        if _refers_to_prefixes(pid, prefixes):
+            tree_pids = get_process_tree_pids(pid)
+            pids.update(tree_pids)
+
+    if not pids:
+        return
+
+    logger.info('Killing processes left behind in %s -> %s', prefixes, sorted(pids))
+
+    # Each process is given a chance to exit cleanly first ..
+    for pid in pids:
+        _send_signal(pid, signal.SIGTERM)
+
+    deadline = time.monotonic() + _Kill_Timeout
+
+    for pid in pids:
+        while not _has_exited(pid):
+            if time.monotonic() > deadline:
+                break
+            time.sleep(_Exit_Poll_Seconds)
+
+    # .. and each one that is still running is killed.
+    for pid in pids:
+        if not _has_exited(pid):
+            _send_signal(pid, signal.SIGKILL)
 
 # ################################################################################################################################
 

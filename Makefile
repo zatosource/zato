@@ -24,7 +24,7 @@
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-export test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
 	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-sftp test-file-transfer test-smb test-smb-windows-build \
-	test-rule-engine \
+	test-rule-engine test-hot-deployment \
 	test-fabric-live fabric-cleanup fabric-tutorial fabric-loading-tables fabric-lookup-tables fabric-looking-up-data \
 	fabric-api-on-fabric-data fabric-scheduled-reports fabric-files fabric-sending-events fabric-receiving-events \
 	fabric-reading-events fabric-notebook-results fabric-pipelines-and-reports fabric-local-systems \
@@ -610,7 +610,6 @@ test-server: ## Server unit and integration tests.
 		$(CURDIR)/code/tests/python/zato-server/marshall/ \
 		$(CURDIR)/code/tests/python/zato-server/config_store/ \
 		$(CURDIR)/code/tests/python/zato-server/service/ \
-		$(CURDIR)/code/tests/python/zato-server/hot_deploy/ \
 		$(CURDIR)/code/tests/python/zato-server/django_plugin/ \
 		$(CURDIR)/code/zato-server/test/zato/connection/ \
 		$(CURDIR)/code/zato-server/test/zato/pattern/ \
@@ -625,6 +624,14 @@ test-server: ## Server unit and integration tests.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/file_transfer/test_tls_material_listener.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_server_tls_material_listener -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+test-hot-deployment: ## Hot deployment - the import graph offline, then a live server with its pickup listener and its importers redeployed.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/import_graph/ \
+		$(CURDIR)/code/tests/python/zato-server/hot_deploy/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hot_deployment -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 # fuzz_disabled
@@ -2014,7 +2021,7 @@ Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub test-queue-delivery test-mongodb test-es \
 	test-sql test-oracle-db test-mssql-db test-microsoft-cloud test-salesforce test-bearer \
 	test-ibm-mq test-kafka test-sdk test-hl7 test-ccda test-documents test-llm test-rule-engine test-enmasse test-audit-export \
-	test-api-portal-live test-file-transfer test-perf-rules
+	test-api-portal-live test-file-transfer test-perf-rules test-hot-deployment
 
 # The whole browser and dashboard suite
 # Zato_Test_Browser := test-ui
