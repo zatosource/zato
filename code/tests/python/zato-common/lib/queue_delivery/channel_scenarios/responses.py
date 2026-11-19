@@ -244,7 +244,7 @@ class ResponseScenarios(ChannelScenarioBase):
 
         _ = self.ack_of(self.call(Channel_Counting, order(1)))
 
-        redeploy_counting(client, Counting_Hooked_Source)
+        redeploy_counting(Counting_Hooked_Source)
 
         try:
             self._wait_for_counting_response(is_hooked=True)
@@ -258,7 +258,7 @@ class ResponseScenarios(ChannelScenarioBase):
             assert msg_id.startswith(_msg_id_prefix), text
 
         finally:
-            redeploy_counting(client, Counting_Source)
+            redeploy_counting(Counting_Source)
             self._wait_for_counting_response(is_hooked=False)
 
         _ = wait_for_queue_empty(client, self.conn(Channel_Counting))

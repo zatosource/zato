@@ -23,7 +23,8 @@ from tempfile import mkdtemp
 from zato.common.crypto.api import CryptoManager
 from zato.common.typing_ import cast_
 from zato.common.test.conftest_base_pubsub import find_free_port, render_template, run_quickstart_and_enmasse, \
-    SessionState, start_server_process
+    SessionState, start_server_process, wait_for_worker_reload
+from zato.common.test.pickup_listener import PickupListener
 
 # Test support
 from queue_delivery.amqp import build_amqp_yaml, declare_broker_queues
@@ -83,6 +84,9 @@ class ChannelSession:
 
         self.backend:'Backend' = cast_('Backend', None)
 
+        # The listener of the pickup directory, which is not running if the session did not start in full
+        self.pickup_listener:'PickupListener | None' = None
+
         # Holds the pub/sub database environment for as long as the session runs
         self._exit_stack = ExitStack()
 
@@ -121,10 +125,15 @@ class ChannelSession:
             '--missing-wait-time', _missing_wait_time,
         ]
 
+        reload_count = self.state.worker_reload_count
+
         result = subprocess.run(command, capture_output=True, text=True, timeout=_import_timeout, env=environment)
 
         if result.returncode != 0:
             raise Exception(f'enmasse import failed:\nstdout: {result.stdout}\nstderr: {result.stderr}')
+
+        # The channels serve requests only once the worker has reloaded the configuration that the import changed
+        wait_for_worker_reload(self.state, reload_count)
 
         logger.info('Channels imported from %s', input_path)
 
@@ -192,6 +201,13 @@ class ChannelSession:
             patch_server_conf_bind=True,
         )
 
+        # The listener of the pickup directory runs next to the server for as long as the session does
+        quickstart_directory = cast_('str', self.state.quickstart_directory)
+        web_admin_repo_dir = os.path.join(quickstart_directory, 'web-admin', 'config', 'repo')
+
+        self.pickup_listener = PickupListener(self.suite_name, server_directory, web_admin_repo_dir, server_port)
+        self.pickup_listener.start()
+
         rendered_yaml = render_template(self.type_under_test.template_path, {})
 
         self._import_channels(zato_bin, server_directory, rendered_yaml, test_data_directory)
@@ -205,14 +221,18 @@ class ChannelSession:
         TestConfig.server_port = server_port
         TestConfig.zato_bin = zato_bin
         TestConfig.backend = backend
+        TestConfig.pickup_listener = self.pickup_listener
         TestConfig.state = self.state
         TestConfig.receivers = {}
 
 # ################################################################################################################################
 
     def stop(self) -> 'None':
-        """ Stops the server and the backend.
+        """ Stops the listener of the pickup directory, the server and the backend.
         """
+        if self.pickup_listener:
+            self.pickup_listener.stop()
+
         self.state.cleanup()
         self._exit_stack.close()
         self.backend.stop()

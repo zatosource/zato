@@ -47,6 +47,9 @@ class ModuleCtx:
     Settle_Seconds = 2
     Deploy_Timeout = 30
 
+    # How long the listener ignores the events of a path after it starts to deploy it, in seconds
+    Debounce_Seconds = 2
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -72,6 +75,9 @@ class PickupListener:
         # Every path that the listener reported as deployed
         self.deployed_paths:'strset' = set()
         self.deployed_condition = threading.Condition()
+
+        # When a deploy call last saw each of its paths deployed, as a reading of the monotonic clock
+        self.deployed_times:'dict[str, float]' = {}
 
 # ################################################################################################################################
 
@@ -129,7 +135,13 @@ class PickupListener:
         """
         file_path = os.path.join(self.pickup_directory, file_name)
 
-        # A path deployed before must be reported again for this write ..
+        # A path deployed shortly before is written again only after the listener stops ignoring its events ..
+        if deployed_at := self.deployed_times.get(file_path):
+            remaining = deployed_at + ModuleCtx.Debounce_Seconds - time.monotonic()
+            if remaining > 0:
+                time.sleep(remaining)
+
+        # .. a path deployed before must be reported again for this write ..
         with self.deployed_condition:
             self.deployed_paths.discard(file_path)
 
@@ -147,6 +159,8 @@ class PickupListener:
 
         if not is_deployed:
             raise Exception(f'The listener did not deploy {file_path} within {ModuleCtx.Deploy_Timeout}s')
+
+        self.deployed_times[file_path] = time.monotonic()
 
 # ################################################################################################################################
 

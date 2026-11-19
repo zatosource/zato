@@ -12,7 +12,6 @@ import os
 import subprocess
 import tempfile
 import time
-from base64 import b64encode
 
 # PyYAML
 import yaml
@@ -211,13 +210,9 @@ def test_redeploy_module_keeps_definitions(zato_server:'stranydict') -> 'None':
     with open(deployed_path, 'rb') as module_file:
         module_content = module_file.read()
 
-    # .. and deploy it once again through the same service that handles hot-deployment.
-    payload = b64encode(module_content).decode('utf8')
-
-    _ = client.invoke('zato.hot-deploy.create', {
-        'payload': payload,
-        'payload_name': deployed_path,
-    })
+    # .. and write it once again to the pickup directory, which the listener deploys.
+    module_name = os.path.basename(deployed_path)
+    zato_server['pickup_listener'].deploy(module_name, module_content)
 
     # The type was updated rather than registered anew ..
     def _is_updated() -> 'bool':

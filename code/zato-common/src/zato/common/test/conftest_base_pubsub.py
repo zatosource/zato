@@ -79,9 +79,15 @@ Env_Keep_Quickstart = 'Zato_Test_Keep_Quickstart'
 # What the arbiter logs the first time that the worker is ready
 _worker_ready_pattern = re.compile(r'zato\.server\.arbiter:\d+ - Worker is ready')
 
+# What the worker logs when it starts, with its process ID, and what each process of a server logs, with its process ID,
+# once it has reloaded its configuration, e.g. after an import into the running server
+_worker_pid_pattern    = re.compile(r' - [A-Z]+ - (\d+):\S+ - zato\.server\.worker_runtime:\d+ - Worker, generation \d+, PID \d+ is ready')
+_config_loaded_pattern = re.compile(r' - [A-Z]+ - (\d+):\S+ - (?:.* - )?zato\.server\.base\.parallel:\d+ - Config loaded OK$')
+
 # The variables of the operating system that a server process needs, the only ones that it receives
-# from the environment of the test process apart from those that select the Zato database
-_system_env_names = ('HOME', 'LANG', 'LC_ALL', 'LD_LIBRARY_PATH', 'LOGNAME', 'PATH', 'TMPDIR', 'TZ', 'USER')
+# from the environment of the test process apart from those that select the Zato database. SSL_CERT_FILE names the CA
+# that a backend with TLS sets for the test process and its server alike.
+_system_env_names = ('HOME', 'LANG', 'LC_ALL', 'LD_LIBRARY_PATH', 'LOGNAME', 'PATH', 'SSL_CERT_FILE', 'TMPDIR', 'TZ', 'USER')
 
 # The variables that select the Zato database and the file of the generation of the active server, which the session
 # sets for the test process and the server alike. The size of the pool is not one of them, it reaches the server
@@ -126,6 +132,11 @@ class SessionState:
 
         # The internal MLLP port of the server of this session, the same one each time that the server starts
         self.mllp_port = find_free_port()
+
+        # The process IDs of the workers of the server and how many times a worker has reloaded its configuration
+        self.worker_pids:'set[str]' = set()
+        self.worker_reload_count = 0
+        self.worker_reload_condition = threading.Condition()
 
         self._logger = logging.getLogger(logger_name)
         self._server_log_copy_name = server_log_copy_name
@@ -415,6 +426,16 @@ def start_server_process(
             if _worker_ready_pattern.search(text):
                 worker_ready.set()
 
+            if match := _worker_pid_pattern.search(text):
+                with state.worker_reload_condition:
+                    state.worker_pids.add(match.group(1))
+
+            elif match := _config_loaded_pattern.search(text):
+                with state.worker_reload_condition:
+                    if match.group(1) in state.worker_pids:
+                        state.worker_reload_count += 1
+                        state.worker_reload_condition.notify_all()
+
     stdout_thread = threading.Thread(target=_stream_server_output, name='server-output', daemon=True)
     stdout_thread.start()
 
@@ -436,6 +457,20 @@ def start_server_process(
         raise
 
     return popen_time
+
+# ################################################################################################################################
+
+def wait_for_worker_reload(state:'SessionState', reload_count:'int') -> 'None':
+    """ Waits until the worker of the server has reloaded its configuration since the given number of its reloads was read.
+    An import into a running server returns once the process that ran it has reloaded, and the worker, which serves
+    the channels, reloads after it.
+    """
+    with state.worker_reload_condition:
+        is_reloaded = state.worker_reload_condition.wait_for(
+            lambda: state.worker_reload_count > reload_count, _server_wait_timeout)
+
+    if not is_reloaded:
+        raise Exception(f'The worker of the server did not reload its configuration within {_server_wait_timeout}s')
 
 # ################################################################################################################################
 

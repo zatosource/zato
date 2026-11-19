@@ -171,6 +171,11 @@ class PowerLossServer:
         if self.listener:
             self.listener.stop()
 
+        # Every process of a running server has exited before the environment is removed,
+        # so that none of them holds a file in a directory that a test unmounts afterwards.
+        if self.state.server_process:
+            self.kill()
+
         self.state.cleanup()
 
 # ################################################################################################################################

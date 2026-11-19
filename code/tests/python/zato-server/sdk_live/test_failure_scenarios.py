@@ -62,7 +62,7 @@ def test_failure_stall_trips_watchdog(zato_server:'stranydict') -> 'None':
     echo_state = zato_server['echo_state']
 
     # The target now answers only after a delay longer than the per-call timeout ..
-    echo_state.stall_seconds = _stall_seconds
+    echo_state.start_stall(_stall_seconds)
 
     try:
         # .. so this call, which carries a two-second timeout, fails through the watchdog ..
@@ -77,7 +77,7 @@ def test_failure_stall_trips_watchdog(zato_server:'stranydict') -> 'None':
 
     finally:
         # .. and once the target answers normally again, the next call goes through.
-        echo_state.stall_seconds = 0
+        echo_state.end_stall()
 
     response = client.invoke('demo.crm.get-customer-timeout', {'customer_id': _customer_id})
     assert response['response'].endswith(f'get-customer {_customer_id}')

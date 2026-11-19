@@ -20,6 +20,7 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 
 if 0:
+    from zato.common.test.pickup_listener import PickupListener
     from zato.common.typing_ import any_, anydict, strdict, strstrdict
     from queue_delivery.backends import Backend
     from queue_delivery.receiver import RecordedRequest, RecordingReceiver
@@ -189,6 +190,9 @@ class TestConfig:
     zato_bin = ''
 
     backend:'Backend' = cast_('Backend', None)
+
+    # The file-transfer listener of the pickup directory of the server
+    pickup_listener:'PickupListener' = cast_('PickupListener', None)
 
     # The endpoints, by the keys of Connection_Keys
     receivers:'dict[str, RecordingReceiver]' = {}

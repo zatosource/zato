@@ -13,7 +13,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import subprocess
 import time
-from base64 import b64encode
 from dataclasses import dataclass, field
 from urllib.error import HTTPError
 from urllib.parse import urlencode
@@ -49,9 +48,6 @@ _set_behaviour_service = 'test.queue-delivery.channel.set-behaviour'
 _get_received_service = 'test.queue-delivery.channel.get-received'
 _clear_service = 'test.queue-delivery.channel.clear'
 _get_counts_service = 'test.queue-delivery.channel.get-counts'
-
-# .. and the server's own hot deployment, which is what a file written to the pickup directory goes through
-_hot_deploy_service = 'zato.hot-deploy.create'
 
 # A refusal count meaning that the target refuses everything until it is told otherwise
 Refuse_Everything = -1
@@ -235,19 +231,14 @@ def get_gaps(invocations:'anylist') -> 'list[float]':
 
 # ################################################################################################################################
 
-def redeploy_counting(client:'AdminClient', source_path:'str') -> 'None':
+def redeploy_counting(source_path:'str') -> 'None':
     """ Replaces the counting service's module in the pickup directory with the source of another file,
-    the way an upload from the Dashboard does it.
+    which the file-transfer listener deploys.
     """
     with open(source_path, 'rb') as source_file:
         source = source_file.read()
 
-    payload = b64encode(source).decode('ascii')
-
-    _ = client.invoke(_hot_deploy_service, {
-        'payload': payload,
-        'payload_name': Counting_Pickup_Name,
-    })
+    TestConfig.pickup_listener.deploy(Counting_Pickup_Name, source)
 
 # ################################################################################################################################
 # ################################################################################################################################

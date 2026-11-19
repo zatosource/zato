@@ -190,7 +190,7 @@ class LazyFSMount:
     def unmount(self) -> 'None':
         """ Unmounts LazyFS and returns its content to the directory.
         """
-        _ = _docker('exec', self.container_name, 'fusermount3', '-u', self.mount_dir, check=False)
+        _ = _docker('exec', self.container_name, 'fusermount3', '-u', self.mount_dir)
         _ = _docker('rm', '-f', self.container_name, check=False)
 
         os.rmdir(self.mount_dir)

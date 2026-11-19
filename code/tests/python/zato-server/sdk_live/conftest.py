@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import atexit
 import logging
 import os
+import queue
 import re
 import shutil
 import signal
@@ -26,6 +27,9 @@ from urllib.request import Request, urlopen
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.test.pickup_listener import PickupListener
+from zato.common.test.pubsub_database import new_sqlite_database
+from zato.common.typing_ import cast_
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -36,7 +40,7 @@ import pytest
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -77,6 +81,13 @@ _ping_poll_interval   = 0.5
 # service invocations overlap and prove that each of them borrowed a distinct pooled connection.
 _slow_command_delay = 1.0
 
+# How many connections each mode of the target server serves at a time. The worker threads that serve them start
+# with the mode, so a connection that a test opens and that outlives it is served by a thread that existed before the test.
+_target_workers_per_mode = 64
+
+# What a worker of the target server receives instead of a connection when its mode stops.
+_stop_worker = None
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -86,14 +97,34 @@ class EchoState:
     """
     def __init__(self) -> 'None':
 
-        # When set, every reply goes out only after this many seconds.
+        # When set, every reply goes out only after this many seconds ..
         self.stall_seconds = 0.0
+
+        # .. unless the stall ends earlier, in which case a stalled request is abandoned,
+        # .. because its caller has already timed out.
+        self.stall_ended = threading.Event()
 
         # Requests carrying any of these keys are answered with a token-expired error.
         self.expired_keys = set()
 
         # What a renew-token request hands out.
         self.renewed_key = ''
+
+# ################################################################################################################################
+
+    def start_stall(self, stall_seconds:'float') -> 'None':
+        """ Makes every reply go out only after the given number of seconds.
+        """
+        self.stall_ended.clear()
+        self.stall_seconds = stall_seconds
+
+# ################################################################################################################################
+
+    def end_stall(self) -> 'None':
+        """ Makes replies go out at once and releases the requests that are stalled.
+        """
+        self.stall_seconds = 0.0
+        self.stall_ended.set()
 
 echo_state = EchoState()
 
@@ -110,7 +141,9 @@ class _EchoHandler(socketserver.StreamRequestHandler):
 
             # The stall switch keeps the reply from going out, without closing the socket.
             if echo_state.stall_seconds:
-                time.sleep(echo_state.stall_seconds)
+                is_ended = echo_state.stall_ended.wait(echo_state.stall_seconds)
+                if is_ended:
+                    return
 
             # Each request line starts with the caller's key.
             key, _, rest = text.partition(' ')
@@ -133,20 +166,51 @@ class _EchoHandler(socketserver.StreamRequestHandler):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _EchoServer(socketserver.ThreadingTCPServer):
-    """ The TCP server every target mode runs on. It tracks its connections so that killing
-    the target severs them too, the way a real crash would.
+class _EchoServer(socketserver.TCPServer):
+    """ The TCP server every target mode runs on. Its connections are served by a fixed set of worker threads,
+    and it tracks them so that killing the target severs them too, the way a real crash would.
     """
     allow_reuse_address = True
-    daemon_threads = True
 
-    def __init__(self, *args:'any_') -> 'None':
+    def __init__(self, mode:'str', *args:'any_') -> 'None':
         super().__init__(*args)
         self.active_connections = []
+        self.request_queue:'queue.Queue[any_]' = queue.Queue()
+        self.workers:'list[threading.Thread]' = []
+
+        for idx in range(_target_workers_per_mode):
+            name = f'zato-sdk-live-target-{mode}-worker-{idx}'
+            worker = threading.Thread(target=self._serve_requests, name=name, daemon=True)
+            worker.start()
+            self.workers.append(worker)
 
     def process_request(self, request:'any_', client_address:'any_') -> 'None':
         self.active_connections.append(request)
-        super().process_request(request, client_address)
+        self.request_queue.put((request, client_address))
+
+    def _serve_requests(self) -> 'None':
+        """ Serves one connection after another until the mode stops.
+        """
+        while True:
+            item = self.request_queue.get()
+
+            if item is _stop_worker:
+                return
+
+            request, client_address = item
+
+            try:
+                self.finish_request(request, client_address)
+            except Exception:
+                self.handle_error(request, client_address)
+            finally:
+                self.shutdown_request(request)
+
+    def stop_workers(self) -> 'None':
+        """ Makes each worker end once the connection it serves, if any, is closed.
+        """
+        for _ in self.workers:
+            self.request_queue.put(_stop_worker)
 
     def kill_connections(self) -> 'None':
         """ Severs every connection this target ever accepted - closed ones are simply skipped.
@@ -351,6 +415,9 @@ class _SessionState:
         self.server_process:'subprocess.Popen[bytes] | None' = None
         self.quickstart_directory:'str | None' = None
 
+        # The listener of the pickup directory, which is not running until the environment is complete
+        self.pickup_listener:'PickupListener | None' = None
+
         # All the target servers the suite owns, one per mode, keyed by mode name.
         self.target_servers:'dict[str, _EchoServer]' = {}
 
@@ -385,11 +452,18 @@ class _SessionState:
             if os.path.exists(server_log_path):
                 _ = shutil.copy(server_log_path, '/tmp/server-logs-sdk-live.txt')
 
+        if self.pickup_listener:
+            self.pickup_listener.stop()
+
+        self.pickup_listener = None
+
         self.kill_server()
 
         for target_server in self.target_servers.values():
             target_server.shutdown()
             target_server.server_close()
+            target_server.kill_connections()
+            target_server.stop_workers()
 
         self.target_servers.clear()
 
@@ -422,10 +496,11 @@ def _start_target_server(mode:'str', handler_class:'any_', port:'int'=0) -> 'int
     """ Starts one mode of the suite's target server and returns its port. A port of 0 means
     any free port, a concrete port lets a mode restart in place after being killed.
     """
-    target_server = _EchoServer(('127.0.0.1', port), handler_class)
+    target_server = _EchoServer(mode, ('127.0.0.1', port), handler_class)
     _state.target_servers[mode] = target_server
 
-    target_thread = threading.Thread(target=target_server.serve_forever, daemon=True)
+    # The name stays the same when a mode restarts, which is what tells the thread apart from one that a test leaves behind.
+    target_thread = threading.Thread(target=target_server.serve_forever, name=f'zato-sdk-live-target-{mode}', daemon=True)
     target_thread.start()
 
     out = target_server.server_address[1]
@@ -447,6 +522,7 @@ def kill_target_server(mode:'str') -> 'int':
 
     # A real crash severs live connections too, which is what reconnect tests rely on.
     target_server.kill_connections()
+    target_server.stop_workers()
 
     logger.info('Target server mode `%s` killed on port %s', mode, out)
     return out
@@ -499,6 +575,18 @@ def _wait_for_server(host:'str', port:'int', timeout:'int'=_server_wait_timeout)
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _get_database_env() -> 'strstrdict':
+    """ Returns the variables that select the Zato database of the suite, a SQLite file in its own environment,
+    which persists across a restart of the server.
+    """
+    quickstart_directory = cast_('str', _state.quickstart_directory)
+    database = new_sqlite_database(quickstart_directory)
+
+    out = database.env
+    return out
+
+# ################################################################################################################################
+
 def _start_server(server_directory:'str', server_port:'int', broker_port:'int') -> 'None':
     """ Starts the Zato server and waits for it to be ready.
     """
@@ -506,6 +594,7 @@ def _start_server(server_directory:'str', server_port:'int', broker_port:'int') 
     server_env['Zato_Config_Bind_Port'] = str(server_port)
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
     _ = server_env.pop('COVERAGE_PROCESS_START', None)
+    server_env.update(_get_database_env())
 
     # The server runs in its own process group so that teardown can terminate the whole tree.
     _state.server_process = subprocess.Popen(
@@ -526,7 +615,8 @@ def _start_server(server_directory:'str', server_port:'int', broker_port:'int') 
             elapsed = time.monotonic() - popen_time
             logger.debug('[SERVER %6.1fs] %s', elapsed, text)
 
-    stdout_thread = threading.Thread(target=_stream_output, daemon=True)
+    # The name stays the same when the server restarts, which is what tells the thread apart from one that a test leaves behind.
+    stdout_thread = threading.Thread(target=_stream_output, name='zato-sdk-live-server-output', daemon=True)
     stdout_thread.start()
 
     host = '127.0.0.1'
@@ -570,6 +660,7 @@ def zato_server() -> 'any_':
 
     quickstart_env = os.environ.copy()
     _ = quickstart_env.pop('COVERAGE_PROCESS_START', None)
+    quickstart_env.update(_get_database_env())
 
     quickstart_command = [
         _zato_bin, 'quickstart', 'create', _state.quickstart_directory,
@@ -619,9 +710,16 @@ def zato_server() -> 'any_':
     with open(server_conf_path, 'w') as server_conf_file:
         _ = server_conf_file.write(server_conf_content)
 
-    # .. and start the server.
+    # .. start the server ..
     broker_port = _find_free_port()
     _start_server(server_directory, server_port, broker_port)
+
+    # .. and the listener of the pickup directory, which runs for as long as the environment does.
+    web_admin_repo_dir = os.path.join(_state.quickstart_directory, 'web-admin', 'config', 'repo')
+
+    pickup_listener = PickupListener('sdk_live', server_directory, web_admin_repo_dir, server_port)
+    _state.pickup_listener = pickup_listener
+    pickup_listener.start()
 
     host = '127.0.0.1'
     base_url = f'http://{host}:{server_port}'
@@ -644,6 +742,7 @@ def zato_server() -> 'any_':
         'counting_port': counting_port,
         'server_directory': server_directory,
         'connector_deployed_path': connector_deployed_path,
+        'pickup_listener': pickup_listener,
         'echo_state': echo_state,
         'correlation_state': correlation_state,
         'push_state': push_state,

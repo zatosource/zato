@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import signal
 import subprocess
+import time
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -22,6 +23,12 @@ if 0:
 
 # How long to wait for a process group to exit cleanly before it goes down hard
 _Kill_Timeout = 5
+
+# How often a killed process is checked for having exited, in seconds
+_Exit_Poll_Seconds = 0.05
+
+# The state in /proc of a process that exited and was not reaped yet
+_Zombie_State = 'Z'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -113,7 +120,9 @@ def _has_exited(pid:'int') -> 'bool':
     try:
         with open(f'/proc/{pid}/stat') as stat_file:
             stat = stat_file.read()
-    except FileNotFoundError:
+
+    # The entry disappears when the process is reaped, which can happen between the open and the read.
+    except (FileNotFoundError, ProcessLookupError):
         return True
 
     # The state follows the process name, which is in parentheses and may contain spaces.
