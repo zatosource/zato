@@ -341,6 +341,7 @@ mod tests {
         let hello = Message::Hello {
             generation: 1,
             active_node: NODE_A.to_owned(),
+            wall_ms: crate::clock::wall_ms(),
         };
 
         for _ in 0..LINK_COUNT {

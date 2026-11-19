@@ -24,7 +24,7 @@ from zato.common.db_env.write_path import Mechanism, write_path
 
 if 0:
     from sqlalchemy import Index, Table
-    from sqlalchemy.engine import Engine
+    from sqlalchemy.engine import Connection, Engine
     from zato.common.typing_ import any_, anydict, anylist, strlist
 
     # Dummy assignments to satisfy type checkers
@@ -32,6 +32,7 @@ if 0:
     anydict = anydict
     anylist = anylist
     strlist = strlist
+    Connection = Connection
     Engine = Engine
     Index = Index
     Table = Table
@@ -275,58 +276,147 @@ def _sum_counts(rows:'any_') -> 'anydict':
 
 # ################################################################################################################################
 
+def _get_key_columns(count_table:'Table') -> 'anylist':
+    """ Returns the key columns of the count table.
+    """
+    out:'anylist' = []
+
+    for name in count_key_columns:
+        out.append(count_table.c[name])
+
+    return out
+
+# ################################################################################################################################
+
+def _get_compactable_periods(count_table:'Table', compacted_up_to:'int', *conditions:'any_') -> 'any_':
+    """ Returns the query of the minutes that received rows above the given id and that hold more than one row
+    of one key or a key whose rows add up to zero, among the rows that also match the given conditions.
+    """
+    id_column = count_table.c.id
+    period_column = count_table.c.period_start
+    count_column = count_table.c.event_count
+    key_columns = _get_key_columns(count_table)
+
+    # The minutes that received rows since the previous compaction ..
+    new_periods = select(period_column)
+    new_periods = new_periods.where(id_column > compacted_up_to, *conditions)
+
+    # .. and those of them with more than one row of a key or a row of nothing.
+    has_duplicates = func.count() > 1
+    has_zero = func.sum(count_column) == 0
+
+    out = select(period_column)
+    out = out.where(period_column.in_(new_periods), *conditions)
+    out = out.group_by(period_column, *key_columns)
+    out = out.having(or_(has_duplicates, has_zero))
+
+    return out
+
+# ################################################################################################################################
+
+def _compact_returning(connection:'Connection', count_table:'Table', compacted_up_to:'int') -> 'None':
+    """ Compacts the counts with one statement that deletes the rows of the compactable minutes and returns them,
+    and one that inserts their sums, which keeps the sums exact while other transactions insert counts concurrently.
+    """
+    period_column = count_table.c.period_start
+    count_column = count_table.c.event_count
+    key_columns = _get_key_columns(count_table)
+
+    compactable = _get_compactable_periods(count_table, compacted_up_to)
+
+    # The compactable minutes lose all their rows, which the statement returns ..
+    statement = delete(count_table)
+    statement = statement.where(period_column.in_(compactable))
+    statement = statement.returning(period_column, *key_columns, count_column)
+
+    result = connection.execute(statement)
+    sums = _sum_counts(result)
+
+    # .. and each minute and key comes back as one row of its sum, unless the sum is zero.
+    rows:'anylist' = []
+
+    for key, total in sums.items():
+
+        if total == 0:
+            continue
+
+        values:'anydict' = dict(zip(_period_and_keys, key))
+        values['event_count'] = total
+
+        rows.append(values)
+
+    if rows:
+        _ = connection.execute(insert(count_table), rows)
+
+# ################################################################################################################################
+
+def _compact_in_database(connection:'Connection', count_table:'Table', compacted_up_to:'int') -> 'None':
+    """ Compacts the counts with statements that sum and delete the rows in the database, without reading them,
+    among the rows up to the highest id at the start, which no other transaction changes while the transaction
+    holds the write lock of SQLite.
+    """
+    id_column = count_table.c.id
+    period_column = count_table.c.period_start
+    count_column = count_table.c.event_count
+    key_columns = _get_key_columns(count_table)
+
+    highest_id_query = select(func.max(id_column))
+    highest_id = connection.execute(highest_id_query).scalar()
+
+    # An empty table has nothing to compact ..
+    if highest_id is None:
+        return
+
+    # .. otherwise, the rows that exist at the start are those that the compaction replaces ..
+    is_existing_row = id_column <= highest_id
+    compactable = _get_compactable_periods(count_table, compacted_up_to, is_existing_row)
+    is_compactable_row = period_column.in_(compactable)
+
+    # .. each minute and key of the compactable minutes receives one row of its sum, unless the sum is zero ..
+    total = func.sum(count_column)
+
+    sums = select(period_column, *key_columns, total)
+    sums = sums.where(is_compactable_row, is_existing_row)
+    sums = sums.group_by(period_column, *key_columns)
+    sums = sums.having(total != 0)
+
+    sum_columns:'anylist' = [period_column]
+    sum_columns.extend(key_columns)
+    sum_columns.append(count_column)
+
+    insert_sums = insert(count_table)
+    insert_sums = insert_sums.from_select(sum_columns, sums)
+
+    _ = connection.execute(insert_sums)
+
+    # .. and the rows that the sums replace are deleted.
+    delete_rows = delete(count_table)
+    delete_rows = delete_rows.where(is_compactable_row, is_existing_row)
+
+    _ = connection.execute(delete_rows)
+
+# ################################################################################################################################
+
+# The compaction of each database, by the name of its dialect
+_compact_functions = {
+    Type_SQLite:     _compact_in_database,
+    Type_PostgreSQL: _compact_returning,
+}
+
+# ################################################################################################################################
+
 def compact_event_counts(engine:'Engine', count_table:'Table', compacted_up_to:'int') -> 'int':
     """ Replaces the rows of every minute that holds more than one row of one key, or a row whose count is zero,
     with one row per key holding their sum, looking only at the minutes that received rows above the given id.
     Returns the highest id of the table afterwards, from which the next compaction starts.
     """
     id_column = count_table.c.id
-    period_column = count_table.c.period_start
-    count_column = count_table.c.event_count
-
-    key_columns:'anylist' = []
-
-    for name in count_key_columns:
-        key_columns.append(count_table.c[name])
-
-    # The minutes that received rows since the previous compaction ..
-    new_periods = select(period_column)
-    new_periods = new_periods.where(id_column > compacted_up_to)
-
-    # .. those of them with more than one row of a key or a row of nothing ..
-    has_duplicates = func.count() > 1
-    has_zero = func.sum(count_column) == 0
-
-    compactable = select(period_column)
-    compactable = compactable.where(period_column.in_(new_periods))
-    compactable = compactable.group_by(period_column, *key_columns)
-    compactable = compactable.having(or_(has_duplicates, has_zero))
-
-    # .. lose all their rows, which the statement returns ..
-    statement = delete(count_table)
-    statement = statement.where(period_column.in_(compactable))
-    statement = statement.returning(period_column, *key_columns, count_column)
+    compact = _compact_functions[engine.dialect.name]
 
     with write_path(Mechanism.Maintenance), engine.begin() as connection:
 
-        result = connection.execute(statement)
-        sums = _sum_counts(result)
-
-        # .. and each minute and key comes back as one row of its sum, unless the sum is zero ..
-        rows:'anylist' = []
-
-        for key, total in sums.items():
-
-            if total == 0:
-                continue
-
-            values:'anydict' = dict(zip(_period_and_keys, key))
-            values['event_count'] = total
-
-            rows.append(values)
-
-        if rows:
-            _ = connection.execute(insert(count_table), rows)
+        # The counts are compacted ..
+        compact(connection, count_table, compacted_up_to)
 
         # .. and the next compaction starts above everything there is now.
         highest_id = select(func.max(id_column))

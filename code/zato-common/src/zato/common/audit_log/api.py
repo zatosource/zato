@@ -31,7 +31,8 @@ from zato.common.audit_log.export.api import get_audit_export
 from zato.common.audit_log.payload import prepare_payloads
 from zato.common.audit_log.pending import PendingEvent
 from zato.common.audit_log.retention import Env_Archive_Dir, Env_Content_Retention_Days, \
-    Env_Content_Retention_Days_Prefix, get_content_retention_days, register_prunability, run_retention
+    Env_Content_Retention_Days_Prefix, Env_Retention_Interval_Seconds, get_content_retention_days, \
+    get_retention_interval_seconds, register_prunability, run_retention
 from zato.common.audit_log.retention_runner import request_retention
 from zato.common.audit_log.search_index_merge import get_search_index_merger
 from zato.common.audit_log.sqlite_writes import dispose_stale_sqlite_engine
@@ -109,6 +110,9 @@ class ModuleCtx:
     Env_Content_Retention_Days_Prefix = Env_Content_Retention_Days_Prefix
     Env_Archive_Dir                   = Env_Archive_Dir
 
+    # The environment variable configuring how many seconds pass between the retention runs that commits request
+    Env_Retention_Interval_Seconds = Env_Retention_Interval_Seconds
+
     # The environment variable configuring the group commit of synchronous writes
     Env_Commit_Max_Events = Env_Commit_Max_Events
 
@@ -117,9 +121,6 @@ class ModuleCtx:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# Retention runs after every that many inserts
-_retention_check_interval = 1000
 
 # A lock of the threads of the operating system, which gevent does not replace
 _allocate_thread_lock = get_original('_thread', 'allocate_lock')
@@ -169,8 +170,10 @@ class AuditLog:
 
         self.server_name = server_name
 
-        # Counts inserts so retention can run periodically instead of on every write
-        self._insert_count = 0
+        # A commit requests a retention run once the interval has passed since the previous request,
+        # and the first request follows the first interval after the start
+        self._retention_interval = get_retention_interval_seconds()
+        self._next_retention_at = monotonic() + self._retention_interval
 
         # Per-cid sequence counters - ordered so the least recently used ones can be dropped. The lock is a thread lock,
         # because the pub/sub writer builds events in the thread of its transaction.
@@ -492,11 +495,11 @@ class AuditLog:
             except Exception:
                 logger.exception('Audit export could not take a batch of %d events', batch_size)
 
-        # Periodically delete rows older than the retention window, in the background
-        self._insert_count += batch_size
+        # Rows older than the retention window are deleted in the background, once per interval.
+        now = monotonic()
 
-        if self._insert_count >= _retention_check_interval:
-            self._insert_count = 0
+        if now >= self._next_retention_at:
+            self._next_retention_at = now + self._retention_interval
             request_retention(self.engine)
 
 # ################################################################################################################################

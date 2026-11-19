@@ -11,7 +11,10 @@ use std::sync::Arc;
 
 use tempfile::TempDir;
 
-use crate::config::{DATABASE_FILE_NAME, DEFAULT_LEASE_NAME, KubernetesConfig, NodeConfig, RefereeConfig, StorageMode, Timers, TlsFiles};
+use crate::config::{
+    DATABASE_FILE_NAME, DEFAULT_LEASE_NAME, DEFAULT_MAX_CLOCK_SKEW_MS, KubernetesConfig, NodeConfig, RefereeConfig, StorageMode, Timers,
+    TlsFiles,
+};
 use crate::link::TlsContext;
 use crate::referee::Referee;
 use crate::state::Shared;
@@ -159,6 +162,7 @@ fn config(node: &str, dir: &Path, storage: StorageMode, tls: Option<TlsFiles>, t
         tls,
         shared_database: None,
         timers,
+        max_clock_skew_ms: DEFAULT_MAX_CLOCK_SKEW_MS,
         database_path: dir.join(DATABASE_FILE_NAME),
         barrier_socket: dir.join("ha-barrier.sock"),
         log_level: "info".to_owned(),

@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import sys
 from base64 import b64encode
 from datetime import datetime, timedelta
 from json import dumps
@@ -66,11 +67,20 @@ Archive_First_Sequence = 1
 # The permissions of an archive file, as a file that open creates
 Archive_File_Mode = 0o666
 
+# The environment variable overriding how many seconds pass between the retention runs that commits of events request
+Env_Retention_Interval_Seconds = 'Zato_Audit_Log_Retention_Interval_Seconds'
+
 # Content retention is off by default - content lives as long as the event rows do
 _default_content_retention_days = 0
 
+# How many seconds pass between the retention runs that commits of events request, unless configured otherwise
+_default_retention_interval_seconds = 60
+
 # How many rows are processed per statement during retention
 _chunk_size = 500
+
+# The number of chunks that a run without a limit writes in one call
+_unlimited_chunks = sys.maxsize
 
 # ################################################################################################################################
 
@@ -92,6 +102,18 @@ def get_content_retention_days(source:'str' = '') -> 'int':
         return out
 
     out = _default_content_retention_days
+    return out
+
+# ################################################################################################################################
+
+def get_retention_interval_seconds() -> 'int':
+    """ Returns how many seconds pass between the retention runs that commits of events request.
+    """
+    if value := os.environ.get(Env_Retention_Interval_Seconds, ''):
+        out = int(value)
+    else:
+        out = _default_retention_interval_seconds
+
     return out
 
 # ################################################################################################################################
@@ -230,6 +252,61 @@ class Archiver:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class RetentionRun:
+    """ One retention run, which proceeds through any number of calls of run_retention, each of which writes
+    at most max_chunks chunks and records where the next call continues, so that other writes run between the calls.
+    """
+
+    def __init__(self, now:'datetime', max_chunks:'int') -> 'None':
+
+        # The moment the cutoffs of the run are computed from
+        self.now = now
+
+        # The archive of the whole run
+        self.archiver = Archiver(now)
+
+        # How many chunks one call writes at most, and how many the call in progress may still write
+        self.max_chunks = max_chunks
+        self.chunks_left = max_chunks
+
+        # The sources of the run, which its first call reads, and the position of the source in progress
+        self.sources:'strlist' = []
+        self.has_sources = False
+        self.source_index = 0
+
+        # The position of the content retention of the source in progress, and whether it is complete
+        self.content_last_id = 0
+        self.is_content_done = False
+
+        # What the run did to the source in progress so far
+        self.pruned_count = 0
+        self.deleted_count = 0
+
+        # Whether a source remains for the next call
+        self.has_remaining_work = True
+
+# ################################################################################################################################
+
+    def has_chunks_left(self) -> 'bool':
+        """ Returns whether the call in progress may write one more chunk.
+        """
+        out = self.chunks_left > 0
+        return out
+
+# ################################################################################################################################
+
+    def next_source(self) -> 'None':
+        """ Moves the run to its next source.
+        """
+        self.source_index += 1
+        self.content_last_id = 0
+        self.is_content_done = False
+        self.pruned_count = 0
+        self.deleted_count = 0
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _get_sources(engine:'Engine') -> 'strlist':
     """ Returns every source that has events in the log, because each of them is kept
     for its own number of days.
@@ -361,31 +438,35 @@ def _delete_events(engine:'Engine', ids:'intlist') -> 'None':
 
 # ################################################################################################################################
 
-def _run_row_retention(engine:'Engine', archiver:'Archiver', source:'str', cutoff:'datetime') -> 'int':
-    """ Deletes one source's events older than its row-retention cutoff, chunk by chunk,
-    archiving them first when an archive directory is configured.
+def _run_row_retention(engine:'Engine', run:'RetentionRun', source:'str', cutoff:'datetime') -> 'bool':
+    """ Deletes one source's events older than its row-retention cutoff, chunk by chunk, archiving them first
+    when an archive directory is configured. Returns whether none remains, which is not the case when the call
+    in progress wrote all the chunks it may write.
     """
-
-    # Our count of deleted events
-    out = 0
-
     while True:
 
-        # Take one chunk of expired events ..
+        # A call that wrote all its chunks leaves the rest to the next call ..
+        if not run.has_chunks_left():
+            out = False
+            break
+
+        # .. otherwise, it takes one chunk of expired events ..
         ids = _get_expired_ids(engine, source, cutoff)
 
         if not ids:
+            out = True
             break
 
-        # .. archive them if archiving is on ..
-        if archiver.is_active():
-            _archive_events(engine, archiver, ids)
+        # .. archives them if archiving is on ..
+        if run.archiver.is_active():
+            _archive_events(engine, run.archiver, ids)
 
-        # .. and delete them along with everything that references them.
+        # .. and deletes them along with everything that references them.
         _delete_events(engine, ids)
 
         deleted_count = len(ids)
-        out += deleted_count
+        run.deleted_count += deleted_count
+        run.chunks_left -= 1
 
     return out
 
@@ -482,27 +563,28 @@ def _prune_content(engine:'Engine', ids:'intlist') -> 'None':
 
 # ################################################################################################################################
 
-def _run_content_retention(engine:'Engine', archiver:'Archiver', source:'str', cutoff:'datetime') -> 'int':
+def _run_content_retention(engine:'Engine', run:'RetentionRun', source:'str', cutoff:'datetime') -> 'bool':
     """ Prunes the content of one source's events older than its content cutoff, keeping their
     metadata rows. The source's prunability predicate decides what is safe - unacknowledged
-    or failed messages keep their content regardless of age.
+    or failed messages keep their content regardless of age. Returns whether no content to prune remains,
+    which is not the case when the call in progress wrote all the chunks it may write.
     """
-
-    # Our count of pruned events
-    out = 0
-
-    last_id = 0
-
     while True:
 
-        # Take one chunk of events that still carry content ..
-        candidates = _get_content_candidates(engine, source, cutoff, last_id)
+        # A call that wrote all its chunks leaves the rest to the next call ..
+        if not run.has_chunks_left():
+            out = False
+            break
+
+        # .. otherwise, it takes one chunk of events that still have content ..
+        candidates = _get_content_candidates(engine, source, cutoff, run.content_last_id)
 
         if not candidates:
+            out = True
             break
 
         last_row = candidates[-1]
-        last_id = last_row['id']
+        run.content_last_id = last_row['id']
 
         # .. each source decides what is safe to prune ..
         ids:'intlist' = []
@@ -514,75 +596,125 @@ def _run_content_retention(engine:'Engine', archiver:'Archiver', source:'str', c
         if not ids:
             continue
 
-        # .. archive the content if archiving is on ..
-        if archiver.is_active():
-            _archive_content(engine, archiver, ids)
+        # .. archives the content if archiving is on ..
+        if run.archiver.is_active():
+            _archive_content(engine, run.archiver, ids)
 
-        # .. and prune it.
+        # .. and prunes it.
         _prune_content(engine, ids)
 
         pruned_count = len(ids)
-        out += pruned_count
+        run.pruned_count += pruned_count
+        run.chunks_left -= 1
 
     return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _run_source_retention(engine:'Engine', archiver:'Archiver', source:'str', now:'datetime') -> 'None':
+def _run_source_retention(engine:'Engine', run:'RetentionRun', source:'str') -> 'bool':
     """ Enforces both retention tiers for one source - content is pruned early while event rows,
     attributes and lineage survive until the row cutoff, so the audit trail outlives the payloads.
+    Returns whether the source is complete, which is not the case when the call in progress wrote
+    all the chunks it may write.
     """
     retention_days = get_retention_days(source)
     content_retention_days = get_content_retention_days(source)
 
     # Content retention only makes sense when it is shorter than row retention ..
-    if content_retention_days:
-        if content_retention_days < retention_days:
+    if not run.is_content_done:
 
-            content_cutoff = now - timedelta(days=content_retention_days)
+        is_content_done = True
 
-            pruned_count = _run_content_retention(engine, archiver, source, content_cutoff)
+        if content_retention_days:
+            if content_retention_days < retention_days:
 
-            if pruned_count:
-                suffix = 'event' if pruned_count == 1 else 'events'
-                logger.info('Audit log retention pruned content of %d %s %s older than %s',
-                    pruned_count, source, suffix, content_cutoff)
+                content_cutoff = run.now - timedelta(days=content_retention_days)
+                is_content_done = _run_content_retention(engine, run, source, content_cutoff)
 
-    # .. and rows older than the row cutoff are deleted outright.
-    row_cutoff = now - timedelta(days=retention_days)
+                if is_content_done:
+                    if run.pruned_count:
+                        suffix = 'event' if run.pruned_count == 1 else 'events'
+                        logger.info('Audit log retention pruned content of %d %s %s older than %s',
+                            run.pruned_count, source, suffix, content_cutoff)
 
-    deleted_count = _run_row_retention(engine, archiver, source, row_cutoff)
+        run.is_content_done = is_content_done
 
-    if deleted_count:
-        suffix = 'event' if deleted_count == 1 else 'events'
-        logger.info('Audit log retention deleted %d %s %s older than %s',
-            deleted_count, source, suffix, row_cutoff)
+    # .. rows older than the row cutoff are deleted outright once the content is complete ..
+    if run.is_content_done:
+
+        row_cutoff = run.now - timedelta(days=retention_days)
+        out = _run_row_retention(engine, run, source, row_cutoff)
+
+        if out:
+            if run.deleted_count:
+                suffix = 'event' if run.deleted_count == 1 else 'events'
+                logger.info('Audit log retention deleted %d %s %s older than %s',
+                    run.deleted_count, source, suffix, row_cutoff)
+
+    # .. and a call that has no chunks left for the content leaves the rows to the next call.
+    else:
+        out = False
+
+    return out
 
 # ################################################################################################################################
 
-def run_retention(engine:'Engine', now:'datetime') -> 'None':
-    """ Enforces retention source by source, because each source is kept for its own number of days -
-    a health check's pings age out well before the traffic events do.
+def _get_run_sources(engine:'Engine') -> 'strlist':
+    """ Returns the sources of a run - every source with events and every source with a retention of its own.
     """
-    archiver = Archiver(now)
-    sources = _get_sources(engine)
+    out = _get_sources(engine)
 
     # A source with a retention of its own keeps rows outside the event table too, so it runs even without events.
     for source in _source_retention_registry:
-        if source not in sources:
-            sources.append(source)
+        if source not in out:
+            out.append(source)
+
+    return out
+
+# ################################################################################################################################
+
+def run_retention(engine:'Engine', now:'datetime', run:'RetentionRun | None' = None) -> 'None':
+    """ Enforces retention source by source, because each source is kept for its own number of days -
+    a health check's pings age out well before the traffic events do. Without a run given, the whole run completes
+    in this call, and with one, the call writes at most the chunks that the run allows and records in the run
+    where the next call continues.
+    """
+    if run is None:
+        run = RetentionRun(now, _unlimited_chunks)
+
+    # Each call may write as many chunks as the run allows ..
+    run.chunks_left = run.max_chunks
+
+    # .. the first call of a run reads its sources ..
+    if not run.has_sources:
+        run.sources = _get_run_sources(engine)
+        run.has_sources = True
+
+    source_count = len(run.sources)
 
     with write_path(Mechanism.Maintenance):
-        for source in sources:
+        while run.source_index < source_count:
 
-            # A source with a retention of its own runs it ..
+            source = run.sources[run.source_index]
+
+            # .. a source with a retention of its own runs it as one chunk ..
             if source_retention := _source_retention_registry.get(source):
-                source_retention(engine, now, source, archiver)
 
-            # .. and any other source has its events deleted the generic way.
-            else:
-                _run_source_retention(engine, archiver, source, now)
+                if not run.has_chunks_left():
+                    break
+
+                source_retention(engine, run.now, source, run.archiver)
+                run.chunks_left -= 1
+
+            # .. any other source has its events deleted the generic way, as far as the chunks of the call allow ..
+            elif not _run_source_retention(engine, run, source):
+                break
+
+            # .. and the run moves on to its next source.
+            run.next_source()
+
+    run.has_remaining_work = run.source_index < source_count
 
 # ################################################################################################################################
 # ################################################################################################################################

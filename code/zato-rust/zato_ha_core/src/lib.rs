@@ -6,6 +6,7 @@
 
 pub mod active;
 pub mod barrier;
+pub mod clock;
 pub mod config;
 pub mod control;
 pub mod copy;

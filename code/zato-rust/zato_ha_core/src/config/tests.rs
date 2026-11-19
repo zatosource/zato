@@ -40,6 +40,7 @@ fn defaults_apply() {
     let config = NodeConfig::from_source(&minimal()).unwrap();
     assert_eq!(config.replication_port, DEFAULT_REPLICATION_PORT);
     assert_eq!(config.timers.mark_out, Duration::from_secs(3));
+    assert_eq!(config.max_clock_skew_ms, DEFAULT_MAX_CLOCK_SKEW_MS);
     assert_eq!(config.data_dir, PathBuf::from("/home/zato/env/qs-1"));
     assert_eq!(config.advertised_address, "zato-a");
     assert_eq!(config.database_path, PathBuf::from("/home/zato/env/qs-1/zato.db"));
@@ -123,6 +124,28 @@ fn takeover_must_exceed_mark_out() {
         error,
         ConfigError::Invalid {
             name: ENV_TAKEOVER_TIME,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn the_bound_of_the_clock_skew_is_read() {
+    let mut variables = minimal();
+    variables.0.insert(ENV_MAX_CLOCK_SKEW_MS.to_owned(), "250".to_owned());
+    let config = NodeConfig::from_source(&variables).unwrap();
+    assert_eq!(config.max_clock_skew_ms, 250);
+}
+
+#[test]
+fn a_bound_of_the_clock_skew_of_zero_is_refused() {
+    let mut variables = minimal();
+    variables.0.insert(ENV_MAX_CLOCK_SKEW_MS.to_owned(), "0".to_owned());
+    let error = NodeConfig::from_source(&variables).unwrap_err();
+    assert!(matches!(
+        error,
+        ConfigError::Invalid {
+            name: ENV_MAX_CLOCK_SKEW_MS,
             ..
         }
     ));

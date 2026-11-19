@@ -156,10 +156,10 @@ class SharedObjectStore:
     against the version that the writer read, so of two concurrent writers of one object, only one succeeds.
     """
 
-    def __init__(self) -> 'None':
+    def __init__(self, engine:'Engine | None'=None) -> 'None':
 
-        # The engine of the Zato database, resolved on first access.
-        self._engine:'Engine | None' = None
+        # The engine of the Zato database, given or resolved on first access.
+        self._engine = engine
 
 # ################################################################################################################################
 

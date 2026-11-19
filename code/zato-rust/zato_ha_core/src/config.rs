@@ -58,6 +58,10 @@ pub const ENV_MARK_OUT_TIME: &str = "Zato_HA_Mark_Out_Time";
 /// The environment variable with the time after which the standby attempts a takeover, in seconds.
 pub const ENV_TAKEOVER_TIME: &str = "Zato_HA_Takeover_Time";
 
+/// The environment variable with the largest skew of the wall clock of the standby from that of the active node
+/// at which the standby is in sync, in milliseconds.
+pub const ENV_MAX_CLOCK_SKEW_MS: &str = "Zato_HA_Max_Clock_Skew_Ms";
+
 /// The environment variable with the path of the Unix socket of the replication barrier.
 pub const ENV_BARRIER_SOCKET: &str = "Zato_HA_Barrier_Socket";
 
@@ -153,6 +157,9 @@ pub const DEFAULT_MARK_OUT_TIME: f64 = 3.0;
 
 /// The default takeover time, in seconds.
 pub const DEFAULT_TAKEOVER_TIME: f64 = 6.0;
+
+/// The default largest skew of the wall clocks, in milliseconds.
+pub const DEFAULT_MAX_CLOCK_SKEW_MS: u64 = 1000;
 
 /// The default log level filter.
 pub const DEFAULT_LOG_LEVEL: &str = "info";
@@ -321,6 +328,10 @@ pub struct NodeConfig {
     /// The timers.
     pub timers: Timers,
 
+    /// The largest skew of the wall clock of the standby from that of the active node at which the standby is in sync,
+    /// in milliseconds.
+    pub max_clock_skew_ms: u64,
+
     /// The path of the replicated Zato database file, at which the Zato server of this host opens it.
     pub database_path: PathBuf,
 
@@ -380,6 +391,26 @@ fn seconds(source: &dyn VariableSource, name: &'static str, default: f64) -> Res
             name,
             reason: format!("{value} is not a positive number of seconds"),
         })
+}
+
+/// Returns a positive number of milliseconds from a variable or its default.
+fn milliseconds(source: &dyn VariableSource, name: &'static str, default: u64) -> Result<u64, ConfigError> {
+    let Some(text) = source.variable(name) else {
+        return Ok(default);
+    };
+    let value = text.parse::<u64>().map_err(|error| ConfigError::Invalid {
+        name,
+        reason: error.to_string(),
+    })?;
+
+    // A bound of zero would refuse every standby, since no two wall clocks agree to the millisecond.
+    if value == 0 {
+        return Err(ConfigError::Invalid {
+            name,
+            reason: format!("{value} is not a positive number of milliseconds"),
+        });
+    }
+    Ok(value)
 }
 
 /// Returns a boolean from a variable or its default, reading the values that the Zato server reads.
@@ -573,6 +604,7 @@ impl NodeConfig {
             tls,
             shared_database,
             timers: timers(source)?,
+            max_clock_skew_ms: milliseconds(source, ENV_MAX_CLOCK_SKEW_MS, DEFAULT_MAX_CLOCK_SKEW_MS)?,
             barrier_socket,
             log_level: source.variable(ENV_LOG_LEVEL).unwrap_or_else(|| DEFAULT_LOG_LEVEL.to_owned()),
             data_dir,

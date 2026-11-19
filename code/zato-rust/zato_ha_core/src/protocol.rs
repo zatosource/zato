@@ -85,12 +85,18 @@ pub enum Message {
 
         /// The name of the active node.
         active_node: String,
+
+        /// The wall time of the active node in milliseconds since the Unix epoch.
+        wall_ms: u64,
     },
 
     /// The standby answers [`Message::Hello`].
     HelloReply {
         /// The position of the standby if it is in sync at this generation and can resume from it.
         position: Option<Position>,
+
+        /// The skew of the wall clock of the standby from that of the active node, in milliseconds.
+        clock_skew_ms: u64,
     },
 
     /// The peer holds a higher generation, so the sender was replaced.
@@ -103,10 +109,16 @@ pub enum Message {
     Heartbeat {
         /// The generation of the active node.
         generation: u64,
+
+        /// The wall time of the active node in milliseconds since the Unix epoch.
+        wall_ms: u64,
     },
 
     /// The standby is alive.
-    HeartbeatAck,
+    HeartbeatAck {
+        /// The skew of the wall clock of the standby from that of the active node, in milliseconds.
+        clock_skew_ms: u64,
+    },
 
     /// Committed frames of the Zato database.
     Frames {
@@ -268,27 +280,37 @@ impl<'body> Decoder<'body> {
 fn encode(message: &Message) -> Result<Vec<u8>, Error> {
     let mut out = Encoder::default();
     match message {
-        Message::Hello { generation, active_node } => {
+        Message::Hello {
+            generation,
+            active_node,
+            wall_ms,
+        } => {
             out.byte(KIND_HELLO);
             out.u64(*generation);
             out.text(active_node)?;
+            out.u64(*wall_ms);
         }
-        Message::HelloReply { position } => {
+        Message::HelloReply { position, clock_skew_ms } => {
             out.byte(KIND_HELLO_REPLY);
             out.byte(u8::from(position.is_some()));
             if let Some(position) = position {
                 out.position(position);
             }
+            out.u64(*clock_skew_ms);
         }
         Message::Refused { generation } => {
             out.byte(KIND_REFUSED);
             out.u64(*generation);
         }
-        Message::Heartbeat { generation } => {
+        Message::Heartbeat { generation, wall_ms } => {
             out.byte(KIND_HEARTBEAT);
             out.u64(*generation);
+            out.u64(*wall_ms);
         }
-        Message::HeartbeatAck => out.byte(KIND_HEARTBEAT_ACK),
+        Message::HeartbeatAck { clock_skew_ms } => {
+            out.byte(KIND_HEARTBEAT_ACK);
+            out.u64(*clock_skew_ms);
+        }
         Message::Frames {
             generation,
             header,
@@ -335,15 +357,24 @@ fn decode(body: &[u8]) -> Result<Message, Error> {
         KIND_HELLO => Message::Hello {
             generation: input.u64()?,
             active_node: input.text()?,
+            wall_ms: input.u64()?,
         },
         KIND_HELLO_REPLY => {
             let in_sync = input.byte()? != 0;
             let position = if in_sync { Some(input.position()?) } else { None };
-            Message::HelloReply { position }
+            Message::HelloReply {
+                position,
+                clock_skew_ms: input.u64()?,
+            }
         }
         KIND_REFUSED => Message::Refused { generation: input.u64()? },
-        KIND_HEARTBEAT => Message::Heartbeat { generation: input.u64()? },
-        KIND_HEARTBEAT_ACK => Message::HeartbeatAck,
+        KIND_HEARTBEAT => Message::Heartbeat {
+            generation: input.u64()?,
+            wall_ms: input.u64()?,
+        },
+        KIND_HEARTBEAT_ACK => Message::HeartbeatAck {
+            clock_skew_ms: input.u64()?,
+        },
         KIND_FRAMES => {
             let generation = input.u64()?;
             let header = Some(input.blob()?).filter(|header| !header.is_empty());
@@ -422,11 +453,16 @@ mod tests {
             end_frame,
         });
         prop_oneof![
-            (any::<u64>(), text).prop_map(|(generation, active_node)| Message::Hello { generation, active_node }),
-            prop::option::of(position.clone()).prop_map(|position| Message::HelloReply { position }),
+            (any::<u64>(), text, any::<u64>()).prop_map(|(generation, active_node, wall_ms)| Message::Hello {
+                generation,
+                active_node,
+                wall_ms
+            }),
+            (prop::option::of(position.clone()), any::<u64>())
+                .prop_map(|(position, clock_skew_ms)| Message::HelloReply { position, clock_skew_ms }),
             any::<u64>().prop_map(|generation| Message::Refused { generation }),
-            any::<u64>().prop_map(|generation| Message::Heartbeat { generation }),
-            Just(Message::HeartbeatAck),
+            (any::<u64>(), any::<u64>()).prop_map(|(generation, wall_ms)| Message::Heartbeat { generation, wall_ms }),
+            any::<u64>().prop_map(|clock_skew_ms| Message::HeartbeatAck { clock_skew_ms }),
             (
                 any::<u64>(),
                 prop::option::of(prop::collection::vec(any::<u8>(), 1..40)),

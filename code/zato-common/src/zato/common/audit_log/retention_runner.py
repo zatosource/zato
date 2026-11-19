@@ -14,7 +14,7 @@ from time import monotonic
 # Zato
 from zato.common.audit_log.common import event_count_table
 from zato.common.audit_log.event_count import compact_event_counts
-from zato.common.audit_log.retention import run_retention
+from zato.common.audit_log.retention import RetentionRun, run_retention
 from zato.common.db_env.engine import call_database
 from zato.common.util.api import utcnow
 from zato.common.worker_slot import is_worker_process
@@ -34,6 +34,9 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# How many chunks of rows one call of the database of a retention run writes, the write lock being released between the calls
+_chunks_per_call = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -92,8 +95,8 @@ class RetentionRunner:
 # ################################################################################################################################
 
     def stop(self) -> 'None':
-        """ Stops the thread after the run in progress, if any, and waits for it to end. The requests not yet served
-        are discarded.
+        """ Stops the thread after the call of the database in progress, if any, and waits for it to end. The requests
+        not yet served are discarded, and the next request starts a new run.
         """
         with self._lock:
             thread = self._thread
@@ -131,9 +134,15 @@ class RetentionRunner:
 
                 now = utcnow()
                 retention_start = monotonic()
+                run = RetentionRun(now, _chunks_per_call)
 
+                # Each call of the run writes one chunk under the write lock, and the run continues until no work remains
+                # or until the runner is stopping.
                 try:
-                    call_database(engine, run_retention, engine, now)
+                    while run.has_remaining_work:
+                        if self._is_stopping:
+                            break
+                        call_database(engine, run_retention, engine, now, run)
                 except Exception:
                     logger.exception('Audit log retention could not be completed')
 
@@ -142,8 +151,9 @@ class RetentionRunner:
 
                 logger.debug('Audit log retention completed in %.1f ms', retention_elapsed_ms)
 
-                # The count rows that the writes and the retention above added are compacted next.
-                self._compact(engine)
+                # The count rows that the writes and the retention above added are compacted next, unless the runner is stopping.
+                if not self._is_stopping:
+                    self._compact(engine)
 
 # ################################################################################################################################
 

@@ -18,7 +18,7 @@ from sqlalchemy import text
 
 # Zato
 from support import Backend_PostgreSQL, Object_Name, read_rows, record_statements, Server_Name
-from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource, ModuleCtx
 from zato.common.audit_log.retention_runner import stop_retention_runner
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.pending import PendingEvent
@@ -31,15 +31,18 @@ from zato.common.db_env.commit_ticket import CommitTicket
 # ################################################################################################################################
 
 if 0:
+    from pytest import MonkeyPatch
     from sqlalchemy.engine import Engine
     from zato.common.audit_log.pending import pending_event_list
-    from zato.common.typing_ import anylist, intlist, intnone
+    from zato.common.typing_ import anylist, intlist, intnone, strlist
 
     anylist = anylist
     Engine = Engine
     intlist = intlist
     intnone = intnone
+    MonkeyPatch = MonkeyPatch
     pending_event_list = pending_event_list
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -65,8 +68,11 @@ _commit_time = 0.01
 # How long a test waits for a background step at most, in seconds
 _wait_timeout = 10
 
-# How many inserts make the writer request a retention run
-_retention_check_interval = 1000
+# The interval between retention runs with which the first commit requests a run, in seconds
+_retention_interval_seconds = '0'
+
+# How many events the retention test inserts
+_retention_event_count = 10
 
 # The name of the thread that the retention runs in
 _retention_thread_name = 'audit-log-retention'
@@ -338,25 +344,30 @@ def test_search_indexes_are_merged(audit_backend:'str') -> 'None':
 
 # ################################################################################################################################
 
-def test_retention_runs_outside_the_write(audit_backend:'str') -> 'None':
-    """ The insert that crosses the retention count hands the retention to the thread of the runner
+def test_retention_runs_outside_the_write(audit_backend:'str', monkeypatch:'MonkeyPatch') -> 'None':
+    """ The commit after the retention interval hands the retention to the thread of the runner
     and returns without running it in the write.
     """
 
     # No run of an earlier test is still in progress
     stop_retention_runner()
 
+    monkeypatch.setenv(ModuleCtx.Env_Retention_Interval_Seconds, _retention_interval_seconds)
     audit_log = AuditLog(Server_Name)
 
-    for index in range(_retention_check_interval):
+    for index in range(_retention_event_count):
         _ = _insert(audit_log, index)
 
-    # The insert that reached the interval started the thread of the runner ..
-    thread_names = [thread.name for thread in enumerate_threads()]
+    # The commit after the interval started the thread of the runner ..
+    thread_names:'strlist' = []
+
+    for thread in enumerate_threads():
+        thread_names.append(thread.name)
+
     assert _retention_thread_name in thread_names
 
     # .. the retention removed none of the events, none of which has expired ..
-    assert len(read_rows(event_table)) == _retention_check_interval
+    assert len(read_rows(event_table)) == _retention_event_count
 
     # .. and the runner completes the run in progress before it stops.
     stop_retention_runner()

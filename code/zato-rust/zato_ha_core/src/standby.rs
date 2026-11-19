@@ -16,10 +16,23 @@ use std::time::Instant;
 
 use parking_lot::MutexGuard;
 
+use crate::clock::SkewEstimate;
 use crate::copy::DatabaseCopy;
 use crate::link::{AcceptedLink, LinkReceiver, LinkSender, verify_peer_name};
 use crate::protocol::Message;
 use crate::state::{Role, Shared};
+
+/// What the hello of the active node that opened a session tells about that node.
+struct Opening<'hello> {
+    /// The name of the active node.
+    active_node: &'hello str,
+
+    /// The generation of the active node.
+    generation: u64,
+
+    /// The skew of the wall clock of this node from that of the active node.
+    skew: SkewEstimate,
+}
 
 /// Answers a link opened by a node of a lower generation, which fences that node.
 fn refuse(sender: &LinkSender, generation: u64, shared: &Shared) {
@@ -83,12 +96,45 @@ fn enter_gate(shared: &Shared, session: u64) -> Option<MutexGuard<'_, ()>> {
     is_current(shared, session).then_some(gate)
 }
 
+/// Begins replacing the copy with the files of the active node, returning `false` once a newer session replaced `session`.
+fn begin_snapshot(shared: &Shared, session: u64, copy: &mut DatabaseCopy) -> Result<bool, Error> {
+    {
+        let mut state = shared.state.lock();
+
+        // A fenced node replaces its files only once its Zato server has stopped.
+        while state.role == Role::Fenced && !state.stopping {
+            shared.changed.wait(&mut state);
+        }
+    }
+    let Some(gate) = enter_gate(shared, session) else {
+        return Ok(false);
+    };
+    {
+        let mut state = shared.state.lock();
+        if !state.role.is_standby() {
+            return Err(Error::new(
+                ErrorKind::InvalidData,
+                format!("a snapshot arrived in role {:?}", state.role),
+            ));
+        }
+        state.role = Role::Joining;
+        drop(state);
+        shared.changed.notify_all();
+    }
+    copy.begin_snapshot()?;
+    drop(gate);
+    Ok(true)
+}
+
 /// Applies the messages of one session until it ends.
-fn run_session(shared: &Shared, sender: &LinkSender, mut receiver: LinkReceiver, active_node: &str, generation: u64) -> Result<(), Error> {
+fn run_session(shared: &Shared, sender: &LinkSender, mut receiver: LinkReceiver, mut opening: Opening<'_>) -> Result<(), Error> {
+    let generation = opening.generation;
+    let active_node = opening.active_node;
     let Some((session, resumes)) = open_session(shared, sender, generation) else {
         return Ok(());
     };
     let timeout = shared.config.timers.mark_out;
+    let max_clock_skew_ms = shared.config.max_clock_skew_ms;
 
     // The position is read only once an earlier session finished the message it was applying.
     let Some(gate) = enter_gate(shared, session) else {
@@ -97,7 +143,10 @@ fn run_session(shared: &Shared, sender: &LinkSender, mut receiver: LinkReceiver,
     let mut copy = DatabaseCopy::open(&shared.config.database_path)?;
     let position = resumes.then(|| copy.position());
     drop(gate);
-    sender.send(&Message::HelloReply { position }, timeout)?;
+
+    // The skew measured from the hello tells the active node whether this node may be admitted.
+    let clock_skew_ms = opening.skew.current();
+    sender.send(&Message::HelloReply { position, clock_skew_ms }, timeout)?;
     tracing::info!("Session with {active_node} at generation {generation} opened, resuming in sync: {resumes}");
 
     loop {
@@ -136,40 +185,22 @@ fn run_session(shared: &Shared, sender: &LinkSender, mut receiver: LinkReceiver,
             }
             Message::Heartbeat {
                 generation: heartbeat_generation,
+                wall_ms,
             } => {
                 let own = shared.state.lock().generation;
                 if heartbeat_generation < own {
                     refuse(sender, own, shared);
                     return Ok(());
                 }
-                sender.send(&Message::HeartbeatAck, timeout)?;
+
+                // The active node marks this node out if its wall clock moved too far from its own.
+                let clock_skew_ms = opening.skew.record(wall_ms, max_clock_skew_ms);
+                sender.send(&Message::HeartbeatAck { clock_skew_ms }, timeout)?;
             }
             Message::SnapshotBegin { .. } => {
-                {
-                    let mut state = shared.state.lock();
-
-                    // A fenced node replaces its files only once its Zato server has stopped.
-                    while state.role == Role::Fenced && !state.stopping {
-                        shared.changed.wait(&mut state);
-                    }
-                }
-                let Some(gate) = enter_gate(shared, session) else {
+                if !begin_snapshot(shared, session, &mut copy)? {
                     return Ok(());
-                };
-                {
-                    let mut state = shared.state.lock();
-                    if !state.role.is_standby() {
-                        return Err(Error::new(
-                            ErrorKind::InvalidData,
-                            format!("a snapshot arrived in role {:?}", state.role),
-                        ));
-                    }
-                    state.role = Role::Joining;
-                    drop(state);
-                    shared.changed.notify_all();
                 }
-                copy.begin_snapshot()?;
-                drop(gate);
             }
             Message::SnapshotChunk { kind, bytes } => {
                 let Some(gate) = enter_gate(shared, session) else {
@@ -215,7 +246,12 @@ fn handle_connection(shared: &Shared, tcp: TcpStream) -> Result<(), Error> {
     } = shared.link_tls()?.accept(tcp)?;
 
     let (hello, receiver) = receiver.receive()?;
-    let Message::Hello { generation, active_node } = hello else {
+    let Message::Hello {
+        generation,
+        active_node,
+        wall_ms,
+    } = hello
+    else {
         return Err(Error::new(ErrorKind::InvalidData, "the link did not begin with a hello"));
     };
 
@@ -225,7 +261,14 @@ fn handle_connection(shared: &Shared, tcp: TcpStream) -> Result<(), Error> {
         return Err(Error::new(ErrorKind::InvalidData, "the peer claims the name of this node"));
     }
 
-    let outcome = run_session(shared, &sender, receiver, &active_node, generation);
+    let mut skew = SkewEstimate::default();
+    let _ = skew.record(wall_ms, shared.config.max_clock_skew_ms);
+    let opening = Opening {
+        active_node: &active_node,
+        generation,
+        skew,
+    };
+    let outcome = run_session(shared, &sender, receiver, opening);
     sender.close();
     outcome
 }
@@ -313,6 +356,7 @@ mod tests {
         let hello = Message::Hello {
             generation: 1,
             active_node: NODE_A.to_owned(),
+            wall_ms: crate::clock::wall_ms(),
         };
         sender.send(&hello, TIMERS.mark_out).unwrap();
         let (reply, _receiver) = receiver.receive().unwrap();

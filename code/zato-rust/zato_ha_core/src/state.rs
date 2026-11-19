@@ -203,6 +203,10 @@ pub struct NodeState {
     /// The record an admission in progress writes, which identifies it if its answer was lost.
     pub pending_admission: Option<RefereeRecord>,
 
+    /// The skew of the wall clock of the standby from that of the active node, as the standby last reported it,
+    /// in milliseconds, which the active node reads.
+    pub peer_clock_skew_ms: u64,
+
     /// Whether the node is shutting down.
     pub stopping: bool,
 }
@@ -271,6 +275,7 @@ impl Shared {
             link: None,
             session: 0,
             pending_admission: None,
+            peer_clock_skew_ms: 0,
             stopping: false,
         };
         Self {

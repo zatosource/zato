@@ -20,6 +20,7 @@ use std::time::{Duration, Instant};
 use rusqlite::Connection;
 use rusqlite::config::DbConfig;
 
+use crate::clock;
 use crate::link::{LinkReceiver, LinkSender};
 use crate::protocol::{FileKind, Message, Position};
 use crate::record::RefereeRecord;
@@ -352,13 +353,14 @@ impl Shipper {
             &Message::Hello {
                 generation,
                 active_node: config.node_name.clone(),
+                wall_ms: clock::wall_ms(),
             },
             timeout,
         )?;
 
         let (reply, receiver) = receiver.receive()?;
-        let position = match reply {
-            Message::HelloReply { position } => position,
+        let (position, clock_skew_ms) = match reply {
+            Message::HelloReply { position, clock_skew_ms } => (position, clock_skew_ms),
             Message::Refused { generation: higher } => {
                 self.shared.fence(&mut self.shared.state.lock(), higher);
                 return Ok(());
@@ -369,6 +371,7 @@ impl Shipper {
         let number = {
             let mut state = self.shared.state.lock();
             state.session += 1;
+            state.peer_clock_skew_ms = clock_skew_ms;
             state.session
         };
 
@@ -727,6 +730,12 @@ fn admission_generation(shared: &Shared, database: &Database, session: &Session,
     }
 
     if !state.admitting {
+        // A standby whose wall clock is too far from that of this node would move the time of the database
+        // by that skew once it took over, so it stays joining until its clock is corrected.
+        if state.peer_clock_skew_ms > shared.config.max_clock_skew_ms {
+            return None;
+        }
+
         let all_sent = session.database.sent >= database.end();
 
         // From here on, no barrier completes until the standby is in sync or the admission is abandoned.
@@ -963,6 +972,23 @@ fn apply_confirmation(state: &mut NodeState, position: &Position) {
     }
 }
 
+/// Records the skew of the wall clock that the standby reported, and requests the mark-out of a standby in sync
+/// whose skew exceeds the bound, since it would move the time of the database by that skew once it took over.
+fn record_clock_skew(shared: &Shared, state: &mut NodeState, clock_skew_ms: u64) {
+    state.peer_clock_skew_ms = clock_skew_ms;
+
+    let max_clock_skew_ms = shared.config.max_clock_skew_ms;
+    let exceeds_bound = clock_skew_ms > max_clock_skew_ms;
+
+    // The mark-out is requested once, and the control loop carries it out.
+    if exceeds_bound && state.role == Role::ActiveReplicated && !state.needs_mark_out {
+        tracing::warn!(
+            "The wall clock of the standby is {clock_skew_ms} ms away from that of this node, above the bound of {max_clock_skew_ms} ms"
+        );
+        state.needs_mark_out = true;
+    }
+}
+
 /// Receives the confirmations and heartbeat answers of one session.
 fn receive_loop(shared: &Shared, mut receiver: LinkReceiver, number: u64) {
     loop {
@@ -983,7 +1009,7 @@ fn receive_loop(shared: &Shared, mut receiver: LinkReceiver, number: u64) {
         state.last_peer_contact = Instant::now();
         match message {
             Message::Confirm(position) => apply_confirmation(&mut state, &position),
-            Message::HeartbeatAck => {}
+            Message::HeartbeatAck { clock_skew_ms } => record_clock_skew(shared, &mut state, clock_skew_ms),
             // The standby refuses the frames of a generation it left behind, and a node that wrote the newer generation
             // itself in the meantime, by a mark-out or an admission, was not replaced, so only a higher one fences it.
             Message::Refused { generation } if generation > state.generation => {
@@ -1015,7 +1041,11 @@ fn heartbeat_loop(shared: &Shared, sender: &LinkSender, number: u64) {
             return;
         }
         let generation = shared.state.lock().generation;
-        if let Err(error) = sender.send(&Message::Heartbeat { generation }, shared.config.timers.mark_out) {
+        let heartbeat = Message::Heartbeat {
+            generation,
+            wall_ms: clock::wall_ms(),
+        };
+        if let Err(error) = sender.send(&heartbeat, shared.config.timers.mark_out) {
             end_from_thread(shared, number, &error.to_string());
             return;
         }
@@ -1094,6 +1124,12 @@ mod tests {
     /// How long a standby that keeps pace with the writers may take to be admitted.
     const ADMISSION_TIMEOUT: Duration = Duration::from_secs(3);
 
+    /// The skew of the wall clock of a standby whose clock agrees with that of the active node.
+    const NO_CLOCK_SKEW_MS: u64 = 0;
+
+    /// A skew of the wall clock of a standby beyond the default bound.
+    const LARGE_CLOCK_SKEW_MS: u64 = 5000;
+
     /// Fills the Zato database in its main file and leaves it without a log, as a checkpoint does.
     fn fill_database(path: &Path) {
         let connection = Connection::open(path).unwrap();
@@ -1124,7 +1160,10 @@ mod tests {
         let (tcp, _) = listener.accept().unwrap();
         let accepted = tls.accept(tcp).unwrap();
         let (_, mut receiver) = accepted.receiver.receive().unwrap();
-        let reply = Message::HelloReply { position: None };
+        let reply = Message::HelloReply {
+            position: None,
+            clock_skew_ms: 0,
+        };
         accepted.sender.send(&reply, RECEIVE_TIMEOUT).unwrap();
 
         let mut paused = false;
@@ -1146,12 +1185,15 @@ mod tests {
         }
     }
 
-    /// Plays a standby that confirms every message of frames once it synced it.
-    fn run_confirming_standby(listener: &TcpListener, tls: &TlsContext) {
+    /// Plays a standby that confirms every message of frames once it synced it, reporting a skew of its wall clock.
+    fn run_confirming_standby(listener: &TcpListener, tls: &TlsContext, clock_skew_ms: u64) {
         let (tcp, _) = listener.accept().unwrap();
         let accepted = tls.accept(tcp).unwrap();
         let (_, mut receiver) = accepted.receiver.receive().unwrap();
-        let reply = Message::HelloReply { position: None };
+        let reply = Message::HelloReply {
+            position: None,
+            clock_skew_ms,
+        };
         accepted.sender.send(&reply, RECEIVE_TIMEOUT).unwrap();
 
         // The salts of the log, read from the start of its file in the snapshot or from the header of a new cycle.
@@ -1182,7 +1224,7 @@ mod tests {
                         end_frame,
                     })
                 }
-                Message::Heartbeat { .. } => Message::HeartbeatAck,
+                Message::Heartbeat { .. } => Message::HeartbeatAck { clock_skew_ms },
                 _ => continue,
             };
 
@@ -1393,7 +1435,7 @@ mod tests {
             writers.push(thread::spawn(move || write_while_solo(&writer_shared, &writer_path)));
         }
         let standby_tls = TlsContext::load(&certificates.files(NODE_B)).unwrap();
-        let standby = thread::spawn(move || run_confirming_standby(&listener, &standby_tls));
+        let standby = thread::spawn(move || run_confirming_standby(&listener, &standby_tls, NO_CLOCK_SKEW_MS));
         let shipper_shared = Arc::clone(&shared);
         let shipper = thread::spawn(move || Shipper::new(shipper_shared).run());
 
@@ -1410,6 +1452,55 @@ mod tests {
         shared.announce_stop();
         shipper.join().unwrap();
         standby.join().unwrap();
+    }
+
+    #[test]
+    fn a_standby_whose_clock_is_skewed_beyond_the_bound_is_not_admitted() {
+        let certificates = Certificates::issue();
+        let dir = tempfile::tempdir().unwrap();
+        let connection = Connection::open(dir.path().join(DATABASE_FILE_NAME)).unwrap();
+        connection
+            .execute_batch("pragma journal_mode=wal; create table message (body blob);")
+            .unwrap();
+
+        let listener = TcpListener::bind((LOOPBACK, 0)).unwrap();
+        let shared = active_node(dir.path(), &certificates, listener.local_addr().unwrap().port());
+        let standby_tls = TlsContext::load(&certificates.files(NODE_B)).unwrap();
+        let standby = thread::spawn(move || run_confirming_standby(&listener, &standby_tls, LARGE_CLOCK_SKEW_MS));
+        let shipper_shared = Arc::clone(&shared);
+        let shipper = thread::spawn(move || Shipper::new(shipper_shared).run());
+
+        // The standby receives its copy and keeps confirming, and it stays joining for as long as its clock is skewed.
+        thread::sleep(ADMISSION_TIMEOUT);
+        let state = shared.state.lock();
+        let observed = (state.role, state.link_state, state.peer_clock_skew_ms);
+        drop(state);
+        assert_eq!(observed, (Role::ActiveSolo, LinkState::Joining, LARGE_CLOCK_SKEW_MS));
+
+        shared.announce_stop();
+        shipper.join().unwrap();
+        standby.join().unwrap();
+    }
+
+    #[test]
+    fn a_standby_in_sync_whose_clock_is_skewed_beyond_the_bound_is_marked_out() {
+        let certificates = Certificates::issue();
+        let dir = tempfile::tempdir().unwrap();
+        let shared = active_node(dir.path(), &certificates, 0);
+        let max_clock_skew_ms = shared.config.max_clock_skew_ms;
+
+        let mut state = shared.state.lock();
+        state.role = Role::ActiveReplicated;
+
+        // A skew within the bound is recorded and nothing more ..
+        record_clock_skew(&shared, &mut state, max_clock_skew_ms);
+        assert!(!state.needs_mark_out);
+
+        // .. whereas one beyond it requests the mark-out.
+        record_clock_skew(&shared, &mut state, max_clock_skew_ms + 1);
+        let observed = (state.needs_mark_out, state.peer_clock_skew_ms);
+        drop(state);
+        assert_eq!(observed, (true, max_clock_skew_ms + 1));
     }
 
     #[test]
