@@ -56,23 +56,42 @@ _verb_table_position:'anydict' = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The statements of each part of a transaction, by verb and table, on each database
-statements_publication = [
-    ('SELECT', 'pubsub_topic_sub'), ('INSERT', 'pubsub_message'), ('INSERT', 'pubsub_delivery'),
-]
+# The statements of each part of a transaction, by verb and table, on each database. A publication writes
+# its dedup record before its message, after the subscribers are read on SQLite and before on PostgreSQL.
+statements_publication = {
+    'sqlite': [
+        ('SELECT', 'pubsub_topic_sub'), ('INSERT', 'zato_message_dedup'), ('INSERT', 'pubsub_message'),
+        ('INSERT', 'pubsub_delivery'),
+    ],
+    'postgresql': [
+        ('INSERT', 'zato_message_dedup'), ('SELECT', 'pubsub_topic_sub'), ('INSERT', 'pubsub_message'),
+        ('INSERT', 'pubsub_delivery'),
+    ],
+}
 
 statements_ack = [
     ('SELECT', 'pubsub_message'), ('SELECT', 'pubsub_delivery'), ('DELETE', 'pubsub_delivery'),
 ]
 
-_statements_atomic_checks = [
-    ('SELECT', 'pubsub_message'), ('SELECT', 'pubsub_delivery'),
-]
+_statements_atomic_checks = {
+    'sqlite': [
+        ('SELECT', 'zato_message_dedup'), ('SELECT', 'pubsub_message'), ('SELECT', 'pubsub_delivery'),
+    ],
+    'postgresql': [
+        ('SELECT', 'pubsub_message'), ('SELECT', 'zato_message_dedup'), ('SELECT', 'pubsub_delivery'),
+    ],
+}
 
-_statements_atomic_writes = [
-    ('SELECT', 'pubsub_topic_sub'), ('INSERT', 'pubsub_message'), ('INSERT', 'pubsub_delivery'),
-    ('DELETE', 'pubsub_delivery'),
-]
+_statements_atomic_writes = {
+    'sqlite': [
+        ('SELECT', 'pubsub_topic_sub'), ('INSERT', 'zato_message_dedup'), ('INSERT', 'pubsub_message'),
+        ('INSERT', 'pubsub_delivery'), ('DELETE', 'pubsub_delivery'),
+    ],
+    'postgresql': [
+        ('INSERT', 'zato_message_dedup'), ('SELECT', 'pubsub_topic_sub'), ('INSERT', 'pubsub_message'),
+        ('INSERT', 'pubsub_delivery'), ('DELETE', 'pubsub_delivery'),
+    ],
+}
 
 statements_attempts = [
     ('UPDATE', 'pubsub_delivery'),
@@ -245,8 +264,8 @@ def get_atomic_statements(dialect_name:'str') -> 'anylist':
     if dialect_name == 'postgresql':
         out.append(_savepoint)
 
-    out.extend(_statements_atomic_checks)
-    out.extend(_statements_atomic_writes)
+    out.extend(_statements_atomic_checks[dialect_name])
+    out.extend(_statements_atomic_writes[dialect_name])
 
     if dialect_name == 'postgresql':
         out.append(_release)

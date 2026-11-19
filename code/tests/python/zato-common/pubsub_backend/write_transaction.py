@@ -208,7 +208,7 @@ def _run_compositions() -> 'None':
     """ Each kind of item alone in a batch runs its own statements, in one transaction.
     """
     dialect_name = get_dialect_name()
-    publication = statements_publication
+    publication = statements_publication[dialect_name]
     drop = statements_drop[dialect_name]
     one_event = get_event_statements(dialect_name, 1, True)
 
@@ -306,7 +306,7 @@ def _run_every_kind() -> 'None':
 
     # .. and their statements run in the order of the kinds, with the payloads dropped after every write of delivery rows ..
     parts = [
-        statements_publication,
+        statements_publication[dialect_name],
         statements_ack,
         get_atomic_statements(dialect_name),
         statements_attempts,

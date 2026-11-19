@@ -152,13 +152,13 @@ class PreloadHook(NodeHook):
 
 # ################################################################################################################################
 
-    def set_clock(self, node:'Node', offset_seconds:'int', rate:'float') -> 'None':
-        """ Offsets the wall clock of a node by the given number of seconds and runs it at the given rate.
+    def set_clock(self, node:'Node', offset_seconds:'float', rate:'float') -> 'None':
+        """ Offsets the wall clock of a node by the given number of seconds, fractions allowed, and runs it at the given rate.
         """
         with open(self._faketime_path(node), 'w') as faketime_file:
-            _ = faketime_file.write(f'{offset_seconds:+d} x{rate}\n')
+            _ = faketime_file.write(f'{offset_seconds:+g} x{rate}\n')
 
-        logger.info('Clock of %s -> %+ds at x%s', node.node_name, offset_seconds, rate)
+        logger.info('Clock of %s -> %+gs at x%s', node.node_name, offset_seconds, rate)
 
 # ################################################################################################################################
 # ################################################################################################################################

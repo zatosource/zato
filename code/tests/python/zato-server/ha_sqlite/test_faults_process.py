@@ -7,10 +7,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # CPU, memory and clock faults on each node - a CPU limit and memory pressure at each severity, an OOM kill
-# of the Zato server inside the active container, and offsets of the wall clock of the standby during a takeover,
-# which the timers of the node do not follow, as they use the monotonic clock.
+# of the Zato server inside the active container, offsets of the wall clock of the standby during a takeover,
+# which the timers of the node do not follow, as they use the monotonic clock, skews of the wall clock of the standby
+# below and above the bound at which it is in sync, and a takeover by a node whose wall clock is behind the floor
+# of the time of the Zato database.
 
 # stdlib
+import json
 import logging
 import time
 
@@ -18,12 +21,14 @@ import time
 import pytest
 
 # Zato
-from ha_checks import check_copies, check_scheduler, check_workload, watch_roles
-from ha_env import ready_pair
+from ha_checks import check_copies, check_scheduler, check_workload, ModuleCtx as ChecksCtx, read_rows, watch_roles
+from ha_env import ModuleCtx as EnvCtx, ready_pair
 from ha_tools import clear_cpu_limit, clear_memory_limit, limit_cpu, limit_memory, ModuleCtx as ToolsCtx, PreloadHook, \
     protect_node_from_oom_killer, read_memory_anon, read_memory_current, read_oom_kills
 from nodes import ModuleCtx as NodesCtx, Timers
-from workload import Workload
+from workload import Topic_Name, Workload
+from zato.common.pubsub.sql.clock import Floor_Key, Floor_Object_Name, Floor_Object_Type
+from zato.common.test.client import PublishClient
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -32,7 +37,7 @@ from zato.common.typing_ import cast_
 if 0:
     from ha_env import HAEnvironment, HASession
     from nodes import Node
-    from zato.common.typing_ import any_, strlist
+    from zato.common.typing_ import any_, strlist, strset
 
     any_ = any_
 
@@ -78,6 +83,36 @@ class ModuleCtx:
         (-120, 1.0),
     ]
 
+    # The rate of a wall clock that runs as the clock of the host does
+    Clock_Rate = 1.0
+
+    # The offset of a wall clock that agrees with the clock of the host, in seconds
+    No_Clock_Offset = 0
+
+    # The skews of the wall clock of the standby beyond and within the default bound of one second, in seconds
+    Skew_Beyond_Bound_Seconds = 5
+    Skew_Within_Bound_Seconds = 0.2
+
+    # How far behind the wall clock of the node that takes over is, in seconds
+    Clock_Behind_Seconds = -120
+
+    # How long the active node may take to mark out a standby whose clock moved beyond the bound, which covers
+    # the heartbeats that the estimate of the skew is taken from and the write of the referee, in seconds
+    Skew_Mark_Out_Timeout = 30
+
+    # The role of an active node without a standby in sync, and the role of the standby in sync
+    Role_Active_Solo = 'ActiveSolo'
+    Role_Standby_In_Sync = EnvCtx.Role_Standby_In_Sync
+
+    # The prefix of the message ID published after a takeover by a node whose clock is behind
+    Clock_Behind_Msg_Id_Prefix = 'zpsm.ha.clock-behind'
+
+    # The query of the floor of the time of the Zato database
+    Floor_Query = 'select data from zato_shared_object where object_type = ? and name = ?'
+
+    # The query of the time at which the dedup record of a message was written
+    Received_Query = 'select received_ms from zato_message_dedup where message_id = ?'
+
     # How long the standby with a changed clock may take to take over, which exceeds the takeover timer of the node
     # with a margin for the start of its role and stays well below any wait that a wall-clock timer would cause, in seconds
     Clock_Takeover_Timeout = 15
@@ -117,6 +152,49 @@ def _finish(env:'HAEnvironment', workload:'Workload', unrun_claims:'int'=0) -> '
 
     _ = check_scheduler(env, active, unrun_claims)
     check_copies(env, active)
+
+# ################################################################################################################################
+
+def _watch_node_roles(node:'Node', seconds:'float') -> 'strset':
+    """ Returns every role that a node reports during the given number of seconds.
+    """
+    out:'strset' = set()
+    deadline = time.monotonic() + seconds
+
+    while time.monotonic() < deadline:
+        report = node.read_role()
+
+        if report is not None:
+            out.add(report['role'])
+
+        time.sleep(ModuleCtx.Poll_Interval)
+
+    return out
+
+# ################################################################################################################################
+
+def _read_floor_ms(node:'Node') -> 'int':
+    """ Returns the floor of the time of the Zato database of a node.
+    """
+    params = [Floor_Object_Type, Floor_Object_Name]
+    rows = read_rows(node.db_path(ChecksCtx.Database_File), ModuleCtx.Floor_Query, params)
+    assert rows, f'No floor in {node.node_name}'
+
+    data = json.loads(rows[0][0])
+
+    out = data[Floor_Key]
+    return out
+
+# ################################################################################################################################
+
+def _read_received_ms(node:'Node', msg_id:'str') -> 'int':
+    """ Returns the time at which the dedup record of a message was written in the Zato database of a node.
+    """
+    rows = read_rows(node.db_path(ChecksCtx.Database_File), ModuleCtx.Received_Query, [msg_id])
+    assert rows, f'No dedup record of {msg_id} in {node.node_name}'
+
+    out = rows[0][0]
+    return out
 
 # ################################################################################################################################
 
@@ -236,8 +314,80 @@ def test_clock_during_takeover(ha_session:'HASession', request:'any_', clock_set
 
         standby = env.get_other(active)
 
+        started = time.time()
+        active.kill()
+
+        # The clock of the standby changes once the active node no longer runs, as a standby whose clock moved away
+        # from that of a running active node is marked out instead.
         preload.set_clock(standby, offset_seconds, rate)
 
+        _ = standby.wait_for_role(ModuleCtx.Active_Roles, ModuleCtx.Clock_Takeover_Timeout)
+        _ = standby.wait_until_server_up(ModuleCtx.Server_Timeout)
+
+        # The node that failed returns with the clock of the node that took over, so that it is admitted in sync.
+        preload.set_clock(active, offset_seconds, rate)
+        active.resume()
+        workload.fault_windows.append((started, time.time()))
+
+        # An active node that is killed leaves the claim it committed before the run began
+        # in the copy of the standby without a run.
+        _finish(env, workload, ModuleCtx.Unrun_Claims_After_Kill)
+
+# ################################################################################################################################
+
+def test_clock_skew_beyond_bound(ha_session:'HASession', request:'any_') -> 'None':
+    """ The wall clock of the standby moves beyond the bound of the skew, the active node marks it out and admits it
+    again only once its clock agrees, and nothing is lost.
+    """
+    preload = PreloadHook()
+
+    with ready_pair(ha_session, request.node.name, Timers(), [preload]) as env:
+        workload = _start_workload(env)
+
+        active = env.get_active()
+        assert active is not None, 'No active node'
+
+        standby = env.get_other(active)
+
+        started = time.time()
+        preload.set_clock(standby, ModuleCtx.Skew_Beyond_Bound_Seconds, ModuleCtx.Clock_Rate)
+
+        # The active node marks the standby out ..
+        _ = active.wait_for_role([ModuleCtx.Role_Active_Solo], ModuleCtx.Skew_Mark_Out_Timeout)
+
+        # .. and does not admit it again for as long as its clock is skewed ..
+        roles = _watch_node_roles(standby, ModuleCtx.Window_Seconds)
+        assert ModuleCtx.Role_Standby_In_Sync not in roles, f'{standby.node_name} admitted with a skew -> {roles}'
+
+        # .. until its clock agrees again.
+        preload.set_clock(standby, ModuleCtx.No_Clock_Offset, ModuleCtx.Clock_Rate)
+        workload.fault_windows.append((started, time.time()))
+
+        _finish(env, workload)
+
+# ################################################################################################################################
+
+def test_clock_skew_within_bound(ha_session:'HASession', request:'any_') -> 'None':
+    """ The wall clock of the standby moves within the bound of the skew, the standby stays in sync and takes over
+    once the active node fails, and nothing is lost.
+    """
+    preload = PreloadHook()
+
+    with ready_pair(ha_session, request.node.name, Timers(), [preload]) as env:
+        workload = _start_workload(env)
+
+        active = env.get_active()
+        assert active is not None, 'No active node'
+
+        standby = env.get_other(active)
+
+        preload.set_clock(standby, ModuleCtx.Skew_Within_Bound_Seconds, ModuleCtx.Clock_Rate)
+
+        # The standby stays in sync with its clock skewed ..
+        roles = _watch_node_roles(standby, ModuleCtx.Window_Seconds)
+        assert roles == {ModuleCtx.Role_Standby_In_Sync}, f'{standby.node_name} left the sync -> {roles}'
+
+        # .. and takes over once the active node fails.
         started = time.time()
         active.kill()
 
@@ -247,8 +397,52 @@ def test_clock_during_takeover(ha_session:'HASession', request:'any_', clock_set
         active.resume()
         workload.fault_windows.append((started, time.time()))
 
-        # An active node that is killed leaves the claim it committed before the run began
-        # in the copy of the standby without a run.
+        _finish(env, workload, ModuleCtx.Unrun_Claims_After_Kill)
+
+# ################################################################################################################################
+
+def test_clock_behind_after_takeover(ha_session:'HASession', request:'any_') -> 'None':
+    """ The node that takes over has a wall clock behind the floor of the time of the Zato database that the failed
+    active node persisted, and the time it issues does not fall below that floor.
+    """
+    preload = PreloadHook()
+
+    with ready_pair(ha_session, request.node.name, Timers(), [preload]) as env:
+        workload = _start_workload(env)
+
+        active = env.get_active()
+        assert active is not None, 'No active node'
+
+        standby = env.get_other(active)
+
+        floor_ms = _read_floor_ms(active)
+
+        started = time.time()
+        active.kill()
+
+        # The clock of the standby falls behind once the active node no longer runs ..
+        preload.set_clock(standby, ModuleCtx.Clock_Behind_Seconds, ModuleCtx.Clock_Rate)
+
+        _ = standby.wait_for_role(ModuleCtx.Active_Roles, ModuleCtx.Clock_Takeover_Timeout)
+        _ = standby.wait_until_server_up(ModuleCtx.Server_Timeout)
+
+        # .. and a message published after the takeover receives a time at or above the floor.
+        client = PublishClient(env.haproxy.base_url, env.publisher_username, env.publisher_password)
+
+        msg_id = f'{ModuleCtx.Clock_Behind_Msg_Id_Prefix}.{time.time_ns()}'
+        data = {'clock_behind_after_takeover': msg_id}
+
+        result = client.publish(Topic_Name, data, msg_id=msg_id)
+        assert result['msg_id'] == msg_id, result
+
+        received_ms = _read_received_ms(standby, msg_id)
+        assert received_ms >= floor_ms, f'Time {received_ms} of {msg_id} below the floor {floor_ms}'
+
+        # The node that failed returns with the clock of the node that took over, so that it is admitted in sync.
+        preload.set_clock(active, ModuleCtx.Clock_Behind_Seconds, ModuleCtx.Clock_Rate)
+        active.resume()
+        workload.fault_windows.append((started, time.time()))
+
         _finish(env, workload, ModuleCtx.Unrun_Claims_After_Kill)
 
 # ################################################################################################################################
