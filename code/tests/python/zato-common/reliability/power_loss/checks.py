@@ -21,6 +21,7 @@ from zato.common.audit_log.common import AuditEvent
 
 if 0:
     from workload import Workload
+    from zato.common.test.receiver import WebhookReceiver
     from zato.common.typing_ import any_, callable_, strlist
 
 # ################################################################################################################################
@@ -67,12 +68,16 @@ def _describe(values:'strlist') -> 'str':
 
 # ################################################################################################################################
 
-def check_traffic(workload:'Workload') -> 'None':
-    """ Asserts that the server acknowledged requests of every kind before it lost its power.
+def check_traffic(workload:'Workload', receiver:'WebhookReceiver') -> 'None':
+    """ Asserts that the server acknowledged requests of every kind before it lost its power,
+    and that it pushed messages to the endpoint of the test.
     """
     assert workload.published, f'No publication acknowledged, failures -> {workload.failures}'
     assert workload.acked, f'No acknowledgement acknowledged, failures -> {workload.failures}'
+    assert workload.receipts, f'No fenced acknowledgement acknowledged, failures -> {workload.failures}'
+    assert workload.push_published, f'No publication to the pushed topic acknowledged, failures -> {workload.failures}'
     assert workload.audited_cids, f'No audited invocation acknowledged, failures -> {workload.failures}'
+    assert receiver.get_request_records(), 'No message pushed to the endpoint of the test'
 
 # ################################################################################################################################
 
@@ -124,6 +129,61 @@ def check_acknowledgements(workload:'Workload', reader:'DatabaseReader') -> 'Non
     returned = list(returned)
 
     assert not returned, f'Acknowledged messages back in the queue -> {_describe(returned)}'
+
+# ################################################################################################################################
+
+def check_receipts(workload:'Workload', reader:'DatabaseReader') -> 'None':
+    """ Asserts that every receipt of an acknowledged fenced acknowledgement is stored with its delivery row.
+    """
+    query = 'select m.msg_id from pubsub_message m join pubsub_delivery d on d.message_id = m.id ' + \
+        f"where m.topic_name = '{WorkloadCtx.Receipt_Topic_Name}'"
+
+    rows = reader.read_rows(query)
+
+    stored:'set[str]' = set()
+
+    for row in rows:
+        stored.add(row[0])
+
+    missing = workload.receipts - stored
+    missing = list(missing)
+
+    assert not missing, f'Receipts of acknowledged fenced acknowledgements lost -> {_describe(missing)}'
+
+# ################################################################################################################################
+
+def check_push_attempts(receiver:'WebhookReceiver', reader:'DatabaseReader') -> 'None':
+    """ Asserts that each message still in the queue of the pushed topic stores at least the attempt
+    with which the server pushed it last, since each attempt is recorded before its request is sent.
+    """
+    query = 'select m.msg_id, d.attempt from pubsub_delivery d join pubsub_message m on m.id = d.message_id ' + \
+        f"where d.topic_name = '{WorkloadCtx.Push_Topic_Name}'"
+
+    stored_attempts:'dict[str, int]' = {}
+
+    for msg_id, attempt in reader.read_rows(query):
+        stored_attempts[msg_id] = attempt
+
+    pushed_attempts:'dict[str, int]' = {}
+
+    for record in receiver.get_request_records():
+        msg_id = record['msg_id']
+        attempt = record['delivery_attempt']
+
+        if msg_id not in pushed_attempts:
+            pushed_attempts[msg_id] = attempt
+        elif attempt > pushed_attempts[msg_id]:
+            pushed_attempts[msg_id] = attempt
+
+    lost:'strlist' = []
+
+    # A message absent from the queue was concluded, so only the ones still in it store their attempts
+    for msg_id, attempt in pushed_attempts.items():
+        if msg_id in stored_attempts:
+            if stored_attempts[msg_id] < attempt:
+                lost.append(msg_id)
+
+    assert not lost, f'Push attempts lost -> {_describe(lost)}'
 
 # ################################################################################################################################
 

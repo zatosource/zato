@@ -16,11 +16,13 @@ import shutil
 import time
 
 # Zato
-from checks import check_acknowledgements, check_audit_events, check_publications, check_redelivery, check_traffic, \
-    DatabaseReader
+from checks import check_acknowledgements, check_audit_events, check_publications, check_push_attempts, check_receipts, \
+    check_redelivery, check_traffic, DatabaseReader
 from workload import ModuleCtx as WorkloadCtx, Workload
 from zato.common.crypto.api import CryptoManager
-from zato.common.test.conftest_base_pubsub import render_template
+from zato.common.db_env.database_env import DatabaseEnv
+from zato.common.test.conftest_base_pubsub import find_free_port, render_template
+from zato.common.test.receiver import WebhookReceiver
 from zato.common.test.reliability.power_loss import PowerLossServer
 
 # ################################################################################################################################
@@ -56,6 +58,9 @@ class ModuleCtx:
     Deploy_Enmasse_Dir = 'enmasse'
     Enmasse_File_Name  = 'power-loss.yaml'
 
+    # The directory of what the endpoint of the test received
+    Push_Dir_Name = 'push-receiver'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -79,6 +84,9 @@ def new_server(name:'str', parent_dir:'str', database_env:'strstrdict') -> 'Powe
         WorkloadCtx.Publisher_Password_Key: 'test.publisher.' + CryptoManager.generate_hex_string(),
         WorkloadCtx.Puller_Password_Key: 'test.puller.' + CryptoManager.generate_hex_string(),
         WorkloadCtx.Caller_Password_Key: 'test.caller.' + CryptoManager.generate_hex_string(),
+        WorkloadCtx.Receipt_Reader_Password_Key: 'test.receipt-reader.' + CryptoManager.generate_hex_string(),
+        WorkloadCtx.Pusher_Password_Key: 'test.pusher.' + CryptoManager.generate_hex_string(),
+        WorkloadCtx.Push_Port_Key: str(find_free_port()),
     }
 
     enmasse_yaml = render_template(ModuleCtx.Template_Path, placeholders)
@@ -127,31 +135,52 @@ def create_deploy_dir(parent_dir:'str', enmasse_yaml:'str') -> 'str':
 def run_power_loss(server:'PowerLossServer', power_loss:'PowerLoss', reader:'DatabaseReader') -> 'None':
     """ Runs the traffic against a started server, cuts the power and restores it, and checks what the database holds.
     """
-    workload = Workload(server.base_url, server.placeholders)
-    workload.start()
+    # The endpoint that the server pushes to runs in the test, so it keeps what it received across the loss of power
+    push_port = int(server.placeholders[WorkloadCtx.Push_Port_Key])
+    push_dir = os.path.join(server.parent_dir, ModuleCtx.Push_Dir_Name)
 
-    time.sleep(ModuleCtx.Traffic_Seconds)
+    receiver = WebhookReceiver(push_port, push_dir, WorkloadCtx.Push_URL_Path)
+    receiver.start()
 
-    # The power goes while the clients are still sending, so requests in flight are cut off too ..
-    power_loss.cut()
-    workload.stop()
+    try:
+        workload = Workload(server.base_url, server.placeholders)
+        workload.start()
 
-    logger.info('Power cut after %d publications, %d acknowledgements and %d audited invocations',
-        len(workload.published), len(workload.acked), len(workload.audited_cids))
+        time.sleep(ModuleCtx.Traffic_Seconds)
 
-    check_traffic(workload)
+        # The power goes while the clients are still sending, so requests in flight are cut off too ..
+        power_loss.cut()
+        workload.stop()
 
-    # .. it comes back ..
-    power_loss.restore()
+        logger.info('Power cut after %d publications, %d acknowledgements, %d receipts, %d pushed publications, ' + \
+            '%d push requests and %d audited invocations', len(workload.published), len(workload.acked),
+            len(workload.receipts), len(workload.push_published), len(receiver.get_request_records()),
+            len(workload.audited_cids))
 
-    # .. everything that was acknowledged is stored ..
-    check_publications(workload, reader)
-    check_acknowledgements(workload, reader)
-    check_audit_events(workload, reader)
+        check_traffic(workload, receiver)
 
-    # .. and the queue hands out every publication that was not acknowledged and none that was.
-    workload.drain()
-    check_redelivery(workload)
+        # .. it comes back ..
+        power_loss.restore()
+
+        # .. everything that was acknowledged is stored, the receipts and the push attempts included ..
+        check_publications(workload, reader)
+        check_acknowledgements(workload, reader)
+        check_receipts(workload, reader)
+        check_audit_events(workload, reader)
+
+        # SQLite counts the push attempts in memory, so only PostgreSQL stores them
+        if server.database_env[DatabaseEnv.Env_Type] != DatabaseEnv.Type_SQLite:
+            check_push_attempts(receiver, reader)
+
+        # .. the queue hands out every publication that was not acknowledged and none that was ..
+        workload.drain()
+        check_redelivery(workload)
+
+        # .. and every acknowledged publication to the pushed topic reaches the endpoint.
+        workload.wait_for_pushes(receiver)
+
+    finally:
+        receiver.stop()
 
 # ################################################################################################################################
 # ################################################################################################################################

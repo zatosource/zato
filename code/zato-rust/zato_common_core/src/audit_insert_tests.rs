@@ -1,5 +1,7 @@
-//! The conversions of the audit writer - the text of a time column, the compressed form of a payload,
-//! the digest of a payload and the capped text of an attribute value - against the values that the Python path stores.
+//! The conversions of the audit writer against the values that the Python path stores.
+//!
+//! The tests cover the text of a time column, the compressed form of a payload,
+//! the digest of a payload and the capped text of an attribute value.
 
 use std::fmt::Write as _;
 
@@ -34,7 +36,7 @@ fn hex_digest(data: &[u8]) -> String {
 /// Returns the bytes of a hexadecimal text.
 fn from_hex(text: &str) -> Vec<u8> {
     let mut out = Vec::new();
-    let mut index = 0;
+    let mut index: usize = 0;
 
     while let Some(pair) = text.get(index..index.saturating_add(2)) {
         out.push(u8::from_str_radix(pair, 16).unwrap_or_default());
@@ -78,7 +80,10 @@ fn formats_the_last_microsecond_of_a_year() {
 fn compresses_as_zlib_at_level_one() {
     let cases = [
         ("", "7801030000000001"),
-        (TEXT_ASCII, "7801f32f4a492d52f00f72d1353030315248cb2f52f04d2cca4c54f0cacfc82bcecf0300a25f0a65"),
+        (
+            TEXT_ASCII,
+            "7801f32f4a492d52f00f72d1353030315248cb2f52f04d2cca4c54f0cacfc82bcecf0300a25f0a65",
+        ),
         (
             TEXT_NON_ASCII,
             "78018b4acc3dbcb93c33352f335521252751c137b1283353c12b3f23af383f4fe151c36405531d530385474d6b14bc0eef294a4fcd030000fe1442",
@@ -133,7 +138,7 @@ fn caps_the_text_of_an_attribute_by_characters() {
 
 #[test]
 fn caps_a_text_outside_of_ascii_on_a_character_boundary() {
-    let text = "Świętej Marii ".repeat(30);
+    let text = "Café order for María Johnson ".repeat(30);
     let capped = capped_attr_text(&text);
 
     assert_eq!(capped.chars().count(), ATTR_VALUE_MAX_LEN);

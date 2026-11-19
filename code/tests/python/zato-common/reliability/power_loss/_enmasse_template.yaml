@@ -15,19 +15,50 @@ security:
     username: test.reliability.power-loss.caller
     password: "{{caller_password}}"
 
+  - name: test.reliability.power-loss.receipt-reader
+    type: basic_auth
+    username: test.reliability.power-loss.receipt-reader
+    password: "{{receipt_reader_password}}"
+
+  - name: test.reliability.power-loss.pusher
+    type: basic_auth
+    username: test.reliability.power-loss.pusher
+    password: "{{pusher_password}}"
+
+outgoing_rest:
+
+  - name: test.reliability.power-loss.out.push
+    host: "http://127.0.0.1:{{push_port}}"
+    url_path: /webhook/power-loss
+    data_format: json
+    timeout: 30
+
 pubsub_topic:
 
   - name: reliability.power-loss
+  - name: reliability.power-loss.receipts
+  - name: reliability.power-loss.pushed
 
 pubsub_permission:
 
   - security: test.reliability.power-loss.publisher
     pub:
       - reliability.power-loss
+      - reliability.power-loss.pushed
 
   - security: test.reliability.power-loss.puller
+    pub:
+      - reliability.power-loss.receipts
     sub:
       - reliability.power-loss
+
+  - security: test.reliability.power-loss.receipt-reader
+    sub:
+      - reliability.power-loss.receipts
+
+  - security: test.reliability.power-loss.pusher
+    sub:
+      - reliability.power-loss.pushed
 
 pubsub_subscription:
 
@@ -35,6 +66,17 @@ pubsub_subscription:
     delivery_type: pull
     topic_list:
       - reliability.power-loss
+
+  - security: test.reliability.power-loss.receipt-reader
+    delivery_type: pull
+    topic_list:
+      - reliability.power-loss.receipts
+
+  - security: test.reliability.power-loss.pusher
+    delivery_type: push
+    push_rest_endpoint: test.reliability.power-loss.out.push
+    topic_list:
+      - reliability.power-loss.pushed
 
 channel_rest:
 

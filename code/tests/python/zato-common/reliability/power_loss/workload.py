@@ -25,7 +25,8 @@ from uuid import uuid4
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, strlist, strstrdict
+    from zato.common.test.receiver import WebhookReceiver
+    from zato.common.typing_ import any_, anydict, anylist, strlist, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,6 +36,11 @@ class ModuleCtx:
     # The topic that the publishers publish to and that the puller pulls from
     Topic_Name = 'reliability.power-loss'
 
+    # The topic of the receipts that the fenced acknowledgements of the puller publish,
+    # and the topic whose messages the server pushes to the endpoint of the test
+    Receipt_Topic_Name = 'reliability.power-loss.receipts'
+    Push_Topic_Name = 'reliability.power-loss.pushed'
+
     # The users of the clients and the names of their passwords in the placeholders of the enmasse file
     Publisher_Username = 'test.reliability.power-loss.publisher'
     Puller_Username = 'test.reliability.power-loss.puller'
@@ -43,9 +49,19 @@ class ModuleCtx:
     Publisher_Password_Key = 'publisher_password'
     Puller_Password_Key = 'puller_password'
     Caller_Password_Key = 'caller_password'
+    Receipt_Reader_Password_Key = 'receipt_reader_password'
+    Pusher_Password_Key = 'pusher_password'
+
+    # The name of the port of the endpoint of the test in the placeholders of the enmasse file, and the path of the endpoint
+    Push_Port_Key = 'push_port'
+    Push_URL_Path = '/webhook/power-loss'
+
+    # The suffix that the msg_id of a receipt adds to the msg_id of the message it acknowledges
+    Receipt_Suffix = '.receipt'
 
     # The paths of the REST interface of the server
     Publish_Path = f'/pubsub/topic/{Topic_Name}'
+    Push_Publish_Path = f'/pubsub/topic/{Push_Topic_Name}'
     Pull_Path = '/pubsub/messages/get'
     Ack_Path = '/pubsub/messages/ack'
     Audited_Path = '/test/reliability/power-loss/audited'
@@ -145,9 +161,12 @@ class Workload:
         self._threads:'list[threading.Thread]' = []
 
         # The msg_id of each acknowledged publication by its correlation ID, the messages whose acknowledgement
-        # was acknowledged and the correlation IDs of the acknowledged audited invocations
+        # was acknowledged, the receipts of the acknowledged fenced acknowledgements, the msg_id of each acknowledged
+        # publication to the pushed topic by its correlation ID and the correlation IDs of the acknowledged audited invocations
         self.published:'strstrdict' = {}
         self.acked:'set[str]' = set()
+        self.receipts:'set[str]' = set()
+        self.push_published:'strstrdict' = {}
         self.audited_cids:'strlist' = []
 
         # What the puller received once the server was back, in the order received
@@ -172,14 +191,14 @@ class Workload:
 
 # ################################################################################################################################
 
-    def _publish_loop(self, publisher_index:'int') -> 'None':
+    def _publish_loop(self, path:'str', prefix:'str', published:'strstrdict') -> 'None':
 
-        url = self._url(ModuleCtx.Publish_Path)
+        url = self._url(path)
         counter = 0
 
         while self.is_running.is_set():
             counter += 1
-            correl_id = f'{self.token}.{publisher_index}.{counter}'
+            correl_id = f'{self.token}.{prefix}.{counter}'
 
             payload = {
                 'data': {'correl_id': correl_id},
@@ -194,9 +213,43 @@ class Workload:
 
             if result.status_code == OK:
                 with self.lock:
-                    self.published[correl_id] = result.body['msg_id']
+                    published[correl_id] = result.body['msg_id']
             else:
                 self._record_failure('publish')
+
+# ################################################################################################################################
+
+    def _build_fenced_ack(self, messages:'anylist') -> 'anydict':
+        """ Returns the fenced acknowledgement of the messages of a pull, with one receipt of each message
+        under a msg_id derived from the msg_id of the message.
+        """
+        consumed:'anylist' = []
+        receipts:'anylist' = []
+
+        for message in messages:
+            meta = message['meta']
+            msg_id = meta['msg_id']
+
+            consumed_message = {
+                'msg_id': msg_id,
+                'delivery_attempt': meta['delivery_attempt'],
+            }
+
+            receipt = {
+                'topic_name': ModuleCtx.Receipt_Topic_Name,
+                'data': {'msg_id': msg_id},
+                'msg_id': msg_id + ModuleCtx.Receipt_Suffix,
+            }
+
+            consumed.append(consumed_message)
+            receipts.append(receipt)
+
+        out:'anydict' = {
+            'consumed': consumed,
+            'publish': receipts,
+        }
+
+        return out
 
 # ################################################################################################################################
 
@@ -204,6 +257,9 @@ class Workload:
 
         pull_url = self._url(ModuleCtx.Pull_Path)
         ack_url = self._url(ModuleCtx.Ack_Path)
+
+        # Every other pull is acknowledged with a receipt of each of its messages
+        is_fenced = False
 
         while self.is_running.is_set():
 
@@ -222,8 +278,22 @@ class Workload:
             if not msg_ids:
                 continue
 
+            is_fenced = not is_fenced
+            receipt_msg_ids:'strlist' = []
+
+            # A fenced acknowledgement commits with its receipts or not at all ..
+            if is_fenced:
+                ack_payload = self._build_fenced_ack(result.body['messages'])
+
+                for msg_id in msg_ids:
+                    receipt_msg_ids.append(msg_id + ModuleCtx.Receipt_Suffix)
+
+            # .. whereas a plain one removes the messages alone.
+            else:
+                ack_payload = {'msg_ids': msg_ids}
+
             try:
-                ack_result = post_json(ack_url, self.puller_auth, {'msg_ids': msg_ids})
+                ack_result = post_json(ack_url, self.puller_auth, ack_payload)
             except Exception:
                 self._record_failure('ack')
                 continue
@@ -231,6 +301,7 @@ class Workload:
             if ack_result.status_code == OK:
                 with self.lock:
                     self.acked.update(msg_ids)
+                    self.receipts.update(receipt_msg_ids)
             else:
                 self._record_failure('ack')
 
@@ -262,8 +333,9 @@ class Workload:
         targets:'list[tuple[any_, tuple]]' = []
 
         for publisher_index in range(ModuleCtx.Publisher_Count):
-            targets.append((self._publish_loop, (publisher_index,)))
+            targets.append((self._publish_loop, (ModuleCtx.Publish_Path, str(publisher_index), self.published)))
 
+        targets.append((self._publish_loop, (ModuleCtx.Push_Publish_Path, 'push', self.push_published)))
         targets.append((self._pull_loop, ()))
         targets.append((self._audited_loop, ()))
 
@@ -324,6 +396,31 @@ class Workload:
 
             ack_result = post_json(ack_url, self.puller_auth, {'msg_ids': msg_ids})
             assert ack_result.status_code == OK, ack_result
+
+# ################################################################################################################################
+
+    def wait_for_pushes(self, receiver:'WebhookReceiver') -> 'None':
+        """ Waits until the endpoint of the test accepted every acknowledged publication to the pushed topic,
+        including the ones that the loss of power left between an attempt and its conclusion.
+        """
+        expected = set(self.push_published.values())
+        deadline = time.monotonic() + ModuleCtx.Drain_Timeout
+
+        while True:
+
+            accepted:'set[str]' = set()
+
+            for record in receiver.get_request_records():
+                if record['status_code'] == OK:
+                    accepted.add(record['msg_id'])
+
+            missing = expected - accepted
+
+            if not missing:
+                break
+
+            assert time.monotonic() < deadline, f'Not pushed after the loss of power: {len(missing)} of {len(expected)}'
+            time.sleep(ModuleCtx.Poll_Interval)
 
 # ################################################################################################################################
 # ################################################################################################################################

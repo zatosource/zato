@@ -12,17 +12,19 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from contextlib import contextmanager
 
 # gevent
 import gevent
 
 # SQLAlchemy
-from sqlalchemy import event as sa_event, select
+from sqlalchemy import select
 
 # Zato
 from common import delete_all_rows, delete_audit_rows, get_delivery_rows, get_dialect_name, get_event_rows, \
     get_message_rows, write_in_one_commit
+from transaction_statements import assert_one_transaction, get_atomic_statements, get_event_statements, get_expected, \
+    record_transactions, statements_ack, statements_attempts, statements_drop, statements_lease, statements_publication, \
+    TransactionRecorder
 from zato.common.audit_log.api import event_table, AuditEvent
 from zato.common.audit_log.export.api import set_audit_export
 from zato.common.config_db import Env_Audit_Log_Enabled
@@ -39,23 +41,17 @@ from zato.common.test.audit_log_ import new_test_audit_log, RecordingAuditExport
 # ################################################################################################################################
 
 if 0:
-    from collections.abc import Iterator
-    from sqlalchemy.engine import Engine
     from zato.common.audit_log.pending import pending_event_list
     from zato.common.pubsub.sql.pending import PendingAtomic
-    from zato.common.typing_ import any_, anydict, anylist, anytuple, intlist, strlist
+    from zato.common.typing_ import any_, anydict, anylist, intlist, strlist
 
     any_ = any_
     anydict = anydict
     anylist = anylist
-    anytuple = anytuple
-    Engine = Engine
     intlist = intlist
     pending_event_list = pending_event_list
     PendingAtomic = PendingAtomic
     strlist = strlist
-
-    recordergen = Iterator['TransactionRecorder']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -104,183 +100,6 @@ _weight_max_messages = '4'
 _weight_commits_in_flight = '1'
 _weight_ack_count = 5
 _weight_ack_size = 2
-
-# The statements that open and close a transaction and a savepoint
-_begin     = ('BEGIN', '')
-_commit    = ('COMMIT', '')
-_savepoint = ('SAVEPOINT', '')
-_release   = ('RELEASE', '')
-
-# The verbs that are recorded, with the position of the table among the words of a statement or None for no table
-_verb_table_position:'anydict' = {
-    'INSERT': 2,
-    'UPDATE': 1,
-    'DELETE': 2,
-    'COPY': 1,
-    'BEGIN': None,
-    'COMMIT': None,
-    'ROLLBACK': None,
-    'SAVEPOINT': None,
-    'RELEASE': None,
-}
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# The statements of each part of a transaction, by verb and table, on each database
-_statements_publication = [
-    ('SELECT', 'pubsub_topic_sub'), ('INSERT', 'pubsub_message'), ('INSERT', 'pubsub_delivery'),
-]
-
-_statements_ack = [
-    ('SELECT', 'pubsub_message'), ('SELECT', 'pubsub_delivery'), ('DELETE', 'pubsub_delivery'),
-]
-
-_statements_atomic_checks = [
-    ('SELECT', 'pubsub_message'), ('SELECT', 'pubsub_delivery'),
-]
-
-_statements_atomic_writes = [
-    ('SELECT', 'pubsub_topic_sub'), ('INSERT', 'pubsub_message'), ('INSERT', 'pubsub_delivery'),
-    ('DELETE', 'pubsub_delivery'),
-]
-
-_statements_attempts = [
-    ('UPDATE', 'pubsub_delivery'),
-]
-
-_statements_lease = [
-    ('SELECT', 'pubsub_delivery'), ('UPDATE', 'pubsub_delivery'), ('SELECT', 'pubsub_message'),
-]
-
-_statements_drop = {
-    'sqlite': [
-        ('UPDATE', 'pubsub_message'),
-    ],
-    'postgresql': [
-        ('SELECT', 'pubsub_message'), ('SELECT', 'pubsub_message'), ('UPDATE', 'pubsub_message'),
-    ],
-}
-
-_statement_payload_select   = ('SELECT', 'event_payload')
-_statement_payload_insert   = ('INSERT', 'event_payload')
-_statement_event_ids_select = ('SELECT', 'generate_series')
-_statement_event_insert     = ('INSERT', 'event')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class TransactionRecorder:
-    """ The statements of an engine by verb and table, with the transactions they ran in. On SQLite, these are
-    the statements that the database runs, including the ones that run in Rust, with the consecutive runs
-    of one statement recorded once, and on PostgreSQL, the statements that SQLAlchemy sends, each with whether
-    a transaction was open when it was sent.
-    """
-
-    def __init__(self, is_sqlite:'bool') -> 'None':
-        self.is_sqlite = is_sqlite
-        self.statements:'anylist' = []
-        self.in_transaction:'anylist' = []
-        self.begin_count = 0
-        self.commit_count = 0
-
-    def on_trace(self, statement:'str') -> 'None':
-        if verb_table := get_verb_table(statement):
-            if not self.statements or self.statements[-1] != verb_table:
-                self.statements.append(verb_table)
-
-    def on_checkout(self, dbapi_connection:'any_', connection_record:'any_', connection_proxy:'any_') -> 'None':
-        dbapi_connection.set_trace_callback(self.on_trace)
-
-    def on_checkin(self, dbapi_connection:'any_', connection_record:'any_') -> 'None':
-        dbapi_connection.set_trace_callback(None)
-
-    def on_execute(
-        self,
-        conn:'any_',
-        cursor:'any_',
-        statement:'str',
-        parameters:'any_',
-        context:'any_',
-        executemany:'bool',
-        ) -> 'None':
-        if verb_table := get_verb_table(statement):
-            self.statements.append(verb_table)
-            self.in_transaction.append(conn.in_transaction())
-
-    def on_begin(self, conn:'any_') -> 'None':
-        self.begin_count += 1
-
-    def on_commit(self, conn:'any_') -> 'None':
-        self.commit_count += 1
-
-        # SQLite runs a statement of its own for the commit, which the trace records
-        if self.is_sqlite:
-            return
-
-        # .. whereas PostgreSQL commits through the driver.
-        self.statements.append(_commit)
-        self.in_transaction.append(True)
-
-# ################################################################################################################################
-
-def get_verb_table(statement:'str') -> 'anytuple | None':
-    """ Returns the verb and the table of a statement, the verb alone for a statement of a transaction
-    or a savepoint, and None for any other statement.
-    """
-    words = statement.split()
-    verb = words[0]
-
-    if verb == 'SELECT':
-        if 'FROM' in words:
-            from_index = words.index('FROM')
-            table_name = words[from_index + 1]
-        else:
-            table_name = words[1]
-        table_name = table_name.split('(')[0]
-
-    elif verb in _verb_table_position:
-        position = _verb_table_position[verb]
-        if position is None:
-            table_name = ''
-        else:
-            table_name = words[position]
-
-    else:
-        return None
-
-    out = (verb, table_name)
-    return out
-
-# ################################################################################################################################
-
-@contextmanager
-def record_transactions(engine:'Engine') -> 'recordergen':
-    """ Records the statements, the transactions and the commits of an engine for the duration of a block.
-    """
-    is_sqlite = engine.dialect.name == 'sqlite'
-    recorder = TransactionRecorder(is_sqlite)
-
-    if is_sqlite:
-        sa_event.listen(engine, 'checkout', recorder.on_checkout)
-        sa_event.listen(engine, 'checkin', recorder.on_checkin)
-    else:
-        sa_event.listen(engine, 'before_cursor_execute', recorder.on_execute)
-
-    sa_event.listen(engine, 'begin', recorder.on_begin)
-    sa_event.listen(engine, 'commit', recorder.on_commit)
-
-    try:
-        yield recorder
-    finally:
-        if is_sqlite:
-            sa_event.remove(engine, 'checkout', recorder.on_checkout)
-            sa_event.remove(engine, 'checkin', recorder.on_checkin)
-        else:
-            sa_event.remove(engine, 'before_cursor_execute', recorder.on_execute)
-
-        sa_event.remove(engine, 'begin', recorder.on_begin)
-        sa_event.remove(engine, 'commit', recorder.on_commit)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -383,91 +202,21 @@ def _write(backend:'SQLPubSubBackend', items:'anylist') -> 'TransactionRecorder'
     return out
 
 # ################################################################################################################################
-
-def _get_expected(dialect_name:'str', parts:'anylist') -> 'anylist':
-    """ Returns the statements of a transaction of the given parts, opened and committed. On SQLite, the driver opens
-    the transaction before the first statement that writes, so the selects that precede it run before it.
-    """
-    out:'anylist' = []
-    needs_begin = dialect_name == 'sqlite'
-
-    for part in parts:
-        for verb_table in part:
-
-            # The first statement that writes opens the transaction on SQLite ..
-            if needs_begin and verb_table[0] != 'SELECT':
-                out.append(_begin)
-                needs_begin = False
-
-            out.append(verb_table)
-
-    # .. and every transaction is committed.
-    out.append(_commit)
-    return out
-
-# ################################################################################################################################
-
-def _get_atomic_statements(dialect_name:'str') -> 'anylist':
-    """ Returns the statements of a fenced acknowledgement with one receipt, which PostgreSQL writes in a savepoint.
-    """
-    out:'anylist' = []
-
-    if dialect_name == 'postgresql':
-        out.append(_savepoint)
-
-    out.extend(_statements_atomic_checks)
-    out.extend(_statements_atomic_writes)
-
-    if dialect_name == 'postgresql':
-        out.append(_release)
-
-    return out
-
-# ################################################################################################################################
-
-def _get_event_statements(dialect_name:'str', event_count:'int', has_new_payloads:'bool') -> 'anylist':
-    """ Returns the statements of the audit events of a batch. PostgreSQL reserves the ids of more than one event
-    from its sequence, and a payload stored already by an earlier event is not inserted again.
-    """
-    out:'anylist' = [_statement_payload_select]
-
-    if dialect_name == 'postgresql' and event_count > 1:
-        out.append(_statement_event_ids_select)
-
-    if has_new_payloads:
-        out.append(_statement_payload_insert)
-
-    out.append(_statement_event_insert)
-    return out
-
-# ################################################################################################################################
-
-def _assert_one_transaction(recorder:'TransactionRecorder', expected:'anylist') -> 'None':
-    """ The batch ran the expected statements in one transaction, which it opened and committed once.
-    """
-    assert recorder.statements == expected, recorder.statements
-    assert recorder.begin_count == 1, recorder.begin_count
-    assert recorder.commit_count == 1, recorder.commit_count
-
-    for is_open in recorder.in_transaction:
-        assert is_open
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 def _run_compositions() -> 'None':
     """ Each kind of item alone in a batch runs its own statements, in one transaction.
     """
     dialect_name = get_dialect_name()
-    publication = _statements_publication
-    drop = _statements_drop[dialect_name]
-    one_event = _get_event_statements(dialect_name, 1, True)
+    publication = statements_publication
+    drop = statements_drop[dialect_name]
+    one_event = get_event_statements(dialect_name, 1, True)
 
     # A publication with its audit event ..
     backend = _new_backend()
     recorder = _write(backend, [_new_publication(backend)])
 
-    _assert_one_transaction(recorder, _get_expected(dialect_name, [publication, one_event]))
+    assert_one_transaction(recorder, get_expected(dialect_name, [publication, one_event]))
 
     # .. an acknowledgement, which drops the payload of the message that it fully delivered ..
     backend = _new_backend()
@@ -476,7 +225,7 @@ def _run_compositions() -> 'None':
     ack = new_pending_ack(_sub_key_main, [prepared.main_msg_ids[0]], None)
     recorder = _write(backend, [ack])
 
-    _assert_one_transaction(recorder, _get_expected(dialect_name, [_statements_ack, drop]))
+    assert_one_transaction(recorder, get_expected(dialect_name, [statements_ack, drop]))
 
     # .. a fenced acknowledgement with its receipt ..
     backend = _new_backend()
@@ -485,8 +234,8 @@ def _run_compositions() -> 'None':
     atomic = _new_atomic(backend, prepared, prepared.input_attempt)
     recorder = _write(backend, [atomic])
 
-    parts = [_get_atomic_statements(dialect_name), drop, one_event]
-    _assert_one_transaction(recorder, _get_expected(dialect_name, parts))
+    parts = [get_atomic_statements(dialect_name), drop, one_event]
+    assert_one_transaction(recorder, get_expected(dialect_name, parts))
 
     # .. the push attempts of two deliveries ..
     backend = _new_backend()
@@ -495,7 +244,7 @@ def _run_compositions() -> 'None':
     attempts = new_pending_attempts(prepared.main_delivery_ids[:2])
     recorder = _write(backend, [attempts])
 
-    _assert_one_transaction(recorder, _get_expected(dialect_name, [_statements_attempts]))
+    assert_one_transaction(recorder, get_expected(dialect_name, [statements_attempts]))
 
     # .. and a lease with the audit events of the messages that it hands out, whose payloads their publications stored.
     backend = _new_backend()
@@ -503,8 +252,8 @@ def _run_compositions() -> 'None':
 
     recorder = _write(backend, [_new_lease(backend)])
 
-    parts = [_statements_lease, _get_event_statements(dialect_name, _main_count, False)]
-    _assert_one_transaction(recorder, _get_expected(dialect_name, parts))
+    parts = [statements_lease, get_event_statements(dialect_name, _main_count, False)]
+    assert_one_transaction(recorder, get_expected(dialect_name, parts))
 
 # ################################################################################################################################
 
@@ -557,16 +306,16 @@ def _run_every_kind() -> 'None':
 
     # .. and their statements run in the order of the kinds, with the payloads dropped after every write of delivery rows ..
     parts = [
-        _statements_publication,
-        _statements_ack,
-        _get_atomic_statements(dialect_name),
-        _statements_attempts,
-        _statements_lease,
-        _statements_drop[dialect_name],
-        _get_event_statements(dialect_name, _every_kind_event_count, True),
+        statements_publication,
+        statements_ack,
+        get_atomic_statements(dialect_name),
+        statements_attempts,
+        statements_lease,
+        statements_drop[dialect_name],
+        get_event_statements(dialect_name, _every_kind_event_count, True),
     ]
 
-    _assert_one_transaction(recorder, _get_expected(dialect_name, parts))
+    assert_one_transaction(recorder, get_expected(dialect_name, parts))
 
     # .. the publication stored its message with one delivery row ..
     assert publication.exception is None
