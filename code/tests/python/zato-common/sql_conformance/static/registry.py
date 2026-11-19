@@ -9,6 +9,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The registries of the static scans of SQL conformance for the code of this installation. The repositories linked
 # to the installation add their own entries of the same shapes through their registry modules.
 
+# stdlib
+from dataclasses import dataclass
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import strtuple
+
+    strtuple = strtuple
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -24,12 +35,6 @@ class ModuleCtx:
     Rust_Setting_Functions = (
         ('code/zato-rust/zato_ha_core/src/active.rs', 'open_connection'),
         ('code/zato-rust/zato_ha_core/src/copy.rs', 'open_for_checkpoint'),
-    )
-
-    # The Rust functions that open a connection over the handle of a connection of the SQLite driver of Python,
-    # each by its file and its name
-    Rust_Handle_Functions = (
-        ('code/zato-rust/zato_common_core/src/audit_insert.rs', 'open_handle'),
     )
 
 # ################################################################################################################################
@@ -130,20 +135,66 @@ Write_Path_Path = 'code/zato-common/src/zato/common/db_env/write_path.py'
 Audit_Tables_Name = 'Audit_Tables'
 Audit_Tables_Not_Guarded = ('alert',)
 
-# The writer of the audit log on SQLite, which writes in Rust through the handle of the connection of the driver,
-# outside the guard of the write path that SQLAlchemy runs. The module that defines it alone builds it, under the name
-# given, and the entry function of that module alone calls its method that writes, after the entry function checks
-# each statement of the list given against the guard. The keys are those under which the writer receives its statements,
-# and the Rust source is the file whose code runs them.
-Rust_Writer_Class = 'zato_common_core.zato_common_core.SQLiteAuditWriter'
-Rust_Writer_Path = 'code/zato-common/src/zato/common/audit_log/sqlite_insert.py'
-Rust_Writer_Instance = 'zato.common.audit_log.sqlite_insert._writer'
-Rust_Writer_Entry = 'insert_pending_events_sqlite'
-Rust_Writer_Method = 'insert_events'
+@dataclass(frozen=True)
+class RustWriter:
+    """ A writer on SQLite that writes in Rust through the handle of the connection of the driver, outside the guard
+    of the write path that SQLAlchemy runs. The module that defines it alone builds it, under the name of its instance,
+    and the entry function of that module alone calls its method that writes, after the entry function checks
+    each statement of the list of statements against the guard. The keys are those under which the writer receives
+    its statements, the Rust sources are the files whose code runs them, and the handle function is the one through
+    which the writer opens its connection over the handle of the driver.
+    """
+    name:            'str'
+    class_name:      'str'
+    path:            'str'
+    instance:        'str'
+    entry:           'str'
+    method:          'str'
+    statements_name: 'str'
+    statement_keys:  'strtuple'
+    sources:         'strtuple'
+    handle_function: 'strtuple'
+
+# The guard of the write path that each Rust writer runs its statements through
 Rust_Writer_Guard = 'zato.common.db_env.write_path.check_write_path'
-Rust_Writer_Statements_Name = '_write_statements'
-Rust_Writer_Statement_Keys = ('insert_event', 'select_payload', 'insert_payload', 'insert_attr', 'insert_body', 'insert_link')
-Rust_Writer_Source = 'code/zato-rust/zato_common_core/src/audit_insert.rs'
+
+# The function through which the Rust writers open their connections over the handle of the driver
+_rust_handle_function = ('code/zato-rust/zato_common_core/src/audit_insert.rs', 'open_handle')
+
+# The Rust writers - the writer of the audit log and the writer of the items of pub/sub batches.
+Rust_Writers = (
+    RustWriter(
+        name='audit-log',
+        class_name='zato_common_core.zato_common_core.SQLiteAuditWriter',
+        path='code/zato-common/src/zato/common/audit_log/sqlite_insert.py',
+        instance='zato.common.audit_log.sqlite_insert._writer',
+        entry='insert_pending_events_sqlite',
+        method='insert_events',
+        statements_name='_write_statements',
+        statement_keys=('insert_event', 'select_payload', 'insert_payload', 'insert_attr', 'insert_body', 'insert_link'),
+        sources=('code/zato-rust/zato_common_core/src/audit_insert.rs',),
+        handle_function=_rust_handle_function,
+    ),
+    RustWriter(
+        name='pubsub',
+        class_name='zato_common_core.zato_common_core.SQLitePubSubWriter',
+        path='code/zato-common/src/zato/common/pubsub/sql/sqlite_write.py',
+        instance='zato.common.pubsub.sql.sqlite_write._writer',
+        entry='write_items_sqlite',
+        method='write_items',
+        statements_name='_write_statements',
+        statement_keys=(
+            'begin', 'select_subscribers', 'insert_message', 'select_existing_message', 'insert_delivery',
+            'select_message_id', 'select_ack_delivery', 'delete_delivery', 'record_attempt', 'select_lease_candidates',
+            'lease_delivery', 'select_leased_message', 'select_fenced_delivery', 'drop_payload',
+        ),
+        sources=(
+            'code/zato-rust/zato_common_core/src/pubsub_write.rs',
+            'code/zato-rust/zato_common_core/src/pubsub_write_sql.rs',
+        ),
+        handle_function=_rust_handle_function,
+    ),
+)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -17,16 +17,26 @@ pub(super) struct GeventLoop<'py> {
 }
 
 /// Retries a raw fd operation, yielding to gevent on `EWOULDBLOCK` and retrying on `EINTR`.
+///
+/// The operation runs without the GIL, so that other interpreter threads proceed during the syscall.
 fn with_gevent_io<F>(py: Python<'_>, fd: i32, event: i32, gev: &GeventLoop<'_>, mut op_fn: F) -> PyResult<isize>
 where
-    F: FnMut() -> isize,
+    F: FnMut() -> isize + Send,
 {
     loop {
-        let result = op_fn();
-        if result >= 0 {
-            return Ok(result);
-        }
-        let err = std::io::Error::last_os_error();
+        // errno is read before the GIL is acquired again, so that nothing in between can overwrite it
+        let outcome = py.detach(|| {
+            let result = op_fn();
+            if result >= 0 {
+                Ok(result)
+            } else {
+                Err(std::io::Error::last_os_error())
+            }
+        });
+        let err = match outcome {
+            Ok(result) => return Ok(result),
+            Err(err) => err,
+        };
         if err.kind() == std::io::ErrorKind::WouldBlock {
             let io_watcher = gev.loop_obj.call_method1(intern!(py, "io"), (fd, event))?;
             gev.hub.call_method1(intern!(py, "wait"), (&io_watcher,))?;

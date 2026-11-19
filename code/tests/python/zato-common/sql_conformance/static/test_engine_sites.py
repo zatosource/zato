@@ -16,13 +16,35 @@ from zato.common.test.sql_conformance.rust_source import get_enclosing_function,
 from zato.common.test.sql_conformance.sources import get_python_files, get_rust_files
 
 # Local
-from registry import Customer_Engine_Sites, Engine_Constructors, External_Database_Tests, ModuleCtx as RegistryModuleCtx
+from registry import Customer_Engine_Sites, Engine_Constructors, External_Database_Tests, ModuleCtx as RegistryModuleCtx, \
+    Rust_Writers
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strlist
+    from zato.common.typing_ import strlist, strstrdict, strtuple
+
+    strstrdict = strstrdict
+    strtuple = strtuple
+
+    strtuple_list  = list[strtuple]
+    strtuple_tuple = tuple[strtuple, ...]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _get_rust_handle_functions() -> 'strtuple_tuple':
+    """ Returns the function through which each Rust writer opens its connection over the handle of the driver,
+    each function once.
+    """
+    out:'strtuple_list' = []
+
+    for writer in Rust_Writers:
+        if writer.handle_function not in out:
+            out.append(writer.handle_function)
+
+    return tuple(out)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,11 +66,14 @@ class ModuleCtx:
     Rust_PostgreSQL_Connect = re.compile(r'(?<!\bself)\.connect\s*\(')
 
     # The Rust functions that may open a database, each by its file and its name - the two that open the SQLite file
-    # of the active-standby node with its settings, the one that opens a connection over the handle of the SQLite driver
-    # of Python for the writer of the audit log, and the probe of the PostgreSQL primary, which only reads.
-    Rust_Engine_Functions = RegistryModuleCtx.Rust_Setting_Functions + RegistryModuleCtx.Rust_Handle_Functions + (
+    # of the active-standby node with its settings, the ones that open a connection over the handle of the SQLite driver
+    # of Python for the Rust writers, and the probe of the PostgreSQL primary, which only reads.
+    Rust_Engine_Functions = RegistryModuleCtx.Rust_Setting_Functions + _get_rust_handle_functions() + (
         ('code/zato-rust/zato_ha_core/src/postgresql.rs', 'connect'),
     )
+
+    # A call of a function, other than its definition, by the name of the function
+    Rust_Call_Pattern = r'(?<!\bfn )\b{}\s*\('
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -121,8 +146,8 @@ def test_python_customer_sites_exist() -> 'None':
 
 def test_rust_connections_only_in_their_functions() -> 'None':
     """ The Rust code opens a database only in the functions that open the SQLite file of the active-standby node
-    with its settings, in the function that opens a connection over the handle of the SQLite driver of Python
-    for the writer of the audit log, and in the probe of the PostgreSQL primary.
+    with its settings, in the functions that open a connection over the handle of the SQLite driver of Python
+    for the Rust writers, and in the probe of the PostgreSQL primary.
     """
     findings:'strlist' = []
 
@@ -146,6 +171,35 @@ def test_rust_connections_only_in_their_functions() -> 'None':
             if source.is_linked or site not in ModuleCtx.Rust_Engine_Functions:
                 line = get_line(text, index)
                 findings.append(f'{source.path}:{line} -> {function_name}')
+
+    assert not findings, '\n'.join(findings)
+
+# ################################################################################################################################
+
+def test_rust_writers_open_through_their_handle_function() -> 'None':
+    """ The Rust code of each Rust writer calls the function registered for the writer, through which it opens
+    its connection over the handle of the SQLite driver of Python.
+    """
+    sources:'strstrdict' = {}
+
+    for source in get_rust_files():
+        if not source.is_linked:
+            sources[source.relative_path] = remove_test_modules(source.read())
+
+    findings:'strlist' = []
+
+    for writer in Rust_Writers:
+        _, function_name = writer.handle_function
+        call_pattern = re.compile(ModuleCtx.Rust_Call_Pattern.format(re.escape(function_name)))
+
+        is_called = False
+
+        for relative_path in writer.sources:
+            if call_pattern.search(sources[relative_path]):
+                is_called = True
+
+        if not is_called:
+            findings.append(f'{writer.name} -> {function_name}')
 
     assert not findings, '\n'.join(findings)
 

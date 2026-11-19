@@ -205,28 +205,47 @@ _drop_payload = _drop_payload.returning(message_table.c.id)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The statements of the transaction, each with the parameters in the order in which the writer binds them.
-_statements = {
-    'begin': _begin_statement,
-    'select_subscribers': _compile(_select_subscribers, ['topic_name']),
-    'insert_message': _compile(_insert_message, _message_parameter_names),
-    'select_existing_message': _compile(_select_existing_message, ['msg_id']),
-    'insert_delivery': _compile(_insert_delivery, [
-        'delivery_message_id', 'delivery_sub_key', 'delivery_topic_name', 'delivery_priority', 'delivery_expiration_ms']),
-    'select_message_id': _compile(_select_message_id, ['msg_id']),
-    'select_ack_delivery': _compile(_select_ack_delivery, ['message_id', 'sub_key']),
-    'delete_delivery': _compile(_delete_delivery, ['delivery_id']),
-    'record_attempt': _compile(_record_attempt, ['delivery_id']),
-    'select_lease_candidates': _compile(_select_lease_candidates, ['sub_key', 'now_ms', 'now_ms', 'max_messages']),
-    'lease_delivery': _compile(_lease_delivery, ['lease_leased_until_ms', 'delivery_id', 'now_ms']),
-    'select_leased_message': _compile(_select_leased_message, ['message_id']),
-    'select_fenced_delivery': _compile(_select_fenced_delivery, ['sub_key', 'msg_id']),
-    'drop_payload': _compile(_drop_payload, ['message_id']),
-}
+# The statements of the transaction, each with the parameters in the order in which the writer binds them,
+# and each checked against the mechanism of the write before a batch is written.
+_select_subscribers = _compile(_select_subscribers, ['topic_name'])
+_insert_message = _compile(_insert_message, _message_parameter_names)
+_select_existing_message = _compile(_select_existing_message, ['msg_id'])
+_insert_delivery = _compile(_insert_delivery, [
+    'delivery_message_id', 'delivery_sub_key', 'delivery_topic_name', 'delivery_priority', 'delivery_expiration_ms'])
+_select_message_id = _compile(_select_message_id, ['msg_id'])
+_select_ack_delivery = _compile(_select_ack_delivery, ['message_id', 'sub_key'])
+_delete_delivery = _compile(_delete_delivery, ['delivery_id'])
+_record_attempt = _compile(_record_attempt, ['delivery_id'])
+_select_lease_candidates = _compile(_select_lease_candidates, ['sub_key', 'now_ms', 'now_ms', 'max_messages'])
+_lease_delivery = _compile(_lease_delivery, ['lease_leased_until_ms', 'delivery_id', 'now_ms'])
+_select_leased_message = _compile(_select_leased_message, ['message_id'])
+_select_fenced_delivery = _compile(_select_fenced_delivery, ['sub_key', 'msg_id'])
+_drop_payload = _compile(_drop_payload, ['message_id'])
+
+_write_statements = [
+    _begin_statement, _select_subscribers, _insert_message, _select_existing_message, _insert_delivery, _select_message_id,
+    _select_ack_delivery, _delete_delivery, _record_attempt, _select_lease_candidates, _lease_delivery,
+    _select_leased_message, _select_fenced_delivery, _drop_payload,
+]
 
 _writer = SQLitePubSubWriter({
     'sqlite_version': sqlite_version,
-    'statements': _statements,
+    'statements': {
+        'begin': _begin_statement,
+        'select_subscribers': _select_subscribers,
+        'insert_message': _insert_message,
+        'select_existing_message': _select_existing_message,
+        'insert_delivery': _insert_delivery,
+        'select_message_id': _select_message_id,
+        'select_ack_delivery': _select_ack_delivery,
+        'delete_delivery': _delete_delivery,
+        'record_attempt': _record_attempt,
+        'select_lease_candidates': _select_lease_candidates,
+        'lease_delivery': _lease_delivery,
+        'select_leased_message': _select_leased_message,
+        'select_fenced_delivery': _select_fenced_delivery,
+        'drop_payload': _drop_payload,
+    },
     'message_columns': _message_column_names,
     'lease_columns': _lease_column_names,
     'payload_column': message_table.c.payload.name,
@@ -257,7 +276,7 @@ def write_items_sqlite(
         raise Exception('The connection has no open transaction')
 
     # .. each statement passes the guard of the write path before the writer runs it ..
-    for statement in _statements.values():
+    for statement in _write_statements:
         check_write_path(None, None, statement, None, None, True)
 
     items = {

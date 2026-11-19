@@ -113,7 +113,8 @@ fn write_all_plain(ctx: &IoContext<'_, '_>, tcp: &mut TcpStream, data: &[u8]) ->
             break;
         }
 
-        match tcp.write(remaining) {
+        // The syscall runs without the GIL, so that other interpreter threads proceed meanwhile
+        match ctx.py.detach(|| tcp.write(remaining)) {
             Ok(0) => return Err(IoError::System(ErrorKind::WriteZero.into())),
             Ok(written) => offset += written,
 
@@ -130,7 +131,8 @@ fn write_all_plain(ctx: &IoContext<'_, '_>, tcp: &mut TcpStream, data: &[u8]) ->
 /// Reads what is available from a plain TCP connection.
 fn read_plain(ctx: &IoContext<'_, '_>, tcp: &mut TcpStream, buffer: &mut [u8]) -> Result<usize, IoError> {
     loop {
-        match tcp.read(buffer) {
+        // The syscall runs without the GIL, so that other interpreter threads proceed meanwhile
+        match ctx.py.detach(|| tcp.read(buffer)) {
             Ok(count) => return Ok(count),
 
             // Nothing arrived yet, so this greenlet waits while the others run
@@ -173,7 +175,8 @@ impl TlsStream {
     /// Sends all the TLS records the session has queued.
     fn flush(&mut self, ctx: &IoContext<'_, '_>) -> Result<(), IoError> {
         while self.session.wants_write() {
-            match self.session.write_tls(&mut self.tcp) {
+            // The syscall runs without the GIL, so that other interpreter threads proceed meanwhile
+            match ctx.py.detach(|| self.session.write_tls(&mut self.tcp)) {
                 Ok(_) => {}
                 Err(err) if err.kind() == ErrorKind::WouldBlock => {
                     ctx.gevent.wait_writable(ctx.py, self.tcp.as_raw_fd(), ctx.timeout)?;
@@ -190,7 +193,8 @@ impl TlsStream {
     /// Returns whether the endpoint closed the connection.
     fn fill(&mut self, ctx: &IoContext<'_, '_>) -> Result<bool, IoError> {
         let is_eof = loop {
-            match self.session.read_tls(&mut self.tcp) {
+            // The syscall runs without the GIL, so that other interpreter threads proceed meanwhile
+            match ctx.py.detach(|| self.session.read_tls(&mut self.tcp)) {
                 Ok(count) => break count == 0,
                 Err(err) if err.kind() == ErrorKind::WouldBlock => {
                     ctx.gevent.wait_readable(ctx.py, self.tcp.as_raw_fd(), ctx.timeout)?;
@@ -200,9 +204,10 @@ impl TlsStream {
             }
         };
 
-        if let Err(err) = self.session.process_new_packets() {
+        // Decryption runs without the GIL, so that other interpreter threads proceed meanwhile
+        if let Err(err) = ctx.py.detach(|| self.session.process_new_packets()) {
             // The session queued an alert describing the failure, which the endpoint is told of if it still listens
-            self.session.write_tls(&mut self.tcp).ok();
+            ctx.py.detach(|| self.session.write_tls(&mut self.tcp)).ok();
             return Err(IoError::Tls(err));
         }
 
@@ -223,8 +228,9 @@ impl TlsStream {
                 break;
             }
 
-            // The session accepts as much plaintext as its buffer holds, and sending makes room for more
-            let accepted = self.session.writer().write(remaining).map_err(IoError::System)?;
+            // The session accepts as much plaintext as its buffer holds, and sending makes room for more,
+            // with encryption running without the GIL, so that other interpreter threads proceed meanwhile
+            let accepted = ctx.py.detach(|| self.session.writer().write(remaining)).map_err(IoError::System)?;
             offset += accepted;
 
             self.flush(ctx)?;
