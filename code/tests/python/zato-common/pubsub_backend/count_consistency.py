@@ -19,6 +19,7 @@ from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.counts import Milliseconds_Per_Minute, No_Publisher
+from zato.common.pubsub.sql.publication import build_publication
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
     topic_count_table
 from zato.common.util.time_ import utcnow
@@ -48,6 +49,10 @@ _publisher_2 = 'bob'
 
 # How far back the earlier messages are published, in milliseconds.
 _moved_back_ms = 3 * Milliseconds_Per_Minute
+
+# The time of publication of the messages whose counts are expected literally, and the minute that it falls in
+_literal_pub_time_iso = '2026-03-01T10:15:30.250000+00:00'
+_literal_minute_ms = 1772360100000
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -178,9 +183,101 @@ def _publish(backend:'SQLPubSubBackend', topic_name:'str', count:'int', publishe
 
 # ################################################################################################################################
 
-def run_count_consistency_scenario() -> 'None':
-    """ The queue, topic and publication counts agree with the rows after every kind of change to them.
+def _assert_stored_counts(step:'str', queue_counts:'anydict', topic_counts:'anydict', publish_counts:'anydict') -> 'None':
+    """ The count tables hold exactly the given counts.
     """
+    stored_queue_counts, stored_topic_counts, stored_publish_counts = _get_stored_counts()
+
+    assert stored_queue_counts == queue_counts, (step, stored_queue_counts, queue_counts)
+    assert stored_topic_counts == topic_counts, (step, stored_topic_counts, topic_counts)
+    assert stored_publish_counts == publish_counts, (step, stored_publish_counts, publish_counts)
+
+# ################################################################################################################################
+
+def _get_msg_ids(messages:'anylist', topic_name:'str') -> 'strlist':
+    """ Returns the identifiers of the messages of one topic among the messages of a pull.
+    """
+    out:'strlist' = []
+
+    for message in messages:
+        if message['topic_name'] == topic_name:
+            out.append(message['msg_id'])
+
+    return out
+
+# ################################################################################################################################
+
+def _run_literal_counts() -> 'None':
+    """ The count tables hold the literal counts after each kind of write of the pub/sub commits.
+    """
+    delete_all_rows()
+
+    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
+
+    backend.subscribe(_sub_key_1, _topic_1)
+    backend.subscribe(_sub_key_2, _topic_1)
+    backend.subscribe(_sub_key_1, _topic_2)
+
+    # Publications with and without a publisher ..
+    first = backend.publish(_topic_1, 'counts-literal-0', publisher=_publisher_1, pub_time=_literal_pub_time_iso)
+    second = backend.publish(_topic_1, 'counts-literal-1', publisher=_publisher_1, pub_time=_literal_pub_time_iso)
+    _ = backend.publish(_topic_2, 'counts-literal-2', pub_time=_literal_pub_time_iso)
+
+    queue_counts = {(_sub_key_1, _topic_1): 2, (_sub_key_2, _topic_1): 2, (_sub_key_1, _topic_2): 1}
+    topic_counts = {_topic_1: 2, _topic_2: 1}
+    publish_counts = {(_topic_1, _literal_minute_ms, _publisher_1): 2, (_topic_2, _literal_minute_ms, No_Publisher): 1}
+
+    _assert_stored_counts('publish', queue_counts, topic_counts, publish_counts)
+
+    # .. an acknowledgement ..
+    _ = backend.ack_messages(_sub_key_1, [first.msg_id])
+
+    queue_counts[_sub_key_1, _topic_1] = 1
+    _assert_stored_counts('ack', queue_counts, topic_counts, publish_counts)
+
+    # .. a pull, which leases what it hands out and changes no count ..
+    messages = backend.pull_messages(_sub_key_1)
+
+    assert _get_msg_ids(messages, _topic_1) == [second.msg_id]
+    _assert_stored_counts('pull', queue_counts, topic_counts, publish_counts)
+
+    # .. a fenced acknowledgement with a receipt of its own publisher ..
+    topic_2_msg_ids = _get_msg_ids(messages, _topic_2)
+    consumed = [(topic_2_msg_ids[0], 1)]
+
+    receipt = build_publication(backend, _topic_1, 'counts-literal-receipt', publisher=_publisher_2,
+        pub_time=_literal_pub_time_iso)
+
+    _ = backend.ack_pulled_with_publications(_sub_key_1, consumed, [receipt])
+
+    del queue_counts[_sub_key_1, _topic_2]
+    queue_counts[_sub_key_1, _topic_1] = 2
+    queue_counts[_sub_key_2, _topic_1] = 3
+    topic_counts[_topic_1] = 3
+    publish_counts[_topic_1, _literal_minute_ms, _publisher_2] = 1
+
+    _assert_stored_counts('fenced-ack', queue_counts, topic_counts, publish_counts)
+
+    # .. push attempts, which change no count ..
+    fetched = backend.fetch_messages(_sub_key_2)
+    _ = backend.record_attempts(fetched)
+
+    _assert_stored_counts('attempts', queue_counts, topic_counts, publish_counts)
+
+    # .. and the acknowledgement of every message of a queue, whose fully delivered messages remain as traces.
+    fetched_msg_ids = _get_msg_ids(fetched, _topic_1)
+    _ = backend.ack_messages(_sub_key_2, fetched_msg_ids)
+
+    del queue_counts[_sub_key_2, _topic_1]
+    _assert_stored_counts('ack-all', queue_counts, topic_counts, publish_counts)
+
+# ################################################################################################################################
+
+def run_count_consistency_scenario() -> 'None':
+    """ The queue, topic and publication counts agree with the rows after every kind of change to them,
+    and they hold the literal counts of each kind of write.
+    """
+    _run_literal_counts()
     delete_all_rows()
 
     backend = SQLPubSubBackend(audit_log=new_test_audit_log())

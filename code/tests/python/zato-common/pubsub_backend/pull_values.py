@@ -14,11 +14,12 @@ import os
 from time import sleep
 
 # Zato
-from common import delete_all_rows, delete_audit_rows, get_message_rows
+from common import delete_all_rows, delete_audit_rows, get_delivery_rows, get_message_rows, write_in_one_commit
 from zato.common.api import HTTP_SOAP
 from zato.common.crypto.api import CryptoManager
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
-from zato.common.pubsub.sql.config import ModuleCtx
+from zato.common.pubsub.sql.config import Default_Pull_Lease_Seconds, ModuleCtx
+from zato.common.pubsub.sql.pending import new_pending_ack, new_pending_lease
 from zato.common.test.audit_log_ import new_test_audit_log
 
 # ################################################################################################################################
@@ -127,6 +128,10 @@ _payload_large_preview = _payload_large_line + _payload_large_line + 'Invoice li
 
 # The budget of the pulls of the order part
 _max_len = 50
+
+# How long pulls lease their messages, in milliseconds, and the budget of the leases of the lease parts
+_lease_ms = Default_Pull_Lease_Seconds * 1000
+_lease_max_len = 10_000_000
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -429,6 +434,84 @@ def _run_attempts(backend:'SQLPubSubBackend') -> 'None':
 
 # ################################################################################################################################
 
+def _get_lease_columns(sub_key:'str') -> 'anylist':
+    """ Returns the attempt and the end of the lease of each delivery row of a subscriber, in the order of the rows.
+    """
+    out:'anylist' = []
+
+    for row in get_delivery_rows(sub_key):
+        out.append((row.attempt, row.leased_until_ms))
+
+    return out
+
+# ################################################################################################################################
+
+def _run_lease_columns(backend:'SQLPubSubBackend') -> 'None':
+    """ A pull leases each row it hands out until the end of its lease with the next attempt, and the rows
+    that it does not hand out keep the attempt and the lease they had.
+    """
+    backend.subscribe(_sub_key_order, _topic_order)
+
+    for index in range(3):
+        _ = backend.publish(_topic_order, f'lease-columns-{index}')
+
+    # The rows are not handed out before the first pull ..
+    assert _get_lease_columns(_sub_key_order) == [(0, 0), (0, 0), (0, 0)]
+
+    # .. a lease of two of them with its own times leases them until its end ..
+    now_ms = backend.clock.now_ms()
+    leased_until_ms = now_ms + _lease_ms
+
+    lease = new_pending_lease(_sub_key_order, 2, _lease_max_len, now_ms, leased_until_ms, backend._on_leased)
+    backend._writer.lease(lease)
+
+    assert len(lease.messages) == 2, lease.messages
+    assert _get_lease_columns(_sub_key_order) == [(1, leased_until_ms), (1, leased_until_ms), (0, 0)]
+
+    # .. and a pull leases the third one for as long as pulls lease their messages.
+    pull_start_ms = backend.clock.now_ms()
+    messages = backend.pull_messages(_sub_key_order)
+    pull_end_ms = backend.clock.now_ms()
+
+    assert len(messages) == 1, messages
+
+    third_attempt, third_leased_until_ms = _get_lease_columns(_sub_key_order)[2]
+
+    assert third_attempt == 1
+    assert pull_start_ms + _lease_ms <= third_leased_until_ms <= pull_end_ms + _lease_ms, third_leased_until_ms
+
+# ################################################################################################################################
+
+def _run_lease_after_ack(backend:'SQLPubSubBackend') -> 'None':
+    """ A lease does not hand out a row that the same commit acknowledged.
+    """
+    backend.subscribe(_sub_key_order, _topic_order)
+
+    first = backend.publish(_topic_order, 'lease-after-ack-0')
+    second = backend.publish(_topic_order, 'lease-after-ack-1')
+
+    now_ms = backend.clock.now_ms()
+    leased_until_ms = now_ms + _lease_ms
+
+    lease = new_pending_lease(_sub_key_order, 2, _lease_max_len, now_ms, leased_until_ms, backend._on_leased)
+    ack = new_pending_ack(_sub_key_order, [first.msg_id], None)
+
+    # The lease is listed first and the acknowledgement is written before it all the same ..
+    write_in_one_commit(backend, [lease, ack])
+
+    assert ack.removed_count == 1
+
+    # .. so the lease hands out the other message alone.
+    leased_msg_ids:'anylist' = []
+
+    for message in lease.messages:
+        leased_msg_ids.append(message['msg_id'])
+
+    assert leased_msg_ids == [second.msg_id], leased_msg_ids
+    assert _get_lease_columns(_sub_key_order) == [(1, leased_until_ms)]
+
+# ################################################################################################################################
+
 def run_pull_values_scenario() -> 'None':
     """ The values of the messages that pulls hand out, each part starting from empty tables.
     """
@@ -439,6 +522,8 @@ def run_pull_values_scenario() -> 'None':
     _run_encrypted_payload()
     _run_order_and_budget(_new_backend())
     _run_attempts(_new_backend())
+    _run_lease_columns(_new_backend())
+    _run_lease_after_ack(_new_backend())
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -17,9 +17,10 @@ from sqlalchemy import select
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, AuditEvent, \
     AuditSource
 from zato.common.audit_log.common import event_count_table, event_dedup_table, event_open_table, event_payload_table
+from zato.common.db_env.commit_ticket import CommitTicket
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
-    topic_count_table, topic_sub_table
+    topic_count_table, topic_sub_table, trace_table
 from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.test.direct_sql.fault import interrupt_topic_rename
 from zato.common.test.direct_sql.reset import reset_table_rows
@@ -30,11 +31,15 @@ from zato.common.test.direct_sql.reset import reset_table_rows
 if 0:
     from collections.abc import Iterator
     from sqlalchemy import Column
+    from zato.common.db_env.commit_ticket import commit_ticket_list
+    from zato.common.pubsub.sql.backend import SQLPubSubBackend
     from zato.common.typing_ import anylist, intset
 
     anylist = anylist
     Column = Column
+    commit_ticket_list = commit_ticket_list
     intset = intset
+    SQLPubSubBackend = SQLPubSubBackend
 
     envgen = Iterator[None]
 
@@ -85,12 +90,21 @@ def get_received_event_rows(topic_name:'str') -> 'anylist':
     """ Reads the audit events of the messages of one topic that pulls handed out, each with the text of its payload,
     in the order of their ids.
     """
+    out = get_event_rows(topic_name, AuditEvent.Received)
+    return out
+
+# ################################################################################################################################
+
+def get_event_rows(topic_name:'str', event_type:'str') -> 'anylist':
+    """ Reads the pub/sub audit events of one type about one topic, each with the text of its payload,
+    in the order of their ids.
+    """
     engine = get_database_engine()
 
     query = select(event_table, event_payload_table.c.data)
     query = query.select_from(event_table.outerjoin(event_payload_table, event_table.c.payload_id == event_payload_table.c.id))
     query = query.where(event_table.c.source == AuditSource.PubSub)
-    query = query.where(event_table.c.event_type == AuditEvent.Received)
+    query = query.where(event_table.c.event_type == event_type)
     query = query.where(event_table.c.object_name == topic_name)
     query = query.order_by(event_table.c.id)
 
@@ -152,6 +166,59 @@ def get_delivery_rows(sub_key:'str') -> 'anylist':
         out = connection.execute(query).fetchall()
 
     return out
+
+# ################################################################################################################################
+
+def get_trace_rows(topic_name:'str') -> 'anylist':
+    """ Reads the delivered-message traces of one topic straight from the database, in the order of their messages.
+    """
+    engine = get_database_engine()
+
+    query = select(trace_table)
+    query = query.where(trace_table.c.topic_name == topic_name)
+    query = query.order_by(trace_table.c.message_id)
+
+    with engine.connect() as connection:
+        out = connection.execute(query).fetchall()
+
+    return out
+
+# ################################################################################################################################
+
+def get_dialect_name() -> 'str':
+    """ Returns the name of the dialect of the database that the scenarios run on.
+    """
+    engine = get_database_engine()
+
+    out = engine.dialect.name
+    return out
+
+# ################################################################################################################################
+
+def write_in_one_commit(backend:'SQLPubSubBackend', items:'anylist') -> 'None':
+    """ Writes the items in one commit of the commit queue, as it writes the items of its concurrent callers,
+    each item receiving its own outcome.
+    """
+    commit_queue = backend._writer._commit_queue
+    tickets:'commit_ticket_list' = []
+
+    for item in items:
+        ticket = CommitTicket(item, 1, False)
+        tickets.append(ticket)
+
+    # The first ticket commits the whole batch in the regular lane, which it takes as the queue admits its runners ..
+    runner = tickets[0]
+    runner.batch = tickets
+    runner.has_started = True
+
+    with commit_queue._lock:
+        commit_queue._in_flight += 1
+
+    commit_queue._commit(runner)
+
+    # .. and an error of the commit as a whole reaches the scenario.
+    if runner.exception is not None:
+        raise runner.exception
 
 # ################################################################################################################################
 

@@ -7,13 +7,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
+from ack_values import run_ack_values_scenario
+from attempt_values import run_attempt_values_scenario
 from cleanup import run_cleanup_scenario
 from concurrency import run_concurrency_scenario
 from count_consistency import run_count_consistency_scenario
 from dlq_rule import run_dlq_rule_scenario
 from encryption import run_encryption_scenario
+from fenced_values import run_fenced_values_scenario
 from lifecycle import run_lifecycle_scenario
 from outgoing import run_outgoing_scenario
+from publish_events import run_publish_events_scenario
+from publish_values import run_publish_values_scenario
 from pull_events import run_pull_events_scenario
 from pull_values import run_pull_values_scenario
 from push_delivery import run_push_delivery_scenario
@@ -44,6 +49,11 @@ def run_common_scenarios() -> 'None':
     run_count_consistency_scenario()
     run_pull_values_scenario()
     run_pull_events_scenario()
+    run_publish_values_scenario()
+    run_ack_values_scenario()
+    run_fenced_values_scenario()
+    run_attempt_values_scenario()
+    run_publish_events_scenario()
 
 # ################################################################################################################################
 # ################################################################################################################################
