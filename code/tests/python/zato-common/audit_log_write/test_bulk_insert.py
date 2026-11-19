@@ -53,7 +53,6 @@ _sqlite_statements = [
     ('SELECT', 'event_payload'),
     ('INSERT', 'event_payload'),
     ('INSERT', 'event'),
-    ('SELECT', 'last_insert_rowid'),
     ('INSERT', 'event_attr'),
     ('INSERT', 'event_body'),
     ('INSERT', 'event_link'),
@@ -108,9 +107,9 @@ def _child_rows(table:'Table', event_column:'str', positions:'intdict') -> 'anyl
 # ################################################################################################################################
 
 def test_one_statement_per_table(audit_backend:'str') -> 'None':
-    """ A batch of events is written with one statement per table, plus the select of the payloads stored already
-    and the select of the event ids, reserved from the sequence of the event table on PostgreSQL
-    and read after the insert on SQLite.
+    """ A batch of events is written with one statement per table, plus the select of the payloads stored already.
+    On PostgreSQL, the ids of the events are reserved from the sequence of the event table with a select of their own,
+    and on SQLite, each statement is prepared once and runs once for each row of its table.
     """
     audit_log = AuditLog(Server_Name)
     seed_event_id = insert_seed_event(audit_log)

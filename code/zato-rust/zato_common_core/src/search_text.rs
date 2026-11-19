@@ -156,7 +156,7 @@ pub fn extract_search_text(py: Python<'_>, data: PyBackedStr) -> String {
 }
 
 /// Returns the words, integers and decimal numbers of a payload, each once, in lower case, separated by spaces.
-fn search_text_of(data: &str) -> String {
+pub(crate) fn search_text_of(data: &str) -> String {
     let mut extraction = Extraction {
         seen: HashSet::default(),
         text: String::new(),

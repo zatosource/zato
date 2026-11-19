@@ -104,9 +104,9 @@ def build_attachment_from_file(filename:'str', content_type:'str', path:'str', s
 
 # ################################################################################################################################
 
-def build_attachment_rows(event_id:'int', event_time:'datetime', attachments:'anylist') -> 'anylist':
-    """ Turns attachment envelopes into event_body rows - one row per attachment, with the metadata in data
-    and the bytes in content, stamped with the event's own time so pruning never needs a join.
+def get_attachment_bodies(attachments:'anylist') -> 'anylist':
+    """ Returns the kind, the data and the content of the event_body row of each attachment envelope,
+    with the metadata in data and the bytes in content.
     """
     out:'anylist' = []
 
@@ -125,11 +125,24 @@ def build_attachment_rows(event_id:'int', event_time:'datetime', attachments:'an
         else:
             content = None
 
+        out.append((AuditBody.Attachment, dumps(metadata), content))
+
+    return out
+
+# ################################################################################################################################
+
+def build_attachment_rows(event_id:'int', event_time:'datetime', attachments:'anylist') -> 'anylist':
+    """ Turns attachment envelopes into event_body rows - one row per attachment, with the metadata in data
+    and the bytes in content, stamped with the event's own time so pruning never needs a join.
+    """
+    out:'anylist' = []
+
+    for kind, data, content in get_attachment_bodies(attachments):
         out.append({
             'event_id': event_id,
-            'kind': AuditBody.Attachment,
+            'kind': kind,
             'event_time': event_time,
-            'data': dumps(metadata),
+            'data': data,
             'content': content,
         })
 

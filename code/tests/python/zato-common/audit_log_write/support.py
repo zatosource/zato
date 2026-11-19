@@ -33,10 +33,11 @@ if 0:
     from sqlalchemy.sql.schema import Table
     from zato.common.audit_log.api import AuditLog
     from zato.common.audit_log.pending import pending_event_list
-    from zato.common.typing_ import any_, anylist, stranydict, strlist
+    from zato.common.typing_ import any_, anylist, anytuple, stranydict, strlist
 
     any_ = any_
     anylist = anylist
+    anytuple = anytuple
     AuditLog = AuditLog
     Engine = Engine
     pending_event_list = pending_event_list
@@ -153,6 +154,8 @@ event_spec_list = list[EventSpec]
 
 class StatementRecorder:
     """ The statements that write or read rows and the commits of an engine, each statement as its verb and its table.
+    On SQLite, the statements are those that the database runs, including the ones the bulk insert runs in Rust,
+    and the consecutive runs of one statement with the rows of one table are recorded once.
     """
 
     def __init__(self) -> 'None':
@@ -168,49 +171,86 @@ class StatementRecorder:
         context:'any_',
         executemany:'bool',
         ) -> 'None':
+        self.record(statement)
 
-        words = statement.split()
-        verb = words[0]
+    def on_trace(self, statement:'str') -> 'None':
 
-        if verb not in _row_verbs:
+        # The runs of one statement with the rows of one table follow each other, and they are recorded once
+        if self.statements and self.statements[-1] == get_statement_verb_table(statement):
             return
 
-        if verb == 'INSERT':
-            table_name = words[2]
-        elif verb == 'COPY':
-            table_name = words[1]
+        self.record(statement)
 
-        # A select of a function alone is recorded under the name of the function ..
-        elif 'FROM' not in words:
-            table_name = words[1].split('(')[0]
+    def on_checkout(self, dbapi_connection:'any_', connection_record:'any_', connection_proxy:'any_') -> 'None':
+        dbapi_connection.set_trace_callback(self.on_trace)
 
-        else:
-            from_index = words.index('FROM')
-            table_name = words[from_index + 1]
+    def on_checkin(self, dbapi_connection:'any_', connection_record:'any_') -> 'None':
+        dbapi_connection.set_trace_callback(None)
 
-            # .. and a select from a set-returning function is recorded under the name of the function as well.
-            table_name = table_name.split('(')[0]
-
-        self.statements.append((verb, table_name))
+    def record(self, statement:'str') -> 'None':
+        if verb_table := get_statement_verb_table(statement):
+            self.statements.append(verb_table)
 
     def on_commit(self, conn:'any_') -> 'None':
         self.commit_count += 1
 
 # ################################################################################################################################
 
+def get_statement_verb_table(statement:'str') -> 'anytuple | None':
+    """ Returns the verb and the table of a statement that writes or reads rows, or None for any other statement.
+    """
+    words = statement.split()
+    verb = words[0]
+
+    if verb not in _row_verbs:
+        return None
+
+    if verb == 'INSERT':
+        table_name = words[2]
+    elif verb == 'COPY':
+        table_name = words[1]
+
+    # A select of a function alone is recorded under the name of the function ..
+    elif 'FROM' not in words:
+        table_name = words[1].split('(')[0]
+
+    else:
+        from_index = words.index('FROM')
+        table_name = words[from_index + 1]
+
+        # .. and a select from a set-returning function is recorded under the name of the function as well.
+        table_name = table_name.split('(')[0]
+
+    out = (verb, table_name)
+    return out
+
+# ################################################################################################################################
+
 @contextmanager
 def record_statements(engine:'Engine') -> 'recordergen':
-    """ Records the statements and the commits of an engine for the duration of a block.
+    """ Records the statements and the commits of an engine for the duration of a block - on SQLite,
+    the statements that the database runs, and on PostgreSQL, the statements that SQLAlchemy sends.
     """
     recorder = StatementRecorder()
+    is_sqlite = engine.dialect.name == Backend_SQLite
 
-    sa_event.listen(engine, 'before_cursor_execute', recorder.on_execute)
+    if is_sqlite:
+        sa_event.listen(engine, 'checkout', recorder.on_checkout)
+        sa_event.listen(engine, 'checkin', recorder.on_checkin)
+    else:
+        sa_event.listen(engine, 'before_cursor_execute', recorder.on_execute)
+
     sa_event.listen(engine, 'commit', recorder.on_commit)
 
     try:
         yield recorder
     finally:
-        sa_event.remove(engine, 'before_cursor_execute', recorder.on_execute)
+        if is_sqlite:
+            sa_event.remove(engine, 'checkout', recorder.on_checkout)
+            sa_event.remove(engine, 'checkin', recorder.on_checkin)
+        else:
+            sa_event.remove(engine, 'before_cursor_execute', recorder.on_execute)
+
         sa_event.remove(engine, 'commit', recorder.on_commit)
 
 # ################################################################################################################################

@@ -23,12 +23,15 @@ chrono = "0.4.44"
 foldhash = "0.2.0"
 serde = "1.0.228"
 serde_json = { version = "1.0.149", features = ["raw_value"] }
+blake2 = "0.11.0"
+rusqlite = "0.41.1"
+flate2 = { version = "1.1.11", default-features = false, features = ["zlib"] }
 
 [dev-dependencies]
 proptest = "1.11.0"
 
 [lints.rust]
-unsafe_code = "forbid"
+unsafe_code = "deny"
 
 [profile.dev]
 incremental = false

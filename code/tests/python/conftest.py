@@ -184,6 +184,24 @@ def no_thread_outlives_its_test() -> 'nonegen':
 
     remaining_names:'strlist' = sorted((threads_after - threads_before).elements())
 
+    if remaining_names:
+        import gc
+        from smbprotocol.connection import Connection
+        print('DIAG before', sorted(threads_before.elements()))
+        for obj in gc.get_objects():
+            if type(obj) is Connection and obj._t_worker is not None and obj._t_worker.is_alive():
+                owners = []
+                for ref in gc.get_referrers(obj):
+                    if isinstance(ref, dict):
+                        for ref2 in gc.get_referrers(ref):
+                            if hasattr(ref2, '__dict__') and getattr(ref2, 'connection_cache', None) is ref:
+                                owners.append(f'{type(ref2).__name__}:{getattr(ref2, "name", getattr(ref2, "username", "?"))}')
+                            elif hasattr(ref2, '__dict__'):
+                                owners.append(f'other:{type(ref2).__name__}')
+                    else:
+                        owners.append(f'ref:{type(ref).__name__}')
+                print('DIAG conn', obj._t_worker.name, id(obj), obj.transport.connected, owners)
+
     assert remaining_names == []
 
 # ################################################################################################################################

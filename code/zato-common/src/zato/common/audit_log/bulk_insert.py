@@ -16,7 +16,8 @@ from zato.common.audit_log.attachment import build_attachment_rows
 from zato.common.audit_log.attr_rows import build_attr_rows
 from zato.common.audit_log.common import event_attr_table, event_body_table, event_link_table, event_table
 from zato.common.audit_log.payload import assign_payload_ids, find_stored_payloads, get_event_rows, insert_new_payloads
-from zato.common.db_env.common import Type_PostgreSQL
+from zato.common.audit_log.sqlite_insert import insert_pending_events_sqlite
+from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.pg8000_copy import copy_rows
 from zato.common.db_env.plain_sql import PlainStatement
 
@@ -191,7 +192,11 @@ def insert_rows(connection:'Connection', table:'Table', rows:'dictlist') -> 'Non
 def insert_pending_events(connection:'Connection', batch:'pending_event_list') -> 'intlist':
     """ Inserts the events of one batch with their attributes, bodies and lineage links in the transaction
     of the connection, with one statement per table, and returns the ids of the events in the order of the batch.
+    On SQLite, the rows are written in Rust with the GIL released.
     """
+    if connection.dialect.name == Type_SQLite:
+        out = insert_pending_events_sqlite(connection, batch)
+        return out
 
     # The payloads of the batch, each once, are stored before the events that reference them ..
     payloads:'strstrdict' = {}

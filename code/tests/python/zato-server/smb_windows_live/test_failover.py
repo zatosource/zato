@@ -86,13 +86,19 @@ def test_switchover(smb_suite:'SMBWindowsSuite', run:'str', monitor:'Monitor') -
     # .. its connections are pointed to the standby ..
     smb_suite.import_guest(ModuleCtx.Primary, target_version=ModuleCtx.Standby, partner_version=ModuleCtx.Standby)
 
-    # .. and the files written on the standby are routed exactly once.
-    names = smb_suite.sequences.next_names(Hub.Plant, ModuleCtx.File_Count)
-    outbox = hub_outbox(Hub.Plant)
-    _ = standby.produce(run, Shares.Exchange, outbox, names, interval_ms=ModuleCtx.Interval_Ms)
+    try:
 
-    sources = wait_produced(monitor, ModuleCtx.Standby, run, ModuleCtx.File_Count)
-    verify_hub(monitor, ModuleCtx.Standby, run, sources, 'flow on the standby after a switchover')
+        # .. the files written on the standby are routed exactly once ..
+        names = smb_suite.sequences.next_names(Hub.Plant, ModuleCtx.File_Count)
+        outbox = hub_outbox(Hub.Plant)
+        _ = standby.produce(run, Shares.Exchange, outbox, names, interval_ms=ModuleCtx.Interval_Ms)
+
+        sources = wait_produced(monitor, ModuleCtx.Standby, run, ModuleCtx.File_Count)
+        verify_hub(monitor, ModuleCtx.Standby, run, sources, 'flow on the standby after a switchover')
+
+    # .. and the connections of the primary are pointed back to it, which closes their connections to the standby.
+    finally:
+        smb_suite.import_guest(ModuleCtx.Primary)
 
 # ################################################################################################################################
 # ################################################################################################################################
