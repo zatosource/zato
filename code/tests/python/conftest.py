@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import gc
 import importlib.util
 import os
 import sys
@@ -86,6 +87,10 @@ def _stop_process_wide_threads() -> 'None':
     if hub_local := sys.modules.get('gevent._hub_local'):
         if hub := hub_local.get_hub_if_exists():
             hub.threadpool.size = 0
+
+    # gevent lists a greenlet that asked for its thread as a thread of its own until the greenlet is collected,
+    # and a finished greenlet held in a reference cycle is collected only by a full collection
+    _ = gc.collect()
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -14,6 +14,9 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import NamedTuple
 
+# SQLAlchemy
+from sqlalchemy import select
+
 # Zato
 from zato.common.alerting.model import new_finding, new_rule
 from zato.common.alerting.store import raise_alert
@@ -23,6 +26,7 @@ from zato.common.common_db.schema import shared_object_table
 from zato.common.common_db.store import SharedObjectStore
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.pubsub.sql.pending import new_pending_attempts
 from zato.common.pubsub.sql.schema import delivery_table, message_table
 from zato.common.rule_engine.sql import RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset
@@ -41,6 +45,9 @@ class ModuleCtx:
 
     # The payload of each publication
     Data = 'Durability of the write'
+
+    # The attempt of a delivery row after its first lease or its first push attempt, as the check of a row compares it
+    Attempt_Recorded = '1'
 
     # The type of the shared objects
     Shared_Object_Type = 'durability-writers'
@@ -184,6 +191,40 @@ class AckAtomicAPI(AckAPI):
 
 # ################################################################################################################################
 
+class LeaseAPI(AckAPI):
+
+    def write(self) -> 'None':
+        _ = self.backend.pull_messages(self.sub_key)
+
+    def get_check(self) -> 'WriteCheck':
+        out = WriteCheck(delivery_table.name, delivery_table.c.attempt.name, ModuleCtx.Attempt_Recorded, True)
+        return out
+
+# ################################################################################################################################
+
+class RecordAttemptsAPI(AckAPI):
+    """ The push attempts of a batch, written through the writer, which SQLite does not use for them otherwise,
+    since a single server counts them in memory.
+    """
+
+    def prepare(self) -> 'None':
+        super().prepare()
+
+        query = select(delivery_table.c.id).where(delivery_table.c.sub_key == self.sub_key)
+
+        with get_database_engine().connect() as connection:
+            self.delivery_ids = list(connection.execute(query).scalars())
+
+    def write(self) -> 'None':
+        pending = new_pending_attempts(self.delivery_ids)
+        self.backend._writer.record_attempts(pending)
+
+    def get_check(self) -> 'WriteCheck':
+        out = WriteCheck(delivery_table.name, delivery_table.c.attempt.name, ModuleCtx.Attempt_Recorded, True)
+        return out
+
+# ################################################################################################################################
+
 class AuditInsertAPI(WriteAPI):
 
     def write(self) -> 'None':
@@ -266,6 +307,8 @@ Write_APIs:'dict[str, type[WriteAPI]]' = {
     'publish': PublishAPI,
     'ack': AckAPI,
     'ack-atomic': AckAtomicAPI,
+    'lease': LeaseAPI,
+    'record-attempts': RecordAttemptsAPI,
     'audit-insert': AuditInsertAPI,
     'shared-object': SharedObjectAPI,
     'alert': AlertAPI,

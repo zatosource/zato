@@ -596,7 +596,7 @@ fn extract_attrs(attrs: &Bound<'_, PyDict>) -> PyResult<Vec<AttrRow>> {
         // .. and everything else is text, capped to the length of the column.
         else {
             let text = value.str()?;
-            let text: String = text.to_str()?.chars().take(ATTR_VALUE_MAX_LEN).collect();
+            let text = capped_attr_text(text.to_str()?);
             AttrRow {
                 name,
                 value: text,
@@ -608,6 +608,11 @@ fn extract_attrs(attrs: &Bound<'_, PyDict>) -> PyResult<Vec<AttrRow>> {
     }
 
     Ok(out)
+}
+
+/// Returns the text of an attribute value capped to the length of its column, in characters.
+fn capped_attr_text(text: &str) -> String {
+    text.chars().take(ATTR_VALUE_MAX_LEN).collect()
 }
 
 /// Copies the message bodies of an event, by their kinds.
@@ -860,3 +865,7 @@ fn write_batch(sqlite: &Connection, statements: &Statements, events: &[EventInpu
 
 // ################################################################################################################################
 // ################################################################################################################################
+
+#[cfg(test)]
+#[path = "audit_insert_tests.rs"]
+mod tests;

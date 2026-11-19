@@ -27,6 +27,7 @@ from queues import run_queues_scenario
 from retry_settings import run_retry_settings_scenario
 from stats import run_stats_scenario
 from wakeup import run_wakeup_scenario
+from write_transaction import run_write_transaction_scenario
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,6 +55,7 @@ def run_common_scenarios() -> 'None':
     run_fenced_values_scenario()
     run_attempt_values_scenario()
     run_publish_events_scenario()
+    run_write_transaction_scenario()
 
 # ################################################################################################################################
 # ################################################################################################################################
