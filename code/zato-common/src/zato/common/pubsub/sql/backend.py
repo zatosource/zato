@@ -17,7 +17,7 @@ from sqlalchemy import and_, select
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource, is_audit_log_enabled
+from zato.common.audit_log.api import is_audit_log_enabled
 from zato.common.db_env.common import Type_SQLite
 from zato.common.db_env.engine import call_database, execute_write
 from zato.common.pubsub.delivery_scope import get_delivery_scope
@@ -28,8 +28,7 @@ from zato.common.pubsub.sql.publication import add_published_event, build_public
 from zato.common.pubsub.sql.pull import fetch_query, has_lease_candidates, outgoing_fetch_query, payload_query
 from zato.common.pubsub.sql.schema import delivery_table, topic_sub_table
 from zato.common.pubsub.sql.pending import new_fenced_ack, new_pending_atomic, new_pending_lease
-from zato.common.typing_ import cast_, list_, tuple_
-from zato.common.util.time_ import parse_utc
+from zato.common.typing_ import list_, tuple_
 from zato.server.metrics import zato_pubsub_messages_delivered_total
 
 # ################################################################################################################################
@@ -37,14 +36,9 @@ from zato.server.metrics import zato_pubsub_messages_delivered_total
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.audit_log.api import AuditLog
-    from zato.common.audit_log.pending import PendingEvent
     from zato.common.pubsub.sql.pending import PendingAck, PendingLease
     from zato.common.pubsub.sql.publication import built_publication_list
     from zato.common.typing_ import any_, anydict, anylist, anylistnone, intlist, intnone, strdict, strlist, strnone
-
-    # Dummy assignments to satisfy type checkers
-    AuditLog = AuditLog
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -571,53 +565,14 @@ class SQLPubSubBackend(SQLAdminAPI):
         """ Builds the messages of the rows that a pull leased and the audit events of their reception,
         in the transaction that leases them, so that a reception is recorded if and only if its lease is committed.
         """
-        is_audited = is_audit_log_enabled()
-
-        for row in lease.rows:
-
-            # Each copy of a message carries the number of the pull that handed it out, which a repeated copy raises ..
-            data = self._load_payload_from_row(row)
-            message = self._build_message_from_row(row, data)
-            message['delivery_attempt'] = lease.attempts[row.id]
-            lease.messages.append(message)
-
-            # .. and its reception is recorded, unless the audit log of its topic is off.
-            if is_audited and row.topic_name not in self.audit_disabled_topics:
-                audit_event = self._new_received_event(message, lease.sub_key)
-                lease.audit_events.append(audit_event)
-
-# ################################################################################################################################
-
-    def _new_received_event(self, message:'anydict', sub_key:'str') -> 'PendingEvent':
-        """ Returns the audit event of the reception of one message by a pull client.
-        """
-        audit_log = cast_('AuditLog', self.audit_log)
-        topic_name = message['topic_name']
-        data = message['data']
-
-        # Messages published before CIDs were carried inside them have no CID stored.
-        if 'cid' in message:
-            cid = message['cid']
+        # The receptions are recorded only while the audit log is on ..
+        if is_audit_log_enabled():
+            audit_log = self.audit_log
         else:
-            cid = ''
+            audit_log = None
 
-        pub_time = parse_utc(message['pub_time_iso'])
-        size = len(data)
-        is_export_payload_active = self.is_topic_payload_exported(topic_name)
-
-        out = audit_log.new_pending_event(AuditSource.PubSub, AuditEvent.Received, topic_name,
-            cid=cid,
-            msg_id=message['msg_id'],
-            pub_time=pub_time,
-            sub_key=sub_key,
-            size=size,
-            priority=message['priority'],
-            outcome=AuditOutcome.OK,
-            data=data,
-            is_export_payload_active=is_export_payload_active,
-        )
-
-        return out
+        # .. and each leased row becomes its message and the audit event of its reception.
+        self._pulled_messages.build(lease, audit_log, self.crypto_manager)
 
 # ################################################################################################################################
 

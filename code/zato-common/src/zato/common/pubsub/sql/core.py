@@ -27,6 +27,7 @@ from zato.common.pubsub.sql.generation import follow_takeover, get_fork_takeover
 from zato.common.pubsub.sql.payload_cache import Max_Payload_Cache_Size, PayloadCache, PayloadEpoch
 from zato.common.pubsub.sql.payloads import drop_payloads
 from zato.common.pubsub.sql.pending import new_pending_ack, new_pending_attempts
+from zato.common.pubsub.sql.pulled_messages import new_pulled_message_builder
 from zato.common.pubsub.sql.writes import PubSubWriter
 from zato.common.typing_ import cast_
 from zato.common.util.memory_trim import start_memory_trimmer
@@ -98,6 +99,9 @@ class SQLBackendCore:
 
         # Names of topics whose message payloads leave with the audit export
         self.audit_payload_topics:'strset' = set()
+
+        # Builds the messages that pulls hand out from their leased rows, reading the two sets above on every pull.
+        self._pulled_messages = new_pulled_message_builder(self.audit_disabled_topics, self.audit_payload_topics)
 
         # One wake-up event per subscriber - publish sets them and blocking fetches wait on them.
         self._sub_events:'sub_event_dict' = {}

@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from exactly_once.harness import build, count_deliveries, First_Output_Topic, get_attempt, get_built_msg_id, get_lease_ms, \
     get_msg_ids, Input_Sub_Key, lease, new_backend, publish_input, Second_Output_Sub_Key, Second_Output_Topic
+from zato.common.db_env.commit_ticket import CommitTicket
 from zato.common.pubsub.sql.fenced_ack import PubSubAckConflict
 from zato.common.pubsub.sql.pending import new_fenced_ack, new_pending_atomic, new_pending_lease
 from zato.common.pubsub.sql.writes import PubSubDuplicateMsgID
@@ -17,6 +18,7 @@ from zato.common.pubsub.sql.writes import PubSubDuplicateMsgID
 # ################################################################################################################################
 
 if 0:
+    from zato.common.db_env.commit_ticket import commit_ticket_list
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
     from zato.common.pubsub.sql.pending import PendingAtomic, PendingLease
     from zato.common.pubsub.sql.publication import BuiltPublication
@@ -65,9 +67,28 @@ def _new_lease(backend:'SQLPubSubBackend', now_ms:'int', max_messages:'int') -> 
 # ################################################################################################################################
 
 def _write_batch(backend:'SQLPubSubBackend', batch:'anylist') -> 'None':
-    """ Writes the items in one commit, as the commit queue writes the items of its concurrent callers.
+    """ Writes the items in one commit of the commit queue, as it writes the items of its concurrent callers.
     """
-    _ = backend._writer._write_transaction(backend.engine, batch)
+    commit_queue = backend._writer._commit_queue
+    tickets:'commit_ticket_list' = []
+
+    for item in batch:
+        ticket = CommitTicket(item, 1, False)
+        tickets.append(ticket)
+
+    # The first ticket commits the whole batch in the regular lane, which it takes as the queue admits its runners ..
+    runner = tickets[0]
+    runner.batch = tickets
+    runner.has_started = True
+
+    with commit_queue._lock:
+        commit_queue._in_flight += 1
+
+    commit_queue._commit(runner)
+
+    # .. and an error of the commit as a whole reaches the scenario.
+    if runner.exception is not None:
+        raise runner.exception
 
 # ################################################################################################################################
 
