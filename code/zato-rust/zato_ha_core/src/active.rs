@@ -972,8 +972,10 @@ fn apply_confirmation(state: &mut NodeState, position: &Position) {
     }
 }
 
-/// Records the skew of the wall clock that the standby reported, and requests the mark-out of a standby in sync
-/// whose skew exceeds the bound, since it would move the time of the database by that skew once it took over.
+/// Records the skew of the wall clock that the standby reported.
+///
+/// A standby in sync whose skew exceeds the bound is marked out, since it would move the time of the database
+/// by that skew once it took over.
 fn record_clock_skew(shared: &Shared, state: &mut NodeState, clock_skew_ms: u64) {
     state.peer_clock_skew_ms = clock_skew_ms;
 
