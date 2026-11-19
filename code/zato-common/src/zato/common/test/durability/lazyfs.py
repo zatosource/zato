@@ -52,6 +52,9 @@ class ModuleCtx:
     # How often the mount is checked while it appears, in seconds
     Poll_Interval = 0.2
 
+    # The mount table of the host, in which the second field of each line is a mount point
+    Mounts_Path = '/proc/self/mounts'
+
     # How large the cache of unsynced writes may grow
     Cache_Size = '1GB'
 
@@ -61,6 +64,21 @@ class ModuleCtx:
     Config_Name = 'lazyfs.toml'
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _is_mounted(path:'str') -> 'bool':
+    """ Returns whether a directory is a mount point of the host, including a FUSE mount whose daemon has ended.
+    """
+    with open(ModuleCtx.Mounts_Path) as mounts_file:
+        mounts = mounts_file.read()
+
+    for line in mounts.splitlines():
+        fields = line.split()
+        if fields[1] == path:
+            return True
+
+    return False
+
 # ################################################################################################################################
 
 def _docker(*args:'str', check:'bool'=True) -> 'subprocess.CompletedProcess[str]':
@@ -190,7 +208,13 @@ class LazyFSMount:
     def unmount(self) -> 'None':
         """ Unmounts LazyFS and returns its content to the directory.
         """
-        _ = _docker('exec', self.container_name, 'fusermount3', '-u', self.mount_dir)
+        # LazyFS is the main process of its container and ends once it is unmounted, which can end the exec session
+        # before it reports success, so the outcome is read from the mount table of the host.
+        out = _docker('exec', self.container_name, 'fusermount3', '-u', self.mount_dir, check=False)
+
+        if _is_mounted(self.mount_dir):
+            raise Exception(f'LazyFS could not be unmounted from {self.mount_dir}: {out.returncode} {out.stderr.strip()}')
+
         _ = _docker('rm', '-f', self.container_name, check=False)
 
         os.rmdir(self.mount_dir)
