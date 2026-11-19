@@ -102,6 +102,9 @@ class PeerWrapper:
         server:'ParallelServer' = cast_('ParallelServer', None)
         self.smb_client = SMBClient(self.config, server)
 
+        # The client connects when the definitions are imported, so that its connection is in place before the tests run
+        self.smb_client.connect()
+
         # The operations of a connection share its pool of clients, as they do in a server
         if 'pool_size' in definition:
             pool_size = definition['pool_size']

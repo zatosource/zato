@@ -67,6 +67,9 @@ class ModuleCtx:
     # The suffix of the file that marks a download as incomplete
     Partial_Suffix = '.aria2'
 
+    # The suffix of a copy of the installation media that is still being written
+    Copy_Suffix = '.copying'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -199,8 +202,9 @@ def _run_container(version:'str', oem_dir:'Path') -> 'None':
 # ################################################################################################################################
 
 def _keep_iso(version:'str') -> 'None':
-    """ Moves the installation media that a container downloaded into the directory of ISO files,
-    from which every later build installs.
+    """ Copies the installation media that a container downloaded into the directory of ISO files,
+    from which every later build installs. The container deletes its download once Windows is installed,
+    which is why the copy is made while the installation runs.
     """
     name = iso_name(version)
     target = Paths.ISO_Dir / name
@@ -218,9 +222,11 @@ def _keep_iso(version:'str') -> 'None':
         # Only a complete download is worth keeping ..
         if candidate.exists() and not partial.exists():
 
-            # .. and it is moved rather than copied, so that no ISO file stays in the storage.
+            # .. and the copy receives its final name only once it is complete.
             Paths.ISO_Dir.mkdir(parents=True, exist_ok=True)
-            _ = shutil.move(candidate, target)
+            copy_path = target.with_name(name + ModuleCtx.Copy_Suffix)
+            _ = shutil.copyfile(candidate, copy_path)
+            _ = copy_path.rename(target)
 
             print(f'[WIN{version} BUILD] Installation media kept in {target}', flush=True)
             return
@@ -274,6 +280,9 @@ def _wait_for_provisioning(version:'str') -> 'anydict':
         except Exception as e:
             last_error = f'{e.__class__.__name__}: {e}'
             client.close()
+
+        # .. the media are kept as soon as their download completes ..
+        _keep_iso(version)
 
         # .. and a long wait reports how far the build is.
         now = monotonic()

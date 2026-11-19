@@ -96,12 +96,17 @@ class SMBClient:
             password = ''
         self.password = password # type: str
 
+        # The connections of this client only. The library otherwise keeps one connection per host and port
+        # for the whole process, and closing this client would close it for every other client of the same server.
+        self.connection_cache:'stranydict' = {}
+
         # Credentials given to each operation - the library registers and caches sessions on first use,
         # keyed by host, port and username, which means that callers never need to register anything themselves.
         self.conn_kwargs:'stranydict' = {
             'username': self.username,
             'password': self.password,
             'port': self.port,
+            'connection_cache': self.connection_cache,
         }
 
         # Added for API completeness
@@ -182,7 +187,7 @@ class SMBClient:
 
     def close(self) -> 'None':
         # Closes the underlying connection to the server along with all of its sessions
-        smbclient.delete_session(self.host, port=self.port)
+        smbclient.delete_session(self.host, port=self.port, connection_cache=self.connection_cache)
 
 # ################################################################################################################################
 

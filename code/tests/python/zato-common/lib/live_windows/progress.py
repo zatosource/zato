@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import re
 from threading import Event, Lock, Thread
 from time import monotonic, sleep
 
@@ -46,6 +47,9 @@ class ModuleCtx:
 
     # What marks an error in the server log
     Error_Marker = ' - ERROR - '
+
+    # Each entry of a server log begins with the date on which it was written
+    Entry_Start = re.compile(r'\d{4}-\d{2}-\d{2}')
 
     # The Windows event levels that fail a test - critical and error
     Failure_Levels = 1, 2
@@ -458,22 +462,34 @@ class Monitor:
         # The last element is either empty or a line without its end yet
         self.server_log_partial = lines.pop()
 
-        for line in lines:
+        # A line that does not begin with a timestamp continues the entry before it, e.g. as a line of a traceback
+        entries:'list[strlist]' = []
 
-            if ModuleCtx.Error_Marker not in line:
+        for line in lines:
+            if entries and not ModuleCtx.Entry_Start.match(line):
+                entries[-1].append(line)
+            else:
+                entries.append([line])
+
+        for entry in entries:
+
+            first_line = entry[0]
+
+            if ModuleCtx.Error_Marker not in first_line:
                 continue
 
             is_expected = False
 
             for pattern in self.expected_server_errors:
-                if pattern in line:
+                if pattern in first_line:
                     is_expected = True
                     break
 
             if is_expected:
-                print(f'[SMB {self.name}] Expected server error -> {line}', flush=True)
+                print(f'[SMB {self.name}] Expected server error -> {first_line}', flush=True)
             else:
-                self._fail(f'Server error -> {line}')
+                text = '\n'.join(entry)
+                self._fail(f'Server error -> {text}')
 
 # ################################################################################################################################
 

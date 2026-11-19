@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 import os
 from time import time
 
@@ -52,6 +53,11 @@ class ModuleCtx:
 
     # The run under which a session stops the tasks and removes the files that earlier sessions left on a guest
     Takeover_Run = 'session-takeover'
+
+    # The SMB libraries log each packet below this level, which with four guests polled at once
+    # consumes the time of the threads that route the files
+    Library_Loggers = 'smbprotocol', 'smbclient', 'spnego'
+    Library_Log_Level = logging.WARNING
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -333,6 +339,10 @@ def open_guests(versions:'strlist') -> 'tuple[handledict, strlist]':
     together with the versions that it booted.
     """
     out:'handledict' = {}
+
+    for logger_name in ModuleCtx.Library_Loggers:
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(ModuleCtx.Library_Log_Level)
 
     guests, started_versions = acquire_guests(versions)
 
