@@ -54,7 +54,7 @@ def _setup(server:'PubSubServer', definition:'Definition') -> 'None':
 # ################################################################################################################################
 
 zato_server = create_zato_server_fixture(**get_fixture_arguments(_server, _setup, scope='module',
-    quickstart_parent_dir=get_runtime_dir()))
+    quickstart_parent_dir=get_runtime_dir(), log_to_files=False))
 
 # ################################################################################################################################
 # ################################################################################################################################

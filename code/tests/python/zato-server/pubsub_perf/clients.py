@@ -110,6 +110,9 @@ class Publisher:
         self.keys:'strlist' = []
         self.sent_times:'floatlist' = []
 
+        # How long the publication of each message took, from the first request until the server confirmed it
+        self.publish_durations:'floatlist' = []
+
 # ################################################################################################################################
 
     def _publish_until_stored(self, key:'str') -> 'None':
@@ -142,6 +145,7 @@ class Publisher:
 
             self.keys.append(key)
             self.sent_times.append(sent_at)
+            self.publish_durations.append(time.monotonic() - sent_at)
 
             break
 
@@ -323,6 +327,19 @@ class PublisherGroup:
 
         for publisher in self.publishers:
             out.extend(publisher.keys)
+
+        return out
+
+# ################################################################################################################################
+
+    def get_publish_latencies(self) -> 'Latencies':
+        """ Returns how long the publication of each message took, from the first request until the server confirmed it.
+        """
+        out = Latencies()
+
+        for publisher in self.publishers:
+            for duration in publisher.publish_durations:
+                out.add(duration)
 
         return out
 

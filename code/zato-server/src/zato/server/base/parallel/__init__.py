@@ -271,6 +271,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.service_sources = []   # Set in a config file
         self.base_dir = ''
         self.logs_dir = ''
+        self.native_log_files:'strlist' = []
         self.tls_dir = ''
         self.static_dir = ''
         self.hot_deploy_config = Bunch()

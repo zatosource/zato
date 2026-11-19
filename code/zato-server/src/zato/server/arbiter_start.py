@@ -62,10 +62,6 @@ class ModuleCtx:
     # The file of each thread that holds its name
     Task_Name_File = 'comm'
 
-    # The files of zato_server_core that the worker appends to
-    REST_Log_Name   = 'rest.log'
-    Access_Log_Name = 'access.log'
-
     # How long the arbiter waits for the threads of the gevent thread pool to exit, and how often it checks, in seconds
     Thread_Stop_Timeout  = 5.0
     Thread_Stop_Interval = 0.01
@@ -225,10 +221,7 @@ def run_arbiter(zato_app:'ZatoApplication') -> 'int':
 
     # .. the arbiter rotates the files of zato_server_core that the worker appends to ..
     config = ArbiterConfig.from_defaults(gettempdir())
-    config.native_log_files = [
-        os.path.join(server.logs_dir, ModuleCtx.REST_Log_Name),
-        os.path.join(server.logs_dir, ModuleCtx.Access_Log_Name),
-    ]
+    config.native_log_files = server.native_log_files
 
     # .. and nothing that a fork would duplicate is open when the processes are forked.
     stop_threadpool()

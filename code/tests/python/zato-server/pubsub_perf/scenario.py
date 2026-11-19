@@ -185,6 +185,7 @@ class ScenarioRun:
 
         sent_times = self.publishers.get_sent_times()
         latencies = self.subscribers.get_latencies(sent_times)
+        publish_latencies = self.publishers.get_publish_latencies()
 
         # The timing is monotonic and the window is in seconds since the epoch, which the recorders of the host use.
         epoch_offset = time.time() - time.monotonic()
@@ -197,6 +198,7 @@ class ScenarioRun:
             'worker_kills': worker_kills,
             'publications': get_rate_figures(published_count, published_seconds),
             'deliveries': get_rate_figures(delivered_count, settled_seconds),
+            'publication': publish_latencies.get_figures(),
             'publication_to_delivery': latencies.get_figures(),
         }
 

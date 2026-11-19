@@ -60,8 +60,9 @@ from dateutil.parser import parse as dt_parse
 
 # gevent
 from gevent import sleep as gevent_sleep, spawn, Timeout
-from gevent.greenlet import Greenlet
-from gevent.hub import Hub
+
+# greenlet
+from greenlet import greenlet as GreenletBase
 
 # OpenSSL
 from OpenSSL import crypto
@@ -940,8 +941,9 @@ def get_threads_traceback(pid:'int') -> 'strdict':
 
 def get_greenlets_traceback(pid:'int') -> 'strdict':
     result:'strdict' = {}
+    # Every kind of greenlet is included - the hub, those of gevent and the raw ones of the inbound connections
     for item in gc.get_objects():
-        if not isinstance(item, (Greenlet, Hub)):
+        if not isinstance(item, GreenletBase):
             continue
         if not item:
             continue

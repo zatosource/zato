@@ -36,6 +36,9 @@ sys.path.insert(0, os.path.dirname(__file__))
 # PyPI
 import pytest
 
+# The GLPI mode of the target server
+from _glpi_target import GLPIHandler, glpi_state
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -65,6 +68,7 @@ _deployed_modules = [
     'inventory_connector.py',
     'textproc_connector.py',
     'tunnel_connector.py',
+    'glpi_connector.py',
 ]
 
 _services_source_path = os.path.join(_suite_directory, '_services.py')
@@ -536,6 +540,7 @@ _mode_handlers = {
     'correlation': _CorrelationHandler,
     'push': _PushHandler,
     'counting': _CountingHandler,
+    'glpi': GLPIHandler,
 }
 
 def restart_target_server(mode:'str', port:'int') -> 'None':
@@ -654,6 +659,7 @@ def zato_server() -> 'any_':
     correlation_port = _start_target_server('correlation', _CorrelationHandler)
     push_port = _start_target_server('push', _PushHandler)
     counting_port = _start_target_server('counting', _CountingHandler)
+    glpi_port = _start_target_server('glpi', GLPIHandler)
 
     # .. create a quickstart environment ..
     _state.quickstart_directory = tempfile.mkdtemp(prefix='zato_sdk_live_qs_')
@@ -740,6 +746,7 @@ def zato_server() -> 'any_':
         'correlation_port': correlation_port,
         'push_port': push_port,
         'counting_port': counting_port,
+        'glpi_port': glpi_port,
         'server_directory': server_directory,
         'connector_deployed_path': connector_deployed_path,
         'pickup_listener': pickup_listener,
@@ -747,6 +754,7 @@ def zato_server() -> 'any_':
         'correlation_state': correlation_state,
         'push_state': push_state,
         'counting_state': counting_state,
+        'glpi_state': glpi_state,
         'kill_target_server': kill_target_server,
         'restart_target_server': restart_target_server,
         'restart_zato_server': restart_zato_server,

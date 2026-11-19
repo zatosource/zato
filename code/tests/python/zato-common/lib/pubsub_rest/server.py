@@ -323,6 +323,7 @@ def get_fixture_arguments(
     autouse:'bool' = True,
     uses_environment_database:'bool' = False,
     quickstart_parent_dir:'strnone' = None,
+    log_to_files:'bool' = True,
     ) -> 'anydict':
     """ Returns the arguments of create_zato_server_fixture that start the server of a suite. The setup function
     receives the server object and the enmasse definition, to which it adds what the suite needs, and it may set
@@ -384,6 +385,7 @@ def get_fixture_arguments(
         'autouse': autouse,
         'uses_environment_database': uses_environment_database,
         'quickstart_parent_dir': quickstart_parent_dir,
+        'log_to_files': log_to_files,
     }
 
     return out

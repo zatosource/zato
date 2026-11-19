@@ -8,8 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The single function through which every performance figure is recorded. A figure is recorded only together with
 # the settings in force in the measured server before and after its measurement, and only when those settings are
-# the settings of a production installation, the database is on a file system that is not held in memory
-# and the server is a process of its own.
+# the settings of a production installation, the database is on a file system that is not held in memory,
+# the server is a process of its own and it logs to stdout only.
 
 # stdlib
 import json
@@ -188,10 +188,15 @@ def _get_findings(settings:'stranydict', database:'PubSubDatabase | None') -> 's
         Default_Delivered_Max_Messages)
     _check_value(out, 'pubsub_delivered_max_days', settings['pubsub_delivered_max_days'], Default_Delivered_Max_Days)
 
-    # .. and the node of an active-standby pair runs with its own timers.
+    # .. the node of an active-standby pair runs with its own timers ..
     for name, value in settings['ha_timers'].items():
         if value is not None:
             out.append(f'{name} is `{value}`, a production node runs with its default')
+
+    # .. and the server logs to stdout only.
+    if log_files := settings['log_files']:
+        log_files_text = ', '.join(log_files)
+        out.append(f'the server writes its logs to files, {log_files_text}, a measured server logs to stdout only')
 
     return out
 

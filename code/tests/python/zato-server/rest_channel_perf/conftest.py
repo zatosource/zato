@@ -139,6 +139,7 @@ zato_server_process = create_zato_server_fixture(
     extra_server_env={},
     patch_server_conf_bind=True,
     build_config_callback=_build_config,
+    log_to_files=False,
 )
 
 # ################################################################################################################################

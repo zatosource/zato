@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 
 # Zato
-from zato.server.service import Service
+from zato.server.service import Int, Service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -219,6 +219,35 @@ class GetTunnelStatus(Service):
         conn = self.out.tunnel['My Tunnel']
         response = conn.get_status(self.request.input.name)
         self.response.payload = json.dumps({'response': response})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetTicket(Service):
+    """ Returns one ticket from GLPI.
+    """
+    name = 'demo.glpi.get-ticket'
+
+    input = Int('ticket_id')
+
+    def handle(self) -> 'None':
+        conn = self.out.glpi['My GLPI']
+        self.response.payload = conn.get_ticket(self.request.input.ticket_id)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CreateTicket(Service):
+    """ Creates a ticket in GLPI and returns its ID.
+    """
+    name = 'demo.glpi.create-ticket'
+
+    input = 'name', 'content'
+
+    def handle(self) -> 'None':
+        conn = self.out.glpi['My GLPI']
+        ticket_id = conn.create_ticket(self.request.input.name, self.request.input.content)
+        self.response.payload = {'ticket_id': ticket_id}
 
 # ################################################################################################################################
 # ################################################################################################################################

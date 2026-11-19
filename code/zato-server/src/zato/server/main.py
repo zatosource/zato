@@ -73,7 +73,7 @@ from zato_server_core.zato_server_core import HTTPServer, handle_http_request, i
 if 0:
     from datetime import timedelta
     from zato.common.ext.bunch import Bunch
-    from zato.common.typing_ import any_, callable_, dictnone, strintnone
+    from zato.common.typing_ import any_, callable_, dictnone, strintnone, strlist
     from zato.server.config_runtime import ConfigRuntime
     from zato.server.worker_runtime import WorkerRuntime
     callable_ = callable_
@@ -107,6 +107,10 @@ class ModuleCtx:
     # The files of zato_server_core that every process of the server appends to
     REST_Log_Name   = 'rest.log'
     Access_Log_Name = 'access.log'
+
+    # The option of the logging stanza of server.conf that turns those files off, and its value if absent
+    Native_Log_Files_Key     = 'access_and_rest_log_files'
+    Native_Log_Files_Default = True
 
     # The size limit of those files in a process that rotates them itself, and in a worker, whose arbiter rotates them
     Log_Max_Bytes   = 10 * 1024 * 1024
@@ -199,7 +203,7 @@ class ZatoApplication:
         runtime.bind(server)
 
         # .. the outgoing REST calls of the services that it runs append to the files that the arbiter rotates ..
-        init_rest_log(os.path.join(server.logs_dir, ModuleCtx.REST_Log_Name), ModuleCtx.Log_No_Rotation)
+        _init_native_logs(server, ModuleCtx.Log_No_Rotation, False)
 
         # .. it loads the configuration and reports ready, after which the arbiter starts the worker ..
         ParallelServer.start_server_process(server)
@@ -243,8 +247,7 @@ class ZatoApplication:
         worker.bind(server)
 
         # .. the REST and access logs of the worker append to the files that the arbiter rotates ..
-        init_rest_log(os.path.join(server.logs_dir, ModuleCtx.REST_Log_Name), ModuleCtx.Log_No_Rotation)
-        init_access_log(os.path.join(server.logs_dir, ModuleCtx.Access_Log_Name), ModuleCtx.Log_No_Rotation)
+        _init_native_logs(server, ModuleCtx.Log_No_Rotation, True)
 
         # .. the worker loads its configuration between two changes of the config process, after which it reports ready ..
         load_cid = worker.request_load()
@@ -269,6 +272,43 @@ class ZatoApplication:
         # The worker binds the port and serves until it is drained.
         http_server = HTTPServer(host, port, request_handler, server_software, max_msg_size)
         worker.serve(http_server)
+
+# ################################################################################################################################
+
+def _get_native_log_files(server_config:'Bunch', logs_dir:'str') -> 'strlist':
+    """ Returns the files of zato_server_core that the processes of a server append to, the REST log first
+    and the access log second, or no files if the logging stanza of server.conf turns them off.
+    """
+    is_enabled = ModuleCtx.Native_Log_Files_Default
+
+    # Installations created before the option existed have no such key
+    if 'logging' in server_config:
+        logging_stanza = server_config.logging
+        if ModuleCtx.Native_Log_Files_Key in logging_stanza:
+            is_enabled = asbool(logging_stanza[ModuleCtx.Native_Log_Files_Key])
+
+    if is_enabled:
+        out = [
+            os.path.join(logs_dir, ModuleCtx.REST_Log_Name),
+            os.path.join(logs_dir, ModuleCtx.Access_Log_Name),
+        ]
+    else:
+        out = []
+
+    return out
+
+# ################################################################################################################################
+
+def _init_native_logs(server:'ParallelServer', max_bytes:'int', needs_access_log:'bool') -> 'None':
+    """ Opens the files of zato_server_core that the current process appends to, the access log only if it needs it,
+    unless the server writes no such files.
+    """
+    if server.native_log_files:
+        rest_log_path, access_log_path = server.native_log_files
+        init_rest_log(rest_log_path, max_bytes)
+
+        if needs_access_log:
+            init_access_log(access_log_path, max_bytes)
 
 # ################################################################################################################################
 
@@ -479,6 +519,7 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     server.base_dir = base_dir
     server.user_conf_location = server.set_up_user_config_location()
     server.logs_dir = os.path.join(server.base_dir, 'logs')
+    server.native_log_files = _get_native_log_files(server_config, server.logs_dir)
     server.tls_dir = os.path.join(server.base_dir, 'config', 'repo', 'tls')
     server.static_dir = os.path.join(server.base_dir, 'config', 'repo', 'static')
     server.fs_server_config = server_config
@@ -514,8 +555,7 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
 
     # A server that is not started runs in this process, which rotates its own files of zato_server_core ..
     if not start_server:
-        init_rest_log(os.path.join(server.logs_dir, ModuleCtx.REST_Log_Name), ModuleCtx.Log_Max_Bytes)
-        init_access_log(os.path.join(server.logs_dir, ModuleCtx.Access_Log_Name), ModuleCtx.Log_Max_Bytes)
+        _init_native_logs(server, ModuleCtx.Log_Max_Bytes, True)
         return server
 
     # .. while a started server runs as an arbiter that forks its worker and returns its exit code once it stopped.

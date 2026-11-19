@@ -63,9 +63,14 @@ def parent_dir() -> 'any_':
 
 # ################################################################################################################################
 
-def _start_server(parent_dir:'str', name:'str', server_env:'strstrdict') -> 'tuple[SessionState, AdminClient]':
-    """ Starts a server with a SQLite Zato database of its own and the given variables,
-    and returns its state and a client of its services.
+def _start_server(
+    parent_dir:'str',
+    name:'str',
+    server_env:'strstrdict',
+    log_to_files:'bool',
+    ) -> 'tuple[SessionState, AdminClient]':
+    """ Starts a server with a SQLite Zato database of its own, the given variables and its logs written to files
+    or to stdout only, and returns its state and a client of its services.
     """
     state = SessionState(f'zato.test.perf_rules.perf_gate.{name}', f'server-logs-perf-gate-{name}.txt')
     zato_bin = os.path.join(os.environ[ModuleCtx.Env_Base_Dir], 'code', 'bin', 'zato')
@@ -80,6 +85,7 @@ def _start_server(parent_dir:'str', name:'str', server_env:'strstrdict') -> 'tup
         rendered_yaml='',
         quickstart_prefix=f'zato_perf_gate_{name}_',
         quickstart_parent_dir=parent_dir,
+        log_to_files=log_to_files,
     )
 
     env = dict(server_env)
@@ -113,7 +119,7 @@ def test_audit_log_turned_off_is_refused(parent_dir:'str') -> 'None':
     """ A server whose audit log is turned off records no figure, neither when a measurement begins
     nor when its figures are reported.
     """
-    state, client = _start_server(parent_dir, 'relaxed', {AuditLogCtx.Env_Enabled: 'false'})
+    state, client = _start_server(parent_dir, 'relaxed', {AuditLogCtx.Env_Enabled: 'false'}, False)
 
     try:
         with pytest.raises(PerfSettingsError, match='is_audit_log_enabled'):
@@ -135,7 +141,7 @@ def test_audit_log_turned_off_is_refused(parent_dir:'str') -> 'None':
 def test_production_settings_are_recorded(parent_dir:'str') -> 'None':
     """ A server with the settings of a production installation records its figures with those settings.
     """
-    state, client = _start_server(parent_dir, 'production', {})
+    state, client = _start_server(parent_dir, 'production', {}, False)
 
     try:
         measurement = start_measurement(client, None)
@@ -144,6 +150,21 @@ def test_production_settings_are_recorded(parent_dir:'str') -> 'None':
         assert record['figures'] == {'messages_per_second': 1}
         assert record['settings_before']['is_audit_log_enabled']
         assert record['settings_after']['pid'] != os.getpid()
+        assert record['settings_after']['log_files'] == []
+
+    finally:
+        state.cleanup()
+
+# ################################################################################################################################
+
+def test_logs_written_to_files_are_refused(parent_dir:'str') -> 'None':
+    """ A server that writes its logs to files records no figure.
+    """
+    state, client = _start_server(parent_dir, 'log-files', {}, True)
+
+    try:
+        with pytest.raises(PerfSettingsError, match='writes its logs to files'):
+            _ = start_measurement(client, None)
 
     finally:
         state.cleanup()

@@ -152,6 +152,7 @@ odoo=True
 json = {JSON}
 
 [logging]
+access_and_rest_log_files=True
 http_access_log_ignore=
 rest_log_ignore=/zato/api/invoke, /metrics, /zato/ping
 

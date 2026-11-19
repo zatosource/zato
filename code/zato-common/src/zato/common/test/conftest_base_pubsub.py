@@ -25,6 +25,9 @@ from urllib.request import Request, urlopen
 # pytest
 import pytest
 
+# PyYAML
+import yaml
+
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.api import PubSub
@@ -115,6 +118,22 @@ _monitoring_env_names = (SQLite_Env_Stats_Dir,)
 # The logs that are copied out of an environment before it is torn down
 _server_log_file_name        = 'server.log'
 _file_transfer_log_file_name = 'file-transfer.log'
+
+# The file in the directory of a server to which the test process writes the stacks of the threads and greenlets
+# that the server logs to stdout on SIGURG, the only part of the output of the server that is kept in a file
+Server_Stacks_File_Name = 'server-stacks.log'
+
+# The entry that begins a dump of the stacks, which dump_stacks in zato.common.util.api logs,
+# and the beginning of every entry of the log, which ends the dump before it
+_stacks_head_pattern = re.compile(r' - Stacks of threads and greenlets$')
+_log_entry_pattern   = re.compile(r'^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3} - ')
+
+# The logging configuration and the main configuration of a server, relative to its directory
+_logging_conf_path = os.path.join('config', 'repo', 'logging.conf')
+_server_conf_path  = os.path.join('config', 'repo', 'server.conf')
+
+# The option of server.conf that turns the access and REST log files of zato_server_core on or off
+_native_log_files_pattern = re.compile(r'^(access_and_rest_log_files\s*=\s*)\S+', re.MULTILINE)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -412,29 +431,45 @@ def start_server_process(
     # so the server is ready for the tests only once the arbiter reports the worker ready.
     worker_ready = threading.Event()
 
+    stacks_path = os.path.join(server_directory, Server_Stacks_File_Name)
+
     # .. stream server stdout in a background thread ..
     def _stream_server_output() -> 'None':
         stdout = state.server_process.stdout # type: ignore[union-attr]
         readline = stdout.readline # pyright: ignore[reportOptionalMemberAccess]
 
-        for line in iter(readline, b''):
-            decoded = line.decode('utf-8', errors='replace')
-            text = decoded.rstrip()
-            elapsed = time.monotonic() - popen_time
-            logger.debug('[SERVER %6.1fs] %s', elapsed, text)
+        # Whether the current line belongs to a dump of the stacks
+        is_stacks = False
 
-            if _worker_ready_pattern.search(text):
-                worker_ready.set()
+        with open(stacks_path, 'ab') as stacks_file:
 
-            if match := _worker_pid_pattern.search(text):
-                with state.worker_reload_condition:
-                    state.worker_pids.add(match.group(1))
+            for line in iter(readline, b''):
+                decoded = line.decode('utf-8', errors='replace')
+                text = decoded.rstrip()
 
-            elif match := _config_loaded_pattern.search(text):
-                with state.worker_reload_condition:
-                    if match.group(1) in state.worker_pids:
-                        state.worker_reload_count += 1
-                        state.worker_reload_condition.notify_all()
+                # Each entry of the log either begins a dump of the stacks or ends the one before it ..
+                if _log_entry_pattern.search(text):
+                    is_stacks = bool(_stacks_head_pattern.search(text))
+
+                # .. and only the dumps are kept in the file.
+                if is_stacks:
+                    _ = stacks_file.write(line)
+
+                elapsed = time.monotonic() - popen_time
+                logger.debug('[SERVER %6.1fs] %s', elapsed, text)
+
+                if _worker_ready_pattern.search(text):
+                    worker_ready.set()
+
+                if match := _worker_pid_pattern.search(text):
+                    with state.worker_reload_condition:
+                        state.worker_pids.add(match.group(1))
+
+                elif match := _config_loaded_pattern.search(text):
+                    with state.worker_reload_condition:
+                        if match.group(1) in state.worker_pids:
+                            state.worker_reload_count += 1
+                            state.worker_reload_condition.notify_all()
 
     stdout_thread = threading.Thread(target=_stream_server_output, name='server-output', daemon=True)
     stdout_thread.start()
@@ -504,6 +539,43 @@ def patch_server_conf(server_directory:'str', server_port:'int', patch_server_co
 # ################################################################################################################################
 # ################################################################################################################################
 
+def use_stdout_logging(server_directory:'str') -> 'None':
+    """ Configures the server of a directory to log to stdout only, without the handlers that write to files,
+    such as the server log, the HTTP access log and the logs of the scheduler and of file transfers,
+    and without the access and REST log files that zato_server_core writes.
+    """
+    server_conf_path = os.path.join(server_directory, _server_conf_path)
+
+    with open(server_conf_path) as server_conf_file:
+        server_conf_content = server_conf_file.read()
+
+    server_conf_content = _native_log_files_pattern.sub(r'\g<1>False', server_conf_content)
+
+    with open(server_conf_path, 'w') as server_conf_file:
+        _ = server_conf_file.write(server_conf_content)
+
+    path = os.path.join(server_directory, _logging_conf_path)
+
+    with open(path) as conf_file:
+        config = yaml.safe_load(conf_file)
+
+    handlers = config['handlers']
+
+    # A handler with a file name writes to a file ..
+    file_handlers = {name for name, handler in handlers.items() if 'filename' in handler}
+
+    for name in file_handlers:
+        del handlers[name]
+
+    # .. each logger keeps the handlers that do not, and a logger with none left discards its entries.
+    for logger_config in config['loggers'].values():
+        logger_config['handlers'] = [name for name in logger_config['handlers'] if name not in file_handlers]
+
+    with open(path, 'w') as conf_file:
+        _ = yaml.safe_dump(config, conf_file)
+
+# ################################################################################################################################
+
 def run_quickstart_and_enmasse(
     state:'SessionState',
     logger:'logging.Logger',
@@ -513,9 +585,11 @@ def run_quickstart_and_enmasse(
     quickstart_prefix:'str',
     extra_env:'strstrdict | None' = None,
     quickstart_parent_dir:'strnone' = None,
+    log_to_files:'bool' = True,
 ) -> 'str':
     """ Creates a quickstart environment and imports the enmasse YAML, with the given variables added
-    to the environment of both commands and under the given parent directory, if any.
+    to the environment of both commands and under the given parent directory, if any. Without log_to_files,
+    the server logs to stdout only, which is how the server of each performance suite logs.
     Returns the server directory path.
     """
     start_time = time.monotonic()
@@ -547,6 +621,9 @@ def run_quickstart_and_enmasse(
     logger.info('Quickstart create: %.1fs', quickstart_time - start_time)
 
     server_directory = os.path.join(state.quickstart_directory, 'server1')
+
+    if not log_to_files:
+        use_stdout_logging(server_directory)
 
     # .. write the rendered YAML and import it, but only if we have a template ..
     if rendered_yaml:
@@ -613,6 +690,7 @@ def create_zato_server_fixture(
     autouse:'bool' = True,
     uses_environment_database:'bool' = False,
     quickstart_parent_dir:'strnone' = None,
+    log_to_files:'bool' = True,
 ) -> 'any_':
     """ Factory that returns a pytest fixture of the given scope that starts a Zato server.
 
@@ -626,7 +704,7 @@ def create_zato_server_fixture(
 
     With uses_environment_database, the server uses the Zato database that the environment of the test process
     already selects, otherwise the fixture starts a database of its own. With quickstart_parent_dir, the environment
-    and its SQLite database are created under that directory.
+    and its SQLite database are created under that directory. Without log_to_files, the server logs to stdout only.
     """
 
     logger = logging.getLogger(logger_name)
@@ -675,6 +753,7 @@ def create_zato_server_fixture(
             rendered_yaml=rendered_yaml,
             quickstart_prefix=quickstart_prefix,
             quickstart_parent_dir=quickstart_parent_dir,
+            log_to_files=log_to_files,
         )
 
         # .. point the Zato database at this environment's own file, or at a PostgreSQL container of this session,

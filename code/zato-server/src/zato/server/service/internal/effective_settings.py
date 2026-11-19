@@ -7,10 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The settings in force in the process of a server - those of the Zato database as its connections see them,
-# the file system of the database, the audit log, the group commits, the pull lease, the retention limits
-# and the active-standby mode with the timers of its node.
+# the file system of the database, the audit log, the group commits, the pull lease, the retention limits,
+# the active-standby mode with the timers of its node and the files that its logs are written to.
 
 # stdlib
+import logging
 import os
 
 # Zato
@@ -33,7 +34,7 @@ from zato.server.service.internal import AdminService
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import stranydict
+    from zato.common.typing_ import stranydict, strlist
 
     Engine = Engine
 
@@ -113,8 +114,31 @@ def _get_postgresql_settings(engine:'Engine') -> 'stranydict':
 
 # ################################################################################################################################
 
-def get_effective_settings() -> 'stranydict':
-    """ Returns the settings in force in this process.
+def _get_log_files(native_log_files:'strlist') -> 'strlist':
+    """ Returns the path of each file that a handler of a logger of this process writes to,
+    together with the files of zato_server_core that the processes of the server append to.
+    """
+    loggers = [logging.getLogger()]
+
+    # The manager holds placeholders, too, for the parents of loggers that were never created themselves
+    for item in logging.Logger.manager.loggerDict.values():
+        if isinstance(item, logging.Logger):
+            loggers.append(item)
+
+    paths = set(native_log_files)
+
+    for logger in loggers:
+        for handler in logger.handlers:
+            if isinstance(handler, logging.FileHandler):
+                paths.add(handler.baseFilename)
+
+    out = sorted(paths)
+    return out
+
+# ################################################################################################################################
+
+def get_effective_settings(native_log_files:'strlist') -> 'stranydict':
+    """ Returns the settings in force in this process, whose server appends to the given files of zato_server_core.
     """
     database_type = get_database_type()
     engine = get_database_engine()
@@ -146,6 +170,7 @@ def get_effective_settings() -> 'stranydict':
         'pubsub_delivered_max_days': get_delivered_max_days(),
         'is_active_standby': is_active_standby(),
         'ha_timers': ha_timers,
+        'log_files': _get_log_files(native_log_files),
     }
 
     return out
@@ -159,7 +184,7 @@ class GetEffectiveSettings(AdminService):
     name = 'zato.server.get-effective-settings'
 
     def handle(self) -> 'None':
-        self.response.payload = get_effective_settings()
+        self.response.payload = get_effective_settings(self.server.native_log_files)
 
 # ################################################################################################################################
 # ################################################################################################################################

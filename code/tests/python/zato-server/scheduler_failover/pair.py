@@ -281,6 +281,7 @@ def _new_server(
         invoke_password=invoke_password,
         rendered_yaml='',
         quickstart_prefix=f'zato_scheduler_failover_{label}_',
+        log_to_files=False,
     )
 
     quickstart_directory = os.path.dirname(server_directory)

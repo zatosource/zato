@@ -255,6 +255,7 @@ def create_quickstart_environment(
         quickstart_prefix='quickstart-',
         extra_env=extra_env,
         quickstart_parent_dir=directory,
+        log_to_files=False,
     )
 
     patch_server_conf(out, NodesCtx.Server_Port, True)
