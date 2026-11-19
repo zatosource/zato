@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import time
 from typing import NamedTuple
 
 # Zato
@@ -185,7 +186,12 @@ class ScenarioRun:
         sent_times = self.publishers.get_sent_times()
         latencies = self.subscribers.get_latencies(sent_times)
 
+        # The timing is monotonic and the window is in seconds since the epoch, which the recorders of the host use.
+        epoch_offset = time.time() - time.monotonic()
+
         out:'stranydict' = {
+            'window_start': timing.start + epoch_offset,
+            'window_end': timing.settled_at + epoch_offset,
             'publishers': self.scenario.publisher_count,
             'subscribers': self.scenario.subscriber_count,
             'worker_kills': worker_kills,
