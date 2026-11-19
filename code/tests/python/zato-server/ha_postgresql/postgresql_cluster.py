@@ -20,12 +20,12 @@ import time
 # Zato
 from topology import Backend, docker, ModuleCtx as TopologyCtx, remove_container
 from zato.common.crypto.api import CryptoManager
-from zato.common.test.durability.disk import get_disk_dir
-from zato.common.test.durability.lazyfs import LazyFSMount
 from zato.common.test.pubsub_certs import generate_certificates
 from zato.common.test.pubsub_database import _directory_mode, _shm_size, _write_tls_setup_script, connect, \
     get_container_settings, ModuleCtx as DatabaseCtx, PubSubDatabase, PubSubDBMode
 from zato.common.test.pubsub_replication import _primary_settings, _write_replication_script
+from zato.common.test.reliability.lazyfs import LazyFSMount
+from zato.common.test.sql_conformance.disk import get_disk_dir
 
 # ################################################################################################################################
 # ################################################################################################################################

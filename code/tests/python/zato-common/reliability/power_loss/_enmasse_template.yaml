@@ -1,0 +1,45 @@
+security:
+
+  - name: test.reliability.power-loss.publisher
+    type: basic_auth
+    username: test.reliability.power-loss.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.reliability.power-loss.puller
+    type: basic_auth
+    username: test.reliability.power-loss.puller
+    password: "{{puller_password}}"
+
+  - name: test.reliability.power-loss.caller
+    type: basic_auth
+    username: test.reliability.power-loss.caller
+    password: "{{caller_password}}"
+
+pubsub_topic:
+
+  - name: reliability.power-loss
+
+pubsub_permission:
+
+  - security: test.reliability.power-loss.publisher
+    pub:
+      - reliability.power-loss
+
+  - security: test.reliability.power-loss.puller
+    sub:
+      - reliability.power-loss
+
+pubsub_subscription:
+
+  - security: test.reliability.power-loss.puller
+    delivery_type: pull
+    topic_list:
+      - reliability.power-loss
+
+channel_rest:
+
+  - name: test.reliability.power-loss.audited
+    service: test.reliability.power-loss.echo
+    url_path: /test/reliability/power-loss/audited
+    data_format: json
+    is_audit_log_active: true

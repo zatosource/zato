@@ -15,7 +15,7 @@ import os
 # Zato
 from nodes import NodeHook
 from zato.common.ha.common import ModuleCtx as HACtx
-from zato.common.test.durability.lazyfs import LazyFSMount
+from zato.common.test.reliability.lazyfs import LazyFSMount
 
 # ################################################################################################################################
 # ################################################################################################################################

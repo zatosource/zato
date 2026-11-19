@@ -12,7 +12,7 @@
 	test-soak test-soak-pubsub test-soak-scheduler-failover test-soak-ha-sqlite test-soak-ha-postgresql \
 	test-arbiter \
 	test-rate-limiting test-enmasse test-cli \
-	test-pubsub test-pubsub-perf test-pubsub-perf-latency test-pubsub-exactly-once test-durability test-durability-fast test-durability-static test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
+	test-pubsub test-pubsub-perf test-pubsub-perf-latency test-pubsub-exactly-once test-sql-conformance test-sql-conformance-fast test-sql-conformance-static test-reliability test-perf-rules test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
 	test-mcp test-bearer test-graphql test-grpc \
 	test-edifact test-soap test-openapi test-api-portal-live \
@@ -483,9 +483,10 @@ pyright-all:
 	@echo "Running Python type checks on every first-party tree from $(CURDIR)/code"
 	cd $(CURDIR)/code && NODE_OPTIONS=--max-old-space-size=$(Zato_Pyright_Heap_MB) PYRIGHT_PYTHON_IGNORE_WARNINGS=1 $(PYRIGHT) --project pyright-all.json --threads $(Zato_Pyright_Threads) $(Zato_Pyright_All_Paths)
 
-test-lint: ## Static analysis only - no test is executed. The first stage of test-all.
+test-lint: ## Static analysis only - nothing of the product is executed. The first stage of test-all.
 	$(Zato_Log_Reset)
 	$(MAKE) ruff pyright format clippy $(Zato_Log)
+	$(foreach target,$(Zato_Static_Linked_Targets),$(MAKE) $(target) $(Zato_Log) &&) true
 
 test-static-python: ## Every Python static check - ruff, and pyright over every first-party tree.
 	$(Zato_Log_Reset)
@@ -727,7 +728,7 @@ Zato_Test_HA_PostgreSQL_Resume_File := $(CURDIR)/code/tests/.test-ha-postgresql-
 Zato_Test_HA_Stepwise                = $(if $(RESTART),--sw-reset,--sw)
 
 # Runs the HA suites in $(1) in order without their soak tests, which test-soak runs after every other target,
-# resuming from the suite named in the resume file $(2).
+# and without their reliability modules, which test-reliability runs, resuming from the suite named in the resume file $(2).
 define Zato_Test_HA_Suites
 	@if [ -n "$(RESTART)" ]; then rm -f $(2); fi
 	$(Zato_Log_Reset)
@@ -745,6 +746,7 @@ define Zato_Test_HA_Suites
 		fi; \
 		echo "$$suite" > $(2); \
 		ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/$$suite/ \
+			--ignore=$(CURDIR)/code/tests/python/zato-server/$$suite/$(Zato_Test_HA_Reliability_Module) \
 			$(Zato_Test_Without_Soak) -v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_$$suite -W ignore::DeprecationWarning \
 			$(Zato_Test_HA_Stepwise) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
 	done; \
@@ -756,8 +758,9 @@ test-ha-core: rust-target-prune ## The Rust tests of the active-standby node - t
 	$(LOAD_CARGO_ENV) && cargo test --manifest-path $(ZATO_RUST)/zato_ha_core/Cargo.toml $(PYTEST_ARGS) $(Zato_Log)
 
 test-ha: ## Active-standby pair under the lease referee - the SQLite and the PostgreSQL targets, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
-	$(MAKE) test-durability-fast
+	$(MAKE) test-sql-conformance-fast
 	$(call Zato_Test_Walk,$(Zato_Test_HA),$(Zato_Test_HA_Resume_File))
+	$(foreach target,$(Zato_HA_Linked_Targets),$(MAKE) $(target) &&) true
 
 test-ha-sqlite: ## Active-standby pair on SQLite - the pair, Kubernetes and control-plane suites, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(call Zato_Test_HA_Suites,$(Zato_Test_HA_SQLite),$(Zato_Test_HA_SQLite_Resume_File))
@@ -810,7 +813,7 @@ Zato_Test_Resolver_Library := $(Zato_Test_Resolver_Dir)/resolver.so
 
 test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing delivery.
 	$(Zato_Log_Reset)
-	$(MAKE) test-durability-fast $(Zato_Log)
+	$(MAKE) test-sql-conformance-fast $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
 		$(CURDIR)/code/tests/python/zato-common/rabbitmq_/ \
@@ -1101,79 +1104,103 @@ test-pubsub-exactly-once: ## Exactly-once delivery of pub/sub - the backend, a s
 	$(foreach step,$(Zato_Test_Exactly_Once_Steps),$(call Zato_Test_Exactly_Once_Step,$(step))) \
 	rm -f $(Zato_Test_Exactly_Once_Resume_File)
 
-# The suites of durability - the static scans, the settings of every engine, the acknowledgment of each write,
-# a loss of power to a single server and to each pair.
-Zato_Test_Durability_Dir := $(CURDIR)/code/tests/python/zato-common/durability
+# The suites of SQL conformance - the static scans, the settings of every engine and the acknowledgment of each write.
+Zato_Test_SQL_Conformance_Dir := $(CURDIR)/code/tests/python/zato-common/sql_conformance
 
-Zato_Test_Durability_Plain  := -m pytest -W ignore::DeprecationWarning
-Zato_Test_Durability_Gevent := -m gevent.monkey --module pytest -W "ignore:This process:DeprecationWarning"
+# The suites of reliability - a loss of power to a single server and to each pair.
+Zato_Test_Reliability_Dir := $(CURDIR)/code/tests/python/zato-common/reliability
 
-Zato_Test_Durability_Tests_static        := $(Zato_Test_Durability_Dir)/static/ \
-	$(CURDIR)/code/tests/python/zato-server/ha_postgresql_kubernetes/test_manifest_durability.py
-Zato_Test_Durability_Tests_engines       := $(Zato_Test_Durability_Dir)/engines/
-Zato_Test_Durability_Tests_writers       := $(Zato_Test_Durability_Dir)/writers/
-Zato_Test_Durability_Tests_perf-gate     := $(Zato_Test_Durability_Dir)/perf_gate/
-Zato_Test_Durability_Tests_power-loss    := $(Zato_Test_Durability_Dir)/power_loss/
-Zato_Test_Durability_Tests_ha-sqlite     := $(CURDIR)/code/tests/python/zato-server/ha_sqlite/test_durability.py
-Zato_Test_Durability_Tests_ha-postgresql := $(CURDIR)/code/tests/python/zato-server/ha_postgresql/test_durability.py
+# The module of each pair suite with its reliability tests, which test-reliability runs and the HA targets leave out
+Zato_Test_HA_Reliability_Module := test_reliability.py
 
-Zato_Test_Durability_Runner_static        := $(Zato_Test_Durability_Plain)
-Zato_Test_Durability_Runner_engines       := $(Zato_Test_Durability_Plain)
-Zato_Test_Durability_Runner_writers       := $(Zato_Test_Durability_Gevent)
-Zato_Test_Durability_Runner_perf-gate     := $(Zato_Test_Durability_Plain)
-Zato_Test_Durability_Runner_power-loss    := $(Zato_Test_Durability_Plain)
-Zato_Test_Durability_Runner_ha-sqlite     := $(Zato_Test_Durability_Plain)
-Zato_Test_Durability_Runner_ha-postgresql := $(Zato_Test_Durability_Plain)
+Zato_Test_Step_Plain  := -m pytest -W ignore::DeprecationWarning
+Zato_Test_Step_Gevent := -m gevent.monkey --module pytest -W "ignore:This process:DeprecationWarning"
 
-# The steps in the order they run, the step that the target is currently on, and the pytest option that resumes
-# each step from the test that failed or was interrupted, or starts it over under RESTART.
-Zato_Test_Durability_Steps       := static engines writers perf-gate power-loss ha-sqlite ha-postgresql
-Zato_Test_Durability_Fast_Steps  := static engines
-Zato_Test_Durability_Resume_File := $(CURDIR)/code/tests/.test-durability-resume
-Zato_Test_Durability_Stepwise     = $(if $(RESTART),--sw-reset,--sw)
+Zato_Test_Step_Tests_sql-conformance-static    := $(Zato_Test_SQL_Conformance_Dir)/static/ \
+	$(CURDIR)/code/tests/python/zato-server/ha_postgresql_kubernetes/test_manifest_synchronous_standby.py
+Zato_Test_Step_Tests_sql-conformance-engines   := $(Zato_Test_SQL_Conformance_Dir)/engines/
+Zato_Test_Step_Tests_sql-conformance-writers   := $(Zato_Test_SQL_Conformance_Dir)/writers/
+Zato_Test_Step_Tests_reliability-power-loss    := $(Zato_Test_Reliability_Dir)/power_loss/
+Zato_Test_Step_Tests_reliability-ha-sqlite     := \
+	$(CURDIR)/code/tests/python/zato-server/ha_sqlite/$(Zato_Test_HA_Reliability_Module)
+Zato_Test_Step_Tests_reliability-ha-postgresql := \
+	$(CURDIR)/code/tests/python/zato-server/ha_postgresql/$(Zato_Test_HA_Reliability_Module)
+
+Zato_Test_Step_Runner_sql-conformance-static    := $(Zato_Test_Step_Plain)
+Zato_Test_Step_Runner_sql-conformance-engines   := $(Zato_Test_Step_Plain)
+Zato_Test_Step_Runner_sql-conformance-writers   := $(Zato_Test_Step_Gevent)
+Zato_Test_Step_Runner_reliability-power-loss    := $(Zato_Test_Step_Plain)
+Zato_Test_Step_Runner_reliability-ha-sqlite     := $(Zato_Test_Step_Plain)
+Zato_Test_Step_Runner_reliability-ha-postgresql := $(Zato_Test_Step_Plain)
+
+# The steps of each target in the order they run, the step that each target is currently on, and the pytest option
+# that resumes each step from the test that failed or was interrupted, or starts it over under RESTART.
+Zato_Test_SQL_Conformance_Steps       := sql-conformance-static sql-conformance-engines sql-conformance-writers
+Zato_Test_SQL_Conformance_Fast_Steps  := sql-conformance-static sql-conformance-engines
+Zato_Test_SQL_Conformance_Resume_File := $(CURDIR)/code/tests/.test-sql-conformance-resume
+Zato_Test_Reliability_Steps           := reliability-power-loss reliability-ha-sqlite reliability-ha-postgresql
+Zato_Test_Reliability_Resume_File     := $(CURDIR)/code/tests/.test-reliability-resume
+Zato_Test_Step_Stepwise                = $(if $(RESTART),--sw-reset,--sw)
 
 # Runs the step $(1) without resuming, for the targets that run a step before their own suites.
-Zato_Test_Durability_Run_Once = \
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) $(Zato_Test_Durability_Runner_$(1)) $(Zato_Test_Durability_Tests_$(1)) \
-		-v -s --tb=short -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_durability_$(1) \
+Zato_Test_Step_Run_Once = \
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) $(Zato_Test_Step_Runner_$(1)) $(Zato_Test_Step_Tests_$(1)) \
+		-v -s --tb=short -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_$(subst -,_,$(1)) \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?;
 
-# Runs the step $(1), unless the walk is still looking for the step it resumes from.
-Zato_Test_Durability_Step = \
+# Runs the step $(1) of the walk with the resume file $(2), unless the walk is still looking for the step it resumes from.
+Zato_Test_Step = \
 	if [ -z "$$resume" ] || [ "$$resume" = "$(1)" ]; then \
 		resume=''; \
-		echo "$(1)" > $(Zato_Test_Durability_Resume_File); \
+		echo "$(1)" > $(2); \
 		echo ">>> $(1)" $(Zato_Log); \
-		ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) $(Zato_Test_Durability_Runner_$(1)) $(Zato_Test_Durability_Tests_$(1)) \
-			-v -s --tb=short -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_durability_$(1) \
-			$(Zato_Test_Durability_Stepwise) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
+		ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) $(Zato_Test_Step_Runner_$(1)) $(Zato_Test_Step_Tests_$(1)) \
+			-v -s --tb=short -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_$(subst -,_,$(1)) \
+			$(Zato_Test_Step_Stepwise) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
 	fi;
 
-# The durability targets of the repositories linked to this installation, which each makefile in links/ may extend
-# and which test-durability runs after its own steps.
-Zato_Durability_Linked_Targets :=
-
-test-durability: ## Durability - static scans, engine settings, write acknowledgments, the settings gate of performance figures, loss of power to a single server and to each pair, resuming from the step that last failed or was interrupted. RESTART=1 to start from scratch.
-	@if [ -n "$(RESTART)" ]; then rm -f $(Zato_Test_Durability_Resume_File); fi
+# Walks the steps $(1) in order, resuming from the step named in the resume file $(2).
+define Zato_Test_Step_Walk
+	@if [ -n "$(RESTART)" ]; then rm -f $(2); fi
 	$(Zato_Log_Reset)
 	$(MAKE) ha-node-build $(Zato_Log)
 	$(MAKE) scheduler-build $(Zato_Log)
 	@resume=''; \
-	if [ -f $(Zato_Test_Durability_Resume_File) ]; then \
-		resume=$$(cat $(Zato_Test_Durability_Resume_File)); \
+	if [ -f $(2) ]; then \
+		resume=$$(cat $(2)); \
 		echo ">>> Resuming from $$resume" $(Zato_Log); \
 	fi; \
-	$(foreach step,$(Zato_Test_Durability_Steps),$(call Zato_Test_Durability_Step,$(step))) \
-	rm -f $(Zato_Test_Durability_Resume_File)
-	$(foreach target,$(Zato_Durability_Linked_Targets),$(MAKE) $(target) $(Zato_Log) &&) true
+	$(foreach step,$(1),$(call Zato_Test_Step,$(step),$(2))) \
+	rm -f $(2)
+endef
 
-test-durability-fast: ## The static scans and the engine settings of durability, which test-pubsub and test-ha run first.
-	$(Zato_Log_Reset)
-	@$(foreach step,$(Zato_Test_Durability_Fast_Steps),$(call Zato_Test_Durability_Run_Once,$(step)))
+# The targets of the repositories linked to this installation, which each makefile in links/ may extend - test-reliability,
+# test-ha, test-lint and test-perf each run theirs after their own suites.
+Zato_Reliability_Linked_Targets :=
+Zato_HA_Linked_Targets          :=
+Zato_Static_Linked_Targets      :=
+Zato_Perf_Linked_Targets        :=
 
-test-durability-static: ## The static scans of durability.
+test-sql-conformance: ## SQL conformance - static scans, engine settings and write acknowledgments, resuming from the step that last failed or was interrupted. RESTART=1 to start from scratch.
+	$(call Zato_Test_Step_Walk,$(Zato_Test_SQL_Conformance_Steps),$(Zato_Test_SQL_Conformance_Resume_File))
+
+test-sql-conformance-fast: ## The static scans and the engine settings of SQL conformance, which test-pubsub and test-ha run first.
 	$(Zato_Log_Reset)
-	@$(call Zato_Test_Durability_Run_Once,static)
+	@$(foreach step,$(Zato_Test_SQL_Conformance_Fast_Steps),$(call Zato_Test_Step_Run_Once,$(step)))
+
+test-sql-conformance-static: ## The static scans of SQL conformance.
+	$(Zato_Log_Reset)
+	@$(call Zato_Test_Step_Run_Once,sql-conformance-static)
+
+test-reliability: ## Reliability - loss of power to a single server and to each pair, resuming from the step that last failed or was interrupted. RESTART=1 to start from scratch.
+	$(call Zato_Test_Step_Walk,$(Zato_Test_Reliability_Steps),$(Zato_Test_Reliability_Resume_File))
+	$(foreach target,$(Zato_Reliability_Linked_Targets),$(MAKE) $(target) $(Zato_Log) &&) true
+
+test-perf-rules: ## The settings gate of performance figures and the scan of every performance suite.
+	$(Zato_Log_Reset)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-common/perf_rules/ \
+		-v -s --tb=short -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_perf_rules -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 # discord_disabled - these enmasse suites run in test-discord only
 Zato_Test_Enmasse_Disabled := \
@@ -1968,7 +1995,7 @@ Zato_Test_Live := \
 	test-mcp test-logging test-graphql test-grpc test-aws test-pubsub test-queue-delivery test-mongodb test-es \
 	test-sql test-oracle-db test-mssql-db test-microsoft-cloud test-salesforce test-bearer \
 	test-ibm-mq test-kafka test-sdk test-hl7 test-ccda test-documents test-llm test-rule-engine test-enmasse test-audit-export \
-	test-api-portal-live test-file-transfer
+	test-api-portal-live test-file-transfer test-perf-rules
 
 # The whole browser and dashboard suite
 # Zato_Test_Browser := test-ui
@@ -1984,7 +2011,7 @@ Zato_Test_Fuzz := test-rest-fuzz test-server-fuzz
 
 Zato_Test_All := \
 	$(Zato_Test_Static) $(Zato_Test_Offline) $(Zato_Test_Toolchain) \
-	$(Zato_Test_Live) test-durability $(Zato_Test_Browser) $(Zato_Test_Heavy) test-soak
+	$(Zato_Test_Live) test-sql-conformance test-reliability $(Zato_Test_Browser) $(Zato_Test_Heavy) test-soak
 
 # Real functionality only - no static checks, no fuzzing and no mutation testing
 Zato_Test_No_Static := $(filter-out $(Zato_Test_Static) $(Zato_Test_Fuzz),$(Zato_Test_All))
@@ -2043,6 +2070,7 @@ test-clean: ## Forget where every test target stopped, so that each next run sta
 	rm -rf $(CURDIR)/code/tests/.pytest_cache_*
 
 test-perf: $(Zato_Test_Perf) ## Every performance suite - not part of test-all.
+	$(foreach target,$(Zato_Perf_Linked_Targets),$(MAKE) $(target) &&) true
 
 test: test-all ## Alias for test-all.
 

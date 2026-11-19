@@ -52,7 +52,7 @@ class ModuleCtx:
     # The marker of the tests that run after every other test of their run
     Soak_Marker = 'soak'
 
-    # The directory on a disk under which the databases of the tests are kept, as zato.common.test.durability.disk
+    # The directory on a disk under which the databases of the tests are kept, as zato.common.test.sql_conformance.disk
     # defines it, and the directory in it with the temporary directories of a run
     Env_Disk_Dir = 'Zato_Test_Disk_Dir'
     Default_Disk_Dir = os.path.join(os.path.expanduser('~'), '.cache', 'zato-test')

@@ -26,12 +26,12 @@ import pg8000.dbapi
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.db_env.database_env import DatabaseEnv
-from zato.common.test.durability.disk import get_disk_dir, verify_disk_dir
 from zato.common.test.pubsub_bouncer import Bouncer_Port, start_bouncer
 from zato.common.test.pubsub_certs import Chain_Plain, generate_certificates
 from zato.common.test.pubsub_network import add_round_trip_time
 from zato.common.test.pubsub_profile import get_host_name, get_profile_settings, Instance_Port, Managed_Profiles, \
      session_dns, write_roles_script
+from zato.common.test.sql_conformance.disk import get_disk_dir, verify_disk_dir
 
 # ################################################################################################################################
 # ################################################################################################################################
