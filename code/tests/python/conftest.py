@@ -184,21 +184,6 @@ def no_thread_outlives_its_test() -> 'nonegen':
 
     remaining_names:'strlist' = sorted((threads_after - threads_before).elements())
 
-    if remaining_names:
-        import gc
-        from smbprotocol.connection import Connection
-        print('DIAG before', sorted(name for name in threads_before.elements() if name.startswith('msg_')))
-        print('DIAG after', sorted(name for name in threads_after.elements() if name.startswith('msg_')))
-        caches = []
-        for obj in gc.get_objects():
-            if type(obj).__name__ in ('SMBClient', 'ShareClient'):
-                caches.append((f'{type(obj).__name__}:{getattr(obj, "name", getattr(obj, "username", "?"))}:{id(obj)}', obj.connection_cache))
-        for thread in threading.enumerate():
-            if thread.name.startswith('msg_'):
-                conn = thread._target.__self__
-                owners = [label for label, cache in caches if any(value is conn for value in cache.values())]
-                print('DIAG conn', thread.name, id(conn), conn.transport.connected, owners)
-
     assert remaining_names == []
 
 # ################################################################################################################################
