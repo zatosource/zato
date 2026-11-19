@@ -112,8 +112,12 @@ _database_env_names = (
     FenceCtx.Env_Generation_File,
 )
 
-# The variables that configure the monitoring of the databases of a server, which the test process passes on to it
-_monitoring_env_names = (SQLite_Env_Stats_Dir,)
+# The variable with which Python writes the perf map of its functions, so that the stacks that perf records name them
+_python_perf_support_env_name = 'PYTHONPERFSUPPORT'
+
+# The variables that configure the monitoring of the databases and the profiling of a server, which the test process
+# passes on to it
+_monitoring_env_names = (SQLite_Env_Stats_Dir, _python_perf_support_env_name)
 
 # The logs that are copied out of an environment before it is torn down
 _server_log_file_name        = 'server.log'
