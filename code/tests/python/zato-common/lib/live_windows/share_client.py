@@ -172,6 +172,17 @@ class ShareClient:
 
 # ################################################################################################################################
 
+    def remove(self, share:'str', path:'str') -> 'None':
+        """ Removes a file, and does nothing if there is no such file.
+        """
+        if self.exists(share, path):
+            unc = self.unc(share, path)
+            options = self._session_options()
+
+            smbclient.remove(unc, **options)
+
+# ################################################################################################################################
+
     def listdir(self, share:'str', path:'str'='') -> 'strlist':
         unc = self.unc(share, path)
         options = self._session_options()

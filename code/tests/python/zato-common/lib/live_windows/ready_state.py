@@ -56,8 +56,8 @@ class ModuleCtx:
 # ################################################################################################################################
 
 def _source_hash() -> 'str':
-    """ Returns a hash of everything that goes into a ready state - the image, the resources of the guest, the agent
-    and the layout.
+    """ Returns a hash of everything that goes into a ready state - the image, the resources of the guest, the agent,
+    the script that saves the state and the layout.
     """
     layout = layout_command()
     layout_document = json.dumps(layout, sort_keys=True)
@@ -66,7 +66,10 @@ def _source_hash() -> 'str':
     digest.update(Image.Name.encode('utf8'))
     digest.update(Guest.RAM_Size.encode('utf8'))
     digest.update(Guest.CPU_Cores.encode('utf8'))
+    digest.update(Guest.CPU_Flags.encode('utf8'))
+    digest.update(Guest.Hyper_V.encode('utf8'))
     digest.update(Paths.Agent_Path.read_bytes())
+    digest.update(ModuleCtx.Save_Script.read_bytes())
     digest.update(layout_document.encode('utf8'))
 
     out = digest.hexdigest()

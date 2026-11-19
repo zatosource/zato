@@ -18,7 +18,7 @@ from live_windows.share_client import ShareClient
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, dictlist, callable_
+    from zato.common.typing_ import anydict, callable_, dictlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,10 +54,25 @@ class AgentClient:
 
 # ################################################################################################################################
 
+    def _remove_runtime_files(self) -> 'None':
+        """ Removes the files that an agent which ran on the same disk before left in the control share, e.g. one
+        whose guest was removed while its events file was being written, so that the new agent starts with none.
+        """
+        for path in Control.Events, Control.Heartbeat, Control.Agent_Error:
+            self.client.remove(Control.Share, path)
+
+        if self.client.exists(Control.Share, Control.Commands_Dir):
+            for name in self.client.listdir(Control.Share, Control.Commands_Dir):
+                self.client.remove(Control.Share, f'{Control.Commands_Dir}\\{name}')
+
+# ################################################################################################################################
+
     def upload_agent(self) -> 'None':
         """ Uploads the agent script and then the file that tells the bootstrap to start it.
         """
         script = Paths.Agent_Path.read_bytes()
+
+        self._remove_runtime_files()
 
         self.client.makedirs(Control.Share, Control.Agent_Dir)
         self.client.write_bytes(Control.Share, Control.Agent_Script, script)

@@ -86,11 +86,9 @@ def main() -> 'None':
 
     client = QMPClient(socket_path)
 
-    # The guest stops first, so that the saved state is the state of one moment ..
-    _ = client.call('stop')
-
-    # .. and its memory and devices are written to the file. QEMU flushes the disk before the migration completes,
-    # and the guest stays stopped until the container is removed.
+    # The memory and devices of the running guest are written to the file. QEMU stops the guest and flushes the disk
+    # before the migration completes, and the guest stays stopped until the container is removed. The guest is not
+    # stopped beforehand, because QEMU saves its run state too, and a guest saved as paused resumes as paused.
     _ = client.call('migrate', uri=uri)
 
     start = monotonic()

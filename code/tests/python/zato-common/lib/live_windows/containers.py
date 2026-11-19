@@ -128,6 +128,8 @@ def _run_container(name:'str', version:'str', mounts:'strlist', arguments:'str')
         '-e', f'DISK_SIZE={Guest.Disk_Size}',
         '-e', f'RAM_SIZE={Guest.RAM_Size}',
         '-e', f'CPU_CORES={Guest.CPU_Cores}',
+        '-e', f'CPU_FLAGS={Guest.CPU_Flags}',
+        '-e', f'HV={Guest.Hyper_V}',
         '-e', 'SAMBA=N',
         '-e', f'ARGUMENTS={arguments}',
         *mounts,

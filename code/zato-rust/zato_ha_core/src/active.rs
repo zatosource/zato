@@ -43,6 +43,9 @@ const CHECKPOINT_WAL_SIZE: u64 = 64 * 1024 * 1024;
 /// How long the node's own connections wait for the write lock of the Zato database.
 const LOCK_BUSY_TIMEOUT: Duration = Duration::from_secs(5);
 
+/// How long the node's own connections sleep between two attempts to take the write lock.
+const LOCK_RETRY_INTERVAL: Duration = Duration::from_millis(1);
+
 /// The connections the node keeps open to the Zato database while it is active.
 ///
 /// Keeping a connection open means no connection of the Zato server is ever the last one to close,
@@ -55,13 +58,30 @@ struct DatabaseConnections {
     checkpoint: Connection,
 }
 
+/// Returns a busy handler that tries to take the write lock again at a short fixed interval, until `LOCK_BUSY_TIMEOUT` elapses.
+///
+/// The busy handler of SQLite sleeps longer after each attempt, up to a tenth of a second, while the writers
+/// of the Zato server commit one after another, so it takes the lock only once the writes pause. An attempt
+/// at a short fixed interval takes it in one of the gaps between their transactions.
+fn lock_retry() -> impl FnMut(i32) -> bool + Send + 'static {
+    let mut first_attempt = Instant::now();
+    move |attempts| {
+        // Each locking event counts its attempts from zero, and its wait starts with the first of them.
+        if attempts == 0 {
+            first_attempt = Instant::now();
+        }
+        thread::sleep(LOCK_RETRY_INTERVAL);
+        first_attempt.elapsed() < LOCK_BUSY_TIMEOUT
+    }
+}
+
 /// Opens a connection that never checkpoints by itself.
 fn open_connection(path: &Path) -> Result<Connection, Error> {
-    let connection = Connection::open(path).map_err(Error::other)?;
+    let mut connection = Connection::open(path).map_err(Error::other)?;
     let _ = connection
         .set_db_config(DbConfig::SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE, true)
         .map_err(Error::other)?;
-    connection.busy_timeout(LOCK_BUSY_TIMEOUT).map_err(Error::other)?;
+    connection.busy_handler(Some(lock_retry())).map_err(Error::other)?;
     let _: String = connection
         .query_row("pragma journal_mode=wal", [], |row| row.get(0))
         .map_err(Error::other)?;
@@ -1129,6 +1149,9 @@ mod tests {
     /// How many small transactions follow the checkpoint of the long log.
     const SMALL_WRITES: usize = 5;
 
+    /// How long the shipper may take to decide on a checkpoint that it does not take the write lock for.
+    const NO_LOCK_WAIT: Duration = Duration::from_secs(1);
+
     /// How long a test lets the shipper run after each write.
     const SHIPPER_ITERATIONS: Duration = Duration::from_millis(200);
 
@@ -1421,6 +1444,40 @@ mod tests {
 
         shared.announce_stop();
         shipper.join().unwrap();
+    }
+
+    #[test]
+    fn a_log_whose_every_frame_was_checkpointed_leaves_the_write_lock_to_the_writers() {
+        let certificates = Certificates::issue();
+        let dir = tempfile::tempdir().unwrap();
+        let database_path = dir.path().join(DATABASE_FILE_NAME);
+        let connection = Connection::open(&database_path).unwrap();
+        connection
+            .execute_batch("pragma journal_mode=wal; pragma wal_autocheckpoint=0; create table message (body blob); begin;")
+            .unwrap();
+        let body = vec![0_u8; BULK_ROW_SIZE];
+        for _ in 0..LONG_LOG_ROWS {
+            let _ = connection.execute("insert into message (body) values (?1)", [&body]).unwrap();
+        }
+        connection.execute_batch("commit").unwrap();
+
+        // Nothing listens on the port of the standby, so the node stays active alone and checkpoints without a session.
+        let port = TcpListener::bind((LOOPBACK, 0)).unwrap().local_addr().unwrap().port();
+        let shared = active_node(dir.path(), &certificates, port);
+        let mut shipper = Shipper::new(Arc::clone(&shared));
+
+        // The first iteration copies every frame of the long log into the database file ..
+        shipper.iteration().unwrap();
+        assert_eq!(shipper.database.checkpointed, shipper.database.end());
+
+        // .. and while a writer holds the write lock, the next decision does not wait for it.
+        connection.execute_batch("begin immediate").unwrap();
+        let started = Instant::now();
+        shipper.checkpoint_if_due().unwrap();
+        let elapsed = started.elapsed();
+        connection.execute_batch("rollback").unwrap();
+
+        assert!(elapsed < NO_LOCK_WAIT, "The checkpoint waited {elapsed:?} for the write lock");
     }
 
     /// Commits and waits at the barrier until the node is no longer active alone.

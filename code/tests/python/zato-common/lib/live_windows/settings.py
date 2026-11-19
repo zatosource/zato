@@ -66,6 +66,13 @@ class Guest:
     RAM_Size  = '4G'
     CPU_Cores = '2'
 
+    # The CPU features that QEMU adds after those of the image. QEMU does not save the state of a guest
+    # whose CPU has an invariant TSC or passes every Hyper-V enlightenment of the host through, so the guests
+    # run without an invariant TSC, with the Hyper-V enlightenments of the image turned off and an explicit set in their place.
+    CPU_Flags = '-invtsc,hv-relaxed,hv-vapic,hv-spinlocks=0x1fff,hv-vpindex,hv-runtime,hv-time,hv-synic,hv-stimer,' \
+        'hv-frequencies,hv-tlbflush,hv-ipi'
+    Hyper_V   = 'N'
+
     # The installation option of Windows Server
     Edition = 'core'
 
