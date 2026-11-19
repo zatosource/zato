@@ -28,11 +28,13 @@ from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.audit_events import collect_audit_events, drop_audit_events, prepare_audit_payloads
 from zato.common.pubsub.sql.config import get_commit_max_messages, get_commits_in_flight, get_urgent_commits_in_flight
+from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID
 from zato.common.pubsub.sql.fenced_ack import check_fenced, delete_fenced, PubSubAckConflict
 from zato.common.pubsub.sql.payloads import drop_payloads, get_chunks, get_message_ids
 from zato.common.pubsub.sql.pending import PendingAck, PendingAtomic, PendingAttempts, PendingPublication, reset_item
 from zato.common.pubsub.sql.pull import lease_messages
 from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
+from zato.common.pubsub.sql.sqlite_write import write_items_sqlite
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,13 +75,6 @@ _max_conflict_retries = 5
 
 # From how many delivery rows on, a commit writes them with COPY rather than with multi-row inserts on PostgreSQL.
 _copy_min_delivery_rows = 200
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class PubSubDuplicateMsgID(Exception):
-    """ Raised to the publisher of a message whose identifier belongs to a different message that exists already.
-    """
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -327,35 +322,41 @@ class PubSubWriter:
 
         with engine.begin() as connection:
 
-            if publications:
-                self._insert_publications(connection, publications)
+            # On SQLite, the items are written in Rust with the GIL released, in the same order as below ..
+            if connection.dialect.name == Type_SQLite:
+                write_items_sqlite(connection, publications, acks, atomics, attempts_list, leases)
 
-            if acks:
-                self._delete_acks(connection, acks, ack_by_message_id)
+            else:
 
-            # Each fenced acknowledgement commits with its publications or not at all, without failing the others ..
-            for atomic in atomics:
-                self._write_atomic(connection, atomic, ack_by_message_id)
+                if publications:
+                    self._insert_publications(connection, publications)
 
-            # .. a push attempt is recorded only for a delivery that this transaction has not acknowledged ..
-            for attempts in attempts_list:
-                parameters = {'attempt_delivery_ids': attempts.delivery_ids}
-                for row in _record_attempts_statement_plain.execute(connection, parameters):
-                    attempts.attempts[row.id] = row.attempt
+                if acks:
+                    self._delete_acks(connection, acks, ack_by_message_id)
 
-            # .. a pull leases nothing that this transaction has acknowledged already ..
-            for lease in leases:
-                rows, attempts = lease_messages(
-                    connection, lease.sub_key, lease.max_messages, lease.max_len, lease.now_ms, lease.leased_until_ms)
-                lease.rows = rows
-                lease.attempts = attempts
-                lease.on_leased(lease)
+                # Each fenced acknowledgement commits with its publications or not at all, without failing the others ..
+                for atomic in atomics:
+                    self._write_atomic(connection, atomic, ack_by_message_id)
 
-            # .. the payloads are dropped after all the writes of delivery rows. Dropping one holds the delivery rows
-            # of the other subscribers of its message until the commit, so a transaction that locked a delivery row
-            # after a drop could wait for one that waits for it in turn ..
-            if ack_by_message_id:
-                self._drop_payloads(connection, ack_by_message_id)
+                # .. a push attempt is recorded only for a delivery that this transaction has not acknowledged ..
+                for attempts in attempts_list:
+                    parameters = {'attempt_delivery_ids': attempts.delivery_ids}
+                    for row in _record_attempts_statement_plain.execute(connection, parameters):
+                        attempts.attempts[row.id] = row.attempt
+
+                # .. a pull leases nothing that this transaction has acknowledged already ..
+                for lease in leases:
+                    rows, attempts = lease_messages(
+                        connection, lease.sub_key, lease.max_messages, lease.max_len, lease.now_ms, lease.leased_until_ms)
+                    lease.rows = rows
+                    lease.attempts = attempts
+                    lease.on_leased(lease)
+
+                # .. the payloads are dropped after all the writes of delivery rows. Dropping one holds the delivery rows
+                # of the other subscribers of its message until the commit, so a transaction that locked a delivery row
+                # after a drop could wait for one that waits for it in turn ..
+                if ack_by_message_id:
+                    self._drop_payloads(connection, ack_by_message_id)
 
             # .. and the audit events of what was written commit with it.
             out = collect_audit_events(publications, atomics, leases)

@@ -44,7 +44,6 @@ fn is_decimal_point(byte: u8, previous: Option<&u8>, next: Option<&u8>) -> bool 
 
 /// The words of one payload, in the order of their first occurrence.
 struct Extraction {
-
     /// The words already added, in lower case.
     seen: HashSet<String>,
 
@@ -56,7 +55,6 @@ struct Extraction {
 }
 
 impl Extraction {
-
     /// Adds one word, unless it is too short for a trigram index or was already added.
     fn add_word(&mut self, word: &str) {
         let is_ascii = word.is_ascii();

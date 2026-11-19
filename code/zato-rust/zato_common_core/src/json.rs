@@ -13,7 +13,6 @@ use serde_json::value::RawValue;
 
 /// The value of one field of a pulled message's meta or of a push envelope.
 enum FieldValue {
-
     /// A field without a value, such as a message without an expiration time.
     Null,
 
@@ -25,10 +24,8 @@ enum FieldValue {
 }
 
 impl FieldValue {
-
     /// Copies the value of one field.
     fn from_python(value: &Bound<'_, PyAny>) -> PyResult<Self> {
-
         if value.is_none() {
             return Ok(Self::Null);
         }
@@ -60,7 +57,6 @@ impl Serialize for FieldValue {
 struct Fields(Vec<(String, FieldValue)>);
 
 impl Fields {
-
     /// Copies the fields of a flat dict whose keys are strings.
     fn from_python(dict: &Bound<'_, PyDict>) -> PyResult<Self> {
         let mut fields = Vec::with_capacity(dict.len());
@@ -87,7 +83,6 @@ struct Payload(String);
 
 impl Serialize for Payload {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-
         // A payload that parses as JSON is written as it stands, without being decoded into values
         match serde_json::from_str::<&RawValue>(&self.0) {
             Ok(raw) => raw.serialize(serializer),
@@ -98,7 +93,6 @@ impl Serialize for Payload {
 
 /// One message of a pull response.
 struct PulledMessage {
-
     /// The payload of the message.
     data: Payload,
 
@@ -107,7 +101,6 @@ struct PulledMessage {
 }
 
 impl PulledMessage {
-
     /// Copies a message formatted by the backend, a dict with the payload text under `data` and the meta fields under `meta`.
     fn from_python(message: &Bound<'_, PyAny>) -> PyResult<Self> {
         let message = message.cast::<PyDict>()?;
@@ -133,7 +126,6 @@ impl Serialize for PulledMessage {
 
 /// The response of a pull.
 struct PullResponse {
-
     /// The correlation ID of the request.
     cid: String,
 
@@ -162,7 +154,11 @@ impl Serialize for PullResponse {
 #[pyfunction]
 pub fn encode_pull_response(py: Python<'_>, cid: String, status: String, messages: &Bound<'_, PyList>) -> PyResult<String> {
     let messages: PyResult<Vec<PulledMessage>> = messages.iter().map(|message| PulledMessage::from_python(&message)).collect();
-    let response = PullResponse { cid, messages: messages?, status };
+    let response = PullResponse {
+        cid,
+        messages: messages?,
+        status,
+    };
 
     // The payloads are validated and the text is written without the GIL, so the other threads of the interpreter run in the meantime
     let encoded = py.detach(|| serde_json::to_string(&response));

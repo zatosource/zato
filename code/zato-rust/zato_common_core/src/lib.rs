@@ -9,6 +9,12 @@ pub mod json;
 /// Building of the messages that pulls of pub/sub hand out.
 pub mod pulled_messages;
 
+/// Pub/sub batches written into `SQLite` without the GIL.
+pub mod pubsub_write;
+
+/// The statements of pub/sub batches on `SQLite`.
+mod pubsub_write_sql;
+
 /// Extraction of the words of audit log payloads that the free-text search indexes.
 pub mod search_text;
 
@@ -22,6 +28,7 @@ use pyo3::prelude::*;
 fn zato_common_core(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<audit_insert::SqliteAuditWriter>()?;
     module.add_class::<pulled_messages::PulledMessageBuilder>()?;
+    module.add_class::<pubsub_write::SqlitePubSubWriter>()?;
     module.add_function(wrap_pyfunction!(json::encode_pull_response, module)?)?;
     module.add_function(wrap_pyfunction!(json::encode_push_envelope, module)?)?;
     module.add_function(wrap_pyfunction!(search_text::extract_search_text, module)?)?;

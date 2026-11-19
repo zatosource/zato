@@ -1,14 +1,14 @@
 //! The conversions of the audit writer against the values that the Python path stores.
 //!
 //! The tests cover the text of a time column, the compressed form of a payload,
-//! the digest of a payload and the capped text of an attribute value.
+//! the digest of a payload, the capped text of an attribute value and the comparison of the versions of `SQLite`.
 
 use std::fmt::Write as _;
 
 use blake2::digest::consts::U16;
 use blake2::{Blake2b, Digest};
 
-use super::{ATTR_FALSE, ATTR_TRUE, ATTR_VALUE_MAX_LEN, UtcTime, capped_attr_text, compress_text, payload_digest};
+use super::{ATTR_FALSE, ATTR_TRUE, ATTR_VALUE_MAX_LEN, UtcTime, capped_attr_text, check_library_version, compress_text, payload_digest};
 
 /// A text with characters outside of ASCII, whose length in characters differs from its length in bytes.
 const TEXT_NON_ASCII: &str = "Zamówienie dla Marii Johnson – 5,50 € Jürgen";
@@ -148,4 +148,24 @@ fn caps_a_text_outside_of_ascii_on_a_character_boundary() {
 #[test]
 fn leaves_a_short_attribute_text_as_it_is() {
     assert_eq!(capped_attr_text(TEXT_NON_ASCII), TEXT_NON_ASCII);
+}
+
+#[test]
+fn accepts_the_same_version_of_sqlite() {
+    assert!(check_library_version("3.45.1", "3.45.1").is_ok());
+}
+
+#[test]
+fn refuses_a_different_version_of_sqlite() {
+    let refused = check_library_version("3.45.1", "3.46.0");
+
+    assert_eq!(
+        refused,
+        Err("SQLite of the driver `3.45.1` differs from SQLite of the writer `3.46.0`".to_owned())
+    );
+}
+
+#[test]
+fn refuses_a_version_of_sqlite_that_differs_in_the_patch_level_alone() {
+    assert!(check_library_version("3.45.1", "3.45.10").is_err());
 }

@@ -52,7 +52,6 @@ const SQLITE_MODULE: &str = "sqlite3";
 /// A moment in UTC, as the event and body tables store it.
 #[derive(Clone)]
 struct UtcTime {
-
     /// The calendar year.
     year: i32,
 
@@ -76,7 +75,6 @@ struct UtcTime {
 }
 
 impl UtcTime {
-
     /// Returns the text that the column of a time holds, the format in which `SQLAlchemy` stores a datetime in `SQLite`.
     fn to_column_text(&self) -> String {
         let Self {
@@ -95,7 +93,6 @@ impl UtcTime {
 /// The value of one column of an event row.
 #[derive(Clone)]
 enum ColumnValue {
-
     /// A value that is bound as the Python driver binds it.
     Bound(Value),
 
@@ -120,10 +117,8 @@ impl ToSql for ColumnValue {
 
 /// Where the digest and the search text of the payload of an event come from.
 enum PayloadSource {
-
     /// Python computed both before the write, outside the lock of the database.
     Prepared {
-
         /// The digest of the payload, or none for an empty payload.
         digest: Option<String>,
 
@@ -137,7 +132,6 @@ enum PayloadSource {
 
 /// One row of the attribute table, without the id of its event.
 struct AttrRow {
-
     /// The name of the attribute.
     name: String,
 
@@ -150,7 +144,6 @@ struct AttrRow {
 
 /// One row of the body table, without the id and the time of its event.
 struct BodyRow {
-
     /// The kind of the body, e.g. a request, a response or an attachment.
     kind: String,
 
@@ -163,7 +156,6 @@ struct BodyRow {
 
 /// The values of one event of a batch, copied from its `PendingEvent`.
 struct EventInput {
-
     /// The values of the columns of the event row, in the order of the parameters of the insert.
     columns: Vec<ColumnValue>,
 
@@ -191,7 +183,6 @@ struct EventInput {
 
 /// A payload of a batch, stored once under its digest however many events have it.
 struct PayloadInput<'batch> {
-
     /// The text of the payload.
     data: &'batch str,
 
@@ -201,7 +192,6 @@ struct PayloadInput<'batch> {
 
 /// One column of the event table that the values of an event provide.
 struct EventColumn {
-
     /// The key of the column in the values of an event.
     name: Py<PyString>,
 
@@ -211,7 +201,6 @@ struct EventColumn {
 
 /// The statements that write the rows of a batch, built by Python from the metadata of the tables of the audit log.
 struct Statements {
-
     /// The insert of one event row, with the id of the row of its payload as the last parameter.
     insert_event: String,
 
@@ -233,7 +222,6 @@ struct Statements {
 
 /// Why the rows of a batch could not be written.
 enum WriteError {
-
     /// `SQLite` refused a statement.
     Sqlite(rusqlite::Error),
 
@@ -257,7 +245,6 @@ impl From<flate2::CompressError> for WriteError {
 }
 
 impl WriteError {
-
     /// Returns the exception of the Python driver that the error is raised as.
     fn into_py_err(self, py: Python<'_>) -> PyErr {
         let (class_name, message) = match self {
@@ -300,7 +287,6 @@ fn sqlite_error_class(error: &rusqlite::Error) -> &'static str {
 /// in the transaction that the given `sqlite3.Connection` holds open.
 #[pyclass(frozen, name = "SQLiteAuditWriter")]
 pub struct SqliteAuditWriter {
-
     /// The statements that write the rows of a batch.
     statements: Statements,
 
@@ -322,7 +308,6 @@ pub struct SqliteAuditWriter {
 
 #[pymethods]
 impl SqliteAuditWriter {
-
     /// Builds the writer from the statements and the event columns that Python derived from the metadata of the tables.
     #[new]
     fn new(py: Python<'_>, config: &Bound<'_, PyDict>) -> PyResult<Self> {
@@ -330,12 +315,7 @@ impl SqliteAuditWriter {
 
         // The handle is shared with the Python driver, so both must use the same SQLite library ..
         let python_version: String = config.get_item("sqlite_version")?.extract()?;
-        let library_version = rusqlite::version();
-
-        if python_version != library_version {
-            let message = format!("SQLite of the driver `{python_version}` differs from SQLite of the writer `{library_version}`");
-            return Err(PyRuntimeError::new_err(message));
-        }
+        check_library_version(&python_version, rusqlite::version()).map_err(PyRuntimeError::new_err)?;
 
         // .. and the columns arrive in the order of the parameters of the insert of an event row.
         let column_specs: Vec<(Bound<'_, PyString>, bool)> = config.get_item("event_columns")?.extract()?;
@@ -386,7 +366,13 @@ impl SqliteAuditWriter {
             events.push(self.extract_event(py, &pending)?);
         }
 
-        let sqlite = self.open_handle(connection)?;
+        let sqlite = open_handle(connection, self.connection_type.bind(py))?;
+
+        // The rows join the transaction of the caller, which must therefore be open already
+        if sqlite.is_autocommit() {
+            return Err(PyRuntimeError::new_err("The connection has no open transaction"));
+        }
+
         let statements = &self.statements;
 
         // Everything from here on is written without the GIL, so the other threads of the interpreter run in the meantime
@@ -405,52 +391,6 @@ impl SqliteAuditWriter {
 }
 
 impl SqliteAuditWriter {
-
-    /// Returns a connection over the handle of the Python driver's connection, which never closes the handle.
-    fn open_handle(&self, connection: &Bound<'_, PyAny>) -> PyResult<Connection> {
-        let py = connection.py();
-
-        // Only the C structure of the driver's own connections is known to hold the handle ..
-        if !connection.is_instance(self.connection_type.bind(py))? {
-            let type_name = connection.get_type().name()?;
-            return Err(PyTypeError::new_err(format!("Not a connection of the SQLite driver `{type_name}`")));
-        }
-
-        // .. right after the header of the object.
-        let field = connection.as_ptr().wrapping_add(1).cast::<*mut ffi::sqlite3>();
-
-        #[expect(unsafe_code, reason = "the SQLite driver of Python exposes no handle of its connections")]
-        // SAFETY: the object is an instance of `sqlite3.Connection`, whose C structure, `pysqlite_Connection`,
-        // begins with `PyObject_HEAD` followed by the `sqlite3 *db` field, which is aligned as a pointer, and the GIL is held,
-        // so the driver is not changing the field while it is read.
-        let handle = unsafe { field.read() };
-
-        // A closed connection has no handle
-        if handle.is_null() {
-            return Err(driver_error(
-                py,
-                "ProgrammingError",
-                "Cannot operate on a closed database.".to_owned(),
-            ));
-        }
-
-        #[expect(
-            unsafe_code,
-            reason = "a connection over a handle that another library opened has no safe constructor"
-        )]
-        // SAFETY: the handle is open and stays open while the rows are written, because the caller holds a reference
-        // to the Python connection that owns it for the whole call, and only the thread of the call uses it meanwhile.
-        // The returned connection does not close the handle when it is dropped.
-        let sqlite = unsafe { Connection::from_handle(handle) }.map_err(|error| WriteError::from(error).into_py_err(py))?;
-
-        // The rows join the transaction of the caller, which must therefore be open already
-        if sqlite.is_autocommit() {
-            return Err(PyRuntimeError::new_err("The connection has no open transaction"));
-        }
-
-        Ok(sqlite)
-    }
-
     /// Copies the values of one `PendingEvent` that its rows are built from.
     fn extract_event(&self, py: Python<'_>, pending: &Bound<'_, PyAny>) -> PyResult<EventInput> {
         let values = pending.getattr(intern!(py, "values"))?;
@@ -516,8 +456,67 @@ impl SqliteAuditWriter {
 // ################################################################################################################################
 // ################################################################################################################################
 
+/// Confirms that the `SQLite` library of the Python driver is the library linked to Rust,
+/// which a handle shared between the two requires.
+pub(crate) fn check_library_version(python_version: &str, library_version: &str) -> Result<(), String> {
+    if python_version != library_version {
+        return Err(format!(
+            "SQLite of the driver `{python_version}` differs from SQLite of the writer `{library_version}`"
+        ));
+    }
+
+    Ok(())
+}
+
+/// Returns a connection over the handle of a connection of the `SQLite` driver of Python, which never closes the handle.
+///
+/// The connection type is `sqlite3.Connection`, whose instances alone hold the handle.
+pub(crate) fn open_handle(connection: &Bound<'_, PyAny>, connection_type: &Bound<'_, PyAny>) -> PyResult<Connection> {
+    let py = connection.py();
+
+    // Only the C structure of the driver's own connections is known to hold the handle ..
+    if !connection.is_instance(connection_type)? {
+        let type_name = connection.get_type().name()?;
+        return Err(PyTypeError::new_err(format!("Not a connection of the SQLite driver `{type_name}`")));
+    }
+
+    // .. right after the header of the object.
+    let field = connection.as_ptr().wrapping_add(1).cast::<*mut ffi::sqlite3>();
+
+    #[expect(unsafe_code, reason = "the SQLite driver of Python exposes no handle of its connections")]
+    // SAFETY: the object is an instance of `sqlite3.Connection`, whose C structure, `pysqlite_Connection`,
+    // begins with `PyObject_HEAD` followed by the `sqlite3 *db` field, which is aligned as a pointer, and the GIL is held,
+    // so the driver is not changing the field while it is read.
+    let handle = unsafe { field.read() };
+
+    // A closed connection has no handle
+    if handle.is_null() {
+        return Err(driver_error(
+            py,
+            "ProgrammingError",
+            "Cannot operate on a closed database.".to_owned(),
+        ));
+    }
+
+    #[expect(
+        unsafe_code,
+        reason = "a connection over a handle that another library opened has no safe constructor"
+    )]
+    // SAFETY: the handle is open and stays open while the rows are written, because the caller holds a reference
+    // to the Python connection that owns it for the whole call, and only the thread of the call uses it meanwhile.
+    // The returned connection does not close the handle when it is dropped.
+    let out = unsafe { Connection::from_handle(handle) }.map_err(|error| sqlite_py_err(py, error))?;
+
+    Ok(out)
+}
+
+/// Returns the exception of the Python driver that an error of `SQLite` is raised as.
+pub(crate) fn sqlite_py_err(py: Python<'_>, error: rusqlite::Error) -> PyErr {
+    WriteError::from(error).into_py_err(py)
+}
+
 /// Returns a value as the `SQLite` driver of Python binds it.
-fn bound_value(value: &Bound<'_, PyAny>) -> PyResult<Value> {
+pub(crate) fn bound_value(value: &Bound<'_, PyAny>) -> PyResult<Value> {
     if value.is_none() {
         return Ok(Value::Null);
     }

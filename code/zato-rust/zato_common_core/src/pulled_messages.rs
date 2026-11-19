@@ -14,7 +14,6 @@ use pyo3::types::{PyDict, PyList, PySet, PyString};
 
 /// The positions of the columns of a message in the rows that a pull reads.
 struct RowColumns {
-
     /// The primary key of the message, which a message has as its sequence ID.
     id: usize,
 
@@ -72,7 +71,6 @@ struct RowColumns {
 
 /// The values of one row that both its message and the audit event of its reception have.
 struct SharedValues<'py> {
-
     /// The primary key of the message.
     id: Bound<'py, PyAny>,
 
@@ -97,7 +95,6 @@ struct SharedValues<'py> {
 
 /// One retry setting, which a message has under its name only when its publisher gave it.
 struct RetryColumn {
-
     /// The key of the setting in the message, the name of its column.
     key: Py<PyString>,
 
@@ -107,7 +104,6 @@ struct RetryColumn {
 
 /// The values of the audit event of a reception that do not depend on the message.
 struct ReceptionEvent {
-
     /// The source of the event, pub/sub.
     source: Py<PyString>,
 
@@ -168,7 +164,6 @@ fn text_or_empty(value: Bound<'_, PyAny>) -> PyResult<Bound<'_, PyAny>> {
 /// and with their payloads exported it reads on every pull.
 #[pyclass(frozen, name = "PulledMessageBuilder")]
 pub struct PulledMessageBuilder {
-
     /// The positions of the columns of a message in the rows.
     columns: RowColumns,
 
@@ -190,7 +185,6 @@ pub struct PulledMessageBuilder {
 
 #[pymethods]
 impl PulledMessageBuilder {
-
     /// Builds the builder from the columns of the rows that a pull reads and from the topic sets of the backend.
     #[new]
     fn new(py: Python<'_>, config: &Bound<'_, PyDict>) -> PyResult<Self> {
@@ -284,7 +278,6 @@ impl PulledMessageBuilder {
 }
 
 impl PulledMessageBuilder {
-
     /// Returns the values of a row that its message and the audit event of its reception both have.
     fn read_shared_values<'py>(&self, row: &Bound<'py, PyAny>, crypto_manager: &Bound<'py, PyAny>) -> PyResult<SharedValues<'py>> {
         let columns = &self.columns;
