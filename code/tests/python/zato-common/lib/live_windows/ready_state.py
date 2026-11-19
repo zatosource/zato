@@ -52,6 +52,17 @@ class ModuleCtx:
     # The script that saves the state, run by the Python of the image
     Save_Script = Path(__file__).parent / 'qmp_save.py'
 
+    # The file in a container that holds the console output of the firmware, which the boot watch of the image reads
+    Boot_Log = '/run/shm/qemu.pty'
+
+    # The console line that the firmware of a guest writes when it hands control to the Windows boot manager. A guest
+    # resumed from a ready state has already booted, so the firmware writes no such line and the boot watch of the image,
+    # which stops QEMU 30 seconds after it started unless it reads that line, receives it from the harness.
+    Boot_Line = 'BdsDxe: starting Boot0005 "Windows Boot Manager" from HD(1,GPT,00000000-0000-0000-0000-000000000000,0x800,0x40000)'
+
+    # How long the harness waits for the console file to appear in a container, in seconds
+    Boot_Log_Wait = 20
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -165,6 +176,23 @@ def save_state(name:'str') -> 'str':
 
     out = result.stdout.strip()
     return out
+
+# ################################################################################################################################
+
+def confirm_boot(name:'str') -> 'None':
+    """ Writes into the console file of a container resumed from a ready state the line that tells the boot watch
+    of the image that Windows has booted, so that the watch does not stop QEMU when its 30 seconds elapse.
+    """
+    script = (
+        f'i=0; while [ ! -f {ModuleCtx.Boot_Log} ] && [ $i -lt {ModuleCtx.Boot_Log_Wait * 10} ]; do sleep 0.1; i=$((i+1)); done; '
+        f"echo '{ModuleCtx.Boot_Line}' >> {ModuleCtx.Boot_Log}"
+    )
+
+    command = ['docker', 'exec', name, 'sh', '-c', script]
+    result = subprocess.run(command, capture_output=True, text=True, check=False)
+
+    if result.returncode != 0:
+        raise Exception(f'Could not confirm the boot of {name} -> {result.stdout} {result.stderr}')
 
 # ################################################################################################################################
 

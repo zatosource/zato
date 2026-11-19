@@ -1121,6 +1121,7 @@ mod tests {
     use crate::record::NodeAddress;
     use crate::referee::tests::MemoryReferee;
     use crate::test_support::{self, Certificates, LOOPBACK, NODE_A, NODE_B};
+    use parking_lot::Mutex;
     use std::net::TcpListener;
     use std::sync::mpsc;
 
@@ -1155,6 +1156,10 @@ mod tests {
 
     /// How many small transactions follow the checkpoint of the long log.
     const SMALL_WRITES: usize = 5;
+
+    /// Held by each test that writes tens of megabytes to its database and by each test bound by a deadline,
+    /// so that the writeback of the one does not hold up the commits of the other.
+    static DISK: Mutex<()> = Mutex::new(());
 
     /// How long the shipper may take to decide on a checkpoint that it does not take the write lock for.
     const NO_LOCK_WAIT: Duration = Duration::from_secs(1);
@@ -1331,6 +1336,7 @@ mod tests {
 
     #[test]
     fn a_publication_acknowledged_during_a_join_reaches_the_standby_before_its_admission() {
+        let _disk = DISK.lock();
         let certificates = Certificates::issue();
         let dir = tempfile::tempdir().unwrap();
         let database_path = dir.path().join(DATABASE_FILE_NAME);
@@ -1371,6 +1377,7 @@ mod tests {
 
     #[test]
     fn a_standby_receiving_its_backup_is_reported_as_joining() {
+        let _disk = DISK.lock();
         let certificates = Certificates::issue();
         let dir = tempfile::tempdir().unwrap();
         fill_database(&dir.path().join(DATABASE_FILE_NAME));
@@ -1414,6 +1421,7 @@ mod tests {
 
     #[test]
     fn a_log_that_restarted_is_not_checkpointed_again_until_its_cycle_is_long() {
+        let _disk = DISK.lock();
         let certificates = Certificates::issue();
         let dir = tempfile::tempdir().unwrap();
         let database_path = dir.path().join(DATABASE_FILE_NAME);
@@ -1455,6 +1463,7 @@ mod tests {
 
     #[test]
     fn a_log_whose_every_frame_was_checkpointed_leaves_the_write_lock_to_the_writers() {
+        let _disk = DISK.lock();
         let certificates = Certificates::issue();
         let dir = tempfile::tempdir().unwrap();
         let database_path = dir.path().join(DATABASE_FILE_NAME);
@@ -1499,6 +1508,7 @@ mod tests {
 
     #[test]
     fn a_standby_that_keeps_pace_with_steady_writers_is_admitted() {
+        let _disk = DISK.lock();
         let certificates = Certificates::issue();
         let dir = tempfile::tempdir().unwrap();
         let database_path = dir.path().join(DATABASE_FILE_NAME);

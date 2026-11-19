@@ -19,7 +19,7 @@ from live_windows.agent_client import AgentClient
 from live_windows.build import build_missing
 from live_windows.docker_ import container_is_running, follow_logs, published_port, remove_container
 from live_windows.layout import layout_command
-from live_windows.ready_state import discard, instance_mounts, is_ready, remove_instance_storage, restore_arguments, \
+from live_windows.ready_state import confirm_boot, discard, instance_mounts, is_ready, remove_instance_storage, restore_arguments, \
     save_arguments, save_state, write_stamp, ModuleCtx as ReadyCtx
 from live_windows.settings import Accounts, container_name, current_instance, Guest, guest_name, Image, Media, state_path, \
     storage_dir, Versions
@@ -347,6 +347,8 @@ def start_guest(version:'str') -> 'GuestInfo':
 
     out = _new_guest(version, name)
     print(f'{out.prefix} Resuming {name} from its ready state, SMB on port {out.port}', flush=True)
+
+    confirm_boot(name)
 
     _wait_for_logon(out, ModuleCtx.Resume_Poll_Interval)
     _set_clock(out)
