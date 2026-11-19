@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from dataclasses import dataclass
 
+# Zato
+from zato.common.pubsub.sql.dedup import get_fingerprint
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -44,6 +47,12 @@ class PendingPublication:
 
     # The values of the message row
     message_values: 'anydict'
+
+    # The values of the dedup record of the message ID - what the ID stands for, when the publication was received
+    # and until when the ID is recognized as a repeat, in milliseconds since the epoch
+    fingerprint: 'str'
+    received_ms: 'int'
+    dedup_expires_ms: 'int'
 
     # The subscribers of the topic as of the commit that wrote the message
     subscriber_keys: 'strlist'
@@ -153,11 +162,15 @@ class PendingAttempts:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def new_pending_publication(message_values:'anydict') -> 'PendingPublication':
-    """ Returns a publication that is yet to be written.
+def new_pending_publication(message_values:'anydict', received_ms:'int', dedup_window_ms:'int') -> 'PendingPublication':
+    """ Returns a publication that is yet to be written, received at the given time, whose message ID is recognized
+    as a repeat for the given window.
     """
     out = PendingPublication()
     out.message_values = message_values
+    out.fingerprint = get_fingerprint(message_values['topic_name'], message_values['payload_crc32'])
+    out.received_ms = received_ms
+    out.dedup_expires_ms = received_ms + dedup_window_ms
     out.subscriber_keys = []
     out.exception = None
     out.is_repeat = False

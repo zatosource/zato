@@ -17,6 +17,7 @@ from zlib import crc32
 from zato.common.api import HTTP_SOAP, PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource, is_audit_log_enabled
 from zato.common.marshal_.api import Model
+from zato.common.pubsub.sql.config import get_dedup_window_days
 from zato.common.pubsub.sql.pending import new_pending_publication
 from zato.common.typing_ import cast_, list_
 from zato.common.util.api import new_msg_id
@@ -49,6 +50,9 @@ _retry = HTTP_SOAP.Retry
 _default_priority   = PubSub.Message.Priority_Default
 _default_expiration = PubSub.Message.Default_Expiration
 _data_preview_len   = PubSub.Message.Data_Preview_Len
+
+# How many milliseconds one day has - the dedup window is given in days.
+_ms_per_day = 24 * 60 * 60 * 1000
 
 built_publication_list = list_['BuiltPublication']
 
@@ -102,13 +106,15 @@ def build_publication(
     now = clock.now()
     now_iso = now.isoformat()
 
+    now_ms_float = datetime_to_ms(now)
+    received_ms = int(now_ms_float)
+
     if pub_time:
         pub_time_iso = pub_time
         pub_time_ms = backend._iso_to_ms(pub_time)
     else:
         pub_time_iso = now_iso
-        now_ms_float = datetime_to_ms(now)
-        pub_time_ms = int(now_ms_float)
+        pub_time_ms = received_ms
 
     expiration_delta = timedelta(seconds=expiration)
     expiration_time = now + expiration_delta
@@ -174,8 +180,12 @@ def build_publication(
         _retry.Field_Backoff_Multiplier: retry_backoff_multiplier,
     }
 
+    # .. the message ID is recognized as a repeat for the window that counts from the time of the database.
+    dedup_window_days = get_dedup_window_days()
+    dedup_window_ms = dedup_window_days * _ms_per_day
+
     out = BuiltPublication()
-    out.pending = new_pending_publication(message_values)
+    out.pending = new_pending_publication(message_values, received_ms, dedup_window_ms)
     out.serialized_data = serialized_data
 
     return out

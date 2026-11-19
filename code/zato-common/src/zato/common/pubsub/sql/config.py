@@ -22,6 +22,9 @@ class ModuleCtx:
     Env_Delivered_Max_Messages = 'Zato_PubSub_Delivered_Max_Messages'
     Env_Delivered_Max_Days     = 'Zato_PubSub_Delivered_Max_Days'
 
+    # The environment variable overriding for how many days a message ID is recognized as a repeat.
+    Env_Dedup_Window_Days = 'Zato_PubSub_Dedup_Window_Days'
+
     # The environment variable overriding how many rows one bulk statement may touch.
     Env_Batch_Size = 'Zato_PubSub_Batch_Size'
 
@@ -46,6 +49,9 @@ Default_Delivered_Max_Messages = 1_000_000
 
 # How many days a fully delivered message is retained for browsing and statistics.
 Default_Delivered_Max_Days = 7
+
+# For how many days a message ID is recognized as a repeat, independently of whether its message is still retained.
+Default_Dedup_Window_Days = 7
 
 # How many rows one bulk delete or update statement may touch.
 _default_batch_size = 5_000
@@ -81,6 +87,18 @@ def get_delivered_max_days() -> 'int':
         out = int(value)
     else:
         out = Default_Delivered_Max_Days
+
+    return out
+
+# ################################################################################################################################
+
+def get_dedup_window_days() -> 'int':
+    """ Returns for how many days a message ID is recognized as a repeat.
+    """
+    if value := os.environ.get(ModuleCtx.Env_Dedup_Window_Days, ''):
+        out = int(value)
+    else:
+        out = Default_Dedup_Window_Days
 
     return out
 

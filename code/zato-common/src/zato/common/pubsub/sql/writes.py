@@ -28,6 +28,7 @@ from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.audit_events import collect_audit_events, drop_audit_events, prepare_audit_payloads
 from zato.common.pubsub.sql.config import get_commit_max_messages, get_commits_in_flight, get_urgent_commits_in_flight
+from zato.common.pubsub.sql.dedup import get_existing_fingerprints, rewrite_fingerprints, write_dedup_records
 from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID
 from zato.common.pubsub.sql.fenced_ack import check_fenced, delete_fenced, PubSubAckConflict
 from zato.common.pubsub.sql.payloads import drop_payloads, get_chunks, get_message_ids
@@ -427,34 +428,24 @@ class PubSubWriter:
         either one that exists already or one published earlier in the same item. Returns whether any publication
         is to insert a new message, as opposed to only repeating existing ones.
         """
-        msg_ids:'strlist' = []
-
-        for pending in atomic.publications:
-            msg_ids.append(pending.message_values['msg_id'])
-
-        existing:'anydict' = {}
-
-        for chunk in get_chunks(msg_ids):
-            for row in connection.execute(_existing_messages_query, {'write_msg_ids': chunk}):
-                existing[row.msg_id] = (row.topic_name, row.payload_crc32)
+        # What each message ID stands for already, by its dedup record or by its stored message
+        existing = get_existing_fingerprints(connection, atomic.publications)
 
         out = False
 
         for pending in atomic.publications:
 
-            message_values = pending.message_values
-            msg_id = message_values['msg_id']
-            content = (message_values['topic_name'], message_values['payload_crc32'])
+            msg_id = pending.message_values['msg_id']
 
             # A message ID that nothing stands for yet inserts a new message ..
             if msg_id not in existing:
-                existing[msg_id] = content
+                existing[msg_id] = pending.fingerprint
                 out = True
                 continue
 
             # .. one that stands for the same content repeats it, and one that stands for different content
             # .. fails a strict item, while otherwise the publication alone is not written.
-            if existing[msg_id] != content:
+            if existing[msg_id] != pending.fingerprint:
                 if atomic.is_strict:
                     message = f'Message ID `{msg_id}` belongs to a different message that exists already'
                     raise PubSubDuplicateMsgID(message)
@@ -541,10 +532,17 @@ class PubSubWriter:
 # ################################################################################################################################
 
     def _insert_publications(self, connection:'Connection', publications:'pending_publication_list') -> 'None':
-        """ Inserts the messages of the publications and one delivery row per message and subscriber.
+        """ Writes the dedup records of the publications, then inserts the messages of those whose dedup records
+        were written and one delivery row per message and subscriber.
         """
 
-        # The subscribers as of this very commit ..
+        # A publication whose dedup record remains from an earlier one inserts nothing ..
+        publications = write_dedup_records(connection, publications)
+
+        if not publications:
+            return
+
+        # .. the subscribers as of this very commit ..
         subscribers = self._get_subscribers(connection, publications)
 
         message_rows:'anylist' = []
@@ -598,8 +596,10 @@ class PubSubWriter:
                     'expiration_ms': message_values['expiration_ms'],
                 })
 
+        # .. a message that met a stored one under the same ID gives its dedup record the fingerprint of the stored one ..
         if duplicates:
             self._resolve_duplicates(connection, duplicates)
+            rewrite_fingerprints(connection, duplicates)
 
         # .. and all the delivery rows go in one statement too.
         if delivery_rows:
