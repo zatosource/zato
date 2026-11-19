@@ -14,6 +14,8 @@ from dlq_rule import run_dlq_rule_scenario
 from encryption import run_encryption_scenario
 from lifecycle import run_lifecycle_scenario
 from outgoing import run_outgoing_scenario
+from pull_events import run_pull_events_scenario
+from pull_values import run_pull_values_scenario
 from push_delivery import run_push_delivery_scenario
 from queue_order import run_queue_order_scenario
 from queues import run_queues_scenario
@@ -40,6 +42,8 @@ def run_common_scenarios() -> 'None':
     run_dlq_rule_scenario()
     run_concurrency_scenario()
     run_count_consistency_scenario()
+    run_pull_values_scenario()
+    run_pull_events_scenario()
 
 # ################################################################################################################################
 # ################################################################################################################################

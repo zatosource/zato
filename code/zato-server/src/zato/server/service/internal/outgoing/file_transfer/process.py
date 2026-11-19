@@ -19,7 +19,8 @@ from zato.common.audit_log.file_transfer import record_schedule_event
 from zato.common.audit_log.file_transfer_run import build_ledger_record, days_ago, Decision_Failed, Decision_Picked_Up, \
     Decision_Quarantined, Decision_Skipped, find_seen_before, load_attempt_memory, Phase_Acking, \
     Phase_Checking_Directory, Phase_Claiming, Phase_Delivering, Phase_Listing, Phase_Reading, Phase_Waiting, \
-    Retry_Memory_Days, Seen_Before_Window_Days, Skip_Claimed_Elsewhere
+    Retry_Memory_Days, Seen_Before_Window_Days, Skip_Claim_Unconfirmed, Skip_Claimed_Elsewhere
+from zato.common.file_transfer.api import OutcomeUnknown
 from zato.common.model.file_transfer_ import FileTransferItem
 from zato.common.util.api import new_cid_server, utcnow
 from zato.common.util.file_transfer_scheduler import apply_schedule_defaults
@@ -61,6 +62,13 @@ _decision_for_status = {
 
 # The error of a claim lost to another consumer.
 _claim_lost_error = 'Already claimed by another consumer'
+
+# The error of a claim that the remote end may have carried out without confirming it.
+_claim_unconfirmed_error = 'Claim not confirmed by the remote end'
+
+# The claims that the remote end may have carried out without confirming them, keyed by connection and schedule,
+# each one mapping the claim path of a file to its original path. The next run of the schedule renames each such file back.
+_unconfirmed_claims:'stranydict' = {}
 
 # Milliseconds per second.
 _ms_per_second = 1000
@@ -172,6 +180,33 @@ def _ack_one_file(
 
 # ################################################################################################################################
 
+def _release_unconfirmed_claims(service:'Service', conn:'any_', conn_name:'str', schedule_name:'str') -> 'None':
+    """ Renames back each file that an earlier run of the schedule claimed without a confirmation from the remote end,
+    so that the run picks it up again.
+    """
+    unconfirmed_key = f'{conn_name}.{schedule_name}'
+
+    if unconfirmed_key not in _unconfirmed_claims:
+        return
+
+    unconfirmed = _unconfirmed_claims[unconfirmed_key]
+
+    for claim_path, full_path in list(unconfirmed.items()):
+
+        # A file that is not under its claim name was not claimed, and a file under its original name is never replaced ..
+        try:
+            if conn.exists(claim_path) and not conn.exists(full_path):
+                _ = conn.move(claim_path, full_path)
+
+        # .. and a remote end that is still unreachable leaves the claim to the next run.
+        except Exception:
+            service.logger.info('Could not release the unconfirmed claim on `%s` -> `%s`', claim_path, format_exc())
+            continue
+
+        del unconfirmed[claim_path]
+
+# ################################################################################################################################
+
 def _release_claim(service:'Service', conn:'any_', full_path:'str', current_path:'str', failure:'stranydict') -> 'None':
     """ Renames a claimed file back to its original name and records the outcome in the failure data.
     """
@@ -276,6 +311,20 @@ def _process_one_file(
         claim_path = full_path + _scheduler.Claim_Suffix
         try:
             _ = conn.move(full_path, claim_path)
+
+        # The file may be under its claim name already, which is why the next run renames it back if it is
+        except OutcomeUnknown:
+            service.logger.info('Claim of file `%s` not confirmed, it is released in the next run', full_path)
+            unconfirmed_key = f'{conn_name}.{schedule_name}'
+            unconfirmed = _unconfirmed_claims.setdefault(unconfirmed_key, {})
+            unconfirmed[claim_path] = full_path
+            _ = record_schedule_event(audit_log, conn_name, AuditEvent.File_Claimed, full_path,
+                cid=file_cid, correl_id=run_cid, schedule=schedule_name, outcome=AuditOutcome.Error,
+                file_name=file_name, error=_claim_unconfirmed_error, attrs_extra=attrs_extra)
+            out.status = _status_skipped
+            out.reason = Skip_Claim_Unconfirmed
+            return out
+
         except Exception:
             service.logger.info('File `%s` already claimed by another consumer, skipping', full_path)
             _ = record_schedule_event(audit_log, conn_name, AuditEvent.File_Claimed, full_path,
@@ -562,8 +611,10 @@ def process_files(service:'Service', context:'stranydict') -> 'None':
 
     audit_log:'AuditLog' = conn.wrapper.audit_log
 
-    # Interrupted runs are closed, and their claims released, before the new one opens ..
+    # Interrupted runs are closed, and their claims released, before the new one opens, as are the claims
+    # that the remote end did not confirm ..
     close_interrupted_runs(audit_log, conn_name, schedule_name, conn)
+    _release_unconfirmed_claims(service, conn, conn_name, schedule_name)
 
     # .. and the new run's row is written before the directory is touched.
     scheduler_context = get_scheduler_context(service)

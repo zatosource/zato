@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+import socket
+
 # smbprotocol
 import smbclient
 import smbclient.path
@@ -23,6 +26,9 @@ class ModuleCtx:
 
     # How long a connection attempt may take, in seconds
     Connection_Timeout = 5
+
+    # How long the guest may leave the data of a request unacknowledged before the connection is closed, in milliseconds
+    Unacknowledged_Data_Timeout_Ms = 5000
 
     # Readers and writers on both sides share every file
     Share_Access = 'rwd'
@@ -46,7 +52,27 @@ class ShareClient:
 
 # ################################################################################################################################
 
+    def _register_session(self) -> 'None':
+        """ Logs on to the guest unless this client is logged on already, over a connection that the client closes
+        once the guest leaves its data unacknowledged for too long, e.g. because a firewall rule dropped the connection.
+        """
+        session = smbclient.register_session(
+            self.host,
+            username=self.username,
+            password=self.password,
+            port=self.port,
+            connection_timeout=ModuleCtx.Connection_Timeout,
+            connection_cache=self.connection_cache,
+        )
+
+        sock = session.connection.transport._sock
+        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_USER_TIMEOUT, ModuleCtx.Unacknowledged_Data_Timeout_Ms)
+
+# ################################################################################################################################
+
     def _session_options(self) -> 'anydict':
+        self._register_session()
+
         out = {
             'port': self.port,
             'username': self.username,
@@ -74,14 +100,7 @@ class ShareClient:
     def connect(self) -> 'None':
         """ Logs on to the guest, raising an exception when that is not possible within the connection timeout.
         """
-        _ = smbclient.register_session(
-            self.host,
-            username=self.username,
-            password=self.password,
-            port=self.port,
-            connection_timeout=ModuleCtx.Connection_Timeout,
-            connection_cache=self.connection_cache,
-        )
+        self._register_session()
 
 # ################################################################################################################################
 

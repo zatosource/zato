@@ -21,7 +21,7 @@ from zato.common.api import FileTransfer
 from zato.common.audit_log.api import AuditLog
 from zato.common.config_db import Env_Audit_Log_Enabled
 from zato.common.ext.bunch import Bunch
-from zato.common.file_transfer.api import Default_Verify_How
+from zato.common.file_transfer.api import Default_Verify_How, OutcomeUnknown
 from zato.common.model.file_transfer_ import FileTransferItem
 from zato.common.typing_ import cast_
 from zato.common.util.file_transfer_scheduler import apply_schedule_defaults
@@ -36,7 +36,7 @@ from zato.server.service.internal.outgoing.file_transfer.candidates import get_c
 
 if 0:
     from pathlib import Path
-    from zato.common.typing_ import any_, anydict, anylist, iterator_
+    from zato.common.typing_ import any_, anydict, anylist, iterator_, strdict
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.config_manager import ConfigManager
     from zato.server.connection.smb import SMBConnection
@@ -101,9 +101,6 @@ class PeerWrapper:
 
         server:'ParallelServer' = cast_('ParallelServer', None)
         self.smb_client = SMBClient(self.config, server)
-
-        # The client connects when the definitions are imported, so that its connection is in place before the tests run
-        self.smb_client.connect()
 
         # The operations of a connection share its pool of clients, as they do in a server
         if 'pool_size' in definition:
@@ -202,6 +199,10 @@ class _ScheduleRunner:
         self.schedule = schedule
         self.name = schedule['name']
 
+        # The claims that the remote end may have carried out without confirming them, each one mapping
+        # the claim path of a file to its original path, as the server keeps them
+        self.unconfirmed_claims:'strdict' = {}
+
         self.stopping = Event()
         self.thread = Thread(target=self._run, daemon=True, name=f'peer-{self.name}-{conn_name}')
 
@@ -243,6 +244,8 @@ class _ScheduleRunner:
         conn = self.peer.connection(self.conn_name)
         directory = self.schedule['directory'].rstrip('/')
 
+        self._release_unconfirmed_claims(conn)
+
         entries = conn.list(directory)
 
         if not entries:
@@ -269,6 +272,26 @@ class _ScheduleRunner:
 
 # ################################################################################################################################
 
+    def _release_unconfirmed_claims(self, conn:'SMBConnection') -> 'None':
+        """ Renames back each file that an earlier run claimed without a confirmation from the remote end.
+        """
+        for claim_path, full_path in list(self.unconfirmed_claims.items()):
+
+            # A file that is not under its claim name was not claimed, and a file under its original name is never replaced ..
+            try:
+                if conn.exists(claim_path) and not conn.exists(full_path):
+                    conn.move(claim_path, full_path)
+
+            # .. and a remote end that is still unreachable leaves the claim to the next run.
+            except Exception:
+                error = format_exc()
+                self.peer.log(ModuleCtx.Level_Info, f'Could not release the unconfirmed claim on `{claim_path}` -> {error}')
+                continue
+
+            del self.unconfirmed_claims[claim_path]
+
+# ################################################################################################################################
+
     def _process(self, conn:'SMBConnection', directory:'str', entry:'any_') -> 'None':
 
         file_name = get_file_name(entry)
@@ -281,6 +304,10 @@ class _ScheduleRunner:
             claim_path = full_path + _scheduler.Claim_Suffix
             try:
                 conn.move(full_path, claim_path)
+            except OutcomeUnknown:
+                self.peer.log(ModuleCtx.Level_Info, f'Claim of file `{full_path}` not confirmed, it is released in the next run')
+                self.unconfirmed_claims[claim_path] = full_path
+                return
             except Exception:
                 self.peer.log(ModuleCtx.Level_Info, f'File `{full_path}` already claimed by another consumer, skipping')
                 return
@@ -480,6 +507,15 @@ class PeerServer:
 
             wrapper = PeerWrapper(definition, self.audit_log)
             self.wrappers[name] = wrapper
+
+            # .. the client connects at once, so that its connection is in place before the tests run,
+            # .. and a client that cannot log on yet, as a server logs it, logs on with its first operation ..
+            try:
+                wrapper.ping()
+            except Exception:
+                error = format_exc()
+                self.log(ModuleCtx.Level_Warning, f'Could not connect `{name}` -> {error}')
+
             self.config_manager.outconn_smb[name] = {'conn': wrapper}
 
             if 'schedules' in definition:

@@ -9,6 +9,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 # ################################################################################################################################
 
+class OutcomeUnknown(Exception):
+    """ Raised when the connection to the remote end fails after a request was sent and before its response arrived,
+    which means that the remote end may have carried out the request.
+    """
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class VerifyHow:
     """ The ways a connection checks a stored file.
     """

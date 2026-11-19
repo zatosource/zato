@@ -53,6 +53,7 @@ Skip_Vanished          = 'vanished'
 Skip_Size_Changed      = 'size-changed'
 Skip_Mtime_Changed     = 'mtime-changed'
 Skip_Claimed_Elsewhere = 'claimed-elsewhere'
+Skip_Claim_Unconfirmed = 'claim-unconfirmed'
 Skip_Retry_Backoff     = 'retry-backoff'
 
 # The name of each skip reason, read in a table or on a chip.
@@ -66,6 +67,7 @@ Skip_Reason_Name = {
     Skip_Size_Changed:      'Size changed',
     Skip_Mtime_Changed:     'Modified',
     Skip_Claimed_Elsewhere: 'Claimed elsewhere',
+    Skip_Claim_Unconfirmed: 'Claim unconfirmed',
     Skip_Retry_Backoff:     'Retry backoff',
 }
 
@@ -80,6 +82,7 @@ Skip_Reason_Label = {
     Skip_Size_Changed:      'still being uploaded, size changed',
     Skip_Mtime_Changed:     'still being uploaded, modified',
     Skip_Claimed_Elsewhere: 'claimed by another consumer first',
+    Skip_Claim_Unconfirmed: 'claim not confirmed by the remote end',
     Skip_Retry_Backoff:     'waiting for its next attempt',
 }
 

@@ -14,6 +14,9 @@ from contextlib import contextmanager
 from sqlalchemy import select
 
 # Zato
+from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, AuditEvent, \
+    AuditSource
+from zato.common.audit_log.common import event_count_table, event_dedup_table, event_open_table, event_payload_table
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
     topic_count_table, topic_sub_table
@@ -26,7 +29,12 @@ from zato.common.test.direct_sql.reset import reset_table_rows
 
 if 0:
     from collections.abc import Iterator
-    from zato.common.typing_ import anylist
+    from sqlalchemy import Column
+    from zato.common.typing_ import anylist, intset
+
+    anylist = anylist
+    Column = Column
+    intset = intset
 
     envgen = Iterator[None]
 
@@ -57,6 +65,60 @@ def delete_all_rows() -> 'None':
     tables = [delivery_table, message_table, topic_sub_table, queue_count_table, topic_count_table, publish_count_table]
 
     reset_table_rows(engine, tables)
+
+# ################################################################################################################################
+
+def delete_audit_rows() -> 'None':
+    """ Starts a scenario from empty audit tables, which the publications and pulls of the earlier scenarios wrote to.
+    """
+    engine = get_database_engine()
+
+    # The counts and the open exchanges are emptied last, after the triggers of the deleted events have written to them.
+    tables = [event_attr_table, event_body_table, event_link_table, event_dedup_table, event_table, event_payload_table,
+        event_count_table, event_open_table]
+
+    reset_table_rows(engine, tables)
+
+# ################################################################################################################################
+
+def get_received_event_rows(topic_name:'str') -> 'anylist':
+    """ Reads the audit events of the messages of one topic that pulls handed out, each with the text of its payload,
+    in the order of their ids.
+    """
+    engine = get_database_engine()
+
+    query = select(event_table, event_payload_table.c.data)
+    query = query.select_from(event_table.outerjoin(event_payload_table, event_table.c.payload_id == event_payload_table.c.id))
+    query = query.where(event_table.c.source == AuditSource.PubSub)
+    query = query.where(event_table.c.event_type == AuditEvent.Received)
+    query = query.where(event_table.c.object_name == topic_name)
+    query = query.order_by(event_table.c.id)
+
+    out:'anylist' = []
+
+    with engine.connect() as connection:
+        for row in connection.execute(query):
+            values = dict(row._mapping)
+            out.append(values)
+
+    return out
+
+# ################################################################################################################################
+
+def get_event_ids(column:'Column') -> 'intset':
+    """ Returns the ids of the events that one column of a companion table of the audit log refers to.
+    """
+    engine = get_database_engine()
+
+    query = select(column)
+
+    out:'intset' = set()
+
+    with engine.connect() as connection:
+        for row in connection.execute(query):
+            out.add(row[0])
+
+    return out
 
 # ################################################################################################################################
 

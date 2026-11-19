@@ -44,10 +44,18 @@ class HTTPResult(NamedTuple):
     body: 'anydict'
 
 # ################################################################################################################################
+
+class RawResult(NamedTuple):
+    """ The status code and the text of the body of one HTTP response, as the server sent it.
+    """
+    status_code: 'int'
+    text: 'str'
+
+# ################################################################################################################################
 # ################################################################################################################################
 
-def post_json(path:'str', username:'str', password:'str', payload:'any_') -> 'HTTPResult':
-    """ Sends one request with basic authentication and returns its status code and its parsed body.
+def post_json_raw(path:'str', username:'str', password:'str', payload:'any_') -> 'RawResult':
+    """ Sends one request with basic authentication and returns its status code and the text of its body.
     """
     url = f'{TestConfig.base_url}{path}'
 
@@ -74,13 +82,25 @@ def post_json(path:'str', username:'str', password:'str', payload:'any_') -> 'HT
         response_data = error.read()
         status_code = error.code
 
-    # .. and parse the response.
-    if response_data:
-        response_body = json.loads(response_data)
+    # .. and decode the text of the response.
+    response_text = response_data.decode('utf8')
+
+    out = RawResult(status_code, response_text)
+    return out
+
+# ################################################################################################################################
+
+def post_json(path:'str', username:'str', password:'str', payload:'any_') -> 'HTTPResult':
+    """ Sends one request with basic authentication and returns its status code and its parsed body.
+    """
+    result = post_json_raw(path, username, password, payload)
+
+    if result.text:
+        response_body = json.loads(result.text)
     else:
         response_body = {}
 
-    out = HTTPResult(status_code, response_body)
+    out = HTTPResult(result.status_code, response_body)
     return out
 
 # ################################################################################################################################
@@ -104,6 +124,17 @@ def pull(username:'str', password:'str') -> 'anylist':
     assert result.status_code == OK, result
 
     out = result.body['messages']
+    return out
+
+# ################################################################################################################################
+
+def pull_raw(username:'str', password:'str') -> 'RawResult':
+    """ Pulls the messages that the queue of the user has, without acknowledging them,
+    and returns the response as the server sent it.
+    """
+    payload = {'max_messages': _pull_max_messages}
+
+    out = post_json_raw('/pubsub/messages/get', username, password, payload)
     return out
 
 # ################################################################################################################################

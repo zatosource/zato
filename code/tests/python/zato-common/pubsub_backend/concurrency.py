@@ -6,8 +6,12 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+import os
+
 # gevent
 import gevent
+from gevent.event import Event
 
 # SQLAlchemy
 from sqlalchemy.exc import DBAPIError
@@ -17,6 +21,7 @@ from common import delete_all_rows, get_delivery_rows, get_message_rows
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.engine import _get_write_key, _sqlite_write_locks
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
+from zato.common.pubsub.sql.config import ModuleCtx
 from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.pending import new_pending_ack
 from zato.common.pubsub.sql.writes import PubSubDuplicateMsgID, PubSubWriter
@@ -27,6 +32,7 @@ from zato.common.typing_ import cast_
 
 if 0:
     from sqlalchemy.engine import Engine
+    from zato.common.audit_log.api import AuditLog
     from zato.common.pubsub.sql.backend import PublishResult
     from zato.common.typing_ import anydict, anylist, intlist, strlist
 
@@ -48,12 +54,20 @@ _claimer_count = 20
 _clear_topic = 'pubsub.backend.test.concurrency.clear'
 _clear_sub_key = 'zpsk.test.concurrency.clear'
 
+Env_Commits_In_Flight = ModuleCtx.Env_Commits_In_Flight
+
 # How many pending messages the cleared queue holds before the clear starts.
 _clear_backlog = 200
 
 # How long the writer lock is held while a concurrent clear is watched for progress, in seconds - long enough
 # that a clear running outside the serialization would finish within it many times over.
 _clear_block_seconds = 0.5
+
+# How many commits may be in progress at once in the flow of disjoint acknowledgements.
+_single_commit_in_flight = '1'
+
+# The message that the held acknowledgement of that flow is about, which no subscriber has.
+_missing_msg_id = 'zpsm.test.concurrency.missing'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,9 +76,23 @@ class _RecordingWriter(PubSubWriter):
     """ A writer that records how many items each of its transactions held.
     """
 
-    def __init__(self) -> 'None':
-        super().__init__(None)
+    def __init__(self, audit_log:'AuditLog') -> 'None':
+        super().__init__(audit_log)
         self.transaction_sizes:'intlist' = []
+
+        # When set, the next commit waits for this event before it writes anything
+        self.hold_event:'Event | None' = None
+
+    def _write_batch(self, batch:'anylist') -> 'None':
+
+        # A commit that is held keeps the lane busy, so the items that arrive in the meantime wait for the next one ..
+        if self.hold_event is not None:
+            hold_event = self.hold_event
+            self.hold_event = None
+            _ = hold_event.wait()
+
+        # .. which writes all of them.
+        super()._write_batch(batch)
 
     def _write_transaction(self, engine:'Engine', batch:'anylist') -> 'anylist':
         self.transaction_sizes.append(len(batch))
@@ -79,9 +107,10 @@ def _new_backend() -> 'tuple[SQLPubSubBackend, _RecordingWriter]':
     """
     delete_all_rows()
 
-    writer = _RecordingWriter()
+    audit_log = new_test_audit_log()
+    writer = _RecordingWriter(audit_log)
 
-    backend = SQLPubSubBackend(audit_log=new_test_audit_log())
+    backend = SQLPubSubBackend(audit_log=audit_log)
     backend._writer = writer
 
     backend.subscribe(_sub_key_1, _topic)
@@ -341,16 +370,40 @@ def _run_disjoint_ack_flow() -> 'None':
     """ One commit with the acknowledgements of two subscribers, each about a different message,
     removes only the two delivery rows they are about.
     """
-    backend, writer = _new_backend()
+    # A single commit in progress at a time, on each database, is what makes the acknowledgements wait together ..
+    os.environ[Env_Commits_In_Flight] = _single_commit_in_flight
+
+    try:
+        backend, writer = _new_backend()
+    finally:
+        del os.environ[Env_Commits_In_Flight]
 
     first = backend.publish(_topic, 'disjoint-message-1')
     second = backend.publish(_topic, 'disjoint-message-2')
 
-    # Each subscriber acknowledges a different message, both in the same commit ..
+    # .. while a commit of an acknowledgement of a message that does not exist is held in progress ..
+    hold_event = Event()
+    writer.hold_event = hold_event
+
+    held_ack = new_pending_ack(_sub_key_1, [_missing_msg_id], None)
+    held_greenlet = gevent.spawn(writer.ack, held_ack)
+    gevent.sleep(0)
+
+    # .. each subscriber acknowledges a different message, and both wait for the next commit ..
     first_ack = new_pending_ack(_sub_key_1, [first.msg_id], None)
     second_ack = new_pending_ack(_sub_key_2, [second.msg_id], None)
 
-    _ = writer._write_transaction(backend.engine, [first_ack, second_ack])
+    first_greenlet = gevent.spawn(writer.ack, first_ack)
+    second_greenlet = gevent.spawn(writer.ack, second_ack)
+    gevent.sleep(0)
+
+    writer.transaction_sizes.clear()
+    hold_event.set()
+
+    _ = gevent.joinall([held_greenlet, first_greenlet, second_greenlet], raise_error=True)
+
+    # .. which writes both of them ..
+    assert writer.transaction_sizes == [1, 2], writer.transaction_sizes
 
     # .. each acknowledgement removed its own row alone ..
     assert first_ack.removed_count == 1

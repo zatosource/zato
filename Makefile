@@ -1105,7 +1105,7 @@ Zato_Test_Exactly_Once_Live   := -m pytest -W ignore::DeprecationWarning
 
 Zato_Test_Exactly_Once_Tests_backend  := $(CURDIR)/code/tests/python/zato-common/pubsub_backend/exactly_once/
 Zato_Test_Exactly_Once_Tests_relay    := $(Zato_Test_Exactly_Once_Dir)/test_relay.py $(Zato_Test_Exactly_Once_Dir)/test_idempotency.py
-Zato_Test_Exactly_Once_Tests_pull     := $(Zato_Test_Exactly_Once_Dir)/test_pull.py
+Zato_Test_Exactly_Once_Tests_pull     := $(Zato_Test_Exactly_Once_Dir)/test_pull.py $(Zato_Test_Exactly_Once_Dir)/test_pull_response.py
 Zato_Test_Exactly_Once_Tests_crash    := $(Zato_Test_Exactly_Once_Dir)/test_crash.py
 Zato_Test_Exactly_Once_Tests_takeover := $(Zato_Test_Exactly_Once_Takeover)/
 Zato_Test_Exactly_Once_Tests_traffic  := $(Zato_Test_Exactly_Once_Dir)/test_traffic.py

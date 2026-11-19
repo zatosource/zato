@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import socket
 from contextlib import contextmanager
 from io import BytesIO
 from logging import getLogger
@@ -16,7 +17,7 @@ from traceback import format_exc
 # smbprotocol
 import smbclient
 from smbclient._io import SMBFileTransaction, SMBRawIO, set_info
-from smbprotocol.exceptions import SMBOSError
+from smbprotocol.exceptions import SMBException, SMBOSError, SMBResponseException
 from smbprotocol.file_info import FileRenameInformation
 from smbprotocol.header import NtStatus
 from smbprotocol.open import CreateOptions, FilePipePrinterAccessMask
@@ -24,7 +25,7 @@ from smbprotocol.open import CreateOptions, FilePipePrinterAccessMask
 # Zato
 from zato.common.api import SMB
 from zato.common.audit_log.api import AuditLog
-from zato.common.file_transfer.api import Default_Verify_How
+from zato.common.file_transfer.api import Default_Verify_How, OutcomeUnknown
 from zato.common.file_transfer.spool import Chunk_Size
 from zato.common.pubsub.outgoing import OutgoingPublisher, OutgoingType
 from zato.common.typing_ import cast_
@@ -70,6 +71,14 @@ outconn_smb_string_config_keys = ('host', 'username', 'verify_how')
 # How the source of a rename is shared with other handles - reading and writing, but not its deletion,
 # which is what a rename of the same file through another handle requires
 rename_share_access = 'rw'
+
+# How long the server may leave the data of a request unacknowledged before the connection is closed, in milliseconds.
+# The library waits for each response without a time limit, which means that without this setting an operation
+# sent over a connection whose packets the network drops waits indefinitely.
+unacknowledged_data_timeout_ms = 15000
+
+# The operating systems that support the time limit on unacknowledged data
+has_unacknowledged_data_timeout = hasattr(socket, 'TCP_USER_TIMEOUT')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -131,10 +140,24 @@ class SMBClient:
 
 # ################################################################################################################################
 
+    def _register_session(self) -> 'Session':
+        """ Returns the session of this client, establishing it first if there is none or its connection was closed.
+        """
+        out:'Session' = smbclient.register_session(self.host, **self.conn_kwargs)
+
+        # A connection whose data the server does not acknowledge in time is closed, which ends each operation that waits on it
+        if has_unacknowledged_data_timeout:
+            sock = out.connection.transport._sock
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_USER_TIMEOUT, unacknowledged_data_timeout_ms)
+
+        return out
+
+# ################################################################################################################################
+
     def _forget_share(self, unc_path:'str') -> 'None':
         """ Removes the cached connection to the share of a UNC path, so that the next operation connects to the share anew.
         """
-        session:'Session' = smbclient.register_session(self.host, **self.conn_kwargs)
+        session = self._register_session()
 
         # The library keys its connections to shares by the server and the share name, e.g. \\host\share ..
         server, share = unc_path.lstrip('\\').split('\\')[:2]
@@ -152,6 +175,8 @@ class SMBClient:
         """ Runs one operation on the share of a UNC path. The library keeps its connection to a share even after
         the server deleted the share, e.g. because it was removed and created again, and every later operation fails.
         """
+        _ = self._register_session()
+
         try:
             yield
 
@@ -170,7 +195,7 @@ class SMBClient:
 
         # Establish or reuse a session - this runs the full protocol negotiation
         # and the NTLM or Kerberos authentication with the remote server ..
-        session:'Session' = smbclient.register_session(self.host, **self.conn_kwargs)
+        session = self._register_session()
 
         # .. and send an echo request over that session to confirm that the server actually responds.
         _ = session.connection.echo(sid=session.session_id)
@@ -340,10 +365,25 @@ class SMBClient:
                 **self.conn_kwargs,
             )
 
-            # .. and the file is renamed through that handle.
-            with source:
-                with SMBFileTransaction(source) as transaction:
-                    set_info(transaction, rename_info)
+            # .. the file is renamed through that handle ..
+            is_open = False
+
+            try:
+                with source:
+                    is_open = True
+                    with SMBFileTransaction(source) as transaction:
+                        set_info(transaction, rename_info)
+
+            # .. a status that the server returned means that it did not rename the file ..
+            except (SMBOSError, SMBResponseException):
+                raise
+
+            # .. whereas a connection that failed once the handle was open leaves the rename possibly carried out.
+            except (SMBException, OSError) as e:
+                if is_open:
+                    raise OutcomeUnknown(f'Rename of `{from_path}` to `{to_path}` not confirmed -> {e}') from e
+                else:
+                    raise
 
 # ################################################################################################################################
 # ################################################################################################################################

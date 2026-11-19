@@ -62,6 +62,14 @@ class ModuleCtx:
     # in seconds
     Windows_Events_Drain = 3
 
+    # The drain also lasts until no expected Windows event has arrived for this long, because a guest that logs many events
+    # forwards them with a delay, but never longer than the second value, in seconds
+    Windows_Events_Quiet     = 2
+    Windows_Events_Drain_Max = 20
+
+    # How often the drain checks whether the expected Windows events stopped arriving, in seconds
+    Windows_Events_Drain_Poll = 0.2
+
     # The kinds of agent events whose number is reported
     Counted_Kinds = 'produced', 'consumed', 'appeared', 'disappeared', 'marked-failed'
 
@@ -129,6 +137,9 @@ class Monitor:
         self.expected_server_errors:'strlist' = list(ModuleCtx.Server_Log_Noise)
         self.expected_windows_events:'strlist' = []
 
+        # When the most recent expected Windows event arrived, on the monotonic clock
+        self.last_expected_event_at = 0.0
+
         self.failures:'strlist' = []
         self.raised_count = 0
 
@@ -159,6 +170,28 @@ class Monitor:
 
 # ################################################################################################################################
 
+    def _drain_windows_events(self) -> 'None':
+        """ Keeps watching after the test ends, for at least the drain period and until the expected Windows events
+        stop arriving, but never longer than the longest drain.
+        """
+        drain_start = monotonic()
+
+        while True:
+
+            now = monotonic()
+            drained_for = now - drain_start
+            quiet_for = now - self.last_expected_event_at
+
+            if drained_for >= ModuleCtx.Windows_Events_Drain_Max:
+                return
+
+            if drained_for >= ModuleCtx.Windows_Events_Drain and quiet_for >= ModuleCtx.Windows_Events_Quiet:
+                return
+
+            sleep(ModuleCtx.Windows_Events_Drain_Poll)
+
+# ################################################################################################################################
+
     def stop(self) -> 'None':
         """ Ends the watch, reads what the guests and the server reported last, and fails on what was not raised yet.
         """
@@ -168,7 +201,7 @@ class Monitor:
             self._fail(f'The test took {elapsed:.1f}s, more than the limit of {ModuleCtx.Test_Timeout}s')
 
         if self.expected_windows_events:
-            sleep(ModuleCtx.Windows_Events_Drain)
+            self._drain_windows_events()
 
         self.stopping.set()
 
@@ -424,6 +457,7 @@ class Monitor:
 
         for pattern in self.expected_windows_events:
             if pattern in text:
+                self.last_expected_event_at = monotonic()
                 print(f'[SMB {self.name}] {prefix} Expected Windows event -> {text}', flush=True)
                 return
 
