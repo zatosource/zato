@@ -41,8 +41,9 @@ _child_skipped_columns = ('id',)
 # The statements that write one batch on each database, as their verbs and tables
 _postgresql_statements = [
     ('SELECT', 'event_payload'),
+    ('SELECT', 'generate_series'),
     ('INSERT', 'event_payload'),
-    ('INSERT', 'event'),
+    ('COPY', 'event'),
     ('COPY', 'event_attr'),
     ('COPY', 'event_body'),
     ('COPY', 'event_link'),
@@ -108,7 +109,8 @@ def _child_rows(table:'Table', event_column:'str', positions:'intdict') -> 'anyl
 
 def test_one_statement_per_table(audit_backend:'str') -> 'None':
     """ A batch of events is written with one statement per table, plus the select of the payloads stored already
-    and, on SQLite, the select of the event ids.
+    and the select of the event ids, reserved from the sequence of the event table on PostgreSQL
+    and read after the insert on SQLite.
     """
     audit_log = AuditLog(Server_Name)
     seed_event_id = insert_seed_event(audit_log)

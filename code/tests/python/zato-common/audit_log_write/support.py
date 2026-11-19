@@ -97,6 +97,9 @@ class StatementRecorder:
             from_index = words.index('FROM')
             table_name = words[from_index + 1]
 
+            # A select from a set-returning function is recorded under the name of the function.
+            table_name = table_name.split('(')[0]
+
         self.statements.append((verb, table_name))
 
     def on_commit(self, conn:'any_') -> 'None':

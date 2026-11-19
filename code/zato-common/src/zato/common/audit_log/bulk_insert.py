@@ -77,10 +77,10 @@ def reserves_ids(dialect:'Dialect') -> 'bool':
 # ################################################################################################################################
 
 def _reserve_ids(connection:'Connection', row_count:'int') -> 'CursorResult[any_] | None':
-    """ Reserves the given number of ids from the sequence of the event table, on a database that reserves them,
-    and returns the result whose rows are the ids, which _insert_with_reserved_ids reads.
+    """ Reserves the ids of a batch of more than one event from the sequence of the event table, on a database
+    that reserves them, and returns the result whose rows are the ids, which _insert_with_reserved_ids reads.
     """
-    if reserves_ids(connection.dialect):
+    if row_count > 1 and reserves_ids(connection.dialect):
         out = _reserve_event_ids_statement.execute(connection, {'row_count': row_count})
     else:
         out = None
@@ -142,11 +142,11 @@ def _insert_events(
     """ Inserts the event rows of one batch and returns their ids in the order of the rows.
     """
 
-    # A database with sequences inserts the rows with the ids it reserved ..
+    # A database with sequences inserts the rows of a batch with the ids it reserved ..
     if reserved is not None:
         out = _insert_with_reserved_ids(connection, rows, reserved)
 
-    # .. a single event receives its id from the insert itself on any other one ..
+    # .. a single event receives its id from the insert itself ..
     elif len(rows) == 1:
         inserted = _insert_event_statement.insert_rows(connection, rows)
         out = [inserted[0].id]
