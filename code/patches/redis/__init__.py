@@ -3,7 +3,6 @@ from importlib import import_module
 from redis.backoff import default_backoff
 from redis.client import Redis, StrictRedis
 from redis.driver_info import DriverInfo
-from redis.cluster import RedisCluster
 from redis.connection import (
     BlockingConnectionPool,
     Connection,
@@ -12,22 +11,6 @@ from redis.connection import (
     UnixDomainSocketConnection,
 )
 from redis.credentials import CredentialProvider, UsernamePasswordCredentialProvider
-from redis.keyspace_notifications import (
-    ChannelType,
-    ClusterKeyspaceNotifications,
-    EventType,
-    KeyeventChannel,
-    KeyNotification,
-    KeyspaceChannel,
-    KeyspaceNotifications,
-    KeyspaceNotificationsInterface,
-    KeyspaceWorkerThread,
-    SubkeyeventChannel,
-    SubkeyspaceChannel,
-    SubkeyspaceeventChannel,
-    SubkeyspaceitemChannel,
-    get_channel_type,
-)
 from redis.exceptions import (
     AuthenticationError,
     AuthenticationWrongNumberOfArgsError,
@@ -123,11 +106,37 @@ __all__ = [
     "WatchError",
 ]
 
-# Zato - the asyncio client is imported on the first access to redis.asyncio rather than with the package.
+# Zato - the asyncio client, the cluster client and the keyspace notifications are imported
+# on the first access to them rather than with the package.
 _asyncio_module = "redis.asyncio"
+_cluster_module = "redis.cluster"
+_keyspace_notifications_module = "redis.keyspace_notifications"
+
+_lazy_names = {
+    "RedisCluster": _cluster_module,
+    "ChannelType": _keyspace_notifications_module,
+    "ClusterKeyspaceNotifications": _keyspace_notifications_module,
+    "EventType": _keyspace_notifications_module,
+    "KeyeventChannel": _keyspace_notifications_module,
+    "KeyNotification": _keyspace_notifications_module,
+    "KeyspaceChannel": _keyspace_notifications_module,
+    "KeyspaceNotifications": _keyspace_notifications_module,
+    "KeyspaceNotificationsInterface": _keyspace_notifications_module,
+    "KeyspaceWorkerThread": _keyspace_notifications_module,
+    "SubkeyeventChannel": _keyspace_notifications_module,
+    "SubkeyspaceChannel": _keyspace_notifications_module,
+    "SubkeyspaceeventChannel": _keyspace_notifications_module,
+    "SubkeyspaceitemChannel": _keyspace_notifications_module,
+    "get_channel_type": _keyspace_notifications_module,
+}
 
 
 def __getattr__(name):
-    if name != "asyncio":
+    if name == "asyncio":
+        return import_module(_asyncio_module)
+    if name not in _lazy_names:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-    return import_module(_asyncio_module)
+    module = import_module(_lazy_names[name])
+    value = getattr(module, name)
+    globals()[name] = value
+    return value
