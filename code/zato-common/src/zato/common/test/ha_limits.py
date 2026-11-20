@@ -41,8 +41,9 @@ class HALimits:
     Server_Bad_Start = 3.0
 
     # How long the stop of the server of an active node may take, from the SIGTERM of its node to the exit of the server,
-    # in seconds. It equals HA_Stop_Grace of zato/server/arbiter_config.py, the longest stop that the node permits.
-    Server_Stop = 10.0
+    # in seconds. The longest stop of breakdowns/ha-handover/01.md of private-zato-perf is 0.4 seconds, and the limit
+    # is five times that, which stays below HA_Stop_Grace of zato/server/arbiter_config.py, the longest stop that the node permits.
+    Server_Stop = 2.0
 
 # ################################################################################################################################
 # ################################################################################################################################

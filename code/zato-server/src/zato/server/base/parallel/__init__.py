@@ -1462,6 +1462,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         duration_ms = int((monotonic() - invocation_start) * 1000)
 
+        # .. the run state records that the run of this entry returned, so that a delivery of the entry again is skipped.
+        # A server that terminates after the service returns and before this record runs the slot again
+        # on the next delivery, so the record precedes every other write that follows the run ..
+        _ = self._scheduler_run_state.release(job_name, entry_id)
+
         logger.info('Fire event: before mark_complete job_id=%s name=%s outcome=%s duration_ms=%s run=%s error_tb_len=%s',
             job_id, job_name, outcome, duration_ms, current_run, len(error_traceback))
 
@@ -1473,9 +1478,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             except Exception:
                 logger.warning('Fire event: run completion not recorded job_id=%s name=%s traceback=%s',
                     job_id, job_name, format_exc())
-
-        # .. the run state records that the run of this entry returned, so that a delivery of the entry again is skipped ..
-        _ = self._scheduler_run_state.release(job_name, entry_id)
 
         # .. report the completion to the Rust scheduler so its in-flight state clears ..
         try:
