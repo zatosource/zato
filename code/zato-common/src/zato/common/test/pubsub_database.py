@@ -283,7 +283,7 @@ def get_database_address(database:'PubSubDatabase') -> 'str':
 
 # ################################################################################################################################
 
-def _write_tls_setup_script(path:'str', needs_client_cert:'bool') -> 'None':
+def write_tls_setup_script(path:'str', needs_client_cert:'bool') -> 'None':
     """ Writes the init script that turns TLS on inside the container and accepts TCP connections over TLS only,
     with a client certificate verified against the CA when the mode requires one.
     """
@@ -544,7 +544,7 @@ def start_pubsub_database(label:'str', mode:'str', extra_settings:'strlist | Non
 
         setup_script = os.path.join(certs_dir, 'tls-setup.sh')
         needs_client_cert = mode == PubSubDBMode.PostgreSQL_MTLS
-        _write_tls_setup_script(setup_script, needs_client_cert)
+        write_tls_setup_script(setup_script, needs_client_cert)
 
         command.extend(['-v', f'{certs_dir}:/certs-in:ro'])
         command.extend(['-v', f'{setup_script}:/docker-entrypoint-initdb.d/tls-setup.sh:ro'])

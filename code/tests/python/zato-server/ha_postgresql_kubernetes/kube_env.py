@@ -28,7 +28,9 @@ from kube_cluster import apply_manifest, build_pod_image, cluster, create_cluste
 from kube_endpoints import EndpointWatcher
 from nodes import is_named_by_record, ModuleCtx as NodesCtx, Node, Timers
 from topology import ModuleCtx as TopologyCtx, Referee
-from zato.common.test.ha_limits import HALimits
+from zato.common.ha.common import ModuleCtx as HACtx
+from zato.common.pubsub.sql.config import Default_Pull_Lease_Seconds
+from zato.common.test.perf_report import ModuleCtx as PerfCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,12 +39,23 @@ if 0:
     from zato.common.test.pubsub_database import PubSubDatabase
     from zato.common.typing_ import any_, anydict, strlist, strstrdict
 
-    PubSubDatabase = PubSubDatabase
-
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = logging.getLogger('zato.test.ha_postgresql_kubernetes.env')
+
+# ################################################################################################################################
+
+def _pull_lease_seconds() -> 'str':
+    """ Returns the pull lease of the pods, the production default while a performance suite records figures,
+    otherwise the short lease of the other tests of the suite.
+    """
+    if os.environ.get(PerfCtx.Env_Results_File, ''):
+        out = str(Default_Pull_Lease_Seconds)
+    else:
+        out = NodesCtx.Pull_Lease_Seconds
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -82,13 +95,13 @@ class ModuleCtx:
     Role_Standby = 'Standby'
 
     # The thresholds of the health of the Zato server and the hold-off of a node that resigned, in seconds, which are
-    # the defaults of zato_ha_core/src/config.rs, so that the pods run with the values of a production node
-    Server_Liveness_Timeout = HALimits.Server_Liveness_Timeout
-    Server_Start_Timeout    = 300.0
-    Server_Exit_Limit       = HALimits.Server_Exit_Limit
-    Server_Exit_Window      = 60.0
-    Resign_Hold_Off         = 20.0
-    Resign_Hold_Off_Max     = 300.0
+    # the defaults of the node, so that the pods run with the values of a production node
+    Server_Liveness_Timeout = HACtx.Default_Server_Liveness_Timeout
+    Server_Start_Timeout    = HACtx.Default_Server_Start_Timeout
+    Server_Exit_Limit       = HACtx.Default_Server_Exit_Limit
+    Server_Exit_Window      = HACtx.Default_Server_Exit_Window
+    Resign_Hold_Off         = HACtx.Default_Resign_Hold_Off
+    Resign_Hold_Off_Max     = HACtx.Default_Resign_Hold_Off_Max
 
     # The Secret with the Zato database settings of the pods, and the CA file that the pods mount
     PubSub_DB_Secret = 'zato-ha-pubsub-db'
@@ -405,6 +418,7 @@ def create_cluster_session(database_image:'str', database_zone:'str') -> 'KubeSe
 
     # The receivers listen on the address of the host on the network of kind ..
     rendered_yaml, invoke_password = start_receivers(base, get_kind_gateway())
+    base.invoke_password = invoke_password
 
     # .. the environment is created at the path that each pod mounts its local volume at, and kept as the template
     # that each pod copies to its volume when it first starts ..
@@ -452,7 +466,7 @@ def create_cluster_session(database_image:'str', database_zone:'str') -> 'KubeSe
         'server_port': str(NodesCtx.Server_Port),
         'redis_port': str(NodesCtx.Redis_Port),
         'scheduler_http_port': str(NodesCtx.Scheduler_HTTP_Port),
-        'pull_lease_seconds': NodesCtx.Pull_Lease_Seconds,
+        'pull_lease_seconds': _pull_lease_seconds(),
         'node_binary': NodesCtx.Node_Binary,
         'server_launcher': NodesCtx.Server_Launcher,
         'scheduler_binary': NodesCtx.Scheduler_Binary,

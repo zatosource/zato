@@ -302,6 +302,35 @@ fn a_failed_test_or_a_deleted_lease_refuses_the_write() {
 }
 
 #[test]
+fn the_release_is_a_json_patch_of_a_released_annotation() {
+    let (client, server) = stub(STATUS_OK);
+    let referee = LeaseReferee::new(client, "zato-ha");
+    let released = RefereeRecord::new(2, NODE_A).released_by();
+    assert!(referee.compare_and_set(&released, Some("7")).unwrap());
+    let received = server.join().unwrap();
+    assert_eq!(received.content_type.as_deref(), Some(CONTENT_TYPE_JSON_PATCH));
+    assert!(
+        received
+            .body
+            .starts_with(r#"[{"op":"test","path":"/metadata/resourceVersion","value":"7"}"#)
+    );
+
+    // The annotation is a JSON string inside the patch, so its quotes are escaped.
+    assert!(received.body.contains(r#"\"released\":true"#));
+    assert!(received.body.contains(r#"\"active_node\":\"zato-a\""#));
+}
+
+#[test]
+fn an_unreleased_annotation_is_the_one_of_the_previous_release() {
+    let (client, server) = stub(STATUS_OK);
+    let referee = LeaseReferee::new(client, "zato-ha");
+    assert!(referee.compare_and_set(&RefereeRecord::new(2, NODE_A), Some("7")).unwrap());
+    let received = server.join().unwrap();
+    assert!(!received.body.contains("released"));
+    assert!(received.body.contains(r#"{\"generation\":2,\"active_node\":\"zato-a\"}"#));
+}
+
+#[test]
 fn a_failed_test_or_a_deleted_lease_refuses_the_renewal() {
     for status in [STATUS_UNPROCESSABLE, STATUS_NOT_FOUND] {
         let (client, server) = stub(status);

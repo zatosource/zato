@@ -23,7 +23,7 @@ from kube_env import ModuleCtx as EnvCtx
 from kube_faults import delete_pod
 from kube_traffic import ModuleCtx as TrafficCtx
 from workload import Workload
-from zato.common.typing_ import cast_
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,9 +31,6 @@ from zato.common.typing_ import cast_
 if 0:
     from kube_env import KubeEnvironment, KubeNode
     from kube_traffic import FailoverClient, RequestRecord
-    from zato.common.typing_ import any_
-
-    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -102,7 +99,7 @@ def place_active(env:'KubeEnvironment', ordinal:'int') -> 'KubeNode':
 def start_workload(env:'KubeEnvironment') -> 'Workload':
     """ Starts the shared workload against the Service of the pair and lets it run before a fault.
     """
-    out = Workload(cast_('any_', env), cast_('any_', [env.haproxy]))
+    out = Workload(cast_(any_, env), cast_(any_, [env.haproxy]))
     out.start()
 
     time.sleep(ModuleCtx.Traffic_Seconds)
@@ -136,9 +133,9 @@ def finish(env:'KubeEnvironment', workload:'Workload', fault_started:'float', un
     for period_start, period_end in env.watcher.get_empty_periods_after(fault_started):
         logger.info('Service listed no pod for %.1fs, from %.3f', period_end - period_start, period_start)
 
-    check_workload(cast_('any_', env), workload)
+    check_workload(cast_(any_, env), workload)
 
-    _ = check_scheduler(cast_('any_', env), unrun_claims)
+    _ = check_scheduler(cast_(any_, env), unrun_claims)
 
     return active
 

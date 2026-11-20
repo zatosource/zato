@@ -751,7 +751,7 @@ Zato_Test_HA_Modules_postgresql := \
 	test_shared_takeover.py test_shared_database_failover.py test_reliability.py test_shared_long_runs.py
 
 Zato_Test_HA_Modules_postgresql-kubernetes := \
-	test_manifest_synchronous_standby.py test_shared_kube_pods.py test_shared_kube_local_postgresql.py \
+	test_manifest_rollout.py test_manifest_synchronous_standby.py test_shared_kube_pods.py test_shared_kube_local_postgresql.py \
 	test_shared_kube_failover.py test_shared_kube_server_faults.py test_shared_kube_postgresql.py test_shared_kube_rollout.py \
 	test_shared_kube_nodes.py
 

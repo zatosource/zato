@@ -14,6 +14,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import json
+import math
 import os
 import re
 import time
@@ -29,7 +30,9 @@ from kube_env import ModuleCtx as EnvCtx
 from kube_faults import delete_pod, heal_node, isolate_node
 from kube_sampler import ModuleCtx as SamplerCtx, PodLogFollower, PodSampler
 from kube_traffic import FailoverClient, ModuleCtx as TrafficCtx
+from zato.common.test.client import AdminClient
 from zato.common.test.ha_limits import HALimits
+from zato.common.test.perf_report import ModuleCtx as PerfCtx, report_result, start_measurement
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,12 +43,14 @@ if 0:
     from kube_sampler import followed_line_list, sample_list
     from kube_traffic import record_list
     from workload import Workload
-    from zato.common.typing_ import anydict, strlist
+    from zato.common.typing_ import anydict, floatlist, strlist, strset
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 request_run_list = list['record_list']
+strfloatdict = dict[str, float]
+stage_moment_list = list[tuple[str, float]]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -80,6 +85,28 @@ class ModuleCtx:
     Standby_Line = re.compile(r'Starting as Standby at generation ')
     Released_By = 'after the release by {}'
     Released_By_Any = 'after the release by '
+
+    # The lines of a node that stops its server and that removes and applies the label of its own pod
+    Server_Stop_Line   = re.compile(r'Stopping the Zato server with PID ')
+    Label_Removed_Line = re.compile(r'labeled as serving: false')
+    Label_Applied_Line = re.compile(r'labeled as serving: true')
+
+    # The stages of a handover that a performance suite records, each by the line that ends it
+    Stage_Patterns = (
+        ('server_stop', Server_Stop_Line),
+        ('label_removed', Label_Removed_Line),
+        ('drain', re.compile(r'Worker is draining')),
+        ('worker_exit', re.compile(r'Worker, PID \d+, terminated')),
+        ('config_exit', re.compile(r'Config process, PID \d+, terminated')),
+        ('release', re.compile(r'Released the active role at generation \d+')),
+        ('takeover', re.compile(r'Taking over at generation \d+ after the release by ')),
+        ('server_start', re.compile(r'Zato server started with PID ')),
+        ('first_answer', re.compile(r'Zato server answers at generation ')),
+        ('label_applied', Label_Applied_Line),
+    )
+
+    # The name under which the figures of a handover are recorded
+    Result_Name = 'Handover'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -274,6 +301,94 @@ def _update_under_workload(env:'KubeEnvironment', workload:'Workload', handovers
     # before the run began without a run.
     unrun_claims = ChecksCtx.Unrun_Claims_After_Fault * handovers
     _ = finish(env, workload, started, unrun_claims)
+
+    # The stages of each handover are recorded while a performance suite asks for them.
+    if os.environ.get(PerfCtx.Env_Results_File, ''):
+        _report_handovers(env, lines, started)
+
+# ################################################################################################################################
+
+def _handover_starts(lines:'followed_line_list', after:'float') -> 'floatlist':
+    """ Returns the moment at which each pod that served began to stop its server after a moment. A pod whose label
+    was never applied, such as one that starts, begins no handover.
+    """
+    out:'floatlist' = []
+
+    # The UIDs of the pods whose own label is applied
+    labeled:'strset' = set()
+
+    for line in lines:
+
+        # A pod that applies its own label serves from then on ..
+        if ModuleCtx.Label_Applied_Line.search(line.text):
+            labeled.add(line.uid)
+
+        # .. the stop of the server of a pod that serves begins a handover ..
+        elif ModuleCtx.Server_Stop_Line.search(line.text):
+            if line.uid in labeled:
+                labeled.remove(line.uid)
+
+                if line.moment >= after:
+                    out.append(line.moment)
+
+        # .. and a pod whose label is removed for another reason serves no longer.
+        elif ModuleCtx.Label_Removed_Line.search(line.text):
+            labeled.discard(line.uid)
+
+    return out
+
+# ################################################################################################################################
+
+def _stage_figures(lines:'followed_line_list', handover_start:'float', handover_end:'float') -> 'strfloatdict':
+    """ Returns how long after the stop of the server each stage of a handover was reported.
+    """
+    moments:'stage_moment_list' = []
+
+    for name, pattern in ModuleCtx.Stage_Patterns:
+        for line in lines:
+            if line.moment < handover_start:
+                continue
+
+            if line.moment >= handover_end:
+                break
+
+            if pattern.search(line.text):
+                moments.append((name, line.moment))
+                break
+
+    out:'strfloatdict' = {}
+
+    for name, moment in moments:
+        out[name] = moment - handover_start
+
+    return out
+
+# ################################################################################################################################
+
+def _report_handovers(env:'KubeEnvironment', lines:'followed_line_list', after:'float') -> 'None':
+    """ Records the stages of each handover after a moment with the settings of the active server.
+    """
+    starts = _handover_starts(lines, after)
+    assert starts, f'No handover after {after}'
+
+    client = AdminClient(env.haproxy.base_url, env.session.base.invoke_password)
+    measurement = start_measurement(client, env.database)
+
+    # Each handover ends where the next one begins, and the last one at the end of the output.
+    ends = starts[1:] + [math.inf]
+
+    for handover_start, handover_end in zip(starts, ends, strict=True):
+        stages = _stage_figures(lines, handover_start, handover_end)
+        duration = stages[ModuleCtx.Stage_Patterns[-1][0]]
+
+        figures = {
+            'stages': stages,
+            'duration': duration,
+            'window_start': handover_start,
+            'window_end': handover_start + duration,
+        }
+
+        _ = report_result(measurement, ModuleCtx.Result_Name, figures)
 
 # ################################################################################################################################
 # ################################################################################################################################

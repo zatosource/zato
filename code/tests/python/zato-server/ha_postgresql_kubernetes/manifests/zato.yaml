@@ -284,7 +284,7 @@ spec:
               containerPort: ${role_port}
           readinessProbe:
             httpGet:
-              path: /zato/ha/health
+              path: /zato/ha/ready
               port: ${role_port}
             periodSeconds: 2
           volumeMounts:

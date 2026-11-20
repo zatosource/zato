@@ -90,3 +90,39 @@ fn a_standby_or_isolated_node_does_not_answer() {
     }
     assert!(request(&shared, ROLE_PATH).starts_with(STATUS_LINE_UNAVAILABLE));
 }
+
+#[test]
+fn the_ready_endpoint_follows_the_role() {
+    let dir = tempfile::tempdir().unwrap();
+    let shared = shared(node_config(NODE_A, dir.path(), TIMERS), Box::new(MemoryReferee::default()));
+
+    // A node that has not read the record is not ready ..
+    assert!(request(&shared, READY_PATH).starts_with(STATUS_LINE_UNAVAILABLE));
+
+    // .. nor is a fenced node ..
+    shared.state.lock().role = Role::Fenced;
+    assert!(request(&shared, READY_PATH).starts_with(STATUS_LINE_UNAVAILABLE));
+
+    // .. nor is an active node whose server has not answered ..
+    {
+        let mut state = shared.state.lock();
+        state.role = Role::Active;
+        state.server_ready = false;
+    }
+    assert!(request(&shared, READY_PATH).starts_with(STATUS_LINE_UNAVAILABLE));
+
+    // .. while a standby is ready, and so is an active node whose server answers ..
+    shared.state.lock().role = Role::Standby;
+    assert!(request(&shared, READY_PATH).starts_with(STATUS_LINE_OK));
+
+    {
+        let mut state = shared.state.lock();
+        state.role = Role::Active;
+        state.server_ready = true;
+    }
+    assert!(request(&shared, READY_PATH).starts_with(STATUS_LINE_OK));
+
+    // .. until the node stops.
+    shared.state.lock().stopping = true;
+    assert!(request(&shared, READY_PATH).starts_with(STATUS_LINE_UNAVAILABLE));
+}

@@ -38,6 +38,12 @@ pub const CONSUMER_INSTANCE_NAME: &str = "scheduler-0";
 /// Maximum number of entries in each stream before trimming.
 const STREAM_MAXLEN: usize = 100_000;
 
+/// How long one read of the command stream waits for a command, in milliseconds.
+///
+/// A stopping scheduler waits for its command listener, which reads the stop flag only between two reads,
+/// so this also bounds how long the stop of an active-standby node waits for the scheduler.
+const COMMAND_BLOCK_MS: u64 = 100;
+
 /// Redis stream keys, all namespaced by the per-environment prefix.
 #[derive(Clone)]
 pub struct StreamKeys {
@@ -237,7 +243,7 @@ pub fn command_listener_loop(conn: &mut RedisLink, keys: &StreamKeys, shared: &A
             .arg(CONSUMER_GROUP_NAME)
             .arg(CONSUMER_INSTANCE_NAME)
             .arg("BLOCK")
-            .arg(1000_u64)
+            .arg(COMMAND_BLOCK_MS)
             .arg("COUNT")
             .arg(10_u64)
             .arg("STREAMS")

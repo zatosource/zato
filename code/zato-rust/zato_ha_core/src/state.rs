@@ -38,6 +38,10 @@ impl Role {
 }
 
 /// Everything the threads of the node share under one mutex.
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "each flag is set by a different thread of the node and is read independently"
+)]
 pub struct NodeState {
     /// The current role.
     pub role: Role,

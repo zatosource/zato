@@ -18,8 +18,6 @@ import os
 if 0:
     from zato.common.typing_ import intnone
 
-    intnone = intnone
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -43,6 +41,29 @@ class ModuleCtx:
     Env_Server_Exit_Window      = 'Zato_HA_Server_Exit_Window'
     Env_Resign_Hold_Off         = 'Zato_HA_Resign_Hold_Off'
     Env_Resign_Hold_Off_Max     = 'Zato_HA_Resign_Hold_Off_Max'
+
+    # The defaults of the timers and thresholds of a node, the same as the DEFAULT_ constants of zato_ha_core/src/config.rs,
+    # in seconds, except for the exit limit, which is a number of exits
+    Default_Heartbeat_Time          = 0.5
+    Default_Takeover_Time           = 6.0
+    Default_Server_Liveness_Timeout = 10.0
+    Default_Server_Start_Timeout    = 300.0
+    Default_Server_Exit_Limit       = 3
+    Default_Server_Exit_Window      = 60.0
+    Default_Resign_Hold_Off         = 20.0
+    Default_Resign_Hold_Off_Max     = 300.0
+
+    # The variable of each timer and threshold of a node with its default
+    Timer_Defaults = {
+        Env_Heartbeat_Time:          Default_Heartbeat_Time,
+        Env_Takeover_Time:           Default_Takeover_Time,
+        Env_Server_Liveness_Timeout: Default_Server_Liveness_Timeout,
+        Env_Server_Start_Timeout:    Default_Server_Start_Timeout,
+        Env_Server_Exit_Limit:       Default_Server_Exit_Limit,
+        Env_Server_Exit_Window:      Default_Server_Exit_Window,
+        Env_Resign_Hold_Off:         Default_Resign_Hold_Off,
+        Env_Resign_Hold_Off_Max:     Default_Resign_Hold_Off_Max,
+    }
 
     # The value of the mode variable that turns the active-standby mode on
     Mode_Active_Standby = 'active-standby'

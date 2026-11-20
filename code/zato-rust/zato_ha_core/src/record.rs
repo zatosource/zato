@@ -15,7 +15,6 @@ use serde::{Deserialize, Serialize};
 /// The record that decides which node is active.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RefereeRecord {
-
     /// Raised by one on every change of the active node.
     pub generation: u64,
 
@@ -48,7 +47,10 @@ impl RefereeRecord {
 }
 
 /// Whether a record is not released, which leaves the `released` field out of its encoding.
-#[expect(clippy::trivially_copy_pass_by_ref, reason = "serde passes the field to skip_serializing_if by reference")]
+#[expect(
+    clippy::trivially_copy_pass_by_ref,
+    reason = "serde passes the field to skip_serializing_if by reference"
+)]
 const fn is_unreleased(released: &bool) -> bool {
     !*released
 }

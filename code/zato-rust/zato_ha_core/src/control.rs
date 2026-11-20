@@ -420,6 +420,7 @@ impl Control {
 mod tests {
     use super::*;
     use crate::config::Timers;
+    use crate::referee::Referee;
     use crate::referee::tests::MemoryReferee;
     use crate::test_support::{self, MemoryProbe, NODE_A, NODE_B};
     use tempfile::TempDir;
@@ -444,7 +445,6 @@ mod tests {
 
     /// Node A of a pair, with the files it needs for as long as it exists.
     struct TestNode {
-
         /// The control loop of the node.
         control: Control,
 
@@ -487,10 +487,7 @@ mod tests {
 
     /// Ends the Zato server of a node after the drain, as the supervisor does once the process has exited,
     /// after `during_drain` has run while the server still runs.
-    fn end_server_after_drain(
-        shared: &Arc<Shared>,
-        during_drain: impl FnOnce() + Send + 'static,
-    ) -> thread::JoinHandle<()> {
+    fn end_server_after_drain(shared: &Arc<Shared>, during_drain: impl FnOnce() + Send + 'static) -> thread::JoinHandle<()> {
         let shared = Arc::clone(shared);
         thread::spawn(move || {
             thread::sleep(DRAIN);
@@ -573,10 +570,7 @@ mod tests {
 
         // .. and once the server has exited, the record is released at the generation of the node.
         assert!(node.control.shared.state.lock().stopping);
-        assert_eq!(
-            record(&node.control),
-            RefereeRecord::new(ACTIVE_GENERATION, NODE_A).released_by()
-        );
+        assert_eq!(record(&node.control), RefereeRecord::new(ACTIVE_GENERATION, NODE_A).released_by());
     }
 
     #[test]

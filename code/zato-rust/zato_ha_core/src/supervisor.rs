@@ -19,8 +19,9 @@
 //!
 //! The supervisor marks the server as running from the moment it commits to a start until the process exited or its
 //! stop completed. On a stop of the node, the label thread removes the label of the own pod while the supervisor
-//! stops the server with SIGTERM, which drains its requests, and the control loop of an active node keeps renewing
-//! the lease until the mark is cleared and then releases the referee record.
+//! stops the server with SIGTERM, which drains its requests, and waits until no process of its group exists.
+//! The control loop of an active node keeps renewing the lease until the mark is cleared and then releases
+//! the referee record.
 
 use std::os::unix::process::CommandExt;
 use std::process::{Child, Command};
@@ -28,6 +29,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
+use nix::errno::Errno;
 use nix::sys::prctl;
 use nix::sys::signal::{Signal, killpg};
 use nix::sys::wait::{WaitPidFlag, WaitStatus, waitpid};
@@ -341,6 +343,9 @@ impl Supervisor {
     }
 
     /// Stops a server and every process it started, with SIGTERM and then SIGKILL.
+    ///
+    /// The server is stopped once no process of its group exists. The process that the node started may exit
+    /// at once on SIGTERM, as `zato start --fg` does, while the arbiter that it started still drains its worker.
     fn terminate(&mut self, mut child: Child) {
         let Ok(pid) = i32::try_from(child.id()) else {
             return;
@@ -356,8 +361,11 @@ impl Supervisor {
         let _ = killpg(group, Signal::SIGTERM);
         let deadline = Instant::now() + STOP_GRACE;
         while Instant::now() < deadline {
-            if matches!(child.try_wait(), Ok(Some(_))) {
-                let _ = killpg(group, Signal::SIGKILL);
+            // The started process and the processes reparented to this node are reaped as they exit,
+            // so that an exited process does not keep the group in existence.
+            let _ = child.try_wait();
+            reap_group(group);
+            if !group_exists(group) {
                 return;
             }
             thread::sleep(STOP_POLL_INTERVAL);
@@ -374,6 +382,25 @@ fn new_agent(timeout: Duration) -> ureq::Agent {
         .http_status_as_error(false)
         .build()
         .into()
+}
+
+/// Reaps the processes of the group of a stopping server that exited and whose parent is this node.
+fn reap_group(group: Pid) {
+    // A negative PID selects every child of this node in the process group of the same number.
+    let members = Pid::from_raw(group.as_raw().saturating_neg());
+    loop {
+        match waitpid(members, Some(WaitPidFlag::WNOHANG)) {
+            // A member that still runs or no member at all leaves nothing more to reap.
+            Ok(WaitStatus::StillAlive) | Err(_) => return,
+            Ok(_) => {}
+        }
+    }
+}
+
+/// Whether any process of a process group exists, one that exited and was not reaped yet included.
+fn group_exists(group: Pid) -> bool {
+    // No signal is delivered, only the existence of the group is checked.
+    !matches!(killpg(group, None), Err(Errno::ESRCH))
 }
 
 /// Whether the kernel reparents to this node the processes whose parent exited.

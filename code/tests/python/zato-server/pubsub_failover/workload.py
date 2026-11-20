@@ -49,6 +49,10 @@ Unpaced_Interval = 0.0
 # How long a client waits after a failed request before the next one, in seconds.
 _retry_pause_seconds = 0.2
 
+# How long one request of a client may take before it fails, in seconds. A connection to the address of a server
+# that no longer exists receives no answer, and without this limit it waits for the retries of the kernel.
+_request_timeout_seconds = 10.0
+
 # How long the push deliveries may take to reach the receiver once the publishers stopped, in seconds.
 _delivery_timeout_seconds = 300
 
@@ -118,7 +122,8 @@ class Workload:
 
         clients:'list[PublishClient]' = []
         for server in self.servers:
-            clients.append(PublishClient(server.base_url, self.env.publisher_username, self.env.publisher_password))
+            clients.append(PublishClient(server.base_url, self.env.publisher_username, self.env.publisher_password,
+                _request_timeout_seconds))
 
         position = 0
         index = 0
@@ -143,7 +148,8 @@ class Workload:
 
         clients:'list[PullClient]' = []
         for server in self.servers:
-            clients.append(PullClient(server.base_url, self.env.puller_username, self.env.puller_password))
+            clients.append(PullClient(server.base_url, self.env.puller_username, self.env.puller_password,
+                _request_timeout_seconds))
 
         position = 0
 

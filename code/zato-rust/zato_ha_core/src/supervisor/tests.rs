@@ -290,6 +290,27 @@ fn on_a_stop_the_running_mark_is_cleared_only_after_the_server_has_exited() {
     node.stop();
 }
 
+/// The server of the test of a launcher, which exits at once on SIGTERM while the process it started drains.
+///
+/// The launcher is a shell that starts the draining server in the background and waits for it, as `zato start --fg`
+/// waits for its arbiter.
+const LAUNCHER_SCRIPT: &str =
+    r#"sh -c 'trap "sleep 0.3; echo stopped > \"$0\"; exit 0" TERM; while true; do sleep 0.05; done' "$0" & wait"#;
+
+#[test]
+fn on_a_stop_the_running_mark_is_cleared_only_after_every_process_of_the_server_has_exited() {
+    let stub = HttpStub::start(STATUS_OK);
+    let node = ActiveNode::start(stub.port, LAUNCHER_SCRIPT, STOPPED_FILE_NAME);
+    assert!(wait_until(|| node.shared.state.lock().server_ready));
+
+    // The launcher exits at once on SIGTERM, and the mark stays set until the process that it started
+    // has drained, recorded its stop and exited.
+    node.shared.announce_stop();
+    assert!(wait_until(|| !node.shared.state.lock().server_running));
+    assert!(node.dir.path().join(STOPPED_FILE_NAME).exists());
+    node.stop();
+}
+
 #[test]
 fn a_stopping_node_starts_no_server() {
     let dir = tempfile::tempdir().unwrap();
@@ -305,7 +326,10 @@ fn a_stopping_node_starts_no_server() {
     }
 
     // The supervisor does not commit to a start once the node is stopping, so no server is ever marked as running.
-    let supervisor = Supervisor::new(Arc::clone(&shared), vec!["sh".to_owned(), "-c".to_owned(), SERVER_SCRIPT.to_owned()]);
+    let supervisor = Supervisor::new(
+        Arc::clone(&shared),
+        vec!["sh".to_owned(), "-c".to_owned(), SERVER_SCRIPT.to_owned()],
+    );
     assert!(!supervisor.commit_to_start());
     assert!(!shared.state.lock().server_running);
 }

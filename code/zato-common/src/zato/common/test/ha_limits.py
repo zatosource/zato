@@ -8,6 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The limits that the suites of the active-standby pair apply to the steps of a failover.
 
+# Zato
+from zato.common.ha.common import ModuleCtx as HACtx
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -25,13 +28,12 @@ class HALimits:
     Server_Ping_Timeout  = 2.0
 
     # How long a server that has answered may remain without an answer before its node resigns, in seconds,
-    # the same as DEFAULT_SERVER_LIVENESS_TIMEOUT of zato_ha_core/src/config.rs. It spans five pings that time out,
-    # and it is below the 30 s after which the arbiter of the server replaces a worker without a heartbeat.
-    Server_Liveness_Timeout = 10.0
+    # the default of the node. It spans five pings that time out, and it is below the 30 s after which the arbiter
+    # of the server replaces a worker without a heartbeat.
+    Server_Liveness_Timeout = HACtx.Default_Server_Liveness_Timeout
 
-    # How many exits of the server within the window make its node resign, the same as DEFAULT_SERVER_EXIT_LIMIT
-    # of zato_ha_core/src/config.rs.
-    Server_Exit_Limit = 3
+    # How many exits of the server within the window make its node resign, the default of the node.
+    Server_Exit_Limit = HACtx.Default_Server_Exit_Limit
 
     # How long a server whose configuration cannot be read may take to exit, from the spawn of its command, in seconds.
     # The exit measures 0.15 s in test_server_liveness.py on the local PostgreSQL 19, and the limit leaves room

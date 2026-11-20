@@ -23,8 +23,8 @@ from kube_env import create_cluster_session, create_secret, KubeBackend, KubeSes
 from kube_local_postgresql import is_local_backend, start_local_backend, use_local_backend
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.direct_sql.reset import recreate_public_schema
-from zato.common.test.pubsub_database import _write_tls_setup_script, connect, get_container_settings, \
-    ModuleCtx as DatabaseCtx, PubSubDatabase, PubSubDBMode
+from zato.common.test.pubsub_database import connect, get_container_settings, ModuleCtx as DatabaseCtx, PubSubDatabase, \
+    PubSubDBMode, write_tls_setup_script
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -241,7 +241,7 @@ def _start_postgresql(session:'KubeSession') -> 'KubePostgreSQL':
 
     # .. the instances accept connections over TLS only, the replication connection of the standby included ..
     tls_script = os.path.join(out.directory, 'tls-setup.sh')
-    _write_tls_setup_script(tls_script, False)
+    write_tls_setup_script(tls_script, False)
 
     replication_script = os.path.join(out.directory, 'replication-setup.sh')
     _write_replication_script(replication_script)

@@ -25,6 +25,7 @@ from zato.common.db_env.commit_queue import Default_Max_In_Flight
 from zato.common.db_env.common import Type_SQLite
 from zato.common.db_env.connection import Relaxed_Commit_Levels, Setting_On, SQLite_Journal_Mode, SQLite_Synchronous
 from zato.common.db_env.filesystem import is_memory_filesystem, ModuleCtx as FilesystemCtx
+from zato.common.ha.common import ModuleCtx as HACtx
 from zato.common.pubsub.sql.config import Default_Commit_Max_Messages, Default_Commits_In_Flight, \
     Default_Delivered_Max_Days, Default_Delivered_Max_Messages, Default_Pull_Lease_Seconds, Urgent_Commits_In_Flight
 
@@ -197,10 +198,17 @@ def _get_findings(settings:'stranydict', database:'PubSubDatabase | None') -> 's
         Default_Delivered_Max_Messages)
     _check_value(out, 'pubsub_delivered_max_days', settings['pubsub_delivered_max_days'], Default_Delivered_Max_Days)
 
-    # .. the node of an active-standby pair runs with its own timers ..
+    # .. the node of an active-standby pair runs with the defaults of its timers ..
     for name, value in settings['ha_timers'].items():
-        if value is not None:
-            out.append(f'{name} is `{value}`, a production node runs with its default')
+        if value is None:
+            continue
+
+        default = HACtx.Timer_Defaults[name]
+
+        if float(value) == default:
+            continue
+
+        out.append(f'{name} is `{value}`, a production node runs with `{default}`')
 
     # .. and the server logs to stdout only.
     if log_files := settings['log_files']:

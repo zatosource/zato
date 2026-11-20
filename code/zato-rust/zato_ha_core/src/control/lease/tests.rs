@@ -610,10 +610,7 @@ fn a_node_without_the_database_does_not_take_over_a_released_record() {
     node.set_database_unreachable(true);
     node.control.watch_lease().unwrap();
     assert_eq!(node.role(), (Role::Standby, FIRST_GENERATION));
-    assert_eq!(
-        node.record().value,
-        RefereeRecord::new(FIRST_GENERATION, NODE_B).released_by()
-    );
+    assert_eq!(node.record().value, RefereeRecord::new(FIRST_GENERATION, NODE_B).released_by());
 }
 
 #[test]

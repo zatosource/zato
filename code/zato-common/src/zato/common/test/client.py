@@ -132,8 +132,9 @@ class PublishClient:
     """ Publishes messages to a Zato pub/sub topic via REST.
     """
 
-    def __init__(self, base_url:'str', username:'str', password:'str') -> 'None':
+    def __init__(self, base_url:'str', username:'str', password:'str', timeout:'floatnone'=None) -> 'None':
         self.base_url = base_url
+        self.timeout = timeout
         credentials = f'{username}:{password}'
         credentials_bytes = credentials.encode()
         encoded = b64encode(credentials_bytes)
@@ -192,7 +193,7 @@ class PublishClient:
         logger.info('Publishing to %s: %s', topic_name, payload)
 
         try:
-            with urlopen(request) as response:
+            with urlopen(request, timeout=self.timeout) as response:
                 raw = response.read()
         except HTTPError as error:
             raw = error.read()
@@ -231,7 +232,7 @@ class PublishClient:
         logger.info('Publishing to %s (username=%s)', topic_name, username)
 
         try:
-            with urlopen(request) as response:
+            with urlopen(request, timeout=self.timeout) as response:
                 raw = response.read()
                 status_code = response.status
         except HTTPError as error:
@@ -255,8 +256,9 @@ class PullClient:
     """ Pulls messages from Zato pub/sub via REST.
     """
 
-    def __init__(self, base_url:'str', username:'str', password:'str') -> 'None':
+    def __init__(self, base_url:'str', username:'str', password:'str', timeout:'floatnone'=None) -> 'None':
         self.base_url = base_url
+        self.timeout = timeout
         credentials = f'{username}:{password}'
         credentials_bytes = credentials.encode()
         encoded = b64encode(credentials_bytes)
@@ -277,7 +279,7 @@ class PullClient:
         request.add_header('Content-Type', 'application/json')
 
         try:
-            with urlopen(request) as response:
+            with urlopen(request, timeout=self.timeout) as response:
                 raw = response.read()
         except HTTPError as error:
             raw = error.read()
