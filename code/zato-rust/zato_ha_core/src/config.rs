@@ -144,6 +144,9 @@ pub const DEFAULT_HEARTBEAT_TIME: f64 = 0.5;
 /// The default takeover time, in seconds.
 pub const DEFAULT_TAKEOVER_TIME: f64 = 6.0;
 
+/// How many requests to the API server or probes of the database, each at its longest, fit in the takeover time.
+pub const REQUESTS_PER_TAKEOVER: u32 = 2;
+
 /// The default log level filter.
 pub const DEFAULT_LOG_LEVEL: &str = "info";
 
@@ -282,6 +285,16 @@ pub struct Timers {
 
     /// How long the standby waits for a renewal of the lease before it attempts a takeover.
     pub takeover: Duration,
+}
+
+impl Timers {
+    /// Returns how long one request to the API server or one probe of the database may take.
+    ///
+    /// A renewal that lands within the takeover time keeps the lease, so a slow path of the active node fails a request
+    /// only once it takes half of the takeover time, and two requests still fit in the takeover time.
+    pub fn request_timeout(&self) -> Duration {
+        self.takeover / REQUESTS_PER_TAKEOVER
+    }
 }
 
 /// How the node decides that its Zato server failed and how long it holds off after it resigned.

@@ -91,6 +91,7 @@ class KubePostgreSQL(KubeBackend):
     def __init__(self, session:'KubeSession') -> 'None':
         self.ip = session.control_plane_ip
         self.pod_names:'strlist' = [ModuleCtx.Pod_Name, ModuleCtx.Standby_Pod_Name]
+        self.service_name = ModuleCtx.StatefulSet_Name
         self.password = 'pubsub.' + CryptoManager.generate_hex_string()
         self.directory = os.path.join(session.base.run_dir, 'postgresql')
 

@@ -50,9 +50,6 @@ class ModuleCtx:
     # How long the traffic runs before a fault, in seconds
     Traffic_Seconds = 5
 
-    # How long one probe of the database may take, as the node bounds it, in seconds
-    Probe_Timeout = 2.0
-
     # How often the role of a node is read while a test waits for it, in seconds
     Poll_Interval = 0.1
 
@@ -153,7 +150,7 @@ def test_asynchronous_standby_at_runtime(ha_pair:'HAEnvironment') -> 'None':
     cluster.set_synchronous_standby_names('')
 
     # .. the active node stops serving within one probe ..
-    detection_bound = env.timers.heartbeat + ModuleCtx.Probe_Timeout + ModuleCtx.Poll_Interval
+    detection_bound = env.timers.heartbeat + env.timers.request_timeout + ModuleCtx.Poll_Interval
     isolated_at = _wait_until_isolated(active, detection_bound)
     logger.info('%s isolated %.3fs after the change', active.node_name, isolated_at - changed_at)
 

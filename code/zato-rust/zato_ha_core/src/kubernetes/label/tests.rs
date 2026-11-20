@@ -12,7 +12,7 @@ use crate::referee::Referee;
 use crate::referee::tests::MemoryReferee;
 use crate::server_health::ServerFailure;
 use crate::state::Role;
-use crate::test_support::{HttpStub, LOOPBACK, NODE_A, NODE_B, node_config, shared, wait_until};
+use crate::test_support::{API_REQUEST_TIMEOUT, HttpStub, LOOPBACK, NODE_A, NODE_B, node_config, shared, wait_until};
 use std::collections::HashMap;
 use std::thread;
 
@@ -105,7 +105,14 @@ fn the_peer_is_unlabeled_at_takeover_and_the_own_pod_only_once_the_server_answer
             .unwrap();
     }
     let shared = shared(node_config(NODE_A, dir.path(), TIMERS), Box::new(referee));
-    let client = ApiClient::new(&format!("http://{LOOPBACK}:{}", stub.port), NAMESPACE, None, None).unwrap();
+    let client = ApiClient::new(
+        &format!("http://{LOOPBACK}:{}", stub.port),
+        NAMESPACE,
+        None,
+        None,
+        API_REQUEST_TIMEOUT,
+    )
+    .unwrap();
     let labels = PodLabels {
         pods_url: client.collection_url(PODS_GROUP_VERSION, PODS_RESOURCE),
         client,
@@ -163,7 +170,14 @@ fn an_isolated_node_removes_its_label() {
         state.generation = GENERATION;
         state.server_ready = true;
     }
-    let client = ApiClient::new(&format!("http://{LOOPBACK}:{}", stub.port), NAMESPACE, None, None).unwrap();
+    let client = ApiClient::new(
+        &format!("http://{LOOPBACK}:{}", stub.port),
+        NAMESPACE,
+        None,
+        None,
+        API_REQUEST_TIMEOUT,
+    )
+    .unwrap();
     let labels = PodLabels {
         pods_url: client.collection_url(PODS_GROUP_VERSION, PODS_RESOURCE),
         client,
@@ -196,7 +210,14 @@ fn a_node_whose_server_failed_removes_its_label_before_it_resigns() {
         state.generation = GENERATION;
         state.server_ready = true;
     }
-    let client = ApiClient::new(&format!("http://{LOOPBACK}:{}", stub.port), NAMESPACE, None, None).unwrap();
+    let client = ApiClient::new(
+        &format!("http://{LOOPBACK}:{}", stub.port),
+        NAMESPACE,
+        None,
+        None,
+        API_REQUEST_TIMEOUT,
+    )
+    .unwrap();
     let labels = PodLabels {
         pods_url: client.collection_url(PODS_GROUP_VERSION, PODS_RESOURCE),
         client,

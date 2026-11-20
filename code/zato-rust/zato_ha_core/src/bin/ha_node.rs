@@ -48,14 +48,16 @@ fn build_referee(config: &NodeConfig, client: &ApiClient) -> Box<dyn Referee> {
 
 /// Builds the probe of the Zato database.
 fn build_probe(config: &NodeConfig) -> Result<Box<dyn DatabaseProbe>, String> {
-    let probe = PostgreSqlProbe::new(&config.database).map_err(|error| error.to_string())?;
+    let request_timeout = config.timers.request_timeout();
+    let probe = PostgreSqlProbe::new(&config.database, request_timeout).map_err(|error| error.to_string())?;
     Ok(Box::new(probe))
 }
 
 /// Starts every thread and runs the control loop until the node stops.
 fn run(config: NodeConfig, command: Vec<String>) -> Result<(), String> {
     // The label thread patches the pods of the pair, so the node runs only where the API server is reachable.
-    let client = ApiClient::from_service_account().map_err(|error| format!("Kubernetes: {error}"))?;
+    let request_timeout = config.timers.request_timeout();
+    let client = ApiClient::from_service_account(request_timeout).map_err(|error| format!("Kubernetes: {error}"))?;
     let referee = build_referee(&config, &client);
     let probe = build_probe(&config)?;
     std::fs::create_dir_all(&config.data_dir).map_err(|error| format!("{}: {error}", config.data_dir.display()))?;

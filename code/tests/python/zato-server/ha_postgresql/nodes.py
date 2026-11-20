@@ -109,6 +109,17 @@ class Timers:
     # and the default retention limits, none of which the nodes are then given
     is_production: 'bool' = False
 
+    # How many requests to the API server or probes of the database fit in the takeover time,
+    # the same as REQUESTS_PER_TAKEOVER of zato_ha_core/src/config.rs
+    Requests_Per_Takeover = 2
+
+    @property
+    def request_timeout(self) -> 'float':
+        """ How long one request of a node to the API server or one probe of the database may take, in seconds.
+        """
+        out = self.takeover / self.Requests_Per_Takeover
+        return out
+
 # ################################################################################################################################
 # ################################################################################################################################
 

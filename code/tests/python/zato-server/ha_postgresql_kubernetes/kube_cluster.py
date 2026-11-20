@@ -20,19 +20,21 @@ import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from functools import partial
 from string import Template
 from tempfile import TemporaryDirectory
 from urllib.request import Request, urlopen
 
 # Zato
 from topology import docker
-from zato.common.test.reservation import forget_name, is_name_live, is_reserved_name, reserve_name
+from zato.common.test.reservation import forget_name, is_name_live, is_reserved_name, PortInUse, reserve_name, \
+    start_on_reserved_port
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.test.reservation import NameReservation
+    from zato.common.test.reservation import NameReservation, PortReservation
     from zato.common.typing_ import any_, strlist, strlistdict, strset, strstrdict
 
 # ################################################################################################################################
@@ -85,12 +87,18 @@ class ModuleCtx:
     # How long the cluster may take to be created and its nodes to be ready, in seconds
     Create_Timeout = '300s'
 
+    # The address of the API server of the cluster on the host, the purpose of the reservation of its port
+    # and the errors with which Docker refuses a port that another process took before the cluster bound it
+    API_Server_Address = '127.0.0.1'
+    API_Server_Purpose = 'zato-ha-kube-api-server'
+    Port_Taken_Errors = ['port is already allocated', 'address already in use']
+
     # How long kubectl waits for an object, in seconds
     Wait_Timeout = '300s'
 
     # The address that kubectl proxy listens on, and what it prints once it does
     Proxy_Host = '127.0.0.1'
-    Proxy_Ready_Pattern = re.compile(r'Starting to serve on [\d.]+:(\d+)')
+    Proxy_Ready_Pattern = re.compile(r'Starting to serve on [\d.]+:\d+')
 
     # How long one request through kubectl proxy may take, in seconds
     Proxy_Request_Timeout = 5
@@ -98,6 +106,11 @@ class ModuleCtx:
     # How long kubectl proxy may take to start, and how often its output is read meanwhile, in seconds
     Proxy_Start_Timeout = 30
     Poll_Interval = 0.2
+
+    # The purpose of the reservation of the port of kubectl proxy, and the error with which the proxy exits
+    # when another process took the port before the proxy bound it
+    Proxy_Purpose = 'zato-ha-kube-proxy'
+    Proxy_Port_Taken = 'address already in use'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -108,6 +121,7 @@ class KubeCluster:
     in parallel processes use clusters of their own.
     """
     reservation: 'NameReservation'
+    api_server_reservation: 'PortReservation | None'
     name: 'str'
     context: 'str'
     control_plane: 'str'
@@ -127,6 +141,7 @@ def reserve_cluster() -> 'None':
     name = reservation.name
 
     cluster.reservation = reservation
+    cluster.api_server_reservation = None
     cluster.name = name
     cluster.context = ModuleCtx.Context_Prefix + name
     cluster.control_plane = name + ModuleCtx.Control_Plane_Suffix
@@ -268,15 +283,17 @@ def get_zone_volume_dir(run_dir:'str', zone:'str') -> 'str':
 
 # ################################################################################################################################
 
-def create_cluster(run_dir:'str', repository_dir:'str') -> 'None':
-    """ Creates the cluster, with the repository, the run directory and the local volumes of each zone mounted
-    into its worker nodes, and waits until every node is ready.
+def _create_cluster_on_port(run_dir:'str', repository_dir:'str', api_server_port:'int') -> 'None':
+    """ Creates the cluster with its API server on the given port of the host, and raises PortInUse if another process
+    took the port before the cluster bound it.
     """
     placeholders = {
         'cluster_name': cluster.name,
         'repository_dir': repository_dir,
         'run_dir': run_dir,
         'volume_dir': ModuleCtx.Volume_Dir,
+        'api_server_address': ModuleCtx.API_Server_Address,
+        'api_server_port': str(api_server_port),
     }
 
     for zone in cluster.zones.values():
@@ -289,20 +306,47 @@ def create_cluster(run_dir:'str', repository_dir:'str') -> 'None':
     with open(config_path, 'w') as config_file:
         _ = config_file.write(config)
 
-    _ = run(['kind', 'create', 'cluster', '--name', cluster.name, '--config', config_path,
-        '--wait', ModuleCtx.Create_Timeout])
+    result = run(['kind', 'create', 'cluster', '--name', cluster.name, '--config', config_path,
+        '--wait', ModuleCtx.Create_Timeout], check=False)
+
+    if result.returncode != 0:
+
+        # A cluster that kind did not create is deleted with whatever of it remains ..
+        _ = run(['kind', 'delete', 'cluster', '--name', cluster.name], check=False)
+
+        # .. and a port that another process took is drawn again.
+        for error in ModuleCtx.Port_Taken_Errors:
+            if error in result.stderr:
+                raise PortInUse(f'API server port {api_server_port} taken -> {result.stderr.strip()}')
+
+        raise Exception(f'Cluster {cluster.name} not created, code {result.returncode}: {result.stderr.strip()}')
+
+# ################################################################################################################################
+
+def create_cluster(run_dir:'str', repository_dir:'str') -> 'None':
+    """ Creates the cluster, with its API server on a reserved port of the host and with the repository, the run directory
+    and the local volumes of each zone mounted into its worker nodes, and waits until every node is ready.
+    """
+    start = partial(_create_cluster_on_port, run_dir, repository_dir)
+    started = start_on_reserved_port(ModuleCtx.API_Server_Purpose, start)
+
+    cluster.api_server_reservation = started.reservation
 
     _ = kubectl('create', 'namespace', ModuleCtx.Namespace)
 
-    logger.info('Cluster %s created', cluster.name)
+    logger.info('Cluster %s created, API server on port %s', cluster.name, started.reservation.port)
 
 # ################################################################################################################################
 
 def delete_cluster() -> 'None':
-    """ Deletes the cluster of the run. Its runtime directory remains, with the logs of the run, until a later run
-    finds the reservation of the name released.
+    """ Deletes the cluster of the run and releases the port of its API server. Its runtime directory remains,
+    with the logs of the run, until a later run finds the reservation of the name released.
     """
     _ = run(['kind', 'delete', 'cluster', '--name', cluster.name], check=False)
+
+    # A session that failed before the cluster was created holds no port of an API server.
+    if cluster.api_server_reservation:
+        cluster.api_server_reservation.release()
 
 # ################################################################################################################################
 
@@ -436,6 +480,16 @@ def get_pod_uid(pod_name:'str') -> 'str':
 
 # ################################################################################################################################
 
+def get_service_ip(namespace:'str', service_name:'str') -> 'str':
+    """ Returns the cluster IP of a Service, which the pods send its traffic to before it is translated to an endpoint.
+    """
+    result = kubectl('get', 'service', service_name, '-n', namespace, '-o', 'jsonpath={.spec.clusterIP}')
+
+    out = result.stdout.strip()
+    return out
+
+# ################################################################################################################################
+
 def get_node_pod_cidr(node_name:'str') -> 'str':
     result = kubectl('get', 'node', node_name, '-o', 'jsonpath={.spec.podCIDR}')
 
@@ -464,39 +518,71 @@ def save_pod_logs(pod_name:'str', directory:'str') -> 'None':
 # ################################################################################################################################
 
 class KubeProxy:
-    """ kubectl proxy on a local port, through which the test process reads the API server without credentials.
+    """ kubectl proxy on a reserved local port, through which the test process reads the API server without credentials.
     """
 
     def __init__(self) -> 'None':
         self.base_url = ''
         self._process:'subprocess.Popen[str] | None' = None
+        self._reservation:'PortReservation | None' = None
 
-    def start(self) -> 'None':
-        process = subprocess.Popen(
-            ['kubectl', '--context', cluster.context, 'proxy', f'--address={ModuleCtx.Proxy_Host}', '--port=0'],
+# ################################################################################################################################
+
+    def _start_on_port(self, port:'int') -> 'subprocess.Popen[str]':
+        """ Starts the proxy on the given port and returns its process once it serves, raising PortInUse
+        if another process took the port before the proxy bound it.
+        """
+        out = subprocess.Popen(
+            ['kubectl', '--context', cluster.context, 'proxy', f'--address={ModuleCtx.Proxy_Host}', f'--port={port}'],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
-        self._process = process
-
-        assert process.stdout is not None
+        assert out.stdout is not None
         deadline = time.monotonic() + ModuleCtx.Proxy_Start_Timeout
 
         while time.monotonic() < deadline:
-            line = process.stdout.readline()
-            match = ModuleCtx.Proxy_Ready_Pattern.search(line)
+            line = out.stdout.readline()
 
-            if match:
-                self.base_url = f'http://{ModuleCtx.Proxy_Host}:{match.group(1)}'
-                return
+            # The proxy serves ..
+            if ModuleCtx.Proxy_Ready_Pattern.search(line):
+                return out
+
+            # .. or it exits because the port is taken ..
+            if ModuleCtx.Proxy_Port_Taken in line:
+                _ = out.wait()
+                raise PortInUse(f'kubectl proxy port {port} taken -> {line.strip()}')
+
+            # .. or it exits for another reason.
+            if not line:
+                if out.poll() is not None:
+                    raise Exception(f'kubectl proxy exited with {out.returncode} on port {port}')
 
             time.sleep(ModuleCtx.Poll_Interval)
 
+        out.terminate()
+        _ = out.wait()
+
         raise Exception(f'kubectl proxy not started after {ModuleCtx.Proxy_Start_Timeout}s')
+
+# ################################################################################################################################
+
+    def start(self) -> 'None':
+        started = start_on_reserved_port(ModuleCtx.Proxy_Purpose, self._start_on_port)
+
+        self._reservation = started.reservation
+        self._process = started.result
+        self.base_url = f'http://{ModuleCtx.Proxy_Host}:{started.reservation.port}'
+
+# ################################################################################################################################
 
     def stop(self) -> 'None':
         if self._process is not None:
             self._process.terminate()
             _ = self._process.wait()
+
+        if self._reservation is not None:
+            self._reservation.release()
+
+# ################################################################################################################################
 
     def get(self, path:'str') -> 'any_':
         request = Request(f'{self.base_url}{path}', method='GET')

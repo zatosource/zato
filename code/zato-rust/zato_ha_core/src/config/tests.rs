@@ -52,6 +52,19 @@ fn defaults_apply() {
 }
 
 #[test]
+fn the_request_timeout_is_half_the_takeover_time() {
+    // The default timers allow three seconds per request ..
+    let config = NodeConfig::from_source(&minimal()).unwrap();
+    assert_eq!(config.timers.request_timeout(), Duration::from_secs(3));
+
+    // .. and a custom takeover time changes the request timeout with it.
+    let mut variables = minimal();
+    variables.0.insert(ENV_TAKEOVER_TIME.to_owned(), "10".to_owned());
+    let config = NodeConfig::from_source(&variables).unwrap();
+    assert_eq!(config.timers.request_timeout(), Duration::from_secs(5));
+}
+
+#[test]
 fn the_server_port_is_read() {
     let mut variables = minimal();
     variables.0.insert(ENV_SERVER_PORT.to_owned(), "17020".to_owned());

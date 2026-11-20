@@ -39,9 +39,10 @@ const TICK: Duration = Duration::from_millis(100);
 /// How much longer than the stop grace of the Zato server an active node that stops waits for its server to exit
 /// before it leaves the record unreleased.
 ///
-/// The stop grace, this margin and the timeout of the one request of the release to the API server, 16 seconds
-/// in total, stay below the `terminationGracePeriodSeconds` of the pod, 30 seconds, so the kubelet does not kill
-/// a node that is still releasing its record.
+/// The stop grace of 10 seconds, this margin and the read and the compare-and-set of the release, each within
+/// the request timeout of 3 seconds under the default timers, 21 seconds in total, stay below
+/// the `terminationGracePeriodSeconds` of the pod, 30 seconds, so the kubelet does not kill a node that is still
+/// releasing its record.
 const RELEASE_MARGIN: Duration = Duration::from_secs(5);
 
 /// How often the referee record is read to detect a lost referee or a missed replacement.

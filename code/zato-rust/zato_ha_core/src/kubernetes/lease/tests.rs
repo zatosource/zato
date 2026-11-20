@@ -6,7 +6,7 @@
 //! The tests of the `Lease` referee against a kind API server and against a local TCP stub.
 
 use super::*;
-use crate::test_support::{LOOPBACK, NODE_A, NODE_B};
+use crate::test_support::{API_REQUEST_TIMEOUT, LOOPBACK, NODE_A, NODE_B};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpListener;
 use std::process::{Child, Command, Stdio};
@@ -85,7 +85,7 @@ impl KindCluster {
 
     /// Returns a client of the namespace of the tests.
     fn client(&self) -> ApiClient {
-        ApiClient::new(&self.address, NAMESPACE, None, None).unwrap()
+        ApiClient::new(&self.address, NAMESPACE, None, None, API_REQUEST_TIMEOUT).unwrap()
     }
 
     /// Returns a referee over the lease `name`.
@@ -259,7 +259,10 @@ fn stub(status: u16) -> (ApiClient, thread::JoinHandle<Received>) {
             body: String::from_utf8(body).unwrap(),
         }
     });
-    (ApiClient::new(&address, NAMESPACE, None, None).unwrap(), server)
+    (
+        ApiClient::new(&address, NAMESPACE, None, None, API_REQUEST_TIMEOUT).unwrap(),
+        server,
+    )
 }
 
 #[test]
@@ -361,7 +364,10 @@ fn an_unexpected_status_is_an_error() {
 #[test]
 fn an_api_server_that_does_not_answer_is_an_error() {
     let address = format!("http://{LOOPBACK}:{CLOSED_PORT}");
-    let referee = LeaseReferee::new(ApiClient::new(&address, NAMESPACE, None, None).unwrap(), "zato-ha");
+    let referee = LeaseReferee::new(
+        ApiClient::new(&address, NAMESPACE, None, None, API_REQUEST_TIMEOUT).unwrap(),
+        "zato-ha",
+    );
     assert!(referee.read().is_err());
     assert!(referee.compare_and_set(&RefereeRecord::new(1, NODE_A), None).is_err());
 }

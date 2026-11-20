@@ -6,7 +6,9 @@
 //! The lease of the active node, which the active node renews and the standby watches.
 //!
 //! The active node rewrites its record at every heartbeat interval in which its probe of the database succeeds,
-//! which raises its version. The standby measures on its own monotonic clock how long the version has not changed,
+//! which raises its version. The probe and each request to the API server may take half of the takeover time,
+//! so a slow path of the active node to either of them delays its renewals without ending them, while
+//! a late renewal is refused by the compare-and-set on the version once the standby took over. The standby measures on its own monotonic clock how long the version has not changed,
 //! restarts the measure at every read that fails, and takes over after the takeover time if its own probe of the
 //! database succeeds. The active node is never isolated by the lease, because the generation guard of the Zato
 //! server refuses every transaction of a replaced server, so an outage of the referee alone does not stop it.

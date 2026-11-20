@@ -18,6 +18,7 @@ import yaml
 # Zato
 from kube_cluster import ModuleCtx as ClusterCtx
 from kube_env import ModuleCtx as EnvCtx
+from nodes import Timers
 from zato.server.arbiter_config import ModuleCtx as ArbiterCtx
 
 # ################################################################################################################################
@@ -41,12 +42,14 @@ class ModuleCtx:
     # the same as RELEASE_MARGIN of zato_ha_core/src/control.rs
     Release_Margin = 5.0
 
-    # How long one request of the node to the API server may take, in seconds, the same as REQUEST_TIMEOUT
-    # of zato_ha_core/src/kubernetes/client.rs
-    API_Request_Timeout = 1.0
+    # How long one request of the node to the API server may take, in seconds, under the default timers
+    API_Request_Timeout = Timers().request_timeout
+
+    # How many requests to the API server a release sends - the read of the record and its compare-and-set
+    Release_Requests = 2
 
     # How long a releasing node may take before the kubelet kills it, in seconds
-    Release_Bound = ArbiterCtx.HA_Stop_Grace + Release_Margin + API_Request_Timeout
+    Release_Bound = ArbiterCtx.HA_Stop_Grace + Release_Margin + Release_Requests * API_Request_Timeout
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -83,6 +83,7 @@ class KubeLocalPostgreSQL(KubeBackend):
 
     def __init__(self, database:'PubSubDatabase', placeholders:'strstrdict') -> 'None':
         self.pod_names = []
+        self.service_name = ModuleCtx.Service_Name
         self.database = database
         self.placeholders = placeholders
 

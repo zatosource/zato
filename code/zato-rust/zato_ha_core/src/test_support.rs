@@ -35,6 +35,9 @@ pub const LOOPBACK: &str = "127.0.0.1";
 /// The name of the Zato database and of its user in the configuration of the tests, which no test connects to.
 const DATABASE_NAME: &str = "zato";
 
+/// How long one request of a client of the API server in the tests may take.
+pub const API_REQUEST_TIMEOUT: Duration = Duration::from_secs(1);
+
 /// How often an HTTP stub checks for a connection and for the request to stop.
 const STUB_POLL: Duration = Duration::from_millis(5);
 

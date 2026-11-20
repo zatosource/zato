@@ -11,7 +11,10 @@
 //! It then verifies that a commit on the database is durable once acknowledged - the server flushes its write-ahead
 //! log, writes full pages after a checkpoint, and as a primary with streaming standbys waits for at least one of them,
 //! unless the provider of a managed service performs the failover.
-//! Each probe runs within [`REQUEST_TIMEOUT`] on a runtime of the probe,
+//!
+//! The generation and the durability settings are read by one statement prepared once per session, so that
+//! once the Zato server created the generation guard, each probe is one exchange with the database.
+//! Each probe runs within the request timeout of the node on a runtime of the probe,
 //! and a probe that fails or does not complete in time ends the session, so that the next probe connects again.
 
 use std::sync::Arc;
@@ -27,44 +30,65 @@ use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use tokio_postgres::config::SslMode;
 use tokio_postgres::error::SqlState;
-use tokio_postgres::{Client, Config, NoTls};
+use tokio_postgres::{Client, Config, NoTls, Row, Statement};
 use tokio_postgres_rustls::MakeRustlsConnect;
 
 use crate::config::{PostgreSqlConfig, PostgreSqlPassword, PostgreSqlTls};
 
-/// How long one probe may take, a new connection included.
-pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
-
 /// The name under which the node appears among the sessions of `PostgreSQL`.
 const APPLICATION_NAME: &str = "zato-ha-node";
-
-/// Reads the generation of the generation guard, which fails if the database is not reachable.
-const PROBE_STATEMENT: &str = "SELECT generation FROM zato_active WHERE id = 1";
 
 /// How `PostgreSQL` shows a setting that is turned on.
 const SETTING_ON: &str = "on";
 
-/// Whether the server flushes its write-ahead log to disk.
-const SHOW_FSYNC: &str = "SHOW fsync";
-
-/// Whether the server writes full pages after a checkpoint, without which a torn page cannot be recovered.
-const SHOW_FULL_PAGE_WRITES: &str = "SHOW full_page_writes";
-
-/// The standbys that a commit waits for.
-const SHOW_SYNCHRONOUS_STANDBY_NAMES: &str = "SHOW synchronous_standby_names";
-
-/// The standbys that stream the write-ahead log of the server, without the logical replication connections,
-/// which receive changes that are already durable.
-const STANDBY_COUNT_STATEMENT: &str = "SELECT count(*) FROM pg_stat_replication AS replication \
-    WHERE NOT EXISTS (SELECT 1 FROM pg_replication_slots AS slot \
-    WHERE slot.active_pid = replication.pid AND slot.slot_type = 'logical')";
-
-/// Whether the server has a role that Amazon RDS, Aurora or Azure Database for `PostgreSQL` creates on it.
+/// The columns that tell whether a commit on the database is durable once acknowledged.
+///
+/// These are whether the server flushes its write-ahead log to disk, whether it writes full pages after
+/// a checkpoint, without which a torn page cannot be recovered, and the standbys that a commit waits for.
+/// They are followed by the number of standbys that stream the write-ahead log of the server, without the logical
+/// replication connections, which receive changes that are already durable. The last column tells whether
+/// the server has a role that Amazon RDS, Aurora or Azure Database for `PostgreSQL` creates on it.
 ///
 /// On these services the provider performs every automatic failover, and only to a standby that it replicates
 /// synchronously, at the storage layer or through `synchronous_standby_names` that it manages, while
 /// the read replicas that stream asynchronously are never a target of an automatic failover.
-const PROVIDER_FAILOVER_STATEMENT: &str = "SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname IN ('rds_superuser', 'azure_pg_admin'))";
+macro_rules! durability_columns {
+    () => {
+        "current_setting('fsync'), current_setting('full_page_writes'), current_setting('synchronous_standby_names'), \
+        (SELECT count(*) FROM pg_stat_replication AS replication \
+            WHERE NOT EXISTS (SELECT 1 FROM pg_replication_slots AS slot \
+            WHERE slot.active_pid = replication.pid AND slot.slot_type = 'logical')), \
+        EXISTS (SELECT 1 FROM pg_roles WHERE rolname IN ('rds_superuser', 'azure_pg_admin'))"
+    };
+}
+
+/// Reads the durability settings, before the Zato server created the generation guard.
+const DURABILITY_STATEMENT: &str = concat!("SELECT ", durability_columns!());
+
+/// Reads the durability settings and the generation of the generation guard, which is null without its row.
+const GUARDED_STATEMENT: &str = concat!(
+    "SELECT ",
+    durability_columns!(),
+    ", (SELECT generation FROM zato_active WHERE id = 1)"
+);
+
+/// The column of `fsync`.
+const FSYNC_COLUMN: usize = 0;
+
+/// The column of `full_page_writes`.
+const FULL_PAGE_WRITES_COLUMN: usize = 1;
+
+/// The column of `synchronous_standby_names`.
+const SYNCHRONOUS_STANDBY_NAMES_COLUMN: usize = 2;
+
+/// The column of the number of streaming standbys.
+const STANDBY_COUNT_COLUMN: usize = 3;
+
+/// The column of whether the provider performs the failover.
+const PROVIDER_FAILOVER_COLUMN: usize = 4;
+
+/// The column of the generation, which only the guarded statement has.
+const GENERATION_COLUMN: usize = 5;
 
 /// The error of a probe that did not succeed.
 #[derive(Debug)]
@@ -94,13 +118,73 @@ pub trait DatabaseProbe: Send + Sync {
     fn probe(&self) -> Result<Option<u64>, ProbeError>;
 }
 
-/// A connection to `PostgreSQL` and the task that exchanges its messages.
+/// A connection to `PostgreSQL`, the task that exchanges its messages and the statements prepared on it.
 struct Session {
     /// The client that sends the statements.
     client: Client,
 
     /// The task of the connection, which ends with the session.
     connection: JoinHandle<()>,
+
+    /// The statement that reads the durability settings, prepared when the session connects.
+    durability: Statement,
+
+    /// The statement that reads the durability settings and the generation, prepared by the first probe
+    /// that finds the generation guard, and dropped once the database reports its table missing.
+    guarded: Option<Statement>,
+}
+
+/// The generation that the generation guard names and why a commit could be acknowledged before it is durable,
+/// as one probe reads them.
+type ProbeReading = (Option<i64>, Option<String>);
+
+/// Returns whether the database reports a table missing.
+fn is_undefined_table(error: &tokio_postgres::Error) -> bool {
+    error.code() == Some(&SqlState::UNDEFINED_TABLE)
+}
+
+impl Session {
+    /// Returns the guarded statement, preparing it if the session has none, or `None` while the generation guard
+    /// does not exist.
+    async fn guarded_statement(&mut self) -> Result<Option<Statement>, tokio_postgres::Error> {
+        // A statement prepared by an earlier probe is reused ..
+        if let Some(statement) = &self.guarded {
+            return Ok(Some(statement.clone()));
+        }
+
+        // .. otherwise it is prepared, which fails until the Zato server first created the generation guard.
+        match self.client.prepare(GUARDED_STATEMENT).await {
+            Ok(statement) => {
+                self.guarded = Some(statement.clone());
+                Ok(Some(statement))
+            }
+            Err(error) if is_undefined_table(&error) => Ok(None),
+            Err(error) => Err(error),
+        }
+    }
+
+    /// Reads the generation and the durability settings, in one exchange once the guarded statement is prepared.
+    async fn read(&mut self) -> Result<ProbeReading, tokio_postgres::Error> {
+        if let Some(statement) = self.guarded_statement().await? {
+            match self.client.query_one(&statement, &[]).await {
+                Ok(row) => {
+                    let stored: Option<i64> = row.try_get(GENERATION_COLUMN)?;
+                    let shortfall = durability_shortfall(&row)?;
+                    return Ok((stored, shortfall));
+                }
+
+                // The generation guard was removed after the statement was prepared, so it is prepared again
+                // by a probe that finds the table, and this probe reads the durability settings alone.
+                Err(error) if is_undefined_table(&error) => self.guarded = None,
+                Err(error) => return Err(error),
+            }
+        }
+
+        // A database without the generation guard answered the probe, and no Zato server took it over yet.
+        let row = self.client.query_one(&self.durability, &[]).await?;
+        let shortfall = durability_shortfall(&row)?;
+        Ok((None, shortfall))
+    }
 }
 
 impl Drop for Session {
@@ -229,11 +313,15 @@ pub struct PostgreSqlProbe {
 
     /// The current session, if one is connected.
     session: Mutex<Option<Session>>,
+
+    /// How long one probe may take, a new connection included.
+    request_timeout: Duration,
 }
 
 impl PostgreSqlProbe {
-    /// Builds the probe of the database that `settings` describe, without connecting yet.
-    pub fn new(settings: &PostgreSqlConfig) -> Result<Self, ProbeError> {
+    /// Builds the probe of the database that `settings` describe, each of whose probes may take `request_timeout`,
+    /// without connecting yet.
+    pub fn new(settings: &PostgreSqlConfig, request_timeout: Duration) -> Result<Self, ProbeError> {
         let connector = settings.tls.as_ref().map(tls_connector).transpose()?;
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
@@ -244,6 +332,7 @@ impl PostgreSqlProbe {
             connector,
             runtime,
             session: Mutex::new(None),
+            request_timeout,
         })
     }
 
@@ -270,7 +359,7 @@ impl PostgreSqlProbe {
             .password(password)
             .dbname(&self.settings.database)
             .application_name(APPLICATION_NAME)
-            .connect_timeout(REQUEST_TIMEOUT)
+            .connect_timeout(self.request_timeout)
             .ssl_mode(ssl_mode);
         Ok(out)
     }
@@ -289,26 +378,37 @@ impl PostgreSqlProbe {
             let (client, connection) = config.connect(NoTls).await.map_err(connect_error)?;
             (client, spawn_connection(connection))
         };
-        Ok(Session { client, connection })
+
+        // The durability settings are read by every probe, so their statement is prepared once per session.
+        let durability = client
+            .prepare(DURABILITY_STATEMENT)
+            .await
+            .map_err(|error| ProbeError::Unreachable(format!("PostgreSQL prepare: {error}")))?;
+        Ok(Session {
+            client,
+            connection,
+            durability,
+            guarded: None,
+        })
     }
 
-    /// Runs `operation` on the session within [`REQUEST_TIMEOUT`], connecting first if there is no session,
+    /// Runs `operation` on the session within the request timeout, connecting first if there is no session,
     /// and ends the session if the operation fails or does not complete in time.
     fn call<T>(
         &self,
         description: &str,
-        operation: impl AsyncFnOnce(&Client) -> Result<T, tokio_postgres::Error>,
+        operation: impl AsyncFnOnce(&mut Session) -> Result<T, tokio_postgres::Error>,
     ) -> Result<T, ProbeError> {
         // The probes use the session one at a time.
         let mut guard = self.session.lock();
         let existing = guard.take();
 
         let attempt = async {
-            let session = match existing {
+            let mut session = match existing {
                 Some(session) => session,
                 None => self.connect().await?,
             };
-            let value = operation(&session.client)
+            let value = operation(&mut session)
                 .await
                 .map_err(|error| ProbeError::Unreachable(format!("PostgreSQL {description}: {error}")))?;
             Ok::<_, ProbeError>((value, session))
@@ -316,9 +416,10 @@ impl PostgreSqlProbe {
 
         // The timer of the deadline registers with the runtime when it is created, so it is created within it.
         // A session that failed or did not answer in time is dropped with the attempt, which ends its connection.
+        let request_timeout = self.request_timeout;
         let outcome = self
             .runtime
-            .block_on(async { tokio::time::timeout(REQUEST_TIMEOUT, attempt).await });
+            .block_on(async { tokio::time::timeout(request_timeout, attempt).await });
         match outcome {
             Ok(Ok((value, session))) => {
                 *guard = Some(session);
@@ -327,35 +428,28 @@ impl PostgreSqlProbe {
             }
             Ok(Err(error)) => Err(error),
             Err(_) => Err(ProbeError::Unreachable(format!(
-                "PostgreSQL {description}: no answer within {REQUEST_TIMEOUT:?}"
+                "PostgreSQL {description}: no answer within {request_timeout:?}"
             ))),
         }
     }
 }
 
-/// Reads one setting that `SHOW` returns.
-async fn show(client: &Client, statement: &str) -> Result<String, tokio_postgres::Error> {
-    let row = client.query_one(statement, &[]).await?;
-    row.try_get(0)
-}
-
-/// Returns why a commit on the database could be acknowledged before it is durable, or `None` if it could not.
-async fn durability_shortfall(client: &Client) -> Result<Option<String>, tokio_postgres::Error> {
-    let fsync = show(client, SHOW_FSYNC).await?;
+/// Returns why a commit on the database could be acknowledged before it is durable, or `None` if it could not,
+/// from a row with the durability columns.
+fn durability_shortfall(row: &Row) -> Result<Option<String>, tokio_postgres::Error> {
+    let fsync: String = row.try_get(FSYNC_COLUMN)?;
     if fsync != SETTING_ON {
         return Ok(Some(format!("fsync is `{fsync}`, it must be `{SETTING_ON}`")));
     }
 
-    let full_page_writes = show(client, SHOW_FULL_PAGE_WRITES).await?;
+    let full_page_writes: String = row.try_get(FULL_PAGE_WRITES_COLUMN)?;
     if full_page_writes != SETTING_ON {
         return Ok(Some(format!("full_page_writes is `{full_page_writes}`, it must be `{SETTING_ON}`")));
     }
 
-    let synchronous_standby_names = show(client, SHOW_SYNCHRONOUS_STANDBY_NAMES).await?;
-    let count_row = client.query_one(STANDBY_COUNT_STATEMENT, &[]).await?;
-    let standby_count: i64 = count_row.try_get(0)?;
-    let provider_row = client.query_one(PROVIDER_FAILOVER_STATEMENT, &[]).await?;
-    let has_provider_failover: bool = provider_row.try_get(0)?;
+    let synchronous_standby_names: String = row.try_get(SYNCHRONOUS_STANDBY_NAMES_COLUMN)?;
+    let standby_count: i64 = row.try_get(STANDBY_COUNT_COLUMN)?;
+    let has_provider_failover: bool = row.try_get(PROVIDER_FAILOVER_COLUMN)?;
 
     // A primary whose standbys all stream asynchronously acknowledges commits that a failover to any of them loses,
     // unless the provider performs the failover, and only to a standby that it replicates synchronously.
@@ -371,18 +465,9 @@ async fn durability_shortfall(client: &Client) -> Result<Option<String>, tokio_p
 
 impl DatabaseProbe for PostgreSqlProbe {
     fn probe(&self) -> Result<Option<u64>, ProbeError> {
-        let (stored, shortfall) = self.call("probe", async |client| {
-            let stored: Option<i64> = match client.query_opt(PROBE_STATEMENT, &[]).await {
-                // The Zato server creates the generation guard when it first starts, after the node already probes,
-                // and a database that reports the table as missing answered the probe.
-                Err(error) if error.code() == Some(&SqlState::UNDEFINED_TABLE) => None,
-                Err(error) => return Err(error),
-                Ok(Some(row)) => Some(row.try_get(0)?),
-                Ok(None) => None,
-            };
-            let shortfall = durability_shortfall(client).await?;
-            Ok((stored, shortfall))
-        })?;
+        // The Zato server creates the generation guard when it first starts, after the node already probes,
+        // and a database that reports the table as missing answered the probe.
+        let (stored, shortfall) = self.call("probe", async |session| session.read().await)?;
 
         // A database that answered and is not durable is reported apart from one that did not answer.
         if let Some(reason) = shortfall {

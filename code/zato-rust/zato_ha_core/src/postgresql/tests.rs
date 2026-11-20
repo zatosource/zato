@@ -51,6 +51,12 @@ const GUARD_GENERATION: u64 = 7;
 const CREATE_GUARD: &str = "CREATE TABLE zato_active (id INTEGER PRIMARY KEY, generation BIGINT NOT NULL, owner TEXT NOT NULL);
     INSERT INTO zato_active (id, generation, owner) VALUES (1, 7, 'zato-a')";
 
+/// Removes the table of the generation guard.
+const DROP_GUARD: &str = "DROP TABLE zato_active";
+
+/// How long one probe of the tests may take.
+const PROBE_TIMEOUT: Duration = Duration::from_secs(2);
+
 /// A `PostgreSQL` server in a container removed on drop.
 struct PostgreSqlContainer {
     /// The name of the container.
@@ -160,7 +166,7 @@ fn settings(port: u16) -> PostgreSqlConfig {
 #[test]
 fn the_probe_succeeds_only_while_the_database_answers() {
     let container = PostgreSqlContainer::start();
-    let probe = PostgreSqlProbe::new(&container.settings()).unwrap();
+    let probe = PostgreSqlProbe::new(&container.settings(), PROBE_TIMEOUT).unwrap();
 
     // A database in which no Zato server created the generation guard yet answers the probe ..
     assert_eq!(probe.probe().unwrap(), None);
@@ -170,13 +176,21 @@ fn the_probe_succeeds_only_while_the_database_answers() {
     assert_eq!(probe.probe().unwrap(), Some(GUARD_GENERATION));
     assert_eq!(probe.probe().unwrap(), Some(GUARD_GENERATION));
 
-    // .. and a database that does not answer fails it within the request timeout.
+    // .. a database that does not answer fails it within the timeout of the probe ..
     docker(&["pause", &container.name]);
     let started = Instant::now();
     assert!(probe.probe().is_err());
-    assert!(started.elapsed() < REQUEST_TIMEOUT + STARTUP_POLL);
+    assert!(started.elapsed() < PROBE_TIMEOUT + STARTUP_POLL);
     docker(&["unpause", &container.name]);
-    probe.probe().unwrap();
+    assert_eq!(probe.probe().unwrap(), Some(GUARD_GENERATION));
+
+    // .. a generation guard removed after the session prepared its statement leaves the database answering ..
+    container.execute(DROP_GUARD);
+    assert_eq!(probe.probe().unwrap(), None);
+
+    // .. and a generation guard created again is read by the same session once more.
+    container.execute(CREATE_GUARD);
+    assert_eq!(probe.probe().unwrap(), Some(GUARD_GENERATION));
 }
 
 #[test]
@@ -186,7 +200,7 @@ fn a_database_with_a_durability_setting_turned_off_is_not_durable() {
         let assignment = format!("{setting}={SETTING_OFF}");
         let label = setting.replace('_', "-");
         let container = PostgreSqlContainer::start_with(&label, &[assignment]);
-        let probe = PostgreSqlProbe::new(&container.settings()).unwrap();
+        let probe = PostgreSqlProbe::new(&container.settings(), PROBE_TIMEOUT).unwrap();
 
         let error = probe.probe().unwrap_err();
         assert!(
@@ -198,6 +212,6 @@ fn a_database_with_a_durability_setting_turned_off_is_not_durable() {
 
 #[test]
 fn a_database_that_does_not_answer_is_an_error() {
-    let probe = PostgreSqlProbe::new(&settings(CLOSED_PORT)).unwrap();
+    let probe = PostgreSqlProbe::new(&settings(CLOSED_PORT), PROBE_TIMEOUT).unwrap();
     assert!(probe.probe().is_err());
 }

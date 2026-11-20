@@ -23,9 +23,6 @@ pub const ENV_SERVICE_PORT: &str = "KUBERNETES_SERVICE_PORT";
 /// The directory of the service account credentials.
 const SERVICE_ACCOUNT_DIR: &str = "/var/run/secrets/kubernetes.io/serviceaccount";
 
-/// How long one request to the API server may take, which remains shorter than the takeover timer.
-pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(1);
-
 /// The content type of a JSON document.
 pub const CONTENT_TYPE_JSON: &str = "application/json";
 
@@ -61,8 +58,9 @@ pub struct ApiClient {
 }
 
 impl ApiClient {
-    /// Returns the client of the service account of the pod, or an error if the node does not run in Kubernetes.
-    pub fn from_service_account() -> Result<Self, String> {
+    /// Returns the client of the service account of the pod, each of whose requests may take `request_timeout`,
+    /// or an error if the node does not run in Kubernetes.
+    pub fn from_service_account(request_timeout: Duration) -> Result<Self, String> {
         let host = std::env::var(ENV_SERVICE_HOST).map_err(|error| format!("{ENV_SERVICE_HOST}: {error}"))?;
         let port = std::env::var(ENV_SERVICE_PORT).map_err(|error| format!("{ENV_SERVICE_PORT}: {error}"))?;
         let read =
@@ -75,13 +73,21 @@ impl ApiClient {
             namespace.trim(),
             Some(token.trim().to_owned()),
             Some(&ca_pem),
+            request_timeout,
         )
     }
 
-    /// Returns a client of the API server at `base_url`, verified against `ca_pem` if it is reached over TLS.
-    pub fn new(base_url: &str, namespace: &str, token: Option<String>, ca_pem: Option<&[u8]>) -> Result<Self, String> {
+    /// Returns a client of the API server at `base_url`, verified against `ca_pem` if it is reached over TLS,
+    /// each of whose requests may take `request_timeout`.
+    pub fn new(
+        base_url: &str,
+        namespace: &str,
+        token: Option<String>,
+        ca_pem: Option<&[u8]>,
+        request_timeout: Duration,
+    ) -> Result<Self, String> {
         let mut builder = ureq::Agent::config_builder()
-            .timeout_global(Some(REQUEST_TIMEOUT))
+            .timeout_global(Some(request_timeout))
             .http_status_as_error(false);
         if let Some(ca_pem) = ca_pem {
             let certificate = Certificate::from_pem(ca_pem).map_err(|error| error.to_string())?;

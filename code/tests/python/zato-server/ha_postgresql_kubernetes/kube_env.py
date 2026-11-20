@@ -218,9 +218,10 @@ class KubeLease(Referee):
 
 class KubeBackend:
     """ A service of the cluster that the pair depends on besides the API server, with the pods whose logs
-    each test keeps.
+    each test keeps and the Service through which the pods of the pair reach it.
     """
     pod_names: 'strlist'
+    service_name: 'str'
 
     def clear(self) -> 'None':
         """ Removes what the pair of an earlier test left in the service.

@@ -7,11 +7,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The faults of the Kubernetes suites. A pod is deleted, its Zato server is killed or frozen, or the configuration
-# of its server is made unreadable. A worker node is stopped, partitioned from the other worker nodes while it still
-# reaches the control plane, or isolated from every other node. Every fault can be removed, and the cluster can be
-# restored to the state in which every node runs and reaches every other one.
+# of its server is made unreadable. The traffic of a pod to one address is delayed. A worker node is stopped, partitioned
+# from the other worker nodes while it still reaches the control plane, or isolated from every other node. Every fault
+# can be removed, and the cluster can be restored to the state in which every node runs and reaches every other one.
 
 # stdlib
+import json
 import logging
 import time
 
@@ -69,6 +70,17 @@ class ModuleCtx:
 
     # The state of a running node container
     State_Running = 'running'
+
+    # The interface of a pod, and the queues of its traffic - a priority queue whose map sends all traffic to its first
+    # band, and a delay on its last band, to which a filter sends the traffic to one address
+    Pod_Interface = 'eth0'
+    Delay_Root_Queue = 'tc qdisc add dev {interface} root handle 1: prio bands 4 priomap 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0'
+    Delay_Queue = 'tc qdisc add dev {interface} parent 1:4 handle 40: netem delay {delay_ms}ms'
+    Delay_Filter = 'tc filter add dev {interface} parent 1: protocol ip prio 1 u32 match ip dst {address}/32 flowid 1:4'
+    Delay_Remove = 'tc qdisc del dev {interface} root'
+
+    # How many milliseconds a second has
+    Milliseconds_Per_Second = 1000
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -169,6 +181,68 @@ def restore_server_config(pod_name:'str', mode:'str') -> 'None':
     _ = _exec_shell(pod_name, f'chmod {mode} {ModuleCtx.Server_Conf}')
 
     logger.info('Restored the server configuration of pod %s to mode %s', pod_name, mode)
+
+# ################################################################################################################################
+
+def _get_pod_pid(pod_name:'str', node_name:'str') -> 'str':
+    """ Returns the PID of the sandbox of a pod on the worker node that runs it, whose network namespace is that of the pod.
+    """
+    result = docker('exec', node_name, 'crictl', 'pods', '--name', f'^{pod_name}$', '--namespace', ClusterCtx.Namespace,
+        '--state', 'Ready', '-q')
+
+    sandbox_ids = result.stdout.split()
+    assert len(sandbox_ids) == 1, f'Expected one ready sandbox of pod {pod_name} on {node_name} -> {sandbox_ids}'
+
+    sandbox_id = sandbox_ids[0]
+    result = docker('exec', node_name, 'crictl', 'inspectp', '-o', 'json', sandbox_id)
+
+    sandbox = json.loads(result.stdout)
+    information = sandbox['info']
+
+    out = str(information['pid'])
+    return out
+
+# ################################################################################################################################
+
+def _run_in_pod_network(pod_name:'str', node_name:'str', commands:'strlist') -> 'None':
+    """ Runs shell commands of the worker node in the network namespace of a pod.
+    """
+    pid = _get_pod_pid(pod_name, node_name)
+    script = ' && '.join(commands)
+
+    _ = docker('exec', node_name, 'nsenter', '-t', pid, '-n', 'sh', '-c', script)
+
+# ################################################################################################################################
+
+def delay_pod_traffic(pod_name:'str', node_name:'str', address:'str', delay:'float') -> 'float':
+    """ Delays every packet that a pod sends to one address by the given number of seconds, leaving the rest
+    of its traffic and the traffic it receives as they are, and returns the time of the fault.
+    """
+    interface = ModuleCtx.Pod_Interface
+    delay_ms = int(delay * ModuleCtx.Milliseconds_Per_Second)
+
+    commands = [
+        ModuleCtx.Delay_Root_Queue.format(interface=interface),
+        ModuleCtx.Delay_Queue.format(interface=interface, delay_ms=delay_ms),
+        ModuleCtx.Delay_Filter.format(interface=interface, address=address),
+    ]
+
+    out = time.time()
+    _run_in_pod_network(pod_name, node_name, commands)
+
+    logger.info('Delayed the traffic of pod %s to %s by %sms', pod_name, address, delay_ms)
+
+    return out
+
+# ################################################################################################################################
+
+def remove_pod_delay(pod_name:'str', node_name:'str') -> 'None':
+    """ Removes the delay of the traffic of a pod.
+    """
+    command = ModuleCtx.Delay_Remove.format(interface=ModuleCtx.Pod_Interface)
+    _run_in_pod_network(pod_name, node_name, [command])
+
+    logger.info('Removed the delay of the traffic of pod %s', pod_name)
 
 # ################################################################################################################################
 
