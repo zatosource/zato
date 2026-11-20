@@ -33,7 +33,7 @@ class DeliveryScope:
     # The publications that the subscriber services made, as PendingPublication objects
     publications: 'anylist'
 
-    # The audit events of the batch, as PendingEvent objects
+    # The audit events that record how the messages of the batch concluded, as PendingEvent objects
     audit_events: 'anylist'
 
 # ################################################################################################################################

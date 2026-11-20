@@ -500,7 +500,6 @@ def audit_batch_received(
         attrs={'batch_count': len(messages)},
         bodies={AuditBody.Request: batch_text},
         is_export_payload_active=is_export_payload_active,
-        needs_id=True,
     )
 
     # Lineage links need the parent's id, which the write above returns under any writer that is on -

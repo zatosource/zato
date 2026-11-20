@@ -16,7 +16,7 @@ from functools import partial
 
 # Zato
 from ha_push_delivery.harness import count_audit_events, count_outgoing_requests, count_outputs, count_pending, \
-    count_received, import_enmasse, ModuleCtx as HarnessCtx, stage_batch, wait_until
+    count_received, import_enmasse, is_concluded, ModuleCtx as HarnessCtx, stage_batch, wait_until
 from zato.common.audit_log.api import AuditEvent
 from zato.common.test.exactly_once.control import count_invocations, release, wait_until_held
 
@@ -47,27 +47,6 @@ def _has_invocations(key:'str', count:'int') -> 'bool':
 
 # ################################################################################################################################
 
-def _has_audit_event(msg_id:'str', event_type:'str') -> 'bool':
-    event_count = count_audit_events(msg_id, event_type)
-
-    out = event_count >= 1
-    return out
-
-# ################################################################################################################################
-
-def _is_concluded(msg_id:'str', event_type:'str') -> 'bool':
-    """ Whether the message has an audit event of the type and no delivery row left.
-    """
-    if not _has_audit_event(msg_id, event_type):
-        return False
-
-    pending_count = count_pending(msg_id)
-
-    out = pending_count == 0
-    return out
-
-# ################################################################################################################################
-
 def _wait_for_commit_during_round(batch:'StagedBatch') -> 'None':
     """ Waits until the second message failed its first attempt and asserts that the first message was committed
     while the second one waits for its second attempt.
@@ -75,7 +54,7 @@ def _wait_for_commit_during_round(batch:'StagedBatch') -> 'None':
     second_invoked = partial(_has_invocations, batch.second_key, 1)
     wait_until(second_invoked, f'first invocation of {batch.second_key}')
 
-    first_delivered = partial(_is_concluded, batch.first_msg_id, AuditEvent.Delivered)
+    first_delivered = partial(is_concluded, batch.first_msg_id, AuditEvent.Delivered)
     wait_until(first_delivered, f'commit of {batch.first_key} during the retry round', _commit_timeout)
 
     assert count_invocations(batch.second_key) == 1
@@ -86,7 +65,7 @@ def _wait_for_commit_during_round(batch:'StagedBatch') -> 'None':
 def _wait_for_second_given_up(batch:'StagedBatch') -> 'None':
     """ Waits until a new round of the second message ran out and the message left the queue.
     """
-    second_given_up = partial(_is_concluded, batch.second_msg_id, AuditEvent.Delivery_Failed)
+    second_given_up = partial(is_concluded, batch.second_msg_id, AuditEvent.Delivery_Failed)
     wait_until(second_given_up, f'new round of {batch.second_key}')
 
     assert count_audit_events(batch.second_msg_id, AuditEvent.Delivery_Failed) == 1
@@ -170,7 +149,7 @@ def test_server_stopped_during_attempt(push_environment:'PushEnvironment') -> 'N
     env.server.start()
 
     # .. it is delivered again ..
-    second_delivered = partial(_is_concluded, batch.second_msg_id, AuditEvent.Delivered)
+    second_delivered = partial(is_concluded, batch.second_msg_id, AuditEvent.Delivered)
     wait_until(second_delivered, f'delivery of {batch.second_key}')
 
     assert count_invocations(batch.second_key) == 2

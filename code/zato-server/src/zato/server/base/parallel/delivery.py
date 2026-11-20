@@ -546,6 +546,7 @@ class PushDelivery:
             status=status,
             data=message['data'],
             is_export_payload_active=self.backend.is_topic_payload_exported(message['topic_name']),
+            commits_with_batch=True,
         )
 
 # ################################################################################################################################

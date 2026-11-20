@@ -505,7 +505,7 @@ def _run_weights() -> 'None':
         greenlets:'anylist' = []
 
         for ack in acks:
-            greenlet = gevent.spawn(backend._writer.ack, ack)
+            greenlet = recorder.spawn(backend._writer.ack, ack)
             greenlets.append(greenlet)
 
         _ = gevent.joinall(greenlets, raise_error=True)

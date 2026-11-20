@@ -7,13 +7,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The audit events of publications, of the push deliveries that a fenced acknowledgement concludes and of the receipts
-# that it publishes, column by column, with the receipts recorded only when their acknowledgement is written
+# that it publishes, column by column, with the receipts recorded only when their acknowledgement is written,
+# the events of the outgoing calls of push subscriber services, recorded before each call returns,
 # and the events that the export receives.
+
+# SQLAlchemy
+from sqlalchemy import select
 
 # Zato
 from common import delete_all_rows, delete_audit_rows, get_event_rows, get_message_rows
 from zato.common.audit_log.api import event_table, AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.export.state import set_audit_export
+from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.delivery_scope import close_delivery_scope, open_delivery_scope
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.fenced_ack import PubSubAckConflict
@@ -26,12 +31,13 @@ from zato.common.util.time_ import parse_utc, utcnow
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, callable_, strset
+    from zato.common.typing_ import any_, anydict, anylist, callable_, intlist, strset
 
     any_ = any_
     anydict = anydict
     anylist = anylist
     callable_ = callable_
+    intlist = intlist
     strset = strset
 
 # ################################################################################################################################
@@ -63,6 +69,11 @@ _other_msg_id   = 'zpsm.test.publish-events.receipt-other'
 
 # The endpoint that a push subscriber delivers to
 _push_endpoint = 'orders.process'
+
+# The outgoing REST connection that a push subscriber service calls, its address and the request that it sends
+_outgoing_name     = 'pubsub.backend.test.publish-events.orders-api'
+_outgoing_endpoint = 'https://orders.example.com/api/orders'
+_outgoing_data     = '{"order_id": "ORD-0042", "customer": "Maria Johnson"}'
 
 # Every column of an event, with the text of its payload
 _event_columns:'strset' = set(event_table.c.keys()) | {'data'}
@@ -226,6 +237,7 @@ def _deliver_batch(backend:'SQLPubSubBackend', msg_id:'str', receipt_msg_id:'str
             priority=message['priority'],
             outcome=AuditOutcome.OK,
             data=_data,
+            commits_with_batch=True,
         )
 
     finally:
@@ -276,6 +288,72 @@ def _run_push_batch_events(backend:'SQLPubSubBackend') -> 'None':
 
     output_rows = get_message_rows(_topic_output)
     assert len(output_rows) == 1, output_rows
+
+# ################################################################################################################################
+
+def _get_outgoing_event_ids() -> 'intlist':
+    """ Returns the ids of the events of the outgoing REST connection of the scenario, in the order of their ids.
+    """
+    engine = get_database_engine()
+
+    query = select(event_table.c.id)
+    query = query.where(event_table.c.source == AuditSource.REST_Outgoing)
+    query = query.where(event_table.c.object_name == _outgoing_name)
+    query = query.order_by(event_table.c.id)
+
+    out:'intlist' = []
+
+    with engine.connect() as connection:
+        for row in connection.execute(query):
+            out.append(row.id)
+
+    return out
+
+# ################################################################################################################################
+
+def _run_outgoing_events_in_batch(backend:'SQLPubSubBackend') -> 'None':
+    """ The event of an outgoing call that a push subscriber service makes commits before the call returns,
+    whereas the event that concludes a message waits for the acknowledgement of its batch.
+    """
+    result = backend.publish(_topic_input, _data)
+    audit_log = backend.audit_log
+
+    scope = open_delivery_scope()
+
+    try:
+
+        # The event of the outgoing call commits at once and its id is returned ..
+        event_id = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Request_Sent, _outgoing_name,
+            endpoint=_outgoing_endpoint,
+            outcome=AuditOutcome.OK,
+            data=_outgoing_data,
+        )
+
+        assert event_id is not None
+        assert _get_outgoing_event_ids() == [event_id]
+        assert scope.audit_events == []
+
+        # .. while the event that concludes the message stays in the scope of the batch.
+        delivered_id = audit_log.insert(AuditSource.PubSub, AuditEvent.Delivered, _topic_input,
+            msg_id=result.msg_id,
+            sub_key=_sub_key_input,
+            outcome=AuditOutcome.OK,
+            data=_data,
+            commits_with_batch=True,
+        )
+
+        assert delivered_id is None
+        assert get_event_rows(_topic_input, AuditEvent.Delivered) == []
+
+        scope_event_count = len(scope.audit_events)
+        assert scope_event_count == 1
+
+    finally:
+        close_delivery_scope()
+
+    # A batch that is never acknowledged leaves the event of the outgoing call behind.
+    assert _get_outgoing_event_ids() == [event_id]
+    assert get_event_rows(_topic_input, AuditEvent.Delivered) == []
 
 # ################################################################################################################################
 
@@ -380,6 +458,7 @@ def run_publish_events_scenario() -> 'None':
     """
     _run_publication_events(_new_backend())
     _run_push_batch_events(_new_backend())
+    _run_outgoing_events_in_batch(_new_backend())
     _run_pull_ack_events(_new_backend())
     _run_export(_new_backend())
 

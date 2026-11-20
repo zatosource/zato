@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.test.exactly_once.control import claim_hold, record_invocation, wait_while_exists
+from zato.common.test.exactly_once.control import claim_hold, count_invocations, record_invocation, wait_while_exists
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -27,7 +27,8 @@ _output_topic  = 'ha-push-delivery.output'
 
 class Target(Service):
     """ The subscriber of the input topic. It calls the outgoing REST connection with the key of the message,
-    publishes the key to the output topic, waits while the test holds the key and fails if the message says so.
+    publishes the key to the output topic, waits while the test holds the key in the invocation that the message names
+    and fails if the message says so.
     """
 
     name = 'test.ha-push-delivery.target'
@@ -39,6 +40,7 @@ class Target(Service):
 
         # Each invocation is recorded outside of the transaction of the batch ..
         record_invocation(key)
+        invocation_count = count_invocations(key)
 
         # .. the outgoing call is made and published about ..
         data = {'key': key}
@@ -47,9 +49,10 @@ class Target(Service):
 
         _ = self.publish(_output_topic, data, correl_id=key)
 
-        # .. a hold of the test keeps the invocation in progress ..
-        if held_path := claim_hold(key):
-            wait_while_exists(held_path)
+        # .. a hold of the test keeps the invocation that it is meant for in progress ..
+        if invocation_count == payload['held_invocation']:
+            if held_path := claim_hold(key):
+                wait_while_exists(held_path)
 
         # .. and a message that is to fail raises after its side effects.
         if payload['should_fail']:

@@ -122,7 +122,7 @@ def _insert_events(audit_log:'AuditLog', count:'int', age_days:'int') -> 'intlis
         for _ in range(count):
             event_id = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Interchange_Received, _channel_name,
                 cid=f'cid-active-standby-{age_days}', data='active-standby', attrs={'age_days': f'{age_days}'},
-                bodies={'request': f'active-standby-{age_days}'}, needs_id=True)
+                bodies={'request': f'active-standby-{age_days}'})
             out.append(event_id)
 
         return out
@@ -238,7 +238,7 @@ def _run_in_doubt_checks(audit_log:'AuditLog') -> 'None':
     as in doubt and does not run it a second time.
     """
     event_id = audit_log.insert(AuditSource.MLLP_Channel, AuditEvent.Interchange_Received, _channel_name,
-        cid=_resubmit_cid, data=_resubmit_payload, needs_id=True)
+        cid=_resubmit_cid, data=_resubmit_payload)
 
     work_dir = mkdtemp(prefix='zato-audit-active-standby-')
     marker_path = os.path.join(work_dir, 'dispatch-started')

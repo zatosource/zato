@@ -274,7 +274,7 @@ class SeedAuditLog(AuditLog):
         super().__init__(server_name)
         self.event_time = event_time
 
-    def insert(self, source:'str', event_type:'str', object_name:'str', *, needs_id:'bool'=False, **kwargs:'any_') -> 'int':
+    def insert(self, source:'str', event_type:'str', object_name:'str', *, commits_with_batch:'bool'=False, **kwargs:'any_') -> 'int':
         out = seed_event(self, self.event_time, source, event_type, object_name, **kwargs)
         return out
 

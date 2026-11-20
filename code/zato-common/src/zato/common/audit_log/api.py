@@ -226,12 +226,13 @@ class AuditLog:
         parents:'intlistnone' = None,
         parent_link_type:'str' = AuditLink.Resubmit_Of,
         is_export_payload_active:'bool' = False,
-        needs_id:'bool' = False,
+        commits_with_batch:'bool' = False,
         ) -> 'intnone':
-        """ Writes one audit event, at the moment it happens, in the same process, and returns its id.
-        An event of a push delivery batch commits along with the batch and returns None, unless the caller sets needs_id,
-        because it links further events to this one. Nothing is written and None is returned when the audit log is turned off.
-        The payload leaves the process with the OTLP export only if is_export_payload_active is set.
+        """ Writes one audit event, at the moment it happens, in the same process, commits it before the call returns
+        and returns its id. An event marked with commits_with_batch that is written in a push delivery batch commits
+        with the acknowledgement of the batch instead, and None is returned. Nothing is written and None is returned
+        when the audit log is turned off. The payload leaves the process with the OTLP export only if
+        is_export_payload_active is set.
         """
 
         # A turned-off audit log records nothing at all - the event is dropped in silence,
@@ -245,10 +246,11 @@ class AuditLog:
             status=status, duration_ms=duration_ms, data=data, attrs=attrs, bodies=bodies, attachments=attachments,
             parents=parents, parent_link_type=parent_link_type, is_export_payload_active=is_export_payload_active)
 
-        # An event of a push delivery batch commits along with the batch, unless the caller needs its id at once ..
-        if not needs_id and (scope := get_delivery_scope()):
-            scope.audit_events.append(pending)
-            return None
+        # An event that records how a message of a push delivery batch concluded commits with the acknowledgement ..
+        if commits_with_batch:
+            if scope := get_delivery_scope():
+                scope.audit_events.append(pending)
+                return None
 
         # .. while any other event is committed before the call returns.
         self._commit_queue.write([pending], weight=_commit_event_weight, is_urgent=False)

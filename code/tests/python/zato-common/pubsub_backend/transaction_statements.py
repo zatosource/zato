@@ -12,6 +12,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from contextlib import contextmanager
 
+# gevent
+import gevent
+from gevent import getcurrent
+from gevent.monkey import get_original
+
 # SQLAlchemy
 from sqlalchemy import event as sa_event
 
@@ -20,19 +25,25 @@ from sqlalchemy import event as sa_event
 
 if 0:
     from collections.abc import Iterator
+    from gevent import Greenlet
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import any_, anydict, anylist, anytuple
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_
 
     any_ = any_
     anydict = anydict
     anylist = anylist
     anytuple = anytuple
+    callable_ = callable_
     Engine = Engine
+    Greenlet = Greenlet
 
     recordergen = Iterator['TransactionRecorder']
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+# The identity of the native thread, which the greenlets of one thread share
+_get_native_ident = get_original('_thread', 'get_ident')
 
 # The statements that open and close a transaction and a savepoint
 _begin     = ('BEGIN', '')
@@ -123,6 +134,12 @@ class TransactionRecorder:
     the statements that the database runs, including the ones that run in Rust, with the consecutive runs
     of one statement recorded once, and on PostgreSQL, the statements that SQLAlchemy sends, each with whether
     a transaction was open when it was sent.
+
+    Only the transactions of the code under test are recorded - those of the greenlet that opened the recording,
+    of the greenlets spawned through the recorder, and of the thread pool of the hub, which runs the database calls
+    of greenlets on SQLite and does not carry the identity of the greenlet whose call it runs. The background threads
+    of the process that run their transactions on the same engine in a greenlet of their own, such as the merger
+    of the search indexes of the audit log on PostgreSQL, are not recorded.
     """
 
     def __init__(self, is_sqlite:'bool') -> 'None':
@@ -131,6 +148,26 @@ class TransactionRecorder:
         self.in_transaction:'anylist' = []
         self.begin_count = 0
         self.commit_count = 0
+        self.native_ident = _get_native_ident()
+        self.greenlets:'anylist' = [getcurrent()]
+
+    def spawn(self, func:'callable_', *args:'any_') -> 'Greenlet':
+        """ Spawns a greenlet whose transactions are recorded.
+        """
+        out = gevent.spawn(func, *args)
+        self.greenlets.append(out)
+        return out
+
+    def is_recorded(self) -> 'bool':
+        """ Says whether the transaction that runs in the current greenlet is one of the code under test.
+        """
+        # A thread of the thread pool of the hub runs the call of a greenlet that waits for it ..
+        if _get_native_ident() != self.native_ident:
+            return True
+
+        # .. whereas in the thread of the recording, only the greenlets of the recording run the code under test.
+        out = getcurrent() in self.greenlets
+        return out
 
     def on_trace(self, statement:'str') -> 'None':
         if verb_table := get_verb_table(statement):
@@ -138,7 +175,8 @@ class TransactionRecorder:
                 self.statements.append(verb_table)
 
     def on_checkout(self, dbapi_connection:'any_', connection_record:'any_', connection_proxy:'any_') -> 'None':
-        dbapi_connection.set_trace_callback(self.on_trace)
+        if self.is_recorded():
+            dbapi_connection.set_trace_callback(self.on_trace)
 
     def on_checkin(self, dbapi_connection:'any_', connection_record:'any_') -> 'None':
         dbapi_connection.set_trace_callback(None)
@@ -152,14 +190,21 @@ class TransactionRecorder:
         context:'any_',
         executemany:'bool',
         ) -> 'None':
+        if not self.is_recorded():
+            return
+
         if verb_table := get_verb_table(statement):
             self.statements.append(verb_table)
             self.in_transaction.append(conn.in_transaction())
 
     def on_begin(self, conn:'any_') -> 'None':
-        self.begin_count += 1
+        if self.is_recorded():
+            self.begin_count += 1
 
     def on_commit(self, conn:'any_') -> 'None':
+        if not self.is_recorded():
+            return
+
         self.commit_count += 1
 
         # SQLite runs a statement of its own for the commit, which the trace records
@@ -204,7 +249,8 @@ def get_verb_table(statement:'str') -> 'anytuple | None':
 
 @contextmanager
 def record_transactions(engine:'Engine') -> 'recordergen':
-    """ Records the statements, the transactions and the commits of an engine for the duration of a block.
+    """ Records the statements, the transactions and the commits that the code under test runs on an engine
+    for the duration of a block.
     """
     is_sqlite = engine.dialect.name == 'sqlite'
     recorder = TransactionRecorder(is_sqlite)

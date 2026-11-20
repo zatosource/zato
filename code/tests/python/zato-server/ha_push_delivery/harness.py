@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import json
 import os
 import subprocess
 import time
@@ -57,6 +58,9 @@ class ModuleCtx:
         'retry_sleep_time': Retry_Wait_Seconds,
         'retry_backoff_multiplier': 1,
     }
+
+    # The invocation of the subscriber that a hold of a key applies to, unless a message names another one
+    Default_Held_Invocation = 1
 
     # How long an import of the enmasse file may take, in seconds
     Enmasse_Timeout = 120
@@ -139,14 +143,27 @@ def import_enmasse(env:'PushEnvironment', is_delivery_active:'bool') -> 'None':
 
 # ################################################################################################################################
 
-def publish(env:'PushEnvironment', key:'str', should_fail:'bool', retry_settings:'anydict') -> 'str':
-    """ Publishes one message to the input topic and returns its message ID.
+def publish(
+    env:'PushEnvironment',
+    key:'str',
+    should_fail:'bool',
+    retry_settings:'anydict',
+    held_invocation:'int' = ModuleCtx.Default_Held_Invocation,
+    ) -> 'str':
+    """ Publishes one message to the input topic and returns its message ID. A hold of the key applies
+    to the invocation of the subscriber with the given number only.
     """
     client = AdminClient(env.server.base_url, env.server.invoke_password)
 
+    data = {
+        'key': key,
+        'should_fail': should_fail,
+        'held_invocation': held_invocation,
+    }
+
     request = {
         'topic_name': ModuleCtx.Input_Topic,
-        'data': {'key': key, 'should_fail': should_fail},
+        'data': data,
         'retry_settings': retry_settings,
     }
 
@@ -263,6 +280,20 @@ def count_received(env:'PushEnvironment', key:'str') -> 'int':
 
 # ################################################################################################################################
 
+def count_rejected(env:'PushEnvironment', key:'str') -> 'int':
+    """ Returns how many requests with the key the endpoint of the outgoing connection rejected.
+    """
+    out = 0
+
+    for body in env.receiver.behavior.rejected_bodies:
+        item = json.loads(body)
+        if item['key'] == key:
+            out += 1
+
+    return out
+
+# ################################################################################################################################
+
 def count_outputs(key:'str') -> 'int':
     """ Returns how many messages with the key the output topic holds.
     """
@@ -285,6 +316,21 @@ def count_pending(msg_id:'str') -> 'int':
     engine = get_database_engine()
 
     out = count_deliveries(engine, msg_id)
+    return out
+
+# ################################################################################################################################
+
+def is_concluded(msg_id:'str', event_type:'str') -> 'bool':
+    """ Whether the message has an audit event of the type and no delivery row left.
+    """
+    event_count = count_audit_events(msg_id, event_type)
+
+    if not event_count:
+        return False
+
+    pending_count = count_pending(msg_id)
+
+    out = pending_count == 0
     return out
 
 # ################################################################################################################################
