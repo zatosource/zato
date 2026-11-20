@@ -10,7 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import re
 
 # Zato
-from zato.common.test.sql_conformance.rust_source import get_line, get_test_module_paths, remove_test_modules
+from zato.common.test.sql_conformance.rust_source import get_concat_constants, get_line, get_test_module_paths, \
+    remove_test_modules
 from zato.common.test.sql_conformance.sources import get_rust_files
 
 # ################################################################################################################################
@@ -21,6 +22,12 @@ if 0:
     from zato.common.typing_ import strlist
 
     SourceFile = SourceFile
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# A statement with the index in its source at which it begins
+indexed_statement_list = list[tuple[int, str]]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,6 +77,9 @@ def test_node_writes_no_rows() -> 'None':
         text = source.read()
         text = remove_test_modules(text)
 
+        # The statements are string literals given to a method or kept in a constant ..
+        statements:'indexed_statement_list' = []
+
         for pattern in (ModuleCtx.Statement_Call, ModuleCtx.Statement_Constant):
             for match in pattern.finditer(text):
                 statement = match.group(1)
@@ -78,11 +88,26 @@ def test_node_writes_no_rows() -> 'None':
                     if not ModuleCtx.SQL_Keyword.match(statement):
                         continue
 
-                statement_count += 1
+                statements.append((match.start(), statement))
 
-                if not ModuleCtx.Allowed_Statements.match(statement):
-                    line = get_line(text, match.start())
-                    findings.append(f'{source.path}:{line} -> {statement}')
+        # .. or constants that concat! assembles, each of which must be readable to be checked ..
+        for constant in get_concat_constants(text):
+
+            if constant.value is None:
+                line = get_line(text, constant.index)
+                findings.append(f'{source.path}:{line} -> concat! with an argument that cannot be read')
+                continue
+
+            if ModuleCtx.SQL_Keyword.match(constant.value):
+                statements.append((constant.index, constant.value))
+
+        # .. and each of them is a read.
+        for index, statement in statements:
+            statement_count += 1
+
+            if not ModuleCtx.Allowed_Statements.match(statement):
+                line = get_line(text, index)
+                findings.append(f'{source.path}:{line} -> {statement}')
 
     assert statement_count
     assert not findings, '\n'.join(findings)

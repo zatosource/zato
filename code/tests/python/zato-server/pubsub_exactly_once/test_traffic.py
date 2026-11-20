@@ -12,7 +12,7 @@ import random
 import time
 from concurrent.futures import ThreadPoolExecutor
 from http.client import CONFLICT, INTERNAL_SERVER_ERROR, OK
-from threading import Event
+from threading import Condition, Event, Lock
 
 # Zato
 from pubsub_exactly_once.harness import get_engine, new_keys
@@ -27,7 +27,7 @@ from zato.common.test.exactly_once.verify import assert_exactly_once, count_topi
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, strlist
+    from zato.common.typing_ import any_, anydict, anylist, strlist, strset
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -211,15 +211,92 @@ class _OutputReader:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _CompetingConsumer:
-    """ A pull client of the orders queue that publishes one invoice per order in the transaction of its acknowledgement,
-    and that acknowledges some of its batches only after their lease ran out.
+class _LateBatches:
+    """ Lets one competing client at a time hold a batch beyond its lease, until another client received the batch again,
+    which the server does with the oldest messages of the queue once their lease ran out. The client that received it
+    acknowledges it only after the client that held it was refused, so that the refusal does not depend on which
+    of the two acknowledgements arrives first.
     """
 
     def __init__(self) -> 'None':
+        self._holder = Lock()
+        self._condition = Condition()
+        self._held_msg_ids:'strset' = set()
+        self._is_received_again = False
+
+# ################################################################################################################################
+
+    def try_hold(self, msg_ids:'strlist') -> 'bool':
+        """ Returns whether the client may hold the batch of the given messages, which it may only if no other client
+        holds one.
+        """
+        out = self._holder.acquire(blocking=False)
+
+        if out:
+            with self._condition:
+                self._held_msg_ids = set(msg_ids)
+                self._is_received_again = False
+
+        return out
+
+# ################################################################################################################################
+
+    def wait_until_received_again(self, stop:'Event') -> 'None':
+        """ Waits until another client received the held batch again, or until the test stops the clients.
+        """
+        with self._condition:
+            while not self._is_received_again:
+                if stop.is_set():
+                    break
+                _ = self._condition.wait(_poll_seconds)
+
+# ################################################################################################################################
+
+    def release(self) -> 'None':
+        """ Lets the client that received the held batch again acknowledge it, and another client hold a batch.
+        """
+        with self._condition:
+            self._held_msg_ids = set()
+            self._condition.notify_all()
+
+        self._holder.release()
+
+# ################################################################################################################################
+
+    def wait_if_held(self, msg_ids:'strlist', stop:'Event') -> 'None':
+        """ Waits, if a pull received messages of the held batch, until the client that holds it was refused,
+        or until the test stops the clients.
+        """
+        with self._condition:
+
+            if self._held_msg_ids.isdisjoint(msg_ids):
+                return
+
+            # The client that holds the batch learns that it was received again ..
+            self._is_received_again = True
+            self._condition.notify_all()
+
+            # .. and this client waits until that one acknowledged it.
+            while self._held_msg_ids:
+                if stop.is_set():
+                    break
+                _ = self._condition.wait(_poll_seconds)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _CompetingConsumer:
+    """ A pull client of the orders queue that publishes one invoice per order in the transaction of its acknowledgement,
+    and that acknowledges some of its batches only after their lease ran out and another client received them again.
+    """
+
+    def __init__(self, consumer_index:'int', late_batches:'_LateBatches') -> 'None':
+        self.consumer_index = consumer_index
+        self.late_batches = late_batches
         self.batch_count = 0
         self.conflict_count = 0
         self.late_batch_count = 0
+        self.is_late_due = False
 
 # ################################################################################################################################
 
@@ -274,18 +351,44 @@ class _CompetingConsumer:
                 time.sleep(_retry_seconds)
                 continue
 
+            msg_ids:'strlist' = []
+
+            for message in messages:
+                meta = message['meta']
+                msg_ids.append(meta['msg_id'])
+
             ack_payload = self._build_ack(messages)
 
-            # A late batch is handed out to another client in the meantime ..
+            # Every tenth batch is due to be held beyond its lease ..
             if self.batch_count % _late_batch_interval == 0:
-                self.late_batch_count += 1
-                time.sleep(_get_lease_seconds() + _lease_margin)
+                self.is_late_due = True
 
             self.batch_count += 1
 
-            ack_result = ack(TestConfig.orders_username, TestConfig.orders_password, ack_payload)
+            # .. which one client at a time does, so that the other ones keep pulling ..
+            is_late = False
 
-            # .. which concludes it, so the acknowledgement of this client is rejected with nothing published.
+            if self.is_late_due:
+                is_late = self.late_batches.try_hold(msg_ids)
+
+            # .. until one of them received the batch again, which the server does only once the lease ran out ..
+            if is_late:
+                self.is_late_due = False
+                self.late_batch_count += 1
+                self.late_batches.wait_until_received_again(stop)
+
+            # .. while a client that received a held batch again waits until the client that held it was refused ..
+            else:
+                self.late_batches.wait_if_held(msg_ids, stop)
+
+            try:
+                ack_result = ack(TestConfig.orders_username, TestConfig.orders_password, ack_payload)
+            finally:
+                if is_late:
+                    self.late_batches.release()
+
+            # .. because the batch belongs to the client that received it again, the acknowledgement of the client
+            # that held it is rejected with nothing published.
             if ack_result.status_code == CONFLICT:
                 self.conflict_count += 1
             else:
@@ -406,8 +509,9 @@ def test_crashes_under_continuous_publication(zato_server:'any_') -> 'None':
 
 def test_competing_consumers_with_lease_expiry(zato_server:'any_') -> 'None':
     """ Four clients consume the orders of one queue, each publishing one invoice per order in the transaction of its
-    acknowledgement and acknowledging every tenth of its batches only after their lease ran out. Every order is acknowledged,
-    and each order has exactly one invoice.
+    acknowledgement and acknowledging every tenth of its batches, one client at a time, only after their lease ran out
+    and another client received them again, before that client acknowledges them. Every order is acknowledged,
+    each order has exactly one invoice, and each acknowledgement of a batch held beyond its lease is rejected.
     """
     _ = drain(TestConfig.orders_username, TestConfig.orders_password)
     _ = drain(TestConfig.verifier_username, TestConfig.verifier_password)
@@ -417,14 +521,15 @@ def test_competing_consumers_with_lease_expiry(zato_server:'any_') -> 'None':
     prefix, keys = new_keys(message_count)
 
     stop = Event()
+    late_batches = _LateBatches()
     consumers:'list[_CompetingConsumer]' = []
 
     with ThreadPoolExecutor() as executor:
 
         futures:'anylist' = []
 
-        for _ in range(_consumer_count):
-            consumer = _CompetingConsumer()
+        for consumer_index in range(_consumer_count):
+            consumer = _CompetingConsumer(consumer_index, late_batches)
             future = executor.submit(consumer.run, stop)
 
             consumers.append(consumer)
@@ -451,7 +556,7 @@ def test_competing_consumers_with_lease_expiry(zato_server:'any_') -> 'None':
     assert count_topic_deliveries(engine, _orders_topic) == 0
     assert invoice_keys == keys
 
-    # .. and the clients competed for the same orders, after batches acknowledged only once their lease ran out.
+    # .. and each batch held beyond its lease was received again by another client, so its acknowledgement was refused.
     conflict_count = 0
     late_batch_count = 0
 
@@ -459,8 +564,8 @@ def test_competing_consumers_with_lease_expiry(zato_server:'any_') -> 'None':
         conflict_count += consumer.conflict_count
         late_batch_count += consumer.late_batch_count
 
-    assert conflict_count > 0
     assert late_batch_count > 0
+    assert conflict_count == late_batch_count
 
 # ################################################################################################################################
 # ################################################################################################################################

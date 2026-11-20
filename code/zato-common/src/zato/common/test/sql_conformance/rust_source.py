@@ -18,9 +18,15 @@ from typing import NamedTuple
 
 if 0:
     from zato.common.test.sql_conformance.sources import source_file_list
-    from zato.common.typing_ import strnone, strstrdict
+    from zato.common.typing_ import strlist, strnone, strstrdict
 
     source_file_list = source_file_list
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+concat_constant_list = list['ConcatConstant']
+strmatch             = re.Match[str]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,6 +44,41 @@ class ModuleCtx:
 
     # The start of a function definition
     Function_Pattern = re.compile(r'\bfn\s+(\w+)')
+
+    # A macro without arguments whose expansion is one string literal
+    String_Macro = re.compile(r'macro_rules!\s*(\w+)\s*\{\s*\(\s*\)\s*=>\s*\{\s*"((?:[^"\\]|\\[\s\S])*)"\s*\}\s*;?\s*\}')
+
+    # A string constant whose value concat! assembles, up to the opening parenthesis of its arguments
+    Concat_Constant = re.compile(r'\bconst\s+\w+\s*:\s*&(?:\'static\s+)?str\s*=\s*concat!\s*\(')
+
+    # One argument of concat!, a string literal or a macro without arguments, followed by what separates it from the next
+    Concat_Argument = re.compile(r'\s*(?:"((?:[^"\\]|\\[\s\S])*)"|(\w+)!\s*\(\s*\))\s*([,)])')
+
+    # The end of the arguments of concat! after a trailing comma
+    Concat_End = re.compile(r'\s*\)')
+
+    # A line continuation of a string literal, which ends the line and removes the leading whitespace of the next one
+    String_Continuation = re.compile(r'\\\n\s*')
+
+    # The escapes of a string literal and the characters they stand for
+    String_Escapes = {
+        r'\"': '"',
+        r'\\': '\\',
+        r'\n': '\n',
+        r'\t': '\t',
+    }
+
+    String_Escape = re.compile(r'\\["\\nt]')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ConcatConstant(NamedTuple):
+    """ A string constant that concat! assembles. Its value is None if an argument of concat! is neither
+    a string literal nor a macro of the same source whose expansion is a string literal.
+    """
+    index: int
+    value: 'strnone'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -120,6 +161,95 @@ def get_line(text:'str', index:'int') -> 'int':
     """ Returns the line number of the given index.
     """
     out = text.count('\n', 0, index) + 1
+    return out
+
+# ################################################################################################################################
+
+def _replace_escape(match:'strmatch') -> 'str':
+    escape = match.group(0)
+
+    out = ModuleCtx.String_Escapes[escape]
+    return out
+
+# ################################################################################################################################
+
+def decode_string_literal(literal:'str') -> 'str':
+    """ Returns the value of the content of a Rust string literal, with its line continuations and escapes resolved.
+    """
+    out = ModuleCtx.String_Continuation.sub('', literal)
+    out = ModuleCtx.String_Escape.sub(_replace_escape, out)
+
+    return out
+
+# ################################################################################################################################
+
+def get_string_macros(text:'str') -> 'strstrdict':
+    """ Returns the value of each macro of a Rust source whose expansion is one string literal, by the name of the macro.
+    """
+    out:'strstrdict' = {}
+
+    for match in ModuleCtx.String_Macro.finditer(text):
+        name = match.group(1)
+        literal = match.group(2)
+        out[name] = decode_string_literal(literal)
+
+    return out
+
+# ################################################################################################################################
+
+def _assemble_concat(text:'str', index:'int', string_macros:'strstrdict') -> 'strnone':
+    """ Returns the value that concat! assembles from the arguments that begin at the given index,
+    or None if an argument cannot be read.
+    """
+    parts:'strlist' = []
+
+    while True:
+
+        # Each argument is a string literal or a macro whose expansion is known ..
+        match = ModuleCtx.Concat_Argument.match(text, index)
+
+        if not match:
+            return None
+
+        literal, macro_name, separator = match.groups()
+
+        if macro_name:
+            if macro_name not in string_macros:
+                return None
+            parts.append(string_macros[macro_name])
+        else:
+            value = decode_string_literal(literal)
+            parts.append(value)
+
+        index = match.end()
+
+        # .. the arguments end with the closing parenthesis ..
+        if separator == ')':
+            break
+
+        # .. which may follow a trailing comma.
+        if end_match := ModuleCtx.Concat_End.match(text, index):
+            index = end_match.end()
+            break
+
+    out = ''.join(parts)
+    return out
+
+# ################################################################################################################################
+
+def get_concat_constants(text:'str') -> 'concat_constant_list':
+    """ Returns each string constant of a Rust source whose value concat! assembles, with the value assembled
+    from string literals and from the macros of the same source whose expansion is a string literal.
+    """
+    string_macros = get_string_macros(text)
+    out:'concat_constant_list' = []
+
+    for match in ModuleCtx.Concat_Constant.finditer(text):
+        value = _assemble_concat(text, match.end(), string_macros)
+
+        constant = ConcatConstant(match.start(), value)
+        out.append(constant)
+
     return out
 
 # ################################################################################################################################
