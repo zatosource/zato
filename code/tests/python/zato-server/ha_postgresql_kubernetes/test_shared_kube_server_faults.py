@@ -107,13 +107,17 @@ def _check_label_moved(old_active:'KubeNode', new_active:'KubeNode', fault_at:'f
 @pytest.mark.parametrize('scope', [FaultsCtx.Scope_Group, FaultsCtx.Scope_Worker])
 def test_hung_server_fails_over(kube_pair:'KubeEnvironment', scope:'str') -> 'None':
     """ The server of the active pod stops answering while its node runs, and the standby takes over within
-    the liveness timeout, the takeover time, the start of the server and the propagation of the endpoints.
+    the liveness timeout with the ping in progress, the takeover time, the start of the server and the propagation
+    of the endpoints.
     """
     env = kube_pair
     active, standby = get_pair(env)
 
-    outage_limit = HALimits.Server_Liveness_Timeout + env.timers.takeover + HALimits.Server_Start + \
-        ModuleCtx.Propagation_Limit
+    # The node reads the verdict of the liveness timeout only after the ping in progress returns,
+    # so the resignation follows the timeout by up to one ping timeout.
+    resign_limit = HALimits.Server_Liveness_Timeout + HALimits.Server_Ping_Timeout
+
+    outage_limit = resign_limit + env.timers.takeover + HALimits.Server_Start + ModuleCtx.Propagation_Limit
     wait_timeout = outage_limit + ModuleCtx.Wait_Margin
 
     client = FailoverClient(env.session.control_plane_ip, EnvCtx.Service_Node_Port)
