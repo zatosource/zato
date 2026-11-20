@@ -99,8 +99,10 @@ fn message_totals(path: &Path) -> (i64, i64) {
         .unwrap()
 }
 
-/// Restarts the log, checkpointed whole, while the shipper sends a file of the snapshot to a joining standby, and checks
-/// that the standby is admitted and that its copy holds every row of the Zato database.
+/// Restarts the log while the shipper sends a file of the snapshot to a joining standby.
+///
+/// The log is checkpointed whole before the standby joins, and the test checks that the standby is admitted
+/// and that its copy holds every row of the Zato database.
 fn restart_the_log_while_the_snapshot_is_sent(restarted_during: RestartedDuring) {
     let _disk = DISK.lock();
     let certificates = Certificates::issue();

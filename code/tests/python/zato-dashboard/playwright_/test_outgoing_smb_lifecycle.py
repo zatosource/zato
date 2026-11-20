@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.smb_ import SMBTestServer
-from zato.common.typing_ import cast_
 
 # Playwright helpers
 from smb_connection import create_connection, delete_connection, get_item_id, navigate_to_list, \
@@ -19,7 +18,7 @@ from smb_connection import create_connection, delete_connection, get_item_id, na
 # ################################################################################################################################
 
 if 0:
-    from playwright.sync_api import Page, Response
+    from playwright.sync_api import ConsoleMessage, Page, Response
     from zato.common.typing_ import anydict
 
 # ################################################################################################################################
@@ -91,9 +90,9 @@ class TestOutgoingSMBLifecycle:
         # Collect console errors ..
         console_errors = [] # type: list
 
-        def _on_console(msg:'object') -> 'None':
-            if cast_('any_', msg).type == 'error':
-                console_errors.append(cast_('any_', msg).text)
+        def _on_console(msg:'ConsoleMessage') -> 'None':
+            if msg.type == 'error':
+                console_errors.append(msg.text)
 
         page.on('console', _on_console)
 

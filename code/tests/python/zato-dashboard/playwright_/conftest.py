@@ -52,7 +52,7 @@ from zato.common.json_internal import dumps, loads
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict
+    from zato.common.typing_ import any_, anydict, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -759,24 +759,31 @@ _Log_Noise_Patterns = [
     'Could not ping Odoo (test.mcp.tools.',
 ]
 
-@pytest.fixture(autouse=True)
-def check_no_log_errors(zato_dashboard:'anydict', request:'any_') -> 'any_':
-    """ Checks server and dashboard log files for ERROR or WARNING lines after each test.
+@pytest.fixture
+def checked_log_dirs(zato_dashboard:'anydict') -> 'anylist':
+    """ The directories of the logs whose new ERROR or WARNING lines fail a test, each with its label.
     """
-
     server_dir = zato_dashboard['server_dir']
     dashboard_dir = zato_dashboard['dashboard_dir']
 
-    # Collect all log files from both server and dashboard ..
-    log_dirs = [
+    out = [
         ('server', os.path.join(server_dir, 'logs')),
         ('dashboard', os.path.join(dashboard_dir, 'logs')),
     ]
 
-    # .. record the current size of each log file before the test runs ..
+    return out
+
+# ################################################################################################################################
+
+@pytest.fixture(autouse=True)
+def check_no_log_errors(checked_log_dirs:'anylist', request:'any_') -> 'any_':
+    """ Checks the server and the Dashboard log files for ERROR or WARNING lines after each test.
+    """
+
+    # Record the current size of each log file before the test runs ..
     offsets = {} # type: dict
 
-    for label, log_dir in log_dirs:
+    for label, log_dir in checked_log_dirs:
         log_files = glob.glob(os.path.join(log_dir, '*.log'))
         for log_file in log_files:
             if os.path.isfile(log_file):

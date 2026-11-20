@@ -23,7 +23,7 @@
 	test-hl7 test-ccda test-documents hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
 	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-export test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
-	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-sftp test-file-transfer test-smb test-smb-peer test-smb-windows-build \
+	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-sftp test-file-transfer test-smb test-smb-peer test-smb-ui test-smb-windows-build \
 	test-rule-engine test-hot-deployment \
 	test-fabric-live fabric-cleanup fabric-tutorial fabric-loading-tables fabric-lookup-tables fabric-looking-up-data \
 	fabric-api-on-fabric-data fabric-scheduled-reports fabric-files fabric-sending-events fabric-receiving-events \
@@ -1838,6 +1838,36 @@ test-smb-peer: ## Live SMB tests against Windows Server 2025, 2022 and 2019 gues
 		-x -v -s -p no:cacheprovider -o faulthandler_timeout=120 -W ignore::DeprecationWarning \
 		$(PYTEST_ARGS) $(Zato_Log)
 
+# The steps of test-smb-ui in the order they run, each the tests of one Windows version, the step that the target is currently on,
+# and the pytest option that resumes each step from the test that failed or was interrupted, or starts it over under RESTART.
+Zato_Test_SMB_UI_Steps       := 2025 2022 2019 2025ja
+Zato_Test_SMB_UI_Tests       := $(CURDIR)/code/tests/python/zato-dashboard/playwright_/smb_windows_ui
+Zato_Test_SMB_UI_Resume_File := $(CURDIR)/code/tests/.test-smb-ui-resume
+Zato_Test_SMB_UI_Stepwise     = $(if $(RESTART),--sw-reset,--sw)
+
+# Runs the tests of the Windows version $(1) as one step, unless the walk is still looking for the step it resumes from.
+Zato_Test_SMB_UI_Step = \
+	if [ -z "$$resume" ] || [ "$$resume" = "$(1)" ]; then \
+		resume=''; \
+		echo "$(1)" > $(Zato_Test_SMB_UI_Resume_File); \
+		echo ">>> $(1)" $(Zato_Log); \
+		Zato_Test_SMB_Windows=1 Zato_Test_SMB_UI_Version=$(1) ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+			$(Zato_Test_SMB_UI_Tests) -v -s -o log_cli_level=WARNING -o faulthandler_timeout=120 -W ignore::DeprecationWarning \
+			-o cache_dir=$(CURDIR)/code/tests/.pytest_cache_smb_ui_$(1) \
+			$(Zato_Test_SMB_UI_Stepwise) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
+	fi;
+
+test-smb-ui: ## Live SMB tests through the Dashboard against Windows Server 2025, 2022 and 2019 guests and a Japanese Windows Server 2025 guest - one step per version, each creating the connections, the schedules and the job of its guests through the Dashboard, stopping at the first failure and resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+	@if [ -n "$(RESTART)" ]; then rm -f $(Zato_Test_SMB_UI_Resume_File); fi
+	$(Zato_Log_Reset)
+	@resume=''; \
+	if [ -f $(Zato_Test_SMB_UI_Resume_File) ]; then \
+		resume=$$(cat $(Zato_Test_SMB_UI_Resume_File)); \
+		echo ">>> Resuming from $$resume" $(Zato_Log); \
+	fi; \
+	$(foreach step,$(Zato_Test_SMB_UI_Steps),$(call Zato_Test_SMB_UI_Step,$(step))) \
+	rm -f $(Zato_Test_SMB_UI_Resume_File)
+
 test-smb: ## Live SMB tests against Windows Server 2025, 2022 and 2019 guests and a Japanese Windows Server 2025 guest - the offline checks, the file exchange flows, reliability, the Dashboard and failover, in that order.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -1857,10 +1887,7 @@ test-smb: ## Live SMB tests against Windows Server 2025, 2022 and 2019 guests an
 		$(Zato_SMB_Windows_Tests)/test_reliability.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_smb_windows -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) && \
-	Zato_Test_SMB_Windows=1 ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/smb_windows/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright_smb_windows -o log_cli_level=WARNING \
-		-W ignore::DeprecationWarning $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) && \
+	$(MAKE) test-smb-ui $(Zato_Log) && \
 	Zato_Test_SMB_Windows=1 ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(Zato_SMB_Windows_Tests)/test_failover.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_smb_windows_failover -W ignore::DeprecationWarning \

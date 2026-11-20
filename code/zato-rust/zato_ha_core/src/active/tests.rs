@@ -5,14 +5,19 @@
 
 //! The tests of the shipper - its sessions, snapshots, admissions and checkpoints.
 
+use super::session::{receive_loop, record_clock_skew};
 use super::*;
 use crate::barrier::{self, BarrierOutcome};
 use crate::config::{DATABASE_FILE_NAME, Timers};
 use crate::link::TlsContext;
 use crate::record::NodeAddress;
+use crate::record::RefereeRecord;
 use crate::referee::tests::MemoryReferee;
 use crate::test_support::{self, Certificates, LOOPBACK, NODE_A, NODE_B};
+use crate::wal::ScanOutcome;
 use parking_lot::Mutex;
+use std::fs::File;
+use std::io::Read;
 use std::net::TcpListener;
 use std::sync::mpsc;
 

@@ -244,7 +244,7 @@ class Node:
             'Zato_HA_Replication_Port': str(ModuleCtx.Replication_Port),
             'Zato_HA_Role_Port': str(ModuleCtx.Role_Port),
             'Zato_HA_Data_Dir': self.data_dir,
-            'Zato_HA_Log_Level': 'info,zato_ha_core::active=debug',
+            'Zato_HA_Log_Level': 'info',
             'Zato_Config_Bind_Port': str(ModuleCtx.Server_Port),
             'Zato_Scheduler_Redis_Host': '127.0.0.1',
             'Zato_Scheduler_Redis_Port': str(ModuleCtx.Redis_Port),

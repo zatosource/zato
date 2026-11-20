@@ -1,0 +1,20 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# Zato
+from live_windows.live_tests import live_test
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+test_temp_then_rename = live_test('test_write_modes', 'test_temp_then_rename')
+test_slow_writer = live_test('test_write_modes', 'test_slow_writer')
+test_locked_file = live_test('test_write_modes', 'test_locked_file')
+
+# ################################################################################################################################
+# ################################################################################################################################

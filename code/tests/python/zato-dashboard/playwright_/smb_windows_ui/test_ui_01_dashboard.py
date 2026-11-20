@@ -19,6 +19,7 @@ from live_windows.layout import app_folder, Hub, Shares
 # Playwright helpers
 from audit_log_ui import wait_for_table
 from file_transfer_schedule import open_schedules
+from smb_connection import navigate_to_list, row_selector
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,15 +28,14 @@ if 0:
     from playwright.sync_api import Page, Response
     from live_windows.progress import Monitor
     from zato.common.typing_ import anydict
-    from _smb_windows_dashboard import DashboardSuite
+    from _smb_windows_ui_suite import UISuite
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ModuleCtx:
 
-    # The list of SMB connections, and the path that a ping of one of them is sent to
-    Page_Url  = '/zato/outgoing/smb/?type_=outconn-smb'
+    # The path that a ping of a connection is sent to
     Ping_Path = '/zato/outgoing/smb/ping/'
 
     # How long a ping and the audit log may take, in milliseconds
@@ -69,31 +69,17 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _row_selector(name:'str') -> 'str':
-    out = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    return out
-
-# ################################################################################################################################
-
-def _navigate(page:'Page', zato_dashboard:'anydict') -> 'None':
-    base_url = zato_dashboard['dashboard_url']
-
-    _ = page.goto(f'{base_url}{ModuleCtx.Page_Url}')
-    _ = page.wait_for_selector('#data-table', state='visible')
-
-# ################################################################################################################################
-
 def _ping(page:'Page', name:'str') -> 'anydict':
     """ Clicks the Ping link of a connection and returns what the Dashboard answered with.
     """
-    row_selector = _row_selector(name)
+    selector = row_selector(name)
 
     def _is_ping(response:'Response') -> 'bool':
         out = ModuleCtx.Ping_Path in response.url
         return out
 
     with page.expect_response(_is_ping, timeout=ModuleCtx.Ping_Timeout) as response_info:
-        page.click(f'{row_selector} a:has-text("Ping")')
+        page.click(f'{selector} a:has-text("Ping")')
 
     response = response_info.value
     body = response.text()
@@ -109,19 +95,19 @@ def _ping(page:'Page', name:'str') -> 'anydict':
 def test_ping(
     logged_in_page:'Page',
     zato_dashboard:'anydict',
-    smb_windows:'DashboardSuite',
+    smb_suite:'UISuite',
     version:'str',
     monitor:'Monitor',
     ) -> 'None':
     """ Both connections to the guest are listed and a ping of each succeeds.
     """
     page = logged_in_page
-    info = smb_windows.guest(version).info
+    info = smb_suite.guest(version).info
 
     exchange_name = exchange_connection_name(info)
     partner_name = partner_connection_name(info)
 
-    _navigate(page, zato_dashboard)
+    navigate_to_list(page, zato_dashboard['dashboard_url'])
 
     for name in exchange_name, partner_name:
         response = _ping(page, name)
@@ -133,22 +119,22 @@ def test_ping(
 def test_schedules_listed(
     logged_in_page:'Page',
     zato_dashboard:'anydict',
-    smb_windows:'DashboardSuite',
+    smb_suite:'UISuite',
     version:'str',
     monitor:'Monitor',
     ) -> 'None':
-    """ The schedules page of the exchange connection lists the schedules that the import created.
+    """ The schedules page of the exchange connection lists the schedules that the Dashboard created.
     """
     page = logged_in_page
-    info = smb_windows.guest(version).info
+    info = smb_suite.guest(version).info
     exchange_name = exchange_connection_name(info)
 
-    _navigate(page, zato_dashboard)
+    navigate_to_list(page, zato_dashboard['dashboard_url'])
     open_schedules(page, exchange_name)
 
     for schedule_name in ModuleCtx.Expected_Schedules:
-        row_selector = _row_selector(schedule_name)
-        row = page.query_selector(row_selector)
+        selector = row_selector(schedule_name)
+        row = page.query_selector(selector)
         assert row is not None, f'Schedule {schedule_name} of {exchange_name} is not listed'
 
     monitor.raise_if_failed()
@@ -158,7 +144,7 @@ def test_schedules_listed(
 def test_audit_log_records_pickup(
     logged_in_page:'Page',
     zato_dashboard:'anydict',
-    smb_windows:'DashboardSuite',
+    smb_suite:'UISuite',
     version:'str',
     run:'str',
     monitor:'Monitor',
@@ -166,7 +152,7 @@ def test_audit_log_records_pickup(
     """ A file that the hub routes is recorded in the audit log of the exchange connection.
     """
     page = logged_in_page
-    handle = smb_windows.guest(version)
+    handle = smb_suite.guest(version)
     exchange_name = exchange_connection_name(handle.info)
 
     # The logistics application reads its inbox, and the plant writes one file ..
@@ -175,7 +161,7 @@ def test_audit_log_records_pickup(
 
     _ = handle.consume(run, Shares.Exchange, inbox, ModuleCtx.Hub_Pattern)
 
-    names = smb_windows.sequences.next_names(Hub.Plant, 1)
+    names = smb_suite.sequences.next_names(Hub.Plant, 1)
     _ = handle.produce(run, Shares.Exchange, outbox, names)
 
     sequence, app = names[0].split('.')
@@ -190,10 +176,10 @@ def test_audit_log_records_pickup(
     monitor.wait_until(_is_routed, f'win{version} received {routed_name}')
 
     # .. and the audit log of the connection shows what the hub did.
-    row_selector = _row_selector(exchange_name)
+    selector = row_selector(exchange_name)
 
-    _navigate(page, zato_dashboard)
-    page.click(f'{row_selector} a:has-text("Audit log")')
+    navigate_to_list(page, zato_dashboard['dashboard_url'])
+    page.click(f'{selector} a:has-text("Audit log")')
     wait_for_table(page)
 
     _ = page.wait_for_function(
@@ -208,37 +194,40 @@ def test_audit_log_records_pickup(
 def test_ping_fails_with_wrong_password(
     logged_in_page:'Page',
     zato_dashboard:'anydict',
-    smb_windows:'DashboardSuite',
+    smb_suite:'UISuite',
     version:'str',
     monitor:'Monitor',
     ) -> 'None':
     """ A connection with a password that the guest does not accept fails its ping, and the guest reports the failed logon.
     """
     page = logged_in_page
-    info = smb_windows.guest(version).info
+    info = smb_suite.guest(version).info
     partner_name = partner_connection_name(info)
 
     monitor.expect_windows_events(*ModuleCtx.Logon_Failure_Events)
     monitor.expect_server_errors(*ModuleCtx.Logon_Failure_Log)
 
-    definitions = smb_windows.definitions(version)
+    # The password of the partner connection is changed through the Dashboard ..
+    definitions = smb_suite.definitions(version)
 
     for connection in definitions['smb']:
         if connection['name'] == partner_name:
             connection['password'] = ModuleCtx.Wrong_Password
 
-    smb_windows.import_definitions(definitions)
+    smb_suite.apply_definitions(version, definitions)
 
+    # .. which makes its ping fail ..
     try:
-        _navigate(page, zato_dashboard)
+        navigate_to_list(page, zato_dashboard['dashboard_url'])
 
         response = _ping(page, partner_name)
         assert not response['is_success'], f'Ping of {partner_name} with a wrong password succeeded -> {response}'
 
         monitor.raise_if_failed()
 
+    # .. until the password is changed back.
     finally:
-        smb_windows.import_guest(version)
+        smb_suite.import_guest(version)
 
 # ################################################################################################################################
 # ################################################################################################################################
