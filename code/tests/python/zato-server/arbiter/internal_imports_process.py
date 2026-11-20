@@ -12,13 +12,26 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import sys
+from importlib import import_module
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ModuleCtx:
+
+    # The module that a server starts from, which patches the process with gevent before anything else is imported
+    Server_Main_Module = 'zato.server.main'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_ = import_module(ModuleCtx.Server_Main_Module)
 
 # Zato
-import zato.server.main # noqa: F401
-from zato.common.util.api import find_internal_modules
-from zato.server.arbiter_config import ArbiterError
-from zato.server.arbiter_start import check_fork_ready, import_internal_service_modules, stop_threadpool
-from zato.server.service import internal
+from zato.common.util.api import find_internal_modules # noqa: E402
+from zato.server.arbiter_config import ArbiterError # noqa: E402
+from zato.server.arbiter_start import check_fork_ready, import_internal_service_modules, stop_threadpool # noqa: E402
+from zato.server.service import internal # noqa: E402
 
 # ################################################################################################################################
 # ################################################################################################################################

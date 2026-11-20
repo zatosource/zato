@@ -24,19 +24,14 @@ from local_server import create_local_server, is_answering, next_generation, rea
 from zato.common.test.pubsub_database import connect
 from zato.common.test.process_util import get_process_tree_pids
 from zato.common.test.reservation import reserve_port, start_on_reserved_port
-from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from local_server import LocalServer
-    from subprocess import Popen
     from zato.common.test.pubsub_database import PubSubDatabase
     from zato.common.typing_ import any_, intset
-
-    LocalServer = LocalServer
-    Popen = Popen
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -156,7 +151,7 @@ def _has_text(server:'LocalServer', text:'str') -> 'bool':
 def _wait_for_waiting(server:'LocalServer') -> 'None':
     """ Waits until the server reports that it waits for its activation.
     """
-    process = cast_('Popen[bytes]', server.process)
+    process:'any_' = server.process
     deadline = time.monotonic() + ModuleCtx.Wait_Timeout
 
     while not _has_line(server, ModuleCtx.Waiting_Pattern):
@@ -202,7 +197,7 @@ def _deliver(activation_path:'str', line:'str') -> 'None':
 def _get_cpu_time(server:'LocalServer') -> 'float':
     """ Returns the CPU time that all the processes of the server used so far, in seconds.
     """
-    process = cast_('Popen[bytes]', server.process)
+    process:'any_' = server.process
     ticks_per_second = os.sysconf('SC_CLK_TCK')
     ticks = 0
 
@@ -286,7 +281,7 @@ def test_warm_server_waits_and_starts_on_activation(pubsub_database:'PubSubDatab
 
         logger.info('Warm server CPU time while waiting -> %.3fs', cpu_time_waiting)
 
-        process = cast_('Popen[bytes]', server.process)
+        process:'any_' = server.process
         backends_waiting = _get_backend_pids(pubsub_database)
         new_backends = backends_waiting - backends_before
 
@@ -345,7 +340,7 @@ def test_warm_server_exits_on_invalid_generation(pubsub_database:'PubSubDatabase
         # .. the test writes a line that is not a generation ..
         _deliver(activation_path, f'{ModuleCtx.Invalid_Generation}\n')
 
-        process = cast_('Popen[bytes]', server.process)
+        process:'any_' = server.process
         returncode = process.wait(ModuleCtx.Exit_Timeout)
 
         stream_thread:'any_' = server.stream_thread

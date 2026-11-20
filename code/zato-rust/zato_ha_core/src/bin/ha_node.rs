@@ -5,13 +5,19 @@
 
 //! The active-standby node of a Zato server on `PostgreSQL`.
 //!
-//! Usage: `_zato_ha_node -- <command that starts the Zato server>`. The node runs the command only while
-//! it is active, and reads its configuration from the `Zato_HA_*` environment variables.
+//! Usage: `_zato_ha_node -- <command that starts the Zato server>`. The node reads its configuration
+//! from the `Zato_HA_*` environment variables.
+//!
+//! Whenever no activated server runs, the node keeps the command running as a warm server, which imports its code
+//! and waits on an activation FIFO in the data directory, without any startup hook, connection to a database
+//! or listening port. Once the node becomes active, it writes its generation to the FIFO, and the warm server starts
+//! under that generation. A warm server that exits is spawned again after a delay, and an activated server is never
+//! returned to the warm state. Once it ends, the node spawns a new warm server with a new FIFO.
 //!
 //! SIGTERM and SIGINT stop the node in this order. The label thread removes the label of the own pod, the supervisor
 //! stops the Zato server, which drains its requests, and an active node keeps renewing its lease during the drain.
 //! Once the server has exited, an active node releases the referee record, so that the other node takes over
-//! at its next heartbeat, and the node exits.
+//! at its next heartbeat. The warm server of a standby is stopped in the same way, and the node exits.
 
 use std::process::ExitCode;
 use std::sync::Arc;

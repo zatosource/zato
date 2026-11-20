@@ -51,12 +51,8 @@ if 0:
     from zato.server.main import ZatoApplication
     from zato_ipc_core.zato_ipc_core import SharedRegion
 
-    Bunch = Bunch
-    SharedRegion = SharedRegion
     strintdict = strintdict
     strlist = strlist
-    WorkerContext = WorkerContext
-    ZatoApplication = ZatoApplication
 
 # ################################################################################################################################
 # ################################################################################################################################

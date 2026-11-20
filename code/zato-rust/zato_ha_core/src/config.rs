@@ -185,6 +185,9 @@ pub const DEFAULT_RESIGN_HOLD_OFF_MAX: f64 = 300.0;
 /// The file name of the highest generation this node has seen, in the data directory.
 pub const GENERATION_FILE_NAME: &str = "ha-generation";
 
+/// The file name of the FIFO through which the node activates its warm Zato server, in the data directory.
+pub const ACTIVATION_FIFO_NAME: &str = "ha-activation.fifo";
+
 /// Errors that stop the node at startup.
 #[derive(Debug)]
 pub enum ConfigError {

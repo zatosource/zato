@@ -23,7 +23,7 @@ from topology import docker
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strlist
+    from zato.common.typing_ import intset, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -138,14 +138,14 @@ def thaw_server(pod_name:'str') -> 'None':
 
 # ################################################################################################################################
 
-def count_server_processes(pod_name:'str') -> 'int':
-    """ Returns how many processes of the Zato server run in a pod.
+def get_server_pids(pod_name:'str') -> 'intset':
+    """ Returns the PIDs of the processes of the Zato server that run in a pod, the warm server of a standby included.
     """
-    # pgrep exits with a non-zero code when it finds no process, and its count is still printed. The pattern
-    # does not match itself, so the shell that runs pgrep, whose command line holds the pattern, is not counted.
-    output = _exec_shell(pod_name, f'pgrep -c -f {ModuleCtx.Server_Process_Pattern}', check=False)
+    # pgrep exits with a non-zero code and prints nothing when it finds no process. The pattern does not match itself,
+    # so the shell that runs pgrep, whose command line holds the pattern, is not listed.
+    output = _exec_shell(pod_name, f'pgrep -f {ModuleCtx.Server_Process_Pattern}', check=False)
 
-    out = int(output)
+    out = {int(line) for line in output.split()}
     return out
 
 # ################################################################################################################################

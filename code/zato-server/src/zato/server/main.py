@@ -100,13 +100,12 @@ from zato_server_core.zato_server_core import HTTPServer, handle_http_request, i
 if 0:
     from datetime import timedelta
     from zato.common.ext.bunch import Bunch
-    from zato.common.typing_ import any_, callable_, dictnone, strintnone, strlist
+    from zato.common.typing_ import any_, anydict, anytuple, callable_, dictnone, strintnone, strlist
     from zato.server.config_runtime import ConfigRuntime
     from zato.server.worker_runtime import WorkerRuntime
+    anydict = anydict
+    anytuple = anytuple
     callable_ = callable_
-    timedelta = timedelta
-    ConfigRuntime = ConfigRuntime
-    WorkerRuntime = WorkerRuntime
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -255,11 +254,12 @@ class ZatoApplication:
 
         # Build the request handler for the Rust HTTP server, which counts the requests in progress for a drain ..
         local_tz = get_localzone()
-        utc_offset = local_tz.utcoffset(datetime.now(timezone.utc))
-        utc_offset = cast_('timedelta', utc_offset)
+        now_utc = datetime.now(timezone.utc)
+        local_offset = local_tz.utcoffset(now_utc)
+        utc_offset:'timedelta' = cast_('timedelta', local_offset)
         local_tz_offset_secs = int(utc_offset.total_seconds())
 
-        def request_handler(request_ctx:'dict') -> 'tuple':
+        def request_handler(request_ctx:'anydict') -> 'anytuple':
             worker.in_flight += 1
             try:
                 out = handle_http_request(server, request_ctx, new_cid_server, local_tz_offset_secs)

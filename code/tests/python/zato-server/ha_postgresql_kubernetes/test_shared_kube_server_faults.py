@@ -21,7 +21,7 @@ import pytest
 # Zato
 from kube_checks import find_moment, get_pair, read_pod_log, wait_for_ok
 from kube_env import ModuleCtx as EnvCtx
-from kube_faults import break_server_config, count_server_processes, freeze_server, kill_server, \
+from kube_faults import break_server_config, freeze_server, get_server_pids, kill_server, \
     ModuleCtx as FaultsCtx, restore_server_config, thaw_server
 from kube_traffic import FailoverClient
 from zato.common.test.ha_limits import HALimits
@@ -31,7 +31,7 @@ from zato.common.test.ha_limits import HALimits
 
 if 0:
     from kube_env import KubeEnvironment, KubeNode
-    from zato.common.typing_ import strlist
+    from zato.common.typing_ import intset, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,13 +70,15 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _wait_for_server_end(pod:'KubeNode') -> 'None':
-    """ Waits until no process of the Zato server runs in a pod.
+def _wait_for_server_end(pod:'KubeNode', pids:'intset') -> 'None':
+    """ Waits until none of the given processes of the Zato server runs in a pod. The warm server that the node
+    of a standby keeps is a process of the Zato server as well, so the wait concerns the given processes alone.
     """
     deadline = time.monotonic() + ModuleCtx.Server_Stop_Timeout
 
     while time.monotonic() < deadline:
-        if count_server_processes(pod.pod_name) == 0:
+        running = get_server_pids(pod.pod_name) & pids
+        if not running:
             return
         time.sleep(ModuleCtx.Poll_Interval)
 
@@ -125,6 +127,7 @@ def test_hung_server_fails_over(kube_pair:'KubeEnvironment', scope:'str') -> 'No
 
     try:
         _ = wait_for_ok(client, 0.0, ModuleCtx.Served_Timeout)
+        frozen_pids = get_server_pids(active.pod_name)
 
         # The server of the active pod is frozen while its node keeps running ..
         frozen_at = freeze_server(active.pod_name, scope)
@@ -138,7 +141,7 @@ def test_hung_server_fails_over(kube_pair:'KubeEnvironment', scope:'str') -> 'No
 
         # .. and the node of the old active pod is the standby and has stopped the frozen server itself.
         _ = active.wait_for_role(ModuleCtx.Standby_Roles, wait_timeout)
-        _wait_for_server_end(active)
+        _wait_for_server_end(active, frozen_pids)
 
     finally:
         client.stop()
@@ -180,9 +183,11 @@ def test_exiting_server_fails_over(kube_pair:'KubeEnvironment') -> 'None':
             _ = standby.wait_for_role(ModuleCtx.Active_Roles, wait_timeout)
             first_ok = wait_for_ok(client, killed_at, wait_timeout)
 
-            # .. and the node of the old active pod is the standby with no server.
+            # .. and the node of the old active pod is the standby with no server. Every process of the server that runs
+            # once the node is the standby exits at once, a warm server included, so none of them may remain.
             _ = active.wait_for_role(ModuleCtx.Standby_Roles, wait_timeout)
-            _wait_for_server_end(active)
+            standby_pids = get_server_pids(active.pod_name)
+            _wait_for_server_end(active, standby_pids)
 
         finally:
             restore_server_config(active.pod_name, mode)
