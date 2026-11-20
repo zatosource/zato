@@ -9,8 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from collections import OrderedDict
 from dataclasses import dataclass
-from http.client import BAD_REQUEST, CONFLICT, FORBIDDEN, OK, UNAUTHORIZED
-from http.client import responses as http_responses
+from http import HTTPStatus
 from numbers import Number
 
 # Bunch
@@ -30,6 +29,21 @@ if 0:
     iterator_ = iterator_
     stranydict = stranydict
     strnone = strnone
+
+# ################################################################################################################################
+
+# The status codes and the reason phrases of HTTP, the same objects that http.client exposes under these names,
+# taken from the package http, whose import does not load the email parser that http.client imports.
+BAD_REQUEST  = HTTPStatus.BAD_REQUEST
+CONFLICT     = HTTPStatus.CONFLICT
+FORBIDDEN    = HTTPStatus.FORBIDDEN
+OK           = HTTPStatus.OK
+UNAUTHORIZED = HTTPStatus.UNAUTHORIZED
+
+http_responses:'dict[HTTPStatus, str]' = {}
+
+for _http_status in HTTPStatus.__members__.values():
+    http_responses[_http_status] = _http_status.phrase
 
 # ################################################################################################################################
 

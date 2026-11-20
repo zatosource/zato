@@ -53,6 +53,10 @@ patch_queue()
 # Anything that looks up entry points later reads the distributions installed at that time.
 metadata.entry_points = _read_entry_points
 
+# Every process of the server runs the gevent integration of gRPC the moment it imports grpc.
+from zato.server.grpc_import_hook import install_grpc_import_hook
+install_grpc_import_hook()
+
 # stdlib
 import logging
 import locale

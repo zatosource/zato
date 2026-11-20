@@ -55,7 +55,7 @@ from zato.server.connection.facade import ESFacade, FHIRFacade, FTPFacade, IBMMQ
     KeysightContainer, MLLPFacade, MongoDBFacade, ODataFacade, RESTFacade, SalesforceFacade, SchedulerFacade, SFTPFacade, \
     SMBFacade, SOAPFacade
 from zato.server.connection.ccda import CCDAFacade
-from zato.server.connection.grpc_ import GRPCFacade
+from zato.server.connection.grpc_facade import GRPCFacade
 from zato.server.destination.facade import DestinationFacade
 from zato.server.destination.hook import run_for_service as run_destinations_for_service
 from zato.server.pattern.api import FanOut

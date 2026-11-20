@@ -60,7 +60,6 @@ from zato.server.generic.api.channel_openapi import ChannelOpenAPIWrapper
 from zato.server.generic.api.chat_discord import ChatDiscordWrapper
 from zato.server.generic.api.chat_microsoft_teams import ChatMicrosoftTeamsWrapper
 from zato.server.generic.api.chat_slack import ChatSlackWrapper
-from zato.server.generic.api.cloud_jira import CloudJiraWrapper
 from zato.server.generic.api.cloud_microsoft_365 import CloudMicrosoft365Wrapper
 from zato.server.generic.api.cloud_microsoft_power_automate import CloudMicrosoftPowerAutomateWrapper
 from zato.server.generic.api.cloud_salesforce import CloudSalesforceWrapper
@@ -70,7 +69,6 @@ from zato.server.generic.api.channel_ibm_mq import ChannelIBMMQWrapper
 from zato.server.generic.api.channel_kafka import ChannelKafkaWrapper
 from zato.server.generic.api.outconn_ftp import OutconnFTPWrapper
 from zato.server.generic.api.outconn_graphql import OutconnGraphQLWrapper
-from zato.server.generic.api.outconn_grpc import OutconnGRPCWrapper
 from zato.server.generic.api.outconn_hl7_mllp import OutconnHL7MLLPWrapper
 from zato.server.generic.api.outconn_ibm_mq import OutconnIBMMQWrapper
 from zato.server.generic.api.outconn_kafka import OutconnKafkaWrapper
@@ -359,14 +357,12 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.CHAT_DISCORD: ChatDiscordWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHAT_MICROSOFT_TEAMS: ChatMicrosoftTeamsWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHAT_SLACK: ChatSlackWrapper,
-            COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: CloudJiraWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365: CloudMicrosoft365Wrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_POWER_AUTOMATE: CloudMicrosoftPowerAutomateWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: CloudSalesforceWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_RULE_ENGINE: GatewayRuleEngineWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: ChannelHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL: OutconnGraphQLWrapper,
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRPC: OutconnGRPCWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: OutconnHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_IBM_MQ: ChannelIBMMQWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IBM_MQ: OutconnIBMMQWrapper,

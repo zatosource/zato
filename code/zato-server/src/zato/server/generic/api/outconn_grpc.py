@@ -16,13 +16,15 @@ from logging import getLogger
 # gRPC
 import grpc
 import grpc_tools
-from grpc.experimental.gevent import init_gevent
 from grpc_tools import protoc
 
 # Zato
+from zato.common import grpc_gevent as grpc_gevent
 from zato.common.api import GRPC
 from zato.common.util.file_system import fs_safe_name
 from zato.server.connection.wrapper import Wrapper
+from zato.server.generic.api.config_defaults import outconn_grpc_bool_config_keys as outconn_grpc_bool_config_keys, \
+    outconn_grpc_config_defaults as outconn_grpc_config_defaults, outconn_grpc_int_config_keys as outconn_grpc_int_config_keys
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,32 +43,6 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# Make the gRPC C-core cooperate with gevent - this must run once per process, before any channels are created.
-init_gevent()
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# Default values applied when a configuration key is missing or None
-outconn_grpc_config_defaults:'dict[str, object]' = {
-    'address': GRPC.Default.Address,
-    'username': '',
-    'is_tls': True,
-    'tls_ca_certs_file': '',
-    'proto_path': '',
-    'stub_module': '',
-    'stub_class': '',
-    'ping_timeout': GRPC.Default.Ping_Timeout,
-    'max_send_message_size': GRPC.Default.Max_Message_Size,
-    'max_recv_message_size': GRPC.Default.Max_Message_Size,
-}
-
-# Config keys that must be integers but may arrive as strings from opaque storage
-outconn_grpc_int_config_keys = ('ping_timeout', 'max_send_message_size', 'max_recv_message_size')
-
-# Config keys that must be booleans but may arrive as strings from opaque storage
-outconn_grpc_bool_config_keys = ('is_tls',)
 
 # The file name suffixes the protobuf compiler gives to the modules it generates.
 _pb2_suffix      = '_pb2'

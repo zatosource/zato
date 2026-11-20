@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # the config manager imports when it builds the first connection of each type. The module imports no client library.
 
 # Zato
-from zato.common.api import AWS, ES, LDAP, MongoDB, SMB
+from zato.common.api import AWS, ES, GRPC, LDAP, MongoDB, SMB
 from zato.common.file_transfer.api import Default_Verify_How
 
 # ################################################################################################################################
@@ -57,6 +57,29 @@ outconn_es_int_config_keys = ('timeout',)
 
 # Config keys that must be booleans but may arrive as strings from opaque storage
 outconn_es_bool_config_keys = ('is_tls_validation_enabled',)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Default values applied when a configuration key is missing or None
+outconn_grpc_config_defaults:'strobjectdict' = {
+    'address': GRPC.Default.Address,
+    'username': '',
+    'is_tls': True,
+    'tls_ca_certs_file': '',
+    'proto_path': '',
+    'stub_module': '',
+    'stub_class': '',
+    'ping_timeout': GRPC.Default.Ping_Timeout,
+    'max_send_message_size': GRPC.Default.Max_Message_Size,
+    'max_recv_message_size': GRPC.Default.Max_Message_Size,
+}
+
+# Config keys that must be integers but may arrive as strings from opaque storage
+outconn_grpc_int_config_keys = ('ping_timeout', 'max_send_message_size', 'max_recv_message_size')
+
+# Config keys that must be booleans but may arrive as strings from opaque storage
+outconn_grpc_bool_config_keys = ('is_tls',)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -7,11 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from importlib import import_module
 from logging import getLogger
 
 # Zato
 from zato.common.audit_log.common import AuditEvent, AuditOutcome, AuditSource
-from zato.common.hl7.ccda.convert import convert
 from zato.common.hl7.ccda.exception import CCDAError
 from zato.common.hl7.ccda.paths import get_converter_dir, is_converter_installed
 from zato.server.commands import CommandsFacade
@@ -31,6 +31,9 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# The module of the converter, which loads the FHIR R4 model, imported by the first conversion
+_convert_module = 'zato.common.hl7.ccda.convert'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,8 +58,10 @@ class CCDAFacade:
     def to_fhir(self, document:'strbytes') -> 'Bundle':
         """ Converts one document and returns the bundle it became - the conversion is audited either way.
         """
+        convert_module = import_module(_convert_module)
+
         try:
-            result = convert(document, commands=self.commands, cid=self.cid)
+            result = convert_module.convert(document, commands=self.commands, cid=self.cid)
 
         except CCDAError as e:
             self._audit(AuditOutcome.Error, data=e.msg, attrs={'reason': e.reason, 'stderr': e.stderr})

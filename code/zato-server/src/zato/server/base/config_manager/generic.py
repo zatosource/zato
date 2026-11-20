@@ -31,11 +31,10 @@ from zato.server.generic.api.channel_kafka import channel_bool_config_keys as ch
 from zato.server.generic.api.chat_discord import discord_config_defaults, discord_int_config_keys
 from zato.server.generic.api.cloud_salesforce import cloud_salesforce_config_defaults
 from zato.server.generic.api.config_defaults import cloud_aws_config_defaults, cloud_aws_int_config_keys, \
-    outconn_es_bool_config_keys, outconn_es_config_defaults, outconn_es_int_config_keys, outconn_ldap_config_defaults, \
+    outconn_es_bool_config_keys, outconn_es_config_defaults, outconn_es_int_config_keys, outconn_grpc_bool_config_keys, \
+    outconn_grpc_config_defaults, outconn_grpc_int_config_keys, outconn_ldap_config_defaults, \
     outconn_mongodb_bool_config_keys, outconn_mongodb_config_defaults, outconn_mongodb_int_config_keys, \
     outconn_smb_bool_config_keys, outconn_smb_config_defaults, outconn_smb_int_config_keys, outconn_smb_string_config_keys
-from zato.server.generic.api.outconn_grpc import outconn_grpc_bool_config_keys, outconn_grpc_config_defaults, \
-    outconn_grpc_int_config_keys
 from zato.server.generic.api.outconn_hl7_mllp import outconn_bool_config_keys, outconn_config_defaults, \
     outconn_int_config_keys
 from zato.server.generic.api.outconn_kafka import outconn_bool_config_keys as outconn_kafka_bool_config_keys, \
@@ -80,10 +79,12 @@ _wrapper_locations = {
     COMMON_GENERIC.CONNECTION.TYPE.CLOUD_AWS: WrapperLocation('zato.server.generic.api.cloud_aws', 'CloudAWSWrapper'),
     COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: WrapperLocation('zato.server.generic.api.cloud_confluence',
         'CloudConfluenceWrapper'),
+    COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: WrapperLocation('zato.server.generic.api.cloud_jira', 'CloudJiraWrapper'),
     COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_FABRIC: WrapperLocation('zato.server.generic.api.cloud_microsoft_fabric',
         'CloudMicrosoftFabricWrapper'),
     COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP: WrapperLocation('zato.server.generic.api.gateway_mcp', 'GatewayMCPWrapper'),
     COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES: WrapperLocation('zato.server.generic.api.outconn_es', 'OutconnESWrapper'),
+    COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRPC: WrapperLocation('zato.server.generic.api.outconn_grpc', 'OutconnGRPCWrapper'),
     COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: WrapperLocation('zato.server.generic.api.outconn_hl7_fhir',
         'OutconnHL7FHIRWrapper'),
     COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: WrapperLocation('zato.server.generic.api.outconn_ldap', 'OutconnLDAPWrapper'),

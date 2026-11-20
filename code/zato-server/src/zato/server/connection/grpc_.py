@@ -22,13 +22,13 @@ from google.protobuf.message_factory import GetMessageClass
 from zato.common.api import SEC_DEF_TYPE
 from zato.common.exception import BadRequest, Conflict, Forbidden, InternalServerError, NotFound, ServiceUnavailable, \
     TooManyRequests, Unauthorized
+from zato.server.connection.grpc_facade import GRPCFacade as GRPCFacade
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, stranydict
-    from zato.server.base.config_manager import ConfigManager
+    from zato.common.typing_ import any_, stranydict
     from zato.server.base.parallel import ParallelServer
     from zato.server.generic.api.outconn_grpc import OutconnGRPCWrapper
 
@@ -255,32 +255,6 @@ class GRPCInvoker:
 
     def __getattr__(self, method_name:'str') -> '_GRPCMethodProxy':
         out = _GRPCMethodProxy(self._wrapper, method_name, self._cid)
-        return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class GRPCFacade:
-    """ Provides dict-like access to gRPC outgoing connections from services via self.grpc.
-    """
-    cid: 'str'
-    _outconn_grpc: 'anydict'
-
-    def init(self, cid:'str', config_manager:'ConfigManager') -> 'None':
-        self.cid = cid
-        self._outconn_grpc = config_manager.outconn_grpc
-
-# ################################################################################################################################
-
-    def __getitem__(self, name:'str') -> 'GRPCInvoker':
-
-        # This will raise a KeyError if there is no such connection
-        item = self._outconn_grpc[name]
-
-        # The wrapper holds the underlying channel and stub
-        wrapper = item['conn']
-
-        out = GRPCInvoker(wrapper, self.cid)
         return out
 
 # ################################################################################################################################

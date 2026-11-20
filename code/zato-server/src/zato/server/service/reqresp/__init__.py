@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import sys
 from copy import deepcopy
 
 # Bunch
@@ -25,7 +26,6 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import make_repr
 from zato.common.util.http_ import get_form_data as util_get_form_data
 from zato.edifact import parse_edifact, wire_text_from
-from zato.fhir.r4_0_1.resources import Bundle
 from zato.hl7v2.base import HL7Message
 from zato.server.generic.api.outconn_sdk import ConnectorContainer, type_prefix as sdk_type_prefix
 
@@ -100,6 +100,23 @@ NOT_GIVEN = 'ZATO_NOT_GIVEN'
 # ################################################################################################################################
 
 direct_payload = simple_types + (EtreeElement, ObjectifiedElement)
+
+# The module of the FHIR R4 resources, of which a payload can be a Bundle only once some code has imported it
+_fhir_resources_module = 'zato.fhir.r4_0_1.resources'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _is_fhir_bundle(payload:'any_') -> 'bool':
+    """ Returns True if the payload is a FHIR R4 Bundle.
+    """
+    out = False
+
+    if _fhir_resources_module in sys.modules:
+        fhir_resources = sys.modules[_fhir_resources_module]
+        out = isinstance(payload, fhir_resources.Bundle)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -248,7 +265,8 @@ class Request:
         # The bundle a C-CDA channel made of the document it received, the messages, attachments and files
         # that the IMAP and file transfer schedulers hand over, a model instance a publisher sent to a topic
         # and an HL7 v2 message an MLLP channel parsed on input are each the input as it is, whatever the service declares
-        if isinstance(self.payload, (Bundle, FileTransferItem, HL7Message, IMAPAttachment, IMAPMessage, Model)):
+        if isinstance(self.payload, (FileTransferItem, HL7Message, IMAPAttachment, IMAPMessage, Model)) or \
+            _is_fhir_bundle(self.payload):
             self.input = self.payload
 
         elif is_io:
