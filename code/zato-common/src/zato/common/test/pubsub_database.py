@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The pub/sub database of a test session - the SQLite file of its environment, or a PostgreSQL container started
 # for the session, with or without TLS, whose data directory is under the runtime directory of the tests.
 # The managed modes run the container under the profile of Amazon RDS or of Azure Database for PostgreSQL.
+# The local mode runs a primary and its synchronous standby from the local build of PostgreSQL, outside of any container.
 
 # stdlib
 import os
@@ -27,6 +28,7 @@ import pg8000.dbapi
 from zato.common.crypto.api import CryptoManager
 from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.test.pubsub_bouncer import Bouncer_Port, start_bouncer
+from zato.common.test.local_postgresql import get_cluster_env, LocalCluster, start_local_cluster, stop_local_cluster
 from zato.common.test.pubsub_certs import Chain_Plain, generate_certificates
 from zato.common.test.pubsub_network import add_round_trip_time
 from zato.common.test.pubsub_profile import get_host_name, get_profile_settings, Instance_Port, Managed_Profiles, \
@@ -50,6 +52,7 @@ class PubSubDBMode:
     PostgreSQL_MTLS  = 'postgresql-mtls'
     PostgreSQL_RDS   = 'postgresql-rds'
     PostgreSQL_Azure = 'postgresql-azure'
+    PostgreSQL_Local = 'postgresql-local'
 
 # The managed modes and the names of their profiles.
 _managed_modes = {
@@ -64,6 +67,7 @@ _postgresql_modes = {
     PubSubDBMode.PostgreSQL_MTLS,
     PubSubDBMode.PostgreSQL_RDS,
     PubSubDBMode.PostgreSQL_Azure,
+    PubSubDBMode.PostgreSQL_Local,
 }
 
 _tls_modes = {
@@ -174,6 +178,7 @@ class PubSubDatabase:
     docker_args: 'strlist' = field(default_factory=list)
     settings: 'strlist' = field(default_factory=list)
     env: 'strstrdict' = field(default_factory=dict)
+    local_cluster: 'LocalCluster | None' = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -481,6 +486,10 @@ def start_pubsub_database(label:'str', mode:'str', extra_settings:'strlist | Non
     if not is_postgresql_mode(mode):
         return out
 
+    if mode == PubSubDBMode.PostgreSQL_Local:
+        _start_local_database(out, extra_settings)
+        return out
+
     if not image:
         image = ModuleCtx.PostgreSQL_Image
 
@@ -596,6 +605,24 @@ def start_pubsub_database(label:'str', mode:'str', extra_settings:'strlist | Non
 
 # ################################################################################################################################
 
+def _start_local_database(database:'PubSubDatabase', extra_settings:'strlist | None') -> 'None':
+    """ Starts the local cluster of a database, with the settings of the containers, and points the database at its primary.
+    """
+    database.password = 'pubsub.' + CryptoManager.generate_hex_string()
+    settings = get_container_settings(database, extra_settings)
+
+    cluster = start_local_cluster(ModuleCtx.Username, database.password, ModuleCtx.DB_Name, settings)
+
+    database.local_cluster = cluster
+    database.host = '127.0.0.1'
+    database.port = cluster.primary.port
+    database.admin_username = ModuleCtx.Username
+    database.admin_password = database.password
+    database.settings = settings
+    database.env = get_cluster_env(cluster)
+
+# ################################################################################################################################
+
 def _run_container(database:'PubSubDatabase', image:'str') -> 'None':
     """ Runs the container of a database from an image, with its arguments and its settings.
     """
@@ -708,8 +735,12 @@ def pubsub_db_env(env:'strstrdict') -> 'Iterator[None]':
 # ################################################################################################################################
 
 def stop_pubsub_database(database:'PubSubDatabase') -> 'None':
-    """ Removes the container of a session together with its data directory.
+    """ Removes the container or the local cluster of a session together with its data directory.
     """
+    if database.local_cluster:
+        stop_local_cluster(database.local_cluster)
+        return
+
     if not database.container_name:
         return
 

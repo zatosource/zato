@@ -423,8 +423,9 @@ class Wrapper:
 
     def delete_queue_connections(self, reason:'strnone'=None) -> 'None':
 
-        # These are connections that are already connected
-        items = self.client.queue.queue
+        # These are connections that are already connected. Deleting one of them yields to other greenlets,
+        # which take clients out of the queue and put them back, so it is a copy of the queue that is iterated.
+        items = list(self.client.queue.queue)
 
         for item in items:
             try:

@@ -222,8 +222,12 @@ def test_credential_rotation(smb_suite:'SMBWindowsSuite', version:'str', run:'st
         verify_hub(monitor, version, run, sources, 'files sent before and after the password change')
 
     finally:
-        handle.set_password(run, Accounts.Exchange_Username, Accounts.Exchange_Password)
+
+        # The original password returns to Zato before it returns to the guest. A run that started with the new one
+        # keeps the client of the previous connection, and its logons fail for as long as it runs once the guest
+        # no longer accepts the new password, whereas a run with the original password succeeds once the guest has it.
         smb_suite.import_guest(version)
+        handle.set_password(run, Accounts.Exchange_Username, Accounts.Exchange_Password)
 
 # ################################################################################################################################
 

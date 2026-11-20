@@ -262,8 +262,7 @@ class OutconnODataWrapperDeleteTestCase(TestCase):
     """ Tests for the removal of pooled OData clients from the connection queue of their wrapper.
     """
 
-    def test_delete_queue_connections_closes_client_session(self) -> 'None':
-
+    def _new_config(self, pool_size:'int') -> 'Bunch':
         config = bunchify({
             'id': 1,
             'name': 'test.odata.delete',
@@ -271,11 +270,17 @@ class OutconnODataWrapperDeleteTestCase(TestCase):
             'address': 'https://odata.example.com/data/',
             'username': '',
             'secret': '',
-            'pool_size': 1,
+            'pool_size': pool_size,
             'queue_build_cap': 30,
         })
-        config = cast_('Bunch', config)
+        out = cast_('Bunch', config)
+        return out
 
+# ################################################################################################################################
+
+    def test_delete_queue_connections_closes_client_session(self) -> 'None':
+
+        config = self._new_config(1)
         wrapper = OutconnODataWrapper(config, MagicMock())
 
         # A pooled client whose HTTP session can be inspected ..
@@ -289,6 +294,36 @@ class OutconnODataWrapperDeleteTestCase(TestCase):
 
         # .. which closes its session without any exception.
         client.session.close.assert_called_once_with()
+        queue_logger.warning.assert_not_called()
+
+# ################################################################################################################################
+
+    def test_delete_queue_connections_while_a_client_is_taken(self) -> 'None':
+
+        config = self._new_config(2)
+        wrapper = OutconnODataWrapper(config, MagicMock())
+
+        # Two pooled clients whose HTTP sessions can be inspected ..
+        first = ODataClient(config)
+        first.session = MagicMock()
+        _ = wrapper.client.put_client(first)
+
+        second = ODataClient(config)
+        second.session = MagicMock()
+        _ = wrapper.client.put_client(second)
+
+        # .. the deletion of the first one yields to a caller that takes a client out of the queue ..
+        def _take_client() -> 'None':
+            _ = wrapper.client.queue.get_nowait()
+
+        first.session.close.side_effect = _take_client
+
+        # .. which does not end the deletion of the clients that were in the queue when it began.
+        with patch('zato.server.connection.queue.logger') as queue_logger:
+            wrapper.delete_queue_connections()
+
+        first.session.close.assert_called_once_with()
+        second.session.close.assert_called_once_with()
         queue_logger.warning.assert_not_called()
 
 # ################################################################################################################################

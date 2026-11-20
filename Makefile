@@ -1958,6 +1958,12 @@ test-common: ## Common library tests.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-common/common_db/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_common_db -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-common/reservation/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_reservation \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-common/local_postgresql/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_local_postgresql \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 # The suite of the PostgreSQL driver patches gevent in its conftest and runs in a pytest process of its own
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/pg8000_wire/ \
