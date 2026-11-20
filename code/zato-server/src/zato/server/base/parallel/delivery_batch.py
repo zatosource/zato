@@ -8,13 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import json
-from functools import partial
 from importlib import import_module
 from logging import getLogger
-from traceback import format_exc
-
-# gevent
-from gevent import GreenletExit
 
 # Zato
 from zato.common.api import DATA_FORMAT
@@ -28,7 +23,7 @@ if 0:
     from gevent.lock import BoundedSemaphore
     from zato.common.pubsub.delivery_scope import DeliveryScope
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
-    from zato.common.typing_ import any_, anydict, anylist, callable_, strset
+    from zato.common.typing_ import any_, anydict, anylist, callable_, strlist, strset
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -41,17 +36,6 @@ logger = getLogger(__name__)
 
 # The key of a message whose first attempt was recorded with the other messages of its batch
 Attempt_Recorded_Key = 'zato.pubsub.attempt_recorded'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class BatchCommitFailed(Exception):
-    """ Raised when what a delivery batch concluded could not be committed before a wait of a retry round.
-    """
-
-    def __init__(self, error:'Exception') -> 'None':
-        super().__init__(str(error))
-        self.error = error
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -69,19 +53,16 @@ def deliver_atomic_batch(
     """ Delivers a batch of messages to a push subscriber as one consume-process-produce transaction. The first attempt
     of each message is recorded in one transaction before the first message is sent, and the acknowledgement
     of the concluded messages commits in one transaction with the publications that the subscriber services made
-    while processing them. The messages concluded so far also commit before each wait of a retry round
-    and when the delivery is stopped. A batch that does not reach its commit leaves no publication behind
-    and goes out again.
+    while processing them. A batch that does not reach its commit leaves no publication behind and goes out again.
     """
+    msg_ids:'strlist' = []
+
     # One transaction records the first attempt of every message of the batch ..
     with database_slots:
         pending_delivery_ids = backend.record_attempts(messages)
 
     # .. what the subscriber services produce from now on commits with the acknowledgement ..
     scope = open_delivery_scope()
-
-    # .. which is also what each wait of a retry round commits first ..
-    before_wait = partial(_commit_before_wait, backend, scope, sub_key)
 
     try:
         for message in messages:
@@ -99,69 +80,34 @@ def deliver_atomic_batch(
                 message[Attempt_Recorded_Key] = True
                 sub_config = config_by_topic[message['topic_name']]
 
-                if not deliver_one(message, sub_config, sub_key, read_epoch, before_wait):
+                if not deliver_one(message, sub_config, sub_key, read_epoch):
                     break
 
-                scope.msg_ids.append(message['msg_id'])
-
-    # .. a commit that failed before a wait is handled as a failed commit of the batch ..
-    except BatchCommitFailed as e:
-        raise e.error from e
-
-    # .. a delivery that is stopped commits what it concluded before it ends ..
-    except GreenletExit:
-        _commit_on_exit(backend, scope, sub_key)
-        raise
+                msg_ids.append(message['msg_id'])
 
     finally:
         close_delivery_scope()
 
-    # .. and the rest of the batch commits once the batch is over.
-    commit_delivery_scope(backend, scope, sub_key)
+    _commit_batch(backend, scope, sub_key, msg_ids)
 
 # ################################################################################################################################
 
-def commit_delivery_scope(backend:'SQLPubSubBackend', scope:'DeliveryScope', sub_key:'str') -> 'None':
-    """ Commits what a delivery batch produced so far. The audit events of the deliveries commit with the acknowledgement
+def _commit_batch(
+    backend:'SQLPubSubBackend',
+    scope:'DeliveryScope',
+    sub_key:'str',
+    msg_ids:'strlist',
+) -> 'None':
+    """ Commits what a delivery batch produced. The audit events of the deliveries commit with the acknowledgement
     and the publications, each publication with the audit event that records it.
     """
-    msg_ids = scope.msg_ids
-    publications = scope.publications
-    audit_events = scope.audit_events
-
-    # What is committed leaves the scope before the commit, so that nothing is committed twice ..
-    scope.msg_ids = []
-    scope.publications = []
-    scope.audit_events = []
-
-    # .. the acknowledgement, the publications and the audit events commit together ..
+    # The acknowledgement, the publications and the audit events commit together ..
     if msg_ids:
-        backend.ack_with_publications(sub_key, msg_ids, publications, audit_events)
+        backend.ack_with_publications(sub_key, msg_ids, scope.publications, scope.audit_events)
 
     # .. while a batch that concluded no message has only its audit events to commit.
-    elif audit_events:
-        backend.audit_log.write_pending(audit_events)
-
-# ################################################################################################################################
-
-def _commit_before_wait(backend:'SQLPubSubBackend', scope:'DeliveryScope', sub_key:'str') -> 'None':
-    """ Commits what a delivery batch concluded before a wait of a retry round, raising BatchCommitFailed
-    if the commit fails, so that the failure is never taken for a failed delivery attempt.
-    """
-    try:
-        commit_delivery_scope(backend, scope, sub_key)
-    except Exception as e:
-        raise BatchCommitFailed(e) from e
-
-# ################################################################################################################################
-
-def _commit_on_exit(backend:'SQLPubSubBackend', scope:'DeliveryScope', sub_key:'str') -> 'None':
-    """ Commits what a delivery batch concluded before its greenlet was stopped.
-    """
-    try:
-        commit_delivery_scope(backend, scope, sub_key)
-    except Exception:
-        logger.warning('Concluded messages not committed when delivery stopped, sub_key `%s`: %s', sub_key, format_exc())
+    elif scope.audit_events:
+        backend.audit_log.write_pending(scope.audit_events)
 
 # ################################################################################################################################
 
@@ -191,8 +137,8 @@ def deliver_to_service(server:'ParallelServer', message:'anydict', sub_config:'a
 # ################################################################################################################################
 
 def _invoke_subscriber(server:'ParallelServer', service_name:'str', payload:'any_', **kwargs:'any_') -> 'None':
-    """ Invokes the service of a push subscriber. An attempt that fails or is stopped leaves none of its publications
-    behind, since only the attempt that concludes a message commits with the batch.
+    """ Invokes the service of a push subscriber. An attempt that fails leaves none of its publications behind,
+    since only the attempt that concludes a message commits with the batch.
     """
     scope = get_delivery_scope()
 
@@ -201,13 +147,13 @@ def _invoke_subscriber(server:'ParallelServer', service_name:'str', payload:'any
         server.invoke(service_name, payload, **kwargs)
         return
 
-    # .. whereas inside of one, the publications of a failed or stopped attempt are discarded along with their audit events.
+    # .. whereas inside of one, the publications of a failed attempt are discarded along with their audit events.
     publication_count = len(scope.publications)
 
     try:
         server.invoke(service_name, payload, **kwargs)
 
-    except (Exception, GreenletExit):
+    except Exception:
         del scope.publications[publication_count:]
         raise
 
