@@ -44,9 +44,12 @@ const STARTUP_POLL: Duration = Duration::from_millis(250);
 /// A port on the loopback that nothing listens on.
 const CLOSED_PORT: u16 = 1;
 
+/// The generation that the row of the generation guard names in the tests.
+const GUARD_GENERATION: u64 = 7;
+
 /// The table of the generation guard with its one row, as the Zato server creates it.
 const CREATE_GUARD: &str = "CREATE TABLE zato_active (id INTEGER PRIMARY KEY, generation BIGINT NOT NULL, owner TEXT NOT NULL);
-    INSERT INTO zato_active (id, generation, owner) VALUES (1, 1, 'zato-a')";
+    INSERT INTO zato_active (id, generation, owner) VALUES (1, 7, 'zato-a')";
 
 /// A `PostgreSQL` server in a container removed on drop.
 struct PostgreSqlContainer {
@@ -160,12 +163,12 @@ fn the_probe_succeeds_only_while_the_database_answers() {
     let probe = PostgreSqlProbe::new(&container.settings()).unwrap();
 
     // A database in which no Zato server created the generation guard yet answers the probe ..
-    probe.probe().unwrap();
+    assert_eq!(probe.probe().unwrap(), None);
 
-    // .. a database with the generation guard passes it too ..
+    // .. a database with the generation guard passes it too, with the generation that the guard names ..
     container.execute(CREATE_GUARD);
-    probe.probe().unwrap();
-    probe.probe().unwrap();
+    assert_eq!(probe.probe().unwrap(), Some(GUARD_GENERATION));
+    assert_eq!(probe.probe().unwrap(), Some(GUARD_GENERATION));
 
     // .. and a database that does not answer fails it within the request timeout.
     docker(&["pause", &container.name]);

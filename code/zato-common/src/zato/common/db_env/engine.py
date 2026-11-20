@@ -28,8 +28,8 @@ from sqlalchemy.pool import QueuePool
 # Zato
 from zato.common.db_env.common import get_env_values, Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.connection import build_connect_args_from_values, build_engine_url_from_values, \
-    DatabaseDurabilityError, set_postgresql_keepalive, set_postgresql_no_delay, set_postgresql_session, \
-    set_sqlite_pragmas, verify_postgresql_server
+    clear_postgresql_connect_timeout, DatabaseDurabilityError, PostgreSQL_Connect_Timeout_Seconds, \
+    set_postgresql_keepalive, set_postgresql_no_delay, set_postgresql_session, set_sqlite_pragmas, verify_postgresql_server
 from zato.common.db_env.fence import install_fence
 from zato.common.db_env.pg8000_copy import install as install_pg8000_copy
 from zato.common.db_env.pg8000_wire import install as install_pg8000_wire
@@ -342,6 +342,10 @@ def _new_env_engine(config:'EnvDBConfig') -> '_EnvEngine':
     engine_url   = build_engine_url_from_values(values, db_type)
     connect_args = build_connect_args_from_values(values, db_type)
 
+    # .. a new connection to PostgreSQL is established within a bounded time ..
+    if db_type == Type_PostgreSQL:
+        connect_args['timeout'] = PostgreSQL_Connect_Timeout_Seconds
+
     # .. runs read committed, and a pooled connection that the server or a load balancer closed
     # .. in the meantime is replaced when it is checked out instead of failing the first statement sent on it ..
     engine_kwargs:'stranydict' = {}
@@ -359,8 +363,9 @@ def _new_env_engine(config:'EnvDBConfig') -> '_EnvEngine':
     # .. every write runs within one of the mechanisms of the Zato database ..
     sa_event.listen(engine, 'before_cursor_execute', check_write_path)
 
-    # .. PostgreSQL needs each socket to send its segments without delay ..
+    # .. PostgreSQL needs each socket to send its segments without delay, with no timeout once it is established ..
     if db_type == Type_PostgreSQL:
+        sa_event.listen(engine, 'connect', clear_postgresql_connect_timeout)
         sa_event.listen(engine, 'connect', set_postgresql_no_delay)
         sa_event.listen(engine, 'connect', set_postgresql_keepalive)
         sa_event.listen(engine, 'connect', set_postgresql_session)

@@ -10,6 +10,7 @@
 //! restarts the measure at every read that fails, and takes over after the takeover time if its own probe of the
 //! database succeeds. The active node is never isolated by the lease, because the generation guard of the Zato
 //! server refuses every transaction of a replaced server, so an outage of the referee alone does not stop it.
+//! An active node that does not reach the referee is fenced once the database names a higher generation.
 
 use std::time::Instant;
 
@@ -45,10 +46,13 @@ impl Control {
         let outcome = self.probe.probe();
         let reachable = outcome.is_ok();
 
+        // A probe that failed tells nothing of the generation, which only the next probe that succeeds reads again.
+        self.database_generation = outcome.as_ref().ok().copied().flatten();
+
         // An isolated node stops its Zato server, so that no commit is acknowledged on a database that may lose it,
         // and the node serves again once the database is durable.
         let isolation_changed = match &outcome {
-            Ok(()) => self.set_isolated(false),
+            Ok(_) => self.set_isolated(false),
             Err(ProbeError::NotDurable(_)) => self.set_isolated(true),
 
             // A database that does not answer tells nothing of its durability, so the last answer still applies.
@@ -57,7 +61,7 @@ impl Control {
 
         if reachable != self.database_reachable || isolation_changed {
             match outcome {
-                Ok(()) => tracing::info!("The database is reachable and durable"),
+                Ok(_) => tracing::info!("The database is reachable and durable"),
                 Err(ProbeError::NotDurable(reason)) => {
                     tracing::error!("The database is not durable, the Zato server stops: {reason}");
                 }
@@ -108,12 +112,35 @@ impl Control {
             // A renewal whose answer was lost raised the version too, which the record then tells apart from a takeover.
             Ok(None) => self.adopt_lease(&record),
 
-            // The Zato server keeps running, and the next heartbeat renews again.
+            // The Zato server keeps running unless the database shows a takeover, and the next heartbeat renews again.
             Err(error) => {
                 tracing::warn!("The lease was not renewed: {error}");
+                self.fence_if_taken_over();
                 Ok(())
             }
         }
+    }
+
+    /// Fences the active node if the generation guard in the database names a generation above the node's own,
+    /// which the Zato server of the node that took over set. The referee tells the node of the takeover too,
+    /// but a node that does not reach the referee would otherwise keep reporting itself as active
+    /// while the database refuses every transaction of its server.
+    fn fence_if_taken_over(&self) {
+        let Some(database_generation) = self.database_generation else {
+            return;
+        };
+        // The role and the generation are compared and changed under one lock, so that no other change comes between.
+        let mut state = self.shared.state.lock();
+        let generation = state.generation;
+        if database_generation <= generation {
+            return;
+        }
+        tracing::warn!("The database names generation {database_generation}, above generation {generation} of this node, fencing");
+
+        // The node keeps its own generation, because only the referee raises it, and a generation that a Zato server
+        // without an active-standby node raised is not one that the referee holds.
+        self.shared.set_fenced(&mut state);
+        drop(state);
     }
 
     /// Continues under the version of the record if it still names this node at its generation, and fences the node
@@ -135,9 +162,10 @@ impl Control {
                 local: self.persisted_generation,
             }),
 
-            // The next heartbeat reads the record again.
+            // The next heartbeat reads the record again, unless the database shows a takeover.
             Err(error) => {
                 tracing::warn!("The lease was not read: {error}");
+                self.fence_if_taken_over();
                 Ok(())
             }
         }
@@ -314,6 +342,11 @@ mod tests {
         /// Makes every probe of the database find it not durable, or durable.
         fn set_database_not_durable(&self, not_durable: bool) {
             *self.probe.not_durable.lock() = not_durable;
+        }
+
+        /// Sets the generation that the generation guard in the database names.
+        fn set_database_generation(&self, generation: Option<u64>) {
+            *self.probe.generation.lock() = generation;
         }
     }
 
@@ -549,6 +582,33 @@ mod tests {
 
         node.set_unreachable(false);
         node.control.renew_lease().unwrap();
+        assert_eq!(node.record().version, version(FIRST_VERSION + 1));
+    }
+
+    #[test]
+    fn an_active_node_without_the_referee_is_fenced_once_the_database_names_a_higher_generation() {
+        let mut node = TestNode::in_role(Role::Active, NODE_A);
+        node.set_database_generation(Some(FIRST_GENERATION));
+        node.control.renew_lease().unwrap();
+        node.set_unreachable(true);
+
+        // The database names the generation of the node while the other node takes over ..
+        node.control.renew_lease().unwrap();
+        assert_eq!(node.role(), (Role::Active, FIRST_GENERATION));
+
+        // .. and the server of the other node sets its own, which fences the node at its own generation.
+        node.set_database_generation(Some(FIRST_GENERATION + 1));
+        node.control.renew_lease().unwrap();
+        assert_eq!(node.role(), (Role::Fenced, FIRST_GENERATION));
+    }
+
+    #[test]
+    fn a_higher_generation_in_the_database_does_not_fence_a_node_that_the_referee_names() {
+        let mut node = TestNode::in_role(Role::Active, NODE_A);
+        node.set_database_generation(Some(FIRST_GENERATION + 1));
+        node.control.renew_lease().unwrap();
+        node.control.renew_lease().unwrap();
+        assert_eq!(node.role(), (Role::Active, FIRST_GENERATION));
         assert_eq!(node.record().version, version(FIRST_VERSION + 1));
     }
 

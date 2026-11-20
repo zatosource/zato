@@ -8,7 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The fault of the database under traffic. Its pod is deleted, which takes the pub/sub database away from both pods
 # at once, until its StatefulSet creates the pod again with its volume. Neither pod renews or takes over the lease while
-# its probe of the database fails, so once the database returns, the first pod whose probe succeeds holds the lease.
+# its probe of the database fails, so once the database returns, the first pod whose probe succeeds holds the lease,
+# and its server acknowledges publications again within a bounded time.
 
 # stdlib
 import time
@@ -27,9 +28,11 @@ from zato.common.typing_ import cast_
 if 0:
     from kube_env import KubeEnvironment
     from kube_postgresql import KubePostgreSQL
+    from workload import Workload
     from zato.common.typing_ import any_
 
     KubePostgreSQL = KubePostgreSQL
+    Workload = Workload
     any_ = any_
 
 # ################################################################################################################################
@@ -43,6 +46,10 @@ class ModuleCtx:
 
     # The scheduler claims that the active server may have taken without running them while it was stopped
     Unrun_Claims = 1
+
+    # How long the active server may take to acknowledge publications again once the database and the pair returned,
+    # which is several times the time that establishing a connection to the database may take, in seconds
+    Resume_Timeout = 45
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -63,6 +70,26 @@ def _wait_for_new_pod(deleted_uid:'str') -> 'None':
                 return
 
         assert time.monotonic() < deadline, f'Pod {PostgreSQLCtx.Pod_Name} not created again'
+        time.sleep(ModuleCtx.Poll_Interval)
+
+# ################################################################################################################################
+
+def _wait_for_publications(workload:'Workload') -> 'None':
+    """ Waits until the workload has a publication acknowledged after this call began.
+    """
+    with workload.lock:
+        acknowledged_before = len(workload.acknowledged)
+
+    deadline = time.monotonic() + ModuleCtx.Resume_Timeout
+
+    while True:
+        with workload.lock:
+            acknowledged = len(workload.acknowledged)
+
+        if acknowledged > acknowledged_before:
+            return
+
+        assert time.monotonic() < deadline, f'No publication acknowledged within {ModuleCtx.Resume_Timeout}s'
         time.sleep(ModuleCtx.Poll_Interval)
 
 # ################################################################################################################################
@@ -100,6 +127,10 @@ def test_postgresql_pod_deleted(kube_pair:'KubeEnvironment') -> 'None':
         assert record['generation'] == generation, record
     else:
         assert record['generation'] > generation, record
+
+    # The server connects to the database again within a bounded time rather than after the retransmissions
+    # of its earlier connection attempts run out.
+    _wait_for_publications(workload)
 
     workload.fault_windows.append((started, time.time()))
 

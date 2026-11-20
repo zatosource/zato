@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The settings of a PostgreSQL server under which a test runs are built at runtime out of the data
 # of zato.common.test.sql_conformance.forbidden, so that no source of the repository spells out a relaxed setting.
 
+# stdlib
+import time
+
 # pytest
 import pytest
 
@@ -18,7 +21,7 @@ from sqlalchemy import text
 # Zato
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.connection import build_connect_args_from_values, build_engine_url_from_values, \
-    DatabaseDurabilityError, Provider_Failover_Roles
+    DatabaseDurabilityError, PostgreSQL_Connect_Timeout_Seconds, Provider_Failover_Roles
 from zato.common.db_env.database import dispose_database_engine, get_database_engine, get_database_values
 from zato.common.db_env.engine import new_zato_engine
 from zato.common.test.pubsub_database import connect, pubsub_db_env, PubSubDBMode, start_pubsub_database, \
@@ -52,6 +55,15 @@ class ModuleCtx:
 
     # A commit level stronger than the local flush, which a session keeps
     Level_Remote_Apply = 'remote_apply'
+
+    # The environment variable with the host of the Zato database
+    Env_Host = 'Zato_Database_Host'
+
+    # An address of the documentation range, which no host answers and to which packets are dropped
+    Unanswering_Host = '192.0.2.1'
+
+    # How much longer than the connect timeout a connection attempt or a statement is allowed to take, in seconds
+    Connect_Margin_Seconds = 5
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -254,6 +266,41 @@ def test_synchronous_standby_accepted() -> 'None':
 def test_primary_without_standbys_accepted(database:'PubSubDatabase') -> 'None':
     engine = get_database_engine()
     assert _get_session_level(engine) == ModuleCtx.Level_On
+
+# ################################################################################################################################
+
+def test_connection_to_unanswering_address_bounded(database:'PubSubDatabase') -> 'None':
+    """ A connection attempt to an address that drops every packet fails once the connect timeout elapses.
+    """
+    env = dict(database.env)
+    env[ModuleCtx.Env_Host] = ModuleCtx.Unanswering_Host
+
+    dispose_database_engine()
+
+    try:
+        with pubsub_db_env(env):
+            started = time.monotonic()
+
+            with pytest.raises(Exception):
+                _ = get_database_engine()
+
+            elapsed = time.monotonic() - started
+    finally:
+        dispose_database_engine()
+
+    assert elapsed < PostgreSQL_Connect_Timeout_Seconds + ModuleCtx.Connect_Margin_Seconds, elapsed
+
+# ################################################################################################################################
+
+def test_statement_longer_than_connect_timeout(database:'PubSubDatabase') -> 'None':
+    """ A statement that runs longer than the connect timeout completes, because the timeout bounds the connection
+    attempt only.
+    """
+    sleep_seconds = PostgreSQL_Connect_Timeout_Seconds + ModuleCtx.Connect_Margin_Seconds
+    engine = get_database_engine()
+
+    with engine.connect() as connection:
+        _ = connection.execute(text('select pg_sleep(:seconds)'), {'seconds': sleep_seconds})
 
 # ################################################################################################################################
 # ################################################################################################################################

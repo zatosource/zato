@@ -6,11 +6,13 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The two nodes partitioned from each other while both reach the database, and the active node partitioned from
-# the database while it reaches the API server. The nodes exchange nothing directly,
-# so the first partition leaves the active node renewing its lease and no takeover takes place however long
-# the partition lasts. In the second, the active node lets its lease lapse, the standby takes over, the database
-# refuses every later transaction of the former server, and the former active node rejoins as the standby.
+# The two nodes partitioned from each other while both reach the database, the active node partitioned from
+# the database while it reaches the API server, and the active node partitioned from the API server while it reaches
+# the database. The nodes exchange nothing directly, so the first partition leaves the active node renewing its lease
+# and no takeover takes place however long the partition lasts. In the second, the active node lets its lease lapse,
+# the standby takes over, the database refuses every later transaction of the former server, and the former active node
+# rejoins as the standby. In the third, the standby takes over once the lease lapses, and the former active node learns
+# of the takeover from the generation that the database names, so it stops serving without the API server.
 
 # stdlib
 import logging
@@ -31,9 +33,10 @@ from zato.common.typing_ import cast_
 
 if 0:
     from ha_env import HAEnvironment
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, strlist
 
     any_ = any_
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,8 +61,15 @@ class ModuleCtx:
     # How long the pair may take to form again once the former active node reaches the database, in seconds
     Recovery_Timeout = 300
 
+    # How long the former active node may serve once the server of the new active node took the database over,
+    # several heartbeat intervals, in seconds
+    Replaced_Timeout = 30
+
     # The role of the standby
     Role_Standby = 'Standby'
+
+    # The roles of a node that no longer serves requests once it was replaced
+    Replaced_Roles:'strlist' = ['Fenced', 'Standby']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -152,6 +162,64 @@ def test_active_node_without_the_database(ha_pair:'HAEnvironment') -> 'None':
     assert read_server_generation(active) != read_active_server(env)
 
     # .. the former active node reaches the database again and rejoins as the standby ..
+    heal(active)
+
+    serving = env.wait_for_pair(ModuleCtx.Recovery_Timeout)
+    assert serving is standby, f'{serving.node_name} serves in place of {standby.node_name}'
+
+    both_active = watch_roles(env, ModuleCtx.Watch_Seconds)
+    assert not both_active, both_active
+
+    publisher.stop()
+
+    # .. and the database holds every publication that a server acknowledged.
+    check_publications_stored(env, standby, publisher.get_msg_ids())
+    check_active_server(env, standby)
+
+# ################################################################################################################################
+
+def test_active_node_without_the_api_server(ha_pair:'HAEnvironment') -> 'None':
+    """ The active node loses the API server while it reaches the database. Its lease lapses and the standby takes over,
+    the former active node stops serving once the database names the generation of the new active node, it rejoins
+    as the standby once it reaches the API server again, and every acknowledged publication is stored.
+    """
+    env = ha_pair
+
+    active = env.get_active()
+    assert active is not None, 'No active node'
+
+    standby = env.get_other(active)
+
+    record = env.referee.read_record()
+    assert record is not None
+    generation_before = record['generation']
+
+    publisher = TimedPublisher(env.haproxy.base_url, env.publisher_username, env.publisher_password)
+    publisher.start()
+
+    time.sleep(ModuleCtx.Traffic_Seconds)
+
+    # The active node loses the API server and cannot renew its lease ..
+    partition(active, [env.referee.ip])
+
+    # .. the standby takes over at a higher generation ..
+    _ = standby.wait_for_role(TakeoverCtx.Active_Roles, TakeoverCtx.Takeover_Timeout)
+    _ = standby.wait_until_server_up(TakeoverCtx.Server_Timeout)
+
+    record = env.referee.read_record()
+    assert record is not None
+    assert record['active_node'] == standby.node_name, record
+    assert record['generation'] > generation_before, record
+
+    check_active_server(env, standby)
+
+    # .. the former active node stops serving while it still does not reach the API server ..
+    _ = active.wait_for_role(ModuleCtx.Replaced_Roles, ModuleCtx.Replaced_Timeout)
+
+    both_active = watch_roles(env, ModuleCtx.Watch_Seconds)
+    assert not both_active, both_active
+
+    # .. it reaches the API server again and rejoins as the standby ..
     heal(active)
 
     serving = env.wait_for_pair(ModuleCtx.Recovery_Timeout)

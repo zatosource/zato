@@ -96,8 +96,13 @@ impl Shared {
             state.generation,
             state.role
         );
-        state.role = Role::Fenced;
         state.generation = state.generation.max(generation);
+        self.set_fenced(state);
+    }
+
+    /// Moves the node to `Fenced` at its own generation.
+    pub fn set_fenced(&self, state: &mut NodeState) {
+        state.role = Role::Fenced;
         state.isolated = false;
         self.changed.notify_all();
     }

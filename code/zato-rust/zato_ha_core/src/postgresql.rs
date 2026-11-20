@@ -5,8 +5,9 @@
 
 //! The probe of the Zato database on `PostgreSQL`.
 //!
-//! A probe reads the row of `zato_active` that the generation guard of the Zato server keeps, which establishes
-//! that the database is reachable from the pod, including before the Zato server first created the table.
+//! A probe reads the generation from the row of `zato_active` that the generation guard of the Zato server keeps,
+//! which establishes that the database is reachable from the pod, including before the Zato server first created
+//! the table, and tells which generation the server that took the database over last runs at.
 //! It then verifies that a commit on the database is durable once acknowledged - the server flushes its write-ahead
 //! log, writes full pages after a checkpoint, and as a primary with streaming standbys waits for at least one of them,
 //! unless the provider of a managed service performs the failover.
@@ -37,8 +38,8 @@ pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
 /// The name under which the node appears among the sessions of `PostgreSQL`.
 const APPLICATION_NAME: &str = "zato-ha-node";
 
-/// Reads the row of the generation guard, which fails if the database is not reachable.
-const PROBE_STATEMENT: &str = "SELECT 1 FROM zato_active WHERE id = 1";
+/// Reads the generation of the generation guard, which fails if the database is not reachable.
+const PROBE_STATEMENT: &str = "SELECT generation FROM zato_active WHERE id = 1";
 
 /// How `PostgreSQL` shows a setting that is turned on.
 const SETTING_ON: &str = "on";
@@ -88,8 +89,9 @@ impl std::error::Error for ProbeError {}
 
 /// A check that the Zato database is reachable from this node.
 pub trait DatabaseProbe: Send + Sync {
-    /// Returns `Ok` if the database answered the probe.
-    fn probe(&self) -> Result<(), ProbeError>;
+    /// Returns the generation that the generation guard in the database names if the database answered the probe,
+    /// which is `None` until a Zato server first took the database over.
+    fn probe(&self) -> Result<Option<u64>, ProbeError>;
 }
 
 /// A connection to `PostgreSQL` and the task that exchanges its messages.
@@ -368,20 +370,30 @@ async fn durability_shortfall(client: &Client) -> Result<Option<String>, tokio_p
 }
 
 impl DatabaseProbe for PostgreSqlProbe {
-    fn probe(&self) -> Result<(), ProbeError> {
-        let shortfall = self.call("probe", async |client| {
-            match client.query_opt(PROBE_STATEMENT, &[]).await {
+    fn probe(&self) -> Result<Option<u64>, ProbeError> {
+        let (stored, shortfall) = self.call("probe", async |client| {
+            let stored: Option<i64> = match client.query_opt(PROBE_STATEMENT, &[]).await {
                 // The Zato server creates the generation guard when it first starts, after the node already probes,
                 // and a database that reports the table as missing answered the probe.
-                Err(error) if error.code() == Some(&SqlState::UNDEFINED_TABLE) => {}
+                Err(error) if error.code() == Some(&SqlState::UNDEFINED_TABLE) => None,
                 Err(error) => return Err(error),
-                Ok(_) => {}
-            }
-            durability_shortfall(client).await
+                Ok(Some(row)) => Some(row.try_get(0)?),
+                Ok(None) => None,
+            };
+            let shortfall = durability_shortfall(client).await?;
+            Ok((stored, shortfall))
         })?;
 
         // A database that answered and is not durable is reported apart from one that did not answer.
-        shortfall.map_or(Ok(()), |reason| Err(ProbeError::NotDurable(reason)))
+        if let Some(reason) = shortfall {
+            return Err(ProbeError::NotDurable(reason));
+        }
+
+        // The column is signed, and the generation guard only ever stores generations of zero or more.
+        stored
+            .map(u64::try_from)
+            .transpose()
+            .map_err(|error| ProbeError::Unreachable(format!("PostgreSQL generation: {error}")))
     }
 }
 

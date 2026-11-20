@@ -65,16 +65,19 @@ pub struct MemoryProbe {
 
     /// Whether every probe finds the database not durable.
     pub not_durable: Mutex<bool>,
+
+    /// The generation that the generation guard in the database names, if a Zato server took it over.
+    pub generation: Mutex<Option<u64>>,
 }
 
 impl DatabaseProbe for Arc<MemoryProbe> {
-    fn probe(&self) -> Result<(), ProbeError> {
+    fn probe(&self) -> Result<Option<u64>, ProbeError> {
         if *self.unreachable.lock() {
             return Err(ProbeError::Unreachable("unreachable".to_owned()));
         }
         if *self.not_durable.lock() {
             return Err(ProbeError::NotDurable("synchronous_standby_names is empty".to_owned()));
         }
-        Ok(())
+        Ok(*self.generation.lock())
     }
 }

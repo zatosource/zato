@@ -98,6 +98,10 @@ pub struct Control {
     /// Whether the last probe of the database succeeded, so that only a change of it is logged.
     database_reachable: bool,
 
+    /// The generation that the generation guard in the database named at the last probe, if the probe succeeded
+    /// and a Zato server took the database over.
+    database_generation: Option<u64>,
+
     /// The record that the standby last saw change.
     observed: Option<Versioned<RefereeRecord>>,
 
@@ -124,6 +128,7 @@ impl Control {
             lease_version: None,
             probe,
             database_reachable: true,
+            database_generation: None,
             observed: None,
             observed_at: Instant::now(),
         })

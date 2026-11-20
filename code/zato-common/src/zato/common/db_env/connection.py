@@ -74,6 +74,11 @@ _keepalive_count = 3
 # How long sent data may remain unacknowledged before the connection fails, in milliseconds.
 _user_timeout_ms = 60_000
 
+# How long establishing a PostgreSQL connection may take, in seconds. Without a limit, a connection attempt to an address
+# that drops packets, e.g. the address of a database pod that was replaced, waits for the kernel's limit
+# of SYN retransmissions of over two minutes.
+PostgreSQL_Connect_Timeout_Seconds = 10
+
 # How long a PostgreSQL session may hold a transaction open without activity, in milliseconds.
 _idle_in_transaction_timeout_ms = 60_000
 
@@ -174,6 +179,15 @@ def set_postgresql_keepalive(dbapi_connection:'any_', connection_record:'any_') 
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, _keepalive_interval_seconds)
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, _keepalive_count)
     sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_USER_TIMEOUT, _user_timeout_ms)
+
+# ################################################################################################################################
+
+def clear_postgresql_connect_timeout(dbapi_connection:'any_', connection_record:'any_') -> 'None':
+    """ Removes the timeout that bounds the establishment of a pg8000 connection from its socket. The driver keeps
+    the timeout for every later read as well, which would end a statement that legitimately waits longer, e.g. for a lock,
+    while a peer that no longer answers is detected by the keepalive probes and the user timeout of the socket.
+    """
+    dbapi_connection._usock.settimeout(None)
 
 # ################################################################################################################################
 
