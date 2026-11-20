@@ -31,6 +31,11 @@ allow = [
   "Zlib",
 ]
 
+# libfuzzer-sys bundles the LLVM libFuzzer sources, which are under NCSA. It is linked only into the fuzz crates.
+[[licenses.exceptions]]
+crate = "libfuzzer-sys"
+allow = ["NCSA"]
+
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"

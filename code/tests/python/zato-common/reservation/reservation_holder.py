@@ -41,7 +41,7 @@ def _hold_ports(count:'int', purpose:'str') -> 'None':
 
     data = json.dumps(ports)
     _ = sys.stdout.write(data + '\n')
-    sys.stdout.flush()
+    _ = sys.stdout.flush()
 
     # The reservations are held until the test closes the standard input.
     _ = sys.stdin.read()
@@ -55,7 +55,7 @@ def _hold_name(prefix:'str') -> 'None':
 
     data = json.dumps(reservation.name)
     _ = sys.stdout.write(data + '\n')
-    sys.stdout.flush()
+    _ = sys.stdout.flush()
 
     # The reservation is held until the test closes the standard input.
     _ = sys.stdin.read()

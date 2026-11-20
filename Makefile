@@ -9,8 +9,8 @@
 	stop-dashboard restart-dashboard scheduler queue-bridge on-prem-gateway on-prem-gateway-hub file-listener sftp api-portal api-portal-demo api-portal-tutorial b2b-portal mcp-demo \
 	help install-deps install-fhir-converter \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-rest-outgoing test-rest-perf test-rest-channel test-rest-channel-perf test-scheduler test-scheduler-failover \
-	test-ha test-ha-core test-ha-postgresql-local test-ha-power-loss test-ha-postgresql test-ha-postgresql-kubernetes \
-	test-ha-postgresql-soak \
+	test-ha test-ha-core test-ha-postgresql-local test-ha-power-loss test-ha-push-delivery test-ha-postgresql \
+	test-ha-postgresql-kubernetes test-ha-postgresql-soak \
 	test-soak test-soak-pubsub test-soak-scheduler-failover \
 	test-arbiter \
 	test-rate-limiting test-enmasse test-cli \
@@ -727,14 +727,15 @@ test-scheduler-failover: ## Active-passive scheduler failover tests on PostgreSQ
 # The HA targets in the order test-ha runs them, from the shortest to the longest, with the targets of the linked
 # repositories after the suites of this repository and the soak tests last, and the target test-ha is currently on.
 Zato_Test_HA = \
-	test-ha-postgresql-local test-ha-core test-ha-power-loss test-ha-postgresql test-ha-postgresql-kubernetes \
-	$(Zato_HA_Linked_Targets) test-ha-postgresql-soak
+	test-ha-push-delivery test-ha-postgresql-local test-ha-core test-ha-power-loss test-ha-postgresql \
+	test-ha-postgresql-kubernetes $(Zato_HA_Linked_Targets) test-ha-postgresql-soak
 Zato_Test_HA_Resume_File := $(CURDIR)/code/tests/.test-ha-resume
 
 # The directory of each HA suite.
 Zato_Test_HA_Server_Dir                := $(CURDIR)/code/tests/python/zato-server
 Zato_Test_HA_Dir_power-loss            := $(CURDIR)/code/tests/python/zato-common/reliability/power_loss
 Zato_Test_HA_Dir_postgresql-local      := $(Zato_Test_HA_Server_Dir)/ha_postgresql_local
+Zato_Test_HA_Dir_push-delivery         := $(Zato_Test_HA_Server_Dir)/ha_push_delivery
 Zato_Test_HA_Dir_postgresql            := $(Zato_Test_HA_Server_Dir)/ha_postgresql
 Zato_Test_HA_Dir_postgresql-kubernetes := $(Zato_Test_HA_Server_Dir)/ha_postgresql_kubernetes
 
@@ -745,6 +746,9 @@ Zato_Test_HA_Modules_power-loss := \
 
 Zato_Test_HA_Modules_postgresql-local := \
 	test_server_start.py test_warm_start.py test_takeover_wait.py test_server_liveness.py test_ping_under_load.py
+
+Zato_Test_HA_Modules_push-delivery := \
+	test_batch_commit.py
 
 Zato_Test_HA_Modules_postgresql := \
 	test_shared_split_brain.py test_shared_outage.py test_shared_partition.py test_shared_functional.py \
@@ -800,6 +804,9 @@ test-ha-postgresql-local: ## The takeover of the Zato database and the start of 
 
 test-ha-power-loss: ## Loss of power to a single server on SQLite and on PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(call Zato_Test_HA_Suite,power-loss)
+
+test-ha-push-delivery: ## The commit of the concluded messages of a push delivery batch when the server is killed, the subscription is edited or the server is stopped during the batch, on SQLite, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+	$(call Zato_Test_HA_Suite,push-delivery)
 
 test-ha-postgresql: ## Active-standby pair on PostgreSQL without its soak tests, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(call Zato_Test_HA_Suite,postgresql)

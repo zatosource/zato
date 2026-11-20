@@ -13,7 +13,7 @@
 
 use std::collections::BTreeMap;
 
-use chrono::{SecondsFormat, Utc};
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 
 use super::client::{ApiClient, CONTENT_TYPE_JSON_PATCH, CONTENT_TYPE_MERGE_PATCH, Response};
@@ -26,6 +26,9 @@ const LEASES_GROUP_VERSION: &str = "apis/coordination.k8s.io/v1";
 
 /// The resource of leases.
 const LEASES_RESOURCE: &str = "leases";
+
+/// The format of the renew time, a Kubernetes `MicroTime` in UTC with six fractional digits.
+const RENEW_TIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%S%.6fZ";
 
 /// The API version of a `Lease` document.
 const LEASE_API_VERSION: &str = "coordination.k8s.io/v1";
@@ -316,7 +319,7 @@ impl Referee for LeaseReferee {
 
     fn renew(&self, record: &RefereeRecord, expected_version: &str) -> Result<Option<String>, RefereeError> {
         let encoded = encode_annotation(record)?;
-        let renew_time = Utc::now().to_rfc3339_opts(SecondsFormat::Micros, true);
+        let renew_time = Timestamp::now().strftime(RENEW_TIME_FORMAT).to_string();
 
         // The test of the record refuses a version that etcd issued again to another record after a restore,
         // and the version the renewal was made from differs in every renewal, so the API server always persists it.

@@ -7,7 +7,9 @@ use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 
-use chrono::{DateTime, Datelike, NaiveDate};
+use jiff::civil::DateTime;
+use jiff::tz::TimeZone;
+use jiff::Timestamp;
 
 use parking_lot::Mutex;
 use pyo3::prelude::*;
@@ -17,12 +19,6 @@ use crate::common::{RateLimitError, RateLimitResult, MICROSECONDS_PER_SECOND};
 const SECONDS_PER_MINUTE: u64 = 60;
 const SECONDS_PER_HOUR: u64 = 3600;
 const SECONDS_PER_DAY: u64 = 86400;
-
-const JANUARY: u32 = 1;
-const DECEMBER: u32 = 12;
-const MIDNIGHT_HOUR: u32 = 0;
-const MIDNIGHT_MINUTE: u32 = 0;
-const MIDNIGHT_SECOND: u32 = 0;
 
 // ----------------------------------------------------------------- window unit
 
@@ -102,7 +98,7 @@ pub fn compute_window_end_us(unit: WindowUnit, now_us: u64) -> Result<u64, RateL
         return Ok(window_end_us);
     }
 
-    // Month requires chrono for calendar math.
+    // Month requires calendar math.
     let now_secs = now_us / MICROSECONDS_PER_SECOND;
 
     let secs_i64 = i64::try_from(now_secs).map_err(|_| {
@@ -111,37 +107,27 @@ pub fn compute_window_end_us(unit: WindowUnit, now_us: u64) -> Result<u64, RateL
         )
     })?;
 
-    let dt = DateTime::from_timestamp(secs_i64, 0).ok_or_else(|| {
+    let now = Timestamp::from_second(secs_i64).map_err(|error| {
         RateLimitError::new(
-            format!("Month boundary failed, DateTime::from_timestamp returned None: {secs_i64}"),
+            format!("Month boundary failed, timestamp out of range: {secs_i64}: {error}"),
         )
     })?;
 
-    let year = dt.year();
-    let month = dt.month();
+    // The first day of the next month is the day after the last day of this one.
+    let today = TimeZone::UTC.to_datetime(now).date();
+    let first_of_next = today.last_of_month().tomorrow().map_err(|error| {
+        RateLimitError::new(
+            format!("Month boundary failed, no month follows {today}: {error}"),
+        )
+    })?;
 
-    let (next_year, next_month): (i32, u32) = if month == DECEMBER {
-        (year + 1, JANUARY)
-    } else {
-        (year, month + 1)
-    };
+    let midnight = TimeZone::UTC.to_timestamp(DateTime::from(first_of_next)).map_err(|error| {
+        RateLimitError::new(
+            format!("Month boundary failed, midnight construction for {first_of_next}: {error}"),
+        )
+    })?;
 
-    let first_of_next = NaiveDate::from_ymd_opt(next_year, next_month, 1)
-        .ok_or_else(|| {
-            RateLimitError::new(
-                format!("Month boundary failed, invalid date: {next_year}-{next_month:02}-01"),
-            )
-        })?;
-
-    let midnight = first_of_next
-        .and_hms_opt(MIDNIGHT_HOUR, MIDNIGHT_MINUTE, MIDNIGHT_SECOND)
-        .ok_or_else(|| {
-            RateLimitError::new(
-                format!("Month boundary failed, midnight construction for {next_year}-{next_month:02}-01"),
-            )
-        })?;
-
-    let boundary_secs = midnight.and_utc().timestamp();
+    let boundary_secs = midnight.as_second();
 
     let boundary_secs_u64 = u64::try_from(boundary_secs).map_err(|_| {
         RateLimitError::new(
@@ -324,7 +310,7 @@ impl FixedWindowRegistry {
     ) -> Result<FixedWindowCheckResult, RateLimitError> {
 
         // Pre-compute the window boundary before taking the lock
-        // so chrono math (for Month) does not hold the mutex.
+        // so calendar math (for Month) does not hold the mutex.
         let window_end = compute_window_end_us(config.unit(), now_us)?;
 
         // Serialize access to the shared counters.

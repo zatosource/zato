@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use chrono::{Duration, Utc};
+use jiff::{SignedDuration, Timestamp};
 
 use zato_scheduler_core::job::RunningJob;
 use zato_scheduler_core::model::SchedulerJob;
@@ -9,6 +9,7 @@ use zato_scheduler_core::scheduler::{
     reanchor_all_jobs, SchedulerState,
 };
 use zato_scheduler_core::DeferredLog;
+use zato_scheduler_core::job::to_rfc3339;
 
 fn make_interval_job(id: i64, name: &str, minutes: u32) -> SchedulerJob {
     SchedulerJob {
@@ -75,7 +76,7 @@ fn test_sleep_duration_past_fire_returns_1ms() {
     let mut state = SchedulerState::new();
     let job = make_interval_job(3, "sd3", 5);
     let mut rj = RunningJob::from_scheduler_job(&job);
-    rj.next_fire_utc = Some(Utc::now() - Duration::seconds(10));
+    rj.next_fire_utc = Some(Timestamp::now() - SignedDuration::from_secs(10));
     state.jobs.insert(3, rj);
 
     let dur = compute_sleep_duration(&state);
@@ -88,12 +89,12 @@ fn test_sleep_duration_picks_soonest() {
 
     let job1 = make_interval_job(4, "sd4a", 30);
     let mut rj1 = RunningJob::from_scheduler_job(&job1);
-    rj1.next_fire_utc = Some(Utc::now() + Duration::minutes(30));
+    rj1.next_fire_utc = Some(Timestamp::now() + SignedDuration::from_mins(30));
     state.jobs.insert(4, rj1);
 
     let job2 = make_interval_job(5, "sd4b", 2);
     let mut rj2 = RunningJob::from_scheduler_job(&job2);
-    rj2.next_fire_utc = Some(Utc::now() + Duration::seconds(5));
+    rj2.next_fire_utc = Some(Timestamp::now() + SignedDuration::from_secs(5));
     state.jobs.insert(5, rj2);
 
     let dur = compute_sleep_duration(&state);
@@ -108,7 +109,7 @@ fn test_sleep_duration_picks_soonest() {
 fn test_collect_due_no_jobs() {
     let mut state = SchedulerState::new();
     let mut deferred = DeferredLog::default();
-    let batch = collect_due_jobs(&mut state, Utc::now(), 0, &mut deferred);
+    let batch = collect_due_jobs(&mut state, Timestamp::now(), 0, &mut deferred);
     assert!(batch.is_empty());
 }
 
@@ -117,11 +118,11 @@ fn test_collect_due_fires_past_job() {
     let mut state = SchedulerState::new();
     let job = make_interval_job(10, "cd1", 5);
     let mut rj = RunningJob::from_scheduler_job(&job);
-    rj.next_fire_utc = Some(Utc::now() - Duration::seconds(1));
+    rj.next_fire_utc = Some(Timestamp::now() - SignedDuration::from_secs(1));
     state.jobs.insert(10, rj);
 
     let mut deferred = DeferredLog::default();
-    let batch = collect_due_jobs(&mut state, Utc::now(), 0, &mut deferred);
+    let batch = collect_due_jobs(&mut state, Timestamp::now(), 0, &mut deferred);
     assert_eq!(batch.len(), 1);
     assert_eq!(batch[0].job_id.0, 10);
 }
@@ -131,11 +132,11 @@ fn test_collect_due_skips_future_job() {
     let mut state = SchedulerState::new();
     let job = make_interval_job(11, "cd2", 5);
     let mut rj = RunningJob::from_scheduler_job(&job);
-    rj.next_fire_utc = Some(Utc::now() + Duration::hours(1));
+    rj.next_fire_utc = Some(Timestamp::now() + SignedDuration::from_hours(1));
     state.jobs.insert(11, rj);
 
     let mut deferred = DeferredLog::default();
-    let batch = collect_due_jobs(&mut state, Utc::now(), 0, &mut deferred);
+    let batch = collect_due_jobs(&mut state, Timestamp::now(), 0, &mut deferred);
     assert!(batch.is_empty());
 }
 
@@ -146,11 +147,11 @@ fn test_collect_due_skips_inactive() {
     job.is_active = false;
     let mut rj = RunningJob::from_scheduler_job(&job);
     rj.is_active = false;
-    rj.next_fire_utc = Some(Utc::now() - Duration::seconds(1));
+    rj.next_fire_utc = Some(Timestamp::now() - SignedDuration::from_secs(1));
     state.jobs.insert(12, rj);
 
     let mut deferred = DeferredLog::default();
-    let batch = collect_due_jobs(&mut state, Utc::now(), 0, &mut deferred);
+    let batch = collect_due_jobs(&mut state, Timestamp::now(), 0, &mut deferred);
     assert!(batch.is_empty());
 }
 
@@ -159,13 +160,13 @@ fn test_collect_due_skips_in_flight() {
     let mut state = SchedulerState::new();
     let job = make_interval_job(13, "cd4", 5);
     let mut rj = RunningJob::from_scheduler_job(&job);
-    rj.next_fire_utc = Some(Utc::now() - Duration::seconds(1));
+    rj.next_fire_utc = Some(Timestamp::now() - SignedDuration::from_secs(1));
     rj.in_flight = true;
     rj.in_flight_since = Some(Instant::now());
     state.jobs.insert(13, rj);
 
     let mut deferred = DeferredLog::default();
-    let batch = collect_due_jobs(&mut state, Utc::now(), 0, &mut deferred);
+    let batch = collect_due_jobs(&mut state, Timestamp::now(), 0, &mut deferred);
     assert!(batch.is_empty());
 
     let rj = state.jobs.get(&13).unwrap();
@@ -177,11 +178,11 @@ fn test_collect_due_marks_in_flight() {
     let mut state = SchedulerState::new();
     let job = make_interval_job(14, "cd5", 5);
     let mut rj = RunningJob::from_scheduler_job(&job);
-    rj.next_fire_utc = Some(Utc::now() - Duration::seconds(1));
+    rj.next_fire_utc = Some(Timestamp::now() - SignedDuration::from_secs(1));
     state.jobs.insert(14, rj);
 
     let mut deferred = DeferredLog::default();
-    let _batch = collect_due_jobs(&mut state, Utc::now(), 0, &mut deferred);
+    let _batch = collect_due_jobs(&mut state, Timestamp::now(), 0, &mut deferred);
 
     let rj = state.jobs.get(&14).unwrap();
     assert!(rj.in_flight);
@@ -194,15 +195,15 @@ fn test_collect_due_carries_planned_fire_time() {
     let mut state = SchedulerState::new();
     let job = make_interval_job(15, "cd6", 5);
     let mut rj = RunningJob::from_scheduler_job(&job);
-    let fire_time = Utc::now() - Duration::seconds(1);
+    let fire_time = Timestamp::now() - SignedDuration::from_secs(1);
     rj.next_fire_utc = Some(fire_time);
     state.jobs.insert(15, rj);
 
     let mut deferred = DeferredLog::default();
-    let batch = collect_due_jobs(&mut state, Utc::now(), 0, &mut deferred);
+    let batch = collect_due_jobs(&mut state, Timestamp::now(), 0, &mut deferred);
 
     // The server records the run's delay from this planned fire time.
-    assert_eq!(batch[0].planned_fire_time_iso, fire_time.to_rfc3339());
+    assert_eq!(batch[0].planned_fire_time_iso, to_rfc3339(fire_time));
 }
 
 #[test]
@@ -210,12 +211,12 @@ fn test_collect_due_advances_next_fire() {
     let mut state = SchedulerState::new();
     let job = make_interval_job(16, "cd7", 5);
     let mut rj = RunningJob::from_scheduler_job(&job);
-    let old_fire = Utc::now() - Duration::seconds(1);
+    let old_fire = Timestamp::now() - SignedDuration::from_secs(1);
     rj.next_fire_utc = Some(old_fire);
     state.jobs.insert(16, rj);
 
     let mut deferred = DeferredLog::default();
-    let _batch = collect_due_jobs(&mut state, Utc::now(), 0, &mut deferred);
+    let _batch = collect_due_jobs(&mut state, Timestamp::now(), 0, &mut deferred);
 
     let rj = state.jobs.get(&16).unwrap();
     assert!(rj.next_fire_utc.is_some());
@@ -225,14 +226,14 @@ fn test_collect_due_advances_next_fire() {
 #[test]
 fn test_collect_due_multiple_jobs() {
     let mut state = SchedulerState::new();
-    let now = Utc::now();
+    let now = Timestamp::now();
 
     for idx in 0..3 {
         let id = 100 + idx as i64;
         let name = format!("cd9-{}", idx);
         let job = make_interval_job(id, &name, 5);
         let mut rj = RunningJob::from_scheduler_job(&job);
-        rj.next_fire_utc = Some(now - Duration::seconds(1));
+        rj.next_fire_utc = Some(now - SignedDuration::from_secs(1));
         state.jobs.insert(id, rj);
     }
 
@@ -309,10 +310,10 @@ fn test_reanchor_updates_active_jobs() {
     let mut state = SchedulerState::new();
     let job = make_interval_job(30, "ra1", 10);
     let mut rj = RunningJob::from_scheduler_job(&job);
-    rj.next_fire_utc = Some(Utc::now() - Duration::hours(2));
+    rj.next_fire_utc = Some(Timestamp::now() - SignedDuration::from_hours(2));
     state.jobs.insert(30, rj);
 
-    let now = Utc::now();
+    let now = Timestamp::now();
     reanchor_all_jobs(&mut state, now);
 
     let rj = state.jobs.get(&30).unwrap();
@@ -328,7 +329,7 @@ fn test_reanchor_skips_inactive_jobs() {
     let rj = RunningJob::from_scheduler_job(&job);
     state.jobs.insert(31, rj);
 
-    reanchor_all_jobs(&mut state, Utc::now());
+    reanchor_all_jobs(&mut state, Timestamp::now());
 
     let rj = state.jobs.get(&31).unwrap();
     assert!(rj.next_fire_utc.is_none());

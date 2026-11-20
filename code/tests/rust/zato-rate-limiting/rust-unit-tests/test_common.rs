@@ -1,4 +1,4 @@
-use chrono::Utc;
+use jiff::Timestamp;
 use zato_rate_limiting_core::common::{RateLimitError, RateLimitResult, current_time_us, MICROSECONDS_PER_SECOND};
 use zato_rate_limiting_core::token_bucket::CheckResult;
 
@@ -89,7 +89,7 @@ fn error_source_is_none() {
 }
 
 #[test]
-fn chrono_dependency_works() {
-    let now = Utc::now();
-    assert!(now.timestamp() > 0);
+fn jiff_dependency_works() {
+    let now = Timestamp::now();
+    assert!(now.as_second() > 0);
 }

@@ -1,4 +1,4 @@
-use chrono::Utc;
+use jiff::{SignedDuration, Timestamp};
 use proptest::prelude::*;
 use std::time::Instant;
 use zato_scheduler_core::DeferredLog;
@@ -7,7 +7,9 @@ use zato_scheduler_core::model::SchedulerJob;
 use zato_scheduler_core::scheduler::{SchedulerState, check_in_flight_timeouts};
 
 fn make_active_job() -> SchedulerJob {
-    let start = (Utc::now() - chrono::Duration::hours(1)).format("%Y-%m-%dT%H:%M:%S").to_string();
+    let start = (Timestamp::now() - SignedDuration::from_hours(1))
+        .strftime("%Y-%m-%dT%H:%M:%S")
+        .to_string();
     SchedulerJob {
         id: 1,
         name: "test".into(),

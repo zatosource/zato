@@ -1,13 +1,18 @@
-use chrono::{Duration, Utc};
+use jiff::{SignedDuration, Timestamp};
 use proptest::prelude::*;
 use zato_scheduler_core::job::RunningJob;
+use zato_scheduler_core::job::signed_millis;
 use zato_scheduler_core::model::SchedulerJob;
 
 fn make_interval_job(minutes: u32, future_start: bool, is_active: bool) -> SchedulerJob {
     let start = if future_start {
-        (Utc::now() + Duration::hours(1)).format("%Y-%m-%dT%H:%M:%S").to_string()
+        (Timestamp::now() + SignedDuration::from_hours(1))
+            .strftime("%Y-%m-%dT%H:%M:%S")
+            .to_string()
     } else {
-        (Utc::now() - Duration::hours(1)).format("%Y-%m-%dT%H:%M:%S").to_string()
+        (Timestamp::now() - SignedDuration::from_hours(1))
+            .strftime("%Y-%m-%dT%H:%M:%S")
+            .to_string()
     };
     SchedulerJob {
         id: 1,
@@ -44,11 +49,11 @@ proptest! {
 
     #[test]
     fn active_interval_job_next_fire_not_in_past(minutes in 1u32..120) {
-        let before = Utc::now();
+        let before = Timestamp::now();
         let job = make_interval_job(minutes, false, true);
         let running_job = RunningJob::from_scheduler_job(&job);
         if let Some(fire) = running_job.next_fire_utc {
-            prop_assert!(fire >= before - Duration::seconds(1));
+            prop_assert!(fire >= before - SignedDuration::from_secs(1));
         }
     }
 
@@ -65,7 +70,7 @@ proptest! {
         let running_job = RunningJob::from_scheduler_job(&job);
         if let Some(fire) = running_job.next_fire_utc
             && let Some(start) = running_job.start_date {
-            let diff = (fire - start).num_milliseconds().abs();
+            let diff = signed_millis(fire, start).abs();
             prop_assert!(diff < i64::from(running_job.jitter_ms.unwrap_or(0)) + 1000);
         }
     }

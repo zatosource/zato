@@ -12,6 +12,7 @@ libfuzzer-sys = "0.4"
 
 [dependencies.zato_rate_limiting_core]
 path = "../../../../zato-rust/zato_rate_limiting_core"
+version = "4.1.0"
 
 [[bin]]
 name = "fuzz_token_bucket_check"

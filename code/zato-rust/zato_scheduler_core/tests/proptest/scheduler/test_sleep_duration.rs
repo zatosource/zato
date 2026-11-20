@@ -1,4 +1,4 @@
-use chrono::{Duration as CDuration, Utc};
+use jiff::{SignedDuration, Timestamp};
 use proptest::prelude::*;
 use std::time::Duration;
 use zato_scheduler_core::job::RunningJob;
@@ -6,8 +6,8 @@ use zato_scheduler_core::model::SchedulerJob;
 use zato_scheduler_core::scheduler::{SchedulerState, compute_sleep_duration};
 
 fn make_job_at_offset(id: i64, offset_secs: i64) -> SchedulerJob {
-    let start = (Utc::now() + CDuration::seconds(offset_secs))
-        .format("%Y-%m-%dT%H:%M:%S")
+    let start = (Timestamp::now() + SignedDuration::from_secs(offset_secs))
+        .strftime("%Y-%m-%dT%H:%M:%S")
         .to_string();
     SchedulerJob {
         id,

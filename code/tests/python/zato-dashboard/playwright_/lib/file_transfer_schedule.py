@@ -166,7 +166,9 @@ def _fill_micro_form(page:'Page', link_id:'str', values:'strdict') -> 'None':
 
     # .. and the micro-form is gone once OK keeps what was entered in it.
     page.click(_Micro_Form_OK)
-    _ = page.wait_for_selector(selector, state='detached', timeout=_Dialog_Timeout)
+    for field in values:
+        selector = _Micro_Form_Input_Prefix + field
+        _ = page.wait_for_selector(selector, state='detached', timeout=_Dialog_Timeout)
 
 # ################################################################################################################################
 

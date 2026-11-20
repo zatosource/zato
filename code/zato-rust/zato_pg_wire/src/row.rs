@@ -3,7 +3,8 @@
 //! Each column is read either natively, from the binary or the text format, or by the pg8000 converter
 //! of its type, which receives the value in the text format.
 
-use chrono::{DateTime, Datelike, Timelike, Utc};
+use jiff::Timestamp;
+use jiff::tz::TimeZone;
 use pyo3::IntoPyObjectExt;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -79,7 +80,7 @@ const NEGATIVE_INFINITY_TEXT: &str = "-infinity";
 const POSTGRESQL_EPOCH_OFFSET_MICROS: i64 = 946_684_800_000_000;
 
 /// Nanoseconds in one microsecond.
-const NANOS_PER_MICRO: u32 = 1_000;
+const NANOS_PER_MICRO: i32 = 1_000;
 
 /// A column type that is read without the pg8000 converter of the type.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -217,18 +218,19 @@ struct TimestampParts {
 impl TimestampParts {
     /// Splits a binary `PostgreSQL` timestamp, in microseconds since 2000-01-01, into its calendar fields.
     fn from_postgresql(micros: i64) -> Option<Self> {
-        // The binary format counts from 2000-01-01 and chrono counts from the Unix epoch.
+        // The binary format counts from 2000-01-01 and a jiff timestamp counts from the Unix epoch.
         let unix_micros = micros.checked_add(POSTGRESQL_EPOCH_OFFSET_MICROS)?;
-        let moment: DateTime<Utc> = DateTime::from_timestamp_micros(unix_micros)?;
+        let moment = Timestamp::from_microsecond(unix_micros).ok()?;
+        let civil = TimeZone::UTC.to_datetime(moment);
 
         Some(Self {
-            year: moment.year(),
-            month: u8::try_from(moment.month()).ok()?,
-            day: u8::try_from(moment.day()).ok()?,
-            hour: u8::try_from(moment.hour()).ok()?,
-            minute: u8::try_from(moment.minute()).ok()?,
-            second: u8::try_from(moment.second()).ok()?,
-            microsecond: moment.nanosecond() / NANOS_PER_MICRO,
+            year: i32::from(civil.year()),
+            month: u8::try_from(civil.month()).ok()?,
+            day: u8::try_from(civil.day()).ok()?,
+            hour: u8::try_from(civil.hour()).ok()?,
+            minute: u8::try_from(civil.minute()).ok()?,
+            second: u8::try_from(civil.second()).ok()?,
+            microsecond: u32::try_from(civil.subsec_nanosecond() / NANOS_PER_MICRO).ok()?,
         })
     }
 }

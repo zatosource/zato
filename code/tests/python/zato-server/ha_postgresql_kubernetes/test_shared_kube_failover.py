@@ -117,7 +117,7 @@ def test_failover_duration(kube_pair:'KubeEnvironment') -> 'None':
     raised_at = find_moment(entries, isolated_at, ModuleCtx.Raised_Line, 'the raised generation')
     first_ok_at = first_ok.ended
 
-    timeline = f'isolated:{isolated_at:.3f}, active:{active_at:.3f}, raised:{raised_at:.3f}, answer:{answer_at:.3f}, ' \
+    timeline = f'isolated:{isolated_at:.3f}, active:{active_at:.3f}, raised:{raised_at:.3f}, answer:{answer_at:.3f}, ' + \
         f'label:{label_at:.3f}, first ok:{first_ok_at:.3f}'
 
     # The pod is labeled only once its server answers ..

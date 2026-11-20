@@ -5,12 +5,12 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
-use chrono::Utc;
+use jiff::{SignedDuration, Timestamp};
 use parking_lot::{Condvar, Mutex};
 
 use crate::DeferredLog;
 use crate::deferred_log;
-use crate::job::RunningJob;
+use crate::job::{RunningJob, signed_millis, to_rfc3339};
 use crate::types::{FireBatch, OutgoingEvent, TimeoutEvent, outcome};
 
 /// Default threshold (ms) for detecting wall-clock jumps relative to monotonic time.
@@ -119,7 +119,7 @@ pub fn scheduler_loop(
 
     tracing::info!("Scheduler loop started");
 
-    let mut last_wall = Utc::now();
+    let mut last_wall = Timestamp::now();
     let mut last_mono = Instant::now();
     let mut last_status_log = Instant::now();
     let status_log_interval = Duration::from_mins(1);
@@ -158,9 +158,9 @@ pub fn scheduler_loop(
 
         crate::metrics::TICKS_TOTAL.inc();
 
-        let now_wall = Utc::now();
+        let now_wall = Timestamp::now();
         let now_mono = Instant::now();
-        let wall_delta_ms = (now_wall - last_wall).num_milliseconds();
+        let wall_delta_ms = signed_millis(now_wall, last_wall);
         let mono_delta_ms = i64::try_from(now_mono.duration_since(last_mono).as_millis()).unwrap_or(i64::MAX);
         let drift_ms = (wall_delta_ms - mono_delta_ms).abs();
 
@@ -239,7 +239,7 @@ pub fn scheduler_loop(
 /// Computes how long the scheduler loop should sleep before the next tick.
 #[must_use]
 pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
-    let now = Utc::now();
+    let now = Timestamp::now();
     let now_instant = Instant::now();
     let mut min_ms: i64 = 60_000;
 
@@ -259,7 +259,7 @@ pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
         }
 
         if let Some(fire_utc) = running_job.next_fire_utc {
-            let diff = (fire_utc - now).num_milliseconds();
+            let diff = signed_millis(fire_utc, now);
             if diff < min_ms {
                 min_ms = diff;
             }
@@ -274,13 +274,8 @@ pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
 ///
 /// Jobs that are currently in flight are silently skipped; missed-fire catchup
 /// for long-running jobs is handled in `mark_complete` logic instead.
-pub fn collect_due_jobs(
-    state: &mut SchedulerState,
-    now: chrono::DateTime<Utc>,
-    coalesce_window_ms: i64,
-    deferred: &mut DeferredLog,
-) -> Vec<FireBatch> {
-    let threshold = now + chrono::Duration::milliseconds(coalesce_window_ms);
+pub fn collect_due_jobs(state: &mut SchedulerState, now: Timestamp, coalesce_window_ms: i64, deferred: &mut DeferredLog) -> Vec<FireBatch> {
+    let threshold = now + SignedDuration::from_millis(coalesce_window_ms);
     let mut batch = Vec::new();
 
     let job_ids: Vec<i64> = state.jobs.keys().copied().collect();
@@ -304,11 +299,11 @@ pub fn collect_due_jobs(
             continue;
         }
 
-        let planned = fire_utc.to_rfc3339();
-        let nominal = running_job.next_nominal_utc.map_or_else(String::new, |slot| slot.to_rfc3339());
+        let planned = to_rfc3339(fire_utc);
+        let nominal = running_job.next_nominal_utc.map_or_else(String::new, to_rfc3339);
 
         running_job.current_run += 1;
-        let delay_ms = (now - fire_utc).num_milliseconds().max(0);
+        let delay_ms = signed_millis(now, fire_utc).max(0);
 
         deferred_log!(
             deferred,
@@ -395,7 +390,7 @@ pub fn check_in_flight_timeouts(state: &mut SchedulerState, deferred: &mut Defer
 }
 
 /// Recomputes `next_fire_utc` for every active job after a clock jump.
-pub fn reanchor_all_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>) {
+pub fn reanchor_all_jobs(state: &mut SchedulerState, now: Timestamp) {
     for running_job in state.jobs.values_mut() {
         if running_job.is_active {
             running_job.compute_next_fire(now);
@@ -405,7 +400,7 @@ pub fn reanchor_all_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>)
 
 /// Logs a periodic summary of scheduler state - active/paused/in-flight counts
 /// and the soonest upcoming fire time.
-fn log_scheduler_status(state: &SchedulerState, now: chrono::DateTime<Utc>) {
+fn log_scheduler_status(state: &SchedulerState, now: Timestamp) {
     let total = state.jobs.len();
     let mut active: usize = 0;
     let mut in_flight: usize = 0;
@@ -420,7 +415,7 @@ fn log_scheduler_status(state: &SchedulerState, now: chrono::DateTime<Utc>) {
             in_flight += 1;
         }
         if let Some(fire_utc) = running_job.next_fire_utc {
-            let diff = (fire_utc - now).num_milliseconds();
+            let diff = signed_millis(fire_utc, now);
             if diff < soonest_ms {
                 soonest_ms = diff;
                 soonest_name = Some(&running_job.name);

@@ -1,4 +1,4 @@
-use chrono::{Duration, Utc};
+use jiff::{SignedDuration, Timestamp};
 use proptest::prelude::*;
 use zato_scheduler_core::DeferredLog;
 use zato_scheduler_core::job::RunningJob;
@@ -6,8 +6,8 @@ use zato_scheduler_core::model::SchedulerJob;
 use zato_scheduler_core::scheduler::{SchedulerState, collect_due_jobs};
 
 fn make_due_job(id: i64, minutes_ago: u32) -> SchedulerJob {
-    let start = (Utc::now() - Duration::minutes(i64::from(minutes_ago) + 60))
-        .format("%Y-%m-%dT%H:%M:%S")
+    let start = (Timestamp::now() - SignedDuration::from_mins(i64::from(minutes_ago) + 60))
+        .strftime("%Y-%m-%dT%H:%M:%S")
         .to_string();
     SchedulerJob {
         id,
@@ -42,7 +42,7 @@ proptest! {
         let running_job = RunningJob::from_scheduler_job(&scheduler_job);
         let mut state = SchedulerState::new();
         state.jobs.insert(1, running_job);
-        let now = Utc::now();
+        let now = Timestamp::now();
         let mut deferred = DeferredLog::new();
         let batch = collect_due_jobs(&mut state, now, 50, &mut deferred);
         prop_assert!(batch.is_empty());
@@ -52,12 +52,12 @@ proptest! {
     fn in_flight_jobs_skipped(minutes in 1u32..30) {
         let scheduler_job = make_due_job(1, minutes);
         let mut running_job = RunningJob::from_scheduler_job(&scheduler_job);
-        running_job.next_fire_utc = Some(Utc::now() - Duration::seconds(1));
-        running_job.sync_instant_from_utc_pub(Utc::now());
+        running_job.next_fire_utc = Some(Timestamp::now() - SignedDuration::from_secs(1));
+        running_job.sync_instant_from_utc_pub(Timestamp::now());
         running_job.start_run(1, std::time::Instant::now());
         let mut state = SchedulerState::new();
         state.jobs.insert(1, running_job);
-        let now = Utc::now();
+        let now = Timestamp::now();
         let mut deferred = DeferredLog::new();
         let batch = collect_due_jobs(&mut state, now, 50, &mut deferred);
         prop_assert!(batch.is_empty());

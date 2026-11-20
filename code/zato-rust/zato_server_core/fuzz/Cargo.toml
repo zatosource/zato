@@ -13,6 +13,7 @@ tempfile = "3.27.0"
 
 [dependencies.zato_server_core]
 path = ".."
+version = "4.1.0"
 
 [[bin]]
 name = "fuzz_parse_content_length"

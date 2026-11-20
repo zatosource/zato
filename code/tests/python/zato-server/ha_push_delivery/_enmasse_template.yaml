@@ -1,0 +1,39 @@
+security:
+
+  - name: test.ha-push-delivery.reader
+    type: basic_auth
+    username: test.ha-push-delivery.reader
+    password: "{{reader_password}}"
+
+outgoing_rest:
+
+  - name: test.ha-push-delivery.out
+    host: "http://127.0.0.1:{{port_rest}}"
+    url_path: /ha-push-delivery
+    data_format: json
+    timeout: 30
+    is_audit_log_active: true
+
+pubsub_topic:
+
+  - name: ha-push-delivery.input
+  - name: ha-push-delivery.output
+
+pubsub_permission:
+
+  - security: test.ha-push-delivery.reader
+    sub:
+      - ha-push-delivery.output
+
+pubsub_subscription:
+
+  - delivery_type: push
+    push_service: test.ha-push-delivery.target
+    is_delivery_active: {{delivery_active}}
+    topic_list:
+      - ha-push-delivery.input
+
+  - security: test.ha-push-delivery.reader
+    delivery_type: pull
+    topic_list:
+      - ha-push-delivery.output

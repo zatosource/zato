@@ -93,7 +93,7 @@ class OutageResult:
         return out
 
     def describe(self) -> 'str':
-        out = f'outage {self.index}: {self.active_before} at {self.generation_before} with {sorted(self.pids_before)} ->' \
+        out = f'outage {self.index}: {self.active_before} at {self.generation_before} with {sorted(self.pids_before)} ->' + \
             f' {self.active_after} at {self.generation_after} with {sorted(self.pids_after)}, standby {self.standby_role}'
         return out
 

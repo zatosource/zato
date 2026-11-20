@@ -1,4 +1,4 @@
-use chrono::Utc;
+use jiff::{SignedDuration, Timestamp};
 
 use zato_scheduler_core::job::{RunningJob, DEFAULT_MAX_EXECUTION_TIME_MS};
 use zato_scheduler_core::model::SchedulerJob;
@@ -178,7 +178,7 @@ fn test_one_time_future_date() {
     let job = make_one_time_job(30, "ot1", "2099-12-31T23:59:59");
     let rj = RunningJob::from_scheduler_job(&job);
     assert!(rj.next_fire_utc.is_some());
-    assert!(rj.next_fire_utc.unwrap() > Utc::now());
+    assert!(rj.next_fire_utc.unwrap() > Timestamp::now());
 }
 
 #[test]
@@ -192,7 +192,7 @@ fn test_one_time_past_date_fires_immediately() {
 fn test_one_time_advance_clears_fire() {
     let job = make_one_time_job(32, "ot3", "2099-12-31T23:59:59");
     let mut rj = RunningJob::from_scheduler_job(&job);
-    rj.advance_to_next(Utc::now());
+    rj.advance_to_next(Timestamp::now());
     assert!(rj.next_fire_utc.is_none());
 }
 
@@ -211,9 +211,9 @@ fn test_interval_next_fire_in_future() {
 fn test_interval_advance_produces_new_fire() {
     let job = make_interval_job(41, "nf2", 10);
     let mut rj = RunningJob::from_scheduler_job(&job);
-    let past = Utc::now() - chrono::Duration::minutes(5);
+    let past = Timestamp::now() - SignedDuration::from_mins(5);
     rj.next_fire_utc = Some(past);
-    rj.advance_to_next(Utc::now());
+    rj.advance_to_next(Timestamp::now());
     assert!(rj.next_fire_utc.is_some());
     assert!(rj.next_fire_utc.unwrap() > past);
 }
@@ -229,7 +229,7 @@ fn test_repeats_exhausted_clears_fire() {
     let mut rj = RunningJob::from_scheduler_job(&job);
 
     rj.current_run = 2;
-    rj.advance_to_next(Utc::now());
+    rj.advance_to_next(Timestamp::now());
     assert!(rj.next_fire_utc.is_none());
 }
 
@@ -240,7 +240,7 @@ fn test_repeats_not_exhausted_keeps_fire() {
     let mut rj = RunningJob::from_scheduler_job(&job);
 
     rj.current_run = 3;
-    rj.advance_to_next(Utc::now());
+    rj.advance_to_next(Timestamp::now());
     assert!(rj.next_fire_utc.is_some());
 }
 
@@ -250,7 +250,7 @@ fn test_no_repeats_limit() {
     let mut rj = RunningJob::from_scheduler_job(&job);
 
     rj.current_run = 1000;
-    rj.advance_to_next(Utc::now());
+    rj.advance_to_next(Timestamp::now());
     assert!(rj.next_fire_utc.is_some());
 }
 

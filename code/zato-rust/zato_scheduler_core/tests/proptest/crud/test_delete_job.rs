@@ -1,11 +1,13 @@
-use chrono::{Duration, Utc};
+use jiff::{SignedDuration, Timestamp};
 use proptest::prelude::*;
 use zato_scheduler_core::job::RunningJob;
 use zato_scheduler_core::model::SchedulerJob;
 use zato_scheduler_core::scheduler::SchedulerState;
 
 fn make_job(id: i64) -> SchedulerJob {
-    let start = (Utc::now() - Duration::hours(1)).format("%Y-%m-%dT%H:%M:%S").to_string();
+    let start = (Timestamp::now() - SignedDuration::from_hours(1))
+        .strftime("%Y-%m-%dT%H:%M:%S")
+        .to_string();
     SchedulerJob {
         id,
         name: format!("job-{id}"),

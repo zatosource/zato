@@ -1,10 +1,12 @@
-use chrono::{Duration, Utc};
+use jiff::{SignedDuration, Timestamp};
 use proptest::prelude::*;
 use zato_scheduler_core::job::RunningJob;
 use zato_scheduler_core::model::SchedulerJob;
 
 fn make_interval_job(minutes: u32) -> SchedulerJob {
-    let start = (Utc::now() - Duration::hours(2)).format("%Y-%m-%dT%H:%M:%S").to_string();
+    let start = (Timestamp::now() - SignedDuration::from_hours(2))
+        .strftime("%Y-%m-%dT%H:%M:%S")
+        .to_string();
     SchedulerJob {
         id: 1,
         name: "test".into(),
@@ -30,7 +32,9 @@ fn make_interval_job(minutes: u32) -> SchedulerJob {
 }
 
 fn make_one_time_job() -> SchedulerJob {
-    let start = (Utc::now() + Duration::hours(1)).format("%Y-%m-%dT%H:%M:%S").to_string();
+    let start = (Timestamp::now() + SignedDuration::from_hours(1))
+        .strftime("%Y-%m-%dT%H:%M:%S")
+        .to_string();
     SchedulerJob {
         id: 1,
         name: "test".into(),
@@ -62,7 +66,7 @@ proptest! {
         let job = make_one_time_job();
         let mut running_job = RunningJob::from_scheduler_job(&job);
         prop_assert!(running_job.next_fire_utc.is_some());
-        running_job.advance_to_next(Utc::now());
+        running_job.advance_to_next(Timestamp::now());
         prop_assert!(running_job.next_fire_utc.is_none());
     }
 
@@ -70,7 +74,7 @@ proptest! {
     fn interval_advances_to_later_fire(minutes in 1u32..60) {
         let job = make_interval_job(minutes);
         let mut running_job = RunningJob::from_scheduler_job(&job);
-        let now = Utc::now();
+        let now = Timestamp::now();
         let first_fire = running_job.next_fire_utc;
         running_job.advance_to_next(now);
         if let (Some(first_fire_time), Some(next_fire_time)) = (first_fire, running_job.next_fire_utc) {
@@ -84,7 +88,7 @@ proptest! {
         scheduler_job.repeats = Some(1);
         let mut running_job = RunningJob::from_scheduler_job(&scheduler_job);
         running_job.current_run = 1;
-        running_job.advance_to_next(Utc::now());
+        running_job.advance_to_next(Timestamp::now());
         prop_assert!(running_job.next_fire_utc.is_none());
     }
 }

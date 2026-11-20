@@ -40,6 +40,7 @@ from zato.common.test.process_util import get_process_tree_pids
 from zato.common.typing_ import cast_
 from zato.common.test.pubsub_database import get_db_mode, is_postgresql_mode, start_pubsub_database, \
     stop_pubsub_database
+from zato.common.test.reservation import PortInUse
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,6 +82,9 @@ Env_Keep_Quickstart = 'Zato_Test_Keep_Quickstart'
 
 # What the arbiter logs the first time that the worker is ready
 _worker_ready_pattern = re.compile(r'zato\.server\.arbiter:\d+ - Worker is ready')
+
+# What a server logs when its listening socket could not bind its port
+_port_in_use_pattern = re.compile(r'Address already in use')
 
 # What the worker logs when it starts, with its process ID, and what each process of a server logs, with its process ID,
 # once it has reloaded its configuration, e.g. after an import into the running server
@@ -435,6 +439,9 @@ def start_server_process(
     # so the server is ready for the tests only once the arbiter reports the worker ready.
     worker_ready = threading.Event()
 
+    # A server whose port another process took reports it in its output
+    port_in_use = threading.Event()
+
     stacks_path = os.path.join(server_directory, Server_Stacks_File_Name)
 
     # .. stream server stdout in a background thread ..
@@ -465,6 +472,9 @@ def start_server_process(
                 if _worker_ready_pattern.search(text):
                     worker_ready.set()
 
+                if _port_in_use_pattern.search(text):
+                    port_in_use.set()
+
                 if match := _worker_pid_pattern.search(text):
                     with state.worker_reload_condition:
                         state.worker_pids.add(match.group(1))
@@ -490,9 +500,15 @@ def start_server_process(
 
         logger.info('Server ready: %.1fs', time.monotonic() - popen_time)
 
-    except (ConnectionRefusedError, OSError, RuntimeError):
+    except (ConnectionRefusedError, OSError, RuntimeError) as e:
         logger.error('Server did not become ready')
         state.kill_server()
+
+        # A server whose port was taken is started again on another port by start_on_reserved_port ..
+        if port_in_use.is_set():
+            raise PortInUse(f'Port {server_port} of the server is in use') from e
+
+        # .. whereas any other failure ends the start.
         raise
 
     return popen_time

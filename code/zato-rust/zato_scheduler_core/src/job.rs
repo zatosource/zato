@@ -3,13 +3,49 @@
 use std::collections::BTreeMap;
 use std::time::Instant;
 
-use chrono::{DateTime, LocalResult, TimeZone, Utc};
+use jiff::civil::DateTime;
+use jiff::tz::{AmbiguousOffset, TimeZone};
+use jiff::{SignedDuration, Timestamp};
 use rand::rngs::SmallRng;
 use rand::{RngExt, SeedableRng};
 use serde::Serialize;
 
-/// Alias for the chrono timezone type.
-type Timezone = chrono_tz::Tz;
+/// Alias for the IANA timezone type.
+type Timezone = TimeZone;
+
+/// Formats of the start date of a job, each read as a civil datetime without an offset.
+const START_DATE_FORMATS: [&str; 4] = [
+    "%Y-%m-%dT%H:%M:%S%.f",
+    "%Y-%m-%dT%H:%M:%S",
+    "%Y-%m-%d %H:%M:%S%.f",
+    "%Y-%m-%d %H:%M:%S",
+];
+
+/// RFC 3339 form of a UTC instant, with the offset written as `+00:00`.
+const RFC3339_UTC_FORMAT: &str = "%Y-%m-%dT%H:%M:%S%.f+00:00";
+
+/// Shift applied to a start date that falls into a gap of its timezone, such as the hour skipped by daylight saving time.
+const DST_GAP_SHIFT: SignedDuration = SignedDuration::from_hours(1);
+
+/// Formats a UTC instant as RFC 3339, the form in which slots and fire times travel to the server.
+#[must_use]
+pub fn to_rfc3339(instant: Timestamp) -> String {
+    instant.strftime(RFC3339_UTC_FORMAT).to_string()
+}
+
+/// Returns the whole milliseconds from `earlier` to `later`, negative when `later` precedes `earlier`.
+#[must_use]
+pub fn signed_millis(later: Timestamp, earlier: Timestamp) -> i64 {
+    let millis = later.duration_since(earlier).as_millis();
+    i64::try_from(millis).unwrap_or(if millis < 0 { i64::MIN } else { i64::MAX })
+}
+
+/// Returns the whole milliseconds between two instants, regardless of their order.
+#[must_use]
+pub fn millis_between(first: Timestamp, second: Timestamp) -> u64 {
+    let millis = first.duration_since(second).as_millis().unsigned_abs();
+    u64::try_from(millis).unwrap_or(u64::MAX)
+}
 
 use crate::model::SchedulerJob;
 use crate::types::{JobId, JobType, ServiceName};
@@ -67,7 +103,7 @@ pub struct RunningJob {
     /// Whether this is a one-time or interval-based job.
     pub job_type: JobType,
     /// UTC datetime of the first firing.
-    pub start_date: Option<DateTime<Utc>>,
+    pub start_date: Option<Timestamp>,
     /// Computed interval between firings (ms).
     pub interval_ms: u64,
     /// Maximum number of firings allowed.
@@ -90,9 +126,9 @@ pub struct RunningJob {
     pub on_error_job: Option<String>,
 
     /// Next scheduled fire time in UTC.
-    pub next_fire_utc: Option<DateTime<Utc>>,
+    pub next_fire_utc: Option<Timestamp>,
     /// Slot of the schedule that the next firing belongs to, which is its fire time without jitter.
-    pub next_nominal_utc: Option<DateTime<Utc>>,
+    pub next_nominal_utc: Option<Timestamp>,
     /// Monotonic instant corresponding to `next_fire_utc`.
     pub next_fire_instant: Option<Instant>,
     /// Runs of the job that were fired and whose completion was not reported yet, each by its run number,
@@ -121,14 +157,14 @@ pub fn clamp_max_execution_time(raw: u64, job_name: &str) -> u64 {
 
 /// Parses a timezone string and start-date string into their resolved forms.
 ///
-/// Falls back to `Utc::now()` if the start date cannot be parsed, logging the error.
+/// Falls back to `Timestamp::now()` if the start date cannot be parsed, logging the error.
 fn resolve_tz_and_start(
     tz_str: Option<&str>,
     start_date_str: &str,
     job_name: &str,
-) -> (Option<Timezone>, Option<String>, Option<DateTime<Utc>>) {
+) -> (Option<Timezone>, Option<String>, Option<Timestamp>) {
     let timezone: Option<Timezone> = tz_str.and_then(|val| {
-        val.parse::<Timezone>().map_or_else(
+        Timezone::get(val).map_or_else(
             |_| {
                 tracing::error!("Job `{job_name}`: invalid timezone `{val}`");
                 None
@@ -139,7 +175,7 @@ fn resolve_tz_and_start(
     let start_date = RunningJob::parse_start_date(start_date_str, timezone.as_ref()).map_or_else(
         || {
             tracing::error!("Job `{job_name}`: failed to parse start_date `{start_date_str}`");
-            Some(Utc::now())
+            Some(Timestamp::now())
         },
         Some,
     );
@@ -182,7 +218,7 @@ impl RunningJob {
             jitter_rng,
         };
         if running_job.is_active {
-            running_job.compute_next_fire(Utc::now());
+            running_job.compute_next_fire(Timestamp::now());
         }
         running_job
     }
@@ -228,7 +264,7 @@ impl RunningJob {
         let just_activated = self.is_active && !was_active;
 
         if self.is_active && (schedule_changed || just_activated) {
-            self.compute_next_fire(Utc::now());
+            self.compute_next_fire(Timestamp::now());
         } else if !self.is_active {
             self.clear_next_fire();
         }
@@ -241,7 +277,7 @@ impl RunningJob {
     /// A job whose repeats are used up, or a one-time job that already ran, does not fire again.
     /// An interval-based job whose latest due slot lies after the last claimed slot fires
     /// once for that slot at `now`, and every older missed slot is skipped.
-    pub fn restore_run_state(&mut self, current_run: u32, last_slot: Option<DateTime<Utc>>, now: DateTime<Utc>) {
+    pub fn restore_run_state(&mut self, current_run: u32, last_slot: Option<Timestamp>, now: Timestamp) {
         self.raise_run_count(current_run);
 
         // An inactive job has no schedule to restore - activating it later computes one.
@@ -295,7 +331,7 @@ impl RunningJob {
     }
 
     /// Computes the next fire time from `now` based on job type and interval.
-    pub fn compute_next_fire(&mut self, now: DateTime<Utc>) {
+    pub fn compute_next_fire(&mut self, now: Timestamp) {
         match self.job_type {
             JobType::OneTime => {
                 if let Some(start) = self.start_date {
@@ -321,9 +357,9 @@ impl RunningJob {
                         let jitter = self.compute_jitter();
                         let nominal_offset_ms = i64::try_from(base_ms).unwrap_or(i64::MAX);
                         let total_ms = i64::try_from(base_ms + jitter).unwrap_or(i64::MAX);
-                        let new_fire = start + chrono::Duration::milliseconds(total_ms);
+                        let new_fire = start + SignedDuration::from_millis(total_ms);
                         self.next_fire_utc = Some(new_fire);
-                        self.next_nominal_utc = Some(start + chrono::Duration::milliseconds(nominal_offset_ms));
+                        self.next_nominal_utc = Some(start + SignedDuration::from_millis(nominal_offset_ms));
                     } else {
                         self.clear_next_fire();
                     }
@@ -336,7 +372,7 @@ impl RunningJob {
     }
 
     /// Advances to the next fire time after the current run completes.
-    pub fn advance_to_next(&mut self, now: DateTime<Utc>) {
+    pub fn advance_to_next(&mut self, now: Timestamp) {
         if self.job_type == JobType::OneTime {
             self.clear_next_fire();
             return;
@@ -392,12 +428,12 @@ impl RunningJob {
             in_flight: self.is_in_flight(),
             current_run: self.current_run,
             interval_ms: self.interval_ms,
-            next_fire_utc: self.next_fire_utc.map(|fire_dt| fire_dt.to_rfc3339()),
+            next_fire_utc: self.next_fire_utc.map(to_rfc3339),
         }
     }
 
     /// Public wrapper around `sync_instant_from_utc`.
-    pub fn sync_instant_from_utc_pub(&mut self, now: DateTime<Utc>) {
+    pub fn sync_instant_from_utc_pub(&mut self, now: Timestamp) {
         self.sync_instant_from_utc(now);
     }
 
@@ -420,7 +456,7 @@ impl RunningJob {
     ///
     /// Returns `None` when the job has no interval or no start date, or when `now` is before the start date.
     #[must_use]
-    pub fn latest_due_slot(&self, now: DateTime<Utc>) -> Option<DateTime<Utc>> {
+    pub fn latest_due_slot(&self, now: Timestamp) -> Option<Timestamp> {
         if self.interval_ms == 0 {
             return None;
         }
@@ -428,21 +464,21 @@ impl RunningJob {
         if now < start {
             return None;
         }
-        let elapsed_ms = (now - start).num_milliseconds().unsigned_abs();
+        let elapsed_ms = millis_between(now, start);
         let elapsed_slots = elapsed_ms / self.interval_ms;
         let offset_ms = i64::try_from(elapsed_slots * self.interval_ms).unwrap_or(i64::MAX);
-        Some(start + chrono::Duration::milliseconds(offset_ms))
+        Some(start + SignedDuration::from_millis(offset_ms))
     }
 
     /// Finds the next interval multiple `n` such that `start + n * interval > now`.
-    fn find_next_n(&self, start: DateTime<Utc>, now: DateTime<Utc>) -> u64 {
+    fn find_next_n(&self, start: Timestamp, now: Timestamp) -> u64 {
         if now <= start {
             return 0;
         }
-        let elapsed_ms = (now - start).num_milliseconds().unsigned_abs();
+        let elapsed_ms = millis_between(now, start);
         let nth = elapsed_ms / self.interval_ms;
         let offset_ms = i64::try_from(nth * self.interval_ms).unwrap_or(i64::MAX);
-        let candidate = start + chrono::Duration::milliseconds(offset_ms);
+        let candidate = start + SignedDuration::from_millis(offset_ms);
         if candidate <= now { nth + 1 } else { nth }
     }
 
@@ -455,9 +491,9 @@ impl RunningJob {
     }
 
     /// Converts `next_fire_utc` to a monotonic `Instant` relative to `now`.
-    fn sync_instant_from_utc(&mut self, now: DateTime<Utc>) {
+    fn sync_instant_from_utc(&mut self, now: Timestamp) {
         self.next_fire_instant = self.next_fire_utc.map(|fire_utc| {
-            let diff_ms = (fire_utc - now).num_milliseconds().unsigned_abs();
+            let diff_ms = millis_between(fire_utc, now);
             Instant::now() + std::time::Duration::from_millis(diff_ms)
         });
     }
@@ -473,47 +509,45 @@ impl RunningJob {
         weeks_ms + days_ms + hours_ms + mins_ms + secs_ms
     }
 
-    /// Parses a start-date string into a UTC `DateTime`, optionally interpreting it in a timezone.
-    fn parse_start_date(raw: &str, zone: Option<&Timezone>) -> Option<DateTime<Utc>> {
+    /// Parses a start-date string into a UTC instant, optionally interpreting it in a timezone.
+    fn parse_start_date(raw: &str, zone: Option<&Timezone>) -> Option<Timestamp> {
         if raw.is_empty() {
             return None;
         }
         let clean = raw.split('+').next().unwrap_or(raw).trim_end_matches('Z');
-        let formats = [
-            "%Y-%m-%dT%H:%M:%S%.f",
-            "%Y-%m-%dT%H:%M:%S",
-            "%Y-%m-%d %H:%M:%S%.f",
-            "%Y-%m-%d %H:%M:%S",
-        ];
-        for fmt in &formats {
-            if let Ok(naive) = chrono::NaiveDateTime::parse_from_str(clean, fmt) {
+        for fmt in &START_DATE_FORMATS {
+            if let Ok(civil) = DateTime::strptime(fmt, clean) {
                 if let Some(tz_ref) = zone {
-                    return Some(Self::naive_to_utc_in_tz(naive, *tz_ref));
+                    return Self::civil_to_utc_in_tz(civil, tz_ref);
                 }
-                return Some(DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc));
+                return TimeZone::UTC.to_timestamp(civil).ok();
             }
         }
         None
     }
 
-    /// Converts a `LocalResult` to a UTC `DateTime`, picking the earliest for ambiguous results.
-    fn local_result_to_utc(local_result: LocalResult<DateTime<Timezone>>) -> Option<DateTime<Utc>> {
-        match local_result {
-            LocalResult::Single(dt) | LocalResult::Ambiguous(dt, _) => Some(dt.with_timezone(&Utc)),
-            LocalResult::None => None,
+    /// Returns the instant of a civil datetime in a timezone, picking the earliest for ambiguous results.
+    ///
+    /// Returns `None` when the civil datetime falls into a gap of the timezone.
+    fn earliest_instant_in_tz(civil: DateTime, zone: &Timezone) -> Option<Timestamp> {
+        match zone.to_ambiguous_timestamp(civil).offset() {
+            AmbiguousOffset::Unambiguous { offset } | AmbiguousOffset::Fold { before: offset, .. } => offset.to_timestamp(civil).ok(),
+            AmbiguousOffset::Gap { .. } => None,
         }
     }
 
-    /// Converts a naive datetime to UTC by interpreting it in a timezone, with a DST-gap fallback.
-    fn naive_to_utc_in_tz(naive: chrono::NaiveDateTime, zone: Timezone) -> DateTime<Utc> {
-        if let Some(utc) = Self::local_result_to_utc(zone.from_local_datetime(&naive)) {
-            return utc;
+    /// Converts a civil datetime to UTC by interpreting it in a timezone, with a DST-gap fallback.
+    fn civil_to_utc_in_tz(civil: DateTime, zone: &Timezone) -> Option<Timestamp> {
+        if let Some(utc) = Self::earliest_instant_in_tz(civil, zone) {
+            return Some(utc);
         }
-        let advanced = naive + chrono::Duration::hours(1);
-        if let Some(utc) = Self::local_result_to_utc(zone.from_local_datetime(&advanced)) {
-            return utc;
+        // A datetime skipped by the timezone exists one shift later.
+        if let Ok(advanced) = civil.checked_add(DST_GAP_SHIFT)
+            && let Some(utc) = Self::earliest_instant_in_tz(advanced, zone)
+        {
+            return Some(utc);
         }
-        DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc)
+        TimeZone::UTC.to_timestamp(civil).ok()
     }
 }
 

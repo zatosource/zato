@@ -1,6 +1,6 @@
-//! Encoding of the responses of pub/sub pulls and of the bodies of pub/sub pushes into JSON with the GIL released.
+//! Encoding of the responses of pub/sub pulls and of the bodies of pub/sub pushes into JSON.
 //!
-//! The payload of each message is the text that the publisher sent and the database stored. In a pull response,
+//! The JSON is written with the GIL released. The payload of each message is the text that the publisher sent and the database stored. In a pull response,
 //! a payload that is valid JSON is placed as it stands, and any other payload is placed as a JSON string. In a push body,
 //! the payload is always placed as a JSON string. The fields are copied while the GIL is held, and the payloads
 //! are validated and the JSON is written after the GIL is released.
@@ -84,7 +84,12 @@ struct Payload(String);
 impl Serialize for Payload {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         // A payload that parses as JSON is written as it stands, without being decoded into values
-        match serde_json::from_str::<&RawValue>(&self.0) {
+        #[expect(
+            clippy::disallowed_methods,
+            reason = "the payload is validated as JSON in place and borrowed into the response, no value crosses the Python boundary as JSON"
+        )]
+        let parsed = serde_json::from_str::<&RawValue>(&self.0);
+        match parsed {
             Ok(raw) => raw.serialize(serializer),
             Err(_) => serializer.serialize_str(&self.0),
         }
@@ -161,6 +166,10 @@ pub fn encode_pull_response(py: Python<'_>, cid: String, status: String, message
     };
 
     // The payloads are validated and the text is written without the GIL, so the other threads of the interpreter run in the meantime
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "the JSON text is the HTTP response body itself, not an intermediate format between Python and Rust"
+    )]
     let encoded = py.detach(|| serde_json::to_string(&response));
 
     encoded.map_err(|err| PyValueError::new_err(err.to_string()))
@@ -174,6 +183,10 @@ pub fn encode_push_envelope<'py>(py: Python<'py>, envelope: &Bound<'py, PyDict>)
     let fields = Fields::from_python(envelope)?;
 
     // The payload is escaped and the body is written without the GIL, so the other threads of the interpreter run in the meantime
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "the JSON bytes are the HTTP request body itself, not an intermediate format between Python and Rust"
+    )]
     let encoded = py.detach(|| serde_json::to_vec(&fields));
     let body = encoded.map_err(|err| PyValueError::new_err(err.to_string()))?;
 

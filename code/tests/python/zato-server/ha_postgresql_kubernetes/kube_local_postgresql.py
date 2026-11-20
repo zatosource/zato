@@ -134,7 +134,7 @@ class KubeLocalPostgreSQL(KubeBackend):
     def read_client_addresses(self) -> 'strset':
         """ Returns the address of each client of the database of the pods, the test process excluded.
         """
-        statement = f"SELECT host(client_addr) FROM pg_stat_activity WHERE datname = '{DatabaseCtx.DB_Name}' " \
+        statement = f"SELECT host(client_addr) FROM pg_stat_activity WHERE datname = '{DatabaseCtx.DB_Name}' " + \
             "AND client_addr IS NOT NULL AND client_addr <> '127.0.0.1' AND pid <> pg_backend_pid()"
 
         rows = self.query(statement)

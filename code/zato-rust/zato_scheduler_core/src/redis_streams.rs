@@ -13,7 +13,7 @@
 
 use std::sync::Arc;
 
-use chrono::Utc;
+use jiff::Timestamp;
 use serde::Deserialize;
 
 use crate::job::RunningJob;
@@ -517,7 +517,7 @@ pub fn handle_execute_job(shared: &SchedulerShared, payload: &str) {
         return;
     };
 
-    let now_iso = Utc::now().to_rfc3339();
+    let now_iso = crate::job::to_rfc3339(Timestamp::now());
 
     running_job.current_run += 1;
 
@@ -591,7 +591,7 @@ pub fn handle_mark_complete(shared: &SchedulerShared, payload: &str) {
         running_job.complete_run(parsed.current_run);
 
         if running_job.interval_ms > 0 && parsed.duration_ms >= running_job.interval_ms {
-            let now = Utc::now();
+            let now = Timestamp::now();
             while let Some(fire) = running_job.next_fire_utc {
                 if fire >= now {
                     break;

@@ -9,9 +9,12 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
-use chrono::Local;
+use jiff::ZonedDateTime;
 use parking_lot::Mutex;
 use pyo3::prelude::*;
+
+/// Local time of a log line, in the format of the Python `logging` module, with milliseconds after a comma.
+const LOG_TIMESTAMP_FORMAT: &str = "%Y-%m-%d %H:%M:%S,%3f";
 
 /// Rotating file writer that keeps at most two backup files (`.log.1` and `.log.2`).
 pub struct LogWriter {
@@ -105,7 +108,7 @@ pub struct RestLogEntry<'entry> {
 ///
 /// Includes timestamp, PID, CID, status, timing and response size.
 pub fn format_rest_line(entry: &RestLogEntry<'_>) -> String {
-    let now = Local::now();
+    let now = ZonedDateTime::now();
     let pid = entry.pid;
     let cid = entry.cid;
     let status_code = entry.status_code;
@@ -114,7 +117,7 @@ pub fn format_rest_line(entry: &RestLogEntry<'_>) -> String {
     let response_size = entry.response_size;
     format!(
         "{} - INFO - {pid}:Dummy - zato_rest:0 - REST cha \u{2190} cid={cid}; {status_code} time=0:{delta_sec:02}.{delta_usec:06}; len={response_size}\n",
-        now.format("%Y-%m-%d %H:%M:%S,%3f"),
+        now.strftime(LOG_TIMESTAMP_FORMAT),
     )
 }
 
@@ -148,7 +151,7 @@ pub struct AccessLogEntry<'entry> {
 
 /// Formats a Zato access log line in combined log format.
 pub fn format_access_line(entry: &AccessLogEntry<'_>) -> String {
-    let now = Local::now();
+    let now = ZonedDateTime::now();
     let pid = entry.pid;
     let remote_ip = entry.remote_ip;
     let cid = entry.cid;
@@ -164,7 +167,7 @@ pub fn format_access_line(entry: &AccessLogEntry<'_>) -> String {
     format!(
         "{} - INFO - {pid}:Dummy - zato_access_log:0 - \
         {remote_ip} {cid}/{resp_time} \"{channel_name}\" [{req_timestamp}] \"{method} {path} {http_version}\" {status_code} {response_size} \"-\" \"{user_agent}\"\n",
-        now.format("%Y-%m-%d %H:%M:%S,%3f"),
+        now.strftime(LOG_TIMESTAMP_FORMAT),
     )
 }
 
@@ -243,10 +246,10 @@ pub fn log_rest_line(message: &str) -> bool {
     let Some(writer_lock) = REST_WRITER.get() else { return false };
 
     let pid = std::process::id();
-    let now = Local::now();
+    let now = ZonedDateTime::now();
     let line = format!(
         "{} - INFO - {pid}:Dummy - zato_rest:0 - {message}\n",
-        now.format("%Y-%m-%d %H:%M:%S,%3f")
+        now.strftime(LOG_TIMESTAMP_FORMAT)
     );
 
     let mut writer = writer_lock.lock();

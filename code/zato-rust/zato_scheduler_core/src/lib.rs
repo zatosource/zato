@@ -3,6 +3,9 @@
 
 use std::time::Duration;
 
+use jiff::Timestamp;
+use jiff::fmt::friendly::SpanPrinter;
+
 /// Numeric conversions that have no lossless form, kept in one place.
 pub mod convert;
 
@@ -88,7 +91,7 @@ pub fn humanize_ms(millis: u64) -> String {
     if millis == 0 {
         return "< 1ms".to_string();
     }
-    humantime::format_duration(Duration::from_millis(millis)).to_string()
+    SpanPrinter::new().unsigned_duration_to_string(&Duration::from_millis(millis))
 }
 
 /// Returns the singular or plural form of a word based on the count.
@@ -121,7 +124,7 @@ pub fn reload_jobs(state: &mut scheduler::SchedulerState, new_jobs: &[crate::mod
         state.record_change(*removed_id, sequence);
     }
 
-    let now = chrono::Utc::now();
+    let now = Timestamp::now();
 
     for reloaded in new_jobs {
         let scheduler_job = &reloaded.job;
@@ -140,7 +143,7 @@ pub fn reload_jobs(state: &mut scheduler::SchedulerState, new_jobs: &[crate::mod
             // The scheduler kept the schedule of a job it holds running, so only a job it did not hold catches up
             existing.restore_run_count(reloaded.current_run);
             let interval = humanize_ms(existing.interval_ms);
-            let next = existing.next_fire_utc.map_or_else(|| "none".to_string(), |fire| fire.to_rfc3339());
+            let next = existing.next_fire_utc.map_or_else(|| "none".to_string(), crate::job::to_rfc3339);
             tracing::info!(
                 "Job updated: id={job_id} name={} interval={interval} next={next} active={} service={}",
                 scheduler_job.name,
@@ -151,9 +154,7 @@ pub fn reload_jobs(state: &mut scheduler::SchedulerState, new_jobs: &[crate::mod
             let mut running_job = RunningJob::from_scheduler_job(scheduler_job);
             running_job.restore_run_state(reloaded.current_run, last_slot, now);
             let interval = humanize_ms(running_job.interval_ms);
-            let next = running_job
-                .next_fire_utc
-                .map_or_else(|| "none".to_string(), |fire| fire.to_rfc3339());
+            let next = running_job.next_fire_utc.map_or_else(|| "none".to_string(), crate::job::to_rfc3339);
             tracing::info!(
                 "Job loaded: id={job_id} name={} interval={interval} next={next} active={} service={}",
                 scheduler_job.name,
@@ -169,10 +170,10 @@ pub fn reload_jobs(state: &mut scheduler::SchedulerState, new_jobs: &[crate::mod
 ///
 /// A slot that cannot be parsed is logged and treated as absent, so the job keeps its
 /// regular schedule and only the catch-up of a missed slot is given up.
-fn parse_last_slot(reloaded: &crate::model::ReloadedJob, job_name: &str) -> Option<chrono::DateTime<chrono::Utc>> {
+fn parse_last_slot(reloaded: &crate::model::ReloadedJob, job_name: &str) -> Option<Timestamp> {
     let raw = reloaded.last_slot_iso.as_deref()?;
-    match chrono::DateTime::parse_from_rfc3339(raw) {
-        Ok(slot) => Some(slot.with_timezone(&chrono::Utc)),
+    match raw.parse::<Timestamp>() {
+        Ok(slot) => Some(slot),
         Err(err) => {
             tracing::error!("Job `{job_name}`: could not parse last_slot_iso `{raw}`: {err}");
             None

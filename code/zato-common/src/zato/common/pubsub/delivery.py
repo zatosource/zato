@@ -105,9 +105,11 @@ def deliver_with_policy(
     conn_name:'str',
     attempt:'callable_',
     should_continue:'callnone'=None,
+    before_wait:'callnone'=None,
     ) -> 'None':
     """ Runs attempts until one is accepted or the policy allows no more, counting from the attempts already made.
     A should_continue callable is asked before and after each wait and a reason it answers with stops the round.
+    A before_wait callable is called before each wait that the round makes.
     """
     attempts_allowed = 1 + policy.max_retries
 
@@ -128,6 +130,10 @@ def deliver_with_policy(
 
             # .. unless the round is to stop here ..
             check_should_continue()
+
+            # .. the caller may need to complete something before the wait ..
+            if before_wait:
+                before_wait()
 
             sleep_time = get_jittered_sleep_time(policy, current_sleep_time)
             sleep(sleep_time)

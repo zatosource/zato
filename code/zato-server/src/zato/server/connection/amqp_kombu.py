@@ -43,7 +43,8 @@ if 0:
     from kombu.connection import Connection as KombuAMQPConnection
     from kombu.messaging import Producer as KombuProducer
     from kombu.pools import ProducerPool as KombuProducerPool
-    from zato.common.typing_ import anylist, anyset, callable_, strdict
+    from kombu.transport.pyamqp import Message as KombuMessage
+    from zato.common.typing_ import any_, anylist, anyset, anytuple, callable_, strdict
     anylist = anylist
     anyset = anyset
     kombu_conn_class = type[KombuAMQPConnection]
@@ -67,7 +68,7 @@ no_ack = {
 def get_connection_class(object_name:'str', suffix:'str', is_tls:'bool') -> 'kombu_conn_class':
 
     class _PyAMQPConnection(PyAMQPConnection):
-        def __init__(_py_amqp_self, *args, **kwargs):
+        def __init__(_py_amqp_self, *args:'any_', **kwargs:'any_') -> 'None':
             version = get_version()
             kwargs['client_properties'] = {
                 'zato.component': '{}/{}'.format(get_component_name('amqp-conn'), suffix),
@@ -133,8 +134,9 @@ def _close_amqp_transport(connection:'PyAMQPConnection') -> 'None':
         for channel in channels:
             channel.collect()
 
-    # Clear client reference
-    connection.client = None
+    # Clear the client reference that kombu set when it established the connection
+    amqp_connection = cast_('any_', connection)
+    amqp_connection.client = None
 
     connection.is_closing = False
 
@@ -177,8 +179,6 @@ def _do_close_connection(cid:'str', connection:'KombuAMQPConnection', max_wait_t
                 # If we're here, it means there was no exception above, which means we really can indicate the connection is closed.
                 is_closed = True
                 connection._transport = None
-                connection.connection = None
-                connection.channels = None
 
         connection._connection = None
 
@@ -230,7 +230,7 @@ class Producer:
 
         self.pool = _Producers(limit=self.config.pool_size + 1000)
 
-    def acquire(self, *args, **kwargs) -> 'KombuProducer':
+    def acquire(self, *args:'any_', **kwargs:'any_') -> 'KombuProducer':
         producers = self.pool[self.conn]
         producer = producers.acquire(*args, **kwargs)
         return producer
@@ -283,7 +283,7 @@ class Consumer:
 
 # ################################################################################################################################
 
-    def _on_amqp_message(self, body, msg):
+    def _on_amqp_message(self, body:'any_', msg:'KombuMessage') -> 'any_':
 
         try:
             return self.on_amqp_message(body, msg, self.name, self.config)
@@ -359,7 +359,7 @@ class Consumer:
 
 # ################################################################################################################################
 
-    def start(self, conn_errors=(socket_error, IOError, OSError), _gevent_sleep=sleep):
+    def start(self, conn_errors:'anytuple'=(socket_error, IOError, OSError), _gevent_sleep:'callable_'=sleep) -> 'None':
         """ Runs the AMQP consumer's mainloop.
         """
 

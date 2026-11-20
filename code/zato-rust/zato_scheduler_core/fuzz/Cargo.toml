@@ -12,9 +12,11 @@ libfuzzer-sys = "0.4"
 
 [dependencies.zato_scheduler_core]
 path = ".."
+version = "4.1.0"
 
 [dependencies.zato_server_core]
 path = "../../zato_server_core"
+version = "4.1.0"
 
 [[bin]]
 name = "fuzz_job_type_from_str"

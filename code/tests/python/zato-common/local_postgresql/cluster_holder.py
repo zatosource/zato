@@ -66,7 +66,7 @@ def main() -> 'None':
 
     data = json.dumps(report)
     _ = sys.stdout.write(data + '\n')
-    sys.stdout.flush()
+    _ = sys.stdout.flush()
 
     # The cluster is held until the test kills this process.
     _ = sys.stdin.read()

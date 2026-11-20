@@ -3,9 +3,12 @@
 //! Timestamps the request, dispatches to the config manager's request dispatcher,
 //! logs access/REST summaries, collects Prometheus metrics, and returns `(status, headers, body)`.
 
+use std::num::TryFromIntError;
 use std::sync::OnceLock;
 
-use chrono::{DateTime, Datelike, FixedOffset, TimeDelta, Timelike, Utc};
+use jiff::tz::{Offset, TimeZone};
+use jiff::{SignedDuration, Timestamp, ZonedDateTime};
+use pyo3::exceptions::PyValueError;
 use pyo3::intern;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDateTime, PyDict, PyString, PyTuple, PyTzInfo};
@@ -30,11 +33,11 @@ const DEFAULT_STATUS_CODE: &str = "200";
 /// Value used for optional WSGI keys, such as `PATH_INFO`, that the request context lacks.
 const NO_CTX_VALUE: &str = "";
 
-/// Microseconds in one second, for splitting a duration into whole seconds and a remainder.
-const MICROS_PER_SECOND: i64 = 1_000_000;
+/// Nanoseconds in one microsecond, for reducing the sub-second part of a timestamp to what Python keeps.
+const NANOS_PER_MICRO: i32 = 1_000;
 
-/// Microseconds assumed when a duration is too long to be expressed in them.
-const NO_MICROS: i64 = 0;
+/// Request time of an access log line, in the common log format.
+const ACCESS_LOG_TIMESTAMP_FORMAT: &str = "%d/%b/%Y:%H:%M:%S %z";
 
 /// Server attributes cached once at first request to avoid repeated Python attribute lookups.
 struct CachedServerAttrs {
@@ -72,9 +75,9 @@ struct RequestSummary<'req> {
     /// Value of the client's `User-Agent` header.
     user_agent: &'req str,
     /// When the request arrived, in UTC.
-    request_ts_utc: DateTime<Utc>,
+    request_ts_utc: Timestamp,
     /// When the request arrived, in the server's local timezone.
-    request_ts_local: DateTime<FixedOffset>,
+    request_ts_local: ZonedDateTime,
     /// Whether the dispatcher raised an exception instead of returning a payload.
     dispatch_had_error: bool,
 }
@@ -116,18 +119,14 @@ pub fn make_cid_public(cid: &str) -> String {
     cid.splitn(5, '-').take(4).collect::<Vec<_>>().join("-")
 }
 
-/// Converts a chrono `DateTime<FixedOffset>` to a Python `datetime.datetime` with timezone.
-#[expect(
-    clippy::cast_possible_truncation,
-    clippy::as_conversions,
-    reason = "chrono month/day/hour/minute/second values are guaranteed to fit in u8"
-)]
-fn chrono_to_py_datetime<'py>(
-    py: Python<'py>,
-    dt: &chrono::DateTime<FixedOffset>,
-    tz_utc: &Bound<'py, PyTzInfo>,
-) -> PyResult<Bound<'py, PyDateTime>> {
-    let offset_secs = dt.offset().local_minus_utc();
+/// Converts one calendar field of a zoned datetime to the unsigned type that `PyDateTime::new` expects.
+fn calendar_field<Field: TryFrom<i32, Error = TryFromIntError>>(value: i32, name: &str) -> PyResult<Field> {
+    Field::try_from(value).map_err(|error| PyValueError::new_err(format!("Calendar field `{name}` out of range: {value}: {error}")))
+}
+
+/// Converts a zoned datetime to a Python `datetime.datetime` with a fixed-offset timezone.
+fn zoned_to_py_datetime<'py>(py: Python<'py>, dt: &ZonedDateTime, tz_utc: &Bound<'py, PyTzInfo>) -> PyResult<Bound<'py, PyDateTime>> {
+    let offset_secs = dt.offset().seconds();
     let py_offset = if offset_secs == 0 {
         tz_utc.clone().into_any()
     } else {
@@ -138,13 +137,13 @@ fn chrono_to_py_datetime<'py>(
     let py_tz: &Bound<'_, PyTzInfo> = py_offset.cast()?;
     PyDateTime::new(
         py,
-        dt.year(),
-        dt.month() as u8,
-        dt.day() as u8,
-        dt.hour() as u8,
-        dt.minute() as u8,
-        dt.second() as u8,
-        dt.timestamp_subsec_micros(),
+        i32::from(dt.year()),
+        calendar_field(i32::from(dt.month()), "month")?,
+        calendar_field(i32::from(dt.day()), "day")?,
+        calendar_field(i32::from(dt.hour()), "hour")?,
+        calendar_field(i32::from(dt.minute()), "minute")?,
+        calendar_field(i32::from(dt.second()), "second")?,
+        calendar_field(dt.subsec_nanosecond() / NANOS_PER_MICRO, "microsecond")?,
         Some(py_tz),
     )
 }
@@ -164,8 +163,8 @@ fn get_channel_field(channel_item: Option<&Bound<'_, PyAny>>, key: &str) -> PyRe
 }
 
 /// Sub-second part of a duration in microseconds, for `seconds.micros` style log fields.
-pub fn fractional_micros(delta: TimeDelta) -> i64 {
-    delta.num_microseconds().unwrap_or(NO_MICROS) % MICROS_PER_SECOND
+pub fn fractional_micros(delta: SignedDuration) -> i64 {
+    i64::from(delta.subsec_micros())
 }
 
 /// Calls `inc` or `dec` on the gauge counting requests currently being processed.
@@ -181,16 +180,14 @@ fn adjust_requests_in_flight(py: Python<'_>, method: &str) -> PyResult<()> {
 /// Returns the UTC timestamp, which the dispatcher also receives directly.
 fn set_request_timestamps<'py>(
     request_ctx: &Bound<'py, PyDict>,
-    request_ts_utc: &DateTime<Utc>,
-    request_ts_local: &DateTime<FixedOffset>,
+    request_ts_utc: Timestamp,
+    request_ts_local: &ZonedDateTime,
 ) -> PyResult<Bound<'py, PyDateTime>> {
     let py = request_ctx.py();
     let tz_utc: Bound<'_, PyTzInfo> = py.import("datetime")?.getattr("timezone")?.getattr("utc")?.cast_into()?;
 
-    let zero_offset = FixedOffset::east_opt(0).ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("cannot create UTC offset"))?;
-
-    let py_ts_utc = chrono_to_py_datetime(py, &request_ts_utc.with_timezone(&zero_offset), &tz_utc)?;
-    let py_ts_local = chrono_to_py_datetime(py, request_ts_local, &tz_utc)?;
+    let py_ts_utc = zoned_to_py_datetime(py, &ZonedDateTime::new(request_ts_utc, TimeZone::UTC), &tz_utc)?;
+    let py_ts_local = zoned_to_py_datetime(py, request_ts_local, &tz_utc)?;
 
     request_ctx.set_item("zato.local_tz", &py_ts_local.getattr("tzinfo")?)?;
     request_ctx.set_item("zato.request_timestamp_utc", &py_ts_utc)?;
@@ -272,14 +269,10 @@ fn write_access_log(request_ctx: &Bound<'_, PyDict>, cached: &CachedServerAttrs,
         return Ok(());
     }
 
-    let access_delta = Utc::now() - summary.request_ts_utc;
-    let resp_time = format!(
-        "{}.{:06}",
-        access_delta.num_seconds(),
-        fractional_micros(access_delta).unsigned_abs(),
-    );
+    let access_delta = Timestamp::now().duration_since(summary.request_ts_utc);
+    let resp_time = format!("{}.{:06}", access_delta.as_secs(), fractional_micros(access_delta).unsigned_abs());
 
-    let req_ts_str = summary.request_ts_local.format("%d/%b/%Y:%H:%M:%S %z").to_string();
+    let req_ts_str = summary.request_ts_local.strftime(ACCESS_LOG_TIMESTAMP_FORMAT).to_string();
 
     let method = get_ctx_string(request_ctx, "REQUEST_METHOD", NO_CTX_VALUE)?;
     let http_version = get_ctx_string(request_ctx, "SERVER_PROTOCOL", NO_CTX_VALUE)?;
@@ -302,7 +295,7 @@ fn write_access_log(request_ctx: &Bound<'_, PyDict>, cached: &CachedServerAttrs,
 }
 
 /// Records the REST channel and service metrics for the request, if Prometheus is enabled on the server.
-fn record_prometheus_metrics(server: &Bound<'_, PyAny>, summary: &RequestSummary<'_>, elapsed: TimeDelta) -> PyResult<()> {
+fn record_prometheus_metrics(server: &Bound<'_, PyAny>, summary: &RequestSummary<'_>, elapsed: SignedDuration) -> PyResult<()> {
     let has_prometheus: bool = server.getattr("has_prometheus")?.extract()?;
     if !has_prometheus {
         return Ok(());
@@ -312,7 +305,7 @@ fn record_prometheus_metrics(server: &Bound<'_, PyAny>, summary: &RequestSummary
     let prom_mod = py.import("zato.server.metrics")?;
     let counter = prom_mod.getattr("zato_rest_channel_requests_total")?;
     let hist = prom_mod.getattr("zato_rest_channel_request_duration_seconds")?;
-    let response_time_secs = elapsed.as_seconds_f64();
+    let response_time_secs = elapsed.as_secs_f64();
 
     let get_status_code_class = prom_mod.getattr("get_status_code_class")?;
     let status_class: String = get_status_code_class.call1((summary.status_code,))?.extract()?;
@@ -350,7 +343,7 @@ fn record_prometheus_metrics(server: &Bound<'_, PyAny>, summary: &RequestSummary
 }
 
 /// Writes the REST summary line for the request, unless it is an internal invocation or its path is ignored.
-fn write_rest_summary(server: &Bound<'_, PyAny>, summary: &RequestSummary<'_>, elapsed: TimeDelta) -> PyResult<()> {
+fn write_rest_summary(server: &Bound<'_, PyAny>, summary: &RequestSummary<'_>, elapsed: SignedDuration) -> PyResult<()> {
     let rest_log_ignore = extract_string_list(&server.getattr("rest_log_ignore")?)?;
 
     let is_internal_invoke = summary.channel_name == "zato.api.invoke" && summary.path_info.starts_with("/zato");
@@ -366,7 +359,7 @@ fn write_rest_summary(server: &Bound<'_, PyAny>, summary: &RequestSummary<'_>, e
         pid: std::process::id(),
         cid: summary.cid,
         status_code: summary.status_code,
-        delta_sec: elapsed.num_seconds(),
+        delta_sec: elapsed.as_secs(),
         delta_usec,
         response_size: summary.response_size,
     });
@@ -401,12 +394,12 @@ pub fn handle_http_request<'py>(
 
     adjust_requests_in_flight(py, "inc")?;
 
-    let request_ts_utc = Utc::now();
-    let local_offset =
-        FixedOffset::east_opt(local_tz_offset_secs).ok_or_else(|| pyo3::exceptions::PyValueError::new_err("invalid timezone offset"))?;
-    let request_ts_local = request_ts_utc.with_timezone(&local_offset);
+    let request_ts_utc = Timestamp::now();
+    let local_offset = Offset::from_seconds(local_tz_offset_secs)
+        .map_err(|error| PyValueError::new_err(format!("Invalid timezone offset {local_tz_offset_secs}: {error}")))?;
+    let request_ts_local = ZonedDateTime::new(request_ts_utc, TimeZone::fixed(local_offset));
 
-    let py_ts_utc = set_request_timestamps(request_ctx, &request_ts_utc, &request_ts_local)?;
+    let py_ts_utc = set_request_timestamps(request_ctx, request_ts_utc, &request_ts_local)?;
 
     let response_headers = PyDict::new(py);
     request_ctx.set_item("zato.http.response.headers", &response_headers)?;
@@ -482,7 +475,7 @@ pub fn handle_http_request<'py>(
         write_access_log(request_ctx, cached, &summary)?;
     }
 
-    let elapsed = Utc::now() - request_ts_utc;
+    let elapsed = Timestamp::now().duration_since(request_ts_utc);
     record_prometheus_metrics(server, &summary, elapsed)?;
     write_rest_summary(server, &summary, elapsed)?;
 

@@ -11,8 +11,9 @@ import unittest
 from unittest.mock import patch
 
 # Zato
-from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, SendRejected
-from zato.common.typing_ import list_
+from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryInterrupted, Interrupt_Paused, \
+    SendRejected
+from zato.common.typing_ import intlist, list_
 from zato.common.util.retry import RetryPolicy
 
 # ################################################################################################################################
@@ -180,6 +181,48 @@ class DeliverWithPolicyTestCase(unittest.TestCase):
             deliver_with_policy(policy, 1, _cid, _conn_name, attempt)
 
         self.assertEqual(self.sleeps, [1])
+
+# ################################################################################################################################
+
+    def test_the_hook_runs_before_each_wait_and_never_after_the_last_attempt(self) -> 'None':
+
+        # How many waits were made by the time of each call of the hook
+        waits_made:'intlist' = []
+
+        def before_wait() -> 'None':
+            sleep_count = len(self.sleeps)
+            waits_made.append(sleep_count)
+
+        attempt = _Attempt(SendRejected(_rejected_error, is_permanent=False))
+
+        with self.assertRaises(DeliveryExhausted):
+            deliver_with_policy(_policy, 0, _cid, _conn_name, attempt, before_wait=before_wait)
+
+        self.assertEqual(attempt.calls, 3)
+        self.assertEqual(len(self.sleeps), 2)
+        self.assertEqual(waits_made, [0, 1])
+
+# ################################################################################################################################
+
+    def test_the_hook_does_not_run_when_the_round_is_stopped_before_a_wait(self) -> 'None':
+
+        hook_calls:'intlist' = []
+
+        def before_wait() -> 'None':
+            hook_calls.append(1)
+
+        def should_continue() -> 'str':
+            return Interrupt_Paused
+
+        attempt = _Attempt(SendRejected(_rejected_error, is_permanent=False))
+
+        with self.assertRaises(DeliveryInterrupted) as raised:
+            deliver_with_policy(_policy, 0, _cid, _conn_name, attempt, should_continue, before_wait)
+
+        self.assertEqual(raised.exception.reason, Interrupt_Paused)
+        self.assertEqual(attempt.calls, 1)
+        self.assertEqual(hook_calls, [])
+        self.assertEqual(self.sleeps, [])
 
 # ################################################################################################################################
 # ################################################################################################################################

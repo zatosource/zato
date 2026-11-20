@@ -149,6 +149,10 @@ impl Extraction {
 /// The words are extracted after the GIL is released, so the other threads of the interpreter run in the meantime.
 #[pyfunction]
 #[must_use]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "PyO3 extracts the payload as an owned PyBackedStr, which keeps the Python string alive while the GIL is released"
+)]
 pub fn extract_search_text(py: Python<'_>, data: PyBackedStr) -> String {
     py.detach(|| search_text_of(&data))
 }
