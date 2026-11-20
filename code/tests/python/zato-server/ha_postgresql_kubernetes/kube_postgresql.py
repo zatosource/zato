@@ -17,7 +17,7 @@ import os
 import time
 
 # Zato
-from kube_cluster import apply_manifest, load_image, ModuleCtx as ClusterCtx, wait_for_rollout
+from kube_cluster import apply_manifest, cluster, load_image, ModuleCtx as ClusterCtx, wait_for_rollout
 from kube_env import create_cluster_session, create_secret, KubeBackend, KubeSession, ModuleCtx as EnvCtx
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.direct_sql.reset import recreate_public_schema
@@ -43,10 +43,25 @@ class ModuleCtx:
     # The manifest of the instance
     Manifest_Path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'manifests', 'postgresql.yaml')
 
-    # The StatefulSet of the instance, its only pod and the zone it runs in
+    # The StatefulSet of the instances, its pods, the headless Service that names each pod and the zone they run in
     StatefulSet_Name = 'postgresql'
     Pod_Name = 'postgresql-0'
+    Standby_Pod_Name = 'postgresql-1'
+    Replicas = 2
+    Pods_Service = 'postgresql-pods'
     Zone = 'zone-c'
+
+    # The settings that make each commit on the primary wait for the standby, which names itself after its pod
+    Synchronous_Settings = [
+        f'synchronous_standby_names="{Standby_Pod_Name}"',
+        'cluster_name=$(POD_NAME)',
+    ]
+
+    # The state in which the primary reports a standby that each commit waits for
+    Sync_State = 'sync'
+
+    # The pg_hba.conf entry that admits the replication connection of the standby over TLS
+    Replication_HBA = 'hostssl replication all all scram-sha-256'
 
     # The port of the instance and the node port through which the test process reaches it
     Port = 5432
@@ -69,7 +84,7 @@ class KubePostgreSQL(KubeBackend):
 
     def __init__(self, session:'KubeSession') -> 'None':
         self.ip = session.control_plane_ip
-        self.pod_names:'strlist' = [ModuleCtx.Pod_Name]
+        self.pod_names:'strlist' = [ModuleCtx.Pod_Name, ModuleCtx.Standby_Pod_Name]
         self.password = 'pubsub.' + CryptoManager.generate_hex_string()
         self.directory = os.path.join(session.base.run_dir, 'postgresql')
 
@@ -104,6 +119,32 @@ class KubePostgreSQL(KubeBackend):
 
 # ################################################################################################################################
 
+    def wait_for_synchronous_standby(self) -> 'None':
+        """ Waits until the primary reports the standby as the synchronous one, which each commit then waits for.
+        """
+        deadline = time.monotonic() + ModuleCtx.Ready_Timeout
+
+        while True:
+            connection = connect(self.database, is_admin=True)
+
+            try:
+                cursor = connection.cursor()
+                cursor.execute('SELECT sync_state FROM pg_stat_replication WHERE application_name = %s',
+                    (ModuleCtx.Standby_Pod_Name,))
+                rows = cursor.fetchall()
+            finally:
+                connection.close()
+
+            if rows:
+                if rows[0][0] == ModuleCtx.Sync_State:
+                    logger.info('Synchronous standby %s connected', ModuleCtx.Standby_Pod_Name)
+                    return
+
+            assert time.monotonic() < deadline, f'No synchronous standby {ModuleCtx.Standby_Pod_Name} -> {rows}'
+            time.sleep(ModuleCtx.Poll_Interval)
+
+# ################################################################################################################################
+
     def clear(self) -> 'None':
         """ Removes every table, so that the pair of the next test begins with a database without data.
         """
@@ -122,12 +163,15 @@ def get_manifest_placeholders(database:'PubSubDatabase') -> 'strstrdict':
     """
     args = ['postgres']
 
-    for setting in get_container_settings(database, None):
+    for setting in get_container_settings(database, ModuleCtx.Synchronous_Settings):
         args.append('-c')
         args.append(setting)
 
     out = {
         'namespace': ClusterCtx.Namespace,
+        'postgresql_primary': ModuleCtx.Pod_Name,
+        'postgresql_pods_service': ModuleCtx.Pods_Service,
+        'postgresql_replicas': str(ModuleCtx.Replicas),
         'postgresql_image': DatabaseCtx.PostgreSQL_Image,
         'postgresql_args': json.dumps(args),
         'postgresql_user': DatabaseCtx.Username,
@@ -142,6 +186,21 @@ def get_manifest_placeholders(database:'PubSubDatabase') -> 'strstrdict':
 
 # ################################################################################################################################
 
+def _write_replication_script(path:'str') -> 'None':
+    """ Writes the init script that admits the replication connection of the standby to the primary.
+    """
+    script = '\n'.join([
+        '#!/bin/bash',
+        'set -e',
+        f'echo "{ModuleCtx.Replication_HBA}" >> "$PGDATA"/pg_hba.conf',
+        '',
+    ])
+
+    with open(path, 'w') as script_file:
+        _ = script_file.write(script)
+
+# ################################################################################################################################
+
 def _start_postgresql(session:'KubeSession') -> 'KubePostgreSQL':
     """ Starts the instance with its certificate, issued by the authority whose CA the pods mount, and creates
     the Secret with the pub/sub database settings of the pods.
@@ -151,7 +210,7 @@ def _start_postgresql(session:'KubeSession') -> 'KubePostgreSQL':
 
     os.makedirs(out.directory)
 
-    for node_name, zone in ClusterCtx.Zones.items():
+    for node_name, zone in cluster.zones.items():
         if zone == ModuleCtx.Zone:
             load_image(DatabaseCtx.PostgreSQL_Image, [node_name])
 
@@ -171,11 +230,14 @@ def _start_postgresql(session:'KubeSession') -> 'KubePostgreSQL':
         'ca.crt': session.authority.cert_path,
     }, {})
 
-    # .. the instance accepts connections over TLS only ..
+    # .. the instances accept connections over TLS only, the replication connection of the standby included ..
     tls_script = os.path.join(out.directory, 'tls-setup.sh')
     _write_tls_setup_script(tls_script, False)
 
-    create_secret('postgresql-init', {'tls-setup.sh': tls_script}, {})
+    replication_script = os.path.join(out.directory, 'replication-setup.sh')
+    _write_replication_script(replication_script)
+
+    create_secret('postgresql-init', {'tls-setup.sh': tls_script, 'replication-setup.sh': replication_script}, {})
     create_secret('postgresql-auth', {}, {'password': out.password})
 
     # .. with the settings of the database containers of the other suites ..
@@ -183,7 +245,9 @@ def _start_postgresql(session:'KubeSession') -> 'KubePostgreSQL':
     apply_manifest(ModuleCtx.Manifest_Path, placeholders)
     wait_for_rollout('statefulset', ModuleCtx.StatefulSet_Name)
 
+    # .. the primary accepts connections and each of its commits waits for the standby ..
     out.wait_until_ready()
+    out.wait_for_synchronous_standby()
 
     # .. and the pods reach it under the name of its Service.
     host = f'{ModuleCtx.StatefulSet_Name}.{namespace}.svc.cluster.local'

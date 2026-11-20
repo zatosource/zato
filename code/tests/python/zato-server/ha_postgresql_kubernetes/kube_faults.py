@@ -7,15 +7,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The faults of the Kubernetes suites. A pod is deleted or its Zato server is killed. A worker node is stopped,
-# or partitioned from the other worker nodes while it still reaches the control plane. Every fault can be removed,
-# and the cluster can be restored to the state in which every node runs and reaches every other one.
+# partitioned from the other worker nodes while it still reaches the control plane, or isolated from every other node.
+# Every fault can be removed, and the cluster can be restored to the state in which every node runs and reaches
+# every other one.
 
 # stdlib
 import logging
 import time
 
 # Zato
-from kube_cluster import get_node_ip, get_node_pod_cidr, kubectl, ModuleCtx as ClusterCtx, run
+from kube_cluster import cluster, get_node_ip, get_node_pod_cidr, kubectl, ModuleCtx as ClusterCtx
 from topology import docker
 
 # ################################################################################################################################
@@ -99,16 +100,46 @@ def start_node(node_name:'str') -> 'None':
 
 # ################################################################################################################################
 
+def _get_chain_commands() -> 'strlist':
+    """ Returns the commands that create the chain of the faults in a node container and make its parent chains
+    jump to it first.
+    """
+    out:'strlist' = [f'iptables -N {ModuleCtx.Chain} 2>/dev/null || true']
+
+    for parent in ModuleCtx.Parent_Chains:
+        out.append(f'iptables -C {parent} -j {ModuleCtx.Chain} 2>/dev/null || iptables -I {parent} 1 -j {ModuleCtx.Chain}')
+
+    return out
+
+# ################################################################################################################################
+
+def isolate_node(node_name:'str') -> 'float':
+    """ Drops every packet to and from a worker node and its pods, the control plane included, as of a node
+    that stopped responding, and returns the time of the isolation. The loopback interface of the node remains,
+    so the processes of the node still reach one another.
+    """
+    commands = _get_chain_commands()
+
+    commands.append(f'iptables -A {ModuleCtx.Chain} -i lo -j RETURN')
+    commands.append(f'iptables -A {ModuleCtx.Chain} -o lo -j RETURN')
+    commands.append(f'iptables -A {ModuleCtx.Chain} -j DROP')
+
+    out = time.time()
+    _ = docker('exec', node_name, 'sh', '-c', ' && '.join(commands))
+
+    logger.info('Isolated %s', node_name)
+
+    return out
+
+# ################################################################################################################################
+
 def partition_node(node_name:'str') -> 'float':
     """ Drops every packet between a worker node, with its pods, and the other worker nodes with their pods.
     The control plane remains reachable, so the pods of the node still reach the API server.
     """
-    commands:'strlist' = [f'iptables -N {ModuleCtx.Chain} 2>/dev/null || true']
+    commands = _get_chain_commands()
 
-    for parent in ModuleCtx.Parent_Chains:
-        commands.append(f'iptables -C {parent} -j {ModuleCtx.Chain} 2>/dev/null || iptables -I {parent} 1 -j {ModuleCtx.Chain}')
-
-    for other in ClusterCtx.Zones:
+    for other in cluster.zones:
         if other == node_name:
             continue
 
@@ -126,7 +157,7 @@ def partition_node(node_name:'str') -> 'float':
 # ################################################################################################################################
 
 def heal_node(node_name:'str') -> 'None':
-    """ Removes the partition of a worker node, leaving the rules of Kubernetes as they are.
+    """ Removes the partition or the isolation of a worker node, leaving the rules of Kubernetes as they are.
     """
     _ = docker('exec', node_name, 'sh', '-c', f'iptables -F {ModuleCtx.Chain} 2>/dev/null || true')
 
@@ -138,7 +169,7 @@ def heal_node(node_name:'str') -> 'None':
 def restore_cluster() -> 'None':
     """ Starts and heals every worker node, and waits until every node is ready.
     """
-    for node_name in ClusterCtx.Zones:
+    for node_name in cluster.zones:
         state = docker('inspect', '-f', '{{.State.Status}}', node_name).stdout.strip()
 
         if state != ModuleCtx.State_Running:
@@ -146,8 +177,7 @@ def restore_cluster() -> 'None':
 
         heal_node(node_name)
 
-    _ = run(['kubectl', '--context', ClusterCtx.Context, 'wait', '--for=condition=Ready', 'node', '--all',
-        f'--timeout={ModuleCtx.Ready_Timeout}'])
+    _ = kubectl('wait', '--for=condition=Ready', 'node', '--all', f'--timeout={ModuleCtx.Ready_Timeout}')
 
 # ################################################################################################################################
 # ################################################################################################################################

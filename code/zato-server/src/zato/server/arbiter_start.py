@@ -28,6 +28,7 @@ from zato.common.db_env.outage import call_until_available
 from zato.common.odb.model import Server
 from zato.common.pubsub.sql.generation import take_over_before_fork
 from zato.common.util.api import get_odb_session_from_server_config
+from zato.common.version import get_version
 from zato.server.arbiter import Arbiter
 from zato.server.arbiter_config import ArbiterConfig, ArbiterError
 from zato.server.server_region import new_server_region
@@ -222,6 +223,9 @@ def run_arbiter(zato_app:'ZatoApplication') -> 'int':
     # .. the arbiter rotates the files of zato_server_core that the worker appends to ..
     config = ArbiterConfig.from_defaults(gettempdir())
     config.native_log_files = server.native_log_files
+
+    # .. the version is read once, and the processes forked below inherit it rather than run git on each start ..
+    _ = get_version()
 
     # .. and nothing that a fork would duplicate is open when the processes are forked.
     stop_threadpool()

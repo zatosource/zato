@@ -11,7 +11,13 @@ import warnings
 warnings.filterwarnings('ignore', category=DeprecationWarning, message='.*multi-threaded.*fork.*')
 warnings.filterwarnings('ignore', category=UserWarning, message='.*pkg_resources is deprecated.*')
 
+import gc
 import os
+
+# A started server creates only long-lived objects until its arbiter forks the processes,
+# and the arbiter enables the cyclic garbage collector again once it froze them.
+if __name__ == '__main__':
+    gc.disable()
 
 # Monkey-patching modules individually can be about 20% faster,
 # or, in absolute terms, instead of 275 ms it may take 220 ms.

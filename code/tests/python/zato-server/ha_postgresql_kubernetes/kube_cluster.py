@@ -17,18 +17,21 @@ import re
 import shutil
 import subprocess
 import time
+from dataclasses import dataclass
 from string import Template
 from tempfile import TemporaryDirectory
 from urllib.request import Request, urlopen
 
 # Zato
 from topology import docker
+from zato.common.test.reservation import forget_name, is_name_live, is_reserved_name, reserve_name
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strlist, strstrdict
+    from zato.common.test.reservation import NameReservation
+    from zato.common.typing_ import any_, strlist, strset, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,20 +43,22 @@ logger = logging.getLogger('zato.test.ha_postgresql_kubernetes.cluster')
 
 class ModuleCtx:
 
-    # Where every run keeps its data, removed at the beginning and at the end of each run
-    Runtime_Dir = '/tmp/zato-ha-kube-test'
+    # The prefix of the reserved name of each run, which names its cluster and its runtime directory
+    Name_Prefix = 'zato-ha-kube'
 
-    # The cluster, its kubectl context and the namespace of the suites
-    Cluster_Name = 'zato-ha'
-    Context = 'kind-zato-ha'
+    # The directory under which each run keeps its data in a directory of its reserved name
+    Runtime_Base_Dir = '/tmp'
+
+    # The prefix of the kubectl context that kind creates for a cluster, and the namespace of the suites
+    Context_Prefix = 'kind-'
     Namespace = 'zato-ha'
 
-    # The worker nodes with their zones, as kind names them
-    Control_Plane = 'zato-ha-control-plane'
-    Zones = {
-        'zato-ha-worker':  'zone-a',
-        'zato-ha-worker2': 'zone-b',
-        'zato-ha-worker3': 'zone-c',
+    # The suffixes that kind appends to the name of a cluster to name its nodes, with the zone of each worker node
+    Control_Plane_Suffix = '-control-plane'
+    Worker_Zones = {
+        '-worker':  'zone-a',
+        '-worker2': 'zone-b',
+        '-worker3': 'zone-c',
     }
 
     # The zones of the Zato pods, whose worker nodes receive the Zato image
@@ -89,6 +94,87 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
+@dataclass(init=False)
+class KubeCluster:
+    """ The cluster of one run, whose names are derived from the name that the run reserves, so that runs
+    in parallel processes use clusters of their own.
+    """
+    reservation: 'NameReservation'
+    name: 'str'
+    context: 'str'
+    control_plane: 'str'
+    zones: 'strstrdict'
+    runtime_dir: 'str'
+
+# The cluster of the run of this process, whose names reserve_cluster sets
+cluster = KubeCluster()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def reserve_cluster() -> 'None':
+    """ Reserves the name of the run and derives from it the names of its cluster, its nodes and its runtime directory.
+    """
+    reservation = reserve_name(ModuleCtx.Name_Prefix)
+    name = reservation.name
+
+    cluster.reservation = reservation
+    cluster.name = name
+    cluster.context = ModuleCtx.Context_Prefix + name
+    cluster.control_plane = name + ModuleCtx.Control_Plane_Suffix
+    cluster.runtime_dir = os.path.join(ModuleCtx.Runtime_Base_Dir, name)
+
+    # kind names the worker nodes after the cluster, in the order in which its configuration lists them.
+    cluster.zones = {}
+    for suffix, zone in ModuleCtx.Worker_Zones.items():
+        cluster.zones[name + suffix] = zone
+
+    logger.info('Cluster name reserved -> %s', name)
+
+# ################################################################################################################################
+
+def _is_stale_name(name:'str') -> 'bool':
+    """ Returns whether a name is one that a run reserved and whose process no longer runs.
+    """
+    if not is_reserved_name(name, ModuleCtx.Name_Prefix):
+        return False
+
+    out = not is_name_live(name)
+    return out
+
+# ################################################################################################################################
+
+def remove_stale_clusters() -> 'None':
+    """ Deletes the clusters and the runtime directories of earlier runs whose processes no longer run.
+    A cluster or a directory of another name, or of a run in progress, is never touched.
+    """
+    # The clusters of earlier runs are found by their names ..
+    result = run(['kind', 'get', 'clusters'])
+    cluster_names = result.stdout.split()
+
+    stale:'strset' = set()
+
+    for name in cluster_names:
+        if _is_stale_name(name):
+            stale.add(name)
+
+    # .. as are the runtime directories of runs whose clusters are already deleted ..
+    for name in os.listdir(ModuleCtx.Runtime_Base_Dir):
+        if _is_stale_name(name):
+            stale.add(name)
+
+    # .. and each is removed together with the reservation that its run left.
+    for name in sorted(stale):
+        if name in cluster_names:
+            _ = run(['kind', 'delete', 'cluster', '--name', name])
+            logger.info('Stale cluster deleted -> %s', name)
+
+        shutil.rmtree(os.path.join(ModuleCtx.Runtime_Base_Dir, name), ignore_errors=True)
+        forget_name(name)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def run(command:'strlist', input_text:'str'='', check:'bool'=True) -> 'subprocess.CompletedProcess[str]':
     """ Runs one command and returns its result.
     """
@@ -105,7 +191,7 @@ def run(command:'strlist', input_text:'str'='', check:'bool'=True) -> 'subproces
 def kubectl(*args:'str', input_text:'str'='', check:'bool'=True) -> 'subprocess.CompletedProcess[str]':
     """ Runs one kubectl command against the cluster of the suites.
     """
-    out = run(['kubectl', '--context', ModuleCtx.Context, *args], input_text, check)
+    out = run(['kubectl', '--context', cluster.context, *args], input_text, check)
     return out
 
 # ################################################################################################################################
@@ -153,14 +239,15 @@ def delete_manifest(file_name:'str', placeholders:'strstrdict') -> 'None':
 # ################################################################################################################################
 
 def prepare_runtime_dir() -> 'str':
-    """ Removes what an earlier run left in the runtime directory, including its cluster, and creates the directory again.
+    """ Reserves the names of the run, removes the clusters and the directories of earlier runs that no longer run,
+    and creates the runtime directory of the run.
     """
-    delete_cluster()
+    reserve_cluster()
+    remove_stale_clusters()
 
-    shutil.rmtree(ModuleCtx.Runtime_Dir, ignore_errors=True)
-    os.makedirs(ModuleCtx.Runtime_Dir)
+    os.makedirs(cluster.runtime_dir)
 
-    out = ModuleCtx.Runtime_Dir
+    out = cluster.runtime_dir
     return out
 
 # ################################################################################################################################
@@ -178,13 +265,13 @@ def create_cluster(run_dir:'str', repository_dir:'str') -> 'None':
     into its worker nodes, and waits until every node is ready.
     """
     placeholders = {
-        'cluster_name': ModuleCtx.Cluster_Name,
+        'cluster_name': cluster.name,
         'repository_dir': repository_dir,
         'run_dir': run_dir,
         'volume_dir': ModuleCtx.Volume_Dir,
     }
 
-    for zone in ModuleCtx.Zones.values():
+    for zone in cluster.zones.values():
         key = zone.replace('-', '_')
         placeholders[f'volume_{key}'] = get_zone_volume_dir(run_dir, zone)
 
@@ -194,20 +281,20 @@ def create_cluster(run_dir:'str', repository_dir:'str') -> 'None':
     with open(config_path, 'w') as config_file:
         _ = config_file.write(config)
 
-    # A cluster that an interrupted run left behind is deleted before the new one is created.
-    delete_cluster()
-
-    _ = run(['kind', 'create', 'cluster', '--name', ModuleCtx.Cluster_Name, '--config', config_path,
+    _ = run(['kind', 'create', 'cluster', '--name', cluster.name, '--config', config_path,
         '--wait', ModuleCtx.Create_Timeout])
 
     _ = kubectl('create', 'namespace', ModuleCtx.Namespace)
 
-    logger.info('Cluster %s created', ModuleCtx.Cluster_Name)
+    logger.info('Cluster %s created', cluster.name)
 
 # ################################################################################################################################
 
 def delete_cluster() -> 'None':
-    _ = run(['kind', 'delete', 'cluster', '--name', ModuleCtx.Cluster_Name], check=False)
+    """ Deletes the cluster of the run. Its runtime directory remains, with the logs of the run, until a later run
+    finds the reservation of the name released.
+    """
+    _ = run(['kind', 'delete', 'cluster', '--name', cluster.name], check=False)
 
 # ################################################################################################################################
 
@@ -227,7 +314,7 @@ def load_image(image:'str', node_names:'strlist') -> 'None':
         archive_path = os.path.join(directory, 'image.tar')
         _ = docker('save', '--platform', platform, '-o', archive_path, image)
 
-        _ = run(['kind', 'load', 'image-archive', archive_path, '--name', ModuleCtx.Cluster_Name,
+        _ = run(['kind', 'load', 'image-archive', archive_path, '--name', cluster.name,
             '--nodes', ','.join(node_names)])
 
 # ################################################################################################################################
@@ -237,7 +324,7 @@ def get_zato_node_names() -> 'strlist':
     """
     out:'strlist' = []
 
-    for node_name, zone in ModuleCtx.Zones.items():
+    for node_name, zone in cluster.zones.items():
         if zone in ModuleCtx.Zato_Zones:
             out.append(node_name)
 
@@ -326,7 +413,7 @@ class KubeProxy:
 
     def start(self) -> 'None':
         process = subprocess.Popen(
-            ['kubectl', '--context', ModuleCtx.Context, 'proxy', f'--address={ModuleCtx.Proxy_Host}', '--port=0'],
+            ['kubectl', '--context', cluster.context, 'proxy', f'--address={ModuleCtx.Proxy_Host}', '--port=0'],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
         self._process = process

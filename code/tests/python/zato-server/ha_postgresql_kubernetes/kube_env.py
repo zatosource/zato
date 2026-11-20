@@ -21,10 +21,10 @@ from dataclasses import dataclass, field
 
 # Zato
 from ha_authority import Authority
-from ha_env import create_quickstart_environment, start_receivers, HASession
-from kube_cluster import apply_manifest, create_cluster, delete_cluster, get_kind_gateway, get_node_ip, get_pod_node, \
-    get_zato_node_names, get_zone_volume_dir, KubeProxy, kubectl, load_image, ModuleCtx as ClusterCtx, prepare_runtime_dir, \
-    save_pod_logs
+from ha_env import create_quickstart_environment, start_receivers, HASession, stop_receivers
+from kube_cluster import apply_manifest, cluster, create_cluster, delete_cluster, get_kind_gateway, get_node_ip, \
+    get_pod_node, get_zato_node_names, get_zone_volume_dir, KubeProxy, kubectl, load_image, ModuleCtx as ClusterCtx, \
+    prepare_runtime_dir, save_pod_logs
 from kube_endpoints import EndpointWatcher
 from nodes import is_named_by_record, ModuleCtx as NodesCtx, Node, Timers
 from topology import ModuleCtx as TopologyCtx, Referee
@@ -103,7 +103,7 @@ class KubeNode(Node):
 
     @property
     def zone(self) -> 'str':
-        out = ClusterCtx.Zones[self.host_node]
+        out = cluster.zones[self.host_node]
         return out
 
     @property
@@ -345,7 +345,7 @@ def _create_ca_secret(authority:'Authority') -> 'None':
 def _create_host_directories(run_dir:'str') -> 'None':
     """ Creates the directories that the pods write to, owned by the user the pods run as.
     """
-    for zone in ClusterCtx.Zones.values():
+    for zone in cluster.zones.values():
         zone_dir = get_zone_volume_dir(run_dir, zone)
 
         for pod_name in ModuleCtx.Pod_Names:
@@ -387,7 +387,7 @@ def create_cluster_session() -> 'KubeSession':
 
     # .. and the CA that the pods trust is created.
     authority = Authority(os.path.join(run_dir, 'authority'))
-    control_plane_ip = get_node_ip(ClusterCtx.Control_Plane)
+    control_plane_ip = get_node_ip(cluster.control_plane)
 
     _create_ca_secret(authority)
 
@@ -442,10 +442,7 @@ def create_cluster_session() -> 'KubeSession':
 
 def remove_kube_session(session:'KubeSession') -> 'None':
     session.proxy.stop()
-
-    for receiver in session.base.receivers.values():
-        receiver.stop()
-
+    stop_receivers(session.base)
     delete_cluster()
 
 # ################################################################################################################################
@@ -465,7 +462,7 @@ def _remove_pair(session:'KubeSession') -> 'None':
 
     run_dir = session.base.run_dir
 
-    for zone in ClusterCtx.Zones.values():
+    for zone in cluster.zones.values():
         zone_dir = get_zone_volume_dir(run_dir, zone)
 
         for pod_name in ModuleCtx.Pod_Names:

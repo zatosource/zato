@@ -29,6 +29,7 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.test.client import AdminClient
 from zato.common.test.conftest_base_pubsub import SessionState, get_server_environment, patch_server_conf, \
      run_quickstart_and_enmasse
+from zato.common.test.ha_limits import HALimits
 from zato.common.test.perf_report import report_result, start_measurement
 from zato.common.test.process_util import get_process_tree_pids
 from zato.common.test.pubsub_database import connect
@@ -63,7 +64,7 @@ class ModuleCtx:
     Port_Purpose = 'ha-postgresql-local-server'
 
     # How long the start may take, from the spawn of the command to the first answer of /zato/ping
-    Start_Limit = 10.0
+    Start_Limit = HALimits.Server_Start
 
     # How long the test waits for the first answer before it gives up
     Start_Timeout = 120.0

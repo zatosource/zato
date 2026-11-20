@@ -13,7 +13,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # never travels to the server before the checks of the transaction are confirmed.
 
 # stdlib
-from contextlib import contextmanager
 from typing import NamedTuple
 
 # pg8000
@@ -27,22 +26,15 @@ from pg8000.legacy import IntegrityError, ProgrammingError
 
 if 0:
     from collections.abc import Iterator
-    from sqlalchemy.engine import Connection
-    from zato.common.typing_ import any_, anytuple, callable_
+    from zato.common.typing_ import any_, anytuple
     any_ = any_
     anytuple = anytuple
-    callable_ = callable_
-    Connection = Connection
     anyiter = Iterator[any_]
-    noneiter = Iterator[None]
 
 deferred_reply_list = list['DeferredReply']
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# The driver whose connections defer their replies.
-_driver_name = 'pg8000'
 
 # The statement with which pg8000 rolls a transaction back.
 _rollback_statement = 'rollback'
@@ -257,49 +249,6 @@ def defer_reply(self:'any_', context:'any_', key:'anytuple') -> 'None':
 
     reply = DeferredReply(context, key)
     self._zato_deferred.append(reply)
-
-# ################################################################################################################################
-
-def check_rows(connection:'Connection', cursor:'any_', check:'callable_') -> 'None':
-    """ Gives the number of rows of the statement that a cursor executed last to a check, once its reply is read.
-    The reply to a statement of pg8000 deferred within deferred_replies is read with that of a later statement,
-    and always before a statement whose reply is read at once is sent.
-    """
-    if connection.dialect.driver == _driver_name:
-        context = cursor._context
-
-        if context.zato_is_pending:
-            context.zato_check = check
-        else:
-            row_count = len(context.rows)
-            check(row_count)
-
-    else:
-        rows = cursor.fetchall()
-        row_count = len(rows)
-        check(row_count)
-
-# ################################################################################################################################
-
-@contextmanager
-def deferred_replies(connection:'Connection') -> 'noneiter':
-    """ Within the block, each statement of the connection is sent without its reply being read, and its reply is read
-    when its rows are needed, or with that of the next statement whose reply is read at once, e.g. the commit.
-    An error of such a statement is raised by that later read. The row count of a statement that returns no rows
-    is not known within the block. A connection of a driver other than pg8000 reads each reply as usual.
-    """
-    if connection.dialect.driver == _driver_name:
-        dbapi_connection = connection.connection.dbapi_connection
-        defers_replies = dbapi_connection._zato_defers_replies
-        dbapi_connection._zato_defers_replies = True
-
-        try:
-            yield
-        finally:
-            dbapi_connection._zato_defers_replies = defers_replies
-
-    else:
-        yield
 
 # ################################################################################################################################
 # ################################################################################################################################

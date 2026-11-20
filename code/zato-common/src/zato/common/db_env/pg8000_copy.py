@@ -18,7 +18,7 @@ from sqlalchemy import event as sa_event
 from sqlalchemy.dialects.postgresql.pg8000 import PGDialect_pg8000
 
 # Zato
-from zato.common.db_env.pg8000_wire import Max_Inline_Size
+from zato.common.db_env.pg8000_common import Max_Inline_Size
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################

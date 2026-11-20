@@ -12,12 +12,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # that builds the pair provides its Zato database.
 
 # stdlib
+import errno
 import logging
 import os
 import shutil
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from functools import partial
 
 # Zato
 from nodes import is_named_by_record, ModuleCtx as NodesCtx, Node, NodeHook, Timers
@@ -26,18 +28,24 @@ from pair import ModuleCtx as PairCtx, render_job_file
 from topology import Backend, create_network, Lease, ModuleCtx as TopologyCtx, prepare_runtime_dir, Referee, remove_network, \
     save_container_logs
 from zato.common.crypto.api import CryptoManager
-from zato.common.test.conftest_base_pubsub import find_free_port, patch_server_conf, render_template, \
-    run_quickstart_and_enmasse, SessionState
+from zato.common.test.conftest_base_pubsub import patch_server_conf, render_template, run_quickstart_and_enmasse, \
+    SessionState
 from zato.common.test.receiver import WebhookReceiver
+from zato.common.test.reservation import PortInUse, start_on_reserved_port
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.test.pubsub_database import PubSubDatabase
+    from zato.common.test.reservation import PortReservation
     from zato.common.typing_ import any_, anydict, strstrdict
-
     PubSubDatabase = PubSubDatabase
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+reservation_list = list['PortReservation']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,6 +65,9 @@ class ModuleCtx:
 
     # The address of the receivers in that file, which the containers reach on the gateway of the network instead
     Template_Receiver_Host = 'http://127.0.0.1:'
+
+    # The purpose under which each receiver reserves its port
+    Receiver_Port_Purpose = 'ha-postgresql-receiver'
 
     # The topics of that file
     Topic_Names = [
@@ -109,6 +120,7 @@ class HASession:
     puller_password: 'str'
     invoke_password: 'str'
     receivers: 'anydict'
+    receiver_ports: 'reservation_list'
     server_directories: 'strstrdict'
     deploy_dir: 'str'
 
@@ -280,6 +292,33 @@ def create_deploy_dir(run_dir:'str', job_yaml:'str') -> 'str':
 
 # ################################################################################################################################
 
+def _start_receiver(port:'int', *, output_directory:'str', host:'str') -> 'WebhookReceiver':
+    """ Starts a receiver on a reserved port, reporting a port that a process without a reservation took as PortInUse.
+    """
+    receiver = WebhookReceiver(port, output_directory, host=host)
+
+    try:
+        receiver.start()
+    except OSError as error:
+        if error.errno == errno.EADDRINUSE:
+            raise PortInUse(f'Receiver could not bind port {port}') from error
+        raise
+
+    return receiver
+
+# ################################################################################################################################
+
+def stop_receivers(session:'HASession') -> 'None':
+    """ Stops the receivers of a session and releases the reservations of their ports.
+    """
+    for receiver in session.receivers.values():
+        receiver.stop()
+
+    for reservation in session.receiver_ports:
+        reservation.release()
+
+# ################################################################################################################################
+
 def start_receivers(session:'HASession', host:'str') -> 'tuple[str, str]':
     """ Creates the credentials of a session, starts its receivers on the given address and creates the directory
     that the nodes deploy the scheduler jobs from, returning the enmasse file with the objects of pub/sub
@@ -288,27 +327,28 @@ def start_receivers(session:'HASession', host:'str') -> 'tuple[str, str]':
     session.publisher_password = 'test.pub.' + CryptoManager.generate_hex_string()
     session.puller_password = 'test.pull.' + CryptoManager.generate_hex_string()
     session.receivers = {}
+    session.receiver_ports = []
     session.server_directories = {}
 
     placeholders:'strstrdict' = {}
     placeholders['publisher_password'] = session.publisher_password
     placeholders['puller_password'] = session.puller_password
 
-    # The receivers listen on an address of the host that the nodes reach ..
+    # The receivers listen on reserved ports of an address of the host that the nodes reach ..
     for topic_name in ModuleCtx.Topic_Names:
         key = _topic_to_key(topic_name)
-        port = find_free_port()
-
-        placeholders[f'sub_{key}_password'] = 'test.sub.' + CryptoManager.generate_hex_string()
-        placeholders[f'port_{key}'] = str(port)
 
         output_directory = os.path.join(session.run_dir, 'receivers', key)
         os.makedirs(output_directory, exist_ok=True)
 
-        receiver = WebhookReceiver(port, output_directory, host=host)
-        receiver.start()
+        started = start_on_reserved_port(ModuleCtx.Receiver_Port_Purpose,
+            partial(_start_receiver, output_directory=output_directory, host=host))
 
-        session.receivers[topic_name] = receiver
+        session.receivers[topic_name] = started.result
+        session.receiver_ports.append(started.reservation)
+
+        placeholders[f'sub_{key}_password'] = 'test.sub.' + CryptoManager.generate_hex_string()
+        placeholders[f'port_{key}'] = str(started.reservation.port)
 
     pubsub_yaml = render_template(ModuleCtx.Template_Path, placeholders)
     pubsub_yaml = pubsub_yaml.replace(ModuleCtx.Template_Receiver_Host, f'http://{host}:')
@@ -365,8 +405,7 @@ def create_session() -> 'HASession':
 # ################################################################################################################################
 
 def remove_session(session:'HASession') -> 'None':
-    for receiver in session.receivers.values():
-        receiver.stop()
+    stop_receivers(session)
 
     session.lease.delete_cluster()
     remove_network()

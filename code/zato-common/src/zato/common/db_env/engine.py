@@ -14,6 +14,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import fcntl
 import os
 import sqlite3
+from importlib import import_module
 from typing import NamedTuple
 
 # gevent
@@ -23,6 +24,7 @@ from gevent.monkey import get_original, is_module_patched
 # SQLAlchemy
 from sqlalchemy import create_engine, text
 from sqlalchemy import event as sa_event
+from sqlalchemy.engine import Dialect
 from sqlalchemy.pool import QueuePool
 
 # Zato
@@ -31,8 +33,7 @@ from zato.common.db_env.connection import build_connect_args_from_values, build_
     clear_postgresql_connect_timeout, DatabaseDurabilityError, PostgreSQL_Connect_Timeout_Seconds, \
     set_postgresql_keepalive, set_postgresql_no_delay, set_postgresql_session, set_sqlite_pragmas, verify_postgresql_server
 from zato.common.db_env.fence import install_fence
-from zato.common.db_env.pg8000_copy import install as install_pg8000_copy
-from zato.common.db_env.pg8000_wire import install as install_pg8000_wire
+from zato.common.db_env.pg8000_common import Driver_Name as PG8000_Driver_Name
 from zato.common.db_env.process_queue import ProcessQueue
 from zato.common.db_env.sqlite_checkpoint import set_background_checkpoint_limit, WALCheckpointer
 from zato.common.db_env.sqlite_stats import collect_sqlite_stats, Env_Stats_Dir
@@ -79,10 +80,8 @@ _engine_cache:'anydict' = {}
 # The background checkpointers of the cached SQLite engines that have one, by the same keys
 _checkpointer_cache:'anydict' = {}
 
-# The connections of PostgreSQL prepare their statements once and exchange bytea values and native types in the binary format,
-# and they insert rows in bulk with COPY.
-install_pg8000_wire()
-install_pg8000_copy()
+# The module whose import applies the extensions of pg8000, loaded by the first connection of pg8000 in a process
+_pg8000_install_module = 'zato.common.db_env.pg8000_install'
 
 # SQLite file engines are cached per path and pool mode
 _sqlite_file_engine_cache:'anydict' = {}
@@ -143,6 +142,18 @@ class _PasswordFileReader:
             password = password_file.read()
 
         cparams['password'] = password.strip()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _install_pg8000(dialect:'Dialect', connection_record:'any_', cargs:'any_', cparams:'stranydict') -> 'None':
+    """ Applies the extensions of pg8000 before a connection of pg8000 is opened, whichever engine of the process opens it.
+    """
+    if dialect.driver == PG8000_Driver_Name:
+        _ = import_module(_pg8000_install_module)
+
+# A process whose databases are all SQLite never loads pg8000.
+sa_event.listen(Dialect, 'do_connect', _install_pg8000)
 
 # ################################################################################################################################
 # ################################################################################################################################

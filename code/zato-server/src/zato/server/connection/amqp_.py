@@ -55,7 +55,6 @@ if 0:
 
 # ################################################################################################################################
 
-version = get_version()
 logger = getLogger('zato')
 
 # ################################################################################################################################
@@ -64,6 +63,7 @@ def get_connection_class(object_name:'str', suffix:'str', is_tls:'bool') -> 'typ
 
     class _PyAMQPConnection(PyAMQPConnection):
         def __init__(_py_amqp_self, *args, **kwargs):
+            version = get_version()
             kwargs['client_properties'] = {
                 'zato.component': '{}/{}'.format(get_component_name('amqp-conn'), suffix),
                 'zato.version': version,

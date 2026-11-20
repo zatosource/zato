@@ -92,4 +92,23 @@ def test_every_multi_instance_configuration_is_synchronous() -> 'None':
                 assert settings[setting_name], f'StatefulSet {name} has {replicas} instances and an empty {setting_name}'
 
 # ################################################################################################################################
+
+def test_the_database_of_the_pair_has_a_synchronous_standby() -> 'None':
+    """ The StatefulSet of the Zato database runs a primary and a standby, and the primary waits for the standby by name.
+    """
+    statefulsets = _get_statefulsets()
+
+    statefulset = None
+    for item in statefulsets:
+        if item['metadata']['name'] == PostgreSQLCtx.StatefulSet_Name:
+            statefulset = item
+
+    assert statefulset is not None, f'No StatefulSet {PostgreSQLCtx.StatefulSet_Name} in {PostgreSQLCtx.Manifest_Path}'
+    assert statefulset['spec']['replicas'] == PostgreSQLCtx.Replicas
+
+    for container in statefulset['spec']['template']['spec']['containers']:
+        settings = _read_settings(container['args'])
+        assert settings[ModuleCtx.Synchronous_Standby_Names] == f'"{PostgreSQLCtx.Standby_Pod_Name}"'
+
+# ################################################################################################################################
 # ################################################################################################################################

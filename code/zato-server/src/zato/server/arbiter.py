@@ -501,6 +501,9 @@ class Arbiter:
         _ = gc.collect()
         gc.freeze()
 
+        # .. the collector, disabled while the server started, runs again in the arbiter and in every process it forks ..
+        gc.enable()
+
         # .. the config process starts first, and the worker once it is ready ..
         if self.config_process:
             self.config_process.spawn()

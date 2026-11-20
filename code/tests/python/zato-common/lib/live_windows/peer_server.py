@@ -199,9 +199,13 @@ class ScheduleRunner:
         self.schedule = schedule
         self.name = schedule['name']
 
-        # The claims that the remote end may have carried out without confirming them, each one mapping
-        # the claim path of a file to its original path, as the server keeps them
-        self.unconfirmed_claims:'strdict' = {}
+        # The claims that the remote end may have carried out without confirming them, or that could not be released,
+        # each one mapping the claim path of a file to its original path, as the server keeps them
+        self.claims_to_release:'strdict' = {}
+
+        # The processed files that could not be moved out of the way, each one mapping the current path of a file
+        # to the directory, the subdirectory and the name it is moved with in the next run
+        self.failed_moves:'dict[str, anydict]' = {}
 
         # How many runs started and how many ended, so that a test knows when a run that started after a point in time ended
         self.started_runs = 0
@@ -259,7 +263,8 @@ class ScheduleRunner:
         conn = self.peer.connection(self.conn_name)
         directory = self.schedule['directory'].rstrip('/')
 
-        self._release_unconfirmed_claims(conn)
+        self._release_pending_claims(conn)
+        self._retry_failed_moves(conn)
 
         entries = conn.list(directory)
 
@@ -287,10 +292,11 @@ class ScheduleRunner:
 
 # ################################################################################################################################
 
-    def _release_unconfirmed_claims(self, conn:'SMBConnection') -> 'None':
-        """ Renames back each file that an earlier run claimed without a confirmation from the remote end.
+    def _release_pending_claims(self, conn:'SMBConnection') -> 'None':
+        """ Renames back each file that an earlier run claimed without a confirmation from the remote end,
+        or could not release.
         """
-        for claim_path, full_path in list(self.unconfirmed_claims.items()):
+        for claim_path, full_path in list(self.claims_to_release.items()):
 
             # A file that is not under its claim name was not claimed, and a file under its original name is never replaced ..
             try:
@@ -300,10 +306,32 @@ class ScheduleRunner:
             # .. and a remote end that is still unreachable leaves the claim to the next run.
             except Exception:
                 error = format_exc()
-                self.peer.log(ModuleCtx.Level_Info, f'Could not release the unconfirmed claim on `{claim_path}` -> {error}')
+                self.peer.log(ModuleCtx.Level_Info, f'Could not release the claim on `{claim_path}` -> {error}')
                 continue
 
-            del self.unconfirmed_claims[claim_path]
+            del self.claims_to_release[claim_path]
+
+# ################################################################################################################################
+
+    def _retry_failed_moves(self, conn:'SMBConnection') -> 'None':
+        """ Moves out of the way each processed file that an earlier run could not move.
+        """
+        for current_path, move in list(self.failed_moves.items()):
+
+            # A file that is no longer under its path was moved by the remote end before it could confirm the move ..
+            try:
+                exists = conn.exists(current_path)
+
+            # .. and a remote end that is still unreachable leaves the move to the next run.
+            except Exception:
+                error = format_exc()
+                self.peer.log(ModuleCtx.Level_Info, f'Could not check file `{current_path}` before its move -> {error}')
+                continue
+
+            del self.failed_moves[current_path]
+
+            if exists:
+                self._move_away(conn, move['directory'], move['subdirectory'], move['file_name'], current_path)
 
 # ################################################################################################################################
 
@@ -321,7 +349,7 @@ class ScheduleRunner:
                 conn.move(full_path, claim_path)
             except OutcomeUnknown:
                 self.peer.log(ModuleCtx.Level_Info, f'Claim of file `{full_path}` not confirmed, it is released in the next run')
-                self.unconfirmed_claims[claim_path] = full_path
+                self.claims_to_release[claim_path] = full_path
                 return
             except Exception:
                 self.peer.log(ModuleCtx.Level_Info, f'File `{full_path}` already claimed by another consumer, skipping')
@@ -350,7 +378,7 @@ class ScheduleRunner:
             if self.schedule['max_attempts'] == 1:
                 self._move_away(conn, directory, self.schedule['quarantine_directory'], file_name, current_path)
             elif current_path != full_path:
-                conn.move(current_path, full_path)
+                self._release_claim(conn, current_path, full_path)
 
             return
 
@@ -379,11 +407,29 @@ class ScheduleRunner:
             stamp = now.strftime(_scheduler.Collision_Suffix_Format)
             destination = f'{destination}.{stamp}'
 
+        # A file that could not be moved stays under its current path, so the next run moves it again.
         try:
             conn.move(current_path, destination)
         except Exception:
             error = format_exc()
-            self.peer.log(ModuleCtx.Level_Warning, f'Could not put file `{current_path}` out of the way -> {error}')
+            self.peer.log(ModuleCtx.Level_Info, f'Could not put file `{current_path}` out of the way, it is moved in the next run -> {error}')
+            self.failed_moves[current_path] = {
+                'directory': directory,
+                'subdirectory': subdirectory,
+                'file_name': file_name,
+            }
+
+# ################################################################################################################################
+
+    def _release_claim(self, conn:'SMBConnection', claim_path:'str', full_path:'str') -> 'None':
+        """ Renames a claimed file back to its original name, or leaves the claim to the next run if the remote end refuses.
+        """
+        try:
+            conn.move(claim_path, full_path)
+        except Exception:
+            error = format_exc()
+            self.peer.log(ModuleCtx.Level_Info, f'Could not release the claim on `{claim_path}`, it is released in the next run -> {error}')
+            self.claims_to_release[claim_path] = full_path
 
 # ################################################################################################################################
 # ################################################################################################################################

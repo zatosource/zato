@@ -32,6 +32,7 @@ from pg8000.exceptions import DatabaseError, InterfaceError
 from zato_pg_wire.zato_pg_wire import encode_bind, RowDecoder
 
 # Zato
+from zato.common.db_env.pg8000_common import Max_Inline_Size
 from zato.common.db_env.pg8000_deferred import can_defer_reply, confirm_checks, defer_reply, forget_stale_statement, \
      in_transaction, raises_deferred_errors, read_deferred
 from zato.common.typing_ import cast_
@@ -51,9 +52,6 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# A value at least this large is written to the socket as it is, rather than copied into the buffer of its message.
-Max_Inline_Size = 65536
 
 # How many prepared statements each connection keeps.
 Max_Statements = 512

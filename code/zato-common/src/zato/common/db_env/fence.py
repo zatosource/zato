@@ -23,7 +23,7 @@ from weakref import WeakKeyDictionary
 from sqlalchemy import event
 
 # Zato
-from zato.common.db_env.pg8000_deferred import check_rows
+from zato.common.db_env.pg8000_common import check_rows
 from zato.common.db_env.write_path import get_write_path, Mechanism
 from zato.common.defaults import default_env_base_dir
 from zato.common.pubsub.sql.replaced import raise_replaced
