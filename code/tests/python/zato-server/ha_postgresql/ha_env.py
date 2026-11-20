@@ -20,7 +20,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 
 # Zato
-from nodes import ModuleCtx as NodesCtx, Node, NodeHook, Timers
+from nodes import is_named_by_record, ModuleCtx as NodesCtx, Node, NodeHook, Timers
 from load_balancer import HAProxy
 from pair import ModuleCtx as PairCtx, render_job_file
 from topology import Backend, create_network, Lease, ModuleCtx as TopologyCtx, prepare_runtime_dir, Referee, remove_network, \
@@ -179,8 +179,8 @@ class HAEnvironment:
 # ################################################################################################################################
 
     def wait_for_pair(self, timeout:'float') -> 'Node':
-        """ Waits until one node is active with its server up and the other is its standby,
-        and returns the active node.
+        """ Waits until one node is active with its server up, the referee record names it at the generation it reports,
+        and the other node is its standby, and returns the active node.
         """
         deadline = time.monotonic() + timeout
 
@@ -192,7 +192,7 @@ class HAEnvironment:
                 report = standby.read_role()
 
                 if report is not None:
-                    if report['role'] == ModuleCtx.Role_Standby:
+                    if report['role'] == ModuleCtx.Role_Standby and is_named_by_record(active, self.referee.read_record()):
                         remaining = deadline - time.monotonic()
                         _ = active.wait_until_server_up(remaining)
                         return active

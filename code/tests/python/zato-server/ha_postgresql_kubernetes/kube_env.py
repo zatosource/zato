@@ -26,7 +26,7 @@ from kube_cluster import apply_manifest, create_cluster, delete_cluster, get_kin
     get_zato_node_names, get_zone_volume_dir, KubeProxy, kubectl, load_image, ModuleCtx as ClusterCtx, prepare_runtime_dir, \
     save_pod_logs
 from kube_endpoints import EndpointWatcher
-from nodes import ModuleCtx as NodesCtx, Node, Timers
+from nodes import is_named_by_record, ModuleCtx as NodesCtx, Node, Timers
 from topology import ModuleCtx as TopologyCtx, Referee
 
 # ################################################################################################################################
@@ -274,8 +274,8 @@ class KubeEnvironment:
         raise Exception(f'No node other than {node.node_name}')
 
     def wait_for_pair(self, timeout:'float') -> 'KubeNode':
-        """ Waits until one pod is active with its server up and the other is its standby,
-        and returns the active one.
+        """ Waits until one pod is active with its server up, the referee record names it at the generation it reports,
+        and the other pod is its standby, and returns the active one.
         """
         deadline = time.monotonic() + timeout
 
@@ -287,7 +287,7 @@ class KubeEnvironment:
                 report = standby.read_role()
 
                 if report is not None:
-                    if report['role'] == ModuleCtx.Role_Standby:
+                    if report['role'] == ModuleCtx.Role_Standby and is_named_by_record(active, self.referee.read_record()):
                         remaining = deadline - time.monotonic()
                         _ = active.wait_until_server_up(remaining)
 

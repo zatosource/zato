@@ -202,6 +202,27 @@ class SchedulerRunState:
 
 # ################################################################################################################################
 
+    def confirm_active(self, job_name:'str') -> 'ClaimResult':
+        """ Confirms, immediately before the run of a claimed firing begins, that this server is still the active one.
+        A server that was frozen between its claim and its run may have been replaced in the meantime,
+        and the read of the run state confirms the generation of this server in a transaction of its own.
+        """
+        try:
+            _ = self.shared_objects.get(ModuleCtx.Object_Type, job_name)
+
+        # A server that was replaced, or that cannot reach the Zato database, does not begin the run,
+        # and the claim remains counted without a run.
+        except _not_active_errors as e:
+            reason = f'Server could not be confirmed as the active one before the run: {e}'
+            out = ClaimResult(False, SCHEDULER.OUTCOME.SKIPPED_NOT_ACTIVE, reason)
+
+        else:
+            out = _claimed
+
+        return out
+
+# ################################################################################################################################
+
     def _release(self, job_name:'str', entry_id:'str') -> 'bool':
         """ Clears the record of the given entry from a job's run state, unless another entry holds the latest slot.
         """

@@ -275,7 +275,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.tls_dir = ''
         self.static_dir = ''
         self.hot_deploy_config = Bunch()
-        self.fs_server_config = None # type: any_
+        self.fs_server_config:'any_' = None
         self.fs_sql_config = Bunch()
         self.pickup_config = Bunch()
         self.logging_conf_path = 'server-'
@@ -1440,6 +1440,13 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             },
         })
 
+        # .. a server frozen since its claim may have been replaced, so the claim is confirmed again before the run ..
+        confirmation = self._scheduler_run_state.confirm_active(job_name)
+
+        if not confirmation.is_claimed:
+            self._abandon_fire_event(ctx, confirmation, audit_event_id)
+            return
+
         # Run the main service and capture the outcome ..
         outcome = SCHEDULER.OUTCOME.OK
         error_traceback = ''
@@ -1501,6 +1508,33 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         if on_callback_job:
             _ = spawn(self._invoke_callback_job, on_callback_job, callback_context, event_label)
+
+# ################################################################################################################################
+
+    def _abandon_fire_event(self, ctx:'anydict', confirmation:'ClaimResult', audit_event_id:'intnone') -> 'None':
+        """ Concludes a claimed firing whose run this server does not begin, because it could not confirm
+        that it is still the active one, without invoking the job's service.
+        """
+        job_id = ctx['job_id']
+        job_name = ctx['name']
+        current_run = ctx['current_run']
+
+        logger.warning('Fire event: claimed run abandoned job_id=%s name=%s run=%s slot=%s outcome=%s reason=%s',
+            job_id, job_name, current_run, ctx['nominal_fire_time_iso'], confirmation.outcome, confirmation.reason)
+
+        # The scheduler clears the run from in-flight first, so the next firing of the job is not held back ..
+        try:
+            self._scheduler.mark_complete(job_id, confirmation.outcome, 0, current_run, confirmation.reason)
+        except Exception:
+            logger.warning('Fire event: mark_complete failed job_id=%s name=%s traceback=%s', job_id, job_name, format_exc())
+
+        # .. and the record of the run that was opened closes with the same outcome, if the audit log is reachable.
+        if audit_event_id:
+            try:
+                record_job_complete(audit_event_id, outcome=confirmation.outcome, duration_ms=0, error=confirmation.reason)
+            except Exception:
+                logger.warning('Fire event: abandoned run not recorded job_id=%s name=%s traceback=%s',
+                    job_id, job_name, format_exc())
 
 # ################################################################################################################################
 

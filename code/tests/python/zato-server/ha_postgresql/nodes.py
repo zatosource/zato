@@ -472,3 +472,20 @@ class Node:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+def is_named_by_record(node:'Node', record:'anydict | None') -> 'bool':
+    """ Whether a referee record names the node as the active one at the generation that the node reports.
+    """
+    if record is None:
+        return False
+
+    report = node.read_role()
+
+    if report is None:
+        return False
+
+    out = record['active_node'] == node.node_name and record['generation'] == report['generation']
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
