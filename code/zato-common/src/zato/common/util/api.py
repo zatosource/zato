@@ -80,8 +80,8 @@ import requests
 import yaml
 
 # Zato
-from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, \
-     engine_display_name, MISC, Secret_Shadow, TRACE1, zato_no_op_marker
+from zato.common.api import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_display_name, MISC, Secret_Shadow, TRACE1, \
+     zato_no_op_marker
 from zato.common.broker_message import SERVICE
 from zato.common.const import SECRETS, ServiceConst
 from zato.common.crypto.api import CryptoManager
@@ -90,6 +90,7 @@ from zato.common.ext.validate_ import is_boolean, is_integer, VdtTypeError
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import HTTPBasicAuth
 from zato.common.util.config import enrich_config_from_environment
+from zato.common.util.engine_url import get_engine_url
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
 from zato.common.util.eval_ import as_bool, as_list
 from zato.common.util.file_system import fs_safe_name, fs_safe_now
@@ -1264,44 +1265,6 @@ def get_client_from_server_conf(
 
 def get_repo_dir_from_component_dir(component_dir:'str') -> 'str':
     return os.path.join(os.path.abspath(os.path.join(component_dir)), 'config', 'repo')
-
-# ################################################################################################################################
-
-def get_engine_url(args:'any_') -> 'str':
-    attrs = {}
-    has_get = getattr(args, 'get', False)
-
-    names = ('engine', 'username', 'password', 'host', 'port', 'db_name', 'sqlite_path')
-
-    for name in names:
-        if has_get:
-            attrs[name] = args.get(name, '')
-        else:
-            attrs[name] = getattr(args, name, '')
-
-    is_sqlite = attrs['engine'] == 'sqlite'
-
-    # An SQLite path may arrive under either of the two names
-    if is_sqlite:
-        db_name = attrs.get('db_name')
-        sqlite_path = attrs.get('sqlite_path')
-
-        if db_name:
-            attrs['sqlite_path'] = db_name
-
-        if sqlite_path:
-            attrs['db_name'] = sqlite_path
-
-    # Pick the URL template for the engine ..
-    if is_sqlite:
-        template = engine_def_sqlite
-
-    # .. anything else uses the standard host:port template.
-    else:
-        template = engine_def
-
-    out = template.format(**attrs)
-    return out
 
 # ################################################################################################################################
 

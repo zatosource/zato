@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.cli.enmasse.util import get_engine_from_type, get_type_from_engine, SQL_TYPE_MAP
-from zato.common.util.api import get_engine_url
+from zato.common.util.engine_url import get_engine_url
 
 # ################################################################################################################################
 # ################################################################################################################################

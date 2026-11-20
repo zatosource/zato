@@ -223,11 +223,11 @@ def test_credential_rotation(smb_suite:'SMBWindowsSuite', version:'str', run:'st
 
     finally:
 
-        # The original password returns to Zato before it returns to the guest. A run that started with the new one
-        # keeps the client of the previous connection, and its logons fail for as long as it runs once the guest
-        # no longer accepts the new password, whereas a run with the original password succeeds once the guest has it.
-        smb_suite.import_guest(version)
+        # The original password returns to the guest before it returns to Zato. The sessions that Zato established
+        # with the new one remain valid until the connection is edited, and every schedule logs on with the original one
+        # only after the edit, so no burst of failed logons reaches the lockout threshold of the guest.
         handle.set_password(run, Accounts.Exchange_Username, Accounts.Exchange_Password)
+        smb_suite.import_guest(version)
 
 # ################################################################################################################################
 

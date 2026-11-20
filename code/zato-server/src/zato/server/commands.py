@@ -24,8 +24,7 @@ from humanize import naturalsize
 from zato.common.marshal_.api import Model
 from zato.common.util.platform_ import is_windows
 from zato.common.typing_ import cast_
-from zato.common.util import new_cid
-from zato.common.util.api import get_zato_command
+from zato.common.util.api import get_zato_command, new_cid
 from zato.common.util.time_ import utcnow
 
 # ################################################################################################################################

@@ -11,6 +11,7 @@ import os
 from hashlib import sha256
 from tempfile import mkdtemp, NamedTemporaryFile, TemporaryDirectory
 from unittest import main, TestCase
+from unittest.mock import patch
 
 # Bunch
 from zato.common.ext.bunch import Bunch, bunchify
@@ -511,6 +512,40 @@ class OutconnSMBTestCase(TestCase):
 
         conn.delete_directory(directory_path)
         self.assertFalse(conn.exists(directory_path))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SMBClientDeleteTestCase(TestCase):
+    """ Tests that a client of a deleted connection never logs on again.
+    """
+
+    def test_a_deleted_client_does_not_log_on(self) -> 'None':
+
+        config = bunchify({
+            'id': 1,
+            'name': 'test-deleted-client',
+            'is_active': True,
+            'host': '127.0.0.1',
+            'port': 445,
+            'username': 'test-user',
+            'secret': 'test-password',
+        })
+
+        server = cast_('any_', None)
+        client = SMBClient(config, server)
+
+        # The connection is deleted, e.g. because it was edited, while a run still holds its client ..
+        with patch('smbclient.delete_session'):
+            client.zato_delete_impl()
+
+        # .. and each operation of that run fails without a logon.
+        with patch('smbclient.register_session') as register_session:
+            with self.assertRaises(Exception) as context:
+                _ = client.exists('share/report.csv')
+
+        self.assertEqual(str(context.exception), 'SMB connection `test-deleted-client` was deleted or edited')
+        register_session.assert_not_called()
 
 # ################################################################################################################################
 # ################################################################################################################################

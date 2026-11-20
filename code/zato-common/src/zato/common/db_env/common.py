@@ -23,7 +23,7 @@ from sqlalchemy.types import TypeDecorator
 # Zato
 from zato.common.defaults import default_env_base_dir
 from zato.common.typing_ import cast_
-from zato.common.util.api import as_bool
+from zato.common.util.eval_ import as_bool
 
 # ################################################################################################################################
 # ################################################################################################################################

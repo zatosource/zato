@@ -105,6 +105,10 @@ class SMBClient:
         # Added for API completeness
         self.is_connected = True
 
+        # A client of a connection that was deleted or edited never logs on again. A run that still holds it
+        # then fails at once, instead of logging on with credentials that the connection no longer has.
+        self.is_deleted = False
+
 # ################################################################################################################################
 
     def to_unc(self, remote_path:'str') -> 'str':
@@ -127,6 +131,9 @@ class SMBClient:
     def _register_session(self) -> 'Session':
         """ Returns the session of this client, establishing it first if there is none or its connection was closed.
         """
+        if self.is_deleted:
+            raise Exception(f'SMB connection `{self.name}` was deleted or edited')
+
         out:'Session' = smbclient.register_session(self.host, **self.conn_kwargs)
 
         # A connection whose data the server does not acknowledge in time is closed, which ends each operation that waits on it
@@ -201,6 +208,7 @@ class SMBClient:
 # ################################################################################################################################
 
     def zato_delete_impl(self) -> 'None':
+        self.is_deleted = True
         self.close()
 
 # ################################################################################################################################

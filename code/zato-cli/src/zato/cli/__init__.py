@@ -526,7 +526,7 @@ class ZatoCommand:
 
         # Zato
         from zato.common.db_env.engine import new_zato_engine
-        from zato.common.util.api import get_engine_url
+        from zato.common.util.engine_url import get_engine_url
 
         if not getattr(args, 'odb_path', None):
             raise Exception('Option --odb-path is required')

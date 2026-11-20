@@ -16,7 +16,8 @@ from unittest import TestCase
 from zato.common.ext.bunch import Bunch
 
 # Zato
-from zato.common.util import api as util_api, StaticConfig
+from zato.common.util import api as util_api
+from zato.common.util.api import StaticConfig
 from zato.common.util.search import SearchResults
 
 # ################################################################################################################################

@@ -12,7 +12,7 @@ from logging import getLogger
 
 # Zato
 from zato.common import CHANNEL
-from zato.common.util import spawn_greenlet
+from zato.common.util.api import spawn_greenlet
 from zato.server.pattern.model import CacheEntry, InvocationResponse, ParallelCtx, Target
 
 # ################################################################################################################################

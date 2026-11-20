@@ -418,7 +418,7 @@ def extract_param_placeholders(data:'str') -> 'any_':
 def get_config_object(repo_location:'str', conf_file:'str') -> 'Bunch | ConfigObj':
 
     # Zato
-    from zato.common.util import get_config
+    from zato.common.util.api import get_config
 
     return get_config(repo_location, conf_file, bunchified=False)
 
