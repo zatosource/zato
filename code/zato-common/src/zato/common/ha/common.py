@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The configuration of a server that runs under the active-standby node, which starts the server only on the active host
-# and passes it the referee generation.
+# The configuration of a server that runs under the active-standby node, which keeps a warm server on a host
+# without an active server and passes it the referee generation when the host becomes the active one.
 
 # stdlib
 import os
@@ -28,6 +28,10 @@ class ModuleCtx:
 
     # The referee generation under which the node started the server
     Env_Generation = 'Zato_HA_Generation'
+
+    # The FIFO through which the node delivers the referee generation to a warm server, which waits for it before
+    # it runs any startup hook or opens the Zato database, the same as ENV_ACTIVATION_PATH of zato_ha_core/src/config.rs
+    Env_Activation_Path = 'Zato_HA_Activation_Path'
 
     # The timers of the node, in seconds, each of which the node takes from its own defaults unless it is given one
     Env_Heartbeat_Time = 'Zato_HA_Heartbeat_Time'
@@ -68,6 +72,16 @@ class ModuleCtx:
     # The value of the mode variable that turns the active-standby mode on
     Mode_Active_Standby = 'active-standby'
 
+    # The exit code of a warm server that the node closed the activation path on without a valid generation
+    Activation_Error_Exit_Code = 1
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ActivationError(Exception):
+    """ Raised when the node closes the activation path without a generation or writes one that is not an integer.
+    """
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -88,6 +102,34 @@ def get_node_generation() -> 'intnone':
         out = int(generation)
     else:
         out = None
+
+    return out
+
+# ################################################################################################################################
+
+def wait_for_activation(activation_path:'str') -> 'int':
+    """ Blocks until the node opens the activation path for writing, reads the generation that the node writes to it,
+    sets it in the environment, from which this process and the processes that it forks read it, and returns it.
+    """
+
+    # The open blocks until the node opens the path for writing ..
+    with open(activation_path) as activation_file:
+        line = activation_file.readline()
+
+    # .. the line has the generation, followed by a newline ..
+    generation = line.strip()
+
+    # .. a node that closed the path without a line delivered nothing ..
+    if not generation:
+        raise ActivationError(f'No generation received through `{activation_path}`')
+
+    # .. and a line that is not an integer is not a generation.
+    try:
+        out = int(generation)
+    except ValueError:
+        raise ActivationError(f'Generation `{generation}` received through `{activation_path}` is not an integer')
+
+    os.environ[ModuleCtx.Env_Generation] = generation
 
     return out
 

@@ -56,6 +56,9 @@ class ModuleCtx:
     # The variable through which an active-standby node passes its generation to its server
     Env_HA_Generation = 'Zato_HA_Generation'
 
+    # The variable with the FIFO through which an active-standby node activates its warm server
+    Env_HA_Activation_Path = 'Zato_HA_Activation_Path'
+
     # The purpose under which the ports of the server are reserved
     Port_Purpose = 'ha-postgresql-local-server'
 
@@ -165,7 +168,7 @@ def new_stages() -> 'stage_list':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _read_generation(database:'PubSubDatabase') -> 'int':
+def read_generation(database:'PubSubDatabase') -> 'int':
     """ Returns the generation of the active server as the database holds it.
     """
     connection = connect(database)
@@ -178,6 +181,16 @@ def _read_generation(database:'PubSubDatabase') -> 'int':
         connection.close()
 
     out = row[0]
+    return out
+
+# ################################################################################################################################
+
+def next_generation(database:'PubSubDatabase') -> 'int':
+    """ Returns a generation of a node above the one that the database holds.
+    """
+    stored_generation = read_generation(database)
+
+    out = stored_generation + ModuleCtx.Generation_Step
     return out
 
 # ################################################################################################################################
@@ -281,17 +294,44 @@ def bind_local_server(server:'LocalServer', port:'int') -> 'None':
 
 # ################################################################################################################################
 
+def _new_server_env(server:'LocalServer') -> 'strstrdict':
+    """ Returns the variables of the Zato database and of the generation file that every start of the server is given.
+    """
+    out:'strstrdict' = dict(server.database.env)
+    out[TakeoverCtx.Env_Generation_File] = os.path.join(server.server_dir, TakeoverCtx.Generation_File_Name)
+
+    return out
+
+# ################################################################################################################################
+
 def spawn_local_server(server:'LocalServer', port:'int') -> 'None':
     """ Spawns the server on the port of its configuration with the generation of a node above the one that the database
     holds, by the command of the node, through the command of a recorder if one is given.
     """
-    stored_generation = _read_generation(server.database)
-    generation = stored_generation + ModuleCtx.Generation_Step
+    generation = next_generation(server.database)
 
-    server_env:'strstrdict' = dict(server.database.env)
-    server_env[TakeoverCtx.Env_Generation_File] = os.path.join(server.server_dir, TakeoverCtx.Generation_File_Name)
+    server_env = _new_server_env(server)
     server_env[ModuleCtx.Env_HA_Generation] = f'{generation}'
 
+    _spawn(server, port, server_env)
+
+# ################################################################################################################################
+
+def spawn_warm_local_server(server:'LocalServer', port:'int', activation_path:'str') -> 'None':
+    """ Spawns the server on the port of its configuration without a generation, as a node spawns its warm server,
+    so that the server waits until a generation is written to the activation path.
+    """
+    server_env = _new_server_env(server)
+    server_env[ModuleCtx.Env_HA_Activation_Path] = activation_path
+
+    _spawn(server, port, server_env)
+
+# ################################################################################################################################
+
+def _spawn(server:'LocalServer', port:'int', server_env:'strstrdict') -> 'None':
+    """ Spawns the server on the port of its configuration with the variables given, by the command of the node,
+    through the command of a recorder if one is given.
+    """
     env = get_server_environment(port, server.broker_port.port, server.mllp_port.port, server_env)
 
     command_prefix = get_command_prefix()
@@ -318,7 +358,7 @@ def spawn_local_server(server:'LocalServer', port:'int') -> 'None':
 
 # ################################################################################################################################
 
-def _wait_for_answer(server:'LocalServer') -> 'float':
+def wait_for_answer(server:'LocalServer') -> 'float':
     """ Returns how long after the spawn /zato/ping first answered with 200. A server that exits because its port
     is in use raises PortInUse, so that the start is repeated on another port.
     """
@@ -356,7 +396,7 @@ def start_local_server(server:'LocalServer') -> 'float':
         bind_local_server(server, port)
         spawn_local_server(server, port)
 
-        out = _wait_for_answer(server)
+        out = wait_for_answer(server)
         return out
 
     started = start_on_reserved_port(ModuleCtx.Port_Purpose, start)

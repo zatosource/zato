@@ -9,10 +9,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The start of a server as an arbiter with the config process and the worker. The arbiter reads the name of the server
 # from the configuration database, creates the schemas of the Zato database, removes the MCP sessions of the previous start,
 # takes over the Zato database on PostgreSQL, creates the shared region with the queue of the SQLite file
-# of the Zato database, confirms that nothing that a fork would duplicate is open, and forks the config process and the worker.
+# of the Zato database, imports the modules of the internal services, which both forked processes inherit,
+# confirms that nothing that a fork would duplicate is open, and forks the config process and the worker.
 
 # stdlib
 import os
+from importlib import import_module
 from tempfile import gettempdir
 from time import monotonic
 
@@ -30,12 +32,13 @@ from zato.common.db_env.engine import create_schemas, get_cached_engine_count, g
 from zato.common.db_env.outage import call_until_available
 from zato.common.odb.model import Server
 from zato.common.pubsub.sql.generation import take_over_before_fork
-from zato.common.util.api import get_odb_session_from_server_config
+from zato.common.util.api import find_internal_modules, get_odb_session_from_server_config
 from zato.common.version import get_version
 from zato.server.arbiter import Arbiter
 from zato.server.arbiter_config import ArbiterConfig, ArbiterError
 from zato.server.server_region import new_server_region
 from zato.server.config_runtime import ConfigRuntime
+from zato.server.service import internal
 from zato.server.worker_runtime import WorkerRuntime
 
 # ################################################################################################################################
@@ -129,6 +132,17 @@ def prepare_databases(server_name:'str') -> 'None':
 
     if get_database_type() == Type_PostgreSQL:
         _ = take_over_before_fork(new_unshared_database_engine, server_name)
+
+# ################################################################################################################################
+
+def import_internal_service_modules() -> 'None':
+    """ Imports each module of the internal services, so that the config process and the worker find them imported
+    and each only registers their classes when it deploys them.
+    """
+    module_names = find_internal_modules(internal)
+
+    for module_name in module_names:
+        _ = import_module(module_name)
 
 # ################################################################################################################################
 
@@ -229,6 +243,9 @@ def run_arbiter(zato_app:'ZatoApplication') -> 'int':
 
     # .. the version is read once, and the processes forked below inherit it rather than run git on each start ..
     _ = get_version()
+
+    # .. the modules of the internal services are imported once, and both processes inherit them ..
+    import_internal_service_modules()
 
     # .. the code objects that SQLAlchemy generated so far are kept for the imports of the next start ..
     save_generated_code()

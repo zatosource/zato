@@ -80,11 +80,13 @@ from zato.common.repo import RepoManager
 from zato.common.typing_ import cast_
 from zato.common.ext.bunch import Bunch
 from zato.common.defaults import default_env_base_dir, secret_fields_exact, secret_fields_prefix, secret_fields_suffix
+from zato.common.ha.common import ActivationError, ModuleCtx as HACtx, wait_for_activation
 from zato.common.util.api import asbool, get_config, is_encrypted, new_cid_server, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.platform_ import is_linux, is_mac, is_windows
 from zato.common.util.open_ import open_r
+from zato.server.arbiter_start import import_internal_service_modules, run_arbiter
 from zato.server.base.parallel import ParallelServer
 from zato.server.service.store import ServiceStore
 from zato.server.startup_callable import StartupCallableTool
@@ -367,6 +369,31 @@ def get_util_dir(code_dir:'str') -> 'str':
 
 # ################################################################################################################################
 
+def _wait_for_activation(activation_path:'str', logger:'Logger') -> 'None':
+    """ Imports the modules of the internal services and waits until the node delivers its generation through
+    the activation path. The server runs no startup hook, opens no database and binds no port before that.
+    A delivery without a valid generation ends the process.
+    """
+
+    # The modules that the arbiter would import are imported while the server waits ..
+    import_internal_service_modules()
+
+    logger.info('Waiting for activation through `%s`', activation_path)
+
+    # .. the node delivers its generation once its host becomes the active one ..
+    try:
+        generation = wait_for_activation(activation_path)
+
+    # .. a delivery without one ends the process before any connection to a database ..
+    except ActivationError as e:
+        logger.error('Activation failed -> %s', e)
+        sys.exit(HACtx.Activation_Error_Exit_Code)
+
+    # .. and the server starts under the generation delivered.
+    logger.info('Activated under generation %s', generation)
+
+# ################################################################################################################################
+
 def get_env_manager_base_dir(code_dir:'str') -> 'str':
     if is_windows:
         base_dir = os.path.join(code_dir, 'bundle-ext', 'python-windows')
@@ -479,6 +506,10 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
 
     server_config.main.token = server_config.main.token.encode('utf8')
 
+    # A server that a node keeps warm waits here until the node activates it
+    if activation_path := os.environ.get(HACtx.Env_Activation_Path):
+        _wait_for_activation(activation_path, logger)
+
     # Create the startup callable tool as soon as practical
     startup_callable_tool = StartupCallableTool(server_config)
 
@@ -584,8 +615,6 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
         return server
 
     # .. while a started server runs as an arbiter that forks its worker and returns its exit code once it stopped.
-    from zato.server.arbiter_start import run_arbiter
-
     exit_code = run_arbiter(zato_app)
     sys.exit(exit_code)
 

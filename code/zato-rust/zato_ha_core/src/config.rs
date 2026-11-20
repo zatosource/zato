@@ -45,6 +45,10 @@ pub const ENV_SERVER_PORT: &str = "Zato_Config_Bind_Port";
 /// The environment variable through which the node passes its generation to the Zato server.
 pub const ENV_GENERATION: &str = "Zato_HA_Generation";
 
+/// The environment variable with the FIFO through which the node delivers its generation to a warm Zato server,
+/// which waits for it before it runs any startup hook or opens the Zato database.
+pub const ENV_ACTIVATION_PATH: &str = "Zato_HA_Activation_Path";
+
 /// The environment variable with the host of the Zato database on `PostgreSQL`.
 pub const ENV_DATABASE_HOST: &str = "Zato_Database_Host";
 

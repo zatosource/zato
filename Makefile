@@ -744,7 +744,7 @@ Zato_Test_HA_Modules_power-loss := \
 	test_harness.py test_sqlite_server.py test_postgresql_server.py
 
 Zato_Test_HA_Modules_postgresql-local := \
-	test_takeover_wait.py test_server_liveness.py test_server_start.py test_ping_under_load.py
+	test_takeover_wait.py test_server_liveness.py test_server_start.py test_warm_start.py test_ping_under_load.py
 
 Zato_Test_HA_Modules_postgresql := \
 	test_shared_split_brain.py test_shared_outage.py test_shared_partition.py test_shared_functional.py \
