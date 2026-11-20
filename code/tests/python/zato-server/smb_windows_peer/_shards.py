@@ -10,7 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 
 # Zato
-from live_windows.settings import Partners, Shards, Versions
+from live_windows.guest_versions import item_versions
+from live_windows.settings import Shards, Versions
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -19,7 +20,6 @@ from zato.common.typing_ import cast_
 if 0:
     from _pytest.python import Function
     from pytest import Item
-    from zato.common.typing_ import strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -68,54 +68,6 @@ def _weight(item:'Item') -> 'float':
     function:'Function' = cast_('Function', item)
 
     out = ModuleCtx.Weights[function.originalname]
-    return out
-
-# ################################################################################################################################
-
-def _in_version_order(versions:'strlist') -> 'strlist':
-    out:'strlist' = []
-
-    for version in Versions.All:
-        if version in versions:
-            out.append(version)
-
-    return out
-
-# ################################################################################################################################
-
-def item_versions(item:'Item') -> 'strlist':
-    """ Returns the versions of the guests that a test runs against, in the order of all the versions.
-    """
-    versions:'strlist' = []
-
-    # A test without a version parameter names its guests ..
-    if marker := item.get_closest_marker('guests'):
-        versions.extend(marker.args)
-
-    # .. and a test with one runs against the guest of its version, and against the partner guest if it needs one.
-    else:
-        function:'Function' = cast_('Function', item)
-        version:'str' = cast_('str', function.callspec.params['version'])
-        versions.append(version)
-
-        if item.get_closest_marker('partner_guest'):
-            partner_version = Partners[version]
-            versions.append(partner_version)
-
-    out = _in_version_order(versions)
-    return out
-
-# ################################################################################################################################
-
-def needed_versions(items:'itemlist') -> 'strlist':
-    """ Returns the versions of the guests that any of the tests runs against.
-    """
-    versions:'strlist' = []
-
-    for item in items:
-        versions.extend(item_versions(item))
-
-    out = _in_version_order(versions)
     return out
 
 # ################################################################################################################################

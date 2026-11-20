@@ -10,9 +10,9 @@ use crate::standby;
 use std::io::Write;
 use std::net::{Shutdown, TcpStream};
 
-/// How many bytes of the link the relay passes to the standby before it holds back the rest,
-/// which is less than the database file, so that the shipper is still sending it.
-const HELD_AFTER_BYTES: usize = 4 * 1024 * 1024;
+/// How many bytes of a file the relay passes to the standby before it holds back the rest, which is less than either file
+/// of the snapshot, so that the shipper is still sending that file.
+const HELD_INTO_FILE: u64 = 4 * 1024 * 1024;
 
 /// The size of each read of the relay.
 const RELAY_BUFFER_SIZE: usize = 64 * 1024;
@@ -23,8 +23,21 @@ const SNAPSHOT_ADMISSION_TIMEOUT: Duration = Duration::from_secs(30);
 /// How often a test reads the role of a node that it waits for.
 const ROLE_POLL_INTERVAL: Duration = Duration::from_millis(10);
 
+/// The file of the snapshot that the shipper is sending when the log is restarted.
+#[derive(Clone, Copy)]
+enum RestartedDuring {
+    /// The database file, sent first.
+    DatabaseFile,
+
+    /// The log, sent after the database file.
+    Log,
+}
+
 /// The channels between a test and the relay of its link.
 struct RelayChannels {
+    /// How many bytes the relay passes to the standby before it holds back the rest.
+    held_after: u64,
+
     /// Told once the relay holds back what the active node sends.
     held: mpsc::Sender<()>,
 
@@ -33,7 +46,7 @@ struct RelayChannels {
 }
 
 /// Relays one link from the active node to the standby on `standby_port`, holding back what the active node sends
-/// once `HELD_AFTER_BYTES` passed until the test releases it.
+/// once `held_after` bytes passed until the test releases it.
 fn relay(listener: &TcpListener, standby_port: u16, channels: &RelayChannels) {
     let (mut from_active, _) = listener.accept().unwrap();
     let mut to_standby = TcpStream::connect((LOOPBACK, standby_port)).unwrap();
@@ -46,7 +59,7 @@ fn relay(listener: &TcpListener, standby_port: u16, channels: &RelayChannels) {
     });
 
     let mut buffer = vec![0_u8; RELAY_BUFFER_SIZE];
-    let mut passed = 0;
+    let mut passed: u64 = 0;
     let mut is_held = false;
     while let Ok(count) = from_active.read(&mut buffer) {
         if count == 0 {
@@ -55,8 +68,8 @@ fn relay(listener: &TcpListener, standby_port: u16, channels: &RelayChannels) {
         if to_standby.write_all(buffer.get(..count).unwrap()).is_err() {
             break;
         }
-        passed += count;
-        if !is_held && passed >= HELD_AFTER_BYTES {
+        passed += u64::try_from(count).unwrap();
+        if !is_held && passed >= channels.held_after {
             is_held = true;
             channels.held.send(()).unwrap();
             channels.release.recv().unwrap();
@@ -73,16 +86,22 @@ fn log_salts(path: &Path) -> (u32, u32) {
     (header.salt_one, header.salt_two)
 }
 
-/// Returns how many rows the table of messages of the database at `path` holds and how many bytes their bodies hold.
+/// Returns how many rows the table of messages of the database at `path` holds and how many bytes their bodies hold,
+/// once the integrity check of the database passed.
 fn message_totals(path: &Path) -> (i64, i64) {
     let connection = Connection::open(path).unwrap();
+    let integrity: String = connection.query_row("pragma integrity_check", [], |row| row.get(0)).unwrap();
+    assert_eq!(integrity, "ok", "The integrity check of {} failed", path.display());
     connection
-        .query_row("select count(*), sum(length(body)) from message", [], |row| Ok((row.get(0)?, row.get(1)?)))
+        .query_row("select count(*), sum(length(body)) from message", [], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })
         .unwrap()
 }
 
-#[test]
-fn a_log_restarted_while_the_snapshot_is_sent_reaches_the_standby_whole() {
+/// Restarts the log, checkpointed whole, while the shipper sends a file of the snapshot to a joining standby, and checks
+/// that the standby is admitted and that its copy holds every row of the Zato database.
+fn restart_the_log_while_the_snapshot_is_sent(restarted_during: RestartedDuring) {
     let _disk = DISK.lock();
     let certificates = Certificates::issue();
     let active_dir = tempfile::tempdir().unwrap();
@@ -104,6 +123,10 @@ fn a_log_restarted_while_the_snapshot_is_sent_reaches_the_standby_whole() {
     let mut shipper = Shipper::new(Arc::clone(&shared));
     shipper.iteration().unwrap();
     assert_eq!(shipper.database.checkpointed, shipper.database.end());
+    let held_after = match restarted_during {
+        RestartedDuring::DatabaseFile => HELD_INTO_FILE,
+        RestartedDuring::Log => std::fs::metadata(&database_path).unwrap().len() + HELD_INTO_FILE,
+    };
 
     let standby_config = test_support::node_config(NODE_B, standby_dir.path(), &certificates, TIMERS);
     let standby_path = standby_config.database_path.clone();
@@ -122,6 +145,7 @@ fn a_log_restarted_while_the_snapshot_is_sent_reaches_the_standby_whole() {
     let (release, release_receiver) = mpsc::channel();
     let _ = thread::spawn(move || {
         let channels = RelayChannels {
+            held_after,
             held,
             release: release_receiver,
         };
@@ -138,7 +162,10 @@ fn a_log_restarted_while_the_snapshot_is_sent_reaches_the_standby_whole() {
 
     let deadline = Instant::now() + SNAPSHOT_ADMISSION_TIMEOUT;
     while shared.state.lock().role != Role::ActiveReplicated {
-        assert!(Instant::now() < deadline, "The standby was not admitted within {SNAPSHOT_ADMISSION_TIMEOUT:?}");
+        assert!(
+            Instant::now() < deadline,
+            "The standby was not admitted within {SNAPSHOT_ADMISSION_TIMEOUT:?}"
+        );
         thread::sleep(ROLE_POLL_INTERVAL);
     }
 
@@ -152,4 +179,14 @@ fn a_log_restarted_while_the_snapshot_is_sent_reaches_the_standby_whole() {
     shipper_thread.join().unwrap();
 
     assert_eq!(message_totals(&standby_path), message_totals(&database_path));
+}
+
+#[test]
+fn a_log_restarted_while_the_database_file_is_sent_reaches_the_standby_whole() {
+    restart_the_log_while_the_snapshot_is_sent(RestartedDuring::DatabaseFile);
+}
+
+#[test]
+fn a_log_restarted_while_the_log_is_sent_reaches_the_standby_whole() {
+    restart_the_log_while_the_snapshot_is_sent(RestartedDuring::Log);
 }

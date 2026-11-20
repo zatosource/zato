@@ -181,6 +181,11 @@ class Shards:
     Count_Variable = 'Zato_Test_SMB_Shards'
     Default_Count  = 8
 
+class Step:
+
+    # The variable that names the version whose tests a session of the Dashboard suite runs
+    Variable = 'Zato_Test_SMB_UI_Version'
+
 # ################################################################################################################################
 # ################################################################################################################################
 

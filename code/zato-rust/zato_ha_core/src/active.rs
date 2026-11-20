@@ -521,19 +521,10 @@ impl Shipper {
             return Err(Error::other("the database is not open"));
         };
 
-        // Under the write lock, no frame is appended while the end of the log is recorded,
-        // and with no checkpoint running, neither file changes below that end afterwards.
-        // Writers wait at their barriers until the lock is taken, so that their commits leave it free ..
-        self.shared.state.lock().taking_snapshot_lock = true;
-        let locked = connections.lock.execute_batch("begin immediate");
-
-        // .. and they go on once it is taken or the attempt gives up.
-        self.shared.state.lock().taking_snapshot_lock = false;
-        self.shared.changed.notify_all();
-        locked.map_err(Error::other)?;
-        let scanned = scan_to_end(&mut database.cursor, &connections.checkpoint);
-        connections.lock.execute_batch("rollback").map_err(Error::other)?;
-        let _ = scanned?;
+        // Only this thread checkpoints the Zato database, so the database file does not change while it is sent,
+        // and a commit restarts the log only once every frame of it is in that file. Frames committed after
+        // the recorded end reach the standby with the frames that follow the snapshot.
+        let _ = scan_to_end(&mut database.cursor, &connections.checkpoint)?;
 
         sender.send(&Message::SnapshotBegin { generation }, timeout)?;
         let database_file = SnapshotFile {

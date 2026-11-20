@@ -6,13 +6,14 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import time
-
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.smb_ import SMBTestServer
-from zato.common.typing_ import any_, cast_
+from zato.common.typing_ import cast_
+
+# Playwright helpers
+from smb_connection import create_connection, delete_connection, get_item_id, navigate_to_list, \
+     open_edit_dialog, submit_edit_form
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -23,8 +24,6 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-_Page_Url_Pattern = '/zato/outgoing/smb/?type_=outconn-smb'
 
 _Test_Name_Prefix = 'test.smb.' + CryptoManager.generate_hex_string(32) + '.'
 
@@ -44,87 +43,20 @@ _Console_Noise_Patterns = [
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _navigate(page:'Page', base_url:'str', url_suffix:'str'='') -> 'None':
-    """ Opens the outgoing SMB page and waits for the data table.
-    """
-    _ = page.goto(f'{base_url}{_Page_Url_Pattern}{url_suffix}')
-    _ = page.wait_for_selector('#data-table', state='visible')
-
-# ################################################################################################################################
-
-def _create_connection(page:'Page', name:'str', host:'str', port:'int', username:'str', password:'str') -> 'None':
-    """ Creates an outgoing SMB connection via the UI.
-    """
-
-    # Open the create dialog ..
-    page.click('#markup .page_prompt a')
-    _ = page.wait_for_selector('#create-div', state='visible')
-
-    # .. fill in the fields ..
-    page.fill('#id_name', name)
-    page.fill('#id_host', host)
-    page.fill('#id_port', str(port))
-    page.fill('#id_username', username)
-    page.fill('#id_secret', password)
-
-    # .. submit and wait for the dialog to close ..
-    page.click('#create-div input[type="submit"]')
-    _ = page.wait_for_selector('#create-div', state='hidden', timeout=10000)
-
-    # .. and wait for the row to appear.
-    row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    _ = page.wait_for_selector(row_selector, state='visible', timeout=5000)
-
-# ################################################################################################################################
-
-def _get_item_id(page:'Page', name:'str') -> 'str':
-    """ Extracts the server-side ID of a row by its name.
-    """
-
-    row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
-    row = cast_('any_', page.query_selector(row_selector))
-    id_cell = row.query_selector('td[class*="item_id_"]')
-    out = id_cell.inner_text().strip()
-
-    return out
-
-# ################################################################################################################################
-
-def _open_edit_dialog(page:'Page', item_id:'str') -> 'None':
-    page.evaluate(f'$.fn.zato.outgoing.smb.edit("{item_id}")')
-    _ = page.wait_for_selector('#edit-div', state='visible', timeout=5000)
-
-# ################################################################################################################################
-
-def _submit_edit_form(page:'Page') -> 'None':
-    page.click('#edit-div input[type="submit"]')
-    _ = page.wait_for_selector('#edit-div', state='hidden', timeout=10000)
-    time.sleep(0.3)
-
-# ################################################################################################################################
-
-def _delete_connection(page:'Page', item_id:'str') -> 'None':
-    page.evaluate(f'$.fn.zato.outgoing.smb.delete_("{item_id}")')
-    _ = page.wait_for_selector('#popup_container', state='visible', timeout=5000)
-    page.click('#popup_ok')
-    time.sleep(0.5)
-
-# ################################################################################################################################
-
 def _do_full_crud(page:'Page', base_url:'str', suffix:'str') -> 'None':
     """ Performs a full CRUD cycle: create, edit, edit again with an empty password, delete.
     """
 
     # Navigate ..
-    _navigate(page, base_url)
+    navigate_to_list(page, base_url)
 
     # .. create ..
     name = _Test_Name_Prefix + suffix
-    _create_connection(page, name, 'smb.example.com', 445, 'smb-user', 'smb-password-' + CryptoManager.generate_hex_string())
+    create_connection(page, name, 'smb.example.com', 445, 'smb-user', 'smb-password-' + CryptoManager.generate_hex_string())
 
     # .. edit everything except the password ..
-    item_id = _get_item_id(page, name)
-    _open_edit_dialog(page, item_id)
+    item_id = get_item_id(page, name)
+    open_edit_dialog(page, item_id)
 
     edited_name = name + '-edited'
     page.fill('#id_edit-name', edited_name)
@@ -132,15 +64,15 @@ def _do_full_crud(page:'Page', base_url:'str', suffix:'str') -> 'None':
     page.fill('#id_edit-port', '10445')
     page.fill('#id_edit-username', 'smb-user-edited')
 
-    _submit_edit_form(page)
+    submit_edit_form(page)
 
     # .. edit again with the password field left empty ..
-    _open_edit_dialog(page, item_id)
+    open_edit_dialog(page, item_id)
     page.fill('#id_edit-secret', '')
-    _submit_edit_form(page)
+    submit_edit_form(page)
 
     # .. delete.
-    _delete_connection(page, item_id)
+    delete_connection(page, item_id)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -218,19 +150,19 @@ class TestOutgoingSMBLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Navigate ..
-        _navigate(page, base_url)
+        navigate_to_list(page, base_url)
 
         # .. create ..
         name = _Test_Name_Prefix + 'crud'
-        _create_connection(page, name, 'smb.example.com', 445, 'smb-user', 'smb-password-' + CryptoManager.generate_hex_string())
+        create_connection(page, name, 'smb.example.com', 445, 'smb-user', 'smb-password-' + CryptoManager.generate_hex_string())
 
         # .. verify row exists ..
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{name}"))')
         assert row is not None, f'Row "{name}" should exist after create'
 
         # .. edit the name, host, port and username ..
-        item_id = _get_item_id(page, name)
-        _open_edit_dialog(page, item_id)
+        item_id = get_item_id(page, name)
+        open_edit_dialog(page, item_id)
 
         edited_name = name + '-edited'
         page.fill('#id_edit-name', edited_name)
@@ -238,7 +170,7 @@ class TestOutgoingSMBLifecycle:
         page.fill('#id_edit-port', '10445')
         page.fill('#id_edit-username', 'smb-user-edited')
 
-        _submit_edit_form(page)
+        submit_edit_form(page)
 
         # .. verify old name gone, new name present ..
         old_row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{name}"))')
@@ -254,15 +186,15 @@ class TestOutgoingSMBLifecycle:
         assert '10445' in row_text, f'Expected edited port in row, got: "{row_text}"'
 
         # .. edit again with the password field left empty and make sure nothing breaks ..
-        _open_edit_dialog(page, item_id)
+        open_edit_dialog(page, item_id)
         page.fill('#id_edit-secret', '')
-        _submit_edit_form(page)
+        submit_edit_form(page)
 
         row_after_empty_password = page.query_selector(f'#data-table tbody tr:has(td:text-is("{edited_name}"))')
         assert row_after_empty_password is not None, 'Row should remain after an edit with an empty password'
 
         # .. delete ..
-        _delete_connection(page, item_id)
+        delete_connection(page, item_id)
 
         # .. verify gone.
         row_after_delete = page.query_selector(f'#data-table tbody tr:has(td:text-is("{edited_name}"))')
@@ -278,23 +210,23 @@ class TestOutgoingSMBLifecycle:
         base_url = zato_dashboard['dashboard_url']
 
         # Navigate ..
-        _navigate(page, base_url)
+        navigate_to_list(page, base_url)
 
         # .. create a connection with a Unicode name ..
         name = _Test_Name_Prefix + _Dutch_Letters + '.' + _Greek_Letters + '.' + _Korean_Letters
-        _create_connection(page, name, 'smb.example.com', 445, 'smb-user', 'smb-password-' + CryptoManager.generate_hex_string())
+        create_connection(page, name, 'smb.example.com', 445, 'smb-user', 'smb-password-' + CryptoManager.generate_hex_string())
 
         # .. verify row exists ..
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{name}"))')
         assert row is not None, f'Row "{name}" should exist after create'
 
         # .. edit the host, keeping the Unicode name ..
-        item_id = _get_item_id(page, name)
-        _open_edit_dialog(page, item_id)
+        item_id = get_item_id(page, name)
+        open_edit_dialog(page, item_id)
 
         page.fill('#id_edit-host', 'smb.edited.example.com')
 
-        _submit_edit_form(page)
+        submit_edit_form(page)
 
         # .. the Unicode name must still be there after the edit ..
         row = page.query_selector(f'#data-table tbody tr:has(td:text-is("{name}"))')
@@ -304,7 +236,7 @@ class TestOutgoingSMBLifecycle:
         assert 'smb.edited.example.com' in row_text, f'Expected edited host in row, got: "{row_text}"'
 
         # .. delete ..
-        _delete_connection(page, item_id)
+        delete_connection(page, item_id)
 
         # .. verify gone.
         row_after_delete = page.query_selector(f'#data-table tbody tr:has(td:text-is("{name}"))')
@@ -327,13 +259,13 @@ class TestOutgoingSMBLifecycle:
         try:
 
             # Navigate ..
-            _navigate(page, base_url)
+            navigate_to_list(page, base_url)
 
             # .. create a connection pointing at the live server ..
             name = _Test_Name_Prefix + 'ping'
-            _create_connection(page, name, smb_server.host, smb_server.port, smb_server.username, smb_server.password)
+            create_connection(page, name, smb_server.host, smb_server.port, smb_server.username, smb_server.password)
 
-            item_id = _get_item_id(page, name)
+            item_id = get_item_id(page, name)
 
             # .. click Ping and wait for the response ..
             row_selector = f'#data-table tbody tr:has(td:text-is("{name}"))'
@@ -346,9 +278,9 @@ class TestOutgoingSMBLifecycle:
             assert response.status == 200, f'Ping should return 200, got {response.status} with body: "{body}"'
 
             # .. edit the connection, leaving the password field empty ..
-            _open_edit_dialog(page, item_id)
+            open_edit_dialog(page, item_id)
             page.fill('#id_edit-secret', '')
-            _submit_edit_form(page)
+            submit_edit_form(page)
 
             # .. and ping again - the connection must still authenticate,
             # .. proving the empty field did not overwrite the stored password ..
@@ -360,7 +292,7 @@ class TestOutgoingSMBLifecycle:
             assert response.status == 200, f'Ping after edit should return 200, got {response.status} with body: "{body}"'
 
             # .. delete the connection before the server goes away.
-            _delete_connection(page, item_id)
+            delete_connection(page, item_id)
 
         finally:
             smb_server.stop()

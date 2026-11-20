@@ -19,8 +19,8 @@ if 0:
 # ################################################################################################################################
 
 def live_test(module_name:'str', test_name:'str') -> 'callable_':
-    """ Returns a test function of the live suites, whose directory the conftest puts on the path,
-    so that the same test runs against the peer.
+    """ Returns a test function of the live suites, whose directory the conftest of a suite puts on the path,
+    so that the same test runs against the suite of that conftest.
     """
     module = importlib.import_module(module_name)
 

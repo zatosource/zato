@@ -128,7 +128,22 @@ fn run_standby(listener: &TcpListener, tls: &TlsContext, channels: &StandbyChann
     }
 }
 
-/// Plays a standby that confirms every message of frames once it synced it, reporting a skew of its wall clock.
+/// Returns the position of the end of the log received in a snapshot, as a copy of the Zato database reads it.
+fn snapshot_position(log: &[u8]) -> Position {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join(DATABASE_FILE_NAME);
+    std::fs::write(wal::wal_path(&path), log).unwrap();
+    let mut cursor = WalCursor::new(wal::wal_path(&path));
+    while !matches!(cursor.scan().unwrap(), ScanOutcome::Unchanged | ScanOutcome::Unsettled) {}
+    let header = cursor.header().unwrap();
+    Position {
+        salt_one: header.salt_one,
+        salt_two: header.salt_two,
+        end_frame: cursor.end_frame(),
+    }
+}
+
+/// Plays a standby that confirms the snapshot and every message of frames once it synced them, reporting a skew of its wall clock.
 fn run_confirming_standby(listener: &TcpListener, tls: &TlsContext, clock_skew_ms: u64) {
     let (tcp, _) = listener.accept().unwrap();
     let accepted = tls.accept(tcp).unwrap();
@@ -139,8 +154,9 @@ fn run_confirming_standby(listener: &TcpListener, tls: &TlsContext, clock_skew_m
     };
     accepted.sender.send(&reply, RECEIVE_TIMEOUT).unwrap();
 
-    // The salts of the log, read from the start of its file in the snapshot or from the header of a new cycle.
+    // The salts of the log, read from its file in the snapshot or from the header of a new cycle.
     let mut salts: Option<(u32, u32)> = None;
+    let mut snapshot_log = Vec::new();
     while let Ok((message, next)) = receiver.receive() {
         receiver = next;
         let confirmation = match message {
@@ -148,11 +164,14 @@ fn run_confirming_standby(listener: &TcpListener, tls: &TlsContext, clock_skew_m
                 kind: FileKind::Wal,
                 bytes,
             } => {
-                if salts.is_none() {
-                    let header = wal::WalHeader::parse(bytes.get(..wal::HEADER_SIZE).unwrap().try_into().unwrap()).unwrap();
-                    salts = Some((header.salt_one, header.salt_two));
-                }
+                snapshot_log.extend_from_slice(&bytes);
                 continue;
+            }
+            Message::SnapshotEnd => {
+                let position = snapshot_position(&snapshot_log);
+                salts = Some((position.salt_one, position.salt_two));
+                thread::sleep(STANDBY_SYNC);
+                Message::Confirm(position)
             }
             Message::Frames { header, end_frame, .. } => {
                 if let Some(raw) = header {

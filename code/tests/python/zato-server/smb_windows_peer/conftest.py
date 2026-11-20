@@ -22,12 +22,13 @@ import pytest
 # Zato
 from live_environment.parts import skip_or_fail
 from live_windows.containers import stop_guests
+from live_windows.guest_versions import needed_versions
 from live_windows.peer_server import PeerServer
 from live_windows.session import missing_guest_requirements, open_guests
 from live_windows.settings import Suite, Versions
 
 # Local
-from _shards import current_shard, is_sharded, needed_versions, shard_items
+from _shards import current_shard, is_sharded, shard_items
 from _smb_windows_peer_suite import ModuleCtx, PeerSuite
 
 # ################################################################################################################################

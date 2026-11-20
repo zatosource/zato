@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Local
-from _live_tests import live_test
+# Zato
+from live_windows.live_tests import live_test
 
 # ################################################################################################################################
 # ################################################################################################################################
