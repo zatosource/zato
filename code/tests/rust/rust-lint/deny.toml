@@ -1,9 +1,13 @@
 [graph]
 all-features = true
 
+# Every advisory fails the check - vulnerabilities, unmaintained and unsound crates anywhere in the graph,
+# and yanked versions - and no advisory is ever listed as ignored.
 [advisories]
-unmaintained = "workspace"
-yanked = "warn"
+unmaintained = "all"
+unsound = "all"
+yanked = "deny"
+ignore = []
 
 [licenses]
 private = { ignore = true }

@@ -2211,16 +2211,19 @@ dylint-zato: rust-target-prune ## Dylint all public Rust crates.
 
 dylint: dylint-zato ## Dylint everything.
 
-rust-deny-zato: ## Dependency audit (advisories, licenses, bans) for public crates.
+# Every Cargo manifest of the product crates, their fuzz crates and the Rust test crates. The list is discovered
+# at invocation time, so a crate added to the repository is audited without being registered here.
+ZATO_DENY_CONF       := $(CURDIR)/code/tests/rust/rust-lint/deny.toml
+ZATO_RUST_MANIFESTS   = $(shell find $(ZATO_RUST_DIR) $(CURDIR)/code/tests/rust -name Cargo.toml -not -path '*/target/*' | sort)
+
+rust-deny-zato: ## Dependency audit - advisories, licenses, bans and sources - of every Rust manifest in the repository.
 	. $(HOME)/.cargo/env && \
-	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_common_core/Cargo.toml    --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
-	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_pg_wire/Cargo.toml        --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
-	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_server_core/Cargo.toml    --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
-	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_ipc_core/Cargo.toml       --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
-	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_scheduler_core/Cargo.toml --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
-	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_ha_core/Cargo.toml        --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
-	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_input_output/Cargo.toml             --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check && \
-	cargo deny --manifest-path $(ZATO_RUST_DIR)/zato_queue_bridge/Cargo.toml   --config $(CURDIR)/code/tests/rust/rust-lint/deny.toml check
+	failed=""; \
+	for manifest in $(ZATO_RUST_MANIFESTS); do \
+		echo ">>> cargo deny $$manifest"; \
+		cargo deny --manifest-path $$manifest --config $(ZATO_DENY_CONF) check || failed="$$failed $$manifest"; \
+	done; \
+	if [ -n "$$failed" ]; then printf 'cargo deny failed for:%s\n' "$$failed"; exit 1; fi
 
 rust-deny: rust-deny-zato ## Dependency audit everywhere.
 

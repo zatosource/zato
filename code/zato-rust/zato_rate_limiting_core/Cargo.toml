@@ -17,9 +17,9 @@ crate-type = ["cdylib", "rlib"]
 extension-module = ["pyo3/extension-module"]
 
 [dependencies]
-chrono = { version = "0.4.44", default-features = false, features = ["std"] }
+jiff = { version = "1.0.1", default-features = false, features = ["std"] }
 parking_lot = "0.12"
-pyo3 = "0.28.3"
+pyo3 = "0.29.2"
 
 [lints.rust]
 unsafe_code = "forbid"

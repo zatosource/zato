@@ -9,7 +9,6 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-chrono = "0.4"
 
 [dependencies.zato_scheduler_core]
 path = ".."
