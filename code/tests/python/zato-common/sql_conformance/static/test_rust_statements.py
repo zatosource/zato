@@ -7,11 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 import re
 
 # Zato
-from zato.common.test.sql_conformance.rust_source import get_line, remove_test_modules
+from zato.common.test.sql_conformance.rust_source import get_line, get_test_module_paths, remove_test_modules
 from zato.common.test.sql_conformance.sources import get_rust_files
 
 # ################################################################################################################################
@@ -30,12 +29,6 @@ class ModuleCtx:
 
     # The crate of the active-standby node
     Crate_Source_Dir = 'code/zato-rust/zato_ha_core/src/'
-
-    # A module in a file of its own that only the tests compile
-    Test_Module_File = re.compile(r'#\[cfg\(test\)\]\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+(\w+)\s*;')
-
-    # The modules whose files hold their submodules in a directory of the same name as the crate root
-    Root_Modules = ('lib.rs', 'main.rs', 'mod.rs')
 
     # A statement given as a literal to a method that runs it
     Statement_Call = re.compile(
@@ -57,29 +50,6 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_test_module_paths(sources:'list[SourceFile]') -> 'set[str]':
-    """ Returns the path of each file that holds a module only the tests compile.
-    """
-    out:'set[str]' = set()
-
-    for source in sources:
-        text = source.read()
-        directory, file_name = os.path.split(source.path)
-
-        if file_name in ModuleCtx.Root_Modules:
-            module_dir = directory
-        else:
-            module_dir = os.path.join(directory, file_name.removesuffix('.rs'))
-
-        for match in ModuleCtx.Test_Module_File.finditer(text):
-            module_name = match.group(1)
-            out.add(os.path.join(module_dir, f'{module_name}.rs'))
-            out.add(os.path.join(module_dir, module_name, 'mod.rs'))
-
-    return out
-
-# ################################################################################################################################
-
 def test_node_writes_no_rows() -> 'None':
     """ The active-standby node runs only pragmas, a write lock that it rolls back and reads, so that it never writes rows
     of the Zato database itself.
@@ -91,7 +61,7 @@ def test_node_writes_no_rows() -> 'None':
             if source.relative_path.startswith(ModuleCtx.Crate_Source_Dir):
                 sources.append(source)
 
-    test_module_paths = _get_test_module_paths(sources)
+    test_module_paths = get_test_module_paths(sources)
     findings:'strlist' = []
     statement_count = 0
 

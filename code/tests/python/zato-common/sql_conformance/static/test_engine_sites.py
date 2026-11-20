@@ -12,7 +12,8 @@ import re
 
 # Zato
 from zato.common.test.sql_conformance.python_ast import get_calls, get_dotted_name, get_import_aliases, get_module_name, parse
-from zato.common.test.sql_conformance.rust_source import get_enclosing_function, get_line, remove_test_modules
+from zato.common.test.sql_conformance.rust_source import get_enclosing_function, get_line, get_test_module_paths, \
+     remove_test_modules
 from zato.common.test.sql_conformance.sources import get_python_files, get_rust_files
 
 # Local
@@ -151,7 +152,16 @@ def test_rust_connections_only_in_their_functions() -> 'None':
     """
     findings:'strlist' = []
 
-    for source in get_rust_files():
+    sources = get_rust_files()
+    test_module_paths = get_test_module_paths(sources)
+
+    for source in sources:
+
+        # A module in a file of its own that only the tests compile is not production code ..
+        if source.path in test_module_paths:
+            continue
+
+        # .. and neither is one within a file.
         text = source.read()
         text = remove_test_modules(text)
 

@@ -10,10 +10,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import io
 import re
 import tokenize
+from functools import cache
 
 # Zato
-from zato.common.test.sql_conformance.rust_source import get_enclosing_function, get_line, remove_test_modules
-from zato.common.test.sql_conformance.sources import get_setting_files, ModuleCtx as SourcesModuleCtx
+from zato.common.test.sql_conformance.rust_source import get_enclosing_function, get_line, get_test_module_paths, \
+     remove_test_modules
+from zato.common.test.sql_conformance.sources import get_rust_files, get_setting_files, ModuleCtx as SourcesModuleCtx
 
 # Local
 from registry import ModuleCtx as RegistryModuleCtx
@@ -82,13 +84,29 @@ def _is_allowed_site(source:'SourceFile', text:'str', index:'int') -> 'bool':
 
 # ################################################################################################################################
 
+@cache
+def _get_test_module_paths() -> 'set[str]':
+    """ Returns the path of each Rust file that holds a module only the tests compile.
+    """
+    out = get_test_module_paths(get_rust_files())
+    return out
+
+# ################################################################################################################################
+
 def _get_text(source:'SourceFile') -> 'str':
     """ Returns the text of a source, without the Rust modules that only the tests compile.
     """
-    out = source.read()
 
-    if source.path.endswith(SourcesModuleCtx.Rust_Suffix):
-        out = remove_test_modules(out)
+    # A module in a file of its own that only the tests compile has no text to scan ..
+    if source.path in _get_test_module_paths():
+        out = ''
+
+    # .. while the modules within a file are removed from it.
+    else:
+        out = source.read()
+
+        if source.path.endswith(SourcesModuleCtx.Rust_Suffix):
+            out = remove_test_modules(out)
 
     return out
 
