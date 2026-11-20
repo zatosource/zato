@@ -748,7 +748,7 @@ Zato_Test_HA_Modules_postgresql-local := \
 	test_server_start.py test_warm_start.py test_takeover_wait.py test_server_liveness.py test_ping_under_load.py
 
 Zato_Test_HA_Modules_push-delivery := \
-	test_batch_commit.py test_outgoing_audit.py
+	test_outgoing_audit.py test_publication_commit.py test_batch_commit.py
 
 Zato_Test_HA_Modules_postgresql := \
 	test_shared_split_brain.py test_shared_outage.py test_shared_partition.py test_shared_functional.py \
@@ -805,7 +805,7 @@ test-ha-postgresql-local: ## The takeover of the Zato database and the start of 
 test-ha-power-loss: ## Loss of power to a single server on SQLite and on PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(call Zato_Test_HA_Suite,power-loss)
 
-test-ha-push-delivery: ## The commit of the concluded messages of a push delivery batch and of the audit events of the outgoing calls of its subscriber when the server is killed, the subscription is edited or the server is stopped during the batch, on SQLite, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+test-ha-push-delivery: ## The commit of the concluded messages of a push delivery batch and of the audit events of the outgoing calls of its subscriber when the server is killed, the subscription is edited or the server is stopped during the batch, and the publications of its subscriber, stored and logged only with the commit of the batch and refused a message ID of a different message, on SQLite, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(call Zato_Test_HA_Suite,push-delivery)
 
 test-ha-postgresql: ## Active-standby pair on PostgreSQL without its soak tests, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.

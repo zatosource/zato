@@ -353,27 +353,23 @@ def _run_receipt_id_strict(backend:'SQLPubSubBackend') -> 'None':
 
 # ################################################################################################################################
 
-def _run_receipt_id_not_strict(backend:'SQLPubSubBackend') -> 'None':
-    """ A publication of a push subscriber whose identifier stands for a different message is the only part
-    of its acknowledgement not written, and it alone receives PubSubDuplicateMsgID.
+def _run_push_receipt_id_strict(backend:'SQLPubSubBackend') -> 'None':
+    """ A publication of a push subscriber whose identifier stands for a different message fails the whole acknowledgement
+    of its batch with PubSubDuplicateMsgID, which writes neither the acknowledgement nor any publication of the batch.
     """
     _ = backend.publish(_topic_output, _data_other, msg_id=_receipt_msg_id)
 
     msg_id, _ = _publish_and_pull(backend)
+    snapshot = _get_input_rows()
 
-    conflicting = _build_receipt(backend, _receipt_msg_id, _data_receipt)
-    accepted = _build_receipt(backend, _receipt_msg_id_other, _data_receipt)
+    def _ack() -> 'None':
+        conflicting = _build_receipt(backend, _receipt_msg_id, _data_receipt)
+        accepted = _build_receipt(backend, _receipt_msg_id_other, _data_receipt)
 
-    publications = [conflicting.pending, accepted.pending]
-    backend.ack_with_publications(_sub_key_input, [msg_id], publications, [])
+        publications:'anylist' = [conflicting.pending, accepted.pending]
+        backend.ack_with_publications(_sub_key_input, [msg_id], publications, [])
 
-    # The acknowledgement and the other publication were written ..
-    assert _get_input_rows() == []
-    assert accepted.pending.exception is None
-    assert _get_output_msg_ids() == [_receipt_msg_id, _receipt_msg_id_other]
-
-    # .. and the conflicting publication alone was not.
-    assert isinstance(conflicting.pending.exception, PubSubDuplicateMsgID), conflicting.pending.exception
+    _assert_fails(_ack, PubSubDuplicateMsgID, snapshot)
 
     output_rows = get_message_rows(_topic_output)
     assert output_rows[0].payload == _data_other
@@ -411,7 +407,7 @@ def run_fenced_values_scenario() -> 'None':
     _run_lease_ran_out(_new_backend())
     _run_concluded(_new_backend())
     _run_receipt_id_strict(_new_backend())
-    _run_receipt_id_not_strict(_new_backend())
+    _run_push_receipt_id_strict(_new_backend())
     _run_isolated_in_commit(_new_backend())
 
 # ################################################################################################################################

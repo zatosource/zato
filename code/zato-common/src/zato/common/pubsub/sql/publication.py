@@ -18,6 +18,8 @@ from zato.common.api import HTTP_SOAP, PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource, is_audit_log_enabled
 from zato.common.marshal_.api import Model
 from zato.common.pubsub.sql.config import get_dedup_window_days
+from zato.common.pubsub.sql.dedup import get_existing_fingerprints
+from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID
 from zato.common.pubsub.sql.pending import new_pending_publication
 from zato.common.typing_ import cast_, list_
 from zato.common.util.api import new_msg_id
@@ -30,11 +32,12 @@ from zato.server.metrics import zato_pubsub_messages_published_total
 if 0:
     from zato.common.audit_log.api import AuditLog
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
-    from zato.common.pubsub.sql.pending import PendingPublication
+    from zato.common.pubsub.sql.pending import PendingPublication, pending_publication_list
     from zato.common.typing_ import any_, anydict, intnone, strnone
 
     AuditLog = AuditLog
     PendingPublication = PendingPublication
+    pending_publication_list = pending_publication_list
     SQLPubSubBackend = SQLPubSubBackend
 
 # ################################################################################################################################
@@ -192,11 +195,11 @@ def build_publication(
 
 # ################################################################################################################################
 
-def _announce_publication(backend:'SQLPubSubBackend', built:'BuiltPublication') -> 'None':
+def _announce_publication(backend:'SQLPubSubBackend', pending:'PendingPublication') -> 'None':
     """ Wakes up the subscribers of a committed publication and updates the publish counter.
     """
-    message_values = built.pending.message_values
-    subscriber_keys = built.pending.subscriber_keys
+    message_values = pending.message_values
+    subscriber_keys = pending.subscriber_keys
 
     message_id = message_values['msg_id']
     topic_name = message_values['topic_name']
@@ -289,16 +292,50 @@ def add_published_event(backend:'SQLPubSubBackend', built:'BuiltPublication') ->
 def complete_publication(backend:'SQLPubSubBackend', built:'BuiltPublication') -> 'None':
     """ Runs what follows the commit of a publication - wakes up its subscribers and updates the publish counter.
     """
-    _announce_publication(backend, built)
+    _announce_publication(backend, built.pending)
 
 # ################################################################################################################################
 
-def complete_publications(backend:'SQLPubSubBackend', built_list:'built_publication_list') -> 'None':
+def complete_publications(backend:'SQLPubSubBackend', publications:'pending_publication_list') -> 'None':
     """ Runs what follows the commit of publications that one transaction committed together,
     as complete_publication does for each of them.
     """
-    for built in built_list:
-        _announce_publication(backend, built)
+    for pending in publications:
+        _announce_publication(backend, pending)
+
+# ################################################################################################################################
+
+def check_scope_publication(
+    backend:'SQLPubSubBackend',
+    publications:'pending_publication_list',
+    pending:'PendingPublication',
+    ) -> 'None':
+    """ Raises PubSubDuplicateMsgID if the message ID of a publication that a subscriber service makes during a push
+    delivery batch stands for a different message - one published earlier in the same batch, one received
+    within the dedup window or one that is stored.
+    """
+    msg_id = pending.message_values['msg_id']
+
+    # An ID published earlier in the same batch stands for the content of that publication ..
+    for earlier in publications:
+        if earlier.message_values['msg_id'] == msg_id:
+            fingerprint = earlier.fingerprint
+            break
+
+    # .. while any other ID stands for what the database holds for it, if anything ..
+    else:
+        candidates:'pending_publication_list' = [pending]
+
+        with backend.engine.connect() as connection:
+            existing = get_existing_fingerprints(connection, candidates)
+
+        fingerprint = existing.get(msg_id)
+
+    # .. and an ID that stands for different content is refused.
+    if fingerprint:
+        if fingerprint != pending.fingerprint:
+            message = f'Message ID `{msg_id}` belongs to a different message that exists already'
+            raise PubSubDuplicateMsgID(message)
 
 # ################################################################################################################################
 # ################################################################################################################################

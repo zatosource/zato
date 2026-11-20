@@ -23,8 +23,8 @@ from zato.common.db_env.engine import call_database, execute_write
 from zato.common.pubsub.delivery_scope import get_delivery_scope
 from zato.common.pubsub.sql.admin import SQLAdminAPI
 from zato.common.pubsub.sql.config import get_batch_size, get_pull_lease_seconds
-from zato.common.pubsub.sql.publication import add_published_event, build_publication, complete_publication, \
-    complete_publications
+from zato.common.pubsub.sql.publication import add_published_event, build_publication, check_scope_publication, \
+    complete_publication, complete_publications
 from zato.common.pubsub.sql.pull import fetch_query, has_lease_candidates, outgoing_fetch_query, payload_query
 from zato.common.pubsub.sql.schema import delivery_table, topic_sub_table
 from zato.common.pubsub.sql.pending import new_fenced_ack, new_pending_atomic, new_pending_lease
@@ -36,7 +36,7 @@ from zato.server.metrics import zato_pubsub_messages_delivered_total
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.pubsub.sql.pending import PendingAck, PendingLease
+    from zato.common.pubsub.sql.pending import PendingAck, PendingLease, pending_publication_list
     from zato.common.pubsub.sql.publication import built_publication_list
     from zato.common.typing_ import any_, anydict, anylist, anylistnone, intlist, intnone, strdict, strlist, strnone
 
@@ -113,6 +113,8 @@ class SQLPubSubBackend(SQLAdminAPI):
         stored, e.g. because the id travels inside the message itself, gives its own, otherwise one is generated.
         The retry settings, when given, travel with the message and the push delivery retries it as they say.
         The audit events, when given, commit with the message in addition to the one that records the publication.
+        A subscriber service that publishes while it processes a push delivery batch receives the id of a message
+        that is stored if and only if the batch commits. A batch that does not commit is delivered again.
         """
         built = build_publication(
             self,
@@ -141,17 +143,20 @@ class SQLPubSubBackend(SQLAdminAPI):
         if audit_events:
             pending.audit_events.extend(audit_events)
 
-        # .. one transaction, possibly shared with other callers, inserts the message and one delivery row
-        # per subscriber, and a topic without subscribers has its message stored without its payload,
-        # though the publications of a subscriber service that processes a push delivery batch
-        # commit in the transaction that acknowledges the batch, which wakes up their subscribers ..
+        # .. the publications of a subscriber service that processes a push delivery batch commit
+        # in the transaction that acknowledges the batch, which also runs what follows their commit,
+        # and a message ID of the caller that stands for a different message is refused at once ..
         if scope := get_delivery_scope():
+            if msg_id:
+                check_scope_publication(self, scope.publications, pending)
             scope.publications.append(pending)
+
+        # .. whereas any other message is inserted with one delivery row per subscriber in one transaction,
+        # possibly shared with other callers, a topic without subscribers has its message stored without its payload,
+        # and what follows the commit runs once it is committed.
         else:
             self._writer.publish(pending)
-
-        # .. and what follows the commit runs once it is committed.
-        complete_publication(self, built)
+            complete_publication(self, built)
 
         out = PublishResult()
         out.msg_id = pending.message_values['msg_id']
@@ -168,25 +173,28 @@ class SQLPubSubBackend(SQLAdminAPI):
         audit_events:'anylist',
         ) -> 'None':
         """ Acknowledges the messages of a push delivery batch in one transaction with the publications that its
-        subscriber services made, which commits all of them or none, and then wakes up the subscribers of the publications.
-        A batch whose delivery rows another delivery of the same messages already removed commits nothing, and if it
-        would store a new message, it raises PubSubAckConflict. The audit events of the deliveries of the batch
-        commit in the same transaction in either case.
+        subscriber services made, which commits all of them or none, and then runs what follows the commit
+        of each publication. A batch whose delivery rows another delivery of the same messages already removed
+        commits nothing, and if it would store a new message, it raises PubSubAckConflict. A publication whose
+        message ID stands for a different message makes the batch commit nothing and raise PubSubDuplicateMsgID.
+        The audit events of the deliveries of the batch commit in the same transaction, also when the acknowledgement
+        fails its checks.
         """
         ack = new_fenced_ack(sub_key, msg_ids, None)
-        atomic = new_pending_atomic(publications, ack, False)
+        atomic = new_pending_atomic(publications, ack, True)
         atomic.audit_events = audit_events
 
         self._writer.ack_atomic(atomic)
         self._log_concluded(ack)
 
-        # A publication whose message ID already stands for different content is the only one not committed.
+        # A publication that only repeated an existing message was completed when that message was committed.
+        completed:'pending_publication_list' = []
+
         for pending in publications:
-            if pending.exception:
-                logger.warning('Publication of a push subscriber not committed -> sub_key:%s, msg_id:%s, %s',
-                    sub_key, pending.message_values['msg_id'], pending.exception)
-            elif pending.subscriber_keys:
-                self.notify_sub_keys(pending.subscriber_keys)
+            if not pending.is_repeat:
+                completed.append(pending)
+
+        complete_publications(self, completed)
 
         logger.info('ack_with_publications -> sub_key:%s, acked:%d, fully_delivered:%d, publications:%d',
             sub_key, len(msg_ids), ack.fully_delivered_count, len(publications))
@@ -263,12 +271,12 @@ class SQLPubSubBackend(SQLAdminAPI):
 
         # A publication that only repeated an existing message was completed when that message was committed.
         published:'strlist' = []
-        completed:'built_publication_list' = []
+        completed:'pending_publication_list' = []
 
         for built in publications:
 
             if not built.pending.is_repeat:
-                completed.append(built)
+                completed.append(built.pending)
 
             msg_id = built.pending.message_values['msg_id']
             published.append(msg_id)

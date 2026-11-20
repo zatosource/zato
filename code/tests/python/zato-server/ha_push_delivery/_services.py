@@ -7,7 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.test.exactly_once.control import claim_hold, count_invocations, record_invocation, wait_while_exists
+from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID
+from zato.common.test.exactly_once.control import claim_hold, count_invocations, record_invocation, record_publication, \
+    wait_while_exists
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -27,7 +29,8 @@ _output_topic  = 'ha-push-delivery.output'
 
 class Target(Service):
     """ The subscriber of the input topic. It calls the outgoing REST connection with the key of the message,
-    publishes the key to the output topic, waits while the test holds the key in the invocation that the message names
+    publishes the key to the output topic under the message ID that the message names, if any, and records
+    the outcome of the publication, waits while the test holds the key in the invocation that the message names
     and fails if the message says so.
     """
 
@@ -42,12 +45,19 @@ class Target(Service):
         record_invocation(key)
         invocation_count = count_invocations(key)
 
-        # .. the outgoing call is made and published about ..
+        # .. the outgoing call is made ..
         data = {'key': key}
         conn = self.out.rest[_outgoing_name].conn
         _ = conn.post(self.cid, data)
 
-        _ = self.publish(_output_topic, data, correl_id=key)
+        # .. and published about, with the outcome of the publication recorded ..
+        try:
+            result = self.publish(_output_topic, data, correl_id=key, msg_id=payload['output_msg_id'])
+        except PubSubDuplicateMsgID as e:
+            record_publication(key, e.__class__.__name__)
+            raise
+        else:
+            record_publication(key, result.msg_id)
 
         # .. a hold of the test keeps the invocation that it is meant for in progress ..
         if invocation_count == payload['held_invocation']:
@@ -62,7 +72,7 @@ class Target(Service):
 # ################################################################################################################################
 
 class Publish(Service):
-    """ Publishes one message to a topic, with the retry settings that the request gives.
+    """ Publishes one message to a topic, with the options that the request gives, e.g. its retry settings.
     """
 
     name = 'test.ha-push-delivery.publish'
@@ -73,9 +83,9 @@ class Publish(Service):
 
         topic_name = request['topic_name']
         data = request['data']
-        retry_settings = request['retry_settings']
+        options = request['options']
 
-        result = self.publish(topic_name, data, **retry_settings)
+        result = self.publish(topic_name, data, **options)
 
         self.response.payload = {'msg_id': result.msg_id}
 

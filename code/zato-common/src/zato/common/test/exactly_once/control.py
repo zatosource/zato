@@ -39,6 +39,10 @@ _fail_dir_name = 'fail'
 # The file of the invocations of the relay
 _invocations_file_name = 'invocations.txt'
 
+# The file of the outcomes of the publications of the relay, and what separates the key of an entry from its outcome
+_publications_file_name = 'publications.txt'
+_publication_separator  = '\t'
+
 # How often a held invocation and a waiting test look at the control files, in seconds
 _poll_seconds = 0.1
 
@@ -76,6 +80,38 @@ def record_invocation(key:'str') -> 'None':
 
     with open(path, 'a') as invocations_file:
         _ = invocations_file.write(key + '\n')
+
+# ################################################################################################################################
+
+def record_publication(key:'str', outcome:'str') -> 'None':
+    """ Appends the outcome of one publication of the relay for the key, which is the message ID that the publication
+    returned or the name of the exception that it raised, to the publication file.
+    """
+    path = _get_path(_publications_file_name)
+
+    with open(path, 'a') as publications_file:
+        _ = publications_file.write(f'{key}{_publication_separator}{outcome}\n')
+
+# ################################################################################################################################
+
+def read_publications(key:'str') -> 'strlist':
+    """ Returns the outcome of each publication of the relay for the key, in the order of the publications.
+    """
+    path = _get_path(_publications_file_name)
+    out:'strlist' = []
+
+    if not os.path.exists(path):
+        return out
+
+    with open(path) as publications_file:
+        for line in publications_file:
+            line = line.rstrip('\n')
+            if line:
+                entry_key, outcome = line.split(_publication_separator)
+                if entry_key == key:
+                    out.append(outcome)
+
+    return out
 
 # ################################################################################################################################
 
