@@ -238,7 +238,7 @@ fn run_session(shared: &Shared, sender: &LinkSender, mut receiver: LinkReceiver,
 }
 
 /// Handles one accepted connection.
-fn handle_connection(shared: &Shared, tcp: TcpStream) -> Result<(), Error> {
+pub(crate) fn handle_connection(shared: &Shared, tcp: TcpStream) -> Result<(), Error> {
     let AcceptedLink {
         sender,
         receiver,
