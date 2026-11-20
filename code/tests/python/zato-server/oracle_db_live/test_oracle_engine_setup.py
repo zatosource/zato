@@ -40,7 +40,11 @@ def _run_check() -> 'None':
     """
     command = [sys.executable, _check_script]
 
-    result = subprocess.run(command, capture_output=True, text=True, timeout=_check_timeout)
+    # The child builds the pool of an outgoing connection, which requires a license key
+    env = dict(os.environ)
+    env[License_Key_Name] = License_Key_Value
+
+    result = subprocess.run(command, capture_output=True, text=True, timeout=_check_timeout, env=env)
 
     failure_details = f'exit code: {result.returncode}\nstdout: {result.stdout}\nstderr: {result.stderr}'
 
@@ -53,7 +57,7 @@ def _run_check() -> 'None':
 class TestEngineSetup:
 
     def test_engine_setup_through_odb(self) -> 'None':
-        """ Importing the ODB module alone lets oracle:// engines load in thin mode.
+        """ The pool of an outgoing connection to Oracle lets oracle:// engines load in thin mode.
         """
         _run_check()
 

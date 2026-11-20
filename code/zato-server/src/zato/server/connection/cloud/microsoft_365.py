@@ -7,21 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from importlib import import_module
 from json import loads
 from logging import getLogger
 from threading import RLock
 from time import monotonic
-from warnings import catch_warnings
-
-# MSAL
-from msal import ConfidentialClientApplication
-
-# Office-365 - importing it sets every DeprecationWarning to always show whenever Python runs with any -W option,
-# which the warning filters of the process are restored from once the import completes.
-with catch_warnings():
-    from O365 import Account
-    from O365.connection import MSGraphProtocol
-    from O365.utils.token import MemoryTokenBackend
 
 # Zato
 from zato.common.api import Microsoft365
@@ -33,6 +23,7 @@ from zato.common.const import SECRETS
 # ################################################################################################################################
 
 if 0:
+    from O365 import Account
     from zato.common.typing_ import any_, stranydict
 
 # ################################################################################################################################
@@ -44,6 +35,9 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 _default = Microsoft365.Default
+
+# The client libraries, imported when the first account is built
+_libraries_module = 'zato.server.connection.cloud.microsoft_365_libraries'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -123,8 +117,10 @@ class Microsoft365Client:
         api_address = config.get('address') or _default.Address
         api_address = api_address.rstrip('/')
 
+        libraries = import_module(_libraries_module)
+
         # Build the protocol object pointing to the Graph API address ..
-        protocol = MSGraphProtocol()
+        protocol = libraries.MSGraphProtocol()
 
         # .. a non-default address means we need to rewrite the URLs the protocol builds ..
         if api_address != _default.Address:
@@ -139,10 +135,10 @@ class Microsoft365Client:
 
         # .. each account keeps its tokens in its own in-memory backend
         # .. so that multiple connections never step on each other ..
-        token_backend = MemoryTokenBackend()
+        token_backend = libraries.MemoryTokenBackend()
 
         # .. now, the account object itself can be created ..
-        account = Account(
+        account = libraries.Account(
             credentials,
             auth_flow_type='credentials',
             tenant_id=tenant_id,
@@ -219,8 +215,10 @@ class Microsoft365Client:
         authority = f'{auth_server_url}/{tenant_id}'
         connection._msal_authority = authority
 
+        libraries = import_module(_libraries_module)
+
         # Instance discovery must be off because the custom server is not in Microsoft's list of known hosts.
-        connection._msal_client = ConfidentialClientApplication(
+        connection._msal_client = libraries.ConfidentialClientApplication(
             client_id=connection.auth[0],
             client_credential=connection.auth[1],
             authority=authority,

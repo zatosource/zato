@@ -24,6 +24,21 @@ if 0:
 _service_url = 'oracle://user1:password1@host1:1521/?service_name=service1'
 _sid_url     = 'oracle://user1:password1@host1:1521/testsid'
 
+# The outgoing connection whose pool registers the driver
+_pool_name = 'test.oracle.engine.setup'
+
+_pool_config = {
+    'engine':    'oracle',
+    'username':  'user1',
+    'password':  'password1',
+    'host':      'host1',
+    'port':      '1521',
+    'db_name':   'service1',
+    'name':      _pool_name,
+    'extra':     '',
+    'pool_size': 1,
+}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -36,11 +51,13 @@ def _refuse_thick_mode(*args:'any_', **kwargs:'any_') -> 'None':
 # The driver has to stay in thin mode, so any call that would enable thick mode fails the check.
 oracledb.init_oracle_client = _refuse_thick_mode
 
-# What is under test is that importing the ODB module alone is enough for oracle:// URLs to load in this interpreter.
-from zato.common.odb import api as odb_api
-odb_api = odb_api
+# Importing the ODB module alone leaves the driver unregistered ..
+from zato.common.odb.api import SQLConnectionPool
+assert 'cx_Oracle' not in sys.modules
 
-# The import made python-oracledb available under the name SQLAlchemy 1.4 knows
+# .. whereas the pool of an outgoing connection to Oracle makes python-oracledb available
+# .. under the name SQLAlchemy 1.4 knows before it builds its engine.
+_pool = SQLConnectionPool(_pool_name, _pool_config, _pool_config)
 assert sys.modules['cx_Oracle'] is oracledb
 assert oracledb.is_thin_mode() is True
 

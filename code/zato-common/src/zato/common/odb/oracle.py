@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # SQLAlchemy 1.4 knows Oracle only through the cx_Oracle driver, so python-oracledb
 # is made importable under that name, which is the arrangement python-oracledb documents
 # for SQLAlchemy 1.4. This module must be imported before the first oracle:// engine
-# is created, which is why the modules that build SQL engines import it themselves.
+# is created, which is why the pool of an outgoing connection to Oracle imports it before it builds its engine.
 #
 # The driver stays in thin mode - nothing here or anywhere else may call
 # oracledb.init_oracle_client, because thin mode does its network I/O through Python's

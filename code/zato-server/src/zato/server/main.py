@@ -13,6 +13,7 @@ warnings.filterwarnings('ignore', category=UserWarning, message='.*pkg_resources
 
 import gc
 import os
+from importlib import metadata
 
 # A started server creates only long-lived objects until its arbiter forks the processes,
 # and the arbiter enables the cyclic garbage collector again once it froze them.
@@ -23,6 +24,17 @@ if __name__ == '__main__':
 # or, in absolute terms, instead of 275 ms it may take 220 ms.
 from gevent.monkey import patch_builtins, patch_thread, patch_time, patch_os, patch_queue, patch_select, \
      patch_selectors, patch_signal, patch_socket, patch_ssl, patch_subprocess, patch_sys
+
+# gevent looks up the entry points of its plugins before and after each patch, and each lookup reads
+# the metadata of every installed distribution, so the patches select them from a single reading instead.
+_all_entry_points = metadata.entry_points()
+_read_entry_points = metadata.entry_points
+
+def _select_entry_points(**params:'any_') -> 'metadata.EntryPoints':
+    out = _all_entry_points.select(**params)
+    return out
+
+metadata.entry_points = _select_entry_points
 
 # Note that the order of patching matters, just like in patch_all
 patch_os()
@@ -37,6 +49,9 @@ patch_subprocess()
 patch_builtins()
 patch_signal()
 patch_queue()
+
+# Anything that looks up entry points later reads the distributions installed at that time.
+metadata.entry_points = _read_entry_points
 
 # stdlib
 import logging

@@ -306,7 +306,7 @@ Examples:
 
     def _on_server(self, *ignored:'any_') -> 'int': # show_output was an old param, *ignored is safer for dispatch
 
-        from zato.common.util.updates import setup_update_file_logger
+        from zato.common.util.update_log import setup_update_file_logger
         setup_update_file_logger(component_name='server')
 
         # Potentially sets up the deployment of any assets given on input
@@ -333,7 +333,7 @@ Examples:
         # Zato
         from zato.common.json_internal import loads
         from zato.common.util import proc # For start_process
-        from zato.common.util.updates import setup_update_file_logger
+        from zato.common.util.update_log import setup_update_file_logger
 
         # stdlib
         import os
@@ -508,7 +508,7 @@ Examples:
 
         # Zato
         from zato.common.util.open_ import open_w
-        from zato.common.util.updates import setup_update_file_logger
+        from zato.common.util.update_log import setup_update_file_logger
 
         setup_update_file_logger(component_name='scheduler')
 

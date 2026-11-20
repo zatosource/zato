@@ -52,7 +52,7 @@ class ModuleCtx:
 
     # The directory of the lock files, shared by every process of the user
     Env_Dir     = 'Zato_Test_Reservation_Dir'
-    Default_Dir = '/dev/shm/zato-test-reservations'
+    Default_Dir = '/tmp/zato-test-reservations'
 
     # The range of the ports, as `<first>-<last>`, in place of the default one
     Env_Port_Range = 'Zato_Test_Port_Range'

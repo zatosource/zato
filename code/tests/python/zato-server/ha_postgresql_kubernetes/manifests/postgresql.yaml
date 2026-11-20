@@ -73,8 +73,12 @@ spec:
                     operator: In
                     values:
                       - ${postgresql_zone}
+      # The data directory of each instance is created here, before the instance starts. The primary is initialized
+      # by the functions of the entrypoint of the image, whose temporary server runs without the arguments of the
+      # instance, since a commit under synchronous_standby_names waits for a standby that cannot connect to it.
+      # The standby is copied from the primary.
       initContainers:
-        - name: standby
+        - name: data
           image: ${postgresql_image}
           imagePullPolicy: Never
           env:
@@ -84,6 +88,8 @@ spec:
                   fieldPath: metadata.name
             - name: POSTGRES_USER
               value: ${postgresql_user}
+            - name: POSTGRES_DB
+              value: ${postgresql_db}
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -96,8 +102,25 @@ spec:
             - -c
             - |
               set -e
-              if [ "$POD_NAME" = "${postgresql_primary}" ] || [ -s "$PGDATA/PG_VERSION" ]; then
+              if [ -s "$PGDATA/PG_VERSION" ]; then
                 exit 0
+              fi
+              if [ "$POD_NAME" = "${postgresql_primary}" ]; then
+                source docker-entrypoint.sh
+                docker_setup_env
+                docker_create_db_directories
+                exec gosu postgres bash -c '
+                  set -e
+                  source docker-entrypoint.sh
+                  docker_setup_env
+                  docker_verify_minimum_env
+                  docker_init_database_dir
+                  pg_setup_hba_conf
+                  export PGPASSWORD="$POSTGRES_PASSWORD"
+                  docker_temp_server_start
+                  docker_setup_db
+                  docker_process_init_files /docker-entrypoint-initdb.d/*
+                  docker_temp_server_stop'
               fi
               primary="host=${postgresql_primary}.${postgresql_pods_service} port=${postgresql_port}"
               primary="$primary user=$POSTGRES_USER password=$POSTGRES_PASSWORD"
@@ -112,6 +135,9 @@ spec:
             - name: tls
               mountPath: /certs-in
               readOnly: true
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
       containers:
         - name: postgresql
           image: ${postgresql_image}
@@ -122,8 +148,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
-            - name: PGOPTIONS
-              value: -c synchronous_commit=local
             - name: POSTGRES_USER
               value: ${postgresql_user}
             - name: POSTGRES_DB
@@ -154,9 +178,6 @@ spec:
               mountPath: /var/lib/postgresql/data
             - name: tls
               mountPath: /certs-in
-              readOnly: true
-            - name: init
-              mountPath: /docker-entrypoint-initdb.d
               readOnly: true
             - name: shm
               mountPath: /dev/shm

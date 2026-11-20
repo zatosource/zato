@@ -11,6 +11,7 @@ import logging
 import os
 from contextlib import closing
 from copy import deepcopy
+from importlib import import_module
 from io import StringIO
 from logging import DEBUG, getLogger
 from threading import RLock
@@ -29,7 +30,6 @@ from sqlalchemy.pool import NullPool
 from sqlalchemy.sql.type_api import TypeEngine
 
 # Zato
-from zato.common.odb import oracle as oracle
 from zato.common.api import HTTP_SOAP, MS_SQL, NotGiven, SEC_DEF_TYPE, SECRET_SHADOW, UNITTEST, ZATO_NONE, \
      ZATO_ODB_POOL_NAME
 from zato.common.audit_log.api import AuditLog, AuditOutcome, AuditSource
@@ -79,6 +79,9 @@ unittest_fs_sql_config = {
 # What a stored procedure call amounts to as a statement - this is how it reads in the audit log
 Proc_Statement_MSSQL  = 'EXEC {}'
 Proc_Statement_Oracle = 'BEGIN {}(); END;'
+
+# The module that registers the driver of Oracle under the name that the dialect of SQLAlchemy imports
+_oracle_driver_module = 'zato.common.odb.oracle'
 
 # ################################################################################################################################
 
@@ -645,9 +648,13 @@ class SQLConnectionPool:
 
         engine_url = get_engine_url(self.config)
 
-        # The Oracle dialect reads the URL's path as a SID, so a service name - the default -
-        # moves into a query parameter instead.
         if self.engine_name.startswith('oracle'):
+
+            # The driver is registered under the name that the dialect imports before the first engine of Oracle is built ..
+            _ = import_module(_oracle_driver_module)
+
+            # .. and since the dialect reads the URL's path as a SID, a service name - the default -
+            # .. moves into a query parameter instead.
             if not oracle_use_sid:
                 base_url, oracle_db_name = engine_url.rsplit('/', 1)
                 engine_url = f'{base_url}/?service_name={oracle_db_name}'

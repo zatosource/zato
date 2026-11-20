@@ -6,14 +6,27 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# oracledb
-import oracledb as oracledb_impl
+# stdlib
+from importlib import import_module
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.typing_ import any_, anylist, anylistnone, intnone
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The driver of Oracle, which the cursor of a parameter belongs to, so it is imported by the time a parameter is bound
+_oracledb_module_name = 'oracledb'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _get_oracledb() -> 'any_':
+    out = import_module(_oracledb_module_name)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,7 +53,7 @@ class OracleParam:
 
 class NumberIn(OracleParam):
     def bind(self, cursor):
-        self.var = cursor.var(oracledb_impl.NUMBER)
+        self.var = cursor.var(_get_oracledb().NUMBER)
         if self.value is not None:
             self.var.setvalue(0, self.value)
         return self.var
@@ -48,7 +61,7 @@ class NumberIn(OracleParam):
 class StringIn(OracleParam):
     def bind(self, cursor):
         size = self.size or 200
-        self.var = cursor.var(oracledb_impl.STRING, size)
+        self.var = cursor.var(_get_oracledb().STRING, size)
         if self.value is not None:
             self.var.setvalue(0, self.value)
         return self.var
@@ -56,28 +69,28 @@ class StringIn(OracleParam):
 class FixedCharIn(OracleParam):
     def bind(self, cursor):
         size = self.size or 200
-        self.var = cursor.var(oracledb_impl.FIXED_CHAR, size)
+        self.var = cursor.var(_get_oracledb().FIXED_CHAR, size)
         if self.value is not None:
             self.var.setvalue(0, self.value)
         return self.var
 
 class DateTimeIn(OracleParam):
     def bind(self, cursor):
-        self.var = cursor.var(oracledb_impl.DATETIME)
+        self.var = cursor.var(_get_oracledb().DATETIME)
         if self.value is not None:
             self.var.setvalue(0, self.value)
         return self.var
 
 class BlobIn(OracleParam):
     def bind(self, cursor):
-        self.var = cursor.var(oracledb_impl.BLOB)
+        self.var = cursor.var(_get_oracledb().BLOB)
         if self.value is not None:
             self.var.setvalue(0, self.value)
         return self.var
 
 class ClobIn(OracleParam):
     def bind(self, cursor):
-        self.var = cursor.var(oracledb_impl.CLOB)
+        self.var = cursor.var(_get_oracledb().CLOB)
         if self.value is not None:
             self.var.setvalue(0, self.value)
         return self.var
@@ -91,7 +104,7 @@ class _OutBase(OracleParam):
 class NumberOut(_OutBase):
 
     def bind(self, cursor):
-        self.var = cursor.var(oracledb_impl.NUMBER)
+        self.var = cursor.var(_get_oracledb().NUMBER)
         if self.value is not None:
             self.var.setvalue(0, self.value)
         return self.var
@@ -99,7 +112,7 @@ class NumberOut(_OutBase):
 class StringOut(_OutBase):
     def bind(self, cursor):
         size = self.size or 200
-        self.var = cursor.var(oracledb_impl.STRING, size)
+        self.var = cursor.var(_get_oracledb().STRING, size)
         if self.value is not None:
             self.var.setvalue(0, self.value)
         return self.var
@@ -107,28 +120,28 @@ class StringOut(_OutBase):
 class FixedCharOut(_OutBase):
     def bind(self, cursor):
         size = self.size or 200
-        self.var = cursor.var(oracledb_impl.FIXED_CHAR, size)
+        self.var = cursor.var(_get_oracledb().FIXED_CHAR, size)
         if self.value is not None:
             self.var.setvalue(0, self.value)
         return self.var
 
 class DateTimeOut(_OutBase):
     def bind(self, cursor):
-        self.var = cursor.var(oracledb_impl.DATETIME)
+        self.var = cursor.var(_get_oracledb().DATETIME)
         if self.value is not None:
             self.var.setvalue(0, self.value)
         return self.var
 
 class BlobOut(_OutBase):
     def bind(self, cursor):
-        self.var = cursor.var(oracledb_impl.BLOB)
+        self.var = cursor.var(_get_oracledb().BLOB)
         if self.value is not None:
             self.var.setvalue(0, self.value)
         return self.var
 
 class ClobOut(_OutBase):
     def bind(self, cursor):
-        self.var = cursor.var(oracledb_impl.CLOB)
+        self.var = cursor.var(_get_oracledb().CLOB)
         if self.value is not None:
             self.var.setvalue(0, self.value)
         return self.var
@@ -141,7 +154,7 @@ class RowsOut(_OutBase):
         self.rows:'anylistnone' = None
 
     def bind(self, cursor:'any_') -> 'any_':
-        self.var = cursor.var(oracledb_impl.CURSOR)
+        self.var = cursor.var(_get_oracledb().CURSOR)
         return self.var
 
     def fetch(self) -> 'anylist':

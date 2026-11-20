@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import errno
+import os
 from datetime import datetime, timedelta
 from logging import getLogger
 from socket import timeout as SocketTimeoutException
@@ -22,6 +22,12 @@ from gevent.server import StreamServer
 # ################################################################################################################################
 
 logger = getLogger('zato')
+
+# The tables of TCP sockets of the network namespace of the process, of IPv4 and IPv6 respectively
+_proc_net_tcp_paths = ('/proc/net/tcp', '/proc/net/tcp6')
+
+# The state that a listening socket has in these tables
+_proc_net_tcp_listen = '0A'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -72,32 +78,52 @@ def get_free_port(start:'int' = 30000) -> 'int':
 
 # ################################################################################################################################
 
-# Taken from http://grodola.blogspot.com/2014/04/reimplementing-netstat-in-cpython.html
-def is_port_taken(port):
+def _has_listener(path:'str', port:'int') -> 'bool':
+    """ Returns True if the table of TCP sockets under path has a listening socket of any address on the port.
+    """
+    out = False
 
-    # Zato
-    from .platform_ import is_linux
+    with open(path) as table:
 
-    if not is_linux:
-        return False
+        # The first line of each table holds the names of its columns ..
+        _ = next(table)
 
-    # psutil
-    import psutil
+        # .. and each of the other lines is a socket, with its local address in the form of hex_ip:hex_port.
+        for line in table:
+            fields = line.split()
+            state = fields[3]
 
-    # Shortcut for Linux so as not to bind to a socket which in turn means waiting until it's closed by OS
-    if is_linux:
-        for conn in psutil.net_connections(kind='tcp'):
-            if conn.laddr[1] == port and conn.status == psutil.CONN_LISTEN:
-                return True
-    else:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            sock.bind(('', port))
-            sock.close()
-        except socket.error as e:
-            if e.args[0] == errno.EADDRINUSE:
-                return True
-            raise
+            if state != _proc_net_tcp_listen:
+                continue
+
+            local_address = fields[1]
+            _, local_port = local_address.rsplit(':', 1)
+
+            if int(local_port, 16) == port:
+                out = True
+                break
+
+    return out
+
+# ################################################################################################################################
+
+def is_port_taken(port:'int') -> 'bool':
+    """ Returns True if a TCP socket of any address listens on the port. The tables of the kernel are read
+    rather than a socket bound to the port, because a probe like that would occupy the port until the kernel released it.
+    """
+    out = False
+
+    for path in _proc_net_tcp_paths:
+
+        # The table of IPv6 sockets does not exist if the kernel runs with IPv6 disabled
+        if not os.path.exists(path):
+            continue
+
+        if _has_listener(path, port):
+            out = True
+            break
+
+    return out
 
 # ################################################################################################################################
 

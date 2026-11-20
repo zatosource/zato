@@ -6,8 +6,8 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# requests-ntlm
-from requests_ntlm import HttpNtlmAuth
+# stdlib
+from importlib import import_module
 
 # Zato
 from zato.common.api import EnvVariable
@@ -29,6 +29,12 @@ if 0:
     HTTPTransport = HTTPTransport
     ParallelServer = ParallelServer
     SOAPClient = SOAPClient
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The client library of NTLM, imported by the first connection whose security definition is of that type
+_requests_ntlm_module = 'requests_ntlm'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -195,7 +201,8 @@ class AuthMixin:
         # #######################################
         elif self.sec_type == _NTLM:
             _username, _password = self.auth
-            _requests_auth = HttpNtlmAuth(_username, _password)
+            requests_ntlm = import_module(_requests_ntlm_module)
+            _requests_auth = requests_ntlm.HttpNtlmAuth(_username, _password)
             self.requests_auth = _requests_auth
             self.username = _username
 
