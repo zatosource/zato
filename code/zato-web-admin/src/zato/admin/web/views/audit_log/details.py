@@ -26,7 +26,7 @@ from zato.common.audit_log.attachment import get_attachment, list_attachments
 from zato.common.audit_log.common import event_data
 from zato.common.audit_log.body import resolve_body
 from zato.common.audit_log.config_audit import record_view_event
-from zato.common.audit_log.export.api import ModuleCtx as ExportCtx, start_audit_export, stop_audit_export
+from zato.common.audit_log.export.state import ModuleCtx as ExportCtx, start_audit_export, stop_audit_export
 from zato.common.crypto.api import CryptoManager
 from zato.common.util.api import new_cid
 from zato.common.version import get_version

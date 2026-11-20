@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from importlib import import_module
+
 from zato.hl7v2.base import (
     HL7Component,
     HL7DataType,
@@ -14,7 +16,6 @@ from zato.hl7v2.base import (
     HL7ValidationError,
     Usage,
 )
-from zato.hl7v2.validator import validate_message, ValidationResult, ValidationError  # pyright: ignore[reportAttributeAccessIssue]
 from zato.hl7v2.batch import HL7Batch, HL7File, parse_batch, parse_file, parse_batch_or_file, create_batch, create_file
 from zato.hl7v2.z_segments import ZAU, ZBE, ZDS, ZFD
 from zato.hl7v2_rs import ToleranceConfig
@@ -27,12 +28,21 @@ if TYPE_CHECKING:
     # them lazily through __getattr__ below.
     from zato.hl7v2.v2_9.datatypes import * # noqa: F403
     from zato.hl7v2.v2_9.segments import * # noqa: F403
+    from zato.hl7v2.validator import validate_message, ValidationResult, ValidationError
+
+# The names of the validator, which imports the whole of v2.9 when the first of them is looked up
+_validator_names = ('validate_message', 'ValidationResult', 'ValidationError')
 
 
 def __getattr__(name:'str') -> 'type':
-    # Segments and data types resolve lazily, so that importing the package
+    # Segments, data types and the validator resolve lazily, so that importing the package
     # stays cheap while user code can still import any of them from the root,
     # e.g. from zato.hl7v2 import PID, XPN.
+    if name in _validator_names:
+        validator = import_module('zato.hl7v2.validator')
+        out = getattr(validator, name)
+        return out
+
     from zato.hl7v2.v2_9 import datatypes, segments
     if name in segments.__all__:
         return getattr(segments, name)

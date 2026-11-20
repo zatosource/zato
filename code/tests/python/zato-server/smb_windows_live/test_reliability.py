@@ -18,7 +18,7 @@ from live_windows.settings import Accounts
 
 # Local
 from _smb_windows_flows import assert_appeared_once, assert_nothing_under, document_name, hub_expected, hub_outbox, \
-     share_path, start_hub, verify_hub, wait_appeared, wait_consumed, wait_produced
+     share_path, start_hub, verify_hub, wait_appeared, wait_consumed, wait_produced, Fault_Stale_Temp_Ms
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,7 +81,7 @@ def _start_plant_flow(smb_suite:'SMBWindowsSuite', version:'str', run:'str', mon
     hits a flow in progress.
     """
     handle = smb_suite.guest(version)
-    start_hub(handle, run, [Hub.Plant])
+    start_hub(handle, run, [Hub.Plant], stale_temp_ms=Fault_Stale_Temp_Ms)
 
     names = smb_suite.sequences.next_names(Hub.Plant, ModuleCtx.File_Count)
     outbox = hub_outbox(Hub.Plant)

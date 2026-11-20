@@ -26,7 +26,7 @@ from transaction_statements import assert_one_transaction, get_atomic_statements
     record_transactions, statements_ack, statements_attempts, statements_drop, statements_lease, statements_publication, \
     TransactionRecorder
 from zato.common.audit_log.api import event_table, AuditEvent
-from zato.common.audit_log.export.api import set_audit_export
+from zato.common.audit_log.export.state import set_audit_export
 from zato.common.config_db import Env_Audit_Log_Enabled
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.backend import SQLPubSubBackend

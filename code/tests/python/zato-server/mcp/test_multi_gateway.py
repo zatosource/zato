@@ -11,6 +11,7 @@ from unittest import TestCase
 
 # Zato
 import zato.server.base.config_manager as config_manager_module
+import zato.server.base.config_manager.generic as config_manager_generic_module
 from zato.common.ext.bunch import Bunch
 from zato.common.api import GENERIC as COMMON_GENERIC
 from zato.server.generic.api.gateway_mcp import GatewayMCPWrapper, GatewayMCPWrapper as Imported
@@ -107,6 +108,19 @@ class ConfigManagerGenericConnWiring(TestCase):
 
         self.assertIn('GATEWAY_MCP', content)
         self.assertIn('self.gateway_mcp', content)
+
+# ################################################################################################################################
+
+    def test_wrapper_location_has_mcp(self) -> 'None':
+        """ Verifies that the generic connection source names the module and the class of the MCP gateway wrapper.
+        """
+
+        source = config_manager_generic_module.__file__
+
+        with open(source) as source_file:
+            content = source_file.read()
+
+        self.assertIn('zato.server.generic.api.gateway_mcp', content)
         self.assertIn('GatewayMCPWrapper', content)
 
 # ################################################################################################################################

@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import socket
-from logging import getLogger
 from time import time_ns
 from urllib.parse import urlparse
 
@@ -22,11 +21,11 @@ from opentelemetry.proto.resource.v1.resource_pb2 import Resource
 
 # Zato
 from zato.common.audit_log.common import event_attr_table, event_data, event_table
-from zato.common.audit_log.export.config import get_export_config
 from zato.common.audit_log.export.data import has_data_export
 from zato.common.audit_log.export.mapping import QueuedEvent, to_key_values
 from zato.common.audit_log.export.queue import ExportQueue
 from zato.common.audit_log.export.sender import sender_by_protocol
+from zato.common.audit_log.export.state import ModuleCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,23 +35,6 @@ if 0:
     from zato.common.audit_log.pending import pending_event_list
     from zato.common.audit_log.export.config import ExportConfig
     from zato.common.typing_ import stranydict
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-logger = getLogger(__name__)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ModuleCtx:
-
-    # The instrumentation scope every record is emitted under
-    Scope_Name = 'zato.audit_log'
-
-    # What the server and the dashboard call themselves
-    Service_Server    = 'zato-server'
-    Service_Dashboard = 'zato-dashboard'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -225,71 +207,6 @@ class AuditExport:
         """
         timeout_seconds = self.config.timeout_ms / 1000
         self.queue.flush_and_stop(timeout_seconds)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# The export of this process, if it has one
-_export:'AuditExport | None' = None
-
-# ################################################################################################################################
-
-def get_audit_export() -> 'AuditExport | None':
-    """ Returns the export of this process, or None when the export is off.
-    """
-    return _export
-
-# ################################################################################################################################
-
-def set_audit_export(export:'AuditExport | None') -> 'None':
-    """ Registers the export of this process.
-    """
-    global _export
-    _export = export
-
-# ################################################################################################################################
-
-def start_audit_export(
-    *,
-    service_name:'str',
-    server_name:'str',
-    instance_id:'str',
-    version:'str',
-    ) -> 'AuditExport | None':
-    """ Builds the export of this process from the environment and registers it, or leaves the export off
-    when no endpoint is set or the configuration cannot be read.
-    """
-    try:
-        config = get_export_config()
-    except Exception as e:
-        logger.warning('Audit export is off - %s', e)
-        return None
-
-    if not config:
-        return None
-
-    out = AuditExport(
-        config,
-        service_name=service_name,
-        server_name=server_name,
-        instance_id=instance_id,
-        version=version,
-    )
-
-    set_audit_export(out)
-
-    logger.info('Audit export to %s is on, sources: %s', out.queue.address, sorted(config.sources) or 'all')
-
-    return out
-
-# ################################################################################################################################
-
-def stop_audit_export() -> 'None':
-    """ Flushes and stops the export of this process, if it has one.
-    """
-    if export := get_audit_export():
-        export.flush_and_stop()
-        set_audit_export(None)
 
 # ################################################################################################################################
 # ################################################################################################################################

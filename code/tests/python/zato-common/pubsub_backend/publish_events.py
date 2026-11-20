@@ -13,7 +13,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from common import delete_all_rows, delete_audit_rows, get_event_rows, get_message_rows
 from zato.common.audit_log.api import event_table, AuditEvent, AuditOutcome, AuditSource
-from zato.common.audit_log.export.api import set_audit_export
+from zato.common.audit_log.export.state import set_audit_export
 from zato.common.pubsub.delivery_scope import close_delivery_scope, open_delivery_scope
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.fenced_ack import PubSubAckConflict

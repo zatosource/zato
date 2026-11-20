@@ -191,6 +191,7 @@ class GuestHandle:
         *,
         action:'str'=Action.Delete,
         fail_names:'strlist | None'=None,
+        stale_temp_ms:'int'=ModuleCtx.Stale_Temp_Ms,
         ) -> 'str':
         """ Has the agent read each file that appears in a folder of a share, as the application that the folder belongs to.
         """
@@ -208,7 +209,7 @@ class GuestHandle:
             'action': action,
             'fail_names': fail_names,
             'ignore_suffixes': ignore_suffixes,
-            'stale_temp_ms': ModuleCtx.Stale_Temp_Ms,
+            'stale_temp_ms': stale_temp_ms,
         }
 
         self._run('consume', run, fields)

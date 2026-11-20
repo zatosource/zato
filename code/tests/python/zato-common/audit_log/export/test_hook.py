@@ -24,7 +24,8 @@ from zato.common.api import SCHEDULER
 from zato.common.audit_log.api import event_table, AuditLog, ModuleCtx as AuditLogCtx
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import event_data, AuditBody, AuditEvent, AuditOutcome, AuditSource
-from zato.common.audit_log.export.api import get_audit_export, set_audit_export, AuditExport, ModuleCtx as APICtx
+from zato.common.audit_log.export.api import AuditExport
+from zato.common.audit_log.export.state import get_audit_export, set_audit_export, ModuleCtx as APICtx
 from zato.common.audit_log.export.data import ModuleCtx as DataCtx
 from zato.common.audit_log.export.mapping import ModuleCtx as MappingCtx
 from zato.common.audit_log.file_transfer import record_file_transfer

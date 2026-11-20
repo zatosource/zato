@@ -17,7 +17,7 @@ from gevent.event import Event
 
 # Zato
 from zato.common.api import HTTP_SOAP
-from zato.common.audit_log.export.api import get_audit_export
+from zato.common.audit_log.export.state import get_audit_export
 from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.pubsub.sql.clock import get_engine_clock
 from zato.common.db_env.database import get_database_engine, get_database_type

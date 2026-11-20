@@ -10,7 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import ast
+import gc
 from dataclasses import dataclass
+from functools import cache
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -18,8 +20,6 @@ from dataclasses import dataclass
 if 0:
     from zato.common.test.sql_conformance.sources import SourceFile
     from zato.common.typing_ import strdict, strlist
-
-    SourceFile = SourceFile
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,9 +70,11 @@ name_reference_list = list[NameReference]
 # ################################################################################################################################
 # ################################################################################################################################
 
+@cache
 def get_import_aliases(tree:'ast.Module', package_name:'str') -> 'strdict':
     """ Returns the full dotted name of each name that a module imports, by the name under which the module uses it.
-    A relative import is resolved against the package of the module.
+    A relative import is resolved against the package of the module. The result is computed once per tree and shared
+    by every caller, which never modifies it.
     """
     out:'strdict' = {}
     package_parts = package_name.split('.')
@@ -196,11 +198,26 @@ class _ReferenceCollector(ast.NodeVisitor):
 
 # ################################################################################################################################
 
-def parse(source:'SourceFile') -> 'ast.Module':
-    """ Returns the syntax tree of a source file.
+@cache
+def _parse_path(path:'str') -> 'ast.Module':
+    """ Returns the syntax tree of the file under a path, parsed once for the whole run.
     """
-    text = source.read()
-    out = ast.parse(text, filename=source.path)
+    with open(path, encoding='utf8', errors='replace') as source_file:
+        text = source_file.read()
+
+    out = ast.parse(text, filename=path)
+
+    # The tree stays in memory until the run ends, so full collections of the garbage collector no longer traverse it.
+    gc.freeze()
+
+    return out
+
+# ################################################################################################################################
+
+def parse(source:'SourceFile') -> 'ast.Module':
+    """ Returns the syntax tree of a source file. The tree is shared by every caller, which never modifies it.
+    """
+    out = _parse_path(source.path)
     return out
 
 # ################################################################################################################################

@@ -22,7 +22,7 @@ from zato.common.audit_log.api import event_attr_table, event_body_table, event_
     AuditSource
 from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
-from zato.common.audit_log.export.api import get_audit_export
+from zato.common.audit_log.export.state import get_audit_export
 from zato.common.audit_log.payload import update_event_payload
 from zato.common.audit_log.writes import execute_audit_write, write_audit
 from zato.common.util.api import utcnow

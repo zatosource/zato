@@ -64,7 +64,6 @@ from zato.server.generic.api.cloud_jira import CloudJiraWrapper
 from zato.server.generic.api.cloud_microsoft_365 import CloudMicrosoft365Wrapper
 from zato.server.generic.api.cloud_microsoft_power_automate import CloudMicrosoftPowerAutomateWrapper
 from zato.server.generic.api.cloud_salesforce import CloudSalesforceWrapper
-from zato.server.generic.api.gateway_mcp import GatewayMCPWrapper
 from zato.server.generic.api.gateway_rule_engine import GatewayRuleEngineWrapper
 from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
 from zato.server.generic.api.channel_ibm_mq import ChannelIBMMQWrapper
@@ -365,7 +364,6 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365: CloudMicrosoft365Wrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_POWER_AUTOMATE: CloudMicrosoftPowerAutomateWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: CloudSalesforceWrapper,
-            COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP: GatewayMCPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_RULE_ENGINE: GatewayRuleEngineWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: ChannelHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL: OutconnGraphQLWrapper,

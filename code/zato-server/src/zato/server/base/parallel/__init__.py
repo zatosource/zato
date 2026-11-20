@@ -2006,7 +2006,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         """ Starts the OTLP export of the audit log if an endpoint is configured. A configuration that cannot
         be read is logged and leaves the export off, the server itself starts regardless.
         """
-        from zato.common.audit_log.export.api import ModuleCtx as ExportCtx, start_audit_export
+        from zato.common.audit_log.export.state import ModuleCtx as ExportCtx, start_audit_export
         from zato.common.version import get_version
 
         # The version is reported without the product name in front of it
@@ -2827,7 +2827,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         stop_demo_file_transfer()
 
         # Audit events still queued for the collector go out before the process ends
-        from zato.common.audit_log.export.api import stop_audit_export
+        from zato.common.audit_log.export.state import stop_audit_export
         stop_audit_export()
 
         logger.info('Stopping server process (%s:%s) (%s)', self.name, self.pid, os.getpid())

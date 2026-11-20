@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from live_windows.layout import app_folder, Hub, local_path, Shares
+from live_windows.session import ModuleCtx as SessionCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -17,6 +18,13 @@ if 0:
     from live_windows.progress import Monitor
     from live_windows.session import GuestHandle
     from zato.common.typing_ import anydict, strlist, strstrdict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# How long a file that the hub was writing when a fault interrupted it may stay under its temporary name,
+# in milliseconds - until the fault ends and the next run of the schedule delivers the file again
+Fault_Stale_Temp_Ms = 30_000
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -231,7 +239,7 @@ def hub_expected(sources:'strstrdict') -> 'strstrdict':
 
 # ################################################################################################################################
 
-def start_hub(handle:'GuestHandle', run:'str', apps:'strlist') -> 'None':
+def start_hub(handle:'GuestHandle', run:'str', apps:'strlist', *, stale_temp_ms:'int'=SessionCtx.Stale_Temp_Ms) -> 'None':
     """ Starts an observer of the exchange share and a consumer of the inbox of each application
     that the given applications send their files to.
     """
@@ -246,7 +254,7 @@ def start_hub(handle:'GuestHandle', run:'str', apps:'strlist') -> 'None':
 
     for destination in destinations:
         inbox = app_folder(destination, Hub.Inbox)
-        _ = handle.consume(run, Shares.Exchange, inbox, ModuleCtx.Hub_Pattern)
+        _ = handle.consume(run, Shares.Exchange, inbox, ModuleCtx.Hub_Pattern, stale_temp_ms=stale_temp_ms)
 
 # ################################################################################################################################
 

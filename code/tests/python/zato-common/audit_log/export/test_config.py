@@ -12,7 +12,8 @@ from unittest import TestCase
 
 # Zato
 from zato.common.audit_log.common import AuditSource
-from zato.common.audit_log.export.api import AuditExport, ModuleCtx as APICtx
+from zato.common.audit_log.export.api import AuditExport
+from zato.common.audit_log.export.state import ModuleCtx as APICtx
 from zato.common.audit_log.export.config import get_export_config, is_compression_on, parse_pairs, ModuleCtx
 from zato.common.audit_log.export.sender import sender_by_protocol, GRPCSender, HTTPSender
 

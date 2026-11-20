@@ -49,6 +49,7 @@ from zato.common.util.python_ import get_module_name_by_path
 from zato.common.util.time_ import utcnow
 from zato.server.config import ConfigDict
 from zato.server.service import SchedulerFacade, Service
+from zato.server.service.class_lines import ClassLines
 from zato.server.service.internal import AdminService
 
 # Zato
@@ -278,6 +279,7 @@ class ServiceStore:
         self.name_to_impl_name = {} # type: stranydict
         self.deployment_info = {}   # type: stranydict
         self.update_lock = RLock()
+        self.class_lines = ClassLines()
         self.needs_post_deploy_attr = 'needs_post_deploy'
 
         self.action_internal_doing = 'Deploying'
@@ -1360,7 +1362,7 @@ class ServiceStore:
             source_info.hash_method = 'SHA-256'
 
             # The line number this class object is defined on
-            source_info.line_number = inspect.findsource(class_)[1]
+            source_info.line_number = self.class_lines.get_line_number(class_)
 
         except IOError:
             if has_trace1:

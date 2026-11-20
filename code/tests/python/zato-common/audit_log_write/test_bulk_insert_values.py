@@ -26,7 +26,7 @@ from support import Attachment_Content, Backend_SQLite, Event_Minute, Event_Time
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, AuditBody, \
     AuditEvent, AuditLink, AuditLog, AuditSource
 from zato.common.audit_log.common import event_count_table, event_open_table, event_payload_table
-from zato.common.audit_log.export.api import set_audit_export
+from zato.common.audit_log.export.state import set_audit_export
 from zato.common.audit_log.search import search_events
 from zato.common.db_env.database import get_database_engine
 from zato.common.test.audit_log_ import RecordingAuditExport

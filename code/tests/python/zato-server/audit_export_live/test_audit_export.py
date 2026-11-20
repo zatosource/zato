@@ -16,7 +16,7 @@ import requests
 
 # Zato
 from zato.common.audit_log.common import AuditEvent, AuditOutcome, AuditSource
-from zato.common.audit_log.export.api import ModuleCtx as APICtx
+from zato.common.audit_log.export.state import ModuleCtx as APICtx
 from zato.common.audit_log.export.config import ModuleCtx as ExportCtx
 from zato.common.audit_log.export.data import ModuleCtx as DataCtx
 from zato.common.audit_log.export.mapping import ModuleCtx as MappingCtx

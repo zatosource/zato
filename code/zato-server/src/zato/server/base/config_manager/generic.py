@@ -74,14 +74,15 @@ class WrapperLocation(NamedTuple):
 
 _secret_prefixes = (SECRETS.Encrypted_Indicator, SECRETS.PREFIX)
 
-# The wrapper classes of the generic connection types whose modules import a client library,
-# each imported when the first connection of its type is built.
+# The wrapper classes of the generic connection types whose modules import a client library or a feature
+# of their own, each imported when the first connection of its type is built.
 _wrapper_locations = {
     COMMON_GENERIC.CONNECTION.TYPE.CLOUD_AWS: WrapperLocation('zato.server.generic.api.cloud_aws', 'CloudAWSWrapper'),
     COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: WrapperLocation('zato.server.generic.api.cloud_confluence',
         'CloudConfluenceWrapper'),
     COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_FABRIC: WrapperLocation('zato.server.generic.api.cloud_microsoft_fabric',
         'CloudMicrosoftFabricWrapper'),
+    COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP: WrapperLocation('zato.server.generic.api.gateway_mcp', 'GatewayMCPWrapper'),
     COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES: WrapperLocation('zato.server.generic.api.outconn_es', 'OutconnESWrapper'),
     COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: WrapperLocation('zato.server.generic.api.outconn_ldap', 'OutconnLDAPWrapper'),
     COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: WrapperLocation('zato.server.generic.api.outconn_mongodb',

@@ -17,7 +17,7 @@ from time import sleep
 from common import delete_all_rows, delete_audit_rows, get_event_ids, get_received_event_rows
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, AuditEvent, AuditOutcome, \
     AuditSource
-from zato.common.audit_log.export.api import set_audit_export
+from zato.common.audit_log.export.state import set_audit_export
 from zato.common.config_db import Env_Audit_Log_Enabled
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.config import ModuleCtx

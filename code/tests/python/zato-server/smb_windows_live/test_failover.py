@@ -16,7 +16,7 @@ from live_windows.layout import Hub, Shares
 from live_windows.settings import Partners, Versions
 
 # Local
-from _smb_windows_flows import hub_outbox, start_hub, verify_hub, wait_produced
+from _smb_windows_flows import hub_outbox, start_hub, verify_hub, wait_produced, Fault_Stale_Temp_Ms
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,7 +52,7 @@ def test_server_restart(smb_suite:'SMBWindowsSuite', version:'str', run:'str', m
 
     monitor.expect_server_errors(conn_name)
 
-    start_hub(handle, run, [Hub.Plant])
+    start_hub(handle, run, [Hub.Plant], stale_temp_ms=Fault_Stale_Temp_Ms)
 
     names = smb_suite.sequences.next_names(Hub.Plant, ModuleCtx.File_Count)
     outbox = hub_outbox(Hub.Plant)
