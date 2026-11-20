@@ -13,7 +13,6 @@ from logging import getLogger
 from elasticsearch import Elasticsearch
 
 # Zato
-from zato.common.api import ES
 from zato.common.typing_ import cast_
 from zato.server.connection.wrapper import Wrapper
 
@@ -31,25 +30,6 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# Default values applied when a configuration key is missing or None
-outconn_es_config_defaults:'dict[str, object]' = {
-    'address_list': ES.Default.Address_List,
-    'username': '',
-    'timeout': ES.Default.Timeout,
-    'tls_ca_certs_file': '',
-    'tls_cert_key_file': '',
-    'is_tls_validation_enabled': True,
-}
-
-# Config keys that must be integers but may arrive as strings from opaque storage
-outconn_es_int_config_keys = ('timeout',)
-
-# Config keys that must be booleans but may arrive as strings from opaque storage
-outconn_es_bool_config_keys = ('is_tls_validation_enabled',)
 
 # ################################################################################################################################
 # ################################################################################################################################

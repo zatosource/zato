@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from time import monotonic
 from traceback import format_exc
 
@@ -24,6 +23,8 @@ from zato.common.file_transfer.api import OutcomeUnknown
 from zato.common.model.file_transfer_ import FileTransferItem
 from zato.common.util.api import new_cid_server, utcnow
 from zato.common.util.file_transfer_scheduler import apply_schedule_defaults
+from zato.server.service.internal.outgoing.file_transfer.ack import ack_one_file, elapsed_ms, move_out_of_the_way, \
+    note_failed_ack, record_acked, resolve_subdirectory, retry_failed_acks
 from zato.server.service.internal.outgoing.file_transfer.candidates import get_candidates, get_file_name, \
     keep_entries_past_backoff, keep_stable_entries
 from zato.server.service.internal.outgoing.file_transfer.run import add_delivered_today, close_interrupted_runs, \
@@ -39,7 +40,6 @@ if 0:
     from zato.server.service import Service
     from zato.server.service.internal.outgoing.file_transfer.candidates import Selection
     from zato.server.service.internal.outgoing.file_transfer.run import RunContext
-    AuditLog = AuditLog
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,9 +70,6 @@ _claim_unconfirmed_error = 'Claim not confirmed by the remote end'
 # each one mapping the claim path of a file to its original path. The next run of the schedule renames each such file back.
 _unconfirmed_claims:'stranydict' = {}
 
-# Milliseconds per second.
-_ms_per_second = 1000
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -89,95 +86,6 @@ class FileResult:
     is_ack_failed: bool = False
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _elapsed_ms(start:'float') -> 'int':
-    elapsed = monotonic() - start
-    out = int(elapsed * _ms_per_second)
-    return out
-
-# ################################################################################################################################
-
-def _get_move_destination(conn:'any_', move_directory:'str', file_name:'str') -> 'str':
-    """ The destination path of a moved file, with a timestamp suffix if the name is already taken.
-    """
-    out = f'{move_directory}/{file_name}'
-
-    # The name is free ..
-    if not conn.exists(out):
-        return out
-
-    # .. or it is taken and the file is given a timestamp suffix.
-    now = datetime.now(timezone.utc)
-    stamp = now.strftime(_scheduler.Collision_Suffix_Format)
-
-    out = f'{move_directory}/{file_name}.{stamp}'
-    return out
-
-# ################################################################################################################################
-
-def _resolve_subdirectory(directory:'str', subdirectory:'str') -> 'str':
-    """ The subdirectory as an absolute path, relative ones are under the directory.
-    """
-    if subdirectory.startswith('/'):
-        out = subdirectory
-    else:
-        out = f'{directory}/{subdirectory}'
-
-    return out
-
-# ################################################################################################################################
-
-def _move_out_of_the_way(
-    conn,                  # type: any_
-    run,                   # type: RunContext
-    destination_directory, # type: str
-    file_name,             # type: str
-    current_path,          # type: str
-    ) -> 'str':
-    """ Moves a file into the directory, creating the directory if needed, and returns the new path.
-    """
-
-    # The directory is created once per run, and creating one that exists already is not an error
-    if destination_directory not in run.ensured_directories:
-        _ = conn.create_directory(destination_directory, exist_ok=True)
-        run.ensured_directories.add(destination_directory)
-
-    out = _get_move_destination(conn, destination_directory, file_name)
-    _ = conn.move(current_path, out)
-
-    return out
-
-# ################################################################################################################################
-
-def _ack_one_file(
-    conn,         # type: any_
-    run,          # type: RunContext
-    schedule,     # type: stranydict
-    directory,    # type: str
-    file_name,    # type: str
-    full_path,    # type: str
-    current_path, # type: str
-    ) -> 'str':
-    """ Moves or deletes a delivered file and returns the path it was moved to, empty if deleted.
-    """
-
-    # Our response to produce
-    out = ''
-
-    if schedule['on_success'] == _scheduler.OnSuccess.Move:
-        move_directory = _resolve_subdirectory(directory, schedule['move_directory'])
-        out = _move_out_of_the_way(conn, run, move_directory, file_name, current_path)
-    else:
-        _ = conn.delete_file(current_path)
-
-    # In marker mode, the marker is deleted with its file.
-    if schedule['ready_how'] == _scheduler.ReadyHow.Marker:
-        marker_path = full_path + schedule['marker_suffix']
-        _ = conn.delete_file(marker_path)
-
-    return out
-
 # ################################################################################################################################
 
 def _release_unconfirmed_claims(service:'Service', conn:'any_', conn_name:'str', schedule_name:'str') -> 'None':
@@ -237,10 +145,10 @@ def _quarantine_one_file(
     ) -> 'str':
     """ Moves a file to the quarantine directory and returns its new path, empty if the move failed.
     """
-    quarantine_directory = _resolve_subdirectory(directory, schedule['quarantine_directory'])
+    quarantine_directory = resolve_subdirectory(directory, schedule['quarantine_directory'])
 
     try:
-        out = _move_out_of_the_way(conn, run, quarantine_directory, file_name, current_path)
+        out = move_out_of_the_way(conn, run, quarantine_directory, file_name, current_path)
     except Exception:
         quarantine_error = format_exc()
         service.logger.warning('Could not quarantine `%s` in `%s` -> `%s`', current_path, quarantine_directory,
@@ -343,7 +251,7 @@ def _process_one_file(
         run.set_phase(Phase_Reading, file_name)
         read_start = monotonic()
         spooled = conn.read_to_spool(current_path)
-        read_ms = _elapsed_ms(read_start)
+        read_ms = elapsed_ms(read_start)
 
         item = FileTransferItem(conn_type, conn_name, schedule_name, directory, file_name, full_path,
             spooled.size, entry.last_modified_iso, spooled.path, schedule['encoding'])
@@ -361,7 +269,7 @@ def _process_one_file(
 
             service_start = monotonic()
             _ = service.invoke(service_name, item, cid=file_cid)
-            service_ms = _elapsed_ms(service_start)
+            service_ms = elapsed_ms(service_start)
 
         finally:
             item.close()
@@ -445,14 +353,14 @@ def _process_one_file(
 
     out.status = _status_processed
 
-    # A failed ack is recorded for this file alone and the run carries on.
+    # A failed ack is recorded for this file alone, the next run of the schedule acks the file, and this run carries on.
     run.set_phase(Phase_Acking, file_name)
     ack_start = monotonic()
 
     try:
-        destination = _ack_one_file(conn, run, schedule, directory, file_name, full_path, current_path)
+        destination = ack_one_file(conn, run, schedule, directory, file_name, full_path, current_path)
     except Exception:
-        ack_ms = _elapsed_ms(ack_start)
+        ack_ms = elapsed_ms(ack_start)
         error = format_exc()
         service.logger.warning('Could not put file `%s` out of the way after `%s` picked it up -> `%s`',
             full_path, service_name, error)
@@ -460,22 +368,12 @@ def _process_one_file(
             cid=file_cid, correl_id=run_cid, schedule=schedule_name, outcome=AuditOutcome.Error,
             file_name=file_name, service=service_name, error=error, duration_ms=ack_ms,
             extra={'ack_ms': ack_ms}, attrs_extra=attrs_extra)
+        note_failed_ack(conn_name, schedule_name, full_path, file_name, file_cid, current_path)
         out.is_ack_failed = True
         return out
 
-    ack_ms = _elapsed_ms(ack_start)
-
-    # What the ack did with the file.
-    if destination:
-        acked:'stranydict' = {'moved_to': destination}
-    else:
-        acked = {'deleted': True}
-
-    acked['ack_ms'] = ack_ms
-
-    _ = record_schedule_event(audit_log, conn_name, AuditEvent.File_Acked, full_path,
-        cid=file_cid, correl_id=run_cid, schedule=schedule_name, outcome=AuditOutcome.OK,
-        file_name=file_name, service=service_name, duration_ms=ack_ms, extra=acked, attrs_extra=attrs_extra)
+    ack_ms = elapsed_ms(ack_start)
+    record_acked(audit_log, conn_name, schedule, full_path, file_name, file_cid, run, destination, ack_ms)
 
     out.is_acked = True
     return out
@@ -564,7 +462,7 @@ def _select_files(
             run.set_phase(Phase_Waiting)
             wait_start = monotonic()
             selection = keep_stable_entries(conn, directory, candidates, schedule['stability_delay'])
-            run.data['stability_wait_ms'] = _elapsed_ms(wait_start)
+            run.data['stability_wait_ms'] = elapsed_ms(wait_start)
             _note_skips(run, selection)
             candidates = selection.kept
 
@@ -620,6 +518,9 @@ def process_files(service:'Service', context:'stranydict') -> 'None':
     scheduler_context = get_scheduler_context(service)
     run = open_run(audit_log, conn_name, directory, run_cid, schedule, scheduler_context)
 
+    # The files that earlier runs delivered without acking them are acked before the directory is listed.
+    retry_failed_acks(service, conn, conn_name, schedule, directory, run)
+
     # A connection or listing error closes the run as list-failed with the phase it failed in.
     phase = Phase_Listing
     directory_exists = True
@@ -643,7 +544,7 @@ def process_files(service:'Service', context:'stranydict') -> 'None':
                 phase = Phase_Listing
                 raise
 
-        list_ms = _elapsed_ms(list_start)
+        list_ms = elapsed_ms(list_start)
 
     except Exception:
         error = format_exc()
@@ -688,7 +589,7 @@ def process_files(service:'Service', context:'stranydict') -> 'None':
             result.attempt = attempt
             result.error = error_summary(error)
 
-        duration_ms = _elapsed_ms(file_start)
+        duration_ms = elapsed_ms(file_start)
         _note_file_result(run, entry, result, duration_ms)
 
     # The run's row is closed.

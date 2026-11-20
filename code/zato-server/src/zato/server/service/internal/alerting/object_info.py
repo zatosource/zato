@@ -24,9 +24,9 @@ from zato.common.audit_log.api import AuditSource
 from zato.common.odb.model import GenericConn
 from zato.common.util.file_transfer_scheduler import get_schedule_list
 from zato.common.util.sql import get_dict_with_opaque
+from zato.server.generic.api.config_defaults import outconn_smb_config_defaults
 from zato.server.generic.api.outconn_ftp import Outconn_FTP_Config_Defaults
 from zato.server.generic.api.outconn_sftp import outconn_sftp_config_defaults
-from zato.server.generic.api.outconn_smb import outconn_smb_config_defaults
 
 # ################################################################################################################################
 # ################################################################################################################################

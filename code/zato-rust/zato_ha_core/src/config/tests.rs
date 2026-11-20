@@ -40,6 +40,7 @@ fn minimal() -> Variables {
 fn defaults_apply() {
     let config = NodeConfig::from_source(&minimal()).unwrap();
     assert_eq!(config.role_port, DEFAULT_ROLE_PORT);
+    assert_eq!(config.server_port, DEFAULT_SERVER_PORT);
     assert_eq!(config.timers.takeover, Duration::from_secs(6));
     assert_eq!(config.data_dir, PathBuf::from("/home/zato/env/qs-1"));
     assert_eq!(
@@ -48,6 +49,14 @@ fn defaults_apply() {
             lease_name: DEFAULT_LEASE_NAME.to_owned()
         })
     );
+}
+
+#[test]
+fn the_server_port_is_read() {
+    let mut variables = minimal();
+    variables.0.insert(ENV_SERVER_PORT.to_owned(), "17020".to_owned());
+    let config = NodeConfig::from_source(&variables).unwrap();
+    assert_eq!(config.server_port, 17_020);
 }
 
 #[test]

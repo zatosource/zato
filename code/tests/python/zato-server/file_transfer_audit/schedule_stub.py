@@ -63,6 +63,9 @@ File_Content = b'code,label\nA1,First\nA2,Second\n'
 # What the failing target service says
 Service_Error = 'The target system is down'
 
+# What the remote end says when a file cannot be acked
+Ack_Error = 'The remote end is unreachable'
+
 # How many bytes at a time the local client reads a file in, small enough for a test file to take several chunks
 Read_Chunk_Size = 7
 
@@ -147,6 +150,25 @@ class ClaimRefusingClient(LocalDirectoryClient):
 
     def rename(self, from_path:'str', to_path:'str') -> 'None':
         raise Exception('Renamed by another consumer first')
+
+# ################################################################################################################################
+
+class AckRefusingClient(LocalDirectoryClient):
+    """ A directory whose remote end becomes unreachable after a file is delivered and before it is acked -
+    the first creation of a directory fails, and every later one succeeds.
+    """
+
+    def __init__(self, base_dir:'str') -> 'None':
+        super().__init__(base_dir)
+        self.is_reachable = False
+
+    def makedirs(self, remote_path:'str', exist_ok:'bool') -> 'None':
+
+        if not self.is_reachable:
+            self.is_reachable = True
+            raise Exception(Ack_Error)
+
+        super().makedirs(remote_path, exist_ok)
 
 # ################################################################################################################################
 

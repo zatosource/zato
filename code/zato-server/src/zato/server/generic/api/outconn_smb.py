@@ -23,7 +23,6 @@ from smbprotocol.header import NtStatus
 from smbprotocol.open import CreateOptions, FilePipePrinterAccessMask
 
 # Zato
-from zato.common.api import SMB
 from zato.common.audit_log.api import AuditLog
 from zato.common.file_transfer.api import Default_Verify_How, OutcomeUnknown
 from zato.common.file_transfer.spool import Chunk_Size
@@ -49,24 +48,6 @@ logger = getLogger(file_transfer_logger_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# Default values applied when a configuration key is missing or None
-outconn_smb_config_defaults:'dict[str, object]' = {
-    'host': '',
-    'port': SMB.DEFAULT.PORT,
-    'username': '',
-    'should_store_content': False,
-    'verify_how': Default_Verify_How,
-}
-
-# Config keys that must be integers but may arrive as strings from opaque storage
-outconn_smb_int_config_keys = ('port',)
-
-# Config keys that must be booleans but may arrive as strings from opaque storage
-outconn_smb_bool_config_keys = ('should_store_content',)
-
-# Config keys that must be strings but may arrive as integers from opaque storage
-outconn_smb_string_config_keys = ('host', 'username', 'verify_how')
 
 # How the source of a rename is shared with other handles - reading and writing, but not its deletion,
 # which is what a rename of the same file through another handle requires

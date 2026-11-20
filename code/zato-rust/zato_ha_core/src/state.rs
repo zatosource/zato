@@ -45,8 +45,23 @@ pub struct NodeState {
     /// Whether the active node lost the referee or the database, which stops the Zato server.
     pub isolated: bool,
 
+    /// Whether the Zato server that the supervisor started last has answered its ping endpoint.
+    pub server_ready: bool,
+
     /// Whether the node is shutting down.
     pub stopping: bool,
+}
+
+impl NodeState {
+    /// Whether the node holds the role in which its Zato server runs.
+    pub const fn serves(&self) -> bool {
+        self.role.is_active() && !self.isolated
+    }
+
+    /// Whether the node serves and its Zato server answers, which is when clients are sent to it.
+    pub const fn answers(&self) -> bool {
+        self.serves() && self.server_ready
+    }
 }
 
 /// The state and services every thread of the node uses.
@@ -71,6 +86,7 @@ impl Shared {
             role: Role::Down,
             generation: 0,
             isolated: false,
+            server_ready: false,
             stopping: false,
         };
         Self {

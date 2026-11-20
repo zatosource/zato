@@ -30,8 +30,8 @@ from zato.server.service.internal.outgoing.file_transfer.run import open_run
 
 # Test support
 from audit_env import audit_db_env
-from schedule_stub import events_of_type, get_attrs, get_events, new_environment, new_schedule, ClaimRefusingClient, \
-    Connection_Name, Directory, FailingServiceStub, File_Content, File_Name, Run_Cid, Schedule_Name, Service_Error, \
+from schedule_stub import events_of_type, get_attrs, get_events, new_environment, new_schedule, Ack_Error, \
+    AckRefusingClient, ClaimRefusingClient, Connection_Name, Directory, FailingServiceStub, File_Content, File_Name, Run_Cid, Schedule_Name, Service_Error, \
     ServiceStub, Target_Service
 
 # ################################################################################################################################
@@ -375,6 +375,50 @@ def test_a_claim_left_by_an_interrupted_run_is_released(tmp_path:'any_') -> 'Non
 
         interrupted_summary = loads(interrupted_row['data'])
         assert interrupted_summary['claim_released'] is True
+
+# ################################################################################################################################
+
+def test_a_file_whose_ack_failed_is_acked_by_the_next_run(tmp_path:'any_') -> 'None':
+    """ A file delivered while its ack fails stays under its claim name, and the next run acks it
+    before it lists the directory, without delivering it again.
+    """
+    with audit_db_env(tmp_path):
+
+        service, context, base_dir = new_environment(tmp_path, client_class=AckRefusingClient)
+        context[_scheduler.Extra_Schedule] = new_schedule(should_claim=True)
+
+        file_path = os.path.join(base_dir, Directory, File_Name)
+        claim_path = file_path + _scheduler.Claim_Suffix
+        archive_path = os.path.join(base_dir, Directory, _scheduler.Default_Move_Directory, File_Name)
+
+        # The first run delivers the file and fails to ack it ..
+        process_files(cast_('any_', service), context)
+
+        assert len(service.invoked) == 1
+        assert os.path.exists(claim_path)
+        assert not os.path.exists(archive_path)
+
+        # .. and the next run acks it without delivering it again.
+        process_files(cast_('any_', service), context)
+
+        assert len(service.invoked) == 1
+        assert not os.path.exists(claim_path)
+        assert os.path.exists(archive_path)
+
+        # The trail has the failed ack and the successful one, both under the cid of the file.
+        events = get_events()
+        acked = events_of_type(events, AuditEvent.File_Acked)
+
+        failed_ack, retried_ack = acked
+
+        assert failed_ack['outcome'] == AuditOutcome.Error
+        assert Ack_Error in failed_ack['data']
+
+        assert retried_ack['outcome'] == AuditOutcome.OK
+        assert retried_ack['cid'] == failed_ack['cid']
+
+        retried_summary = loads(retried_ack['data'])
+        assert retried_summary['moved_to'] == f'{Directory}/{_scheduler.Default_Move_Directory}/{File_Name}'
 
 # ################################################################################################################################
 # ################################################################################################################################

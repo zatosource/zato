@@ -39,6 +39,9 @@ pub const ENV_HEARTBEAT_TIME: &str = "Zato_HA_Heartbeat_Time";
 /// The environment variable with the time after which the standby attempts a takeover, in seconds.
 pub const ENV_TAKEOVER_TIME: &str = "Zato_HA_Takeover_Time";
 
+/// The environment variable with the port of the Zato server, which the server itself reads.
+pub const ENV_SERVER_PORT: &str = "Zato_Config_Bind_Port";
+
 /// The environment variable through which the node passes its generation to the Zato server.
 pub const ENV_GENERATION: &str = "Zato_HA_Generation";
 
@@ -104,6 +107,9 @@ const FALSE_VALUES: [&str; 6] = ["false", "no", "off", "n", "f", "0"];
 
 /// The default port of the role endpoint.
 pub const DEFAULT_ROLE_PORT: u16 = 35_201;
+
+/// The default port of the Zato server, as in the configuration of a new server.
+pub const DEFAULT_SERVER_PORT: u16 = 17_010;
 
 /// The default directory of the node's own files, relative to the home directory, as in `zato.common.defaults`.
 pub const DEFAULT_DATA_DIR_UNDER_HOME: &str = "env/qs-1";
@@ -227,6 +233,9 @@ pub struct NodeConfig {
 
     /// The port of the role endpoint.
     pub role_port: u16,
+
+    /// The port on which the Zato server answers its ping endpoint on the loopback address.
+    pub server_port: u16,
 
     /// The directory of the node's own files.
     pub data_dir: PathBuf,
@@ -411,6 +420,7 @@ impl NodeConfig {
             referee: referee(source)?,
             node_name: node_name(source)?,
             role_port: port(source, ENV_ROLE_PORT, DEFAULT_ROLE_PORT)?,
+            server_port: port(source, ENV_SERVER_PORT, DEFAULT_SERVER_PORT)?,
             database: postgresql(source)?,
             timers: timers(source)?,
             log_level: source.variable(ENV_LOG_LEVEL).unwrap_or_else(|| DEFAULT_LOG_LEVEL.to_owned()),

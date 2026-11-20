@@ -13,7 +13,6 @@ from logging import getLogger
 from pymongo import MongoClient
 
 # Zato
-from zato.common.api import MongoDB
 from zato.common.typing_ import cast_
 from zato.server.connection.wrapper import Wrapper
 
@@ -38,28 +37,6 @@ logger = getLogger(__name__)
 # How many milliseconds one second has - the client expects timeouts in milliseconds
 # while the configuration keeps them in seconds.
 _ms_per_second = 1000
-
-# Default values applied when a configuration key is missing or None
-outconn_mongodb_config_defaults:'dict[str, object]' = {
-    'server_list': MongoDB.Default.Server_List,
-    'username': '',
-    'auth_source': MongoDB.Default.Auth_Source,
-    'replica_set': '',
-    'app_name': MongoDB.Default.App_Name,
-    'pool_size_max': MongoDB.Default.Pool_Size_Max,
-    'connect_timeout': MongoDB.Default.Connect_Timeout,
-    'server_select_timeout': MongoDB.Default.Server_Select_Timeout,
-    'is_tls_enabled': False,
-    'tls_ca_certs_file': '',
-    'tls_cert_key_file': '',
-    'is_tls_validation_enabled': True,
-}
-
-# Config keys that must be integers but may arrive as strings from opaque storage
-outconn_mongodb_int_config_keys = ('pool_size_max', 'connect_timeout', 'server_select_timeout')
-
-# Config keys that must be booleans but may arrive as strings from opaque storage
-outconn_mongodb_bool_config_keys = ('is_tls_enabled', 'is_tls_validation_enabled')
 
 # ################################################################################################################################
 # ################################################################################################################################

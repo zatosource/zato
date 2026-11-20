@@ -36,9 +36,6 @@ if 0:
     from zato.common.test.pubsub_database import PubSubDatabase
     from zato.common.typing_ import stranydict, strlist
 
-    AdminClient = AdminClient
-    PubSubDatabase = PubSubDatabase
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -128,8 +125,20 @@ def _check_postgresql(findings:'strlist', database:'stranydict') -> 'None':
 # ################################################################################################################################
 
 def _check_data_directory(findings:'strlist', database:'PubSubDatabase') -> 'None':
-    """ Adds a finding if the data directory of a PostgreSQL container is on a file system held in memory.
+    """ Adds a finding if the data directory of a PostgreSQL container, or of the primary of a local cluster,
+    is on a file system held in memory.
     """
+
+    # The primary of a local cluster keeps its data directory on the file system of the host ..
+    if database.local_cluster:
+        data_dir = database.local_cluster.primary.data_dir
+
+        if is_memory_filesystem(data_dir):
+            findings.append(f'the data directory of PostgreSQL is on a file system held in memory, `{data_dir}`')
+
+        return
+
+    # .. while that of a container is inside the container.
     command = ['docker', 'exec', database.container_name, 'sh', '-c', ModuleCtx.Data_Directory_Type_Command]
     result = subprocess.run(command, capture_output=True, text=True, check=True)
 

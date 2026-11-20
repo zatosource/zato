@@ -15,7 +15,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # frozen or cut off from the network, and also when a failover of the database to a replica without the last raise
 # lets another server reach its generation again. A server that an active-standby node starts sets the generation
 # of the node's referee record in place of raising it, unless the stored generation is higher, in which case
-# the node was replaced before its server started and the server does no pub/sub work.
+# the node was replaced before its server started and the server does no pub/sub work. A plain raise waits
+# up to five seconds for the transactions of the previous server before it ends their sessions, while a server
+# of a node ends them at once, as its node starts it only after the previous server was replaced.
 
 # stdlib
 from logging import getLogger
@@ -39,16 +41,11 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 
 if 0:
+    from typing import Callable
     from sqlalchemy.engine import Connection, Engine
-    from zato.common.typing_ import anylist, callable_, intnone, strnone
+    from zato.common.typing_ import anylist, intnone, strnone
 
-    # Dummy assignments to satisfy type checkers
-    anylist = anylist
-    callable_ = callable_
-    intnone = intnone
-    strnone = strnone
-    Connection = Connection
-    Engine = Engine
+    engine_factory = Callable[[], Engine]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -63,6 +60,12 @@ _takeover_wait_seconds = 5
 
 # How often the sessions that hold up raising the generation are looked up again once the wait is over.
 _takeover_check_seconds = 1
+
+# The same two for a server of an active-standby node, whose node starts it only after the lease of the previous
+# active node went unrenewed for the takeover time, so every session that still holds the row belongs to a server
+# that was already replaced.
+_node_takeover_wait_seconds = 0
+_node_takeover_check_seconds = 0.05
 
 # What raises the generation.
 _raise_query = text('UPDATE zato_active SET generation = generation + 1, owner = :owner WHERE id = 1 ' + \
@@ -95,7 +98,7 @@ class _EngineRecorder:
     """ Builds the engine of a takeover and retains it, so that the caller of the takeover disposes it afterwards.
     """
 
-    def __init__(self, new_engine:'callable_') -> 'None':
+    def __init__(self, new_engine:'engine_factory') -> 'None':
         self.new_engine = new_engine
         self.engine:'Engine | None' = None
 
@@ -193,11 +196,23 @@ def _terminate_blockers(engine:'Engine', backend_pid:'int') -> 'anylist':
 def _raise_generation(engine:'Engine', owner:'str', ha_generation:'intnone', server_name:'strnone') -> '_GenerationRaiser':
     """ Raises the generation once, or sets the generation of an active-standby node, and writes the owner.
     Returns the raiser, whose generation is None if the stored generation is higher than the one of the node.
-    The transactions of the previous server that are still in progress are waited for up to a fixed time, after which
-    the sessions that still hold them are ended, as a frozen or cut-off server would hold its row locks until PostgreSQL
-    notices the lost client.
+    The transactions of the previous server that are still in progress are waited for up to _takeover_wait_seconds,
+    after which the sessions that still hold them are ended, as a frozen or cut-off server would hold its row locks
+    until PostgreSQL notices the lost client. A server of an active-standby node ends them without that wait,
+    looking them up every _node_takeover_check_seconds, because its node replaced the previous server before it started
+    this one. A session that is ended rolls back a transaction that was never acknowledged.
     """
     raiser = _GenerationRaiser(engine, owner, ha_generation, server_name)
+
+    # A server without a node waits for the previous server to complete its transactions ..
+    if ha_generation is None:
+        wait_seconds = _takeover_wait_seconds
+        check_seconds = _takeover_check_seconds
+
+    # .. while the previous server of a node has been replaced already.
+    else:
+        wait_seconds = _node_takeover_wait_seconds
+        check_seconds = _node_takeover_check_seconds
 
     thread = Thread(target=raiser.run, daemon=True)
     thread.start()
@@ -205,7 +220,7 @@ def _raise_generation(engine:'Engine', owner:'str', ha_generation:'intnone', ser
     started_at = monotonic()
 
     # Wait for the generation to be raised by itself first ..
-    thread.join(_takeover_wait_seconds)
+    thread.join(wait_seconds)
 
     # .. and end the sessions that keep it from completing after that.
     while thread.is_alive():
@@ -217,7 +232,7 @@ def _raise_generation(engine:'Engine', owner:'str', ha_generation:'intnone', ser
                 elapsed = monotonic() - started_at
                 logger.warning('Ended pub/sub sessions of a previous server -> pids:%s, waited:%.1fs', terminated, elapsed)
 
-        thread.join(_takeover_check_seconds)
+        thread.join(check_seconds)
 
     if raiser.exception is not None:
         raise raiser.exception
@@ -227,7 +242,7 @@ def _raise_generation(engine:'Engine', owner:'str', ha_generation:'intnone', ser
 # ################################################################################################################################
 
 def _connect_and_raise_generation(
-    get_engine:'callable_',
+    get_engine:'engine_factory',
     owner:'str',
     ha_generation:'intnone',
     server_name:'strnone',
@@ -242,12 +257,14 @@ def _connect_and_raise_generation(
 
 # ################################################################################################################################
 
-def take_over(get_engine:'callable_', server_name:'strnone') -> 'GenerationGuard':
+def take_over(get_engine:'engine_factory', server_name:'strnone') -> 'GenerationGuard':
     """ Makes this server the active one - raises the generation, or sets the generation of its active-standby node,
     and writes an owner unique to this server, waiting for the database to become available if it is not, records both
     and guards every subsequent transaction of the engine with them. The engine is built within the wait as well,
     because building it already connects to the database. A raise that is run again after an error writes the same owner.
     A server with a name records the takeover in the audit log in the transaction that raises the generation.
+    The sessions of the previous server that hold up the raise are ended after _takeover_wait_seconds,
+    and at once for a server of an active-standby node.
     """
     owner = CryptoManager.generate_hex_string()
     ha_generation = get_node_generation()
@@ -279,7 +296,7 @@ def take_over(get_engine:'callable_', server_name:'strnone') -> 'GenerationGuard
 
 # ################################################################################################################################
 
-def take_over_before_fork(new_engine:'callable_', server_name:'str') -> 'GenerationGuard':
+def take_over_before_fork(new_engine:'engine_factory', server_name:'str') -> 'GenerationGuard':
     """ Makes this server the active one once for the processes that its arbiter forks next, through an engine
     that is disposed before the fork, and retains the guard for those processes, each of which follows it on an engine of its own.
     The guard remains bound to the generation file of the server, so every engine that a forked process builds

@@ -8,7 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import nullcontext
+from importlib import import_module
 from traceback import format_exc
+from typing import NamedTuple
 
 # Bunch
 from zato.common.ext.bunch import Bunch
@@ -25,10 +27,11 @@ from zato.server.generic.api.channel_hl7_mllp import channel_config_defaults, ch
 from zato.server.generic.api.channel_kafka import channel_bool_config_keys as channel_kafka_bool_config_keys, \
     channel_config_defaults as channel_kafka_config_defaults, channel_int_config_keys as channel_kafka_int_config_keys
 from zato.server.generic.api.chat_discord import discord_config_defaults, discord_int_config_keys
-from zato.server.generic.api.cloud_aws import cloud_aws_config_defaults, cloud_aws_int_config_keys
 from zato.server.generic.api.cloud_salesforce import cloud_salesforce_config_defaults
-from zato.server.generic.api.outconn_es import outconn_es_bool_config_keys, outconn_es_config_defaults, \
-    outconn_es_int_config_keys
+from zato.server.generic.api.config_defaults import cloud_aws_config_defaults, cloud_aws_int_config_keys, \
+    outconn_es_bool_config_keys, outconn_es_config_defaults, outconn_es_int_config_keys, outconn_ldap_config_defaults, \
+    outconn_mongodb_bool_config_keys, outconn_mongodb_config_defaults, outconn_mongodb_int_config_keys, \
+    outconn_smb_bool_config_keys, outconn_smb_config_defaults, outconn_smb_int_config_keys, outconn_smb_string_config_keys
 from zato.server.generic.api.outconn_grpc import outconn_grpc_bool_config_keys, outconn_grpc_config_defaults, \
     outconn_grpc_int_config_keys
 from zato.server.generic.api.outconn_hl7_fhir import outconn_fhir_bool_config_keys, outconn_fhir_config_defaults, \
@@ -37,7 +40,6 @@ from zato.server.generic.api.outconn_hl7_mllp import outconn_bool_config_keys, o
     outconn_int_config_keys
 from zato.server.generic.api.outconn_kafka import outconn_bool_config_keys as outconn_kafka_bool_config_keys, \
     outconn_config_defaults as outconn_kafka_config_defaults, outconn_int_config_keys as     outconn_kafka_int_config_keys
-from zato.server.generic.api.outconn_ldap import outconn_ldap_config_defaults
 from zato.server.generic.api.outconn_llm import llm_config_defaults, llm_int_config_keys
 from zato.server.generic.api.outconn_odata import outconn_odata_bool_config_keys, outconn_odata_config_defaults, \
     outconn_odata_int_config_keys, outconn_sap_config_defaults
@@ -46,10 +48,6 @@ from zato.server.generic.api.outconn_ftp import Outconn_FTP_Bool_Config_Keys, Ou
 from zato.server.generic.api.outconn_sdk import normalize_connector_config
 from zato.server.generic.api.outconn_sftp import outconn_sftp_bool_config_keys, outconn_sftp_config_defaults, \
     outconn_sftp_int_config_keys, outconn_sftp_string_config_keys
-from zato.server.generic.api.outconn_mongodb import outconn_mongodb_bool_config_keys, outconn_mongodb_config_defaults, \
-    outconn_mongodb_int_config_keys
-from zato.server.generic.api.outconn_smb import outconn_smb_bool_config_keys, outconn_smb_config_defaults, \
-    outconn_smb_int_config_keys, outconn_smb_string_config_keys
 from zato.server.generic.connection import GenericConnection
 from zato.server.connection.outgoing_delivery import inbound_generic_types, publishable_generic_types
 
@@ -65,7 +63,31 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class WrapperLocation(NamedTuple):
+    """ The module and the name of the wrapper class of a generic connection type.
+    """
+    module_name: str
+    class_name: str
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 _secret_prefixes = (SECRETS.Encrypted_Indicator, SECRETS.PREFIX)
+
+# The wrapper classes of the generic connection types whose modules import a client library,
+# each imported when the first connection of its type is built.
+_wrapper_locations = {
+    COMMON_GENERIC.CONNECTION.TYPE.CLOUD_AWS: WrapperLocation('zato.server.generic.api.cloud_aws', 'CloudAWSWrapper'),
+    COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: WrapperLocation('zato.server.generic.api.cloud_confluence',
+        'CloudConfluenceWrapper'),
+    COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_FABRIC: WrapperLocation('zato.server.generic.api.cloud_microsoft_fabric',
+        'CloudMicrosoftFabricWrapper'),
+    COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES: WrapperLocation('zato.server.generic.api.outconn_es', 'OutconnESWrapper'),
+    COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: WrapperLocation('zato.server.generic.api.outconn_ldap', 'OutconnLDAPWrapper'),
+    COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: WrapperLocation('zato.server.generic.api.outconn_mongodb',
+        'OutconnMongoDBWrapper'),
+    COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SMB: WrapperLocation('zato.server.generic.api.outconn_smb', 'OutconnSMBWrapper'),
+}
 
 # The prefix GenericConnection.from_model gives to column-backed fields
 # that the incoming message did not carry at all.
@@ -192,6 +214,19 @@ class Generic(ConfigManagerImpl):
 
 # ################################################################################################################################
 
+    def _import_generic_wrapper(self, type_:'str') -> 'any_':
+        """ Imports the wrapper class of a generic connection type and keeps it for the next connections of the type.
+        """
+        location = _wrapper_locations[type_]
+        module = import_module(location.module_name)
+
+        out = getattr(module, location.class_name)
+        self._generic_conn_handler[type_] = out
+
+        return out
+
+# ################################################################################################################################
+
     def _create_generic_connection(
         self,
         msg:'stranydict',
@@ -227,7 +262,9 @@ class Generic(ConfigManagerImpl):
             self.logger.info('No config attr found for generic connection `%s`', item.type_)
             return
 
-        wrapper = self._generic_conn_handler[item.type_]
+        # The wrapper module of a type that has no connection yet is imported now.
+        if not (wrapper := self._generic_conn_handler.get(item.type_)):
+            wrapper = self._import_generic_wrapper(item.type_)
 
         msg_name = msg['name'] # type: str
 

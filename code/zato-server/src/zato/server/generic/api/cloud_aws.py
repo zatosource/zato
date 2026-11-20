@@ -11,7 +11,6 @@ from logging import getLogger
 from traceback import format_exc
 
 # Zato
-from zato.common.api import AWS
 from zato.common.typing_ import cast_
 from zato.server.connection.cloud.aws import AWSClient
 from zato.server.connection.queue import Wrapper
@@ -28,21 +27,6 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# Defaults for fields that the create path may not have supplied,
-# e.g. when a connection is created directly through zato.generic.connection.create.
-cloud_aws_config_defaults = {
-    'region': AWS.Default.Region,
-    'endpoint_url': '',
-    'access_key_id': '',
-    'pool_size': AWS.Default.Pool_Size,
-}
-
-# Values of these configuration keys may arrive as strings from opaque storage and need to be integers.
-cloud_aws_int_config_keys = ['pool_size']
 
 # ################################################################################################################################
 # ################################################################################################################################
