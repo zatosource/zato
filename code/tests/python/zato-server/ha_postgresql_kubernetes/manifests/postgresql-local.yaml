@@ -1,0 +1,28 @@
+# The Service through which the pods reach the primary of the local PostgreSQL on the host. The Service has
+# no selector, and its EndpointSlice names the address of the host on the network of kind and the port of the primary.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${service_name}
+  namespace: ${namespace}
+spec:
+  ports:
+    - name: postgresql
+      port: ${service_port}
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: ${service_name}-host
+  namespace: ${namespace}
+  labels:
+    kubernetes.io/service-name: ${service_name}
+addressType: IPv4
+ports:
+  - name: postgresql
+    port: ${primary_port}
+    protocol: TCP
+endpoints:
+  - addresses:
+      - ${host_address}

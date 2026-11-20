@@ -250,3 +250,62 @@ fn a_single_exit_is_not_a_failure() {
     assert_eq!(node.failure(), None);
     node.stop();
 }
+
+/// The file that the draining server of the stop test writes on SIGTERM before it exits.
+const STOPPED_FILE_NAME: &str = "stopped";
+
+/// The server of the stop test, which drains for a while on SIGTERM, records that it stopped and exits.
+const DRAINING_SCRIPT: &str = r#"trap 'sleep 0.3; echo stopped > "$0"; exit 0' TERM; while true; do sleep 0.05; done"#;
+
+#[test]
+fn the_running_mark_is_set_at_the_spawn_and_cleared_when_the_server_exits() {
+    // A spawned server is marked as running ..
+    let stub = HttpStub::start(STATUS_OK);
+    let node = ActiveNode::start(stub.port, SERVER_SCRIPT, EXIT_FILE_NAME);
+    assert!(wait_until(|| node.shared.state.lock().server_running));
+    node.stop();
+
+    // .. and the exit of a server that is not started again clears the mark.
+    let stub = HttpStub::start(STATUS_UNAVAILABLE);
+    let node = ActiveNode::start(stub.port, EXITING_SCRIPT, STARTS_FILE_NAME);
+    assert!(wait_until(|| node.failure() == Some(ServerFailure::Exits)));
+    assert!(wait_until(|| !node.shared.state.lock().server_running));
+    thread::sleep(UNANSWERED_PERIOD);
+    assert!(!node.shared.state.lock().server_running);
+    node.stop();
+}
+
+#[test]
+fn on_a_stop_the_running_mark_is_cleared_only_after_the_server_has_exited() {
+    let stub = HttpStub::start(STATUS_OK);
+    let node = ActiveNode::start(stub.port, DRAINING_SCRIPT, STOPPED_FILE_NAME);
+    assert!(wait_until(|| node.shared.state.lock().server_ready));
+
+    // The stop of the node sends SIGTERM to a server that drains before it exits, and the mark stays set
+    // until the server has recorded its stop and exited.
+    node.shared.announce_stop();
+    assert!(node.shared.state.lock().server_running);
+    assert!(wait_until(|| !node.shared.state.lock().server_running));
+    assert!(node.dir.path().join(STOPPED_FILE_NAME).exists());
+    node.stop();
+}
+
+#[test]
+fn a_stopping_node_starts_no_server() {
+    let dir = tempfile::tempdir().unwrap();
+    let stub = HttpStub::start(STATUS_OK);
+    let mut config = node_config(NODE_A, dir.path(), TIMERS);
+    config.server_port = stub.port;
+    let shared = shared(config, Box::new(MemoryReferee::default()));
+    {
+        let mut state = shared.state.lock();
+        state.role = Role::Active;
+        state.generation = GENERATION;
+        state.stopping = true;
+    }
+
+    // The supervisor does not commit to a start once the node is stopping, so no server is ever marked as running.
+    let supervisor = Supervisor::new(Arc::clone(&shared), vec!["sh".to_owned(), "-c".to_owned(), SERVER_SCRIPT.to_owned()]);
+    assert!(!supervisor.commit_to_start());
+    assert!(!shared.state.lock().server_running);
+}

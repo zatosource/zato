@@ -7,6 +7,11 @@
 //!
 //! Usage: `_zato_ha_node -- <command that starts the Zato server>`. The node runs the command only while
 //! it is active, and reads its configuration from the `Zato_HA_*` environment variables.
+//!
+//! SIGTERM and SIGINT stop the node in this order. The label thread removes the label of the own pod, the supervisor
+//! stops the Zato server, which drains its requests, and an active node keeps renewing its lease during the drain.
+//! Once the server has exited, an active node releases the referee record, so that the other node takes over
+//! at its next heartbeat, and the node exits.
 
 use std::process::ExitCode;
 use std::sync::Arc;
@@ -67,6 +72,8 @@ fn run(config: NodeConfig, command: Vec<String>) -> Result<(), String> {
         .spawn(move || supervisor.run())
         .map_err(|error| error.to_string())?;
 
+    // On a stop, the control loop of an active node returns once its server has exited and the record is released,
+    // or once its wait for the server has elapsed.
     let outcome = control.run().map_err(|error| error.to_string());
 
     // The server is stopped before the node exits, whatever ended the control loop.

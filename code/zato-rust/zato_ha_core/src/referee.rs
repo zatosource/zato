@@ -117,6 +117,9 @@ pub mod tests {
         /// The record that another writer renews before the next compare-and-set, raising its version.
         pub renew_before_next_write: Mutex<bool>,
 
+        /// The record that another node writes before the next compare-and-set, as its takeover does.
+        pub write_before_next_write: Mutex<Option<RefereeRecord>>,
+
         /// The last version issued, from which every next version is issued.
         pub last_version: Mutex<u64>,
     }
@@ -184,6 +187,17 @@ pub mod tests {
                 versioned.version = self.next_version();
             }
         }
+
+        /// Writes the record of another node at the next version, if a test asked for it before this write.
+        fn write_if_requested(&self) {
+            let Some(record) = self.write_before_next_write.lock().take() else {
+                return;
+            };
+            *self.record.lock() = Some(Versioned {
+                value: record,
+                version: self.next_version(),
+            });
+        }
     }
 
     impl Referee for MemoryReferee {
@@ -199,6 +213,7 @@ pub mod tests {
                 return Err(RefereeError("unreachable".to_owned()));
             }
             self.renew_if_requested();
+            self.write_if_requested();
             let applied = self.store(record, expected_version);
 
             // The record is written before the answer is lost, as it is when a network drops a response.

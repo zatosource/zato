@@ -10,6 +10,14 @@
 //! under one lock, which makes the label thread remove the label of the own pod, and stops the server. At its next
 //! tick, the control loop makes the node the standby, which stops the renewals, so the lease lapses and the other node
 //! takes over after the takeover time. The node that resigned takes no lease over before its hold-off elapses.
+//!
+//! A stop of the node runs in this order. The node announces the stop, which makes the label thread remove the label
+//! of the own pod and the supervisor stop the Zato server with SIGTERM, which drains it. An active node keeps renewing
+//! its lease until the supervisor reports that no process of the server runs, so the other node does not take over
+//! during the drain. It then writes the record as released, on the condition that the record still names it at its
+//! generation, and exits, and the other node takes the released record over at its next heartbeat. A server that still
+//! runs at the deadline leaves the record unreleased, so its lease lapses. A standby and a fenced node exit
+//! without a write.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -21,11 +29,20 @@ use crate::postgresql::DatabaseProbe;
 use crate::record::{NodeEntry, RefereeRecord, Versioned};
 use crate::referee::{Transition, transition};
 use crate::state::{Role, Shared};
+use crate::supervisor::STOP_GRACE;
 
 mod lease;
 
 /// How often the control loop evaluates the timers.
 const TICK: Duration = Duration::from_millis(100);
+
+/// How much longer than the stop grace of the Zato server an active node that stops waits for its server to exit
+/// before it leaves the record unreleased.
+///
+/// The stop grace, this margin and the timeout of the one request of the release to the API server, 16 seconds
+/// in total, stay below the `terminationGracePeriodSeconds` of the pod, 30 seconds, so the kubelet does not kill
+/// a node that is still releasing its record.
+const RELEASE_MARGIN: Duration = Duration::from_secs(5);
 
 /// How often the referee record is read to detect a lost referee or a missed replacement.
 const RECORD_CHECK_INTERVAL: Duration = Duration::from_secs(2);
@@ -119,6 +136,9 @@ pub struct Control {
 
     /// When the node last resigned, while consecutive resignations double the hold-off.
     last_resigned_at: Option<Instant>,
+
+    /// How long an active node that stops waits for its Zato server to exit before it leaves the record unreleased.
+    release_wait: Duration,
 }
 
 impl Control {
@@ -147,14 +167,92 @@ impl Control {
             observed_at: Instant::now(),
             hold_off,
             last_resigned_at: None,
+            release_wait: STOP_GRACE.saturating_add(RELEASE_MARGIN),
         })
     }
 
     /// Runs until a stop is requested or the referee is found to have lost data.
     pub fn run(mut self) -> Result<(), ControlError> {
         let outcome = self.bootstrap().and_then(|()| self.control_loop());
-        self.shared.announce_stop();
+        if outcome.is_ok() {
+            self.stop();
+        } else {
+            // A node that found the referee lost data writes nothing to it.
+            self.shared.announce_stop();
+        }
         outcome
+    }
+
+    /// Announces the stop to every thread and, on an active node, releases the record once its Zato server has exited.
+    fn stop(&mut self) {
+        // The role is read before the announcement, after which the supervisor stops the server of an active node.
+        let is_active = self.shared.state.lock().role.is_active();
+        self.shared.announce_stop();
+        if is_active {
+            self.release_on_stop();
+        }
+    }
+
+    /// Keeps renewing the lease of an active node that stops until its Zato server has exited, and then releases
+    /// the record, so the other node takes it over at its next heartbeat instead of after the takeover time.
+    fn release_on_stop(&mut self) {
+        if self.renew_until_server_exits() {
+            self.release();
+        }
+    }
+
+    /// Renews the lease at every heartbeat while a process of the Zato server runs, and returns whether the server
+    /// exited before the release wait elapsed.
+    fn renew_until_server_exits(&mut self) -> bool {
+        let deadline = Instant::now() + self.release_wait;
+        loop {
+            // The role and the mark of the server are read under one lock, so the mark matches the role it was read with.
+            let (role, is_running) = {
+                let state = self.shared.state.lock();
+                (state.role, state.server_running)
+            };
+            if !is_running {
+                return true;
+            }
+            if Instant::now() >= deadline {
+                tracing::error!(
+                    "The Zato server still runs {} s after the stop began, the active role is not released",
+                    self.release_wait.as_secs_f64()
+                );
+                return false;
+            }
+
+            // The renewals continue during the drain of the server, so the other node does not take over while
+            // the server still runs, and a node that a renewal fenced renews no more.
+            if role.is_active()
+                && let Err(error) = self.check_lease(role)
+            {
+                tracing::error!("The active role is not released: {error}");
+                return false;
+            }
+
+            // The supervisor notifies the end of the server, which ends the wait before the tick does.
+            let mut state = self.shared.state.lock();
+            if state.server_running {
+                let _ = self.shared.changed.wait_for(&mut state, TICK);
+            }
+            drop(state);
+        }
+    }
+
+    /// Writes the record as released on the condition that it still names this node at its generation, unreleased,
+    /// so that a record that the other node took over during the drain stays as that node wrote it.
+    fn release(&self) {
+        let generation = self.shared.state.lock().generation;
+        let held = RefereeRecord::new(generation, &self.shared.config.node_name);
+        let released = held.released_by();
+        match transition(self.shared.referee.as_ref(), &released, |current| current == Some(&held)) {
+            Transition::Applied => tracing::info!("Released the active role at generation {generation}"),
+            Transition::Refused(current) => {
+                tracing::warn!("The active role is not released, the referee record is {current:?}");
+            }
+            Transition::Unreachable(error) => tracing::warn!("The active role is not released: {error}"),
+        }
     }
 
     /// Whether a stop was requested.
@@ -228,7 +326,8 @@ impl Control {
         }
 
         // A node that the record names as active also starts as the standby, and it becomes active again only through
-        // a takeover once its earlier lease lapsed, so the other node may take over first.
+        // a takeover once its earlier lease lapsed, so the other node may take over first. A released record is taken
+        // over at once, by this node or by the other one, at the first read of the lease.
         let role = Role::Standby;
 
         let mut state = self.shared.state.lock();
@@ -331,10 +430,26 @@ mod tests {
         takeover: Duration::from_millis(40),
     };
 
+    /// The version of the record that a test starts with.
+    const FIRST_VERSION: u64 = 1;
+
+    /// The generation at which node A is active in the tests of its stop.
+    const ACTIVE_GENERATION: u64 = 3;
+
+    /// How long the Zato server of the tests of a stop drains, which spans several ticks of the control loop.
+    const DRAIN: Duration = Duration::from_millis(500);
+
+    /// The release wait of the test of a server that does not exit.
+    const SHORT_RELEASE_WAIT: Duration = Duration::from_millis(50);
+
     /// Node A of a pair, with the files it needs for as long as it exists.
     struct TestNode {
+
         /// The control loop of the node.
         control: Control,
+
+        /// The referee, which the test changes under the node.
+        referee: Arc<MemoryReferee>,
 
         /// The directory of the node's files.
         _dir: TempDir,
@@ -342,15 +457,49 @@ mod tests {
 
     /// Returns node A with `record` in the referee and `persisted` in its generation file.
     fn node(record: Option<RefereeRecord>, persisted: u64) -> TestNode {
-        let referee = MemoryReferee::holding(record, 1);
+        let referee = Arc::new(MemoryReferee::holding(record, FIRST_VERSION));
         let dir = tempfile::tempdir().unwrap();
         let config = test_support::node_config(NODE_A, dir.path(), TIMERS);
         generation::write(&config.generation_file(), persisted).unwrap();
 
-        let shared = test_support::shared(config, Box::new(referee));
+        let shared = test_support::shared(config, Box::new(Arc::clone(&referee)));
         let probe = Box::new(Arc::new(MemoryProbe::default()));
         let control = Control::new(shared, probe, Arc::new(AtomicBool::new(false))).unwrap();
-        TestNode { control, _dir: dir }
+        TestNode {
+            control,
+            referee,
+            _dir: dir,
+        }
+    }
+
+    /// Returns node A active at the active generation, with a running Zato server.
+    fn active_node() -> TestNode {
+        let node = node(Some(RefereeRecord::new(ACTIVE_GENERATION, NODE_A)), ACTIVE_GENERATION);
+        set_role(&node.control, Role::Active, ACTIVE_GENERATION);
+        node.control.shared.state.lock().server_running = true;
+        node
+    }
+
+    /// Returns the number of the version of the record the referee holds.
+    fn version_number(node: &TestNode) -> u64 {
+        node.referee.read().unwrap().unwrap().version.parse().unwrap()
+    }
+
+    /// Ends the Zato server of a node after the drain, as the supervisor does once the process has exited,
+    /// after `during_drain` has run while the server still runs.
+    fn end_server_after_drain(
+        shared: &Arc<Shared>,
+        during_drain: impl FnOnce() + Send + 'static,
+    ) -> thread::JoinHandle<()> {
+        let shared = Arc::clone(shared);
+        thread::spawn(move || {
+            thread::sleep(DRAIN);
+            during_drain();
+            let mut state = shared.state.lock();
+            state.server_running = false;
+            drop(state);
+            shared.changed.notify_all();
+        })
     }
 
     /// Returns the record the referee holds.
@@ -406,5 +555,66 @@ mod tests {
         set_role(&node.control, Role::Active, 3);
         node.control.check_record().unwrap();
         assert_eq!(role(&node.control), (Role::Fenced, 5));
+    }
+
+    #[test]
+    fn the_stop_of_an_active_node_renews_during_the_drain_and_releases_after_it() {
+        let mut node = active_node();
+
+        // While the server drains, the record stays unreleased and its lease is renewed ..
+        let referee = Arc::clone(&node.referee);
+        let draining = end_server_after_drain(&node.control.shared, move || {
+            let current = referee.read().unwrap().unwrap();
+            assert_eq!(current.value, RefereeRecord::new(ACTIVE_GENERATION, NODE_A));
+            assert!(current.version.parse::<u64>().unwrap() > FIRST_VERSION);
+        });
+        node.control.stop();
+        draining.join().unwrap();
+
+        // .. and once the server has exited, the record is released at the generation of the node.
+        assert!(node.control.shared.state.lock().stopping);
+        assert_eq!(
+            record(&node.control),
+            RefereeRecord::new(ACTIVE_GENERATION, NODE_A).released_by()
+        );
+    }
+
+    #[test]
+    fn a_server_that_runs_past_the_release_wait_leaves_the_record_unreleased() {
+        let mut node = active_node();
+        node.control.release_wait = SHORT_RELEASE_WAIT;
+        node.control.stop();
+        assert_eq!(record(&node.control), RefereeRecord::new(ACTIVE_GENERATION, NODE_A));
+    }
+
+    #[test]
+    fn the_stop_of_a_standby_or_a_fenced_node_writes_nothing() {
+        for role in [Role::Standby, Role::Fenced] {
+            let mut node = node(Some(RefereeRecord::new(ACTIVE_GENERATION, NODE_B)), ACTIVE_GENERATION);
+            set_role(&node.control, role, ACTIVE_GENERATION);
+            node.control.stop();
+            assert!(node.control.shared.state.lock().stopping);
+            assert_eq!(record(&node.control), RefereeRecord::new(ACTIVE_GENERATION, NODE_B));
+            assert_eq!(version_number(&node), FIRST_VERSION);
+        }
+    }
+
+    #[test]
+    fn a_record_that_the_other_node_took_over_during_the_drain_is_not_released() {
+        let mut node = active_node();
+        let taken_over = RefereeRecord::new(ACTIVE_GENERATION + 1, NODE_B);
+
+        // The other node takes the record over while the server of this node drains ..
+        let referee = Arc::clone(&node.referee);
+        let written = taken_over.clone();
+        let draining = end_server_after_drain(&node.control.shared, move || {
+            let current = referee.read().unwrap().unwrap();
+            assert!(referee.compare_and_set(&written, Some(&current.version)).unwrap());
+        });
+        node.control.stop();
+        draining.join().unwrap();
+
+        // .. so the record stays as the other node wrote it.
+        assert_eq!(record(&node.control), taken_over);
     }
 }

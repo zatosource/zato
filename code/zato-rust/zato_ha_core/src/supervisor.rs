@@ -16,6 +16,11 @@
 //! the failure in the shared state and clears the mark under one lock, so the label of the pod is removed first.
 //! The supervisor then stops the server and keeps it stopped, the control loop resigns the active role, the lease
 //! lapses and the node holds off its own takeovers. An exit below the exit limit starts the server again.
+//!
+//! The supervisor marks the server as running from the moment it commits to a start until the process exited or its
+//! stop completed. On a stop of the node, the label thread removes the label of the own pod while the supervisor
+//! stops the server with SIGTERM, which drains its requests, and the control loop of an active node keeps renewing
+//! the lease until the mark is cleared and then releases the referee record.
 
 use std::os::unix::process::CommandExt;
 use std::process::{Child, Command};
@@ -36,7 +41,7 @@ use crate::state::{Role, Shared};
 const CHECK_INTERVAL: Duration = Duration::from_millis(500);
 
 /// How long the server may take to stop after SIGTERM before it receives SIGKILL.
-const STOP_GRACE: Duration = Duration::from_secs(10);
+pub const STOP_GRACE: Duration = Duration::from_secs(10);
 
 /// How often a stopping server is checked.
 const STOP_POLL_INTERVAL: Duration = Duration::from_millis(50);
@@ -181,6 +186,7 @@ impl Supervisor {
                 self.child = None;
                 self.health.on_exit(Instant::now());
                 self.set_server_ready(false);
+                self.set_server_running(false);
             }
             Ok(None) => {}
             Err(error) => tracing::error!("Cannot check the Zato server: {error}"),
@@ -228,6 +234,30 @@ impl Supervisor {
         }
     }
 
+    /// Records whether a process of the server runs, notifying the control loop, which releases the record
+    /// of a stopping active node only once no process of its server runs.
+    fn set_server_running(&self, running: bool) {
+        let mut state = self.shared.state.lock();
+        state.server_running = running;
+        drop(state);
+        self.shared.changed.notify_all();
+    }
+
+    /// Commits to a start of the server unless the node is stopping, and returns whether it did.
+    ///
+    /// The mark of a running server is set under the same lock in which the stop is read, so the control loop of
+    /// a stopping node either finds the mark set and waits for the stop of the server, or the server never starts.
+    fn commit_to_start(&self) -> bool {
+        let mut state = self.shared.state.lock();
+        let committed = !state.stopping;
+        if committed {
+            state.server_running = true;
+        }
+        drop(state);
+        self.shared.changed.notify_all();
+        committed
+    }
+
     /// Sends one ping to the server and returns whether it answered 200.
     fn ping(&self, agent: &ureq::Agent) -> bool {
         agent
@@ -269,6 +299,11 @@ impl Supervisor {
             return;
         };
 
+        // A node that began to stop since the role was read starts no server.
+        if !self.commit_to_start() {
+            return;
+        }
+
         // A new server has not answered yet, whatever its predecessor did.
         self.set_server_ready(false);
         reap_reparented_processes();
@@ -287,19 +322,26 @@ impl Supervisor {
                 self.last_ping_at = Instant::now();
             }
 
-            // A server that cannot be spawned fails as one that exits at once does.
+            // A server that cannot be spawned fails as one that exits at once does, and no process of it runs.
             Err(error) => {
                 tracing::error!("Cannot start the Zato server: {error}");
                 self.health.on_exit(Instant::now());
+                self.set_server_running(false);
             }
         }
     }
 
-    /// Stops the server and every process it started, with SIGTERM and then SIGKILL.
+    /// Stops the server and every process it started, and only then clears the mark of a running server.
     fn stop(&mut self) {
-        let Some(mut child) = self.child.take() else {
+        let Some(child) = self.child.take() else {
             return;
         };
+        self.terminate(child);
+        self.set_server_running(false);
+    }
+
+    /// Stops a server and every process it started, with SIGTERM and then SIGKILL.
+    fn terminate(&mut self, mut child: Child) {
         let Ok(pid) = i32::try_from(child.id()) else {
             return;
         };

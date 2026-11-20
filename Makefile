@@ -751,8 +751,9 @@ Zato_Test_HA_Modules_postgresql := \
 	test_shared_takeover.py test_shared_database_failover.py test_reliability.py test_shared_long_runs.py
 
 Zato_Test_HA_Modules_postgresql-kubernetes := \
-	test_manifest_synchronous_standby.py test_shared_kube_pods.py test_shared_kube_failover.py test_shared_kube_server_faults.py \
-	test_shared_kube_postgresql.py test_shared_kube_rollout.py test_shared_kube_nodes.py
+	test_manifest_synchronous_standby.py test_shared_kube_pods.py test_shared_kube_local_postgresql.py \
+	test_shared_kube_failover.py test_shared_kube_server_faults.py test_shared_kube_postgresql.py test_shared_kube_rollout.py \
+	test_shared_kube_nodes.py
 
 # The pytest option that resumes each suite from the test that failed or was interrupted, or starts it over under RESTART.
 Zato_Test_HA_Stepwise = $(if $(RESTART),--sw-reset,--sw)

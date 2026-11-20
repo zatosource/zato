@@ -7,7 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The checks of every run applied to a pair in Kubernetes, the report of how long the Service listed no pod,
-# and the readers of the output of a pod and of the answers that a client of the Service received.
+# the placement of the active role on a given pod, and the readers of the output of a pod and of the answers
+# that a client of the Service received.
 
 # stdlib
 import logging
@@ -19,6 +20,7 @@ from datetime import datetime
 from ha_checks import check_scheduler, check_workload
 from kube_cluster import kubectl, ModuleCtx as ClusterCtx
 from kube_env import ModuleCtx as EnvCtx
+from kube_faults import delete_pod
 from kube_traffic import ModuleCtx as TrafficCtx
 from workload import Workload
 from zato.common.typing_ import cast_
@@ -55,6 +57,9 @@ class ModuleCtx:
     # How long the pair may take to recover once a fault is removed, in seconds, which includes pods that start again
     Recovery_Timeout = 600
 
+    # How long the endpoints of the Service may take to follow the label of the new active pod, in seconds
+    Propagation_Limit = 2.0
+
     # How many claims of each scheduler job an active pod that a fault ends between a claim and its run may leave without a run
     Unrun_Claims_After_Fault = 1
 
@@ -68,6 +73,30 @@ class ModuleCtx:
     Fraction_Digits = 6
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def place_active(env:'KubeEnvironment', ordinal:'int') -> 'KubeNode':
+    """ Moves the active role to the pod of the given ordinal, deleting the active pod while the role is on the other one,
+    and returns the active pod once the other one is its standby.
+    """
+    pod_name = EnvCtx.Pod_Names[ordinal]
+    deadline = time.monotonic() + ModuleCtx.Recovery_Timeout
+
+    while True:
+        remaining = deadline - time.monotonic()
+        active = env.wait_for_pair(remaining)
+
+        if active.pod_name == pod_name:
+            logger.info('Active role on %s', pod_name)
+            return active
+
+        # The pod of the given ordinal takes over from the deleted one, which then becomes its standby.
+        _ = delete_pod(active.pod_name)
+
+        target = env.get_node(pod_name)
+        remaining = deadline - time.monotonic()
+        _ = target.wait_for_role([EnvCtx.Role_Active], remaining)
+
 # ################################################################################################################################
 
 def start_workload(env:'KubeEnvironment') -> 'Workload':
@@ -115,13 +144,20 @@ def finish(env:'KubeEnvironment', workload:'Workload', fault_started:'float', un
 
 # ################################################################################################################################
 
-def read_pod_log(pod_name:'str') -> 'log_entry_list':
-    """ Returns each line of the output of the Zato container of a pod with the time at which the kubelet received it.
+def read_pod_log(pod_name:'str', path:'str'='') -> 'log_entry_list':
+    """ Returns each line of the output of the Zato container of a pod with the time at which the kubelet received it,
+    from the pod itself or, given a path, from a file of that output that a follower of the pod wrote.
     """
-    result = kubectl('logs', pod_name, '-n', ClusterCtx.Namespace, '-c', EnvCtx.Zato_Container, '--timestamps')
+    if path:
+        with open(path) as log_file:
+            text = log_file.read()
+    else:
+        result = kubectl('logs', pod_name, '-n', ClusterCtx.Namespace, '-c', EnvCtx.Zato_Container, '--timestamps')
+        text = result.stdout
+
     out:'log_entry_list' = []
 
-    for line in result.stdout.splitlines():
+    for line in text.splitlines():
         match = ModuleCtx.Timestamped_Line.match(line)
         if not match:
             continue

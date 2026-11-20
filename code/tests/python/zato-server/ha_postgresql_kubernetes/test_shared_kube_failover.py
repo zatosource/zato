@@ -16,7 +16,7 @@ import re
 import time
 
 # Zato
-from kube_checks import find_moment, get_pair, read_pod_log, wait_for_ok
+from kube_checks import find_moment, get_pair, ModuleCtx as ChecksCtx, read_pod_log, wait_for_ok
 from kube_env import ModuleCtx as EnvCtx
 from kube_faults import heal_node, isolate_node
 from kube_traffic import FailoverClient, ModuleCtx as TrafficCtx, RequestRecord
@@ -35,9 +35,6 @@ if 0:
 # ################################################################################################################################
 
 class ModuleCtx:
-
-    # How long the endpoints of the Service may take to follow the label of the new active pod, in seconds
-    Propagation_Limit = 2.0
 
     # How long the session of the previous server may be kept once the raise begins, in seconds
     Session_End_Limit = 1.0
@@ -139,7 +136,7 @@ def test_failover_duration(kube_pair:'KubeEnvironment') -> 'None':
 
     # .. the client is served again within the takeover time, the start of the server and the propagation ..
     outage = first_ok_at - isolated_at
-    outage_limit = env.timers.takeover + HALimits.Server_Start + ModuleCtx.Propagation_Limit
+    outage_limit = env.timers.takeover + HALimits.Server_Start + ChecksCtx.Propagation_Limit
     assert outage <= outage_limit, f'Outage of {outage:.3f}s above {outage_limit:.3f}s -> {timeline}'
 
     # .. and the raise ends the sessions of the previous server without waiting for them.

@@ -97,6 +97,7 @@ class LocalInstance:
     role: 'str'
     data_dir: 'str'
     log_path: 'str'
+    listen_addresses: 'str'
     port: 'int'
     reservation: 'PortReservation'
 
@@ -211,7 +212,7 @@ def _get_instance_settings(instance:'LocalInstance', settings:'strlist', synchro
     """
     out = list(settings)
     out.append(f'port={instance.port}')
-    out.append(f'listen_addresses={ModuleCtx.Host}')
+    out.append(f'listen_addresses={instance.listen_addresses}')
     out.append('unix_socket_directories=')
     out.append(f'cluster_name={instance.role}')
     out.append(f'synchronous_standby_names={synchronous_standby}')
@@ -260,13 +261,14 @@ def _start_instance(instance:'LocalInstance', settings:'strlist') -> 'None':
 
 # ################################################################################################################################
 
-def _start_on_reserved_port(base_dir:'str', role:'str', settings:'strlist') -> 'LocalInstance':
-    """ Starts an instance whose data directory exists on a port reserved for it.
+def _start_on_reserved_port(base_dir:'str', role:'str', settings:'strlist', listen_addresses:'str') -> 'LocalInstance':
+    """ Starts an instance whose data directory exists on a port reserved for it, listening on the given addresses.
     """
     instance = LocalInstance()
     instance.role = role
     instance.data_dir = os.path.join(base_dir, role)
     instance.log_path = os.path.join(base_dir, f'{role}.log')
+    instance.listen_addresses = listen_addresses
 
     def start(port:'int') -> 'None':
         instance.port = port
@@ -392,11 +394,41 @@ def _record_instance(cluster:'LocalCluster', instance:'LocalInstance') -> 'None'
 
 # ################################################################################################################################
 
-def start_local_cluster(username:'str', password:'str', database:'str', settings:'strlist') -> 'LocalCluster':
+def _admit_subnets(data_dir:'str', client_subnets:'strlist') -> 'None':
+    """ Makes pg_hba.conf of a new data directory admit the clients of the given subnets with a password.
+    """
+    path = os.path.join(data_dir, 'pg_hba.conf')
+    lines:'strlist' = []
+
+    for subnet in client_subnets:
+        line = f'host all all {subnet} scram-sha-256\n'
+        lines.append(line)
+
+    with open(path, 'a') as hba_file:
+        _ = hba_file.write(''.join(lines))
+
+# ################################################################################################################################
+
+def start_local_cluster(
+    username:'str',
+    password:'str',
+    database:'str',
+    settings:'strlist',
+    extra_listen_addresses:'strlist | None' = None,
+    client_subnets:'strlist | None' = None,
+    ) -> 'LocalCluster':
     """ Initializes and starts a primary with the given settings and its synchronous standby, each on a port reserved
     for it, with a superuser and a database of the given names, and returns them once each commit waits for the standby.
+    Each instance listens on 127.0.0.1 and on the extra addresses, and admits the clients of the given subnets.
     """
     remove_stale_clusters()
+
+    addresses = [ModuleCtx.Host]
+
+    if extra_listen_addresses:
+        addresses.extend(extra_listen_addresses)
+
+    listen_addresses = ','.join(addresses)
 
     # The cluster is under a name of its own ..
     disk_dir = get_disk_dir(ModuleCtx.Disk_Dir_Name)
@@ -427,8 +459,12 @@ def start_local_cluster(username:'str', password:'str', database:'str', settings
     os.remove(initial_password_file)
     _include_settings(primary_dir)
 
+    # .. it admits the clients of the subnets, and so does the standby, which is a copy of it ..
+    if client_subnets:
+        _admit_subnets(primary_dir, client_subnets)
+
     # .. it starts without a synchronous standby, which does not exist yet ..
-    out.primary = _start_on_reserved_port(out.base_dir, ModuleCtx.Primary, settings)
+    out.primary = _start_on_reserved_port(out.base_dir, ModuleCtx.Primary, settings, listen_addresses)
 
     client_env = get_client_env(out)
     primary_port = f'{out.primary.port}'
@@ -442,7 +478,7 @@ def start_local_cluster(username:'str', password:'str', database:'str', settings
 
     _ = _run([pg_basebackup, '-p', primary_port, '-D', standby_dir, '-R', '-X', 'stream', '--checkpoint=fast'], client_env)
 
-    out.standby = _start_on_reserved_port(out.base_dir, ModuleCtx.Standby, settings)
+    out.standby = _start_on_reserved_port(out.base_dir, ModuleCtx.Standby, settings, listen_addresses)
 
     # .. and the primary makes each commit wait for it from now on.
     primary_settings = _get_instance_settings(out.primary, settings, ModuleCtx.Standby)

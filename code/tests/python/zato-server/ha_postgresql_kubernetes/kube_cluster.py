@@ -382,19 +382,39 @@ def get_node_ip(node_name:'str') -> 'str':
 
 # ################################################################################################################################
 
-def get_kind_gateway() -> 'str':
-    """ Returns the address of the host on the network of kind, which the pods reach it at.
+def _get_kind_ipv4_config() -> 'strstrdict':
+    """ Returns the IPv4 subnet of the network of kind with its gateway.
     """
     network = json.loads(docker('network', 'inspect', 'kind').stdout)[0]
 
     for config in network['IPAM']['Config']:
         gateway = config['Gateway']
 
-        # The network has an IPv6 subnet as well, which the receivers do not listen on.
+        # The network has an IPv6 subnet as well, which the services of the host do not listen on.
         if ':' not in gateway:
-            return gateway
+            return config
 
     raise Exception('No IPv4 gateway on the network of kind')
+
+# ################################################################################################################################
+
+def get_kind_gateway() -> 'str':
+    """ Returns the address of the host on the network of kind, which the pods reach it at.
+    """
+    config = _get_kind_ipv4_config()
+
+    out = config['Gateway']
+    return out
+
+# ################################################################################################################################
+
+def get_kind_subnet() -> 'str':
+    """ Returns the IPv4 subnet of the network of kind, from which the nodes and their pods reach the host.
+    """
+    config = _get_kind_ipv4_config()
+
+    out = config['Subnet']
+    return out
 
 # ################################################################################################################################
 

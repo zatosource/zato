@@ -8,7 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The session of the Kubernetes suites of a pair on PostgreSQL. The session creates the cluster, the receivers,
 # the quickstart environment and the referee, and one PostgreSQL instance in the zone without Zato pods
-# is the Zato database of both pods.
+# is the Zato database of both pods. With Zato_Test_Kube_PostgreSQL_Backend=local, the local build
+# of PostgreSQL on the host is the Zato database instead.
 
 # stdlib
 import json
@@ -19,6 +20,7 @@ import time
 # Zato
 from kube_cluster import apply_manifest, ModuleCtx as ClusterCtx, wait_for_rollout
 from kube_env import create_cluster_session, create_secret, KubeBackend, KubeSession, ModuleCtx as EnvCtx
+from kube_local_postgresql import is_local_backend, start_local_backend, use_local_backend
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.direct_sql.reset import recreate_public_schema
 from zato.common.test.pubsub_database import _write_tls_setup_script, connect, get_container_settings, \
@@ -159,6 +161,12 @@ class KubePostgreSQL(KubeBackend):
         connection.close()
 
 # ################################################################################################################################
+
+    def stop(self) -> 'None':
+        """ The instance runs in the cluster, whose deletion removes it.
+        """
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def get_manifest_placeholders(database:'PubSubDatabase') -> 'strstrdict':
@@ -275,14 +283,24 @@ def _start_postgresql(session:'KubeSession') -> 'KubePostgreSQL':
 # ################################################################################################################################
 
 def create_postgresql_session() -> 'KubeSession':
-    """ Creates the cluster, the receivers, the quickstart environment of the pods and the PostgreSQL instance.
+    """ Creates the cluster, the receivers, the quickstart environment of the pods and the Zato database of the pods,
+    which is the PostgreSQL instance in the cluster or, with the local backend, the local build on the host.
     """
-    out = create_cluster_session(DatabaseCtx.PostgreSQL_Image, ModuleCtx.Zone)
+    # The local build runs on the host, so the nodes of the cluster receive no image of the database ..
+    if is_local_backend():
+        out = create_cluster_session('', ModuleCtx.Zone)
 
-    postgresql = _start_postgresql(out)
+        local_backend = start_local_backend()
+        use_local_backend(out, local_backend)
 
-    out.backends = [postgresql]
-    out.database = postgresql.database
+    # .. whereas the instance in the cluster runs from its image.
+    else:
+        out = create_cluster_session(DatabaseCtx.PostgreSQL_Image, ModuleCtx.Zone)
+
+        postgresql = _start_postgresql(out)
+
+        out.backends = [postgresql]
+        out.database = postgresql.database
 
     return out
 

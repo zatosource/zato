@@ -38,5 +38,9 @@ class HALimits:
     # for the start of the interpreter in a pod, which takes up to 2.1 s in the Kubernetes suite.
     Server_Bad_Start = 3.0
 
+    # How long the stop of the server of an active node may take, from the SIGTERM of its node to the exit of the server,
+    # in seconds. It equals HA_Stop_Grace of zato/server/arbiter_config.py, the longest stop that the node permits.
+    Server_Stop = 10.0
+
 # ################################################################################################################################
 # ################################################################################################################################

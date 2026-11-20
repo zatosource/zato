@@ -214,6 +214,11 @@ class KubeBackend:
         """
         raise NotImplementedError()
 
+    def stop(self) -> 'None':
+        """ Stops what the service runs outside of the cluster, which the deletion of the cluster does not remove.
+        """
+        raise NotImplementedError()
+
 # ################################################################################################################################
 
 @dataclass(init=False)
@@ -369,8 +374,8 @@ def _create_host_directories(run_dir:'str') -> 'None':
 
 def create_cluster_session(database_image:'str', database_zone:'str') -> 'KubeSession':
     """ Creates the cluster, the receivers, the quickstart environment of the pods, the CA that they trust and the referee,
-    without the Zato database, which the caller adds. The image of the database is loaded into the nodes of its zone
-    together with the image of the pods.
+    without the Zato database, which the caller adds. The image of the database, unless it is empty for a database
+    outside of the cluster, is loaded into the nodes of its zone together with the image of the pods.
     """
     run_dir = prepare_runtime_dir()
     _create_host_directories(run_dir)
@@ -379,10 +384,19 @@ def create_cluster_session(database_image:'str', database_zone:'str') -> 'KubeSe
 
     create_cluster(run_dir, NodesCtx.Repository_Dir)
 
-    database_nodes = [node_name for node_name, zone in cluster.zones.items() if zone == database_zone]
+    images = {pod_image: get_zato_node_names()}
+
+    if database_image:
+        database_nodes:'strlist' = []
+
+        for node_name, zone in cluster.zones.items():
+            if zone == database_zone:
+                database_nodes.append(node_name)
+
+        images[database_image] = database_nodes
 
     start_time = time.monotonic()
-    load_images({pod_image: get_zato_node_names(), database_image: database_nodes})
+    load_images(images)
     logger.info('Image load: %.1fs', time.monotonic() - start_time)
 
     base = HASession()
@@ -468,6 +482,9 @@ def remove_kube_session(session:'KubeSession') -> 'None':
     session.proxy.stop()
     stop_receivers(session.base)
     delete_cluster()
+
+    for backend in session.backends:
+        backend.stop()
 
 # ################################################################################################################################
 

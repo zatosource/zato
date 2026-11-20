@@ -605,13 +605,19 @@ def start_pubsub_database(label:'str', mode:'str', extra_settings:'strlist | Non
 
 # ################################################################################################################################
 
-def _start_local_database(database:'PubSubDatabase', extra_settings:'strlist | None') -> 'None':
+def _start_local_database(
+    database:'PubSubDatabase',
+    extra_settings:'strlist | None',
+    extra_listen_addresses:'strlist | None' = None,
+    client_subnets:'strlist | None' = None,
+    ) -> 'None':
     """ Starts the local cluster of a database, with the settings of the containers, and points the database at its primary.
     """
     database.password = 'pubsub.' + CryptoManager.generate_hex_string()
     settings = get_container_settings(database, extra_settings)
 
-    cluster = start_local_cluster(ModuleCtx.Username, database.password, ModuleCtx.DB_Name, settings)
+    cluster = start_local_cluster(ModuleCtx.Username, database.password, ModuleCtx.DB_Name, settings,
+        extra_listen_addresses, client_subnets)
 
     database.local_cluster = cluster
     database.host = '127.0.0.1'
@@ -620,6 +626,17 @@ def _start_local_database(database:'PubSubDatabase', extra_settings:'strlist | N
     database.admin_password = database.password
     database.settings = settings
     database.env = get_cluster_env(cluster)
+
+# ################################################################################################################################
+
+def start_reachable_local_database(extra_listen_addresses:'strlist', client_subnets:'strlist') -> 'PubSubDatabase':
+    """ Starts the pub/sub database of a session on the local cluster, which also listens on the given addresses
+    and admits the clients of the given subnets.
+    """
+    out = PubSubDatabase(mode=PubSubDBMode.PostgreSQL_Local)
+    _start_local_database(out, None, extra_listen_addresses, client_subnets)
+
+    return out
 
 # ################################################################################################################################
 

@@ -48,6 +48,10 @@ pub struct NodeState {
     /// Whether the active node lost the referee or the database, which stops the Zato server.
     pub isolated: bool,
 
+    /// Whether a process of the Zato server runs, from the moment the supervisor commits to its start
+    /// until the process exited or its stop completed.
+    pub server_running: bool,
+
     /// Whether the Zato server that the supervisor started last has answered its ping endpoint.
     pub server_ready: bool,
 
@@ -98,6 +102,7 @@ impl Shared {
             role: Role::Down,
             generation: 0,
             isolated: false,
+            server_running: false,
             server_ready: false,
             server_ready_since: None,
             server_failure: None,
