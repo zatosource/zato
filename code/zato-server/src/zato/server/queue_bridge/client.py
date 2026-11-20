@@ -280,13 +280,15 @@ class QueueBridgeClient:
 
 # ################################################################################################################################
 
-    def reload(self, channels:'anylist | None'=None, outgoing:'anylist | None'=None) -> 'None':
-        """ Sends the full connection config to the queue bridge. """
+    def reload(self, *, channels:'anylist', outgoing:'anylist', needs_reply:'bool') -> 'None':
+        """ Sends the full connection config to the queue bridge. With needs_reply, returns once the queue bridge
+        acknowledges the reload or the reply timeout elapses.
+        """
         payload = {
-            'channels': channels if channels is not None else [],
-            'outgoing': outgoing if outgoing is not None else [],
+            'channels': channels,
+            'outgoing': outgoing,
         }
-        _ = self.invoke('reload', payload, needs_reply=True)
+        _ = self.invoke('reload', payload, needs_reply=needs_reply)
 
 # ################################################################################################################################
 

@@ -31,8 +31,9 @@ from zato.server.service.internal.outgoing.file_transfer.run import open_run
 # Test support
 from audit_env import audit_db_env
 from schedule_stub import events_of_type, get_attrs, get_events, new_environment, new_schedule, Ack_Error, \
-    AckRefusingClient, ClaimRefusingClient, Connection_Name, Directory, FailingServiceStub, File_Content, File_Name, Run_Cid, Schedule_Name, Service_Error, \
-    ServiceStub, Target_Service
+    AckRefusingClient, ClaimRefusingClient, Connection_Name, Directory, FailingOnceServiceStub, FailingServiceStub, \
+    File_Content, File_Name, Release_Error, ReleaseRefusingClient, Run_Cid, Schedule_Name, Service_Error, ServiceStub, \
+    Target_Service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -419,6 +420,44 @@ def test_a_file_whose_ack_failed_is_acked_by_the_next_run(tmp_path:'any_') -> 'N
 
         retried_summary = loads(retried_ack['data'])
         assert retried_summary['moved_to'] == f'{Directory}/{_scheduler.Default_Move_Directory}/{File_Name}'
+
+# ################################################################################################################################
+
+def test_a_claim_that_could_not_be_released_is_released_by_the_next_run(tmp_path:'any_') -> 'None':
+    """ A file whose delivery fails stays under its claim name when the claim cannot be released,
+    and the next run releases it before it lists the directory, so the file is delivered.
+    """
+    with audit_db_env(tmp_path):
+
+        service, context, base_dir = new_environment(tmp_path,
+            client_class=ReleaseRefusingClient, service_class=FailingOnceServiceStub)
+        context[_scheduler.Extra_Schedule] = new_schedule(should_claim=True, retry_backoff=0)
+
+        file_path = os.path.join(base_dir, Directory, File_Name)
+        claim_path = file_path + _scheduler.Claim_Suffix
+        archive_path = os.path.join(base_dir, Directory, _scheduler.Default_Move_Directory, File_Name)
+
+        # The first run fails to deliver the file and fails to release its claim ..
+        process_files(cast_('any_', service), context)
+
+        assert service.invoked == []
+        assert os.path.exists(claim_path)
+
+        # .. and the next run releases the claim and delivers the file.
+        process_files(cast_('any_', service), context)
+
+        assert len(service.invoked) == 1
+        assert service.invoked[0][1].file_name == File_Name
+        assert not os.path.exists(claim_path)
+        assert os.path.exists(archive_path)
+
+        # The trail has the failed delivery with the claim that was not released.
+        events = get_events()
+        failed = events_of_type(events, AuditEvent.Delivery_Failed)[0]
+
+        failed_summary = loads(failed['data'])
+        assert failed_summary['claim_released'] is False
+        assert Release_Error in failed_summary['release_error']
 
 # ################################################################################################################################
 # ################################################################################################################################

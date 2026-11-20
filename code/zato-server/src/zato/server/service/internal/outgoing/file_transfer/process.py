@@ -66,9 +66,10 @@ _claim_lost_error = 'Already claimed by another consumer'
 # The error of a claim that the remote end may have carried out without confirming it.
 _claim_unconfirmed_error = 'Claim not confirmed by the remote end'
 
-# The claims that the remote end may have carried out without confirming them, keyed by connection and schedule,
-# each one mapping the claim path of a file to its original path. The next run of the schedule renames each such file back.
-_unconfirmed_claims:'stranydict' = {}
+# The claims that the remote end may have carried out without confirming them, and the claims that could not be released,
+# keyed by connection and schedule, each one mapping the claim path of a file to its original path.
+# The next run of the schedule renames each such file back.
+_claims_to_release:'stranydict' = {}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -88,18 +89,27 @@ class FileResult:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _release_unconfirmed_claims(service:'Service', conn:'any_', conn_name:'str', schedule_name:'str') -> 'None':
-    """ Renames back each file that an earlier run of the schedule claimed without a confirmation from the remote end,
-    so that the run picks it up again.
+def _note_claim_to_release(conn_name:'str', schedule_name:'str', claim_path:'str', full_path:'str') -> 'None':
+    """ Remembers a claimed file that the next run of the schedule renames back to its original name.
     """
-    unconfirmed_key = f'{conn_name}.{schedule_name}'
+    claims_key = f'{conn_name}.{schedule_name}'
+    claims = _claims_to_release.setdefault(claims_key, {})
+    claims[claim_path] = full_path
 
-    if unconfirmed_key not in _unconfirmed_claims:
+# ################################################################################################################################
+
+def _release_pending_claims(service:'Service', conn:'any_', conn_name:'str', schedule_name:'str') -> 'None':
+    """ Renames back each file that an earlier run of the schedule claimed without a confirmation from the remote end,
+    or could not release, so that the run picks it up again.
+    """
+    claims_key = f'{conn_name}.{schedule_name}'
+
+    if claims_key not in _claims_to_release:
         return
 
-    unconfirmed = _unconfirmed_claims[unconfirmed_key]
+    claims = _claims_to_release[claims_key]
 
-    for claim_path, full_path in list(unconfirmed.items()):
+    for claim_path, full_path in list(claims.items()):
 
         # A file that is not under its claim name was not claimed, and a file under its original name is never replaced ..
         try:
@@ -108,15 +118,24 @@ def _release_unconfirmed_claims(service:'Service', conn:'any_', conn_name:'str',
 
         # .. and a remote end that is still unreachable leaves the claim to the next run.
         except Exception:
-            service.logger.info('Could not release the unconfirmed claim on `%s` -> `%s`', claim_path, format_exc())
+            service.logger.info('Could not release the pending claim on `%s` -> `%s`', claim_path, format_exc())
             continue
 
-        del unconfirmed[claim_path]
+        del claims[claim_path]
 
 # ################################################################################################################################
 
-def _release_claim(service:'Service', conn:'any_', full_path:'str', current_path:'str', failure:'stranydict') -> 'None':
+def _release_claim(
+    service:'Service',
+    conn:'any_',
+    conn_name:'str',
+    schedule_name:'str',
+    full_path:'str',
+    current_path:'str',
+    failure:'stranydict',
+    ) -> 'None':
     """ Renames a claimed file back to its original name and records the outcome in the failure data.
+    A claim that cannot be released is released by the next run of the schedule.
     """
     if current_path == full_path:
         return
@@ -126,6 +145,7 @@ def _release_claim(service:'Service', conn:'any_', full_path:'str', current_path
     except Exception:
         release_error = format_exc()
         service.logger.info('Could not release the claim on `%s` -> `%s`', current_path, release_error)
+        _note_claim_to_release(conn_name, schedule_name, current_path, full_path)
         failure['claim_released'] = False
         failure['release_error'] = error_summary(release_error)
     else:
@@ -223,9 +243,7 @@ def _process_one_file(
         # The file may be under its claim name already, which is why the next run renames it back if it is
         except OutcomeUnknown:
             service.logger.info('Claim of file `%s` not confirmed, it is released in the next run', full_path)
-            unconfirmed_key = f'{conn_name}.{schedule_name}'
-            unconfirmed = _unconfirmed_claims.setdefault(unconfirmed_key, {})
-            unconfirmed[claim_path] = full_path
+            _note_claim_to_release(conn_name, schedule_name, claim_path, full_path)
             _ = record_schedule_event(audit_log, conn_name, AuditEvent.File_Claimed, full_path,
                 cid=file_cid, correl_id=run_cid, schedule=schedule_name, outcome=AuditOutcome.Error,
                 file_name=file_name, error=_claim_unconfirmed_error, attrs_extra=attrs_extra)
@@ -298,12 +316,12 @@ def _process_one_file(
                 failure['quarantine_path'] = quarantine_path
                 out.status = _status_quarantined
             else:
-                _release_claim(service, conn, full_path, current_path, failure)
+                _release_claim(service, conn, conn_name, schedule_name, full_path, current_path, failure)
                 out.status = _status_failed
 
         # .. an earlier one leaves it in place for the next run.
         else:
-            _release_claim(service, conn, full_path, current_path, failure)
+            _release_claim(service, conn, conn_name, schedule_name, full_path, current_path, failure)
             out.status = _status_failed
 
         _ = record_schedule_event(audit_log, conn_name, AuditEvent.Delivery_Failed, full_path,
@@ -510,9 +528,9 @@ def process_files(service:'Service', context:'stranydict') -> 'None':
     audit_log:'AuditLog' = conn.wrapper.audit_log
 
     # Interrupted runs are closed, and their claims released, before the new one opens, as are the claims
-    # that the remote end did not confirm ..
+    # that the remote end did not confirm and the claims that earlier runs could not release ..
     close_interrupted_runs(audit_log, conn_name, schedule_name, conn)
-    _release_unconfirmed_claims(service, conn, conn_name, schedule_name)
+    _release_pending_claims(service, conn, conn_name, schedule_name)
 
     # .. and the new run's row is written before the directory is touched.
     scheduler_context = get_scheduler_context(service)

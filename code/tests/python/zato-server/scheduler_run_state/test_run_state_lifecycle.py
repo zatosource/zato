@@ -340,7 +340,7 @@ def test_a_reload_draws_its_number_before_its_odb_read(env:'_Environment', redis
 
     # Another server creates a job while the reload reads the ODB ..
     adapter = _ODBAdapter(jobs, lambda: other.create_job(2, {}))
-    reloading.reload(adapter, env.run_state)
+    reloading.reload(adapter, env.run_state, needs_reply=False)
 
     command, reload_payload = reloading.payloads[0]
     _, create_payload = other.payloads[0]

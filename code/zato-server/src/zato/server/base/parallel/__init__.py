@@ -1192,7 +1192,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         listener_loops.append(self._new_scheduler_request_listener(scheduler_adapter))
 
-        self._scheduler.reload(scheduler_adapter, self._scheduler_run_state)
+        # The scheduler applies the commands of its stream in order, so the start does not wait for the reply to the reload.
+        self._scheduler.reload(scheduler_adapter, self._scheduler_run_state, needs_reply=False)
         self._scheduler_started = True
 
         for listener_loop in listener_loops:
@@ -1314,7 +1315,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             command = fields['command']
             if command == 'request_jobs':
                 logger.info('Scheduler requested jobs, sending reload')
-                self._scheduler.reload(scheduler_adapter, self._scheduler_run_state)
+                self._scheduler.reload(scheduler_adapter, self._scheduler_run_state, needs_reply=True)
             _ = req_redis.xack(request_stream, group_name, msg_id)
 
         def _request_listener_loop() -> 'None':
@@ -1723,7 +1724,8 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             outgoing_noun = 'outgoing connection' if len(outgoing) == 1 else 'outgoing connections'
             logger.info('Sending reload to queue bridge with %d %s and %d %s',
                 len(channels), channel_noun, len(outgoing), outgoing_noun)
-            self._queue_bridge.reload(channels=channels, outgoing=outgoing)
+            # The queue bridge applies the commands of its stream in order, so the start does not wait for the reply.
+            self._queue_bridge.reload(channels=channels, outgoing=outgoing, needs_reply=False)
             self._queue_bridge_started = True
 
             self._start_queue_bridge_request_listener()
@@ -1757,7 +1759,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         channel_noun = 'channel' if len(channels) == 1 else 'channels'
         outgoing_noun = 'outgoing connection' if len(outgoing) == 1 else 'outgoing connections'
         logger.info('Reloading queue bridge with %d %s and %d %s', len(channels), channel_noun, len(outgoing), outgoing_noun)
-        self._queue_bridge.reload(channels=channels, outgoing=outgoing)
+        self._queue_bridge.reload(channels=channels, outgoing=outgoing, needs_reply=True)
 
         # The listeners follow the channels the config manager holds now - the normalized configurations, not the raw rows.
         if self._channel_listeners:
@@ -2203,7 +2205,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # .. reload the scheduler if it was started ..
         if self._scheduler_started:
             scheduler_adapter = SchedulerODBAdapter(self.odb)
-            self._scheduler.reload(scheduler_adapter, self._scheduler_run_state)
+            self._scheduler.reload(scheduler_adapter, self._scheduler_run_state, needs_reply=True)
 
         # .. reload the queue bridge if it was started ..
         if self._queue_bridge_started:

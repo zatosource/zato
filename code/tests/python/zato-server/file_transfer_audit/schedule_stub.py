@@ -66,6 +66,9 @@ Service_Error = 'The target system is down'
 # What the remote end says when a file cannot be acked
 Ack_Error = 'The remote end is unreachable'
 
+# What the remote end says when a claim cannot be released
+Release_Error = 'The remote end is unreachable during the release'
+
 # How many bytes at a time the local client reads a file in, small enough for a test file to take several chunks
 Read_Chunk_Size = 7
 
@@ -150,6 +153,28 @@ class ClaimRefusingClient(LocalDirectoryClient):
 
     def rename(self, from_path:'str', to_path:'str') -> 'None':
         raise Exception('Renamed by another consumer first')
+
+# ################################################################################################################################
+
+class ReleaseRefusingClient(LocalDirectoryClient):
+    """ A directory whose remote end becomes unreachable while a claimed file is renamed back to its original name -
+    the first such rename fails, and every later one succeeds.
+    """
+
+    def __init__(self, base_dir:'str') -> 'None':
+        super().__init__(base_dir)
+        self.is_reachable = False
+
+    def rename(self, from_path:'str', to_path:'str') -> 'None':
+
+        is_release = from_path.endswith(_scheduler.Claim_Suffix)
+
+        if is_release:
+            if not self.is_reachable:
+                self.is_reachable = True
+                raise Exception(Release_Error)
+
+        super().rename(from_path, to_path)
 
 # ################################################################################################################################
 
@@ -245,6 +270,24 @@ class FailingServiceStub(ServiceStub):
 
     def invoke(self, service_name:'str', item:'any_', cid:'str'='') -> 'None':
         raise Exception(Service_Error)
+
+# ################################################################################################################################
+
+class FailingOnceServiceStub(ServiceStub):
+    """ A dispatch service whose target service is down for the first invocation only.
+    """
+
+    def __init__(self, conn:'SMBConnection') -> 'None':
+        super().__init__(conn)
+        self.is_up = False
+
+    def invoke(self, service_name:'str', item:'any_', cid:'str'='') -> 'None':
+
+        if not self.is_up:
+            self.is_up = True
+            raise Exception(Service_Error)
+
+        super().invoke(service_name, item, cid)
 
 # ################################################################################################################################
 # ################################################################################################################################
