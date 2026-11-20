@@ -52,7 +52,7 @@ const LOCK_RETRY_INTERVAL: Duration = Duration::from_millis(1);
 /// Keeping a connection open means no connection of the Zato server is ever the last one to close,
 /// which would checkpoint and delete the log.
 struct DatabaseConnections {
-    /// Takes the write lock during a checkpoint and a snapshot.
+    /// Takes the write lock during a checkpoint.
     lock: Connection,
 
     /// Runs the checkpoint while the write lock is held by `lock`.

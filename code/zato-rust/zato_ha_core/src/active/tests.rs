@@ -409,12 +409,18 @@ fn a_log_whose_every_frame_was_checkpointed_leaves_the_write_lock_to_the_writers
     assert!(elapsed < NO_LOCK_WAIT, "The checkpoint waited {elapsed:?} for the write lock");
 }
 
-/// Commits and waits at the barrier until the node is no longer active alone.
-fn write_while_solo(shared: &Shared, path: &Path) {
+/// Commits and waits at the barrier until the node is no longer active alone, committing only while it holds `turns`.
+///
+/// The busy handler of `SQLite` keeps no queue of its waiters, so writers that only retried the write lock would wait
+/// for it in no order and for as long as the commits of all the others take. The writers of the Zato server take turns
+/// under the lock of the database file in the same way.
+fn write_while_solo(shared: &Shared, path: &Path, turns: &Mutex<()>) {
     let connection = Connection::open(path).unwrap();
     connection.busy_timeout(RECEIVE_TIMEOUT).unwrap();
     while shared.state.lock().role == Role::ActiveSolo {
+        let turn = turns.lock();
         let _ = connection.execute("insert into message (body) values (?1)", [PUBLICATION]).unwrap();
+        drop(turn);
         assert_eq!(barrier::wait(shared), BarrierOutcome::Synced);
     }
 }
@@ -432,11 +438,13 @@ fn a_standby_that_keeps_pace_with_steady_writers_is_admitted() {
 
     let listener = TcpListener::bind((LOOPBACK, 0)).unwrap();
     let shared = active_node(dir.path(), &certificates, listener.local_addr().unwrap().port());
+    let turns = Arc::new(Mutex::new(()));
     let mut writers = Vec::new();
     for _ in 0..WRITERS {
         let writer_shared = Arc::clone(&shared);
         let writer_path = database_path.clone();
-        writers.push(thread::spawn(move || write_while_solo(&writer_shared, &writer_path)));
+        let writer_turns = Arc::clone(&turns);
+        writers.push(thread::spawn(move || write_while_solo(&writer_shared, &writer_path, &writer_turns)));
     }
     let standby_tls = TlsContext::load(&certificates.files(NODE_B)).unwrap();
     let standby = thread::spawn(move || run_confirming_standby(&listener, &standby_tls, NO_CLOCK_SKEW_MS));
