@@ -6,10 +6,10 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The faults of the Kubernetes suites. A pod is deleted or its Zato server is killed. A worker node is stopped,
-# partitioned from the other worker nodes while it still reaches the control plane, or isolated from every other node.
-# Every fault can be removed, and the cluster can be restored to the state in which every node runs and reaches
-# every other one.
+# The faults of the Kubernetes suites. A pod is deleted, its Zato server is killed or frozen, or the configuration
+# of its server is made unreadable. A worker node is stopped, partitioned from the other worker nodes while it still
+# reaches the control plane, or isolated from every other node. Every fault can be removed, and the cluster can be
+# restored to the state in which every node runs and reaches every other one.
 
 # stdlib
 import logging
@@ -43,6 +43,23 @@ class ModuleCtx:
 
     # The process of the Zato server in a pod
     Server_Process = 'zato.server.main'
+
+    # The pattern of the process of the Zato server that pgrep receives from a shell
+    Server_Process_Pattern = 'zato[.]server[.]main'
+
+    # The name of the worker process of the Zato server
+    Worker_Process = 'zato-worker'
+
+    # The scopes of a freeze - the process group of the command of the server that the node started, which holds
+    # the arbiter, the worker and the scheduler, or the worker alone
+    Scope_Group = 'group'
+    Scope_Worker = 'worker'
+
+    # The configuration file of the Zato server, under the directory of the server in a pod
+    Server_Conf = '"$Zato_Test_Server_Directory/config/repo/server.conf"'
+
+    # The mode that makes a file unreadable to its owner
+    Unreadable_Mode = '000'
 
     # The container of the Zato pods
     Zato_Container = 'zato'
@@ -78,6 +95,80 @@ def kill_server(pod_name:'str') -> 'float':
     logger.info('Killed the server in pod %s', pod_name)
 
     return out
+
+# ################################################################################################################################
+
+def _exec_shell(pod_name:'str', command:'str', check:'bool'=True) -> 'str':
+    """ Runs a shell command in the Zato container of a pod and returns its output.
+    """
+    result = kubectl('exec', pod_name, '-n', ClusterCtx.Namespace, '-c', ModuleCtx.Zato_Container, '--',
+        'sh', '-c', command, check=check)
+
+    out = result.stdout.strip()
+    return out
+
+# ################################################################################################################################
+
+def freeze_server(pod_name:'str', scope:'str') -> 'float':
+    """ Stops the Zato server of a pod with SIGSTOP and returns the time of the freeze. The group scope stops the process
+    group of the command that the node started, which the worker belongs to, and the worker scope stops the worker alone.
+    """
+    worker = ModuleCtx.Worker_Process
+
+    if scope == ModuleCtx.Scope_Group:
+        command = f'pid=$(pgrep -x {worker} | head -n 1) && pgid=$(cut -d " " -f 5 /proc/$pid/stat) && kill -STOP -$pgid'
+    else:
+        command = f'pkill -STOP -x {worker}'
+
+    out = time.time()
+    _ = _exec_shell(pod_name, command)
+
+    logger.info('Froze the server in pod %s, scope %s', pod_name, scope)
+
+    return out
+
+# ################################################################################################################################
+
+def thaw_server(pod_name:'str') -> 'None':
+    """ Resumes every stopped process of the Zato container of a pod with SIGCONT, which a running process ignores.
+    """
+    _ = _exec_shell(pod_name, 'kill -CONT -1')
+
+    logger.info('Thawed the server in pod %s', pod_name)
+
+# ################################################################################################################################
+
+def count_server_processes(pod_name:'str') -> 'int':
+    """ Returns how many processes of the Zato server run in a pod.
+    """
+    # pgrep exits with a non-zero code when it finds no process, and its count is still printed. The pattern
+    # does not match itself, so the shell that runs pgrep, whose command line holds the pattern, is not counted.
+    output = _exec_shell(pod_name, f'pgrep -c -f {ModuleCtx.Server_Process_Pattern}', check=False)
+
+    out = int(output)
+    return out
+
+# ################################################################################################################################
+
+def break_server_config(pod_name:'str') -> 'str':
+    """ Makes the configuration of the Zato server of a pod unreadable, so that each start of the server exits at once,
+    and returns the mode that the file had.
+    """
+    path = ModuleCtx.Server_Conf
+    out = _exec_shell(pod_name, f'stat -c %a {path} && chmod {ModuleCtx.Unreadable_Mode} {path}')
+
+    logger.info('Made the server configuration of pod %s unreadable, mode was %s', pod_name, out)
+
+    return out
+
+# ################################################################################################################################
+
+def restore_server_config(pod_name:'str', mode:'str') -> 'None':
+    """ Gives the configuration of the Zato server of a pod its mode again.
+    """
+    _ = _exec_shell(pod_name, f'chmod {mode} {ModuleCtx.Server_Conf}')
+
+    logger.info('Restored the server configuration of pod %s to mode %s', pod_name, mode)
 
 # ################################################################################################################################
 

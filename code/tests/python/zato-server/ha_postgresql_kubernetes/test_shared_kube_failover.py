@@ -14,11 +14,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import re
 import time
-from datetime import datetime
 
 # Zato
-from kube_checks import get_pair
-from kube_cluster import kubectl, ModuleCtx as ClusterCtx
+from kube_checks import find_moment, get_pair, read_pod_log, wait_for_ok
 from kube_env import ModuleCtx as EnvCtx
 from kube_faults import heal_node, isolate_node
 from kube_traffic import FailoverClient, ModuleCtx as TrafficCtx, RequestRecord
@@ -32,12 +30,6 @@ if 0:
     from kube_env import KubeEnvironment
     from kube_traffic import record_list
     from zato.common.typing_ import strlist
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-log_entry = tuple[float, str]
-log_entry_list = list[log_entry]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -59,17 +51,8 @@ class ModuleCtx:
     # How long the client keeps sending requests after its first answer from the new active pod, in seconds
     Served_Seconds = 5
 
-    # How often the requests of the client are read while the test waits for an answer, in seconds
-    Poll_Interval = 0.1
-
     # The roles of a pod that serves requests
     Active_Roles:'strlist' = [NodesCtx.Role_Active]
-
-    # A line of the output of a pod, with the time at which the kubelet received it
-    Timestamped_Line = re.compile(r'^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(\.\d+)?Z (.*)$')
-
-    # The digits of a fraction of a second that datetime reads
-    Fraction_Digits = 6
 
     # The lines of the node and of the server of the new active pod that the test reads the times of a failover from
     Active_Line = re.compile(r'Active at generation \d+ after ')
@@ -79,59 +62,6 @@ class ModuleCtx:
     Ended_Line = re.compile(r'Ended pub/sub sessions of a previous server -> pids:.*, waited:([\d.]+)s')
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _read_pod_log(pod_name:'str') -> 'log_entry_list':
-    """ Returns each line of the output of the Zato container of a pod with the time at which the kubelet received it.
-    """
-    result = kubectl('logs', pod_name, '-n', ClusterCtx.Namespace, '-c', EnvCtx.Zato_Container, '--timestamps')
-    out:'log_entry_list' = []
-
-    for line in result.stdout.splitlines():
-        match = ModuleCtx.Timestamped_Line.match(line)
-        if not match:
-            continue
-
-        # The kubelet writes nine digits of a fraction of a second, of which datetime reads six.
-        seconds, fraction, text = match.groups()
-        if fraction is None:
-            fraction = '.0'
-        fraction = fraction[:ModuleCtx.Fraction_Digits + 1]
-
-        moment = datetime.fromisoformat(f'{seconds}{fraction}+00:00').timestamp()
-        out.append((moment, text))
-
-    return out
-
-# ################################################################################################################################
-
-def _find_moment(entries:'log_entry_list', after:'float', pattern:'re.Pattern[str]', description:'str') -> 'float':
-    """ Returns the time of the first line after a moment that matches a pattern.
-    """
-    for moment, text in entries:
-        if moment >= after:
-            if pattern.search(text):
-                return moment
-
-    raise Exception(f'No line of {description} after {after}')
-
-# ################################################################################################################################
-
-def _wait_for_ok(client:'FailoverClient', after:'float', timeout:'float') -> 'RequestRecord':
-    """ Waits for the first request sent after a moment that the Service answered, and returns it.
-    """
-    deadline = time.monotonic() + timeout
-
-    while time.monotonic() < deadline:
-        for record in client.get_records():
-            if record.sent >= after:
-                if record.outcome == TrafficCtx.Outcome_OK:
-                    return record
-
-        time.sleep(ModuleCtx.Poll_Interval)
-
-    raise Exception(f'No answer from the Service after {after} within {timeout}s')
-
 # ################################################################################################################################
 
 def _get_old_connection_request(records:'record_list', isolated_at:'float') -> 'RequestRecord':
@@ -160,7 +90,7 @@ def test_failover_duration(kube_pair:'KubeEnvironment') -> 'None':
     client.start()
 
     try:
-        _ = _wait_for_ok(client, 0.0, ModuleCtx.Served_Timeout)
+        _ = wait_for_ok(client, 0.0, ModuleCtx.Served_Timeout)
 
         # .. the node of the active pod stops responding. The isolation begins before the rules are applied
         # .. and is complete once the command returns, so the old active pod may still answer in between ..
@@ -169,7 +99,7 @@ def test_failover_duration(kube_pair:'KubeEnvironment') -> 'None':
 
         # .. the standby takes over and its server answers through the Service ..
         _ = standby.wait_for_role(ModuleCtx.Active_Roles, ModuleCtx.Takeover_Timeout)
-        first_ok = _wait_for_ok(client, isolation_complete_at, ModuleCtx.Served_Timeout)
+        first_ok = wait_for_ok(client, isolation_complete_at, ModuleCtx.Served_Timeout)
 
         # .. and the client keeps being served afterwards.
         time.sleep(ModuleCtx.Served_Seconds)
@@ -180,14 +110,14 @@ def test_failover_duration(kube_pair:'KubeEnvironment') -> 'None':
         heal_node(active.host_node)
 
     records = client.get_records()
-    entries = _read_pod_log(standby.pod_name)
+    entries = read_pod_log(standby.pod_name)
 
     # The times of the failover from the output of the new active pod
-    active_at = _find_moment(entries, isolated_at, ModuleCtx.Active_Line, 'the active role')
-    answer_at = _find_moment(entries, isolated_at, ModuleCtx.Answer_Line, 'the answer of the server')
+    active_at = find_moment(entries, isolated_at, ModuleCtx.Active_Line, 'the active role')
+    answer_at = find_moment(entries, isolated_at, ModuleCtx.Answer_Line, 'the answer of the server')
     label_pattern = re.compile(re.escape(ModuleCtx.Label_Line.format(standby.pod_name)))
-    label_at = _find_moment(entries, isolated_at, label_pattern, 'the label of the pod')
-    raised_at = _find_moment(entries, isolated_at, ModuleCtx.Raised_Line, 'the raised generation')
+    label_at = find_moment(entries, isolated_at, label_pattern, 'the label of the pod')
+    raised_at = find_moment(entries, isolated_at, ModuleCtx.Raised_Line, 'the raised generation')
     first_ok_at = first_ok.ended
 
     timeline = f'isolated:{isolated_at:.3f}, active:{active_at:.3f}, raised:{raised_at:.3f}, answer:{answer_at:.3f}, ' \

@@ -233,6 +233,18 @@ spec:
               value: "${heartbeat_time}"
             - name: Zato_HA_Takeover_Time
               value: "${takeover_time}"
+            - name: Zato_HA_Server_Liveness_Timeout
+              value: "${server_liveness_timeout}"
+            - name: Zato_HA_Server_Start_Timeout
+              value: "${server_start_timeout}"
+            - name: Zato_HA_Server_Exit_Limit
+              value: "${server_exit_limit}"
+            - name: Zato_HA_Server_Exit_Window
+              value: "${server_exit_window}"
+            - name: Zato_HA_Resign_Hold_Off
+              value: "${resign_hold_off}"
+            - name: Zato_HA_Resign_Hold_Off_Max
+              value: "${resign_hold_off_max}"
             - name: Zato_HA_Log_Level
               value: info
             - name: Zato_Config_Bind_Port

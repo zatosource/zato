@@ -17,6 +17,10 @@ import sys
 import pytest
 
 _here = os.path.dirname(os.path.abspath(__file__))
+_server_tests_dir = os.path.dirname(_here)
+
+# The modules of the suite and the clients of the pub/sub performance suite, which load the server
+sys.path.insert(0, _server_tests_dir)
 sys.path.insert(0, _here)
 
 # Zato

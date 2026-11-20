@@ -18,7 +18,9 @@ from sqlalchemy import text
 from sqlalchemy.engine import URL
 
 # Zato
-from zato.common.db_env.common import sqlite_decompress, SQLite_Decompress_Function, Type_PostgreSQL, Type_SQLite
+from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
+from zato.common.sqlite_connection import register_sqlite_functions as register_sqlite_functions, set_sqlite_pragmas, \
+    SQLite_Busy_Timeout_Ms as SQLite_Busy_Timeout_Ms
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,24 +46,6 @@ _dialects = {
 _default_ports = {
     Type_PostgreSQL: 5432,
 }
-
-# How long an SQLite write waits for another writer to finish before giving up,
-# in milliseconds - without this, two processes sharing one file, e.g. a server
-# and the cron-driven cleanup process, fail immediately with a locked-database
-# error instead of taking turns. Writes are bounded batches, so the wait is short.
-SQLite_Busy_Timeout_Ms = 5000
-
-# The size of a page of a new SQLite database, in bytes. A commit writes each page it changes in full to the write-ahead log,
-# and a commit of one event changes a leaf page of each of the some forty tables and indexes of the audit log.
-SQLite_Page_Size = 1024
-
-# How much of an SQLite database file is read through memory mapping rather than copied in with a read call per page,
-# in bytes. SQLite lowers it to the maximum its build allows.
-SQLite_MMAP_Size = 1024 ** 4
-
-# The size of a page of a new SQLite database, in bytes. A commit writes each page that it modifies to the write-ahead log
-# in full, and a commit of one event modifies a leaf page of each of the tables and indexes of the audit log.
-SQLite_Page_Size = 1024
 
 # How long a PostgreSQL connection stays idle before it sends its first keepalive probe, in seconds - below
 # the idle limits of cloud load balancers and NAT gateways, which drop idle flows silently after 240 to 350 seconds.
@@ -121,41 +105,6 @@ class DatabaseDurabilityError(Exception):
     """
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def set_sqlite_pragmas(dbapi_connection:'any_', connection_record:'any_') -> 'None':
-    """ WAL mode lets multiple processes share the file safely, synchronous=FULL
-    flushes the write-ahead log at each commit so that a committed transaction survives a power loss
-    or a forced detachment of the volume, and the busy timeout makes concurrent writers from separate processes take turns.
-    Secure deletion in its fast form zeroes deleted content on the pages a delete writes anyway and leaves freed
-    overflow pages as they are, because SQLite builds that enable full secure deletion by default otherwise write
-    each freed page of a large payload again, which doubles the cost of every commit that removes message bodies.
-    Foreign keys are enforced, as on PostgreSQL. The file is read through memory mapping, which shares the pages
-    of the operating system's cache among all the connections and processes instead of copying each page
-    into the cache of each connection. A new database uses small pages, which reduces the bytes that each commit
-    writes to the write-ahead log.
-    """
-    cursor = dbapi_connection.cursor()
-    _ = cursor.execute(f'pragma page_size={SQLite_Page_Size}')
-    _ = cursor.execute(f'pragma page_size={SQLite_Page_Size}')
-    _ = cursor.execute('pragma journal_mode=wal')
-    _ = cursor.execute('pragma synchronous=full')
-    _ = cursor.execute('pragma secure_delete=fast')
-    _ = cursor.execute('pragma foreign_keys=on')
-    _ = cursor.execute(f'pragma busy_timeout={SQLite_Busy_Timeout_Ms}')
-    _ = cursor.execute(f'pragma mmap_size={SQLite_MMAP_Size}')
-    cursor.close()
-
-    register_sqlite_functions(dbapi_connection)
-
-# ################################################################################################################################
-
-def register_sqlite_functions(dbapi_connection:'any_') -> 'None':
-    """ Registers the SQL functions of Zato on a connection of the sqlite3 module, the one that returns the text
-    of a value of CompressedText among them.
-    """
-    dbapi_connection.create_function(SQLite_Decompress_Function, 1, sqlite_decompress, deterministic=True)
-
 # ################################################################################################################################
 
 def set_postgresql_no_delay(dbapi_connection:'any_', connection_record:'any_') -> 'None':

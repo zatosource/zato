@@ -11,7 +11,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import zlib
 from datetime import timezone
 
 # SQLAlchemy
@@ -22,6 +21,7 @@ from sqlalchemy.types import TypeDecorator
 
 # Zato
 from zato.common.defaults import default_env_base_dir
+from zato.common.sqlite_connection import compress_text, decompress_text, SQLite_Decompress_Function, Type_SQLite
 from zato.common.typing_ import cast_
 from zato.common.util.eval_ import as_bool
 
@@ -49,8 +49,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Recognized database types
-Type_SQLite     = 'sqlite'
+# Recognized database types, along with Type_SQLite
 Type_PostgreSQL = 'postgresql'
 
 # What is used when the type variable is not set
@@ -73,15 +72,6 @@ Default_Pool_Size = 80
 
 # Binary content, raw bytes on every database.
 Binary_Type = LargeBinary()
-
-# The SQL function of each SQLite connection of Zato that returns the text of a value of CompressedText
-SQLite_Decompress_Function = 'zato_decompress'
-
-# The zlib level of the text that SQLite stores compressed, the fastest one
-_compression_level = 1
-
-# The encoding of the text that SQLite stores compressed
-_compressed_text_encoding = 'utf8'
 
 # The hour a timestamp falls in, in the form YYYY-MM-DDTHH, as Python and each database format it.
 Hour_Period_Format = '%Y-%m-%dT%H'
@@ -141,38 +131,6 @@ class UTC_DateTime(TypeDecorator):
         return out
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def compress_text(value:'str') -> 'bytes':
-    """ Returns the text compressed as SQLite stores a value of CompressedText.
-    """
-    encoded = value.encode(_compressed_text_encoding)
-
-    out = zlib.compress(encoded, _compression_level)
-    return out
-
-# ################################################################################################################################
-
-def decompress_text(value:'bytes') -> 'str':
-    """ Returns the text of a value of CompressedText as SQLite stores it.
-    """
-    decompressed = zlib.decompress(value)
-
-    out = decompressed.decode(_compressed_text_encoding)
-    return out
-
-# ################################################################################################################################
-
-def sqlite_decompress(value:'bytes | None') -> 'strnone':
-    """ The SQL function SQLite_Decompress_Function, which returns the text of a value of CompressedText,
-    or NULL for NULL.
-    """
-    if value is None:
-        return None
-
-    out = decompress_text(value)
-    return out
-
 # ################################################################################################################################
 
 def text_of_compressed(column:'any_', dialect_name:'str') -> 'any_':

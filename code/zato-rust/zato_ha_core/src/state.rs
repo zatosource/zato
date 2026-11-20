@@ -5,11 +5,14 @@
 
 //! The role of the node and the state shared by its threads.
 
+use std::time::Instant;
+
 use parking_lot::{Condvar, Mutex};
 use serde::Serialize;
 
 use crate::config::NodeConfig;
 use crate::referee::Referee;
+use crate::server_health::ServerFailure;
 
 /// The role of the node.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -47,6 +50,15 @@ pub struct NodeState {
 
     /// Whether the Zato server that the supervisor started last has answered its ping endpoint.
     pub server_ready: bool,
+
+    /// Since when the Zato server has been ready, while it is.
+    pub server_ready_since: Option<Instant>,
+
+    /// The failure of the Zato server that the supervisor found and on which the control loop has not acted yet.
+    pub server_failure: Option<ServerFailure>,
+
+    /// Until when a node that resigned does not take over.
+    pub hold_off_until: Option<Instant>,
 
     /// Whether the node is shutting down.
     pub stopping: bool,
@@ -87,6 +99,9 @@ impl Shared {
             generation: 0,
             isolated: false,
             server_ready: false,
+            server_ready_since: None,
+            server_failure: None,
+            hold_off_until: None,
             stopping: false,
         };
         Self {

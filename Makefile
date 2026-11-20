@@ -744,14 +744,14 @@ Zato_Test_HA_Modules_power-loss := \
 	test_harness.py test_sqlite_server.py test_postgresql_server.py
 
 Zato_Test_HA_Modules_postgresql-local := \
-	test_takeover_wait.py test_server_start.py
+	test_takeover_wait.py test_server_liveness.py test_server_start.py test_ping_under_load.py
 
 Zato_Test_HA_Modules_postgresql := \
 	test_shared_split_brain.py test_shared_outage.py test_shared_partition.py test_shared_functional.py \
 	test_shared_takeover.py test_shared_database_failover.py test_reliability.py test_shared_long_runs.py
 
 Zato_Test_HA_Modules_postgresql-kubernetes := \
-	test_manifest_synchronous_standby.py test_shared_kube_pods.py test_shared_kube_failover.py \
+	test_manifest_synchronous_standby.py test_shared_kube_pods.py test_shared_kube_failover.py test_shared_kube_server_faults.py \
 	test_shared_kube_postgresql.py test_shared_kube_rollout.py test_shared_kube_nodes.py
 
 # The pytest option that resumes each suite from the test that failed or was interrupted, or starts it over under RESTART.

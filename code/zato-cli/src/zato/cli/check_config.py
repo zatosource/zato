@@ -6,10 +6,29 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from contextlib import closing
+from importlib import import_module
+
 # Zato
 from zato.cli import ManageCommand
+from zato.common.sqlite_connection import connect_sqlite_file, Type_SQLite
 from zato.common.util.open_ import open_r
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ModuleCtx:
+
+    # The modules through which a database other than SQLite is reached, imported only for such a database
+    SQLAlchemy_Module = 'sqlalchemy'
+    Engine_Module = 'zato.common.db_env.engine'
+    Engine_URL_Module = 'zato.common.util.engine_url'
+
+    # The query that confirms that the ODB accepts connections
+    Ping_Query = 'SELECT 1'
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class CheckConfig(ManageCommand):
@@ -48,23 +67,42 @@ class CheckConfig(ManageCommand):
 
 # ################################################################################################################################
 
-    def ping_sql_odb(self, engine, sqlite_path):
-        """ Opens the ODB file and runs a query against it.
+    def _ping_sqlite_odb(self, sqlite_path:'str') -> 'None':
+        """ Opens the ODB file through the sqlite3 module, with the settings of durability of the engine factory,
+        and runs a query against it.
         """
-        # SQLAlchemy
-        from sqlalchemy import text
+        with closing(connect_sqlite_file(sqlite_path)) as connection:
+            _ = connection.execute(ModuleCtx.Ping_Query)
 
-        # Zato
-        from zato.common.db_env.engine import new_zato_engine
-        from zato.common.util.engine_url import get_engine_url
+# ################################################################################################################################
 
-        engine_url = get_engine_url({'engine': engine, 'sqlite_path': sqlite_path})
-        sql_engine = new_zato_engine(engine_url)
+    def _ping_engine_odb(self, engine:'str', sqlite_path:'str') -> 'None':
+        """ Opens a connection to the ODB through an engine of the engine factory and runs a query against it.
+        """
+        sqlalchemy = import_module(ModuleCtx.SQLAlchemy_Module)
+        engine_module = import_module(ModuleCtx.Engine_Module)
+        engine_url_module = import_module(ModuleCtx.Engine_URL_Module)
+
+        engine_url = engine_url_module.get_engine_url({'engine': engine, 'sqlite_path': sqlite_path})
+        sql_engine = engine_module.new_zato_engine(engine_url)
 
         with sql_engine.connect() as connection:
-            _ = connection.execute(text('SELECT 1'))
+            _ = connection.execute(sqlalchemy.text(ModuleCtx.Ping_Query))
 
         sql_engine.dispose()
+
+# ################################################################################################################################
+
+    def ping_sql_odb(self, engine:'str', sqlite_path:'str') -> 'None':
+        """ Opens the ODB file and runs a query against it.
+        """
+        # A SQLite file is opened without SQLAlchemy ..
+        if engine == Type_SQLite:
+            self._ping_sqlite_odb(sqlite_path)
+
+        # .. while any other database is reached through an engine.
+        else:
+            self._ping_engine_odb(engine, sqlite_path)
 
         if self.show_output:
             self.logger.info('SQL ODB connection OK')

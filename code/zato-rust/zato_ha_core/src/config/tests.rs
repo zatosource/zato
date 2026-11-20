@@ -188,3 +188,82 @@ fn a_client_certificate_without_its_key_is_refused() {
     let error = NodeConfig::from_source(&variables).unwrap_err();
     assert!(matches!(error, ConfigError::Missing(ENV_DATABASE_SSL_KEY_FILE)));
 }
+
+#[test]
+fn the_health_of_the_server_has_defaults() {
+    let config = NodeConfig::from_source(&minimal()).unwrap();
+    assert_eq!(config.server_health, ServerHealthConfig::from_defaults());
+    assert!(config.server_health.hold_off > config.timers.takeover);
+}
+
+#[test]
+fn the_health_of_the_server_is_read() {
+    let mut variables = minimal();
+    let pairs = [
+        (ENV_SERVER_LIVENESS_TIMEOUT, "15"),
+        (ENV_SERVER_START_TIMEOUT, "120"),
+        (ENV_SERVER_EXIT_LIMIT, "5"),
+        (ENV_SERVER_EXIT_WINDOW, "90"),
+        (ENV_RESIGN_HOLD_OFF, "30"),
+        (ENV_RESIGN_HOLD_OFF_MAX, "600"),
+    ];
+    for (name, value) in pairs {
+        variables.0.insert(name.to_owned(), value.to_owned());
+    }
+    let config = NodeConfig::from_source(&variables).unwrap();
+    assert_eq!(
+        config.server_health,
+        ServerHealthConfig {
+            liveness_timeout: Duration::from_secs(15),
+            start_timeout: Duration::from_mins(2),
+            exit_limit: 5,
+            exit_window: Duration::from_secs(90),
+            hold_off: Duration::from_secs(30),
+            hold_off_max: Duration::from_mins(10),
+        }
+    );
+}
+
+#[test]
+fn an_exit_limit_of_zero_is_refused() {
+    let mut variables = minimal();
+    variables.0.insert(ENV_SERVER_EXIT_LIMIT.to_owned(), "0".to_owned());
+    let error = NodeConfig::from_source(&variables).unwrap_err();
+    assert!(matches!(
+        error,
+        ConfigError::Invalid {
+            name: ENV_SERVER_EXIT_LIMIT,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn a_hold_off_not_longer_than_the_takeover_time_is_refused() {
+    let mut variables = minimal();
+    variables.0.insert(ENV_TAKEOVER_TIME.to_owned(), "6".to_owned());
+    variables.0.insert(ENV_RESIGN_HOLD_OFF.to_owned(), "6".to_owned());
+    let error = NodeConfig::from_source(&variables).unwrap_err();
+    assert!(matches!(
+        error,
+        ConfigError::Invalid {
+            name: ENV_RESIGN_HOLD_OFF,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn a_longest_hold_off_below_the_hold_off_is_refused() {
+    let mut variables = minimal();
+    variables.0.insert(ENV_RESIGN_HOLD_OFF.to_owned(), "30".to_owned());
+    variables.0.insert(ENV_RESIGN_HOLD_OFF_MAX.to_owned(), "20".to_owned());
+    let error = NodeConfig::from_source(&variables).unwrap_err();
+    assert!(matches!(
+        error,
+        ConfigError::Invalid {
+            name: ENV_RESIGN_HOLD_OFF_MAX,
+            ..
+        }
+    ));
+}

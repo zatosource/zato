@@ -9,7 +9,8 @@
 //! its connection to the API server while it was being replaced, so the Service no longer selects a pod whose server
 //! has been replaced. The node labels its own pod only once its own Zato server answers, and removes the label
 //! when the node stops serving or its server stops answering. The peer is always unlabeled before the node labels
-//! its own pod, so the Service never selects two pods at once.
+//! its own pod, so the Service never selects two pods at once. A server whose health policy finds it failed is no longer
+//! ready, so the label leaves the pod at once, before the node resigns and before the other node takes over.
 
 use std::sync::Arc;
 use std::time::Duration;

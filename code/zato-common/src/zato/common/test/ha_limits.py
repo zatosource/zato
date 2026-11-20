@@ -18,5 +18,25 @@ class HALimits:
     # and 4.3 s while eight other suites run.
     Server_Start = 5.0
 
+    # How often the node sends /zato/ping to a server that has answered, and how long each ping may take, in seconds,
+    # the same as SERVER_PING_INTERVAL and SERVER_PING_TIMEOUT of zato_ha_core/src/config.rs. The slowest ping measures
+    # 55 ms in test_ping_under_load.py under 16 publishers and 16 subscribers on the local PostgreSQL 19.
+    Server_Ping_Interval = 1.0
+    Server_Ping_Timeout  = 2.0
+
+    # How long a server that has answered may remain without an answer before its node resigns, in seconds,
+    # the same as DEFAULT_SERVER_LIVENESS_TIMEOUT of zato_ha_core/src/config.rs. It spans five pings that time out,
+    # and it is below the 30 s after which the arbiter of the server replaces a worker without a heartbeat.
+    Server_Liveness_Timeout = 10.0
+
+    # How many exits of the server within the window make its node resign, the same as DEFAULT_SERVER_EXIT_LIMIT
+    # of zato_ha_core/src/config.rs.
+    Server_Exit_Limit = 3
+
+    # How long a server whose configuration cannot be read may take to exit, from the spawn of its command, in seconds.
+    # The exit measures 0.15 s in test_server_liveness.py on the local PostgreSQL 19, and the limit leaves room
+    # for the start of the interpreter in a pod, which takes up to 2.1 s in the Kubernetes suite.
+    Server_Bad_Start = 3.0
+
 # ################################################################################################################################
 # ################################################################################################################################

@@ -11,6 +11,10 @@
 //! database succeeds. The active node is never isolated by the lease, because the generation guard of the Zato
 //! server refuses every transaction of a replaced server, so an outage of the referee alone does not stop it.
 //! An active node that does not reach the referee is fenced once the database names a higher generation.
+//!
+//! An active node whose Zato server failed resigns, becomes the standby and stops renewing its lease, so that the other
+//! node takes over after the takeover time. The node that resigned does not take over before its hold-off elapses,
+//! which exceeds the takeover time, and which doubles with consecutive resignations up to its longest value.
 
 use std::time::Instant;
 
@@ -38,6 +42,67 @@ impl Control {
                 Ok(())
             }
         }
+    }
+
+    /// Makes an active node whose Zato server failed the standby, so that its lease lapses and the other node takes over,
+    /// and holds it off a takeover of its own for the hold-off. A failure found in any other role is discarded,
+    /// because the server of such a node is stopped already.
+    pub(super) fn resign_if_server_failed(&mut self) {
+        let now = Instant::now();
+        let health = self.shared.config.server_health;
+
+        // The role and the failure are read and changed under one lock, so that no takeover comes between.
+        let mut state = self.shared.state.lock();
+
+        // A server that has been ready for the exit window ends the run of consecutive resignations.
+        let is_settled = state.role.is_active()
+            && state
+                .server_ready_since
+                .is_some_and(|since| now.saturating_duration_since(since) >= health.exit_window);
+        if is_settled {
+            self.hold_off = health.hold_off;
+            self.last_resigned_at = None;
+        }
+
+        let Some(failure) = state.server_failure.take() else {
+            return;
+        };
+
+        // Only the active node has a lease to give up.
+        if !state.role.is_active() {
+            drop(state);
+            self.shared.changed.notify_all();
+            return;
+        }
+
+        // A resignation soon after the previous one doubles the hold-off, so that a node whose server keeps failing
+        // takes its lease over less and less often while it runs alone.
+        let is_consecutive = self
+            .last_resigned_at
+            .is_some_and(|resigned_at| now.saturating_duration_since(resigned_at) <= health.hold_off_max);
+        if is_consecutive {
+            self.hold_off = self.hold_off.saturating_mul(2).min(health.hold_off_max);
+        } else {
+            self.hold_off = health.hold_off;
+        }
+        self.last_resigned_at = Some(now);
+
+        let hold_off = self.hold_off;
+        state.role = Role::Standby;
+        state.hold_off_until = Some(now + hold_off);
+        let generation = state.generation;
+        drop(state);
+
+        // The standby measures the lease afresh, and the version of the record is read again at the next activation.
+        self.lease_version = None;
+        self.observed = None;
+        self.observed_at = now;
+        self.shared.changed.notify_all();
+
+        tracing::warn!(
+            "Resigned the active role at generation {generation} because {failure}, no takeover for {} s",
+            hold_off.as_secs_f64()
+        );
     }
 
     /// Returns whether the probe of the database succeeds, logging only a change of the outcome,
@@ -207,6 +272,12 @@ impl Control {
             return Ok(());
         }
 
+        // A node that resigned leaves its lease to the other node for the hold-off, which exceeds the takeover time.
+        let hold_off_until = self.shared.state.lock().hold_off_until;
+        if hold_off_until.is_some_and(|until| Instant::now() < until) {
+            return Ok(());
+        }
+
         // A standby that does not reach the database would start a Zato server that cannot work, so it waits.
         if !self.database_reachable() {
             return Ok(());
@@ -235,10 +306,11 @@ impl Control {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::Timers;
+    use crate::config::{ServerHealthConfig, Timers};
     use crate::generation;
     use crate::record::Versioned;
     use crate::referee::tests::{MemoryReferee, version};
+    use crate::server_health::ServerFailure;
     use crate::test_support::{self, MemoryProbe, NODE_A, NODE_B};
     use std::sync::Arc;
     use std::sync::atomic::AtomicBool;
@@ -254,6 +326,16 @@ mod tests {
 
     /// How long a test waits for every timer to expire.
     const PAST_TIMERS: Duration = Duration::from_millis(60);
+
+    /// The health of the server of the tests, with a hold-off longer than the takeover time and a short exit window.
+    const HEALTH: ServerHealthConfig = ServerHealthConfig {
+        liveness_timeout: Duration::from_secs(10),
+        start_timeout: Duration::from_mins(5),
+        exit_limit: 3,
+        exit_window: Duration::from_secs(1),
+        hold_off: Duration::from_millis(150),
+        hold_off_max: Duration::from_millis(600),
+    };
 
     /// The version of the record that a test starts with.
     const FIRST_VERSION: u64 = 1;
@@ -282,7 +364,8 @@ mod tests {
             let referee = Arc::new(MemoryReferee::holding(record, FIRST_VERSION));
             let probe = Arc::new(MemoryProbe::default());
             let dir = tempfile::tempdir().unwrap();
-            let config = test_support::node_config(NODE_A, dir.path(), TIMERS);
+            let mut config = test_support::node_config(NODE_A, dir.path(), TIMERS);
+            config.server_health = HEALTH;
             generation::write(&config.generation_file(), FIRST_GENERATION).unwrap();
 
             let shared = test_support::shared(config, Box::new(Arc::clone(&referee)));
@@ -347,6 +430,21 @@ mod tests {
         /// Sets the generation that the generation guard in the database names.
         fn set_database_generation(&self, generation: Option<u64>) {
             *self.probe.generation.lock() = generation;
+        }
+
+        /// Records a failure of the Zato server, as the supervisor does.
+        fn set_server_failure(&self, failure: ServerFailure) {
+            self.control.shared.state.lock().server_failure = Some(failure);
+        }
+
+        /// Returns the failure of the Zato server on which the control loop has not acted yet.
+        fn server_failure(&self) -> Option<ServerFailure> {
+            self.control.shared.state.lock().server_failure
+        }
+
+        /// Returns until when the node does not take over.
+        fn hold_off_until(&self) -> Option<Instant> {
+            self.control.shared.state.lock().hold_off_until
         }
     }
 
@@ -624,5 +722,130 @@ mod tests {
                 local: FIRST_GENERATION
             }
         ));
+    }
+
+    #[test]
+    fn an_active_node_whose_server_failed_resigns_and_its_lease_lapses() {
+        let mut node = TestNode::in_role(Role::Active, NODE_A);
+        node.control.renew_lease().unwrap();
+        node.control.renew_lease().unwrap();
+        let renewed = node.record().version;
+
+        // The failure makes the node the standby at its own generation, with the hold-off ahead of it ..
+        node.set_server_failure(ServerFailure::Unanswered);
+        let before = Instant::now();
+        node.control.resign_if_server_failed();
+        assert_eq!(node.role(), (Role::Standby, FIRST_GENERATION));
+        assert_eq!(node.server_failure(), None);
+        let hold_off_until = node.hold_off_until().unwrap();
+        assert!(hold_off_until >= before + HEALTH.hold_off);
+
+        // .. and the standby no longer renews, so the version stays and the other node finds the lease lapsed.
+        node.control.watch_lease().unwrap();
+        node.control.watch_lease().unwrap();
+        assert_eq!(node.record().version, renewed);
+        assert_eq!(node.record().value, RefereeRecord::new(FIRST_GENERATION, NODE_A));
+    }
+
+    #[test]
+    fn the_other_node_takes_over_the_lease_of_a_node_that_resigned() {
+        let mut node = TestNode::in_role(Role::Active, NODE_A);
+        node.control.renew_lease().unwrap();
+        node.set_server_failure(ServerFailure::Exits);
+        node.control.resign_if_server_failed();
+
+        // The other node takes over within the hold-off, and the node that resigned stays the standby
+        // under the higher generation ..
+        let next = FIRST_GENERATION + 1;
+        node.control.watch_lease().unwrap();
+        node.replace_record(RefereeRecord::new(next, NODE_B), FIRST_VERSION + 2);
+        node.control.watch_lease().unwrap();
+        assert_eq!(node.role(), (Role::Standby, next));
+
+        // .. and once the other node renews no more and the hold-off elapsed, the node that resigned takes over
+        // as any standby does.
+        thread::sleep(HEALTH.hold_off);
+        node.control.watch_lease().unwrap();
+        assert_eq!(node.role(), (Role::Active, next + 1));
+        assert_eq!(node.record().value, RefereeRecord::new(next + 1, NODE_A));
+    }
+
+    #[test]
+    fn a_lone_node_that_resigned_takes_over_only_after_its_hold_off() {
+        let mut node = TestNode::in_role(Role::Active, NODE_A);
+        node.control.renew_lease().unwrap();
+        node.set_server_failure(ServerFailure::Unanswered);
+        node.control.resign_if_server_failed();
+
+        // The takeover time elapses without a renewal, and the hold-off still keeps the node the standby ..
+        node.control.watch_lease().unwrap();
+        thread::sleep(PAST_TIMERS);
+        node.control.watch_lease().unwrap();
+        assert_eq!(node.role(), (Role::Standby, FIRST_GENERATION));
+
+        // .. until the hold-off elapses.
+        let hold_off_until = node.hold_off_until().unwrap();
+        thread::sleep(hold_off_until.saturating_duration_since(Instant::now()));
+        node.control.watch_lease().unwrap();
+        let next = FIRST_GENERATION + 1;
+        assert_eq!(node.role(), (Role::Active, next));
+        assert_eq!(node.record().value, RefereeRecord::new(next, NODE_A));
+    }
+
+    #[test]
+    fn consecutive_resignations_double_the_hold_off_up_to_its_longest_value() {
+        let mut node = TestNode::in_role(Role::Active, NODE_A);
+        let mut expected = Vec::new();
+        let mut held_off = Vec::new();
+
+        for _ in 0..4 {
+            node.control.shared.state.lock().role = Role::Active;
+            node.set_server_failure(ServerFailure::Exits);
+            node.control.resign_if_server_failed();
+            held_off.push(node.control.hold_off);
+        }
+
+        let mut hold_off = HEALTH.hold_off;
+        for _ in 0..4 {
+            expected.push(hold_off);
+            hold_off = hold_off.saturating_mul(2).min(HEALTH.hold_off_max);
+        }
+        assert_eq!(held_off, expected);
+        assert_eq!(held_off.last().copied(), Some(HEALTH.hold_off_max));
+    }
+
+    #[test]
+    fn a_server_ready_for_the_exit_window_resets_the_hold_off() {
+        let mut node = TestNode::in_role(Role::Active, NODE_A);
+        node.set_server_failure(ServerFailure::Exits);
+        node.control.resign_if_server_failed();
+        node.control.shared.state.lock().role = Role::Active;
+        node.set_server_failure(ServerFailure::Exits);
+        node.control.resign_if_server_failed();
+        assert_eq!(node.control.hold_off, HEALTH.hold_off.saturating_mul(2));
+
+        // A server that has been ready for the exit window ends the run of resignations ..
+        {
+            let mut state = node.control.shared.state.lock();
+            state.role = Role::Active;
+            state.server_ready_since = Instant::now().checked_sub(HEALTH.exit_window);
+        }
+        node.control.resign_if_server_failed();
+        assert_eq!(node.control.hold_off, HEALTH.hold_off);
+
+        // .. so the next resignation holds off for the hold-off itself.
+        node.set_server_failure(ServerFailure::Unanswered);
+        node.control.resign_if_server_failed();
+        assert_eq!(node.control.hold_off, HEALTH.hold_off);
+    }
+
+    #[test]
+    fn a_failure_found_by_a_standby_is_discarded() {
+        let mut node = TestNode::in_role(Role::Standby, NODE_B);
+        node.set_server_failure(ServerFailure::Unanswered);
+        node.control.resign_if_server_failed();
+        assert_eq!(node.role(), (Role::Standby, FIRST_GENERATION));
+        assert_eq!(node.server_failure(), None);
+        assert_eq!(node.hold_off_until(), None);
     }
 }

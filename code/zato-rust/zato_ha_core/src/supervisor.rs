@@ -9,6 +9,13 @@
 //! answers 200, and only then marks the server as ready. The label of the pod and the role endpoint follow that mark,
 //! so clients reach the node only once its server answers. The mark is cleared whenever the server is started again,
 //! exits or is stopped.
+//!
+//! A server that answered is sent a ping at every ping interval with the timeout of a liveness ping, and every start,
+//! answer and exit of the server is passed to the policy of its health. Once the policy finds the server failed,
+//! because it stopped answering, never answered after its start or exited repeatedly, the supervisor records
+//! the failure in the shared state and clears the mark under one lock, so the label of the pod is removed first.
+//! The supervisor then stops the server and keeps it stopped, the control loop resigns the active role, the lease
+//! lapses and the node holds off its own takeovers. An exit below the exit limit starts the server again.
 
 use std::os::unix::process::CommandExt;
 use std::process::{Child, Command};
@@ -21,7 +28,8 @@ use nix::sys::signal::{Signal, killpg};
 use nix::sys::wait::{WaitPidFlag, WaitStatus, waitpid};
 use nix::unistd::Pid;
 
-use crate::config::ENV_GENERATION;
+use crate::config::{ENV_GENERATION, SERVER_PING_INTERVAL, SERVER_PING_TIMEOUT};
+use crate::server_health::{ServerHealth, Verdict};
 use crate::state::{Role, Shared};
 
 /// How often the supervisor compares the process with the role when nothing notifies it.
@@ -65,43 +73,56 @@ pub struct Supervisor {
     /// The running server, if any.
     child: Option<Child>,
 
-    /// The HTTP client of the pings of the server.
+    /// The HTTP client of the pings of a starting server.
     agent: ureq::Agent,
+
+    /// The HTTP client of the liveness pings of a server that answered.
+    liveness_agent: ureq::Agent,
 
     /// The URL of the ping endpoint of the server.
     ping_url: String,
+
+    /// The policy that decides from the starts, answers and exits of the server whether it failed.
+    health: ServerHealth,
+
+    /// When the last liveness ping was sent.
+    last_ping_at: Instant,
 }
 
 impl Supervisor {
     /// Returns a supervisor of the server started with `command`.
     pub fn new(shared: Arc<Shared>, command: Vec<String>) -> Self {
         let ping_url = format!("http://{SERVER_HOST}:{}{PING_PATH}", shared.config.server_port);
-        let agent = ureq::Agent::config_builder()
-            .timeout_global(Some(READINESS_TIMEOUT))
-            .http_status_as_error(false)
-            .build()
-            .into();
+        let agent = new_agent(READINESS_TIMEOUT);
+        let liveness_agent = new_agent(SERVER_PING_TIMEOUT);
+        let health = ServerHealth::new(shared.config.server_health);
         Self {
             shared,
             command,
             child: None,
             agent,
+            liveness_agent,
             ping_url,
+            health,
+            last_ping_at: Instant::now(),
         }
     }
 
     /// Runs until the node stops, then stops the server.
     pub fn run(mut self) {
         loop {
-            let (should_run, role, stopping, generation, server_ready) = {
+            let (mut should_run, role, stopping, generation, server_ready) = {
                 let mut state = self.shared.state.lock();
 
                 // A started server that has not answered yet is checked more often, since clients wait for its answer.
                 let awaiting_answer = self.child.is_some() && !state.server_ready;
                 let interval = if awaiting_answer { READINESS_INTERVAL } else { CHECK_INTERVAL };
                 let _ = self.shared.changed.wait_for(&mut state, interval);
+
+                // A failure on which the control loop has not acted yet keeps the server stopped.
+                let has_failed = state.server_failure.is_some();
                 (
-                    state.serves() && !state.stopping,
+                    state.serves() && !state.stopping && !has_failed,
                     state.role,
                     state.stopping,
                     state.generation,
@@ -111,14 +132,23 @@ impl Supervisor {
 
             self.reap();
 
+            // A server found failed is not started again, whatever the role, until the control loop resigns.
+            if should_run && self.check_health() {
+                should_run = false;
+            }
+
             if should_run && self.child.is_none() {
                 self.start(generation);
             } else if !should_run && self.child.is_some() {
                 self.stop();
             }
 
-            if !server_ready && self.child.is_some() {
-                self.check_readiness(generation);
+            if self.child.is_some() {
+                if server_ready {
+                    self.check_liveness();
+                } else {
+                    self.check_readiness(generation);
+                }
             }
 
             // A fenced node joins again as the standby only once its server no longer runs.
@@ -149,6 +179,7 @@ impl Supervisor {
             Ok(Some(status)) => {
                 tracing::warn!("Zato server exited with {status}");
                 self.child = None;
+                self.health.on_exit(Instant::now());
                 self.set_server_ready(false);
             }
             Ok(None) => {}
@@ -156,11 +187,39 @@ impl Supervisor {
         }
     }
 
+    /// Records a failure of the server that the policy of its health finds, for the control loop to act on,
+    /// and returns whether there was one.
+    fn check_health(&mut self) -> bool {
+        let Verdict::Failed(failure) = self.health.verdict(Instant::now()) else {
+            return false;
+        };
+
+        // The failure and the end of readiness are set under one lock, so that the label thread and the role endpoint
+        // never see a failed server that is still ready.
+        let mut state = self.shared.state.lock();
+        state.server_failure = Some(failure);
+        state.server_ready = false;
+        state.server_ready_since = None;
+        drop(state);
+        self.shared.changed.notify_all();
+
+        tracing::error!("The node resigns because {failure}");
+
+        // The node acts on this failure once, and a server that it runs again later is judged afresh.
+        self.health.reset();
+        true
+    }
+
     /// Records whether the server answers, notifying the label thread and the role endpoint of a change.
     fn set_server_ready(&self, ready: bool) {
         let mut state = self.shared.state.lock();
         let changed = state.server_ready != ready;
         state.server_ready = ready;
+
+        // The moment of readiness is kept only from the change to ready, so a ready server keeps its first moment.
+        if changed {
+            state.server_ready_since = ready.then(Instant::now);
+        }
         drop(state);
 
         // Only a change moves the label and the answer of the role endpoint.
@@ -169,18 +228,37 @@ impl Supervisor {
         }
     }
 
-    /// Sends one ping to the started server and marks it as ready once it answers 200.
-    fn check_readiness(&self, generation: u64) {
-        // A server that does not listen yet refuses the connection, and one whose worker has not started
-        // lets the ping time out, so neither is marked as ready.
-        let answered = self
-            .agent
+    /// Sends one ping to the server and returns whether it answered 200.
+    fn ping(&self, agent: &ureq::Agent) -> bool {
+        agent
             .get(&self.ping_url)
             .call()
-            .is_ok_and(|response| response.status().as_u16() == STATUS_OK);
-        if answered {
+            .is_ok_and(|response| response.status().as_u16() == STATUS_OK)
+    }
+
+    /// Sends one ping to the started server and marks it as ready once it answers 200.
+    fn check_readiness(&mut self, generation: u64) {
+        // A server that does not listen yet refuses the connection, and one whose worker has not started
+        // lets the ping time out, so neither is marked as ready.
+        if self.ping(&self.agent) {
             tracing::info!("Zato server answers at generation {generation}");
+            self.health.on_answer(Instant::now());
+            self.last_ping_at = Instant::now();
             self.set_server_ready(true);
+        }
+    }
+
+    /// Sends a liveness ping to a server that answered, once per ping interval, and records its answer.
+    fn check_liveness(&mut self) {
+        if self.last_ping_at.elapsed() < SERVER_PING_INTERVAL {
+            return;
+        }
+        self.last_ping_at = Instant::now();
+
+        // A ping that is refused, times out or is not answered 200 is not recorded,
+        // and the policy measures the silence from the last answer.
+        if self.ping(&self.liveness_agent) {
+            self.health.on_answer(Instant::now());
         }
     }
 
@@ -203,8 +281,17 @@ impl Supervisor {
             Ok(child) => {
                 tracing::info!("Zato server started with PID {} at generation {generation}", child.id());
                 self.child = Some(child);
+                self.health.on_start(Instant::now());
+
+                // A new server receives readiness pings, never a liveness ping before its first ping interval.
+                self.last_ping_at = Instant::now();
             }
-            Err(error) => tracing::error!("Cannot start the Zato server: {error}"),
+
+            // A server that cannot be spawned fails as one that exits at once does.
+            Err(error) => {
+                tracing::error!("Cannot start the Zato server: {error}");
+                self.health.on_exit(Instant::now());
+            }
         }
     }
 
@@ -219,8 +306,9 @@ impl Supervisor {
         let group = Pid::from_raw(pid);
         tracing::info!("Stopping the Zato server with PID {pid}");
 
-        // Clients stop being sent to a server that is stopping.
+        // Clients stop being sent to a server that is stopping, and its stop is not a failure of the server.
         self.set_server_ready(false);
+        self.health.on_stop();
 
         // A group that already exited reports an error that changes nothing.
         let _ = killpg(group, Signal::SIGTERM);
@@ -235,6 +323,15 @@ impl Supervisor {
         let _ = killpg(group, Signal::SIGKILL);
         let _ = child.wait();
     }
+}
+
+/// Returns an HTTP client of the pings of the server with the given timeout, which reads every status as an answer.
+fn new_agent(timeout: Duration) -> ureq::Agent {
+    ureq::Agent::config_builder()
+        .timeout_global(Some(timeout))
+        .http_status_as_error(false)
+        .build()
+        .into()
 }
 
 /// Whether the kernel reparents to this node the processes whose parent exited.

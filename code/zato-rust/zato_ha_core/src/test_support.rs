@@ -17,7 +17,7 @@ use parking_lot::Mutex;
 
 use crate::config::{
     DEFAULT_LEASE_NAME, DEFAULT_LOG_LEVEL, DEFAULT_POSTGRESQL_PORT, KubernetesConfig, NodeConfig, PostgreSqlConfig, PostgreSqlPassword,
-    RefereeConfig, Timers,
+    RefereeConfig, ServerHealthConfig, Timers,
 };
 use crate::postgresql::{DatabaseProbe, ProbeError};
 use crate::referee::Referee;
@@ -202,6 +202,7 @@ pub fn node_config(node: &str, dir: &Path, timers: Timers) -> NodeConfig {
             tls: None,
         },
         timers,
+        server_health: ServerHealthConfig::from_defaults(),
         log_level: DEFAULT_LOG_LEVEL.to_owned(),
     }
 }

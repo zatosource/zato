@@ -81,6 +81,26 @@ pub const ENV_DATABASE_SSL_VERIFY: &str = "Zato_Database_SSL_Verify";
 /// The environment variable with the log level filter of the node.
 pub const ENV_LOG_LEVEL: &str = "Zato_HA_Log_Level";
 
+/// The environment variable with how long a Zato server that has answered may remain without an answer before the node
+/// resigns, in seconds.
+pub const ENV_SERVER_LIVENESS_TIMEOUT: &str = "Zato_HA_Server_Liveness_Timeout";
+
+/// The environment variable with how long a started Zato server may take to answer for the first time before the node
+/// resigns, in seconds.
+pub const ENV_SERVER_START_TIMEOUT: &str = "Zato_HA_Server_Start_Timeout";
+
+/// The environment variable with how many exits of the Zato server within the exit window make the node resign.
+pub const ENV_SERVER_EXIT_LIMIT: &str = "Zato_HA_Server_Exit_Limit";
+
+/// The environment variable with the window in which the exits of the Zato server are counted, in seconds.
+pub const ENV_SERVER_EXIT_WINDOW: &str = "Zato_HA_Server_Exit_Window";
+
+/// The environment variable with how long a node that resigned waits before it may take over again, in seconds.
+pub const ENV_RESIGN_HOLD_OFF: &str = "Zato_HA_Resign_Hold_Off";
+
+/// The environment variable with the longest hold-off that consecutive resignations reach, in seconds.
+pub const ENV_RESIGN_HOLD_OFF_MAX: &str = "Zato_HA_Resign_Hold_Off_Max";
+
 /// The referee type backed by a `Lease` of the Kubernetes API server.
 pub const REFEREE_TYPE_KUBERNETES: &str = "kubernetes";
 
@@ -122,6 +142,41 @@ pub const DEFAULT_TAKEOVER_TIME: f64 = 6.0;
 
 /// The default log level filter.
 pub const DEFAULT_LOG_LEVEL: &str = "info";
+
+/// How often the node sends `GET /zato/ping` to a Zato server that has answered.
+pub const SERVER_PING_INTERVAL: Duration = Duration::from_secs(1);
+
+/// How long one ping of a Zato server that has answered may take before it counts as unanswered.
+///
+/// The slowest ping of a server under 16 publishers and 16 subscribers of pub/sub measures 55 ms on `PostgreSQL` 19,
+/// so the timeout exceeds it more than 30 times.
+pub const SERVER_PING_TIMEOUT: Duration = Duration::from_secs(2);
+
+/// The default liveness timeout of the Zato server, in seconds.
+///
+/// The timeout spans several unanswered pings, so that one slow answer does not fail a server that answers the pings
+/// after it. It is below the 30 s after which the arbiter of the server replaces a worker without a heartbeat,
+/// so that the node resigns before a hung worker is replaced.
+pub const DEFAULT_SERVER_LIVENESS_TIMEOUT: f64 = 10.0;
+
+/// The default start timeout of the Zato server, in seconds.
+///
+/// The timeout equals the time that the arbiter of the server gives a starting worker, so that the node never cuts
+/// short a start that the server itself permits.
+pub const DEFAULT_SERVER_START_TIMEOUT: f64 = 300.0;
+
+/// The default number of exits of the Zato server within the exit window after which the node resigns.
+pub const DEFAULT_SERVER_EXIT_LIMIT: u32 = 3;
+
+/// The default window in which the exits of the Zato server are counted, in seconds.
+pub const DEFAULT_SERVER_EXIT_WINDOW: f64 = 60.0;
+
+/// The default hold-off of a node that resigned, in seconds, which exceeds the default takeover time,
+/// so that the standby takes over before the node that resigned may.
+pub const DEFAULT_RESIGN_HOLD_OFF: f64 = 20.0;
+
+/// The default longest hold-off of consecutive resignations, in seconds.
+pub const DEFAULT_RESIGN_HOLD_OFF_MAX: f64 = 300.0;
 
 /// The file name of the highest generation this node has seen, in the data directory.
 pub const GENERATION_FILE_NAME: &str = "ha-generation";
@@ -222,6 +277,43 @@ pub struct Timers {
     pub takeover: Duration,
 }
 
+/// How the node decides that its Zato server failed and how long it holds off after it resigned.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ServerHealthConfig {
+    /// How long a server that has answered may remain without an answer.
+    pub liveness_timeout: Duration,
+
+    /// How long a started server may take to answer for the first time.
+    pub start_timeout: Duration,
+
+    /// How many exits of the server within the exit window count as a failure.
+    pub exit_limit: u32,
+
+    /// The window in which the exits of the server are counted, and the time for which a server that answers
+    /// without a failure resets the hold-off.
+    pub exit_window: Duration,
+
+    /// How long a node that resigned waits before it may take over again.
+    pub hold_off: Duration,
+
+    /// The longest hold-off that consecutive resignations reach.
+    pub hold_off_max: Duration,
+}
+
+impl ServerHealthConfig {
+    /// Returns the defaults of every setting.
+    pub fn from_defaults() -> Self {
+        Self {
+            liveness_timeout: Duration::from_secs_f64(DEFAULT_SERVER_LIVENESS_TIMEOUT),
+            start_timeout: Duration::from_secs_f64(DEFAULT_SERVER_START_TIMEOUT),
+            exit_limit: DEFAULT_SERVER_EXIT_LIMIT,
+            exit_window: Duration::from_secs_f64(DEFAULT_SERVER_EXIT_WINDOW),
+            hold_off: Duration::from_secs_f64(DEFAULT_RESIGN_HOLD_OFF),
+            hold_off_max: Duration::from_secs_f64(DEFAULT_RESIGN_HOLD_OFF_MAX),
+        }
+    }
+}
+
 /// The complete configuration of the node.
 #[derive(Debug, Clone)]
 pub struct NodeConfig {
@@ -245,6 +337,9 @@ pub struct NodeConfig {
 
     /// The timers.
     pub timers: Timers,
+
+    /// The thresholds of the health of the Zato server and the hold-off after a resignation.
+    pub server_health: ServerHealthConfig,
 
     /// The log level filter.
     pub log_level: String,
@@ -382,6 +477,64 @@ fn timers(source: &dyn VariableSource) -> Result<Timers, ConfigError> {
     })
 }
 
+/// Returns a positive count from a variable or its default.
+fn count(source: &dyn VariableSource, name: &'static str, default: u32) -> Result<u32, ConfigError> {
+    let Some(value) = source.variable(name) else {
+        return Ok(default);
+    };
+    let parsed = value.parse::<u32>().map_err(|error| ConfigError::Invalid {
+        name,
+        reason: error.to_string(),
+    })?;
+
+    // A limit of zero would count every server as failed before it ever exited.
+    if parsed == 0 {
+        return Err(ConfigError::Invalid {
+            name,
+            reason: "0 is not a positive count".to_owned(),
+        });
+    }
+    Ok(parsed)
+}
+
+/// Returns the thresholds of the health of the Zato server, refusing a hold-off that the takeover of the standby
+/// would not precede.
+fn server_health(source: &dyn VariableSource, takeover: Duration) -> Result<ServerHealthConfig, ConfigError> {
+    let out = ServerHealthConfig {
+        liveness_timeout: seconds(source, ENV_SERVER_LIVENESS_TIMEOUT, DEFAULT_SERVER_LIVENESS_TIMEOUT)?,
+        start_timeout: seconds(source, ENV_SERVER_START_TIMEOUT, DEFAULT_SERVER_START_TIMEOUT)?,
+        exit_limit: count(source, ENV_SERVER_EXIT_LIMIT, DEFAULT_SERVER_EXIT_LIMIT)?,
+        exit_window: seconds(source, ENV_SERVER_EXIT_WINDOW, DEFAULT_SERVER_EXIT_WINDOW)?,
+        hold_off: seconds(source, ENV_RESIGN_HOLD_OFF, DEFAULT_RESIGN_HOLD_OFF)?,
+        hold_off_max: seconds(source, ENV_RESIGN_HOLD_OFF_MAX, DEFAULT_RESIGN_HOLD_OFF_MAX)?,
+    };
+
+    // A node that resigned would otherwise take its own lease over again before the standby does.
+    if out.hold_off <= takeover {
+        return Err(ConfigError::Invalid {
+            name: ENV_RESIGN_HOLD_OFF,
+            reason: format!(
+                "{} s is not longer than the takeover time of {} s",
+                out.hold_off.as_secs_f64(),
+                takeover.as_secs_f64()
+            ),
+        });
+    }
+
+    // Doubling never shortens the hold-off, so the longest one is at least the first one.
+    if out.hold_off_max < out.hold_off {
+        return Err(ConfigError::Invalid {
+            name: ENV_RESIGN_HOLD_OFF_MAX,
+            reason: format!(
+                "{} s is shorter than the hold-off of {} s",
+                out.hold_off_max.as_secs_f64(),
+                out.hold_off.as_secs_f64()
+            ),
+        });
+    }
+    Ok(out)
+}
+
 /// Returns the default data directory under the home directory.
 fn default_data_dir(source: &dyn VariableSource) -> Result<PathBuf, ConfigError> {
     let home = source.variable("HOME").ok_or(ConfigError::Missing("HOME"))?;
@@ -416,13 +569,16 @@ impl NodeConfig {
             None => default_data_dir(source)?,
         };
 
+        let timers = timers(source)?;
+
         Ok(Self {
             referee: referee(source)?,
             node_name: node_name(source)?,
             role_port: port(source, ENV_ROLE_PORT, DEFAULT_ROLE_PORT)?,
             server_port: port(source, ENV_SERVER_PORT, DEFAULT_SERVER_PORT)?,
             database: postgresql(source)?,
-            timers: timers(source)?,
+            server_health: server_health(source, timers.takeover)?,
+            timers,
             log_level: source.variable(ENV_LOG_LEVEL).unwrap_or_else(|| DEFAULT_LOG_LEVEL.to_owned()),
             data_dir,
         })

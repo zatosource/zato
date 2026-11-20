@@ -88,7 +88,7 @@ def test_python_engines_from_the_factory() -> 'None':
     for source in get_python_files(is_production=True):
         module_name = get_module_name(source)
 
-        if module_name == RegistryModuleCtx.Engine_Factory_Module:
+        if module_name in RegistryModuleCtx.Engine_Factory_Modules:
             continue
 
         for call in get_calls(source):

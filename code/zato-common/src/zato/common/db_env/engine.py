@@ -13,7 +13,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import fcntl
 import os
-import sqlite3
 from importlib import import_module
 from typing import NamedTuple
 
@@ -38,6 +37,7 @@ from zato.common.db_env.process_queue import ProcessQueue
 from zato.common.db_env.sqlite_checkpoint import set_background_checkpoint_limit, WALCheckpointer
 from zato.common.db_env.sqlite_stats import collect_sqlite_stats, Env_Stats_Dir
 from zato.common.db_env.write_path import check_write_path, get_write_path, Mechanism, run_in_write_path, write_path
+from zato.common.sqlite_connection import connect_sqlite_file as connect_sqlite_file
 from zato.common.worker_slot import is_config_owner
 
 # ################################################################################################################################
@@ -466,17 +466,6 @@ def new_zato_engine(engine_url:'any_', **engine_kwargs:'any_') -> 'Engine':
 
     else:
         raise DatabaseDurabilityError(f'Unsupported database type `{db_type}` of a database of Zato')
-
-    return out
-
-# ################################################################################################################################
-
-def connect_sqlite_file(db_path:'str') -> 'sqlite3.Connection':
-    """ Returns a connection of the sqlite3 module to a SQLite file of Zato, with the settings of durability
-    that each connection of the engine factory has.
-    """
-    out = sqlite3.connect(db_path)
-    set_sqlite_pragmas(out, None)
 
     return out
 

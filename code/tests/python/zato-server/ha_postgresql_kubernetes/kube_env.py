@@ -28,6 +28,7 @@ from kube_cluster import apply_manifest, cluster, create_cluster, delete_cluster
 from kube_endpoints import EndpointWatcher
 from nodes import is_named_by_record, ModuleCtx as NodesCtx, Node, Timers
 from topology import ModuleCtx as TopologyCtx, Referee
+from zato.common.test.ha_limits import HALimits
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -76,8 +77,18 @@ class ModuleCtx:
     # How often the roles are read while a test waits for the pair, in seconds
     Poll_Interval = 0.5
 
-    # The role of the standby
+    # The roles of the active node and of the standby
+    Role_Active = 'Active'
     Role_Standby = 'Standby'
+
+    # The thresholds of the health of the Zato server and the hold-off of a node that resigned, in seconds, which are
+    # the defaults of zato_ha_core/src/config.rs, so that the pods run with the values of a production node
+    Server_Liveness_Timeout = HALimits.Server_Liveness_Timeout
+    Server_Start_Timeout    = 300.0
+    Server_Exit_Limit       = HALimits.Server_Exit_Limit
+    Server_Exit_Window      = 60.0
+    Resign_Hold_Off         = 20.0
+    Resign_Hold_Off_Max     = 300.0
 
     # The Secret with the Zato database settings of the pods, and the CA file that the pods mount
     PubSub_DB_Secret = 'zato-ha-pubsub-db'
@@ -429,6 +440,12 @@ def create_cluster_session() -> 'KubeSession':
         'run_logs_dir': os.path.join(run_dir, 'run-logs'),
         'server_directory': server_directory,
         'service_node_port': str(ModuleCtx.Service_Node_Port),
+        'server_liveness_timeout': str(ModuleCtx.Server_Liveness_Timeout),
+        'server_start_timeout': str(ModuleCtx.Server_Start_Timeout),
+        'server_exit_limit': str(ModuleCtx.Server_Exit_Limit),
+        'server_exit_window': str(ModuleCtx.Server_Exit_Window),
+        'resign_hold_off': str(ModuleCtx.Resign_Hold_Off),
+        'resign_hold_off_max': str(ModuleCtx.Resign_Hold_Off_Max),
     }
 
     for pod_name, (server_node_port, role_node_port) in ModuleCtx.Pod_Node_Ports.items():

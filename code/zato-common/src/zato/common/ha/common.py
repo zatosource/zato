@@ -35,6 +35,15 @@ class ModuleCtx:
     Env_Heartbeat_Time = 'Zato_HA_Heartbeat_Time'
     Env_Takeover_Time  = 'Zato_HA_Takeover_Time'
 
+    # The thresholds after which the node finds its server failed and resigns, and the hold-off of a node that resigned,
+    # each of which the node takes from its own defaults unless it is given one
+    Env_Server_Liveness_Timeout = 'Zato_HA_Server_Liveness_Timeout'
+    Env_Server_Start_Timeout    = 'Zato_HA_Server_Start_Timeout'
+    Env_Server_Exit_Limit       = 'Zato_HA_Server_Exit_Limit'
+    Env_Server_Exit_Window      = 'Zato_HA_Server_Exit_Window'
+    Env_Resign_Hold_Off         = 'Zato_HA_Resign_Hold_Off'
+    Env_Resign_Hold_Off_Max     = 'Zato_HA_Resign_Hold_Off_Max'
+
     # The value of the mode variable that turns the active-standby mode on
     Mode_Active_Standby = 'active-standby'
 

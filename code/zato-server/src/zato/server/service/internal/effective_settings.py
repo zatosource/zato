@@ -60,10 +60,17 @@ select
     current_setting('synchronous_standby_names')
 """.strip()
 
-    # The variables with the timers of the node of an active-standby pair
+    # The variables with the timers of the node of an active-standby pair, the thresholds of the health of its server
+    # and its hold-off after a resignation
     HA_Timer_Variables = (
         HACtx.Env_Heartbeat_Time,
         HACtx.Env_Takeover_Time,
+        HACtx.Env_Server_Liveness_Timeout,
+        HACtx.Env_Server_Start_Timeout,
+        HACtx.Env_Server_Exit_Limit,
+        HACtx.Env_Server_Exit_Window,
+        HACtx.Env_Resign_Hold_Off,
+        HACtx.Env_Resign_Hold_Off_Max,
     )
 
 # ################################################################################################################################

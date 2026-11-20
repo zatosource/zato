@@ -10,6 +10,7 @@ use crate::config::Timers;
 use crate::record::NodeEntry;
 use crate::referee::Referee;
 use crate::referee::tests::MemoryReferee;
+use crate::server_health::ServerFailure;
 use crate::state::Role;
 use crate::test_support::{HttpStub, LOOPBACK, NODE_A, NODE_B, node_config, shared, wait_until};
 use std::collections::HashMap;
@@ -179,6 +180,51 @@ fn an_isolated_node_removes_its_label() {
     shared.state.lock().isolated = true;
     shared.changed.notify_all();
     assert!(wait_until(|| patches(&stub) == [patch(NODE_A, true), patch(NODE_A, false)]));
+
+    shared.announce_stop();
+    running.join().unwrap();
+}
+
+#[test]
+fn a_node_whose_server_failed_removes_its_label_before_it_resigns() {
+    let dir = tempfile::tempdir().unwrap();
+    let stub = HttpStub::start(STATUS_OK);
+    let shared = shared(node_config(NODE_A, dir.path(), TIMERS), Box::new(MemoryReferee::default()));
+    {
+        let mut state = shared.state.lock();
+        state.role = Role::Active;
+        state.generation = GENERATION;
+        state.server_ready = true;
+    }
+    let client = ApiClient::new(&format!("http://{LOOPBACK}:{}", stub.port), NAMESPACE, None, None).unwrap();
+    let labels = PodLabels {
+        pods_url: client.collection_url(PODS_GROUP_VERSION, PODS_RESOURCE),
+        client,
+    };
+    let running = {
+        let shared = Arc::clone(&shared);
+        thread::spawn(move || run(&shared, &labels))
+    };
+    assert!(wait_until(|| patches(&stub) == [patch(NODE_A, true)]));
+
+    // The supervisor records the failure and ends the readiness under one lock, while the node is still active ..
+    {
+        let mut state = shared.state.lock();
+        state.server_failure = Some(ServerFailure::Unanswered);
+        state.server_ready = false;
+    }
+    shared.changed.notify_all();
+    assert!(wait_until(|| patches(&stub) == [patch(NODE_A, true), patch(NODE_A, false)]));
+
+    // .. and the resignation that follows leaves the pod unlabeled.
+    {
+        let mut state = shared.state.lock();
+        state.server_failure = None;
+        state.role = Role::Standby;
+    }
+    shared.changed.notify_all();
+    thread::sleep(UNANSWERED_PERIOD);
+    assert!(!patches(&stub).iter().skip(1).any(|item| item.active));
 
     shared.announce_stop();
     running.join().unwrap();

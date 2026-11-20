@@ -3,7 +3,13 @@
 // Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 // Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
-//! The control loop of the node: bootstrap, the lease, takeover, isolation and the checks of the referee record.
+//! The control loop of the node: bootstrap, the lease, takeover, isolation, the checks of the referee record
+//! and the resignation of an active node whose Zato server failed.
+//!
+//! A resignation runs in this order. The supervisor records the failure of the server and clears its readiness
+//! under one lock, which makes the label thread remove the label of the own pod, and stops the server. At its next
+//! tick, the control loop makes the node the standby, which stops the renewals, so the lease lapses and the other node
+//! takes over after the takeover time. The node that resigned takes no lease over before its hold-off elapses.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -107,6 +113,12 @@ pub struct Control {
 
     /// When the standby last saw the record change or failed to read it.
     observed_at: Instant,
+
+    /// The hold-off of the next resignation, which doubles with consecutive resignations up to the longest hold-off.
+    hold_off: Duration,
+
+    /// When the node last resigned, while consecutive resignations double the hold-off.
+    last_resigned_at: Option<Instant>,
 }
 
 impl Control {
@@ -118,6 +130,8 @@ impl Control {
         let mut state = shared.state.lock();
         state.generation = persisted_generation;
         drop(state);
+
+        let hold_off = shared.config.server_health.hold_off;
 
         Ok(Self {
             shared,
@@ -131,6 +145,8 @@ impl Control {
             database_generation: None,
             observed: None,
             observed_at: Instant::now(),
+            hold_off,
+            last_resigned_at: None,
         })
     }
 
@@ -258,6 +274,8 @@ impl Control {
 
             let generation = self.shared.state.lock().generation;
             self.persist(generation)?;
+
+            self.resign_if_server_failed();
 
             let role = self.shared.state.lock().role;
             self.check_lease(role)?;

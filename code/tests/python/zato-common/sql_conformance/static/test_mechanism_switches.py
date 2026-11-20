@@ -42,6 +42,7 @@ class ModuleCtx:
     Modules_Without_Environment = (
         'zato.common.db_env.connection',
         'zato.common.db_env.commit_queue',
+        'zato.common.sqlite_connection',
         'zato.common.pubsub.sql.generation',
     )
 

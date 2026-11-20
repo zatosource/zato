@@ -12,6 +12,7 @@ pub mod postgresql;
 pub mod record;
 pub mod referee;
 pub mod role_endpoint;
+pub mod server_health;
 pub mod state;
 pub mod supervisor;
 #[cfg(test)]

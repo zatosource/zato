@@ -68,7 +68,7 @@ def _is_allowed_site(source:'SourceFile') -> 'bool':
     if source.is_linked:
         return False
 
-    out = source.relative_path == RegistryModuleCtx.Setting_Module_Path
+    out = source.relative_path in RegistryModuleCtx.Setting_Module_Paths
     return out
 
 # ################################################################################################################################

@@ -25,11 +25,15 @@ if 0:
 
 class ModuleCtx:
 
-    # The module that builds every engine and every connection of a database of Zato
-    Engine_Factory_Module = 'zato.common.db_env.engine'
+    # The modules that build every engine and every connection of a database of Zato, the second one
+    # for the connections of the sqlite3 module that a process opens without SQLAlchemy
+    Engine_Factory_Modules = ('zato.common.db_env.engine', 'zato.common.sqlite_connection')
 
-    # The module in which SQLite pragmas and PostgreSQL session settings that concern durability are set
-    Setting_Module_Path = 'code/zato-common/src/zato/common/db_env/connection.py'
+    # The modules in which SQLite pragmas and PostgreSQL session settings that concern durability are set
+    Setting_Module_Paths = (
+        'code/zato-common/src/zato/common/db_env/connection.py',
+        'code/zato-common/src/zato/common/sqlite_connection.py',
+    )
 
 # ################################################################################################################################
 # ################################################################################################################################
