@@ -942,9 +942,11 @@ def get_threads_traceback(pid:'int') -> 'strdict':
 
 def get_greenlets_traceback(pid:'int') -> 'strdict':
     result:'strdict' = {}
-    # Every kind of greenlet is included - the hub, those of gevent and the raw ones of the inbound connections
+    # Every kind of greenlet is included - the hub, those of gevent and the raw ones of the inbound connections.
+    # The type is checked rather than the instance, because isinstance reads the class through a weak proxy
+    # and raises ReferenceError for a proxy whose object no longer exists.
     for item in gc.get_objects():
-        if not isinstance(item, GreenletBase):
+        if not issubclass(type(item), GreenletBase):
             continue
         if not item:
             continue

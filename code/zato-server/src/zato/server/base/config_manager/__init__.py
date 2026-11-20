@@ -71,7 +71,6 @@ from zato.server.generic.api.channel_kafka import ChannelKafkaWrapper
 from zato.server.generic.api.outconn_ftp import OutconnFTPWrapper
 from zato.server.generic.api.outconn_graphql import OutconnGraphQLWrapper
 from zato.server.generic.api.outconn_grpc import OutconnGRPCWrapper
-from zato.server.generic.api.outconn_hl7_fhir import OutconnHL7FHIRWrapper
 from zato.server.generic.api.outconn_hl7_mllp import OutconnHL7MLLPWrapper
 from zato.server.generic.api.outconn_ibm_mq import OutconnIBMMQWrapper
 from zato.server.generic.api.outconn_kafka import OutconnKafkaWrapper
@@ -368,7 +367,6 @@ class ConfigManager(_ConfigManagerBase):
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: ChannelHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRAPHQL: OutconnGraphQLWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_GRPC: OutconnGRPCWrapper,
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: OutconnHL7FHIRWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: OutconnHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_IBM_MQ: ChannelIBMMQWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IBM_MQ: OutconnIBMMQWrapper,

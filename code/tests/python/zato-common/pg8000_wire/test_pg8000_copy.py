@@ -18,8 +18,8 @@ from sqlalchemy import BigInteger, Boolean, Column, DateTime, Double, event as s
 
 # Zato
 from zato.common.db_env.common import UTC_DateTime
+from zato.common.db_env.pg8000_common import Max_Inline_Size
 from zato.common.db_env.pg8000_copy import copy_rows, encode_rows, get_copy_plan
-from zato.common.db_env.pg8000_wire import Max_Inline_Size
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -29,6 +29,7 @@ from live_windows.containers import stop_guests
 from live_windows.guest_versions import needed_versions, version_items
 from live_windows.session import missing_guest_requirements, open_guests
 from live_windows.settings import Step, Suite, Versions
+from live_windows.shard_selection import current_shard, is_sharded, shard_items
 from zato.common.crypto.api import CryptoManager
 
 # Playwright helpers
@@ -103,22 +104,30 @@ for _version in _versions:
 
 @pytest.hookimpl(trylast=True)
 def pytest_collection_modifyitems(config:'Config', items:'itemlist') -> 'None':
-    """ Keeps the tests of the version of the step that this session runs, if a step is given, and records the versions
-    of the guests that the remaining tests run against. It runs after the selection by keywords and markers,
-    so that a session resumes only the guests of the tests it runs.
+    """ Keeps the tests of the shard of this process, if the tests are divided into shards, or those of the version
+    of the step that this session runs, if a step is given, and records the versions of the guests that the remaining
+    tests run against. It runs after the selection by keywords and markers, so that a session resumes only the guests
+    of the tests it runs.
     """
-    if Step.Variable in os.environ:
+    if is_sharded():
+        index, count = current_shard()
+        selected = shard_items(items, index, count)
+
+    elif Step.Variable in os.environ:
         step_version = os.environ[Step.Variable]
-
         selected = version_items(items, step_version)
-        deselected:'itemlist' = []
 
-        for item in items:
-            if item not in selected:
-                deselected.append(item)
+    else:
+        selected = items
 
-        config.hook.pytest_deselected(items=deselected)
-        items[:] = selected
+    deselected:'itemlist' = []
+
+    for item in items:
+        if item not in selected:
+            deselected.append(item)
+
+    config.hook.pytest_deselected(items=deselected)
+    items[:] = selected
 
     config.stash[_versions_key] = needed_versions(items)
 

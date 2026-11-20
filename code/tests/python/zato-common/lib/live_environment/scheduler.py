@@ -22,7 +22,7 @@ from redis import Redis
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.process_util import kill_process_tree
 from zato.common.typing_ import cast_
-from zato.common.util.tcp import get_free_port
+from zato.common.test.reservation import reserve_port
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,8 +58,8 @@ _redis_defaults = {
     'Zato_Scheduler_Log_Level':      'info',
 }
 
-# Where the HTTP API port search starts.
-_http_port_start = 41000
+# The purpose of the reservation of the port of the HTTP API.
+_http_port_purpose = 'scheduler-http'
 
 _start_timeout = 30
 _poll_interval = 0.5
@@ -90,7 +90,8 @@ class SchedulerProcess:
 
     def __init__(self) -> 'None':
         self.stream_prefix = 'zato:scheduler:test-' + CryptoManager.generate_hex_string()
-        self.http_port = get_free_port(_http_port_start)
+        self.http_port_reservation = reserve_port(_http_port_purpose)
+        self.http_port = self.http_port_reservation.port
 
         self._process:'any_' = None
 
@@ -226,10 +227,11 @@ class SchedulerProcess:
 # ################################################################################################################################
 
     def cleanup(self) -> 'None':
-        """ Ends the binary and removes its streams.
+        """ Ends the binary, removes its streams and releases the port of its HTTP API.
         """
         self.stop()
         self.delete_streams()
+        self.http_port_reservation.release()
 
 # ################################################################################################################################
 # ################################################################################################################################

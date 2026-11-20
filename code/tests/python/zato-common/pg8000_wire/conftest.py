@@ -14,6 +14,7 @@ _ = monkey.patch_all()
 import atexit
 import os
 import sys
+from importlib import import_module
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
 
@@ -27,8 +28,6 @@ from sqlalchemy import create_engine
 from gevent_monitor import pytest_pyfunc_call as pytest_pyfunc_call
 from live_sql.containers import start_postgresql, stop_container
 from logging_teardown import silence_logging_teardown
-from zato.common.db_env.pg8000_copy import install as install_pg8000_copy
-from zato.common.db_env.pg8000_wire import install as install_pg8000_wire
 
 _ = atexit.register(silence_logging_teardown)
 
@@ -60,6 +59,9 @@ class ModuleCtx:
     Password = 'test-pg8000-wire-password'
     DB_Name  = 'zato_pg8000_wire'
 
+    # The module whose import applies the extensions of pg8000 once per process
+    PG8000_Install_Module = 'zato.common.db_env.pg8000_install'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -67,8 +69,7 @@ class ModuleCtx:
 def postgresql_server() -> 'servergen':
     """ A PostgreSQL server, started for the session and removed after it.
     """
-    install_pg8000_wire()
-    install_pg8000_copy()
+    _ = import_module(ModuleCtx.PG8000_Install_Module)
 
     server = start_postgresql(
         container_name=ModuleCtx.PostgreSQL_Container,

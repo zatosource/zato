@@ -67,9 +67,6 @@ class ModuleCtx:
     # The kinds of agent events whose number is reported
     Counted_Kinds = 'produced', 'consumed', 'appeared', 'disappeared', 'marked-failed'
 
-    # The kinds of agent events that report a file which a schedule may pick up
-    Activity_Kinds = 'produced', 'appeared'
-
     # The server log lines that every environment without these components produces
     Server_Log_Noise = (
         'check_latest_version',
@@ -469,9 +466,6 @@ class Monitor:
             watch.events.append(event)
             if kind in watch.counts:
                 watch.counts[kind] += 1
-
-        if kind in ModuleCtx.Activity_Kinds:
-            self.barrier.on_activity()
 
         if kind == 'error':
             self._fail(f'{watch.handle.prefix} Agent error -> {event}')

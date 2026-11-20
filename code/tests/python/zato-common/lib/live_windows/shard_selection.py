@@ -26,34 +26,40 @@ if 0:
 
 class ModuleCtx:
 
-    # The duration of each test on one guest, in seconds, measured in a session that ran the tests one after another,
-    # by which the tests of each version are divided among its shards
+    # The duration of each test on one guest, in seconds, by which the tests of each version are divided among its shards
     Weights = {
+        'test_ping':                                 1.0,
+        'test_schedules_listed':                     1.0,
+        'test_audit_log_records_pickup':             9.0,
+        'test_ping_fails_with_wrong_password':       2.0,
         'test_agent_responds':                       1.5,
         'test_exchange_account_reaches_every_share': 1.1,
         'test_round_trip':                           1.1,
         'test_control_share_refused':                4.0,
         'test_single_file':                          5.5,
-        'test_burst':                               13.0,
-        'test_fan_out':                              6.0,
+        'test_burst':                                9.0,
+        'test_fan_out':                              8.0,
         'test_empty_file_rejected':                  6.0,
         'test_temp_then_rename':                     6.0,
-        'test_slow_writer':                          8.5,
-        'test_locked_file':                          8.8,
-        'test_archive_and_partner_drop':             6.8,
-        'test_partner_on_other_guest':               6.3,
-        'test_labels_per_site':                      8.0,
-        'test_daily_extract':                        6.3,
-        'test_both_directions':                      7.0,
-        'test_claim_contention':                    10.0,
-        'test_smb_service_restart':                 13.8,
-        'test_port_blocked':                        17.5,
-        'test_guest_paused':                        18.3,
-        'test_credential_rotation':                 14.0,
-        'test_share_removed':                       12.5,
-        'test_server_restart':                      10.5,
+        'test_slow_writer':                          9.0,
+        'test_locked_file':                          9.0,
+        'test_archive_and_partner_drop':             7.0,
+        'test_partner_on_other_guest':              10.0,
+        'test_labels_per_site':                      9.0,
+        'test_daily_extract':                        7.0,
+        'test_both_directions':                     10.0,
+        'test_claim_contention':                    15.0,
+        'test_smb_service_restart':                 15.0,
+        'test_port_blocked':                        18.0,
+        'test_guest_paused':                        18.0,
+        'test_credential_rotation':                 15.0,
+        'test_share_removed':                       13.0,
+        'test_server_restart':                      13.0,
         'test_switchover':                          15.0,
     }
+
+    # How long a shard takes to create the definitions of one more guest through the Dashboard, in seconds
+    Guest_Setup_Weight = 10.0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -102,8 +108,9 @@ def is_sharded() -> 'bool':
 
 def shard_items(items:'itemlist', index:'int', count:'int') -> 'itemlist':
     """ Returns the tests of one shard, in the order of their collection. Each version has the same number of shards.
-    A test that runs against two guests belongs to the first shard of the first of its versions, and the other tests
-    of each version go to the shard of that version that has the least work so far, the longest test first.
+    A test that runs against two guests belongs to the first shard of the first of its versions, which also creates
+    the definitions of the second guest, and the other tests of each version go to the shard of that version
+    that has the least work so far, the longest test first.
     """
     version_count = len(Versions.All)
     shards_per_version = count // version_count
@@ -118,11 +125,12 @@ def shard_items(items:'itemlist', index:'int', count:'int') -> 'itemlist':
 
     assignment:'dict[str, shardkey]' = {}
     single_guest:'dict[str, itemlist]' = {}
+    extra_guests:'set[tuple[shardkey, str]]' = set()
 
     for version in Versions.All:
         single_guest[version] = []
 
-    # The tests that run against two guests are placed first ..
+    # The tests that run against two guests are placed first, each other guest of a shard adding to its work ..
     for item in items:
 
         versions = item_versions(item)
@@ -132,6 +140,12 @@ def shard_items(items:'itemlist', index:'int', count:'int') -> 'itemlist':
             key:'shardkey' = first_version, 0
             assignment[item.nodeid] = key
             loads[key] += _weight(item)
+
+            for other_version in versions[1:]:
+                extra_guest = key, other_version
+                if extra_guest not in extra_guests:
+                    extra_guests.add(extra_guest)
+                    loads[key] += ModuleCtx.Guest_Setup_Weight
         else:
             single_guest[first_version].append(item)
 

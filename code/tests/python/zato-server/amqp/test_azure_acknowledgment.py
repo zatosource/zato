@@ -11,7 +11,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.api import AMQP
-from zato.server.connection.amqp_ import _AzureMessageWrapper
+from zato.server.connection.amqp_azure import _AzureMessageWrapper
 
 # Test support
 from amqp_stub import new_channel_config, new_connector, AzureProducerRecorder, AzureReceiverRecorder, Channel_Name

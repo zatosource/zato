@@ -17,7 +17,7 @@ from redis import Redis
 from redis.exceptions import RedisError
 
 # Zato
-from zato.common.util.tcp import get_free_port
+from zato.common.test.reservation import reserve_port
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,8 +32,8 @@ class ModuleCtx:
 
     Host = '127.0.0.1'
 
-    # Where the search for a free port starts
-    Port_Start = 42000
+    # The purpose of the reservation of the port of each server
+    Port_Purpose = 'scheduler-redis'
 
     # How long the server may take to accept commands after it starts, in seconds
     Ready_Timeout = 30.0
@@ -46,12 +46,13 @@ class ModuleCtx:
 # ################################################################################################################################
 
 class RedisProcess:
-    """ A Redis server of the tests' own, on a free port, which writes every command to its append-only file
+    """ A Redis server of the tests' own, on a port reserved for it, which writes every command to its append-only file
     before it replies, so that a restart in the same directory keeps every stream, consumer group and pending entry.
     """
 
     def __init__(self) -> 'None':
-        self.port = get_free_port(ModuleCtx.Port_Start)
+        self.port_reservation = reserve_port(ModuleCtx.Port_Purpose)
+        self.port = self.port_reservation.port
         self.data_dir = mkdtemp(prefix='zato_test_redis_')
         self._process:'any_' = None
 
@@ -124,12 +125,13 @@ class RedisProcess:
 # ################################################################################################################################
 
     def cleanup(self) -> 'None':
-        """ Stops the server if it runs and removes its data directory.
+        """ Stops the server if it runs, removes its data directory and releases its port.
         """
         if self._process is not None:
             self.stop()
 
         rmtree(self.data_dir)
+        self.port_reservation.release()
 
 # ################################################################################################################################
 # ################################################################################################################################

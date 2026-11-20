@@ -9,10 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import os
-import time
 
 # Zato
 from zato.common.api import FileTransfer
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,8 +45,8 @@ _Dialog_Timeout = 5000
 # How long to wait for a save to complete, in milliseconds
 _Submit_Timeout = 10000
 
-# How long to let the wizard move between steps, in seconds
-_Step_Sleep_Time = 0.2
+# The tab of the step of the wizard that is shown, whose data-step attribute is the index of the step
+_Active_Step_Selector = '#file-transfer-wizard-steps .wizard-step-active'
 
 # The prefix of the identifier of each input of a micro-form, followed by the name of its field
 _Micro_Form_Input_Prefix = '#file-transfer-wizard-tippy-'
@@ -101,8 +101,13 @@ def open_create_wizard(page:'Page') -> 'None':
 # ################################################################################################################################
 
 def wizard_next(page:'Page') -> 'None':
+    """ Moves the wizard to its next step and waits until that step is shown.
+    """
+    current_step = cast_('str', page.get_attribute(_Active_Step_Selector, 'data-step'))
+    next_step = int(current_step) + 1
+
     page.click('#file-transfer-wizard-next')
-    time.sleep(_Step_Sleep_Time)
+    _ = page.wait_for_selector(f'{_Active_Step_Selector}[data-step="{next_step}"]', state='visible', timeout=_Dialog_Timeout)
 
 # ################################################################################################################################
 

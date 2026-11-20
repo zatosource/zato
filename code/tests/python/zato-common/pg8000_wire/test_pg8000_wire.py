@@ -24,7 +24,7 @@ from zato_pg_wire.zato_pg_wire import RowDecoder
 
 # Zato
 from zato.common.db_env import pg8000_wire
-from zato.common.db_env.pg8000_common import deferred_replies
+from zato.common.db_env.pg8000_common import deferred_replies, Max_Inline_Size
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -80,7 +80,7 @@ _typed_select_prepared = _typed_select + ', %s::int4'
 _many_rows = 5000
 
 # The sizes of the bytea values sent as parameters, one of them larger than a part of a message kept inline.
-_bytea_sizes = (0, 1, 1000, pg8000_wire.Max_Inline_Size + 4464, 5_000_000)
+_bytea_sizes = (0, 1, 1000, Max_Inline_Size + 4464, 5_000_000)
 
 # The insert of one customer and the count of the customers with an id above the one given.
 _insert_customer = 'insert into customer values (%s)'

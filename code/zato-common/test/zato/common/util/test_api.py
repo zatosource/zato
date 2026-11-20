@@ -8,11 +8,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import weakref
 from pathlib import Path
 from unittest import main, TestCase
 from uuid import uuid4
 
 # Zato
+from zato.common.util.api import get_greenlets_traceback
 from zato.common.util.file_system import resolve_path
 
 # ################################################################################################################################
@@ -174,6 +176,31 @@ class UtilAPITestCase(TestCase):
 
         # .. and confirm that it was resolved correctly.
         self.assertEqual(resolved, expected)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _ProxyTarget:
+    pass
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GreenletsTracebackTestCase(TestCase):
+
+    def test_a_dead_weak_proxy_is_skipped(self):
+
+        # A proxy whose object no longer exists stays in the garbage collector's view of the process ..
+        target = _ProxyTarget()
+        dead_proxy = weakref.proxy(target)
+        del target
+
+        # .. the stacks of the greenlets are collected regardless ..
+        tracebacks = get_greenlets_traceback(os.getpid())
+
+        # .. and the proxy remains referenced until this point.
+        self.assertIsInstance(tracebacks, dict)
+        self.assertIsNotNone(dead_proxy)
 
 # ################################################################################################################################
 # ################################################################################################################################

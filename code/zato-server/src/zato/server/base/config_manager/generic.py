@@ -19,6 +19,8 @@ from zato.common.ext.bunch import Bunch
 from zato.common.api import GENERIC as COMMON_GENERIC, HL7, HTTP_SOAP, LDAP, ZATO_NONE
 from zato.common.broker_message import GENERIC as GENERIC_BROKER_MSG
 from zato.common.const import SECRETS
+from zato.common.hl7.fhir.fields import Outgoing_Bool_Names as outconn_fhir_bool_config_keys, \
+    Outgoing_Config_Defaults as outconn_fhir_config_defaults, Outgoing_Int_Names as outconn_fhir_int_config_keys
 from zato.common.typing_ import cast_
 from zato.common.util.api import as_bool, parse_simple_type
 from zato.common.util.config import replace_query_string_items_in_dict
@@ -34,8 +36,6 @@ from zato.server.generic.api.config_defaults import cloud_aws_config_defaults, c
     outconn_smb_bool_config_keys, outconn_smb_config_defaults, outconn_smb_int_config_keys, outconn_smb_string_config_keys
 from zato.server.generic.api.outconn_grpc import outconn_grpc_bool_config_keys, outconn_grpc_config_defaults, \
     outconn_grpc_int_config_keys
-from zato.server.generic.api.outconn_hl7_fhir import outconn_fhir_bool_config_keys, outconn_fhir_config_defaults, \
-    outconn_fhir_int_config_keys
 from zato.server.generic.api.outconn_hl7_mllp import outconn_bool_config_keys, outconn_config_defaults, \
     outconn_int_config_keys
 from zato.server.generic.api.outconn_kafka import outconn_bool_config_keys as outconn_kafka_bool_config_keys, \
@@ -84,6 +84,8 @@ _wrapper_locations = {
         'CloudMicrosoftFabricWrapper'),
     COMMON_GENERIC.CONNECTION.TYPE.GATEWAY_MCP: WrapperLocation('zato.server.generic.api.gateway_mcp', 'GatewayMCPWrapper'),
     COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_ES: WrapperLocation('zato.server.generic.api.outconn_es', 'OutconnESWrapper'),
+    COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: WrapperLocation('zato.server.generic.api.outconn_hl7_fhir',
+        'OutconnHL7FHIRWrapper'),
     COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: WrapperLocation('zato.server.generic.api.outconn_ldap', 'OutconnLDAPWrapper'),
     COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: WrapperLocation('zato.server.generic.api.outconn_mongodb',
         'OutconnMongoDBWrapper'),
