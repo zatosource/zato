@@ -105,10 +105,10 @@ fn run(shared: &Shared, labels: &PodLabels) {
         }
 
         let outcome = if serving {
-            let peers = shared.referee.read_addresses().map_err(|error| error.to_string());
-            peers.and_then(|addresses| {
-                for address in addresses.iter().filter(|address| address.node_name != own_pod) {
-                    labels.set(&address.node_name, false)?;
+            let peers = shared.referee.read_entries().map_err(|error| error.to_string());
+            peers.and_then(|entries| {
+                for entry in entries.iter().filter(|entry| entry.node_name != own_pod) {
+                    labels.set(&entry.node_name, false)?;
                 }
                 labels.set(&own_pod, true)
             })

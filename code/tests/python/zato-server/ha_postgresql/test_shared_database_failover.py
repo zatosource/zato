@@ -109,7 +109,7 @@ def test_failover_to_synchronous_standby(ha_pair:'HAEnvironment') -> 'None':
     check_workload(env, workload)
     check_publications_stored(env, active, publisher.get_msg_ids())
 
-    _ = check_scheduler(env, active, ModuleCtx.Unrun_Claims_After_Isolation)
+    _ = check_scheduler(env, ModuleCtx.Unrun_Claims_After_Isolation)
     check_active_server(env, active)
 
 # ################################################################################################################################
@@ -190,7 +190,7 @@ def test_failover_to_standby_without_the_last_takeover(ha_pair:'HAEnvironment') 
     _ = new_active.wait_until_server_up(TakeoverCtx.Server_Timeout)
 
     old_active.resume()
-    _ = old_active.wait_for_role(TakeoverCtx.Standby_In_Sync, TakeoverCtx.Rejoin_Timeout)
+    _ = old_active.wait_for_role(TakeoverCtx.Standby_Roles, TakeoverCtx.Rejoin_Timeout)
 
     record = env.referee.read_record()
     assert record is not None

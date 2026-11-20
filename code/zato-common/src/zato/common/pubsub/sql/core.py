@@ -17,13 +17,11 @@ from gevent.event import Event
 
 # Zato
 from zato.common.api import HTTP_SOAP
-from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.export.api import get_audit_export
 from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
-from zato.common.ha.common import get_generation, get_node_name, is_active_standby
 from zato.common.pubsub.sql.clock import get_engine_clock
 from zato.common.db_env.database import get_database_engine, get_database_type
-from zato.common.pubsub.sql.generation import follow_takeover, get_fork_takeover, take_over, Takeover_Object_Name
+from zato.common.pubsub.sql.generation import follow_takeover, get_fork_takeover, take_over
 from zato.common.pubsub.sql.payload_cache import Max_Payload_Cache_Size, PayloadCache, PayloadEpoch
 from zato.common.pubsub.sql.payloads import drop_payloads
 from zato.common.pubsub.sql.pending import new_pending_ack, new_pending_attempts
@@ -155,9 +153,8 @@ class SQLBackendCore:
     def take_over(self) -> 'None':
         """ Makes this server the active one on PostgreSQL, whose database a standby server may take over,
         and guards each subsequent transaction with the generation raised. A process that an arbiter started follows
-        the takeover that its arbiter ran before the fork. On SQLite under an active-standby node, the node made
-        this server the active one already. The takeover is recorded in the audit log once per server start,
-        on PostgreSQL in the transaction that raises the generation.
+        the takeover that its arbiter ran before the fork. The takeover is recorded in the audit log once per server start,
+        in the transaction that raises the generation.
         """
         if get_database_type() == Type_PostgreSQL:
 
@@ -175,19 +172,6 @@ class SQLBackendCore:
             if is_first_start() and (takeover_event_id := generation_guard.takeover_event_id):
                 if export := get_audit_export():
                     export.emit_row(self.engine, takeover_event_id)
-
-        elif is_active_standby():
-            if is_first_start():
-                generation = get_generation()
-                node_name = get_node_name()
-
-                attrs = {
-                    'generation': f'{generation}',
-                    'node': node_name,
-                }
-
-                self.audit_log.insert(AuditSource.PubSub, AuditEvent.Takeover, Takeover_Object_Name,
-                    outcome=AuditOutcome.OK, attrs=attrs)
 
 # ################################################################################################################################
 

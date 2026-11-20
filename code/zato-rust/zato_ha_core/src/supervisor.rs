@@ -15,7 +15,7 @@ use nix::sys::signal::{Signal, killpg};
 use nix::sys::wait::{WaitPidFlag, WaitStatus, waitpid};
 use nix::unistd::Pid;
 
-use crate::config::{ENV_BARRIER_SOCKET, ENV_GENERATION, ENV_NODE_NAME, StorageMode};
+use crate::config::ENV_GENERATION;
 use crate::state::{Role, Shared};
 
 /// How often the supervisor compares the process with the role when nothing notifies it.
@@ -74,17 +74,12 @@ impl Supervisor {
                 self.stop();
             }
 
-            // A fenced node joins again only once its server no longer runs, and in the shared storage mode
-            // it is a standby that may take over at once, since both hosts use one database.
+            // A fenced node joins again as the standby only once its server no longer runs.
             if role == Role::Fenced && self.child.is_none() {
-                let rejoined = match self.shared.config.storage {
-                    StorageMode::Replicated => Role::StandbyOut,
-                    StorageMode::Shared => Role::StandbyInSync,
-                };
                 let mut state = self.shared.state.lock();
                 let is_fenced = state.role == Role::Fenced;
                 if is_fenced {
-                    state.role = rejoined;
+                    state.role = Role::Standby;
                 }
                 drop(state);
                 if is_fenced {
@@ -120,12 +115,9 @@ impl Supervisor {
             return;
         };
         reap_orphans();
-        let config = &self.shared.config;
         let spawned = Command::new(program)
             .args(arguments)
             .env(ENV_GENERATION, generation.to_string())
-            .env(ENV_BARRIER_SOCKET, &config.barrier_socket)
-            .env(ENV_NODE_NAME, &config.node_name)
             .process_group(OWN_PROCESS_GROUP)
             .spawn();
         match spawned {

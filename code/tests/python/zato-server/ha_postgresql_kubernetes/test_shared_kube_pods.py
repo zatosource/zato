@@ -6,15 +6,15 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The faults of the active pod of the SQLite suites, run against a pair on PostgreSQL through the fixtures
-# of this directory. The deletion and the freeze of the pod end the lease renewal as the faults of the node do,
-# so the pair on PostgreSQL runs the kill of the server only.
+# The Zato server of the active pod is killed under traffic. The deletion and the freeze of the pod end the lease
+# renewal as the faults of the node do, which the suite of the worker nodes covers.
 
-# pytest
-import pytest
+# stdlib
+import time
 
 # Zato
-from test_kube_pods import ModuleCtx as PodsCtx, test_pod_fault as run_pod_fault
+from kube_checks import finish, get_pair, ModuleCtx as ChecksCtx, start_workload
+from kube_faults import kill_server
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,17 +27,27 @@ if 0:
 
 class ModuleCtx:
 
-    # The faults of the active pod
-    Faults = [PodsCtx.Fault_Kill_Server]
+    # How long a server may take to start again, in seconds
+    Server_Timeout = 180
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.mark.parametrize('fault', ModuleCtx.Faults)
-def test_pod_fault(kube_pair:'KubeEnvironment', fault:'str') -> 'None':
-    """ The active pod fails under traffic, as in the SQLite suite.
+def test_kill_server(kube_pair:'KubeEnvironment') -> 'None':
+    """ The server of the active pod is killed under traffic, and the pod keeps its role and starts its server again.
     """
-    run_pod_fault(kube_pair, fault)
+    env = kube_pair
+    workload = start_workload(env)
+
+    active, _ = get_pair(env)
+
+    started = kill_server(active.pod_name)
+    _ = active.wait_until_server_up(ModuleCtx.Server_Timeout)
+
+    workload.fault_windows.append((started, time.time()))
+
+    # The server that the fault ends leaves the claim it committed before the run began without a run.
+    _ = finish(env, workload, started, ChecksCtx.Unrun_Claims_After_Fault)
 
 # ################################################################################################################################
 # ################################################################################################################################

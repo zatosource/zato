@@ -10,16 +10,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
-from ha_env import ready_pair as ready_sqlite_pair
-from ha_takeover import ModuleCtx as TakeoverCtx
 from nodes import Timers
 from postgresql_cluster import ModuleCtx as ClusterCtx
-from postgresql_env import get_cluster, ready_pair as ready_postgresql_pair
-from pubsub_exactly_once.database import postgresql_only, sqlite_only
+from postgresql_env import get_cluster, ready_pair
+from pubsub_exactly_once.database import postgresql_only
 from pubsub_exactly_once.harness import new_keys, stage_batch, verify
-from pubsub_exactly_once_takeover.ha_pair import ControlDirHook, get_cluster_env, get_control_dir, verify_node
+from pubsub_exactly_once_takeover.ha_pair import ControlDirHook, get_cluster_env, get_control_dir
 from zato.common.test.exactly_once.config import TestConfig
-from zato.common.test.exactly_once.control import count_invocations, release
+from zato.common.test.exactly_once.control import release
 from zato.common.test.pubsub_database import pubsub_db_env
 
 # ################################################################################################################################
@@ -49,46 +47,6 @@ _synchronous_standby = ClusterCtx.Standby_Names[0]
 # ################################################################################################################################
 # ################################################################################################################################
 
-@sqlite_only
-def test_frozen_node_on_sqlite(relay_ha_session:'HASession', request:'any_') -> 'None':
-    """ The active node is frozen while its relay holds the last key of a batch, the standby takes over and
-    delivers the batch, and the frozen node resumes, finishes the held key and joins again as the standby.
-    The database of the new active node holds each output once.
-    """
-    hook = ControlDirHook(get_control_dir(relay_ha_session))
-
-    with ready_sqlite_pair(relay_ha_session, request.node.name, Timers(), [hook]) as env:
-
-        old_active = env.get_active()
-        assert old_active is not None, 'No active node'
-
-        new_active = env.get_other(old_active)
-
-        prefix, keys = new_keys(_batch_count)
-        last_key = keys[-1]
-
-        # The relay of the active node holds the last key of a batch ..
-        TestConfig.base_url = old_active.server_url
-        stage_batch(keys)
-
-        # .. the node is frozen and its standby takes over ..
-        old_active.pause()
-
-        _ = new_active.wait_for_role(TakeoverCtx.Active_Roles, TakeoverCtx.Takeover_Timeout)
-        _ = new_active.wait_until_server_up(TakeoverCtx.Server_Timeout)
-
-        # .. the frozen node resumes and finishes the held key ..
-        old_active.unpause()
-        release(last_key)
-
-        # .. and it joins again as the standby.
-        _ = old_active.wait_for_role(TakeoverCtx.Standby_In_Sync, TakeoverCtx.Rejoin_Timeout)
-
-        _ = verify_node(new_active, prefix, keys)
-        assert count_invocations(last_key) >= 2
-
-# ################################################################################################################################
-
 @postgresql_only
 def test_database_failover_on_postgresql(relay_ha_session:'HASession', request:'any_') -> 'None':
     """ The primary of the shared database fails while the relay of the active node holds the last key of a batch,
@@ -96,7 +54,7 @@ def test_database_failover_on_postgresql(relay_ha_session:'HASession', request:'
     """
     hook = ControlDirHook(get_control_dir(relay_ha_session))
 
-    with ready_postgresql_pair(relay_ha_session, request.node.name, Timers(), [hook]) as env:
+    with ready_pair(relay_ha_session, request.node.name, Timers(), [hook]) as env:
 
         cluster = get_cluster(env)
 

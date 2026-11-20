@@ -25,8 +25,9 @@ if 0:
 
 class ModuleCtx:
 
-    # How many files a burst consists of, and the pause between two of them, in milliseconds
-    Burst_Count       = 50
+    # How many files a burst consists of, and the pause between two of them, in milliseconds. The connection
+    # of the burst serves every schedule of the guest through one client, which routes about one file a second.
+    Burst_Count       = 25
     Burst_Interval_Ms = 20
 
     # How many files the catalog sends to the branches at once

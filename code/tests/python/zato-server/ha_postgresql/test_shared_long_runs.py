@@ -84,7 +84,7 @@ def _finish(
     check_workload(env, workload)
     check_publications_stored(env, active, publisher.get_msg_ids())
 
-    _ = check_scheduler(env, active, unrun_claims)
+    _ = check_scheduler(env, unrun_claims)
     check_active_server(env, active)
 
     return active

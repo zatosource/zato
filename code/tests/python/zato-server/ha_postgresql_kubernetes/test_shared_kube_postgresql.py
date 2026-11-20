@@ -104,7 +104,7 @@ def test_postgresql_pod_deleted(kube_pair:'KubeEnvironment') -> 'None':
     workload.fault_windows.append((started, time.time()))
 
     check_workload(cast_('any_', env), workload)
-    _ = check_scheduler(cast_('any_', env), returned, ModuleCtx.Unrun_Claims)
+    _ = check_scheduler(cast_('any_', env), ModuleCtx.Unrun_Claims)
 
 # ################################################################################################################################
 # ################################################################################################################################

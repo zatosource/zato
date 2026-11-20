@@ -5,10 +5,9 @@
 
 //! Configuration of the node, read from `Zato_HA_*` environment variables.
 //!
-//! A deployment sets the mode, and every other variable overrides a default defined in this module. A Zato
-//! database on `PostgreSQL` puts the node in the shared storage mode, in which both hosts use the one database,
-//! nothing is replicated between them, and the node probes the database with the `Zato_Database_*` variables
-//! of the Zato server.
+//! A deployment sets the mode and the Zato database, and every other variable overrides a default defined in this
+//! module. Both hosts use one Zato database on `PostgreSQL`, which the node probes with the `Zato_Database_*`
+//! variables of the Zato server.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -28,51 +27,20 @@ pub const ENV_LEASE_NAME: &str = "Zato_HA_Lease_Name";
 /// The environment variable with the name of this node.
 pub const ENV_NODE_NAME: &str = "Zato_HA_Node_Name";
 
-/// The environment variable with the address under which the other node reaches this one.
-pub const ENV_ADVERTISED_ADDRESS: &str = "Zato_HA_Advertised_Address";
-
-/// The environment variable with the port of the replication link.
-pub const ENV_REPLICATION_PORT: &str = "Zato_HA_Replication_Port";
-
 /// The environment variable with the port of the role endpoint.
 pub const ENV_ROLE_PORT: &str = "Zato_HA_Role_Port";
 
-/// The environment variable with the directory of the Zato database and of the node's own files.
+/// The environment variable with the directory of the node's own files.
 pub const ENV_DATA_DIR: &str = "Zato_HA_Data_Dir";
-
-/// The environment variable with the CA file of the replication link.
-pub const ENV_TLS_CA_FILE: &str = "Zato_HA_TLS_CA_File";
-
-/// The environment variable with the certificate file of this node on the replication link.
-pub const ENV_TLS_CERT_FILE: &str = "Zato_HA_TLS_Cert_File";
-
-/// The environment variable with the private key file of this node on the replication link.
-pub const ENV_TLS_KEY_FILE: &str = "Zato_HA_TLS_Key_File";
 
 /// The environment variable with the interval of heartbeats, in seconds.
 pub const ENV_HEARTBEAT_TIME: &str = "Zato_HA_Heartbeat_Time";
 
-/// The environment variable with the time after which the active node marks the standby out, in seconds.
-pub const ENV_MARK_OUT_TIME: &str = "Zato_HA_Mark_Out_Time";
-
 /// The environment variable with the time after which the standby attempts a takeover, in seconds.
 pub const ENV_TAKEOVER_TIME: &str = "Zato_HA_Takeover_Time";
 
-/// The environment variable with the largest skew of the wall clock of the standby from that of the active node
-/// at which the standby is in sync, in milliseconds.
-pub const ENV_MAX_CLOCK_SKEW_MS: &str = "Zato_HA_Max_Clock_Skew_Ms";
-
-/// The environment variable with the path of the Unix socket of the replication barrier.
-pub const ENV_BARRIER_SOCKET: &str = "Zato_HA_Barrier_Socket";
-
 /// The environment variable through which the node passes its generation to the Zato server.
 pub const ENV_GENERATION: &str = "Zato_HA_Generation";
-
-/// The environment variable with the path of the Zato database, shared with the Zato server.
-pub const ENV_DATABASE_PATH: &str = "Zato_Database_Path";
-
-/// The environment variable with the type of the Zato database, shared with the Zato server.
-pub const ENV_DATABASE_TYPE: &str = "Zato_Database_Type";
 
 /// The environment variable with the host of the Zato database on `PostgreSQL`.
 pub const ENV_DATABASE_HOST: &str = "Zato_Database_Host";
@@ -119,12 +87,6 @@ pub const DEFAULT_REFEREE_TYPE: &str = REFEREE_TYPE_KUBERNETES;
 /// The name of the `Lease` of the referee record when the variable is not set.
 pub const DEFAULT_LEASE_NAME: &str = "zato-ha";
 
-/// The type of the Zato database that is a `SQLite` file on each host.
-pub const DATABASE_TYPE_SQLITE: &str = "sqlite";
-
-/// The type of the Zato database that both hosts share.
-pub const DATABASE_TYPE_POSTGRESQL: &str = "postgresql";
-
 /// The default port of `PostgreSQL`.
 pub const DEFAULT_POSTGRESQL_PORT: u16 = 5432;
 
@@ -140,35 +102,20 @@ const TRUE_VALUES: [&str; 6] = ["true", "yes", "on", "y", "t", "1"];
 /// The values that a boolean variable reads as false, as in `zato.common.util.eval_`.
 const FALSE_VALUES: [&str; 6] = ["false", "no", "off", "n", "f", "0"];
 
-/// The default port of the replication link.
-pub const DEFAULT_REPLICATION_PORT: u16 = 35_200;
-
 /// The default port of the role endpoint.
 pub const DEFAULT_ROLE_PORT: u16 = 35_201;
 
-/// The default directory of the Zato database, relative to the home directory, as in `zato.common.defaults`.
+/// The default directory of the node's own files, relative to the home directory, as in `zato.common.defaults`.
 pub const DEFAULT_DATA_DIR_UNDER_HOME: &str = "env/qs-1";
 
 /// The default heartbeat interval, in seconds.
 pub const DEFAULT_HEARTBEAT_TIME: f64 = 0.5;
 
-/// The default mark-out time, in seconds.
-pub const DEFAULT_MARK_OUT_TIME: f64 = 3.0;
-
 /// The default takeover time, in seconds.
 pub const DEFAULT_TAKEOVER_TIME: f64 = 6.0;
 
-/// The default largest skew of the wall clocks, in milliseconds.
-pub const DEFAULT_MAX_CLOCK_SKEW_MS: u64 = 1000;
-
 /// The default log level filter.
 pub const DEFAULT_LOG_LEVEL: &str = "info";
-
-/// The file name of the Zato database.
-pub const DATABASE_FILE_NAME: &str = "zato.db";
-
-/// The file name of the barrier socket in the data directory.
-pub const BARRIER_SOCKET_FILE_NAME: &str = "ha-barrier.sock";
 
 /// The file name of the highest generation this node has seen, in the data directory.
 pub const GENERATION_FILE_NAME: &str = "ha-generation";
@@ -203,7 +150,7 @@ impl std::error::Error for ConfigError {}
 /// The settings of the `Lease` referee.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KubernetesConfig {
-    /// The name of the `Lease` that holds the referee record, which also prefixes the leases of the addresses.
+    /// The name of the `Lease` that holds the referee record, which also prefixes the leases of the nodes.
     pub lease_name: String,
 }
 
@@ -259,39 +206,13 @@ pub enum RefereeConfig {
     Kubernetes(KubernetesConfig),
 }
 
-/// Where the Zato database is kept.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum StorageMode {
-    /// Each host keeps a `SQLite` file, which the active node replicates to the standby.
-    Replicated,
-
-    /// Both hosts use one database on `PostgreSQL`, and the active node renews its lease on the referee record.
-    Shared,
-}
-
-/// The files of mutual TLS on the replication link.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TlsFiles {
-    /// The CA file that both certificates are issued by.
-    pub authority: PathBuf,
-
-    /// The certificate file of this node, whose DNS name is the node name.
-    pub certificate: PathBuf,
-
-    /// The private key file of this node.
-    pub private_key: PathBuf,
-}
-
 /// The timers of the node.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Timers {
-    /// How often the active node sends a heartbeat.
+    /// How often the active node renews its lease and the standby reads it.
     pub heartbeat: Duration,
 
-    /// How long the active node waits for a confirmation before it marks the standby out.
-    pub mark_out: Duration,
-
-    /// How long the standby waits for a frame or a heartbeat before it attempts a takeover.
+    /// How long the standby waits for a renewal of the lease before it attempts a takeover.
     pub takeover: Duration,
 }
 
@@ -301,17 +222,8 @@ pub struct NodeConfig {
     /// The selected referee and its settings.
     pub referee: RefereeConfig,
 
-    /// Where the Zato database is kept.
-    pub storage: StorageMode,
-
     /// The name of this node.
     pub node_name: String,
-
-    /// The host name or address under which the other node reaches this one.
-    pub advertised_address: String,
-
-    /// The port of the replication link.
-    pub replication_port: u16,
 
     /// The port of the role endpoint.
     pub role_port: u16,
@@ -319,24 +231,11 @@ pub struct NodeConfig {
     /// The directory of the node's own files.
     pub data_dir: PathBuf,
 
-    /// The files of mutual TLS on the replication link, which the shared storage mode does not open.
-    pub tls: Option<TlsFiles>,
-
-    /// The Zato database that the node probes, which only the shared storage mode has.
-    pub shared_database: Option<PostgreSqlConfig>,
+    /// The Zato database that the node probes.
+    pub database: PostgreSqlConfig,
 
     /// The timers.
     pub timers: Timers,
-
-    /// The largest skew of the wall clock of the standby from that of the active node at which the standby is in sync,
-    /// in milliseconds.
-    pub max_clock_skew_ms: u64,
-
-    /// The path of the replicated Zato database file, at which the Zato server of this host opens it.
-    pub database_path: PathBuf,
-
-    /// The path of the barrier socket.
-    pub barrier_socket: PathBuf,
 
     /// The log level filter.
     pub log_level: String,
@@ -391,26 +290,6 @@ fn seconds(source: &dyn VariableSource, name: &'static str, default: f64) -> Res
             name,
             reason: format!("{value} is not a positive number of seconds"),
         })
-}
-
-/// Returns a positive number of milliseconds from a variable or its default.
-fn milliseconds(source: &dyn VariableSource, name: &'static str, default: u64) -> Result<u64, ConfigError> {
-    let Some(text) = source.variable(name) else {
-        return Ok(default);
-    };
-    let value = text.parse::<u64>().map_err(|error| ConfigError::Invalid {
-        name,
-        reason: error.to_string(),
-    })?;
-
-    // A bound of zero would refuse every standby, since no two wall clocks agree to the millisecond.
-    if value == 0 {
-        return Err(ConfigError::Invalid {
-            name,
-            reason: format!("{value} is not a positive number of milliseconds"),
-        });
-    }
-    Ok(value)
 }
 
 /// Returns a boolean from a variable or its default, reading the values that the Zato server reads.
@@ -486,54 +365,12 @@ fn referee(source: &dyn VariableSource) -> Result<RefereeConfig, ConfigError> {
     }
 }
 
-/// Returns the storage mode, which the type of the Zato database decides.
-fn storage_mode(source: &dyn VariableSource) -> Result<StorageMode, ConfigError> {
-    let Some(value) = source.variable(ENV_DATABASE_TYPE) else {
-        return Ok(StorageMode::Replicated);
-    };
-    match value.as_str() {
-        DATABASE_TYPE_SQLITE => Ok(StorageMode::Replicated),
-        DATABASE_TYPE_POSTGRESQL => Ok(StorageMode::Shared),
-        _ => Err(ConfigError::Invalid {
-            name: ENV_DATABASE_TYPE,
-            reason: format!("unsupported Zato database type `{value}`"),
-        }),
-    }
-}
-
-/// Returns the files of mutual TLS on the replication link, which only the replicated storage mode opens.
-fn link_tls(source: &dyn VariableSource, storage: StorageMode) -> Result<Option<TlsFiles>, ConfigError> {
-    if storage == StorageMode::Shared {
-        return Ok(None);
-    }
-    Ok(Some(TlsFiles {
-        authority: PathBuf::from(required(source, ENV_TLS_CA_FILE)?),
-        certificate: PathBuf::from(required(source, ENV_TLS_CERT_FILE)?),
-        private_key: PathBuf::from(required(source, ENV_TLS_KEY_FILE)?),
-    }))
-}
-
-/// Returns the timers, refusing a takeover time that does not exceed the mark-out time.
+/// Returns the timers.
 fn timers(source: &dyn VariableSource) -> Result<Timers, ConfigError> {
-    let out = Timers {
+    Ok(Timers {
         heartbeat: seconds(source, ENV_HEARTBEAT_TIME, DEFAULT_HEARTBEAT_TIME)?,
-        mark_out: seconds(source, ENV_MARK_OUT_TIME, DEFAULT_MARK_OUT_TIME)?,
         takeover: seconds(source, ENV_TAKEOVER_TIME, DEFAULT_TAKEOVER_TIME)?,
-    };
-
-    // The active node must stop acknowledging before the standby may take over.
-    if out.takeover <= out.mark_out {
-        return Err(ConfigError::Invalid {
-            name: ENV_TAKEOVER_TIME,
-            reason: format!(
-                "{} seconds does not exceed {ENV_MARK_OUT_TIME} of {} seconds",
-                out.takeover.as_secs_f64(),
-                out.mark_out.as_secs_f64()
-            ),
-        });
-    }
-
-    Ok(out)
+    })
 }
 
 /// Returns the default data directory under the home directory.
@@ -554,13 +391,6 @@ fn node_name(source: &dyn VariableSource) -> Result<String, ConfigError> {
     Ok(host_name.trim().to_owned())
 }
 
-/// Returns the path of the replicated Zato database, which is the one that the Zato server uses.
-fn database_path(source: &dyn VariableSource, data_dir: &Path) -> PathBuf {
-    source
-        .variable(ENV_DATABASE_PATH)
-        .map_or_else(|| data_dir.join(DATABASE_FILE_NAME), PathBuf::from)
-}
-
 impl NodeConfig {
     /// Reads the configuration from a source of variables.
     pub fn from_source(source: &dyn VariableSource) -> Result<Self, ConfigError> {
@@ -572,40 +402,17 @@ impl NodeConfig {
             });
         }
 
-        let referee = referee(source)?;
-        let storage = storage_mode(source)?;
-
         let data_dir = match source.variable(ENV_DATA_DIR) {
             Some(dir) => PathBuf::from(dir),
             None => default_data_dir(source)?,
         };
 
-        let node_name = node_name(source)?;
-        let advertised_address = source.variable(ENV_ADVERTISED_ADDRESS).unwrap_or_else(|| node_name.clone());
-
-        let tls = link_tls(source, storage)?;
-        let shared_database = match storage {
-            StorageMode::Shared => Some(postgresql(source)?),
-            StorageMode::Replicated => None,
-        };
-
-        let barrier_socket = source
-            .variable(ENV_BARRIER_SOCKET)
-            .map_or_else(|| data_dir.join(BARRIER_SOCKET_FILE_NAME), PathBuf::from);
-
         Ok(Self {
-            referee,
-            storage,
-            database_path: database_path(source, &data_dir),
-            node_name,
-            advertised_address,
-            replication_port: port(source, ENV_REPLICATION_PORT, DEFAULT_REPLICATION_PORT)?,
+            referee: referee(source)?,
+            node_name: node_name(source)?,
             role_port: port(source, ENV_ROLE_PORT, DEFAULT_ROLE_PORT)?,
-            tls,
-            shared_database,
+            database: postgresql(source)?,
             timers: timers(source)?,
-            max_clock_skew_ms: milliseconds(source, ENV_MAX_CLOCK_SKEW_MS, DEFAULT_MAX_CLOCK_SKEW_MS)?,
-            barrier_socket,
             log_level: source.variable(ENV_LOG_LEVEL).unwrap_or_else(|| DEFAULT_LOG_LEVEL.to_owned()),
             data_dir,
         })

@@ -33,9 +33,8 @@ if 0:
 # Whether the suite runs against PostgreSQL
 _is_postgresql = is_postgresql_mode(get_db_mode())
 
-# The markers of the tests that run against one database only
+# The marker of the tests that run against PostgreSQL only
 postgresql_only = pytest.mark.skipif(not _is_postgresql, reason='PostgreSQL only')
-sqlite_only     = pytest.mark.skipif(_is_postgresql, reason='SQLite only')
 
 # How long the trigger delays the insert of a message, in seconds
 Insert_Delay_Seconds = 30

@@ -3,7 +3,7 @@
 // Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 // Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
-//! The probe of the Zato database on `PostgreSQL` in the shared storage mode.
+//! The probe of the Zato database on `PostgreSQL`.
 //!
 //! A probe reads the row of `zato_active` that the generation guard of the Zato server keeps, which establishes
 //! that the database is reachable from the pod, including before the Zato server first created the table.
@@ -86,7 +86,7 @@ impl std::fmt::Display for ProbeError {
 
 impl std::error::Error for ProbeError {}
 
-/// A check that the database of the shared storage mode is reachable from this node.
+/// A check that the Zato database is reachable from this node.
 pub trait DatabaseProbe: Send + Sync {
     /// Returns `Ok` if the database answered the probe.
     fn probe(&self) -> Result<(), ProbeError>;

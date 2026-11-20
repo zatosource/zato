@@ -396,6 +396,9 @@ def zato_dashboard() -> 'any_':
     _ = dashboard_env.pop('COVERAGE_PROCESS_START', None)
     dashboard_env['Zato_Server_Address'] = f'http://127.0.0.1:{server_port}'
 
+    # The audit log views read the database of this test server, not the one of the default environment directory.
+    dashboard_env['Zato_Database_Path'] = pubsub_db_path
+
     # The OpenAPI import runs enmasse against this server directory ..
     dashboard_env['Zato_Server_Dir'] = server_dir
 

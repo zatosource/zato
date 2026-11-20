@@ -23,6 +23,7 @@ import pytest
 
 # Zato
 from live_environment.parts import Parts, skip_or_fail, tear_down
+from live_environment.redis_process import RedisProcess
 from live_environment.scheduler import find_binary, SchedulerProcess
 from live_windows.containers import stop_guests
 from live_windows.guest_versions import needed_versions, version_items
@@ -80,9 +81,12 @@ class ModuleCtx:
 # ################################################################################################################################
 
 # The server of the Playwright environment copies the environment of this process when it starts,
-# which is how it learns about the scheduler of this suite, and why this happens at import time.
+# which is how it learns about the scheduler of this suite and its Redis, and why this happens at import time.
+# The Redis is one of this suite's own, because other suites delete keys in the shared one while they run.
 _scheduler = SchedulerProcess()
+_scheduler_redis = RedisProcess()
 os.environ.update(_scheduler.server_environment())
+os.environ.update(_scheduler_redis.server_environment())
 
 # The guests every test that takes a version runs against
 _versions = list(Versions.All)
@@ -194,6 +198,20 @@ class _GuestStart:
         stop_guests(guest_versions)
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='session', autouse=True)
+def scheduler_redis() -> 'iterator_':
+    """ The Redis of the scheduler of this suite, which runs before the server that connects to it starts,
+    because an autouse fixture is set up ahead of the fixtures that a test requests.
+    """
+    _scheduler_redis.start()
+
+    try:
+        yield _scheduler_redis
+    finally:
+        _scheduler_redis.cleanup()
+
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')

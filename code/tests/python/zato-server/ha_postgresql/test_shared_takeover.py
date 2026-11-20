@@ -59,7 +59,7 @@ def test_takeover(ha_pair:'HAEnvironment', fault:'str') -> 'None':
     check_no_runs_after(env, old_active, takeover_time)
 
     # An active node that fails leaves the claim it committed before the run began without a run.
-    _ = check_scheduler(env, new_active, ModuleCtx.Unrun_Claims_After_Takeover)
+    _ = check_scheduler(env, ModuleCtx.Unrun_Claims_After_Takeover)
     check_active_server(env, new_active)
 
 # ################################################################################################################################

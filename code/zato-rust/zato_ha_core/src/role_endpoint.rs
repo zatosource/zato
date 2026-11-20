@@ -15,7 +15,7 @@ use std::time::Duration;
 
 use serde::Serialize;
 
-use crate::state::{LinkState, LogPosition, Role, Shared};
+use crate::state::{Role, Shared};
 use crate::wire;
 
 /// The path of the role endpoint.
@@ -26,16 +26,6 @@ pub const HEALTH_PATH: &str = "/zato/ha/health";
 
 /// How long a client may take to send its request.
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
-
-/// The progress of the Zato database in the report.
-#[derive(Serialize)]
-struct DatabaseReport {
-    /// The end of the log at the last scan.
-    scanned: LogPosition,
-
-    /// The end of what the standby confirmed.
-    confirmed: LogPosition,
-}
 
 /// The body of both endpoints.
 #[derive(Serialize)]
@@ -49,35 +39,19 @@ struct RoleReport {
     /// The generation of the node.
     generation: u64,
 
-    /// Whether the node lost both the standby and the referee.
+    /// Whether the node lost the referee or the database.
     isolated: bool,
-
-    /// Whether an admission holds the barriers.
-    admitting: bool,
-
-    /// The state of the link on the active node.
-    link: LinkState,
-
-    /// The progress of the Zato database.
-    database: DatabaseReport,
 }
 
 /// Builds the report and tells whether the node serves traffic.
 fn report(shared: &Shared) -> (bool, RoleReport) {
     let state = shared.state.lock();
     let serving = state.role.is_active() && !state.isolated;
-    let database = DatabaseReport {
-        scanned: state.database.scanned,
-        confirmed: state.database.confirmed,
-    };
     let out = RoleReport {
         node: shared.config.node_name.clone(),
         role: state.role,
         generation: state.generation,
         isolated: state.isolated,
-        admitting: state.admitting,
-        link: state.link_state,
-        database,
     };
     drop(state);
     (serving, out)

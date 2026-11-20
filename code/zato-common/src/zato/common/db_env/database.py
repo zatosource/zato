@@ -50,7 +50,6 @@ database_config = EnvDBConfig(
     metadata_tuple=(pubsub_metadata, audit_metadata, common_metadata, rule_engine_metadata),
     needs_pool=True,
     needs_background_checkpoint=True,
-    is_replicated=True,
 )
 
 # ################################################################################################################################

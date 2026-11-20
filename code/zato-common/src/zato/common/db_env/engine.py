@@ -37,7 +37,6 @@ from zato.common.db_env.process_queue import ProcessQueue
 from zato.common.db_env.sqlite_checkpoint import set_background_checkpoint_limit, WALCheckpointer
 from zato.common.db_env.sqlite_stats import collect_sqlite_stats, Env_Stats_Dir
 from zato.common.db_env.write_path import check_write_path, get_write_path, Mechanism, run_in_write_path, write_path
-from zato.common.ha.sqlite import holds_log_for_node, ReplicatedConnection, set_replicated_pragmas
 from zato.common.worker_slot import is_config_owner
 
 # ################################################################################################################################
@@ -153,10 +152,9 @@ def _new_sqlite_file_engine(
     *,
     needs_pool:'bool',
     needs_background_checkpoint:'bool',
-    is_replicated:'bool',
     ) -> '_EnvEngine':
     """ Builds an SQLAlchemy engine for a SQLite file, with the settings of its connections, and says whether its WAL
-    is to be checkpointed in the background, which a file that the active-standby node replicates is not.
+    is to be checkpointed in the background.
     """
 
     # Create the file's directory ..
@@ -171,19 +169,9 @@ def _new_sqlite_file_engine(
         connect_args['check_same_thread'] = False
         engine_kwargs['poolclass'] = QueuePool
 
-    # .. a file whose log the active-standby node holds is checkpointed by the node only ..
-    is_log_held = holds_log_for_node(is_replicated)
-
-    if is_log_held:
-        needs_background_checkpoint = False
-        connect_args['factory'] = ReplicatedConnection
-
-    # .. build the engine and apply the SQLite connection settings, the ones of replication first ..
+    # .. build the engine and apply the SQLite connection settings ..
     engine_url = f'sqlite:///{db_path}'
     engine = create_engine(engine_url, connect_args=connect_args, **engine_kwargs)
-
-    if is_log_held:
-        sa_event.listen(engine, 'connect', set_replicated_pragmas)
 
     sa_event.listen(engine, 'connect', set_sqlite_pragmas)
 
@@ -227,8 +215,7 @@ def get_sqlite_file_engine(
     needs_pool:'bool',
     needs_background_checkpoint:'bool',
     ) -> 'Engine':
-    """ Returns an SQLAlchemy engine for a SQLite file that the active-standby node does not replicate,
-    and creates its schema if needed.
+    """ Returns an SQLAlchemy engine for a SQLite file and creates its schema if needed.
     """
 
     # Reuse the engine for this file and pool mode ..
@@ -240,7 +227,7 @@ def get_sqlite_file_engine(
 
     # .. build the engine ..
     file_engine = _new_sqlite_file_engine(db_path, needs_pool=needs_pool,
-        needs_background_checkpoint=needs_background_checkpoint, is_replicated=False)
+        needs_background_checkpoint=needs_background_checkpoint)
 
     out = file_engine.engine
 
@@ -348,7 +335,7 @@ def _new_env_engine(config:'EnvDBConfig') -> '_EnvEngine':
     # .. a SQLite file has an engine of its own kind ..
     if db_type == Type_SQLite:
         out = _new_sqlite_file_engine(values['name'], needs_pool=config.needs_pool,
-            needs_background_checkpoint=config.needs_background_checkpoint, is_replicated=config.is_replicated)
+            needs_background_checkpoint=config.needs_background_checkpoint)
         return out
 
     # .. while a network database is built from its URL and connection arguments ..

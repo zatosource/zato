@@ -66,10 +66,10 @@ class ModuleCtx:
     Rust_PostgreSQL_Crate = 'tokio_postgres'
     Rust_PostgreSQL_Connect = re.compile(r'(?<!\bself)\.connect\s*\(')
 
-    # The Rust functions that may open a database, each by its file and its name - the two that open the SQLite file
-    # of the active-standby node with its settings, the ones that open a connection over the handle of the SQLite driver
-    # of Python for the Rust writers, and the probe of the PostgreSQL primary, which only reads.
-    Rust_Engine_Functions = RegistryModuleCtx.Rust_Setting_Functions + _get_rust_handle_functions() + (
+    # The Rust functions that may open a database, each by its file and its name - the ones that open a connection
+    # over the handle of the SQLite driver of Python for the Rust writers, and the probe of the PostgreSQL primary,
+    # which only reads.
+    Rust_Engine_Functions = _get_rust_handle_functions() + (
         ('code/zato-rust/zato_ha_core/src/postgresql.rs', 'connect'),
     )
 

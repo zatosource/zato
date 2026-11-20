@@ -42,8 +42,6 @@ class ModuleCtx:
     Modules_Without_Environment = (
         'zato.common.db_env.connection',
         'zato.common.db_env.commit_queue',
-        'zato.common.ha.sqlite',
-        'zato.common.ha.barrier',
         'zato.common.pubsub.sql.generation',
     )
 
@@ -143,7 +141,7 @@ def test_no_test_variables_in_production() -> 'None':
 # ################################################################################################################################
 
 def test_no_environment_in_write_path_modules() -> 'None':
-    """ The modules of the connections, of the group commit, of the replication barrier and of the generation fence
+    """ The modules of the connections, of the group commit and of the generation fence
     read no environment variable, so that nothing outside the code changes how a write becomes durable.
     """
     findings:'strlist' = []

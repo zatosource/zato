@@ -56,7 +56,7 @@ class ModuleCtx:
     Stop_Timeout = 60
 
     # The role of the standby
-    Standby_In_Sync = 'StandbyInSync'
+    Role_Standby = 'Standby'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -151,9 +151,9 @@ def test_api_server_outage(ha_pair:'HAEnvironment', outage_seconds:'int') -> 'No
 
     report = standby.read_role()
     assert report is not None
-    assert report['role'] == ModuleCtx.Standby_In_Sync, report
+    assert report['role'] == ModuleCtx.Role_Standby, report
 
-    _ = check_scheduler(env, active)
+    _ = check_scheduler(env)
     check_active_server(env, active)
 
 # ################################################################################################################################

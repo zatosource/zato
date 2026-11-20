@@ -80,6 +80,9 @@ unacknowledged_data_timeout_ms = 15000
 # The operating systems that support the time limit on unacknowledged data
 has_unacknowledged_data_timeout = hasattr(socket, 'TCP_USER_TIMEOUT')
 
+# How many seconds a ping waits for the client of the pool while a schedule of the connection uses it
+ping_block_timeout = 60
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -419,7 +422,7 @@ class OutconnSMBWrapper(Wrapper):
 # ################################################################################################################################
 
     def ping(self) -> 'None':
-        with self.client() as client:
+        with self.client(should_block=True, block_timeout=ping_block_timeout) as client:
             client = cast_('SMBClient', client)
             client.ping()
 

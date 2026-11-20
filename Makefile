@@ -9,8 +9,7 @@
 	stop-dashboard restart-dashboard scheduler queue-bridge on-prem-gateway on-prem-gateway-hub file-listener sftp api-portal api-portal-demo api-portal-tutorial b2b-portal mcp-demo \
 	help install-deps install-fhir-converter \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-rest-outgoing test-rest-perf test-rest-channel test-rest-channel-perf test-scheduler test-scheduler-failover \
-	test-ha test-ha-core test-ha-power-loss test-ha-control-plane test-ha-postgresql test-ha-sqlite \
-	test-ha-postgresql-kubernetes test-ha-sqlite-kubernetes test-ha-sqlite-soak test-ha-postgresql-soak \
+	test-ha test-ha-core test-ha-power-loss test-ha-postgresql test-ha-postgresql-kubernetes test-ha-postgresql-soak \
 	test-soak test-soak-pubsub test-soak-scheduler-failover \
 	test-arbiter \
 	test-rate-limiting test-enmasse test-cli \
@@ -727,44 +726,28 @@ test-scheduler-failover: ## Active-passive scheduler failover tests on PostgreSQ
 # The HA targets in the order test-ha runs them, from the shortest to the longest, with the targets of the linked
 # repositories after the suites of this repository and the soak tests last, and the target test-ha is currently on.
 Zato_Test_HA = \
-	test-ha-core test-ha-power-loss test-ha-control-plane test-ha-postgresql test-ha-sqlite \
-	test-ha-postgresql-kubernetes test-ha-sqlite-kubernetes $(Zato_HA_Linked_Targets) \
-	test-ha-sqlite-soak test-ha-postgresql-soak
+	test-ha-core test-ha-power-loss test-ha-postgresql test-ha-postgresql-kubernetes $(Zato_HA_Linked_Targets) \
+	test-ha-postgresql-soak
 Zato_Test_HA_Resume_File := $(CURDIR)/code/tests/.test-ha-resume
 
 # The directory of each HA suite.
 Zato_Test_HA_Server_Dir                := $(CURDIR)/code/tests/python/zato-server
 Zato_Test_HA_Dir_power-loss            := $(CURDIR)/code/tests/python/zato-common/reliability/power_loss
-Zato_Test_HA_Dir_control-plane         := $(Zato_Test_HA_Server_Dir)/ha_control_plane
 Zato_Test_HA_Dir_postgresql            := $(Zato_Test_HA_Server_Dir)/ha_postgresql
-Zato_Test_HA_Dir_sqlite                := $(Zato_Test_HA_Server_Dir)/ha_sqlite
 Zato_Test_HA_Dir_postgresql-kubernetes := $(Zato_Test_HA_Server_Dir)/ha_postgresql_kubernetes
-Zato_Test_HA_Dir_sqlite-kubernetes     := $(Zato_Test_HA_Server_Dir)/ha_sqlite_kubernetes
 
 # The modules of each HA suite in the order they run, from the shortest to the longest. Every module of a suite
 # is listed, and a suite with a module that is not listed refuses to run.
 Zato_Test_HA_Modules_power-loss := \
 	test_harness.py test_sqlite_server.py test_postgresql_server.py
 
-Zato_Test_HA_Modules_control-plane := \
-	test_etcd_leader.py
-
 Zato_Test_HA_Modules_postgresql := \
 	test_shared_split_brain.py test_shared_outage.py test_shared_partition.py test_shared_functional.py \
 	test_shared_takeover.py test_shared_database_failover.py test_reliability.py test_shared_long_runs.py
 
-Zato_Test_HA_Modules_sqlite := \
-	test_config.py test_haproxy.py test_split_brain.py test_server_processes.py test_bootstrap.py \
-	test_faults_link.py test_mark_out.py test_faults_combined.py test_takeover.py test_lease.py \
-	test_reliability.py test_rejoin.py test_faults_api_server.py test_faults_process.py test_faults_disk.py \
-	test_long_runs.py
-
 Zato_Test_HA_Modules_postgresql-kubernetes := \
 	test_manifest_synchronous_standby.py test_shared_kube_pods.py test_shared_kube_postgresql.py \
 	test_shared_kube_rollout.py test_shared_kube_nodes.py
-
-Zato_Test_HA_Modules_sqlite-kubernetes := \
-	test_kube_pods.py test_kube_rollout.py test_kube_nodes.py
 
 # The pytest option that resumes each suite from the test that failed or was interrupted, or starts it over under RESTART.
 Zato_Test_HA_Stepwise = $(if $(RESTART),--sw-reset,--sw)
@@ -802,30 +785,18 @@ test-ha: ## Active-standby pair under the lease referee - every HA target from t
 	$(MAKE) test-sql-conformance-fast
 	$(call Zato_Test_Walk,$(Zato_Test_HA),$(Zato_Test_HA_Resume_File))
 
-test-ha-core: rust-target-prune ## The Rust tests of the active-standby node - the role, the lease, the replication of the Zato database and the barrier.
+test-ha-core: rust-target-prune ## The Rust tests of the active-standby node - the role, the lease and the probe of the Zato database.
 	$(Zato_Log_Reset)
 	$(LOAD_CARGO_ENV) && cargo test --manifest-path $(ZATO_RUST)/zato_ha_core/Cargo.toml $(PYTEST_ARGS) $(Zato_Log)
 
 test-ha-power-loss: ## Loss of power to a single server on SQLite and on PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(call Zato_Test_HA_Suite,power-loss)
 
-test-ha-control-plane: ## Active-standby pair with the etcd leader lost during a takeover, a mark-out or an admission, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
-	$(call Zato_Test_HA_Suite,control-plane)
-
 test-ha-postgresql: ## Active-standby pair on PostgreSQL without its soak tests, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(call Zato_Test_HA_Suite,postgresql)
 
-test-ha-sqlite: ## Active-standby pair on SQLite without its soak tests, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
-	$(call Zato_Test_HA_Suite,sqlite)
-
 test-ha-postgresql-kubernetes: ## Active-standby pair on PostgreSQL in Kubernetes, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(call Zato_Test_HA_Suite,postgresql-kubernetes)
-
-test-ha-sqlite-kubernetes: ## Active-standby pair on SQLite in Kubernetes, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
-	$(call Zato_Test_HA_Suite,sqlite-kubernetes)
-
-test-ha-sqlite-soak: ## The soak tests of the active-standby pair on SQLite, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
-	$(call Zato_Test_HA_Soak,sqlite)
 
 test-ha-postgresql-soak: ## The soak tests of the active-standby pair on PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(call Zato_Test_HA_Soak,postgresql)
@@ -1120,7 +1091,9 @@ Zato_Test_Exactly_Once_Runner_traffic  := $(Zato_Test_Exactly_Once_Live)
 # The steps in the order they run, each a group of tests on one pub/sub database, the step that the target is currently on,
 # and the pytest option that resumes each step from the test that failed or was interrupted, or starts it over under RESTART.
 Zato_Test_Exactly_Once_Steps := backend \
-	$(foreach group,relay pull crash takeover traffic,$(foreach mode,sqlite postgresql,$(group):$(mode)))
+	$(foreach group,relay pull crash,$(foreach mode,sqlite postgresql,$(group):$(mode))) \
+	takeover:postgresql \
+	$(foreach mode,sqlite postgresql,traffic:$(mode))
 Zato_Test_Exactly_Once_Resume_File := $(CURDIR)/code/tests/.test-pubsub-exactly-once-resume
 Zato_Test_Exactly_Once_Stepwise     = $(if $(RESTART),--sw-reset,--sw)
 

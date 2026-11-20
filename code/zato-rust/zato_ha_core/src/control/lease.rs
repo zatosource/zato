@@ -3,7 +3,7 @@
 // Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 // Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
-//! The lease of the shared storage mode, which the active node renews and the standby watches.
+//! The lease of the active node, which the active node renews and the standby watches.
 //!
 //! The active node rewrites its record at every heartbeat interval in which its probe of the database succeeds,
 //! which raises its version. The standby measures on its own monotonic clock how long the version has not changed,
@@ -27,11 +27,11 @@ impl Control {
         self.last_lease_check = Instant::now();
 
         match role {
-            Role::ActiveSolo => self.renew_lease(),
-            Role::StandbyInSync => self.watch_lease(),
+            Role::Active => self.renew_lease(),
+            Role::Standby => self.watch_lease(),
 
             // A node that is not active or a standby yet watches nothing, and its next role begins its measures afresh.
-            Role::Down | Role::Fenced | Role::ActiveReplicated | Role::StandbyOut | Role::Joining => {
+            Role::Down | Role::Fenced => {
                 self.lease_version = None;
                 self.observed = None;
                 Ok(())
@@ -42,11 +42,7 @@ impl Control {
     /// Returns whether the probe of the database succeeds, logging only a change of the outcome,
     /// and isolates the node while the database answers and is not durable.
     fn database_reachable(&mut self) -> bool {
-        // The replicated storage mode has no shared database and never watches a lease.
-        let Some(probe) = &self.probe else {
-            return true;
-        };
-        let outcome = probe.probe();
+        let outcome = self.probe.probe();
         let reachable = outcome.is_ok();
 
         // An isolated node stops its Zato server, so that no commit is acknowledged on a database that may lose it,
@@ -96,7 +92,7 @@ impl Control {
         }
 
         let generation = self.shared.state.lock().generation;
-        let record = RefereeRecord::solo(generation, &self.shared.config.node_name);
+        let record = RefereeRecord::new(generation, &self.shared.config.node_name);
 
         // A node that has just become active does not know the version of its record yet.
         let Some(version) = self.lease_version.clone() else {
@@ -167,7 +163,7 @@ impl Control {
                 "Taking over at generation {}, written by an earlier attempt",
                 current.value.generation
             );
-            return self.become_active_solo(current.value.generation, "takeover");
+            return self.become_active(current.value.generation, "takeover");
         }
 
         let changed = self.observed.as_ref() != Some(&current);
@@ -189,11 +185,11 @@ impl Control {
         }
 
         let next = current.value.generation + 1;
-        let intended = RefereeRecord::solo(next, &node_name);
+        let intended = RefereeRecord::new(next, &node_name);
         match self.shared.referee.compare_and_set(&intended, Some(&current.version)) {
             Ok(true) => {
                 tracing::info!("Taking over at generation {next} after the lease was not renewed");
-                self.become_active_solo(next, "takeover")
+                self.become_active(next, "takeover")
             }
 
             // A renewal of the active node in the meantime changed the version, which the next read observes.
@@ -213,12 +209,9 @@ mod tests {
     use super::*;
     use crate::config::Timers;
     use crate::generation;
-    use crate::postgresql::{DatabaseProbe, ProbeError};
-    use crate::record::{NodeAddress, Versioned};
+    use crate::record::Versioned;
     use crate::referee::tests::{MemoryReferee, version};
-    use crate::referee::{Referee, RefereeError};
-    use crate::test_support::{self, NODE_A, NODE_B};
-    use parking_lot::Mutex;
+    use crate::test_support::{self, MemoryProbe, NODE_A, NODE_B};
     use std::sync::Arc;
     use std::sync::atomic::AtomicBool;
     use std::thread;
@@ -228,7 +221,6 @@ mod tests {
     /// Timers short enough for a test to let them expire.
     const TIMERS: Timers = Timers {
         heartbeat: Duration::from_millis(10),
-        mark_out: Duration::from_millis(20),
         takeover: Duration::from_millis(40),
     };
 
@@ -241,51 +233,7 @@ mod tests {
     /// The generation of the record that a test starts with.
     const FIRST_GENERATION: u64 = 3;
 
-    impl Referee for Arc<MemoryReferee> {
-        fn read(&self) -> Result<Option<Versioned<RefereeRecord>>, RefereeError> {
-            self.as_ref().read()
-        }
-
-        fn compare_and_set(&self, record: &RefereeRecord, expected_version: Option<&str>) -> Result<bool, RefereeError> {
-            self.as_ref().compare_and_set(record, expected_version)
-        }
-
-        fn renew(&self, record: &RefereeRecord, expected_version: &str) -> Result<Option<String>, RefereeError> {
-            self.as_ref().renew(record, expected_version)
-        }
-
-        fn publish_address(&self, address: &NodeAddress) -> Result<(), RefereeError> {
-            self.as_ref().publish_address(address)
-        }
-
-        fn read_addresses(&self) -> Result<Vec<NodeAddress>, RefereeError> {
-            self.as_ref().read_addresses()
-        }
-    }
-
-    /// A probe kept in memory, which a test makes fail or succeed.
-    #[derive(Default)]
-    struct MemoryProbe {
-        /// Whether every probe fails.
-        unreachable: Mutex<bool>,
-
-        /// Whether every probe finds the database not durable.
-        not_durable: Mutex<bool>,
-    }
-
-    impl DatabaseProbe for Arc<MemoryProbe> {
-        fn probe(&self) -> Result<(), ProbeError> {
-            if *self.unreachable.lock() {
-                return Err(ProbeError::Unreachable("unreachable".to_owned()));
-            }
-            if *self.not_durable.lock() {
-                return Err(ProbeError::NotDurable("synchronous_standby_names is empty".to_owned()));
-            }
-            Ok(())
-        }
-    }
-
-    /// Node A of the shared storage mode, with its files for as long as it exists.
+    /// Node A of a pair, with its files for as long as it exists.
     struct TestNode {
         /// The control loop of the node.
         control: Control,
@@ -306,11 +254,11 @@ mod tests {
             let referee = Arc::new(MemoryReferee::holding(record, FIRST_VERSION));
             let probe = Arc::new(MemoryProbe::default());
             let dir = tempfile::tempdir().unwrap();
-            let config = test_support::shared_storage_config(NODE_A, dir.path(), TIMERS);
+            let config = test_support::node_config(NODE_A, dir.path(), TIMERS);
             generation::write(&config.generation_file(), FIRST_GENERATION).unwrap();
 
             let shared = test_support::shared(config, Box::new(Arc::clone(&referee)));
-            let control = Control::new(shared, Some(Box::new(Arc::clone(&probe))), Arc::new(AtomicBool::new(false))).unwrap();
+            let control = Control::new(shared, Box::new(Arc::clone(&probe)), Arc::new(AtomicBool::new(false))).unwrap();
             Self {
                 control,
                 referee,
@@ -321,7 +269,7 @@ mod tests {
 
         /// Returns node A in `role` at the first generation, under a record that names `active_node`.
         fn in_role(role: Role, active_node: &str) -> Self {
-            let out = Self::new(Some(RefereeRecord::solo(FIRST_GENERATION, active_node)));
+            let out = Self::new(Some(RefereeRecord::new(FIRST_GENERATION, active_node)));
             let mut state = out.control.shared.state.lock();
             state.role = role;
             drop(state);
@@ -370,24 +318,24 @@ mod tests {
     }
 
     #[test]
-    fn a_node_starts_as_a_standby_in_sync_and_publishes_its_address() {
-        let mut node = TestNode::new(Some(RefereeRecord::solo(FIRST_GENERATION, NODE_B)));
+    fn a_node_starts_as_the_standby_and_publishes_its_entry() {
+        let mut node = TestNode::new(Some(RefereeRecord::new(FIRST_GENERATION, NODE_B)));
         node.control.bootstrap().unwrap();
-        assert_eq!(node.role(), (Role::StandbyInSync, FIRST_GENERATION));
+        assert_eq!(node.role(), (Role::Standby, FIRST_GENERATION));
 
-        // The node that takes over later finds the pod of this node among the addresses.
-        let addresses = node.referee.addresses.lock().clone();
-        let names: Vec<&str> = addresses.iter().map(|address| address.node_name.as_str()).collect();
+        // The node that takes over later finds the pod of this node among the entries.
+        let entries = node.referee.entries.lock().clone();
+        let names: Vec<&str> = entries.iter().map(|entry| entry.node_name.as_str()).collect();
         assert_eq!(names, [NODE_A]);
     }
 
     #[test]
     fn a_restarted_active_node_waits_for_the_takeover_as_the_standby_does() {
-        let mut node = TestNode::new(Some(RefereeRecord::solo(FIRST_GENERATION, NODE_A)));
+        let mut node = TestNode::new(Some(RefereeRecord::new(FIRST_GENERATION, NODE_A)));
         node.control.bootstrap().unwrap();
 
         // The node does not resume at once, so the standby that watched the lease takes over first ..
-        assert_eq!(node.role(), (Role::StandbyInSync, FIRST_GENERATION));
+        assert_eq!(node.role(), (Role::Standby, FIRST_GENERATION));
         assert_eq!(node.record().version, version(FIRST_VERSION));
 
         // .. and without a standby, the node takes over its own record once the takeover time elapses.
@@ -396,13 +344,13 @@ mod tests {
         node.control.watch_lease().unwrap();
 
         let next = FIRST_GENERATION + 1;
-        assert_eq!(node.role(), (Role::ActiveSolo, next));
-        assert_eq!(node.record().value, RefereeRecord::solo(next, NODE_A));
+        assert_eq!(node.role(), (Role::Active, next));
+        assert_eq!(node.record().value, RefereeRecord::new(next, NODE_A));
     }
 
     #[test]
     fn the_active_node_renews_its_lease() {
-        let mut node = TestNode::in_role(Role::ActiveSolo, NODE_A);
+        let mut node = TestNode::in_role(Role::Active, NODE_A);
 
         // The first renewal of a node learns the version of its record ..
         node.control.renew_lease().unwrap();
@@ -412,12 +360,12 @@ mod tests {
         node.control.renew_lease().unwrap();
         node.control.renew_lease().unwrap();
         assert_eq!(node.record().version, version(FIRST_VERSION + 2));
-        assert_eq!(node.role(), (Role::ActiveSolo, FIRST_GENERATION));
+        assert_eq!(node.role(), (Role::Active, FIRST_GENERATION));
     }
 
     #[test]
     fn an_active_node_without_the_database_does_not_renew_its_lease() {
-        let mut node = TestNode::in_role(Role::ActiveSolo, NODE_A);
+        let mut node = TestNode::in_role(Role::Active, NODE_A);
         node.control.renew_lease().unwrap();
         node.control.renew_lease().unwrap();
         assert_eq!(node.record().version, version(FIRST_VERSION + 1));
@@ -427,7 +375,7 @@ mod tests {
         node.control.renew_lease().unwrap();
         node.control.renew_lease().unwrap();
         assert_eq!(node.record().version, version(FIRST_VERSION + 1));
-        assert_eq!(node.role(), (Role::ActiveSolo, FIRST_GENERATION));
+        assert_eq!(node.role(), (Role::Active, FIRST_GENERATION));
 
         // .. unless the database is reachable again first.
         node.set_database_unreachable(false);
@@ -437,7 +385,7 @@ mod tests {
 
     #[test]
     fn an_active_node_on_a_database_that_is_not_durable_stops_serving() {
-        let mut node = TestNode::in_role(Role::ActiveSolo, NODE_A);
+        let mut node = TestNode::in_role(Role::Active, NODE_A);
         node.control.renew_lease().unwrap();
         assert!(!node.is_isolated());
 
@@ -458,12 +406,12 @@ mod tests {
         node.control.renew_lease().unwrap();
         assert!(!node.is_isolated());
         assert_eq!(node.record().version, version(FIRST_VERSION + 1));
-        assert_eq!(node.role(), (Role::ActiveSolo, FIRST_GENERATION));
+        assert_eq!(node.role(), (Role::Active, FIRST_GENERATION));
     }
 
     #[test]
     fn an_unreachable_database_does_not_isolate_the_active_node() {
-        let mut node = TestNode::in_role(Role::ActiveSolo, NODE_A);
+        let mut node = TestNode::in_role(Role::Active, NODE_A);
         node.set_database_unreachable(true);
         node.control.renew_lease().unwrap();
         assert!(!node.is_isolated());
@@ -471,57 +419,57 @@ mod tests {
 
     #[test]
     fn a_standby_on_a_database_that_is_not_durable_does_not_take_over() {
-        let mut node = TestNode::in_role(Role::StandbyInSync, NODE_B);
+        let mut node = TestNode::in_role(Role::Standby, NODE_B);
         node.set_database_not_durable(true);
         node.control.watch_lease().unwrap();
         thread::sleep(PAST_TIMERS);
         node.control.watch_lease().unwrap();
-        assert_eq!(node.role(), (Role::StandbyInSync, FIRST_GENERATION));
-        assert_eq!(node.record().value, RefereeRecord::solo(FIRST_GENERATION, NODE_B));
+        assert_eq!(node.role(), (Role::Standby, FIRST_GENERATION));
+        assert_eq!(node.record().value, RefereeRecord::new(FIRST_GENERATION, NODE_B));
     }
 
     #[test]
     fn a_silent_active_node_is_taken_over() {
-        let mut node = TestNode::in_role(Role::StandbyInSync, NODE_B);
+        let mut node = TestNode::in_role(Role::Standby, NODE_B);
         node.control.watch_lease().unwrap();
         thread::sleep(PAST_TIMERS);
         node.control.watch_lease().unwrap();
 
         let next = FIRST_GENERATION + 1;
-        assert_eq!(node.role(), (Role::ActiveSolo, next));
-        assert_eq!(node.record().value, RefereeRecord::solo(next, NODE_A));
+        assert_eq!(node.role(), (Role::Active, next));
+        assert_eq!(node.record().value, RefereeRecord::new(next, NODE_A));
     }
 
     #[test]
     fn a_standby_without_the_database_does_not_take_over() {
-        let mut node = TestNode::in_role(Role::StandbyInSync, NODE_B);
+        let mut node = TestNode::in_role(Role::Standby, NODE_B);
         node.set_database_unreachable(true);
         node.control.watch_lease().unwrap();
         thread::sleep(PAST_TIMERS);
         node.control.watch_lease().unwrap();
-        assert_eq!(node.role(), (Role::StandbyInSync, FIRST_GENERATION));
-        assert_eq!(node.record().value, RefereeRecord::solo(FIRST_GENERATION, NODE_B));
+        assert_eq!(node.role(), (Role::Standby, FIRST_GENERATION));
+        assert_eq!(node.record().value, RefereeRecord::new(FIRST_GENERATION, NODE_B));
 
         // The lease is still not renewed when the database is reachable again, so the standby takes over at once.
         node.set_database_unreachable(false);
         node.control.watch_lease().unwrap();
-        assert_eq!(node.role(), (Role::ActiveSolo, FIRST_GENERATION + 1));
+        assert_eq!(node.role(), (Role::Active, FIRST_GENERATION + 1));
     }
 
     #[test]
     fn a_renewed_lease_is_not_taken_over() {
-        let mut node = TestNode::in_role(Role::StandbyInSync, NODE_B);
+        let mut node = TestNode::in_role(Role::Standby, NODE_B);
         node.control.watch_lease().unwrap();
         thread::sleep(PAST_TIMERS);
-        node.replace_record(RefereeRecord::solo(FIRST_GENERATION, NODE_B), FIRST_VERSION + 1);
+        node.replace_record(RefereeRecord::new(FIRST_GENERATION, NODE_B), FIRST_VERSION + 1);
         node.control.watch_lease().unwrap();
-        assert_eq!(node.role(), (Role::StandbyInSync, FIRST_GENERATION));
-        assert_eq!(node.record().value, RefereeRecord::solo(FIRST_GENERATION, NODE_B));
+        assert_eq!(node.role(), (Role::Standby, FIRST_GENERATION));
+        assert_eq!(node.record().value, RefereeRecord::new(FIRST_GENERATION, NODE_B));
     }
 
     #[test]
     fn a_failed_read_restarts_the_measure_of_the_standby() {
-        let mut node = TestNode::in_role(Role::StandbyInSync, NODE_B);
+        let mut node = TestNode::in_role(Role::Standby, NODE_B);
         node.control.watch_lease().unwrap();
         thread::sleep(PAST_TIMERS);
 
@@ -532,40 +480,40 @@ mod tests {
 
         // .. so the standby measures the silence of the active node again from the failed read.
         node.control.watch_lease().unwrap();
-        assert_eq!(node.role(), (Role::StandbyInSync, FIRST_GENERATION));
+        assert_eq!(node.role(), (Role::Standby, FIRST_GENERATION));
     }
 
     #[test]
     fn a_takeover_whose_answer_was_lost_is_adopted() {
-        let mut node = TestNode::in_role(Role::StandbyInSync, NODE_B);
+        let mut node = TestNode::in_role(Role::Standby, NODE_B);
         node.control.watch_lease().unwrap();
         thread::sleep(PAST_TIMERS);
 
         // The record names the node, which the node does not know yet ..
         *node.referee.lose_next_answer.lock() = true;
         node.control.watch_lease().unwrap();
-        assert_eq!(node.role(), (Role::StandbyInSync, FIRST_GENERATION));
+        assert_eq!(node.role(), (Role::Standby, FIRST_GENERATION));
 
         // .. until its next read.
         node.control.watch_lease().unwrap();
-        assert_eq!(node.role(), (Role::ActiveSolo, FIRST_GENERATION + 1));
+        assert_eq!(node.role(), (Role::Active, FIRST_GENERATION + 1));
     }
 
     #[test]
     fn the_replaced_active_node_is_fenced() {
-        let mut node = TestNode::in_role(Role::ActiveSolo, NODE_A);
+        let mut node = TestNode::in_role(Role::Active, NODE_A);
         node.control.renew_lease().unwrap();
         let next = FIRST_GENERATION + 1;
-        node.replace_record(RefereeRecord::solo(next, NODE_B), FIRST_VERSION + 1);
+        node.replace_record(RefereeRecord::new(next, NODE_B), FIRST_VERSION + 1);
         node.control.renew_lease().unwrap();
         assert_eq!(node.role(), (Role::Fenced, next));
     }
 
     #[test]
     fn a_record_created_again_by_the_other_node_fences_the_active_node() {
-        let mut node = TestNode::in_role(Role::ActiveSolo, NODE_A);
+        let mut node = TestNode::in_role(Role::Active, NODE_A);
         node.control.renew_lease().unwrap();
-        node.replace_record(RefereeRecord::solo(FIRST_GENERATION, NODE_B), FIRST_VERSION);
+        node.replace_record(RefereeRecord::new(FIRST_GENERATION, NODE_B), FIRST_VERSION);
         node.control.renew_lease().unwrap();
         assert_eq!(node.role(), (Role::Fenced, FIRST_GENERATION));
         assert_eq!(node.record().version, version(FIRST_VERSION));
@@ -573,7 +521,7 @@ mod tests {
 
     #[test]
     fn a_renewal_whose_answer_was_lost_is_adopted() {
-        let mut node = TestNode::in_role(Role::ActiveSolo, NODE_A);
+        let mut node = TestNode::in_role(Role::Active, NODE_A);
         node.control.renew_lease().unwrap();
 
         // The version is raised, which the node does not know yet ..
@@ -585,19 +533,19 @@ mod tests {
         node.control.renew_lease().unwrap();
         node.control.renew_lease().unwrap();
         assert_eq!(node.record().version, version(FIRST_VERSION + 2));
-        assert_eq!(node.role(), (Role::ActiveSolo, FIRST_GENERATION));
+        assert_eq!(node.role(), (Role::Active, FIRST_GENERATION));
     }
 
     #[test]
     fn an_active_node_without_the_referee_keeps_serving() {
-        let mut node = TestNode::in_role(Role::ActiveSolo, NODE_A);
+        let mut node = TestNode::in_role(Role::Active, NODE_A);
         node.control.renew_lease().unwrap();
         node.set_unreachable(true);
         thread::sleep(PAST_TIMERS);
         node.control.renew_lease().unwrap();
         node.control.renew_lease().unwrap();
         assert!(!node.is_isolated());
-        assert_eq!(node.role(), (Role::ActiveSolo, FIRST_GENERATION));
+        assert_eq!(node.role(), (Role::Active, FIRST_GENERATION));
 
         node.set_unreachable(false);
         node.control.renew_lease().unwrap();
@@ -607,7 +555,7 @@ mod tests {
     #[test]
     fn a_referee_without_the_record_stops_the_active_node() {
         let mut node = TestNode::new(None);
-        node.control.shared.state.lock().role = Role::ActiveSolo;
+        node.control.shared.state.lock().role = Role::Active;
         let error = node.control.renew_lease().unwrap_err();
         assert!(matches!(
             error,

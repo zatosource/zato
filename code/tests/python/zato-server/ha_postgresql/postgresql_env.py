@@ -6,16 +6,14 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The environment of the PostgreSQL suites. The session is the one of the SQLite suite, with its lease as the referee,
+# The environment of the PostgreSQL suites. The session holds the lease of the referee,
 # and every test receives a new PostgreSQL cluster, which both nodes share as the Zato database, both nodes started
 # from a copy of the environments of the session and HAProxy in front of them.
 
 # stdlib
-import os
 from contextlib import contextmanager
 
 # Zato
-from ha_authority import Authority
 from ha_env import clear_receivers, new_nodes, start_pair, until_removed
 from postgresql_cluster import PostgreSQLCluster
 from zato.common.typing_ import cast_
@@ -50,9 +48,9 @@ def get_cluster(env:'HAEnvironment') -> 'PostgreSQLCluster':
 
 def prepare_node(node:'Node', lease:'Lease', cluster:'PostgreSQLCluster', timers:'Timers') -> 'None':
     """ Fills in the environment of a node with the lease as its referee and the database of the cluster
-    as its Zato database, which selects the shared storage mode.
+    as its Zato database.
     """
-    node.prepare_common(lease, timers)
+    node.prepare(lease, timers)
     node.env.update(cluster.node_env)
 
 # ################################################################################################################################
@@ -69,8 +67,6 @@ def build_environment(
     both nodes from the environments of the session and HAProxy, under a referee without leases,
     without waiting for the pair.
     """
-    authority = Authority(os.path.join(session.run_dir, 'authority'))
-
     # Each test begins with no lease of the pair ..
     lease = session.lease
     lease.clear()
@@ -90,7 +86,7 @@ def build_environment(
     for node in node_list:
         prepare_node(node, lease, cluster, timers)
 
-    out = start_pair(session, test_name, timers, hooks, authority, lease, cluster.database, node_list, [cluster])
+    out = start_pair(session, test_name, timers, hooks, lease, cluster.database, node_list, [cluster])
     return out
 
 # ################################################################################################################################

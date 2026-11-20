@@ -17,7 +17,7 @@ use chrono::{SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::client::{ApiClient, CONTENT_TYPE_JSON_PATCH, CONTENT_TYPE_MERGE_PATCH, Response};
-use crate::record::{NodeAddress, RefereeRecord, Versioned};
+use crate::record::{NodeEntry, RefereeRecord, Versioned};
 use crate::referee::{Referee, RefereeError};
 use crate::wire;
 
@@ -36,13 +36,13 @@ const LEASE_KIND: &str = "Lease";
 /// The annotation that holds the referee record.
 const RECORD_ANNOTATION: &str = "zato.io/ha-record";
 
-/// The annotation that holds the address a node published.
-const ADDRESS_ANNOTATION: &str = "zato.io/ha-address";
+/// The annotation that holds the entry a node published.
+const ENTRY_ANNOTATION: &str = "zato.io/ha-node";
 
-/// The label that ties the address leases to the lease of the record.
+/// The label that ties the node leases to the lease of the record.
 const LEASE_LABEL: &str = "zato.io/ha-lease";
 
-/// The infix between the name of the lease of the record and the name of a node in the name of an address lease.
+/// The infix between the name of the lease of the record and the name of a node in the name of a node lease.
 const NODE_INFIX: &str = "-node-";
 
 /// The JSON Pointer of the version of an object.
@@ -187,7 +187,7 @@ struct PatchOperation<'input> {
     value: &'input str,
 }
 
-/// The referee record in a `Lease`, with the addresses of the nodes in `Lease` objects labeled with its name.
+/// The referee record in a `Lease`, with the entries of the nodes in `Lease` objects labeled with its name.
 pub struct LeaseReferee {
     /// The client of the API server.
     client: ApiClient,
@@ -353,32 +353,32 @@ impl Referee for LeaseReferee {
         }
     }
 
-    fn publish_address(&self, address: &NodeAddress) -> Result<(), RefereeError> {
-        let name = format!("{}{NODE_INFIX}{}", self.name, address.node_name);
-        let encoded = encode_annotation(address)?;
+    fn publish_entry(&self, entry: &NodeEntry) -> Result<(), RefereeError> {
+        let name = format!("{}{NODE_INFIX}{}", self.name, entry.node_name);
+        let encoded = encode_annotation(entry)?;
         let lease = NewLease {
             api_version: LEASE_API_VERSION,
             kind: LEASE_KIND,
             metadata: NewMetadata {
                 name: &name,
                 labels: BTreeMap::from([(LEASE_LABEL, self.name.as_str())]),
-                annotations: BTreeMap::from([(ADDRESS_ANNOTATION, encoded.as_str())]),
+                annotations: BTreeMap::from([(ENTRY_ANNOTATION, encoded.as_str())]),
             },
             spec: Spec {
-                holder_identity: &address.node_name,
+                holder_identity: &entry.node_name,
             },
         };
         let response = self.client.post(&self.leases_url, &encode(&lease)?).map_err(RefereeError)?;
         match response.status {
             STATUS_CREATED => return Ok(()),
             STATUS_CONFLICT => {}
-            _ => return Err(unexpected("Creation of the address", &response)),
+            _ => return Err(unexpected("Creation of the node entry", &response)),
         }
 
-        // A node started again replaces the address it published earlier, which no other node writes.
+        // A node started again replaces the entry it published earlier, which no other node writes.
         let patch = AnnotationsPatch {
             metadata: AnnotationsMetadata {
-                annotations: BTreeMap::from([(ADDRESS_ANNOTATION, encoded.as_str())]),
+                annotations: BTreeMap::from([(ENTRY_ANNOTATION, encoded.as_str())]),
             },
         };
         let url = format!("{}/{name}", self.leases_url);
@@ -388,22 +388,22 @@ impl Referee for LeaseReferee {
             .map_err(RefereeError)?;
         match response.status {
             STATUS_OK => Ok(()),
-            _ => Err(unexpected("Update of the address", &response)),
+            _ => Err(unexpected("Update of the node entry", &response)),
         }
     }
 
-    fn read_addresses(&self) -> Result<Vec<NodeAddress>, RefereeError> {
+    fn read_entries(&self) -> Result<Vec<NodeEntry>, RefereeError> {
         // The label selector is percent-encoded, in which %2F stands for / and %3D for =.
         let label = LEASE_LABEL.replace('/', "%2F");
         let url = format!("{}?labelSelector={label}%3D{}", self.leases_url, self.name);
         let response = self.client.get(&url).map_err(RefereeError)?;
         if response.status != STATUS_OK {
-            return Err(unexpected("Read of the addresses", &response));
+            return Err(unexpected("Read of the node entries", &response));
         }
         let list: LeaseList = decode(&response.body)?;
         list.items
             .iter()
-            .map(|lease| decode(lease.metadata.annotation(ADDRESS_ANNOTATION)?.as_bytes()))
+            .map(|lease| decode(lease.metadata.annotation(ENTRY_ANNOTATION)?.as_bytes()))
             .collect()
     }
 }

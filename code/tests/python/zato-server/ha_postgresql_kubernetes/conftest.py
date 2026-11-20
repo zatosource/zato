@@ -18,19 +18,15 @@ _here = os.path.dirname(os.path.abspath(__file__))
 _scheduler_failover_dir = os.path.join(_here, '..', 'scheduler_failover')
 _scheduler_failover_dir = os.path.abspath(_scheduler_failover_dir)
 
-_ha_sqlite_dir = os.path.join(_here, '..', 'ha_sqlite')
-_ha_sqlite_dir = os.path.abspath(_ha_sqlite_dir)
-
-_ha_sqlite_kubernetes_dir = os.path.join(_here, '..', 'ha_sqlite_kubernetes')
-_ha_sqlite_kubernetes_dir = os.path.abspath(_ha_sqlite_kubernetes_dir)
+_ha_postgresql_dir = os.path.join(_here, '..', 'ha_postgresql')
+_ha_postgresql_dir = os.path.abspath(_ha_postgresql_dir)
 
 _pubsub_faults_dir = os.path.join(_here, '..', '..', 'zato-common', 'pubsub_faults')
 _pubsub_faults_dir = os.path.abspath(_pubsub_faults_dir)
 
 sys.path.insert(0, _pubsub_faults_dir)
 sys.path.insert(0, _scheduler_failover_dir)
-sys.path.insert(0, _ha_sqlite_dir)
-sys.path.insert(0, _ha_sqlite_kubernetes_dir)
+sys.path.insert(0, _ha_postgresql_dir)
 sys.path.insert(0, _here)
 
 # Zato
@@ -80,15 +76,6 @@ def kube_pair(kube_session:'any_', request:'any_') -> 'any_':
             yield env
     finally:
         restore_cluster()
-
-# ################################################################################################################################
-
-@pytest.fixture
-def partition_replaces_active() -> 'bool':
-    """ Whether the standby takes over from an active pod whose worker node is partitioned from the other zones.
-    The node no longer reaches the database in its own zone, so the active pod stops renewing the lease.
-    """
-    return True
 
 # ################################################################################################################################
 # ################################################################################################################################

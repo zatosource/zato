@@ -11,17 +11,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import shutil
-from functools import partial
-from tempfile import TemporaryDirectory
 
 # Zato
-from zato.common.db_env.engine import new_zato_engine
 from ha_env import create_session as create_ha_session, ModuleCtx as EnvCtx
 from nodes import Node, NodeHook
 from pair import import_jobs
-from topology import ModuleCtx as TopologyCtx
 from zato.common.test.exactly_once.control import create_control_dir, Env_Dir
-from zato.common.test.exactly_once.verify import assert_exactly_once, check_outputs, wait_for_checks
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,8 +24,7 @@ from zato.common.test.exactly_once.verify import assert_exactly_once, check_outp
 if 0:
     from ha_env import HASession
     from postgresql_cluster import PostgreSQLCluster
-    from zato.common.test.exactly_once.verify import OutputCheck
-    from zato.common.typing_ import strlist, strstrdict
+    from zato.common.typing_ import strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,12 +33,6 @@ class ModuleCtx:
 
     # The directory of the control files of the relay, under the run directory that both nodes mount
     Control_Dir_Name = 'exactly-once-control'
-
-    # The suffix of the log of a SQLite database file
-    WAL_Suffix = '-wal'
-
-    # How long the outputs of the relay may take to settle once the pair serves again, in seconds
-    Settle_Timeout = 120.0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -90,7 +78,7 @@ def create_session(rendered_yaml:'str', services_source:'str') -> 'HASession':
     """ Creates the session of the HA suites, adds the relay to the environment of both nodes, and replaces
     the copy of each environment, from which every test starts its node, with the result.
     """
-    out = create_ha_session(TopologyCtx.Single_Control_Plane)
+    out = create_ha_session()
 
     for short_name in EnvCtx.Node_Names:
         node = Node(short_name=short_name, run_dir=out.run_dir)
@@ -108,47 +96,6 @@ def create_session(rendered_yaml:'str', services_source:'str') -> 'HASession':
     return out
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def _read_copied_check(path:'str', keys:'strlist', prefix:'str') -> 'OutputCheck':
-    """ Checks the outputs of the relay in a private copy of the Zato database of a node, which the node never waits for.
-    """
-    with TemporaryDirectory() as copy_dir:
-        copy_path = os.path.join(copy_dir, os.path.basename(path))
-
-        # The log is copied before the file, so that frames that a checkpoint moves into the file
-        # in the meantime are still in the copied log ..
-        try:
-            _ = shutil.copyfile(path + ModuleCtx.WAL_Suffix, copy_path + ModuleCtx.WAL_Suffix)
-
-        # .. and a database without a log consists of its file alone.
-        except FileNotFoundError:
-            pass
-
-        _ = shutil.copyfile(path, copy_path)
-        engine = new_zato_engine(f'sqlite:///{copy_path}')
-
-        try:
-            out = check_outputs(engine, keys, prefix)
-        finally:
-            engine.dispose()
-
-    return out
-
-# ################################################################################################################################
-
-def verify_node(node:'Node', prefix:'str', keys:'strlist') -> 'OutputCheck':
-    """ Waits until the outputs of the relay settle in the Zato database of a node and asserts that each key
-    was relayed exactly once and in order.
-    """
-    path = node.db_path(EnvCtx.Database_File)
-    read_check = partial(_read_copied_check, path, keys, prefix)
-
-    out = wait_for_checks(read_check, ModuleCtx.Settle_Timeout)
-    assert_exactly_once(out, keys)
-
-    return out
-
 # ################################################################################################################################
 
 def get_cluster_env(cluster:'PostgreSQLCluster') -> 'strstrdict':

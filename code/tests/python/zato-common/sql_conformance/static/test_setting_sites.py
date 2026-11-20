@@ -13,8 +13,7 @@ import tokenize
 from functools import cache
 
 # Zato
-from zato.common.test.sql_conformance.rust_source import get_enclosing_function, get_line, get_test_module_paths, \
-     remove_test_modules
+from zato.common.test.sql_conformance.rust_source import get_line, get_test_module_paths, remove_test_modules
 from zato.common.test.sql_conformance.sources import get_rust_files, get_setting_files, ModuleCtx as SourcesModuleCtx
 
 # Local
@@ -63,24 +62,14 @@ def _get_statement(text:'str', index:'int') -> 'str':
 
 # ################################################################################################################################
 
-def _is_allowed_site(source:'SourceFile', text:'str', index:'int') -> 'bool':
-    """ Returns whether a setting at the given index is in the module of the settings or in a Rust function
-    that opens the SQLite file of the active-standby node.
+def _is_allowed_site(source:'SourceFile') -> 'bool':
+    """ Returns whether a setting at the given index is in the module of the settings.
     """
     if source.is_linked:
         return False
 
-    if source.relative_path == RegistryModuleCtx.Setting_Module_Path:
-        return True
-
-    function_name = get_enclosing_function(text, index)
-
-    for rust_path, rust_function in RegistryModuleCtx.Rust_Setting_Functions:
-        if source.relative_path == rust_path:
-            if function_name == rust_function:
-                return True
-
-    return False
+    out = source.relative_path == RegistryModuleCtx.Setting_Module_Path
+    return out
 
 # ################################################################################################################################
 
@@ -170,7 +159,7 @@ def test_settings_only_in_their_module() -> 'None':
         text = _get_text(source)
 
         for match in _get_setting_matches(source, text):
-            if not _is_allowed_site(source, text, match.start()):
+            if not _is_allowed_site(source):
                 line = get_line(text, match.start())
                 findings.append(f'{source.path}:{line} -> {match.group(0)}')
 

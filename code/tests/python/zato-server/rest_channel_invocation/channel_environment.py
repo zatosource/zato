@@ -57,7 +57,6 @@ _redis_environment_keys = (
 _isolated_file_variables = (
     ('Zato_Database_Path', 'zato.db'),
     ('Zato_Analytics_DB_Path', 'analytics.db'),
-    ('Zato_HA_Barrier_Socket', 'barrier.sock'),
 )
 
 # The metrics channel of a new environment is secured with this user and the password of this variable

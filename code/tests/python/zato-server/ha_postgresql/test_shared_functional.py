@@ -46,8 +46,8 @@ logger = logging.getLogger('zato.test.ha_postgresql.functional')
 class ModuleCtx:
 
     # The roles of a pair that formed on the database both nodes share
-    Role_Active  = 'ActiveSolo'
-    Role_Standby = 'StandbyInSync'
+    Role_Active  = 'Active'
+    Role_Standby = 'Standby'
 
     # How long a request to the role endpoint or through HAProxy may take, in seconds
     Request_Timeout = 5
@@ -140,13 +140,13 @@ def test_bootstrap(ha_pair:'HAEnvironment') -> 'None':
     assert active_report['generation'] == record['generation'], (active_report, record)
     assert standby_report['generation'] == record['generation'], (standby_report, record)
 
-    # The referee holds the address of each node in a lease of its own, by which the pod of the other node
+    # The referee holds the entry of each node in a lease of its own, by which the pod of the other node
     # is found in Kubernetes ..
-    names = env.referee.read_address_names()
+    names = env.referee.read_node_lease_names()
     expected_names:'list[str]' = []
 
     for node in sorted([active.node_name, standby.node_name]):
-        expected_names.append(f'{TopologyCtx.Lease_Name}{TopologyCtx.Address_Lease_Infix}{node}')
+        expected_names.append(f'{TopologyCtx.Lease_Name}{TopologyCtx.Node_Lease_Infix}{node}')
 
     assert names == expected_names, names
 
@@ -172,14 +172,14 @@ def test_scheduler(ha_pair:'HAEnvironment') -> 'None':
     runs none of them.
     """
     env = ha_pair
-    active, standby = _get_pair(env)
+    _, standby = _get_pair(env)
 
     time.sleep(ModuleCtx.Scheduler_Seconds)
 
     entries = read_run_log(cast_('any_', env))
     assert get_starts(entries), 'No scheduler run began'
 
-    _ = check_scheduler(env, active)
+    _ = check_scheduler(env)
     check_no_runs_after(env, standby, 0.0)
 
 # ################################################################################################################################

@@ -31,12 +31,6 @@ class ModuleCtx:
     # The module in which SQLite pragmas and PostgreSQL session settings that concern durability are set
     Setting_Module_Path = 'code/zato-common/src/zato/common/db_env/connection.py'
 
-    # The Rust functions that open the SQLite file of the active-standby node, each by its file and its name
-    Rust_Setting_Functions = (
-        ('code/zato-rust/zato_ha_core/src/active.rs', 'open_connection'),
-        ('code/zato-rust/zato_ha_core/src/copy.rs', 'open_for_checkpoint'),
-    )
-
 # ################################################################################################################################
 # ################################################################################################################################
 

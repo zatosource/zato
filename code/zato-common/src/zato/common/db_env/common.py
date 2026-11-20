@@ -301,7 +301,6 @@ class EnvDBConfig:
         metadata_tuple:'anytuple',
         needs_pool:'bool' = False,
         needs_background_checkpoint:'bool' = False,
-        is_replicated:'bool' = False,
         ) -> 'None':
 
         self.env_prefix = env_prefix
@@ -316,9 +315,6 @@ class EnvDBConfig:
 
         # Whether the WAL of a SQLite database is checkpointed in a thread of its own rather than by the commits
         self.needs_background_checkpoint = needs_background_checkpoint
-
-        # Whether the active-standby node replicates the SQLite file of the database
-        self.is_replicated = is_replicated
 
         # The full names of the environment variables selecting and configuring the database
         self.env_type     = f'{env_prefix}Type'

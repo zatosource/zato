@@ -43,16 +43,14 @@ class ModuleCtx:
         r'^\s*(insert|update|delete|replace|create|drop|alter|truncate|copy|merge|upsert|vacuum|reindex|begin|commit|end|' +
         r'rollback|savepoint|release|attach|detach|pragma|select|show|with|set|analyze|lock|do|call)\b', re.IGNORECASE)
 
-    # The statements that the node may run - pragmas, which include the checkpoint, the write lock of the takeover
-    # check that it always rolls back, and the reads of the probes
-    Allowed_Statements = re.compile(r'^\s*(?:pragma\b|begin\s+immediate\b|rollback\b|select\b|show\b)', re.IGNORECASE)
+    # The statements that the node may run - the reads of the probes
+    Allowed_Statements = re.compile(r'^\s*(?:select\b|show\b)', re.IGNORECASE)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def test_node_writes_no_rows() -> 'None':
-    """ The active-standby node runs only pragmas, a write lock that it rolls back and reads, so that it never writes rows
-    of the Zato database itself.
+    """ The active-standby node runs only reads, so that it never writes rows of the Zato database itself.
     """
     sources:'list[SourceFile]' = []
 

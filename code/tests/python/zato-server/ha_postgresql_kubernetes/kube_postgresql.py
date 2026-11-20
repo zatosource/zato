@@ -6,9 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The session of the Kubernetes suites of a pair on PostgreSQL. The cluster, the receivers, the quickstart
-# environment and the referee are those of the SQLite suites, and one PostgreSQL instance in the zone without Zato pods
-# is the pub/sub database of both pods.
+# The session of the Kubernetes suites of a pair on PostgreSQL. The session creates the cluster, the receivers,
+# the quickstart environment and the referee, and one PostgreSQL instance in the zone without Zato pods
+# is the Zato database of both pods.
 
 # stdlib
 import json
@@ -105,8 +105,7 @@ class KubePostgreSQL(KubeBackend):
 # ################################################################################################################################
 
     def clear(self) -> 'None':
-        """ Removes every table, so that the pair of the next test begins with a database without data,
-        as the pair of each SQLite test begins with a copy of the quickstart environment.
+        """ Removes every table, so that the pair of the next test begins with a database without data.
         """
         connection = connect(self.database, is_admin=True)
         connection.autocommit = True

@@ -63,7 +63,6 @@ select
     # The variables with the timers of the node of an active-standby pair
     HA_Timer_Variables = (
         HACtx.Env_Heartbeat_Time,
-        HACtx.Env_Mark_Out_Time,
         HACtx.Env_Takeover_Time,
     )
 

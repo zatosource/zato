@@ -7,7 +7,7 @@
 //!
 //! Every referee type implements [`Referee`], so the control logic does not depend on the store of the record.
 
-use crate::record::{NodeAddress, RefereeRecord, Versioned};
+use crate::record::{NodeEntry, RefereeRecord, Versioned};
 
 /// Errors of a referee operation whose outcome is unknown.
 #[derive(Debug)]
@@ -37,11 +37,11 @@ pub trait Referee: Send + Sync {
     /// differs from `record`, so the lease of the node that it does not name is not renewed.
     fn renew(&self, record: &RefereeRecord, expected_version: &str) -> Result<Option<String>, RefereeError>;
 
-    /// Publishes the address of this node under its own key.
-    fn publish_address(&self, address: &NodeAddress) -> Result<(), RefereeError>;
+    /// Publishes the entry of this node under its own key.
+    fn publish_entry(&self, entry: &NodeEntry) -> Result<(), RefereeError>;
 
-    /// Returns the addresses that all nodes published.
-    fn read_addresses(&self) -> Result<Vec<NodeAddress>, RefereeError>;
+    /// Returns the entries that all nodes published.
+    fn read_entries(&self) -> Result<Vec<NodeEntry>, RefereeError>;
 }
 
 /// The outcome of a conditional transition of the record.
@@ -97,6 +97,7 @@ pub fn transition(referee: &dyn Referee, intended: &RefereeRecord, condition: im
 pub mod tests {
     use super::*;
     use parking_lot::Mutex;
+    use std::sync::Arc;
 
     /// A referee kept in memory, which can be made unreachable.
     #[derive(Default)]
@@ -104,8 +105,8 @@ pub mod tests {
         /// The record and its version.
         pub record: Mutex<Option<Versioned<RefereeRecord>>>,
 
-        /// The published addresses.
-        pub addresses: Mutex<Vec<NodeAddress>>,
+        /// The published entries.
+        pub entries: Mutex<Vec<NodeEntry>>,
 
         /// Whether every operation fails.
         pub unreachable: Mutex<bool>,
@@ -222,23 +223,45 @@ pub mod tests {
             Ok(renewed)
         }
 
-        fn publish_address(&self, address: &NodeAddress) -> Result<(), RefereeError> {
-            let mut addresses = self.addresses.lock();
-            addresses.retain(|existing| existing.node_name != address.node_name);
-            addresses.push(address.clone());
-            drop(addresses);
+        fn publish_entry(&self, entry: &NodeEntry) -> Result<(), RefereeError> {
+            let mut entries = self.entries.lock();
+            entries.retain(|existing| existing.node_name != entry.node_name);
+            entries.push(entry.clone());
+            drop(entries);
             Ok(())
         }
 
-        fn read_addresses(&self) -> Result<Vec<NodeAddress>, RefereeError> {
-            Ok(self.addresses.lock().clone())
+        fn read_entries(&self) -> Result<Vec<NodeEntry>, RefereeError> {
+            Ok(self.entries.lock().clone())
+        }
+    }
+
+    impl Referee for Arc<MemoryReferee> {
+        fn read(&self) -> Result<Option<Versioned<RefereeRecord>>, RefereeError> {
+            self.as_ref().read()
+        }
+
+        fn compare_and_set(&self, record: &RefereeRecord, expected_version: Option<&str>) -> Result<bool, RefereeError> {
+            self.as_ref().compare_and_set(record, expected_version)
+        }
+
+        fn renew(&self, record: &RefereeRecord, expected_version: &str) -> Result<Option<String>, RefereeError> {
+            self.as_ref().renew(record, expected_version)
+        }
+
+        fn publish_entry(&self, entry: &NodeEntry) -> Result<(), RefereeError> {
+            self.as_ref().publish_entry(entry)
+        }
+
+        fn read_entries(&self) -> Result<Vec<NodeEntry>, RefereeError> {
+            self.as_ref().read_entries()
         }
     }
 
     #[test]
     fn creates_an_absent_record() {
         let referee = MemoryReferee::default();
-        let intended = RefereeRecord::solo(1, "zato-a");
+        let intended = RefereeRecord::new(1, "zato-a");
         let outcome = transition(&referee, &intended, |current| current.is_none());
         assert!(matches!(outcome, Transition::Applied));
         assert_eq!(referee.read().unwrap().unwrap().value, intended);
@@ -247,12 +270,12 @@ pub mod tests {
     #[test]
     fn refuses_when_the_condition_fails() {
         let referee = MemoryReferee::default();
-        let first = RefereeRecord::solo(1, "zato-a");
+        let first = RefereeRecord::new(1, "zato-a");
         assert!(matches!(
             transition(&referee, &first, |current| current.is_none()),
             Transition::Applied
         ));
-        let second = RefereeRecord::solo(1, "zato-b");
+        let second = RefereeRecord::new(1, "zato-b");
         let outcome = transition(&referee, &second, |current| current.is_none());
         assert!(matches!(outcome, Transition::Refused(Some(record)) if record == first));
     }
@@ -261,7 +284,7 @@ pub mod tests {
     fn a_lost_answer_is_recognized() {
         let referee = MemoryReferee::default();
         *referee.lose_next_answer.lock() = true;
-        let intended = RefereeRecord::solo(1, "zato-a");
+        let intended = RefereeRecord::new(1, "zato-a");
         let first = transition(&referee, &intended, |current| current.is_none());
         assert!(matches!(first, Transition::Unreachable(_)));
 
@@ -272,10 +295,10 @@ pub mod tests {
 
     #[test]
     fn a_renewal_between_the_read_and_the_write_does_not_refuse_the_transition() {
-        let current = RefereeRecord::replicated(3, "zato-a", "zato-b");
+        let current = RefereeRecord::new(3, "zato-b");
         let referee = MemoryReferee::holding(Some(current.clone()), 1);
         *referee.renew_before_next_write.lock() = true;
-        let intended = RefereeRecord::solo(4, "zato-a");
+        let intended = RefereeRecord::new(4, "zato-a");
         let outcome = transition(&referee, &intended, |record| record == Some(&current));
         assert!(matches!(outcome, Transition::Applied));
         assert_eq!(referee.read().unwrap().unwrap().value, intended);
@@ -283,10 +306,10 @@ pub mod tests {
 
     #[test]
     fn a_write_between_the_read_and_the_write_refuses_a_transition_it_no_longer_allows() {
-        let current = RefereeRecord::replicated(3, "zato-a", "zato-b");
+        let current = RefereeRecord::new(3, "zato-b");
         let referee = MemoryReferee::holding(Some(current.clone()), 1);
-        let intended = RefereeRecord::solo(4, "zato-a");
-        let other = RefereeRecord::solo(4, "zato-b");
+        let intended = RefereeRecord::new(4, "zato-a");
+        let other = RefereeRecord::new(4, "zato-b");
         let outcome = transition(&referee, &intended, |record| {
             // The other node writes its own record after this read, before this node's compare-and-set.
             if record == Some(&current) {

@@ -131,26 +131,26 @@ fn version(referee: &LeaseReferee) -> String {
 fn check_creation(cluster: &KindCluster) {
     let referee = cluster.referee("zato-ha-creation");
     assert!(referee.read().unwrap().is_none());
-    assert!(referee.compare_and_set(&RefereeRecord::solo(1, NODE_A), None).unwrap());
-    assert!(!referee.compare_and_set(&RefereeRecord::solo(1, NODE_B), None).unwrap());
-    assert_eq!(referee.read().unwrap().unwrap().value, RefereeRecord::solo(1, NODE_A));
+    assert!(referee.compare_and_set(&RefereeRecord::new(1, NODE_A), None).unwrap());
+    assert!(!referee.compare_and_set(&RefereeRecord::new(1, NODE_B), None).unwrap());
+    assert_eq!(referee.read().unwrap().unwrap().value, RefereeRecord::new(1, NODE_A));
 }
 
 /// A write that names a version older than the current one is refused.
 fn check_stale_version(cluster: &KindCluster) {
     let referee = cluster.referee("zato-ha-stale");
-    assert!(referee.compare_and_set(&RefereeRecord::solo(1, NODE_A), None).unwrap());
+    assert!(referee.compare_and_set(&RefereeRecord::new(1, NODE_A), None).unwrap());
     let first = version(&referee);
-    let replicated = RefereeRecord::replicated(1, NODE_A, NODE_B);
-    assert!(referee.compare_and_set(&replicated, Some(&first)).unwrap());
-    assert!(!referee.compare_and_set(&RefereeRecord::solo(2, NODE_B), Some(&first)).unwrap());
-    assert_eq!(referee.read().unwrap().unwrap().value, replicated);
+    let taken_over = RefereeRecord::new(2, NODE_B);
+    assert!(referee.compare_and_set(&taken_over, Some(&first)).unwrap());
+    assert!(!referee.compare_and_set(&RefereeRecord::new(3, NODE_A), Some(&first)).unwrap());
+    assert_eq!(referee.read().unwrap().unwrap().value, taken_over);
 }
 
 /// Every renewal raises the version, and a renewal at an older version or of another record is refused.
 fn check_renewal(cluster: &KindCluster) {
     let referee = cluster.referee("zato-ha-renewal");
-    let record = RefereeRecord::solo(1, NODE_A);
+    let record = RefereeRecord::new(1, NODE_A);
     assert!(referee.compare_and_set(&record, None).unwrap());
     let first = version(&referee);
 
@@ -161,7 +161,7 @@ fn check_renewal(cluster: &KindCluster) {
     assert_eq!(version(&referee), third);
 
     assert!(referee.renew(&record, &first).unwrap().is_none());
-    assert!(referee.renew(&RefereeRecord::solo(1, NODE_B), &third).unwrap().is_none());
+    assert!(referee.renew(&RefereeRecord::new(1, NODE_B), &third).unwrap().is_none());
     assert_eq!(referee.read().unwrap().unwrap().value, record);
 }
 
@@ -169,36 +169,34 @@ fn check_renewal(cluster: &KindCluster) {
 fn check_deletion(cluster: &KindCluster) {
     let name = "zato-ha-deletion";
     let referee = cluster.referee(name);
-    let record = RefereeRecord::solo(1, NODE_A);
+    let record = RefereeRecord::new(1, NODE_A);
     assert!(referee.compare_and_set(&record, None).unwrap());
     let first = version(&referee);
     cluster.delete(name);
 
-    assert!(!referee.compare_and_set(&RefereeRecord::solo(2, NODE_A), Some(&first)).unwrap());
+    assert!(!referee.compare_and_set(&RefereeRecord::new(2, NODE_A), Some(&first)).unwrap());
     assert!(referee.renew(&record, &first).unwrap().is_none());
     assert!(referee.read().unwrap().is_none());
 }
 
-/// The addresses of both nodes are read back, an address published again replaces the earlier one,
-/// and neither the record nor the addresses of another lease are among them.
-fn check_addresses(cluster: &KindCluster) {
-    let referee = cluster.referee("zato-ha-addresses");
+/// The entries of both nodes are read back, an entry published again replaces the earlier one,
+/// and neither the record nor the entries of another lease are among them.
+fn check_entries(cluster: &KindCluster) {
+    let referee = cluster.referee("zato-ha-entries");
     let other = cluster.referee("zato-ha-other");
-    assert!(referee.compare_and_set(&RefereeRecord::solo(1, NODE_A), None).unwrap());
-    let address = |node_name: &str, port| NodeAddress {
+    assert!(referee.compare_and_set(&RefereeRecord::new(1, NODE_A), None).unwrap());
+    let entry = |node_name: &str| NodeEntry {
         node_name: node_name.to_owned(),
-        host: LOOPBACK.to_owned(),
-        port,
     };
-    referee.publish_address(&address(NODE_A, 17010)).unwrap();
-    referee.publish_address(&address(NODE_B, 17011)).unwrap();
-    referee.publish_address(&address(NODE_B, 17012)).unwrap();
-    other.publish_address(&address(NODE_A, 17020)).unwrap();
+    referee.publish_entry(&entry(NODE_A)).unwrap();
+    referee.publish_entry(&entry(NODE_B)).unwrap();
+    referee.publish_entry(&entry(NODE_B)).unwrap();
+    other.publish_entry(&entry(NODE_A)).unwrap();
 
-    let mut addresses = referee.read_addresses().unwrap();
-    addresses.sort_by(|left, right| left.node_name.cmp(&right.node_name));
-    assert_eq!(addresses, [address(NODE_A, 17010), address(NODE_B, 17012)]);
-    assert_eq!(referee.read().unwrap().unwrap().value, RefereeRecord::solo(1, NODE_A));
+    let mut entries = referee.read_entries().unwrap();
+    entries.sort_by(|left, right| left.node_name.cmp(&right.node_name));
+    assert_eq!(entries, [entry(NODE_A), entry(NODE_B)]);
+    assert_eq!(referee.read().unwrap().unwrap().value, RefereeRecord::new(1, NODE_A));
 }
 
 #[test]
@@ -208,7 +206,7 @@ fn the_record_follows_compare_and_set_in_a_lease() {
     check_stale_version(&cluster);
     check_renewal(&cluster);
     check_deletion(&cluster);
-    check_addresses(&cluster);
+    check_entries(&cluster);
 }
 
 /// A request that the stub received.
@@ -279,7 +277,7 @@ fn an_absent_lease_is_an_absent_record() {
 fn an_existing_lease_refuses_the_creation() {
     let (client, server) = stub(STATUS_CONFLICT);
     let referee = LeaseReferee::new(client, "zato-ha");
-    assert!(!referee.compare_and_set(&RefereeRecord::solo(1, NODE_A), None).unwrap());
+    assert!(!referee.compare_and_set(&RefereeRecord::new(1, NODE_A), None).unwrap());
     let received = server.join().unwrap();
     assert_eq!(
         received.request_line,
@@ -292,7 +290,7 @@ fn a_failed_test_or_a_deleted_lease_refuses_the_write() {
     for status in [STATUS_UNPROCESSABLE, STATUS_NOT_FOUND] {
         let (client, server) = stub(status);
         let referee = LeaseReferee::new(client, "zato-ha");
-        assert!(!referee.compare_and_set(&RefereeRecord::solo(2, NODE_A), Some("7")).unwrap());
+        assert!(!referee.compare_and_set(&RefereeRecord::new(2, NODE_A), Some("7")).unwrap());
         let received = server.join().unwrap();
         assert_eq!(received.content_type.as_deref(), Some(CONTENT_TYPE_JSON_PATCH));
         assert!(
@@ -308,7 +306,7 @@ fn a_failed_test_or_a_deleted_lease_refuses_the_renewal() {
     for status in [STATUS_UNPROCESSABLE, STATUS_NOT_FOUND] {
         let (client, server) = stub(status);
         let referee = LeaseReferee::new(client, "zato-ha");
-        assert!(referee.renew(&RefereeRecord::solo(2, NODE_A), "7").unwrap().is_none());
+        assert!(referee.renew(&RefereeRecord::new(2, NODE_A), "7").unwrap().is_none());
         let received = server.join().unwrap();
         assert!(
             received
@@ -327,7 +325,7 @@ fn a_failed_test_or_a_deleted_lease_refuses_the_renewal() {
 fn an_unexpected_status_is_an_error() {
     let (client, server) = stub(STATUS_CONFLICT);
     let referee = LeaseReferee::new(client, "zato-ha");
-    assert!(referee.renew(&RefereeRecord::solo(2, NODE_A), "7").is_err());
+    assert!(referee.renew(&RefereeRecord::new(2, NODE_A), "7").is_err());
     let _ = server.join().unwrap();
 }
 
@@ -336,5 +334,5 @@ fn an_api_server_that_does_not_answer_is_an_error() {
     let address = format!("http://{LOOPBACK}:{CLOSED_PORT}");
     let referee = LeaseReferee::new(ApiClient::new(&address, NAMESPACE, None, None).unwrap(), "zato-ha");
     assert!(referee.read().is_err());
-    assert!(referee.compare_and_set(&RefereeRecord::solo(1, NODE_A), None).is_err());
+    assert!(referee.compare_and_set(&RefereeRecord::new(1, NODE_A), None).is_err());
 }

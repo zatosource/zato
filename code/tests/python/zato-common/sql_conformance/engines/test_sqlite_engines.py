@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import shutil
 import subprocess
 import sys
 from argparse import Namespace
@@ -24,8 +23,6 @@ from zato.common.db_env.database import new_unshared_database_engine
 from zato.common.db_env.engine import connect_sqlite_file, get_sqlite_file_engine, new_zato_engine
 from zato.common.odb.api import SQLConnectionPool
 from zato.common.settings_db import SettingsDB
-from zato.common.test.sql_conformance.barrier import replicated_environment
-from zato.common.test.sql_conformance.disk import get_disk_dir
 from zato.common.test.sql_conformance.sources import ModuleCtx as SourcesModuleCtx
 from zato.common.test.zato_database import file_database_engine
 from zato.common.typing_ import cast_
@@ -119,21 +116,6 @@ def test_sqlite_file_engine(tmp_path:'Path') -> 'None':
     db_path = os.path.join(tmp_path, 'analytics.db')
     engine = get_sqlite_file_engine(db_path, MetaData(), needs_pool=True, needs_background_checkpoint=False)
     _check_engine(engine)
-
-# ################################################################################################################################
-
-def test_replicated_zato_database_engine() -> 'None':
-
-    # The directory has a short path, which the socket of the barrier needs
-    directory = get_disk_dir('replicated-engine')
-    shutil.rmtree(directory)
-    os.makedirs(directory)
-
-    with replicated_environment(directory) as barrier:
-        with file_database_engine(directory) as engine:
-            _check_engine(engine)
-
-    assert barrier.request_count > 0
 
 # ################################################################################################################################
 

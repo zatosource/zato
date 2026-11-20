@@ -7,8 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # An attempt at a split brain on the database both nodes share. The process of the active node is frozen while its server
-# continues, so the lease is not renewed and the standby takes over once the lease lapses. The nodes of the shared
-# storage mode act on the lease only, so no mark-out takes place. The former server acknowledges publications until
+# continues, so the lease is not renewed and the standby takes over once the lease lapses. The nodes act on the lease
+# only. The former server acknowledges publications until
 # the server of the new active node raises the pub/sub generation and nothing afterwards, and the new active node
 # delivers what it acknowledged before.
 
@@ -112,7 +112,7 @@ def test_split_brain(ha_pair:'HAEnvironment') -> 'None':
 
     # The former node resumes, is fenced and joins again as the standby.
     _signal_node(old_active, ModuleCtx.Signal_Resume)
-    _ = old_active.wait_for_role(TakeoverCtx.Standby_In_Sync, TakeoverCtx.Rejoin_Timeout)
+    _ = old_active.wait_for_role(TakeoverCtx.Standby_Roles, TakeoverCtx.Rejoin_Timeout)
 
     logs = old_active.read_logs()
     assert TakeoverCtx.Fencing_Text in logs, f'{old_active.node_name} was not fenced'

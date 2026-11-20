@@ -23,8 +23,7 @@ pub const ENV_SERVICE_PORT: &str = "KUBERNETES_SERVICE_PORT";
 /// The directory of the service account credentials.
 const SERVICE_ACCOUNT_DIR: &str = "/var/run/secrets/kubernetes.io/serviceaccount";
 
-/// How long one request to the API server may take, which remains shorter than the gap between the mark-out
-/// and the takeover timers.
+/// How long one request to the API server may take, which remains shorter than the takeover timer.
 pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(1);
 
 /// The content type of a JSON document.

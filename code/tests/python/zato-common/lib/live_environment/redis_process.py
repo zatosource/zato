@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import subprocess
 import time
+from shutil import rmtree
 from tempfile import mkdtemp
 
 # redis
@@ -123,10 +124,12 @@ class RedisProcess:
 # ################################################################################################################################
 
     def cleanup(self) -> 'None':
-        """ Stops the server if it runs.
+        """ Stops the server if it runs and removes its data directory.
         """
         if self._process is not None:
             self.stop()
+
+        rmtree(self.data_dir)
 
 # ################################################################################################################################
 # ################################################################################################################################

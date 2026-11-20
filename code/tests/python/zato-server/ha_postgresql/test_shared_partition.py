@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The two nodes partitioned from each other while both reach the database, and the active node partitioned from
-# the database while it reaches the API server. The nodes of the shared storage mode exchange nothing directly,
+# the database while it reaches the API server. The nodes exchange nothing directly,
 # so the first partition leaves the active node renewing its lease and no takeover takes place however long
 # the partition lasts. In the second, the active node lets its lease lapse, the standby takes over, the database
 # refuses every later transaction of the former server, and the former active node rejoins as the standby.
@@ -59,7 +59,7 @@ class ModuleCtx:
     Recovery_Timeout = 300
 
     # The role of the standby
-    Standby_In_Sync = 'StandbyInSync'
+    Role_Standby = 'Standby'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -101,14 +101,14 @@ def test_partition_between_nodes(ha_pair:'HAEnvironment') -> 'None':
 
     report = standby.read_role()
     assert report is not None
-    assert report['role'] == ModuleCtx.Standby_In_Sync, report
+    assert report['role'] == ModuleCtx.Role_Standby, report
 
     heal(active)
     heal(standby)
 
     check_workload(env, workload)
 
-    _ = check_scheduler(env, active)
+    _ = check_scheduler(env)
     check_active_server(env, active)
 
 # ################################################################################################################################
