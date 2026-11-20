@@ -16,8 +16,6 @@ use crate::referee::tests::MemoryReferee;
 use crate::test_support::{self, Certificates, LOOPBACK, NODE_A, NODE_B};
 use crate::wal::ScanOutcome;
 use parking_lot::Mutex;
-use std::fs::File;
-use std::io::Read;
 use std::net::TcpListener;
 use std::sync::mpsc;
 
@@ -26,20 +24,20 @@ use std::sync::mpsc;
 const BULK_ROWS: usize = 1024;
 
 /// The size of each of these rows.
-const BULK_ROW_SIZE: usize = 64 * 1024;
+pub(super) const BULK_ROW_SIZE: usize = 64 * 1024;
 
 /// Timers that do not expire during a test.
-const TIMERS: Timers = Timers {
+pub(super) const TIMERS: Timers = Timers {
     heartbeat: Duration::from_millis(500),
     mark_out: Duration::from_mins(1),
     takeover: Duration::from_mins(2),
 };
 
 /// How long a test waits for a message of the link.
-const RECEIVE_TIMEOUT: Duration = Duration::from_secs(30);
+pub(super) const RECEIVE_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// The body of the publication acknowledged while the snapshot is being sent.
-const PUBLICATION: &[u8] = b"acknowledged-publication";
+pub(super) const PUBLICATION: &[u8] = b"acknowledged-publication";
 
 /// The report of the frames of the Zato database.
 const FRAMES: &str = "frames";
@@ -48,14 +46,14 @@ const FRAMES: &str = "frames";
 const ADMIT: &str = "admit";
 
 /// Rows whose frames make the log longer than the length at which it is checkpointed.
-const LONG_LOG_ROWS: usize = 1100;
+pub(super) const LONG_LOG_ROWS: usize = 1100;
 
 /// How many small transactions follow the checkpoint of the long log.
-const SMALL_WRITES: usize = 5;
+pub(super) const SMALL_WRITES: usize = 5;
 
 /// Held by each test that writes tens of megabytes to its database and by each test bound by a deadline,
 /// so that the writeback of the one does not hold up the commits of the other.
-static DISK: Mutex<()> = Mutex::new(());
+pub(super) static DISK: Mutex<()> = Mutex::new(());
 
 /// How long the shipper may take to decide on a checkpoint that it does not take the write lock for.
 const NO_LOCK_WAIT: Duration = Duration::from_secs(1);
@@ -203,7 +201,7 @@ fn run_confirming_standby(listener: &TcpListener, tls: &TlsContext, clock_skew_m
 }
 
 /// Returns the shared state of node A, active alone at generation 1, with node B listening on `port`.
-fn active_node(dir: &Path, certificates: &Certificates, port: u16) -> Arc<Shared> {
+pub(super) fn active_node(dir: &Path, certificates: &Certificates, port: u16) -> Arc<Shared> {
     let config = test_support::node_config(NODE_A, dir, certificates, TIMERS);
     let referee = MemoryReferee::holding(Some(RefereeRecord::solo(1, NODE_A)), 1);
     referee.addresses.lock().push(NodeAddress {
@@ -575,5 +573,3 @@ fn the_connections_of_the_node_sync_every_write() {
     assert_eq!(journal_mode, "wal");
     assert_eq!(synchronous, 2);
 }
-
-mod snapshot;

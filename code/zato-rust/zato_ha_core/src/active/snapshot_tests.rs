@@ -5,10 +5,17 @@
 
 //! The tests of the snapshot that a joining standby receives while the Zato server keeps committing.
 
+use super::tests::{BULK_ROW_SIZE, DISK, LONG_LOG_ROWS, PUBLICATION, RECEIVE_TIMEOUT, SMALL_WRITES, TIMERS, active_node};
 use super::*;
+use crate::barrier::{self, BarrierOutcome};
+use crate::config::DATABASE_FILE_NAME;
+use crate::referee::tests::MemoryReferee;
 use crate::standby;
-use std::io::Write;
-use std::net::{Shutdown, TcpStream};
+use crate::test_support::{self, Certificates, LOOPBACK, NODE_B};
+use std::fs::File;
+use std::io::{Read, Write};
+use std::net::{Shutdown, TcpListener, TcpStream};
+use std::sync::mpsc;
 
 /// How many bytes of a file the relay passes to the standby before it holds back the rest, which is less than either file
 /// of the snapshot, so that the shipper is still sending that file.

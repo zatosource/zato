@@ -556,3 +556,6 @@ impl Shipper {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod snapshot_tests;
