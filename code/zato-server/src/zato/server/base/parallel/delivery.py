@@ -31,7 +31,8 @@ from zato.common.pubsub.sql.replaced import PubSubReplaced
 from zato.common.util.retry import RetryPolicy
 from zato.common.util.time_ import parse_utc
 from zato.common.worker_slot import is_config_process
-from zato.server.base.parallel.delivery_batch import Attempt_Recorded_Key, deliver_atomic_batch, deliver_to_service
+from zato.server.base.parallel.delivery_batch import Attempt_Recorded_Key, BatchCommitFailed, deliver_atomic_batch, \
+    deliver_to_service
 from zato.server.base.parallel.delivery_rest import deliver_to_rest, get_rest_push_url
 
 # ################################################################################################################################
@@ -40,7 +41,7 @@ from zato.server.base.parallel.delivery_rest import deliver_to_rest, get_rest_pu
 if 0:
     from gevent import Greenlet
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
-    from zato.common.typing_ import anydict, anylist, callable_, floatnone, strset
+    from zato.common.typing_ import anydict, anylist, callable_, callnone, floatnone, strset
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -327,7 +328,7 @@ class PushDelivery:
             sub_config = config_by_topic[message['topic_name']]
 
             # A message that was not concluded is not acked, and nothing behind it is either ..
-            if not self._deliver_one(message, sub_config, sub_key, read_epoch):
+            if not self._deliver_one(message, sub_config, sub_key, read_epoch, None):
                 break
 
             msg_id = message['msg_id']
@@ -347,10 +348,12 @@ class PushDelivery:
         sub_config:'anydict',
         sub_key:'str',
         read_epoch:'int',
+        before_wait:'callnone',
     ) -> 'bool':
         """ Delivers one message, returning whether it was concluded - delivered, expired or given up on.
         A message of an outgoing connection's queue whose round failed is not concluded, it stays for the next round,
-        whereas a push message whose round ran out is concluded as a failed delivery.
+        whereas a push message whose round ran out is concluded as a failed delivery. A before_wait callable
+        is called before each wait between two attempts of a push message.
         """
         msg_id = message['msg_id']
         is_outgoing = sub_key.startswith(_outgoing_sub_key_prefix)
@@ -381,7 +384,11 @@ class PushDelivery:
             return ''
 
         try:
-            self._deliver_message(message, sub_config, sub_key, should_continue, read_epoch)
+            self._deliver_message(message, sub_config, sub_key, should_continue, read_epoch, before_wait)
+
+        # A commit before a wait that failed is not a failure of the delivery ..
+        except BatchCommitFailed:
+            raise
 
         except DeliveryInterrupted as e:
 
@@ -427,6 +434,8 @@ class PushDelivery:
 
             # A push message fails here only outside its retry policy, which therefore did not wait before the next read
             if not is_concluded and not is_outgoing:
+                if before_wait:
+                    before_wait()
                 wait_between_rounds()
 
             return is_concluded
@@ -560,6 +569,7 @@ class PushDelivery:
         sub_key:'str',
         should_continue:'callable_',
         read_epoch:'int',
+        before_wait:'callnone',
     ) -> 'None':
         """ Delivers one message to its target. An outgoing connection's queue invokes its delivery service once,
         which retries as the connection says, whereas a push message runs one round under its own retry policy
@@ -593,7 +603,7 @@ class PushDelivery:
             read_epoch = self._use_current_payload(message, read_epoch)
             deliver(message, sub_config)
 
-        deliver_with_policy(policy, 0, message_cid, endpoint, attempt, should_continue)
+        deliver_with_policy(policy, 0, message_cid, endpoint, attempt, should_continue, before_wait)
 
 # ################################################################################################################################
 

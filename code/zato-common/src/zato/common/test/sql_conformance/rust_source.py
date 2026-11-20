@@ -11,12 +11,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import re
+from typing import NamedTuple
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.test.sql_conformance.sources import source_file_list
+    from zato.common.typing_ import strnone, strstrdict
 
     source_file_list = source_file_list
 

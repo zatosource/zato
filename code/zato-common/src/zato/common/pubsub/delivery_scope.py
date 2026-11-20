@@ -16,7 +16,7 @@ from gevent import getcurrent
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, anylist
+    from zato.common.typing_ import anydict, anylist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -26,6 +26,9 @@ class DeliveryScope:
     """ What the subscriber services of one push delivery batch produce while they process it, which commits
     in the transaction that acknowledges the batch rather than in transactions of its own.
     """
+
+    # The messages of the batch that were concluded and are not acknowledged yet
+    msg_ids: 'strlist'
 
     # The publications that the subscriber services made, as PendingPublication objects
     publications: 'anylist'
@@ -45,6 +48,7 @@ def open_delivery_scope() -> 'DeliveryScope':
     """ Opens the scope of the batch that the current greenlet delivers.
     """
     out = DeliveryScope()
+    out.msg_ids = []
     out.publications = []
     out.audit_events = []
 
