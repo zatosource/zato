@@ -125,9 +125,12 @@ def test_hung_server_fails_over(kube_pair:'KubeEnvironment', scope:'str') -> 'No
         # The server of the active pod is frozen while its node keeps running ..
         frozen_at = freeze_server(active.pod_name, scope)
 
-        # .. the standby takes over and its server answers through the Service ..
+        # .. the standby takes over and its server answers through the Service. A request that reached the frozen
+        # worker is answered by the old server once its node stops it, so only a request sent after the takeover
+        # is an answer of the new active pod ..
         _ = standby.wait_for_role(ModuleCtx.Active_Roles, wait_timeout)
-        first_ok = wait_for_ok(client, frozen_at, wait_timeout)
+        promoted_at = time.time()
+        first_ok = wait_for_ok(client, promoted_at, wait_timeout)
 
         # .. and the node of the old active pod is the standby and has stopped the frozen server itself.
         _ = active.wait_for_role(ModuleCtx.Standby_Roles, wait_timeout)

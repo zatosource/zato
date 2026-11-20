@@ -19,6 +19,9 @@ from time import monotonic
 # gevent
 from gevent import get_hub, sleep
 
+# SQLAlchemy
+from sqlalchemy.util.langhelpers import save_generated_code
+
 # Zato
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.database import database_config, get_database_sqlite_path, get_database_type, \
@@ -226,6 +229,9 @@ def run_arbiter(zato_app:'ZatoApplication') -> 'int':
 
     # .. the version is read once, and the processes forked below inherit it rather than run git on each start ..
     _ = get_version()
+
+    # .. the code objects that SQLAlchemy generated so far are kept for the imports of the next start ..
+    save_generated_code()
 
     # .. and nothing that a fork would duplicate is open when the processes are forked.
     stop_threadpool()

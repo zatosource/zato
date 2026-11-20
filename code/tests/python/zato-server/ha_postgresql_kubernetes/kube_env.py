@@ -22,8 +22,8 @@ from dataclasses import dataclass, field
 # Zato
 from ha_authority import Authority
 from ha_env import create_quickstart_environment, start_receivers, HASession, stop_receivers
-from kube_cluster import apply_manifest, cluster, create_cluster, delete_cluster, get_kind_gateway, get_node_ip, \
-    get_pod_node, get_zato_node_names, get_zone_volume_dir, KubeProxy, kubectl, load_image, ModuleCtx as ClusterCtx, \
+from kube_cluster import apply_manifest, build_pod_image, cluster, create_cluster, delete_cluster, get_kind_gateway, get_node_ip, \
+    get_pod_node, get_zato_node_names, get_zone_volume_dir, KubeProxy, kubectl, load_images, ModuleCtx as ClusterCtx, \
     prepare_runtime_dir, save_pod_logs
 from kube_endpoints import EndpointWatcher
 from nodes import is_named_by_record, ModuleCtx as NodesCtx, Node, Timers
@@ -367,16 +367,23 @@ def _create_host_directories(run_dir:'str') -> 'None':
 
 # ################################################################################################################################
 
-def create_cluster_session() -> 'KubeSession':
+def create_cluster_session(database_image:'str', database_zone:'str') -> 'KubeSession':
     """ Creates the cluster, the receivers, the quickstart environment of the pods, the CA that they trust and the referee,
-    without the Zato database, which the caller adds.
+    without the Zato database, which the caller adds. The image of the database is loaded into the nodes of its zone
+    together with the image of the pods.
     """
     run_dir = prepare_runtime_dir()
     _create_host_directories(run_dir)
 
+    pod_image = build_pod_image()
+
     create_cluster(run_dir, NodesCtx.Repository_Dir)
 
-    load_image(NodesCtx.Zato_Image, get_zato_node_names())
+    database_nodes = [node_name for node_name, zone in cluster.zones.items() if zone == database_zone]
+
+    start_time = time.monotonic()
+    load_images({pod_image: get_zato_node_names(), database_image: database_nodes})
+    logger.info('Image load: %.1fs', time.monotonic() - start_time)
 
     base = HASession()
     base.run_dir = run_dir
@@ -415,7 +422,7 @@ def create_cluster_session() -> 'KubeSession':
     out.data_mount = data_mount
     out.placeholders = {
         'namespace': ClusterCtx.Namespace,
-        'zato_image': NodesCtx.Zato_Image,
+        'zato_image': pod_image,
         'uid': str(os.getuid()),
         'gid': str(os.getgid()),
         'repository_dir': NodesCtx.Repository_Dir,

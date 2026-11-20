@@ -2,7 +2,9 @@
 # share as the pub/sub database. The Secret postgresql-tls holds the certificate and the CA, the Secret postgresql-init
 # holds the init scripts that turn TLS on and admit the replication connection of the standby, and the Secret
 # postgresql-auth holds the password of the user. Ordinal 0 is the primary, which every commit of the pods waits on
-# until ordinal 1, initialized from it with pg_basebackup, has received it.
+# until ordinal 1, initialized from it with pg_basebackup, has received it. Both pods start at the same time, and
+# the standby repeats pg_basebackup until the primary accepts it. The data directory of each pod is a directory
+# of the node in its zone, which exists for as long as the cluster does.
 
 apiVersion: v1
 kind: Service
@@ -55,6 +57,7 @@ metadata:
 spec:
   serviceName: ${postgresql_pods_service}
   replicas: ${postgresql_replicas}
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
       app: postgresql
@@ -125,13 +128,14 @@ spec:
               primary="host=${postgresql_primary}.${postgresql_pods_service} port=${postgresql_port}"
               primary="$primary user=$POSTGRES_USER password=$POSTGRES_PASSWORD"
               primary="$primary sslmode=verify-ca sslrootcert=/certs-in/ca.crt"
-              until pg_basebackup -d "$primary" -D "$PGDATA" -R -X stream; do
+              until pg_basebackup -d "$primary" -D "$PGDATA" -R -X stream -c fast; do
                 rm -rf "$PGDATA"
                 sleep 1
               done
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
+              subPathExpr: $(POD_NAME)
             - name: tls
               mountPath: /certs-in
               readOnly: true
@@ -176,6 +180,7 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
+              subPathExpr: $(POD_NAME)
             - name: tls
               mountPath: /certs-in
               readOnly: true
@@ -193,13 +198,7 @@ spec:
           emptyDir:
             medium: Memory
             sizeLimit: ${postgresql_shm_size}
-  volumeClaimTemplates:
-    - metadata:
-        name: data
-      spec:
-        accessModes:
-          - ReadWriteOnce
-        storageClassName: standard
-        resources:
-          requests:
-            storage: 1Gi
+        - name: data
+          hostPath:
+            path: ${postgresql_data_dir}
+            type: DirectoryOrCreate

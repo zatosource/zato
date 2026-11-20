@@ -17,7 +17,7 @@ import os
 import time
 
 # Zato
-from kube_cluster import apply_manifest, cluster, load_image, ModuleCtx as ClusterCtx, wait_for_rollout
+from kube_cluster import apply_manifest, ModuleCtx as ClusterCtx, wait_for_rollout
 from kube_env import create_cluster_session, create_secret, KubeBackend, KubeSession, ModuleCtx as EnvCtx
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.direct_sql.reset import recreate_public_schema
@@ -73,6 +73,10 @@ class ModuleCtx:
 
     # The shared memory of the pod, as large as that of the database containers of the other suites
     Shm_Size = '1Gi'
+
+    # The directory of the node in which each pod keeps its data directory, which the host does not mount,
+    # so that the cluster removes it together with the node
+    Data_Dir = '/zato-ha-postgresql'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -180,6 +184,7 @@ def get_manifest_placeholders(database:'PubSubDatabase') -> 'strstrdict':
         'postgresql_node_port': str(ModuleCtx.Node_Port),
         'postgresql_zone': ModuleCtx.Zone,
         'postgresql_shm_size': ModuleCtx.Shm_Size,
+        'postgresql_data_dir': ModuleCtx.Data_Dir,
     }
 
     return out
@@ -210,10 +215,6 @@ def _start_postgresql(session:'KubeSession') -> 'KubePostgreSQL':
 
     os.makedirs(out.directory)
 
-    for node_name, zone in cluster.zones.items():
-        if zone == ModuleCtx.Zone:
-            load_image(DatabaseCtx.PostgreSQL_Image, [node_name])
-
     # The certificate is valid under the name of the Service in the pods and at the control plane node ..
     dns_names = [
         ModuleCtx.StatefulSet_Name,
@@ -242,12 +243,16 @@ def _start_postgresql(session:'KubeSession') -> 'KubePostgreSQL':
 
     # .. with the settings of the database containers of the other suites ..
     placeholders = get_manifest_placeholders(out.database)
+    start_time = time.monotonic()
     apply_manifest(ModuleCtx.Manifest_Path, placeholders)
     wait_for_rollout('statefulset', ModuleCtx.StatefulSet_Name)
+    logger.info('PostgreSQL rollout: %.1fs', time.monotonic() - start_time)
 
     # .. the primary accepts connections and each of its commits waits for the standby ..
+    start_time = time.monotonic()
     out.wait_until_ready()
     out.wait_for_synchronous_standby()
+    logger.info('PostgreSQL synchronous standby: %.1fs', time.monotonic() - start_time)
 
     # .. and the pods reach it under the name of its Service.
     host = f'{ModuleCtx.StatefulSet_Name}.{namespace}.svc.cluster.local'
@@ -272,7 +277,7 @@ def _start_postgresql(session:'KubeSession') -> 'KubePostgreSQL':
 def create_postgresql_session() -> 'KubeSession':
     """ Creates the cluster, the receivers, the quickstart environment of the pods and the PostgreSQL instance.
     """
-    out = create_cluster_session()
+    out = create_cluster_session(DatabaseCtx.PostgreSQL_Image, ModuleCtx.Zone)
 
     postgresql = _start_postgresql(out)
 

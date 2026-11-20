@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # container with the repository and the run directory mounted at their own paths - and the commands that act on it.
 
 # stdlib
+import hashlib
 import json
 import logging
 import os
@@ -17,6 +18,7 @@ import re
 import shutil
 import subprocess
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from string import Template
 from tempfile import TemporaryDirectory
@@ -31,7 +33,7 @@ from zato.common.test.reservation import forget_name, is_name_live, is_reserved_
 
 if 0:
     from zato.common.test.reservation import NameReservation
-    from zato.common.typing_ import any_, strlist, strset, strstrdict
+    from zato.common.typing_ import any_, strlist, strlistdict, strset, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -63,6 +65,12 @@ class ModuleCtx:
 
     # The zones of the Zato pods, whose worker nodes receive the Zato image
     Zato_Zones = ['zone-a', 'zone-b']
+
+    # The build directory of the runtime image of the Zato pods, the repository of its name and the length of its tag,
+    # which is a prefix of the digest of its Dockerfile
+    Pod_Image_Dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pod-image')
+    Pod_Image_Repository = 'zato-test-kube-pod'
+    Pod_Image_Tag_Length = 12
 
     # The path at which each worker node holds the local volumes of the Zato pods
     Volume_Dir = '/zato-ha-data'
@@ -316,6 +324,38 @@ def load_image(image:'str', node_names:'strlist') -> 'None':
 
         _ = run(['kind', 'load', 'image-archive', archive_path, '--name', cluster.name,
             '--nodes', ','.join(node_names)])
+
+# ################################################################################################################################
+
+def load_images(images:'strlistdict') -> 'None':
+    """ Loads each image into its nodes, all images at the same time.
+    """
+    with ThreadPoolExecutor(max_workers=len(images)) as executor:
+        futures = [executor.submit(load_image, image, node_names) for image, node_names in images.items()]
+
+        for future in futures:
+            future.result()
+
+# ################################################################################################################################
+
+def build_pod_image() -> 'str':
+    """ Builds the runtime image of the Zato pods unless the host has it already and returns its name, whose tag
+    follows the content of its Dockerfile.
+    """
+    dockerfile_path = os.path.join(ModuleCtx.Pod_Image_Dir, 'Dockerfile')
+
+    with open(dockerfile_path, 'rb') as dockerfile:
+        digest = hashlib.sha256(dockerfile.read()).hexdigest()
+
+    out = f'{ModuleCtx.Pod_Image_Repository}:{digest[:ModuleCtx.Pod_Image_Tag_Length]}'
+
+    result = docker('image', 'inspect', out, check=False)
+
+    if result.returncode != 0:
+        _ = docker('build', '-t', out, ModuleCtx.Pod_Image_Dir)
+        logger.info('Built the pod image %s', out)
+
+    return out
 
 # ################################################################################################################################
 
