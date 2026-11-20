@@ -289,8 +289,55 @@ fn a_standby_without_the_database_does_not_take_over() {
     assert_eq!(node.role(), (Role::Standby, FIRST_GENERATION));
     assert_eq!(node.record().value, RefereeRecord::new(FIRST_GENERATION, NODE_B));
 
-    // The lease is still not renewed when the database is reachable again, so the standby takes over at once.
+    // The database returns, and the standby measures the silence of the active node again from its return ..
     node.set_database_unreachable(false);
+    node.control.watch_lease().unwrap();
+    node.control.watch_lease().unwrap();
+    assert_eq!(node.role(), (Role::Standby, FIRST_GENERATION));
+
+    // .. so it takes over only once the takeover time elapses again without a renewal.
+    thread::sleep(PAST_TIMERS);
+    node.control.watch_lease().unwrap();
+    assert_eq!(node.role(), (Role::Active, FIRST_GENERATION + 1));
+}
+
+#[test]
+fn a_renewal_after_the_return_of_the_database_keeps_the_active_node() {
+    let mut node = TestNode::in_role(Role::Standby, NODE_B);
+    node.control.watch_lease().unwrap();
+    thread::sleep(PAST_TIMERS);
+
+    // The probe of the standby fails while the database is unavailable to both nodes ..
+    node.set_database_unreachable(true);
+    node.control.watch_lease().unwrap();
+
+    // .. the standby does not take over at its first probe that succeeds once the database returns ..
+    node.set_database_unreachable(false);
+    node.control.watch_lease().unwrap();
+    assert_eq!(node.role(), (Role::Standby, FIRST_GENERATION));
+
+    // .. so the active node renews in time, and the standby remains its standby.
+    node.replace_record(RefereeRecord::new(FIRST_GENERATION, NODE_B), FIRST_VERSION + 1);
+    node.control.watch_lease().unwrap();
+    assert_eq!(node.role(), (Role::Standby, FIRST_GENERATION));
+    assert_eq!(node.record().value, RefereeRecord::new(FIRST_GENERATION, NODE_B));
+}
+
+#[test]
+fn a_renewal_seen_after_a_failed_probe_does_not_delay_a_later_takeover() {
+    let mut node = TestNode::in_role(Role::Standby, NODE_B);
+    node.control.watch_lease().unwrap();
+    thread::sleep(PAST_TIMERS);
+
+    // The probe of the standby fails once, and the active node renews after the database returns ..
+    node.set_database_unreachable(true);
+    node.control.watch_lease().unwrap();
+    node.set_database_unreachable(false);
+    node.replace_record(RefereeRecord::new(FIRST_GENERATION, NODE_B), FIRST_VERSION + 1);
+    node.control.watch_lease().unwrap();
+
+    // .. so once the active node is silent for the takeover time, the standby takes over at its next watch.
+    thread::sleep(PAST_TIMERS);
     node.control.watch_lease().unwrap();
     assert_eq!(node.role(), (Role::Active, FIRST_GENERATION + 1));
 }
@@ -611,6 +658,23 @@ fn a_node_without_the_database_does_not_take_over_a_released_record() {
     node.control.watch_lease().unwrap();
     assert_eq!(node.role(), (Role::Standby, FIRST_GENERATION));
     assert_eq!(node.record().value, RefereeRecord::new(FIRST_GENERATION, NODE_B).released_by());
+}
+
+#[test]
+fn a_released_record_is_taken_over_at_once_after_the_database_returns() {
+    let mut node = TestNode::under_released(NODE_B);
+
+    // The probe fails under the released record ..
+    node.set_database_unreachable(true);
+    node.control.watch_lease().unwrap();
+    assert_eq!(node.role(), (Role::Standby, FIRST_GENERATION));
+
+    // .. and the first probe that succeeds takes the record over, since no server runs under it.
+    node.set_database_unreachable(false);
+    node.control.watch_lease().unwrap();
+    let next = FIRST_GENERATION + 1;
+    assert_eq!(node.role(), (Role::Active, next));
+    assert_eq!(node.record().value, RefereeRecord::new(next, NODE_A));
 }
 
 #[test]

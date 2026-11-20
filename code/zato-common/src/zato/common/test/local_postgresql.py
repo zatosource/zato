@@ -512,6 +512,31 @@ def get_cluster_env(cluster:'LocalCluster') -> 'strstrdict':
 
 # ################################################################################################################################
 
+def stop_primary(cluster:'LocalCluster') -> 'None':
+    """ Stops the primary of a running cluster, with its data directory and the reservation of its port left in place.
+    """
+    pg_ctl = get_binary('pg_ctl')
+    primary = cluster.primary
+
+    _ = _run([pg_ctl, 'stop', '-D', primary.data_dir, '-m', 'fast', '-w', '-t', f'{ModuleCtx.Stop_Timeout}'])
+
+# ################################################################################################################################
+
+def start_primary(cluster:'LocalCluster') -> 'None':
+    """ Starts the primary that stop_primary stopped, on its data directory and on its reserved port, and waits until
+    each commit waits for the standby again.
+    """
+    # The settings file of the primary keeps its port and its synchronous standby, so the start writes no settings ..
+    pg_ctl = get_binary('pg_ctl')
+    primary = cluster.primary
+
+    _ = _run([pg_ctl, 'start', '-D', primary.data_dir, '-l', primary.log_path, '-w', '-t', f'{ModuleCtx.Start_Timeout}'])
+
+    # .. and the function returns once the standby streams from the primary again and each commit waits for it.
+    _wait_until_synchronous(cluster)
+
+# ################################################################################################################################
+
 def stop_local_cluster(cluster:'LocalCluster') -> 'None':
     """ Stops the standby and the primary, removes their data and releases the reservations of the cluster.
     """

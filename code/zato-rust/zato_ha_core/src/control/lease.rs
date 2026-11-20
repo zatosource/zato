@@ -10,7 +10,8 @@
 //! so a slow path of the active node to either of them delays its renewals without ending them, while
 //! a late renewal is refused by the compare-and-set on the version once the standby took over. The standby measures on its own monotonic clock how long the version has not changed,
 //! restarts the measure at every read that fails, and takes over after the takeover time if its own probe of the
-//! database succeeds. The active node is never isolated by the lease, because the generation guard of the Zato
+//! database succeeds. A standby whose probe failed restarts the measure at its first probe that succeeds, so that
+//! after an outage of the database that both nodes saw, the active node renews before the takeover time elapses again. The active node is never isolated by the lease, because the generation guard of the Zato
 //! server refuses every transaction of a replaced server, so an outage of the referee alone does not stop it.
 //! An active node that does not reach the referee is fenced once the database names a higher generation.
 //!
@@ -269,6 +270,7 @@ impl Control {
             return self.become_active(current.value.generation, "takeover");
         }
 
+        // A change of the record restarts the measure, which also ends the wait for the return of the database.
         let changed = self.observed.as_ref() != Some(&current);
         if changed {
             let mut state = self.shared.state.lock();
@@ -276,6 +278,7 @@ impl Control {
             drop(state);
             self.observed = Some(current.clone());
             self.observed_at = Instant::now();
+            self.database_lost = false;
         }
 
         // A lease that its active node renews is taken over only after the takeover time without a renewal,
@@ -298,6 +301,16 @@ impl Control {
 
         // A standby that does not reach the database would start a Zato server that cannot work, so it waits.
         if !self.database_reachable() {
+            self.database_lost = true;
+            return Ok(());
+        }
+
+        // The active node renews at its first probe that succeeds once the database returns, so the standby
+        // measures the silence again from the return rather than from before the outage. A released record
+        // has no server running under it and is taken over at once.
+        let database_returned = std::mem::take(&mut self.database_lost);
+        if database_returned && !is_released {
+            self.observed_at = Instant::now();
             return Ok(());
         }
 

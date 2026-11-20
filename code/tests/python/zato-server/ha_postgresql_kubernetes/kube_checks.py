@@ -200,4 +200,24 @@ def wait_for_ok(client:'FailoverClient', after:'float', timeout:'float') -> 'Req
     raise Exception(f'No answer from the Service after {after} within {timeout}s')
 
 # ################################################################################################################################
+
+def wait_for_publications(workload:'Workload', timeout:'float') -> 'None':
+    """ Waits until the workload has a publication acknowledged after this call began.
+    """
+    with workload.lock:
+        acknowledged_before = len(workload.acknowledged)
+
+    deadline = time.monotonic() + timeout
+
+    while True:
+        with workload.lock:
+            acknowledged = len(workload.acknowledged)
+
+        if acknowledged > acknowledged_before:
+            return
+
+        assert time.monotonic() < deadline, f'No publication acknowledged within {timeout}s'
+        time.sleep(ModuleCtx.Poll_Interval)
+
+# ################################################################################################################################
 # ################################################################################################################################

@@ -8,32 +8,26 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The fault of the database under traffic. Its pod is deleted, which takes the pub/sub database away from both pods
 # at once, until its StatefulSet creates the pod again with its volume. Neither pod renews or takes over the lease while
-# its probe of the database fails, so once the database returns, the first pod whose probe succeeds holds the lease,
-# and its server acknowledges publications again within a bounded time.
+# its probe of the database fails, and the standby measures the silence of the active pod again once its probe succeeds,
+# so the pod that held the lease before the fault holds it after, and its server acknowledges publications again
+# within a bounded time.
 
 # stdlib
 import time
 
 # Zato
 from ha_checks import check_scheduler, check_workload
-from kube_checks import get_pair, ModuleCtx as ChecksCtx, start_workload
+from kube_checks import get_pair, ModuleCtx as ChecksCtx, start_workload, wait_for_publications
 from kube_cluster import get_pod_uid, kubectl, ModuleCtx as ClusterCtx, wait_for_rollout
 from kube_faults import delete_pod
-from kube_postgresql import ModuleCtx as PostgreSQLCtx
-from zato.common.typing_ import cast_
+from kube_postgresql import KubePostgreSQL, ModuleCtx as PostgreSQLCtx
+from zato.common.typing_ import any_, cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from kube_env import KubeEnvironment
-    from kube_postgresql import KubePostgreSQL
-    from workload import Workload
-    from zato.common.typing_ import any_
-
-    KubePostgreSQL = KubePostgreSQL
-    Workload = Workload
-    any_ = any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,35 +67,15 @@ def _wait_for_new_pod(deleted_uid:'str') -> 'None':
         time.sleep(ModuleCtx.Poll_Interval)
 
 # ################################################################################################################################
-
-def _wait_for_publications(workload:'Workload') -> 'None':
-    """ Waits until the workload has a publication acknowledged after this call began.
-    """
-    with workload.lock:
-        acknowledged_before = len(workload.acknowledged)
-
-    deadline = time.monotonic() + ModuleCtx.Resume_Timeout
-
-    while True:
-        with workload.lock:
-            acknowledged = len(workload.acknowledged)
-
-        if acknowledged > acknowledged_before:
-            return
-
-        assert time.monotonic() < deadline, f'No publication acknowledged within {ModuleCtx.Resume_Timeout}s'
-        time.sleep(ModuleCtx.Poll_Interval)
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 def test_postgresql_pod_deleted(kube_pair:'KubeEnvironment') -> 'None':
-    """ The pod of the database is deleted under traffic. Once the database returns with its volume, the pod that holds
-    the lease is active, at the generation of the record from before the fault if it is the same pod and at a higher one
-    otherwise, and nothing acknowledged is lost.
+    """ The pod of the database is deleted under traffic. Once the database returns with its volume, the pod that held
+    the lease before the fault holds it at the generation of the record from before the fault, and nothing acknowledged
+    is lost.
     """
     env = kube_pair
-    postgresql = cast_('KubePostgreSQL', env.session.backends[0])
+    postgresql = cast_(KubePostgreSQL, env.session.backends[0])
     workload = start_workload(env)
 
     active, _ = get_pair(env)
@@ -121,21 +95,18 @@ def test_postgresql_pod_deleted(kube_pair:'KubeEnvironment') -> 'None':
 
     record = env.referee.read_record()
     assert record is not None
-    assert record['active_node'] == returned.pod_name, record
-
-    if returned is active:
-        assert record['generation'] == generation, record
-    else:
-        assert record['generation'] > generation, record
+    assert returned.pod_name == active.pod_name, record
+    assert record['active_node'] == active.pod_name, record
+    assert record['generation'] == generation, record
 
     # The server connects to the database again within a bounded time rather than after the retransmissions
     # of its earlier connection attempts run out.
-    _wait_for_publications(workload)
+    wait_for_publications(workload, ModuleCtx.Resume_Timeout)
 
     workload.fault_windows.append((started, time.time()))
 
-    check_workload(cast_('any_', env), workload)
-    _ = check_scheduler(cast_('any_', env), ModuleCtx.Unrun_Claims)
+    check_workload(cast_(any_, env), workload)
+    _ = check_scheduler(cast_(any_, env), ModuleCtx.Unrun_Claims)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -10,28 +10,21 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # the primary through a Service without a selector, under a name of the cluster.
 
 # stdlib
-import copy
 import time
-
-# pytest
-import pytest
 
 # Zato
 from kube_checks import get_pair
 from kube_cluster import get_node_ip, kubectl, ModuleCtx as ClusterCtx
-from kube_env import ModuleCtx as EnvCtx, ready_kube_pair
-from kube_faults import restore_cluster
-from kube_local_postgresql import is_local_backend, KubeLocalPostgreSQL, ModuleCtx as LocalCtx, start_local_backend, \
-    use_local_backend
-from nodes import Timers
+from kube_env import ModuleCtx as EnvCtx
+from kube_local_postgresql import KubeLocalPostgreSQL, ModuleCtx as LocalCtx
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from kube_env import KubeEnvironment, KubeSession
-    from zato.common.typing_ import any_, strset
+    from kube_env import KubeEnvironment
+    from zato.common.typing_ import strset
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,44 +34,6 @@ class ModuleCtx:
     # How long the server of the active pod may take to open its sessions with the primary, and how often they are read
     Sessions_Timeout = 60
     Poll_Interval = 0.5
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@pytest.fixture(scope='module')
-def local_session(kube_session:'KubeSession') -> 'any_':
-    """ The session with the local build as the Zato database of the pods. A session that already runs on the local
-    build is used as it is, and any other one receives a local cluster for the tests of this module.
-    """
-    if is_local_backend():
-        yield kube_session
-        return
-
-    backend = start_local_backend()
-
-    out = copy.copy(kube_session)
-    out.placeholders = dict(kube_session.placeholders)
-    use_local_backend(out, backend)
-
-    try:
-        yield out
-    finally:
-        _ = kubectl('delete', 'statefulset', EnvCtx.StatefulSet_Name, '-n', ClusterCtx.Namespace, '--ignore-not-found',
-            '--wait=true')
-        backend.remove_service()
-        backend.stop()
-
-# ################################################################################################################################
-
-@pytest.fixture
-def local_pair(local_session:'KubeSession', request:'any_') -> 'any_':
-    """ A pair on the local build that is ready, with every node of the cluster restored once the test completes.
-    """
-    try:
-        with ready_kube_pair(local_session, request.node.name, Timers()) as env:
-            yield env
-    finally:
-        restore_cluster()
 
 # ################################################################################################################################
 # ################################################################################################################################

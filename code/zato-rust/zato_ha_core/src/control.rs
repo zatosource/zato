@@ -132,6 +132,10 @@ pub struct Control {
     /// When the standby last saw the record change or failed to read it.
     observed_at: Instant,
 
+    /// Whether the last probe of the database by the standby failed and the record has not changed since,
+    /// so that the standby measures the silence of the active node again once the database returns.
+    database_lost: bool,
+
     /// The hold-off of the next resignation, which doubles with consecutive resignations up to the longest hold-off.
     hold_off: Duration,
 
@@ -166,6 +170,7 @@ impl Control {
             database_generation: None,
             observed: None,
             observed_at: Instant::now(),
+            database_lost: false,
             hold_off,
             last_resigned_at: None,
             release_wait: STOP_GRACE.saturating_add(RELEASE_MARGIN),
