@@ -195,22 +195,6 @@ class Pickup:
 
 # ################################################################################################################################
 
-    def wait_for_failed_import(self, completed_before:'int', failed_before:'int', what:'str') -> 'None':
-        """ Waits until the server fails one more enmasse import and has none running, and raises if one completed.
-        """
-        def _is_failed() -> 'bool':
-            started, completed, failed = self.count_markers()
-
-            if completed > completed_before:
-                raise Exception(f'The server imported {what}, which was expected to fail, see {self.log_path}')
-
-            out = failed > failed_before and started == completed + failed
-            return out
-
-        wait_for(_is_failed, f'The failed import of {what}')
-
-# ################################################################################################################################
-
     def place(self, name:'str', definitions:'str') -> 'str':
         """ Writes an enmasse file into the pickup directory and returns its name, without waiting for the import.
         """

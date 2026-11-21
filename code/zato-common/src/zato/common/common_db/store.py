@@ -19,7 +19,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from zato.common.common_db.schema import shared_object_table
 from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.database import get_database_engine
-from zato.common.db_env.engine import call_database
+from zato.common.db_env.engine import call_database, read_database
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -154,6 +154,8 @@ def _update(engine:'Engine', object_type:'str', name:'str', data:'anydict', vers
 class SharedObjectStore:
     """ JSON documents in the Zato database, each under a type and a name. Every write is a compare-and-set
     against the version that the writer read, so of two concurrent writers of one object, only one succeeds.
+    The reads run outside of the writer queue of the server, and a read that precedes a concurrent commit
+    is followed by a compare-and-set that fails, after which its caller reads again.
     """
 
     def __init__(self, engine:'Engine | None'=None) -> 'None':
@@ -182,7 +184,7 @@ class SharedObjectStore:
         """
         engine = self.engine
 
-        out = call_database(engine, _get, engine, object_type, name)
+        out = read_database(engine, _get, engine, object_type, name)
         return out
 
 # ################################################################################################################################
@@ -192,7 +194,7 @@ class SharedObjectStore:
         """
         engine = self.engine
 
-        out = call_database(engine, _list, engine, object_type)
+        out = read_database(engine, _list, engine, object_type)
         return out
 
 # ################################################################################################################################

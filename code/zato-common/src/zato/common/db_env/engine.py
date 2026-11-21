@@ -668,6 +668,21 @@ def call_database(engine:'Engine', func:'callable_', *args:'any_', prepare:'call
 
 # ################################################################################################################################
 
+def read_database(engine:'Engine', func:'callable_', *args:'any_') -> 'any_':
+    """ Runs one blocking read, in the thread pool of the gevent hub if the engine needs it, outside of the write lock
+    of this process and of the writer queue of the server. A read of SQLite in WAL mode waits neither for a writer
+    nor for the sync of a commit, so a write that waits for its sync does not delay it.
+    """
+    if needs_thread_pool(engine):
+        hub = get_hub()
+        out = hub.threadpool.apply(func, args)
+    else:
+        out = func(*args)
+
+    return out
+
+# ################################################################################################################################
+
 def _execute_in_transaction(engine:'Engine', statement:'any_', *params:'any_') -> 'any_':
     with engine.begin() as connection:
         out = connection.execute(statement, *params)

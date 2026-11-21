@@ -875,6 +875,35 @@ test-ha-pubsub-subscription: ## Governed subscription rows of the configuration 
 		$(Zato_Test_FSFault_Env) Zato_Test_PubSub_DB_Mode=$$mode $(call Zato_Test_HA_Pytest,pubsub-subscription-$(subst -,_,$$mode),$(addprefix $(Zato_Test_HA_Dir_pubsub-subscription)/,$(Zato_Test_HA_Modules_pubsub-subscription)) $(Zato_Test_Without_Soak)) || exit $$?; \
 	done
 
+test-tmp-store-reads: ## The reads of the shared object store outside of the writer queue - the store, the run state of the scheduler, the floor of the pub/sub clock, the writer queue and the delay of the syncs during a reload on a live server on SQLite.
+	$(Zato_Log_Reset)
+	$(Zato_Test_FSFault_Build)
+	$(MAKE) ipc-build $(Zato_Log)
+	$(MAKE) ha-node-build $(Zato_Log)
+	$(MAKE) scheduler-build $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/process_queue/test_read_database_queue.py \
+		$(CURDIR)/code/tests/python/zato-common/process_queue/test_call_database_wait.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_tmp_store_reads_queue -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-common/common_db/test_shared_objects.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_tmp_store_reads_common_db -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/scheduler_run_state/test_run_state_entries.py \
+		$(CURDIR)/code/tests/python/zato-server/scheduler_run_state/test_run_state_lifecycle.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_tmp_store_reads_run_state -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
+		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_store_sqlite.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_tmp_store_reads_clock -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	$(Zato_Test_FSFault_Env) Zato_Test_PubSub_DB_Mode=sqlite ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(Zato_Test_HA_Dir_pubsub-subscription)/test_disk_faults.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_tmp_store_reads_disk_faults -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
 test-ha-pubsub-subscription-ui: ## Governed subscription rows of the configuration database in Dashboard, on SQLite and on PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(Zato_Log_Reset)
 	$(Zato_Test_FSFault_Build)
