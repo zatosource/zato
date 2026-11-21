@@ -246,16 +246,18 @@ def get_sqlite_file_engine(
     metadata_tuple = (metadata,)
     _create_sqlite_schema(db_path, out, metadata_tuple)
 
-    # .. start the checkpoints of the WAL that the commits no longer run, in one process of the server,
-    # retaining the checkpointer by the engine's key so dispose_sqlite_file_engine can stop its thread ..
+    # .. retain the engine for subsequent callers ..
+    _sqlite_file_engine_cache[cache_key] = out
+
+    # .. and start the checkpoints of the WAL that the commits no longer run, in one process of the server,
+    # retaining the checkpointer by the engine's key so dispose_cached_engines can stop its thread. Both caches
+    # are filled before the thread starts, because under gevent the start yields to other greenlets, and a greenlet
+    # that found the caches empty would start a second checkpointer that no cache retains.
     if file_engine.needs_background_checkpoint:
         if is_config_owner():
             checkpointer = WALCheckpointer(out, db_path=db_path)
-            checkpointer.start()
             _checkpointer_cache[cache_key] = checkpointer
-
-    # .. and retain the engine for subsequent callers.
-    _sqlite_file_engine_cache[cache_key] = out
+            checkpointer.start()
 
     return out
 
@@ -424,15 +426,16 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
     else:
         create_schemas(out, config.metadata_tuple)
 
-    # .. start the checkpoints of the WAL that the commits no longer run, in one process of the server ..
+    # .. cache the engine for all future callers ..
+    _engine_cache[cache_key] = out
+
+    # .. and start the checkpoints of the WAL that the commits no longer run, in one process of the server,
+    # with both caches filled before the thread starts, as in get_sqlite_file_engine.
     if env_engine.needs_background_checkpoint:
         if is_config_owner():
             checkpointer = WALCheckpointer(out, db_path=env_engine.db_path)
-            checkpointer.start()
             _checkpointer_cache[cache_key] = checkpointer
-
-    # .. and cache the engine for all future callers.
-    _engine_cache[cache_key] = out
+            checkpointer.start()
 
     return out
 
