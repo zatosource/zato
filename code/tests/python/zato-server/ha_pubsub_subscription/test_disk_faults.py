@@ -33,8 +33,9 @@ if 0:
 
 class ModuleCtx:
 
-    # How long each sync of the pub/sub database waits during the first fault, past the deadline of its writes
-    Sync_Delay_Ms = Lock_Timeout_Ms + 1000
+    # How long each sync of the pub/sub database waits during the first fault, which outlasts the deadline
+    # of the writes queued behind it several times over
+    Sync_Delay_Ms = Lock_Timeout_Ms * 6
 
     # The error that each write of the pub/sub database fails with during the second fault
     Write_Error = 'ENOSPC'
@@ -58,16 +59,19 @@ def test_disk_faults(environment:'any_', pickup:'any_', runtime:'any_', names:'a
     # The path that fsfault.so compares is the one that the descriptors of the server resolve to
     fault = FilesystemFault(os.path.realpath(environment.audit_db_path))
 
-    # The syncs are delayed while the server applies the addition ..
+    # The syncs are delayed while the server applies the addition, so the pair is pending for as long as the first
+    # commit after it waits for its sync and the writes queued behind that commit wait past their deadline ..
+    _, completed_before, failed_before = pickup.count_markers()
     fault.delay_syncs(ModuleCtx.Sync_Delay_Ms)
 
     try:
-        pickup.apply('add-second-during-sync-delay',
+        file_name = pickup.place('add-second-during-sync-delay',
             yaml_subscription(names.security_pull, [names.topic_pull, names.topic_second]))
         wait_for_unconfirmed(runtime)
     finally:
         fault.clear()
 
+    pickup.wait_for_import(completed_before, failed_before, file_name)
     wait_for_no_unconfirmed(runtime)
 
     assert added_pair in runtime.governed_pairs()

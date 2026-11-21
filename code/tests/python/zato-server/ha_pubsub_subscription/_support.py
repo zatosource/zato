@@ -195,18 +195,27 @@ class Pickup:
 
 # ################################################################################################################################
 
-    def apply(self, name:'str', definitions:'str') -> 'None':
-        """ Writes an enmasse file into the pickup directory and waits for the import to complete.
+    def place(self, name:'str', definitions:'str') -> 'str':
+        """ Writes an enmasse file into the pickup directory and returns its name, without waiting for the import.
         """
-        _, completed_before, failed_before = self.count_markers()
         self.counter += 1
 
-        file_name = f'enmasse-{self.counter:04d}-{name}.yaml'
-        path = os.path.join(self.environment.pickup_directory, file_name)
+        out = f'enmasse-{self.counter:04d}-{name}.yaml'
+        path = os.path.join(self.environment.pickup_directory, out)
 
         with open(path, 'w') as enmasse_file:
             _ = enmasse_file.write(definitions)
 
+        return out
+
+# ################################################################################################################################
+
+    def apply(self, name:'str', definitions:'str') -> 'None':
+        """ Writes an enmasse file into the pickup directory and waits for the import to complete.
+        """
+        _, completed_before, failed_before = self.count_markers()
+
+        file_name = self.place(name, definitions)
         self.wait_for_import(completed_before, failed_before, file_name)
 
 # ################################################################################################################################
