@@ -12,9 +12,6 @@ $.fn.zato.pubsub.subscription.config = {
     secDefLabel: 'Security definition',
     serviceLabel: 'Service',
     statusPollIntervalMs: 1000,
-    statusConfirmed: 'confirmed',
-    statusPending: 'pending',
-    statusPendingRemoval: 'pending-removal',
 };
 
 // Tri-state checkbox functionality
@@ -281,27 +278,6 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, insta
     var tableSelector = isEditMode ? '#id_edit-multi-select-table' : '#multi-select-table';
     var tdSelector = isEditMode ? '#id_edit-td_topic_list' : '#td_topic_list';
 }
-
-// /////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.pubsub.subscription.pairStatusBadges = function(topicNameList) {
-    var config = $.fn.zato.pubsub.subscription.config;
-    var html = '';
-
-    if (!topicNameList) {
-        return html;
-    }
-
-    for (var topicIdx = 0; topicIdx < topicNameList.length; topicIdx++) {
-        var topic = topicNameList[topicIdx];
-        if (topic.status === config.statusConfirmed) {
-            continue;
-        }
-        html += '<span class="ps-pair-status ps-pair-status-' + topic.status + '">' + topic.status + '</span>';
-    }
-
-    return html;
-};
 
 // /////////////////////////////////////////////////////////////////////////////
 
@@ -648,8 +624,8 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 
     var delivery_css_class = is_delivery_active ? 'ps-badge-deliv-enabled' : 'ps-badge-deliv-disabled';
     var pub_css_class = is_pub_active ? 'ps-badge-pub-enabled' : 'ps-badge-pub-disabled';
-    var pair_status_badges = $.fn.zato.pubsub.subscription.pairStatusBadges(item.topic_name_list);
-    row += '<td style="text-align:center"><div class="enabled-for-inner"><div class="ps-status-cell"><span class="ps-badge ' + delivery_css_class + '">Delivery</span><span class="ps-badge ' + pub_css_class + '">Pub</span>' + pair_status_badges + '</div></div></td>';
+    // The status of each pair is known to the worker only, so the list rendered by the server shows it after a save
+    row += '<td style="text-align:center"><div class="enabled-for-inner"><div class="ps-status-cell"><span class="ps-badge ' + delivery_css_class + '">Delivery</span><span class="ps-badge ' + pub_css_class + '">Pub</span></div></div></td>';
 
     if(item.delivery_type === 'pull') {
         row += '<td style="text-align:center"><div class="col-center-left">Pull</div></td>';

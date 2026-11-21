@@ -832,11 +832,19 @@ test-ha-push-delivery: ## The commit of the concluded messages of a push deliver
 
 Zato_Test_FSFault_Control := $(Zato_Test_FSFault_Dir)/control
 
-test-ha-pubsub-subscription-in-process: ## Governed subscription rows of the configuration database on a server assembled in-process, on SQLite and on PostgreSQL, with fsfault.so loaded, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
-	$(Zato_Log_Reset)
+# Builds fsfault.so and writes its control file with no fault in it.
+define Zato_Test_FSFault_Build
 	mkdir -p $(Zato_Test_FSFault_Dir)
 	gcc -O2 -Wall -Wextra -shared -fPIC -o $(Zato_Test_FSFault_Library) $(Zato_Test_FSFault_Source) -ldl -lpthread
 	printf 'prefix=\n' > $(Zato_Test_FSFault_Control)
+endef
+
+# The variables under which a process, and every process it starts, loads fsfault.so and reads its control file.
+Zato_Test_FSFault_Env = LD_PRELOAD=$(Zato_Test_FSFault_Library) ZATO_FSFAULT_CONTROL=$(Zato_Test_FSFault_Control)
+
+test-ha-pubsub-subscription-in-process: ## Governed subscription rows of the configuration database on a server assembled in-process, on SQLite and on PostgreSQL, with fsfault.so loaded, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+	$(Zato_Log_Reset)
+	$(Zato_Test_FSFault_Build)
 	$(MAKE) common-core-build $(Zato_Log)
 	$(LOAD_CARGO_ENV) && cargo test --manifest-path $(ZATO_RUST)/zato_common_core/Cargo.toml --lib pubsub_subscription_list $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -845,8 +853,7 @@ test-ha-pubsub-subscription-in-process: ## Governed subscription rows of the con
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ha_pubsub_subscription_enmasse_flags \
 		-W ignore::DeprecationWarning $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	for mode in sqlite postgresql; do \
-		LD_PRELOAD=$(Zato_Test_FSFault_Library) ZATO_FSFAULT_CONTROL=$(Zato_Test_FSFault_Control) \
-		Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) \
+		$(Zato_Test_FSFault_Env) Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) \
 		$(ZATO_PY) -m gevent.monkey --module pytest \
 			$(Zato_Test_HA_Dir_pubsub-subscription-in-process)/ \
 			-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ha_pubsub_subscription_in_process_$$mode \
@@ -855,6 +862,7 @@ test-ha-pubsub-subscription-in-process: ## Governed subscription rows of the con
 
 test-ha-pubsub-subscription: ## Governed subscription rows of the configuration database on a live server, on SQLite and on PostgreSQL, with disk, lock, process and network faults, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(Zato_Log_Reset)
+	$(Zato_Test_FSFault_Build)
 	@for module in $(Zato_Test_HA_Dir_pubsub-subscription)/test_*.py; do \
 		case " $(Zato_Test_HA_Modules_pubsub-subscription) " in \
 			*" $$(basename $$module) "*) ;; \
@@ -864,13 +872,14 @@ test-ha-pubsub-subscription: ## Governed subscription rows of the configuration 
 	$(MAKE) ha-node-build $(Zato_Log)
 	$(MAKE) scheduler-build $(Zato_Log)
 	for mode in sqlite postgresql; do \
-		Zato_Test_PubSub_DB_Mode=$$mode $(call Zato_Test_HA_Pytest,pubsub-subscription-$(subst -,_,$$mode),$(addprefix $(Zato_Test_HA_Dir_pubsub-subscription)/,$(Zato_Test_HA_Modules_pubsub-subscription)) $(Zato_Test_Without_Soak)) || exit $$?; \
+		$(Zato_Test_FSFault_Env) Zato_Test_PubSub_DB_Mode=$$mode $(call Zato_Test_HA_Pytest,pubsub-subscription-$(subst -,_,$$mode),$(addprefix $(Zato_Test_HA_Dir_pubsub-subscription)/,$(Zato_Test_HA_Modules_pubsub-subscription)) $(Zato_Test_Without_Soak)) || exit $$?; \
 	done
 
 test-ha-pubsub-subscription-ui: ## Governed subscription rows of the configuration database in Dashboard, on SQLite and on PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(Zato_Log_Reset)
+	$(Zato_Test_FSFault_Build)
 	for mode in sqlite postgresql; do \
-		Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(Zato_Test_FSFault_Env) Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 			$(Zato_Test_HA_Dir_pubsub-subscription-ui)/ \
 			-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ha_pubsub_subscription_ui_$$mode \
 			-o log_cli_level=WARNING -W ignore::DeprecationWarning $(Zato_Test_HA_Stepwise) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \

@@ -9,15 +9,22 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import time
+from dataclasses import dataclass
 
 # PyYAML
 import yaml
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.test.client import PublishClient, PullClient
+from zato.common.test.pubsub_database import connect, get_db_mode, is_postgresql_mode
+from zato.common.test.pubsub_in_process_support import SQLiteWriteLock
 
 # Live environment
-from live_containers.ready import wait_until
+from live_environment.quickstart import Host
+
+# Fault tools
+from toxiproxy import Database_Proxy, Stream_Downstream, Toxiproxy
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -25,23 +32,65 @@ from live_containers.ready import wait_until
 if 0:
     from live_environment.quickstart import ZatoEnvironment
     from zato.common.test.client import AdminClient
-    from zato.common.typing_ import anydict, strstrdict
+    from zato.common.test.pubsub_database import PubSubDatabase
+    from zato.common.typing_ import anydict, anylist, callable_, strlist, strset, strstrdict
+
+    AdminClient = AdminClient
+    PubSubDatabase = PubSubDatabase
+    ZatoEnvironment = ZatoEnvironment
+    anydict = anydict
+    anylist = anylist
+    callable_ = callable_
+    strlist = strlist
+    strset = strset
+    strstrdict = strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ModuleCtx:
 
-    # The service the suite deploys to hold locks and read subscription rows
+    # The services the suite deploys - its own, which reads the worker, and the test services of the pub/sub REST suites
     Runtime_Service      = 'ha.pubsub.subscription.runtime'
     Runtime_Service_File = 'ha_pubsub_subscription_runtime.py'
+    REST_Services_File   = 'ha_pubsub_subscription_rest.py'
 
-    # The markers the server writes for each pickup import
+    Get_Sub_Keys_Service     = 'test.pubsub-rest.get-sub-keys'
+    Get_Queue_Depths_Service = 'test.pubsub-rest.get-queue-depths'
+
+    # The markers the server writes for each enmasse import that it runs
     Marker_Started   = 'Invoking command'
     Marker_Import    = '--import'
     Marker_Completed = 'Enmasse stderr'
+    Marker_Failed    = 'Enmasse import failed'
 
     Log_Path = os.path.join('logs', 'server.log')
+
+    # How long a condition that the suite waits for may take to hold, in seconds, and how often it is checked
+    Wait_Timeout  = 180.0
+    Poll_Interval = 0.5
+
+    # How long one REST call of a publisher or a subscriber may take, in seconds
+    Client_Timeout = 60.0
+
+    # The status of a pair whose rows match the subscription list
+    Status_Confirmed = 'confirmed'
+
+    # The toxic that resets each connection from the server to PostgreSQL
+    Toxic_Reset_Peer = 'reset_peer'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def wait_for(check:'callable_', what:'str', timeout:'float'=ModuleCtx.Wait_Timeout) -> 'None':
+    """ Polls a check until it returns True and raises once the timeout passes.
+    """
+    deadline = time.monotonic() + timeout
+
+    while not check():
+        if time.monotonic() > deadline:
+            raise Exception(f'{what} did not happen within {timeout}s')
+        time.sleep(ModuleCtx.Poll_Interval)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,7 +100,7 @@ class Names:
     """
 
     def __init__(self) -> 'None':
-        suffix = CryptoManager.generate_hex_string(8)
+        suffix = CryptoManager.generate_hex_string(32)
 
         self.security_pull = f'ha.sub.sec.pull.{suffix}'
         self.security_second = f'ha.sub.sec.second.{suffix}'
@@ -76,8 +125,18 @@ class Names:
 # ################################################################################################################################
 # ################################################################################################################################
 
+@dataclass
+class DatabaseProxy:
+    """ The proxy of Toxiproxy through which the server reaches PostgreSQL.
+    """
+    toxiproxy: 'Toxiproxy'
+    listen_port: 'int'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Pickup:
-    """ Places enmasse files in the pickup directory and waits for each import to complete.
+    """ Places enmasse files in the pickup directory and waits for the server to import each one.
     """
 
     def __init__(self, environment:'ZatoEnvironment') -> 'None':
@@ -98,21 +157,46 @@ class Pickup:
 
 # ################################################################################################################################
 
-    def _count_completed(self, text:'str') -> 'int':
+    def count_markers(self) -> 'tuple[int, int, int]':
+        """ How many enmasse imports the log of the server says started, completed and failed.
+        """
+        started = 0
         completed = 0
+        failed = 0
 
-        for line in text.splitlines():
-            if ModuleCtx.Marker_Completed in line:
+        for line in self._read_log().splitlines():
+            if ModuleCtx.Marker_Started in line and ModuleCtx.Marker_Import in line:
+                started += 1
+            elif ModuleCtx.Marker_Completed in line:
                 completed += 1
+            elif ModuleCtx.Marker_Failed in line:
+                failed += 1
 
-        return completed
+        out = started, completed, failed
+        return out
+
+# ################################################################################################################################
+
+    def wait_for_import(self, completed_before:'int', failed_before:'int', what:'str') -> 'None':
+        """ Waits until the server completes one more enmasse import and has none running, and raises if one failed.
+        """
+        def _is_imported() -> 'bool':
+            started, completed, failed = self.count_markers()
+
+            if failed > failed_before:
+                raise Exception(f'The server could not import {what}, see {self.log_path}')
+
+            out = completed > completed_before and started == completed
+            return out
+
+        wait_for(_is_imported, f'The import of {what}')
 
 # ################################################################################################################################
 
     def apply(self, name:'str', definitions:'str') -> 'None':
         """ Writes an enmasse file into the pickup directory and waits for the import to complete.
         """
-        before = self._count_completed(self._read_log())
+        _, completed_before, failed_before = self.count_markers()
         self.counter += 1
 
         file_name = f'enmasse-{self.counter:04d}-{name}.yaml'
@@ -121,17 +205,13 @@ class Pickup:
         with open(path, 'w') as enmasse_file:
             _ = enmasse_file.write(definitions)
 
-        def _completed() -> 'bool':
-            out = self._count_completed(self._read_log()) > before
-            return out
-
-        wait_until(_completed, f'pickup import {file_name}')
+        self.wait_for_import(completed_before, failed_before, file_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Runtime:
-    """ Invokes the runtime service of the suite.
+    """ Invokes the services that the suite deployed into the live server.
     """
 
     def __init__(self, client:'AdminClient') -> 'None':
@@ -139,46 +219,143 @@ class Runtime:
 
 # ################################################################################################################################
 
-    def invoke(self, request:'anydict') -> 'anydict':
-        response = self.client.invoke(ModuleCtx.Runtime_Service, request)
-        return response
-
-# ################################################################################################################################
-
-    def hold_locks(self, topic_name:'str', hold_seconds:'float') -> 'None':
-        """ Holds the write lock of the pub/sub database for the given time.
-        """
-        _ = self.invoke({
-            'action': 'hold_locks',
-            'topic_name': topic_name,
-            'hold_seconds': hold_seconds,
-            'row_count': 1,
-        })
-
-# ################################################################################################################################
-
-    def governed_pairs(self) -> 'list':
-        """ Returns the governed subscriber and topic pairs of the pub/sub database.
-        """
-        response = self.invoke({'action': 'governed_pairs'})
-        out = response['pairs']
+    def _invoke_runtime(self, action:'str') -> 'anydict':
+        out = self.client.invoke(ModuleCtx.Runtime_Service, {'action': action})
         return out
 
 # ################################################################################################################################
 
-    def statuses(self) -> 'list':
-        """ Returns the statuses of the subscription list.
+    def governed_pairs(self) -> 'set[tuple[str, str]]':
+        """ Returns the governed subscriber and topic pairs that the pub/sub database has rows of.
         """
-        response = self.invoke({'action': 'statuses'})
+        response = self._invoke_runtime('governed_pairs')
+
+        out:'set[tuple[str, str]]' = set()
+
+        for sub_key, topic_name in response['pairs']:
+            out.add((sub_key, topic_name))
+
+        return out
+
+# ################################################################################################################################
+
+    def statuses(self) -> 'anylist':
+        """ Returns each pair of the subscription list of the worker with its status.
+        """
+        response = self._invoke_runtime('statuses')
         out = response['statuses']
         return out
 
 # ################################################################################################################################
 
-    def kill_worker(self) -> 'None':
-        """ Sends SIGKILL to the worker process of the server.
+    def has_unconfirmed(self) -> 'bool':
+        """ Whether any pair of the subscription list waits for its rows to be written or deleted.
         """
-        _ = self.invoke({'action': 'kill_worker'})
+        for _sub_key, _topic_name, status in self.statuses():
+            if status != ModuleCtx.Status_Confirmed:
+                return True
+
+        return False
+
+# ################################################################################################################################
+
+    def listed_pairs(self) -> 'set[tuple[str, str]]':
+        """ Returns the pairs of the subscription list of the worker.
+        """
+        out:'set[tuple[str, str]]' = set()
+
+        for sub_key, topic_name, _status in self.statuses():
+            out.add((sub_key, topic_name))
+
+        return out
+
+# ################################################################################################################################
+
+    def kill_worker(self) -> 'None':
+        """ Sends SIGKILL to the worker process of the server, which ends the request that asks for it.
+        """
+        _ = self._invoke_runtime('kill_worker')
+
+# ################################################################################################################################
+
+    def sub_key(self, security_name:'str') -> 'str':
+        """ Returns the subscription key of the subscriber with the given security definition.
+        """
+        response = self.client.invoke(ModuleCtx.Get_Sub_Keys_Service, {})
+        out = response['sub_keys'][security_name]
+        return out
+
+# ################################################################################################################################
+
+    def queue_depth(self, sub_key:'str') -> 'int':
+        """ Returns how many deliveries the queue of a subscriber holds.
+        """
+        response = self.client.invoke(ModuleCtx.Get_Queue_Depths_Service, {'sub_keys': [sub_key]})
+        out = response['depths'][sub_key]
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class WriteFault:
+    """ Fails the writes of the server to the pub/sub database - on SQLite through the write lock held by a process
+    of its own past the deadline of the writes, and on PostgreSQL through a reset_peer toxic on the link of the server.
+    """
+
+    def __init__(self, environment:'ZatoEnvironment', database_proxy:'DatabaseProxy | None') -> 'None':
+        self.database_proxy = database_proxy
+        self.write_lock = SQLiteWriteLock(environment.audit_db_path)
+
+# ################################################################################################################################
+
+    def apply(self) -> 'None':
+        if self.database_proxy is None:
+            self.write_lock.acquire()
+        else:
+            self.database_proxy.toxiproxy.add_toxic(
+                Database_Proxy, ModuleCtx.Toxic_Reset_Peer, {'timeout': 0}, Stream_Downstream)
+
+# ################################################################################################################################
+
+    def remove(self) -> 'None':
+        if self.database_proxy is None:
+            self.write_lock.release()
+        else:
+            self.database_proxy.toxiproxy.remove_toxics(Database_Proxy)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class RowLock:
+    """ Holds a lock on rows of a pub/sub table of PostgreSQL from a session of the test.
+    """
+
+    def __init__(self, database:'PubSubDatabase', statement:'str', params:'anylist') -> 'None':
+        self.database = database
+        self.statement = statement
+        self.params = params
+        self.connection = None
+
+# ################################################################################################################################
+
+    def acquire(self) -> 'None':
+        """ Opens a session, whose first statement begins its transaction, and locks the rows.
+        """
+        self.connection = connect(self.database)
+        cursor = self.connection.cursor()
+        cursor.execute(self.statement, self.params)
+
+# ################################################################################################################################
+
+    def release(self) -> 'None':
+        """ Rolls the transaction back, which releases the locks, and closes the session.
+        """
+        if self.connection is None:
+            return
+
+        self.connection.rollback()
+        self.connection.close()
+        self.connection = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -194,14 +371,14 @@ def render_template(template_path:'str', placeholders:'strstrdict') -> 'str':
 
 # ################################################################################################################################
 
-def yaml_add_second_topic(names:'Names') -> 'str':
-    """ Returns an enmasse file that adds the second topic to the pull subscription.
+def yaml_subscription(security_name:'str', topic_names:'strlist') -> 'str':
+    """ Returns an enmasse file that subscribes a pull subscriber to exactly the given topics.
     """
     definition = {
         'pubsub_subscription': [{
-            'security': names.security_pull,
+            'security': security_name,
             'delivery_type': 'pull',
-            'topic_list': [names.topic_pull, names.topic_second],
+            'topic_list': topic_names,
         }],
     }
     out = yaml.dump(definition)
@@ -209,41 +386,75 @@ def yaml_add_second_topic(names:'Names') -> 'str':
 
 # ################################################################################################################################
 
-def yaml_remove_pull_topic(names:'Names') -> 'str':
-    """ Returns an enmasse file that removes the pull topic from the pull subscription.
+def wait_for_unconfirmed(runtime:'Runtime') -> 'None':
+    """ Waits until the worker has a pair whose rows it could not write or delete yet.
     """
-    definition = {
-        'pubsub_subscription': [{
-            'security': names.security_pull,
-            'delivery_type': 'pull',
-            'topic_list': [names.topic_second],
-        }],
-    }
-    out = yaml.dump(definition)
+    wait_for(runtime.has_unconfirmed, 'A pair of the subscription list becoming unconfirmed')
+
+# ################################################################################################################################
+
+def wait_for_no_unconfirmed(runtime:'Runtime') -> 'None':
+    """ Waits until the rows of every pair of the subscription list are written or deleted.
+    """
+    def _is_confirmed() -> 'bool':
+        out = not runtime.has_unconfirmed()
+        return out
+
+    wait_for(_is_confirmed, 'The confirmation of every pair of the subscription list')
+
+# ################################################################################################################################
+
+def assert_rows_equal_list(runtime:'Runtime') -> 'None':
+    """ Confirms that the governed rows of the pub/sub database are exactly the pairs of the subscription list.
+    """
+    rows = runtime.governed_pairs()
+    listed = runtime.listed_pairs()
+
+    assert rows == listed, f'Rows {sorted(rows)} differ from the subscription list {sorted(listed)}'
+
+# ################################################################################################################################
+
+def is_postgresql() -> 'bool':
+    """ Whether the suite runs on PostgreSQL.
+    """
+    out = is_postgresql_mode(get_db_mode())
     return out
 
 # ################################################################################################################################
 
-def wait_for_no_unconfirmed(runtime:'Runtime', timeout:'float'=60.0) -> 'None':
-    """ Waits until the subscription list has no unconfirmed pairs.
+def publish_client(environment:'ZatoEnvironment', names:'Names') -> 'PublishClient':
+    """ A publisher with the security definition of the second subscriber, which may publish to both topics.
     """
-    deadline = time.monotonic() + timeout
+    base_url = f'http://{Host}:{environment.server_port}'
+    out = PublishClient(base_url, names.security_second, names.password, timeout=ModuleCtx.Client_Timeout)
+    return out
 
-    while time.monotonic() < deadline:
-        statuses = runtime.statuses()
-        unconfirmed = False
+# ################################################################################################################################
 
-        for _sub_key, _topic, status in statuses:
-            if status != 'confirmed':
-                unconfirmed = True
-                break
+def pull_client(environment:'ZatoEnvironment', names:'Names', security_name:'str') -> 'PullClient':
+    """ A subscriber that pulls with the given security definition.
+    """
+    base_url = f'http://{Host}:{environment.server_port}'
+    out = PullClient(base_url, security_name, names.password, timeout=ModuleCtx.Client_Timeout)
+    return out
 
-        if not unconfirmed:
-            return
+# ################################################################################################################################
 
-        time.sleep(0.5)
+def pull_all(client:'PullClient') -> 'anylist':
+    """ Pulls and acknowledges messages until the queue of the subscriber is empty and returns all of them.
+    """
+    out:'anylist' = []
 
-    raise Exception('The subscription list still has unconfirmed pairs')
+    while True:
+        response = client.pull(max_messages=50)
+        messages = response['messages']
+
+        if not messages:
+            break
+
+        out.extend(messages)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

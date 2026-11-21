@@ -72,7 +72,9 @@ class Index(_Index):
 
     def on_before_append_item(self, item:'any_') -> 'any_':
 
+        # The template renders the status of each pair from the list, and the browser reads the topics from the JSON
         topic_name_list = item.topic_name_list
+        item.topic_status_list = topic_name_list
         item.topic_name_list = dumps(topic_name_list)
 
         # A subscriber that is a service has no security definition, and the list leaves out fields without a value
