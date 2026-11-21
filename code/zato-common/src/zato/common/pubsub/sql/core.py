@@ -97,7 +97,7 @@ class SQLBackendCore:
         if subscription_list is None:
             subscription_list = SubscriptionList()
 
-        self.subscription_list = subscription_list
+        self.subscription_list:'SubscriptionList' = subscription_list
 
         # The names of the topics of config.db that are inactive. Topics outside config.db are never among them.
         if inactive_topics is None:
