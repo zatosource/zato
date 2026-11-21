@@ -57,6 +57,7 @@ class ModuleCtx:
 
     Get_Sub_Keys_Service     = 'test.pubsub-rest.get-sub-keys'
     Get_Queue_Depths_Service = 'test.pubsub-rest.get-queue-depths'
+    Get_Topic_Rows_Service   = 'test.pubsub-rest.get-topic-rows'
 
     # The markers the server writes for each enmasse import that it runs
     Marker_Started   = 'Invoking command'
@@ -127,8 +128,9 @@ class Names:
 
 @dataclass
 class DatabaseProxy:
-    """ The proxy of Toxiproxy through which the server reaches PostgreSQL.
+    """ The PostgreSQL database of a module and the proxy of Toxiproxy through which the server reaches it.
     """
+    database: 'PubSubDatabase'
     toxiproxy: 'Toxiproxy'
     listen_port: 'int'
 
@@ -295,6 +297,15 @@ class Runtime:
         return out
 
 # ################################################################################################################################
+
+    def topic_deliveries(self, topic_name:'str') -> 'int':
+        """ Returns how many deliveries of the messages of a topic the queues of all subscribers hold.
+        """
+        response = self.client.invoke(ModuleCtx.Get_Topic_Rows_Service, {'topic_name': topic_name.lower()})
+        out = response['deliveries']
+        return out
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class WriteFault:
@@ -436,6 +447,51 @@ def pull_client(environment:'ZatoEnvironment', names:'Names', security_name:'str
     """
     base_url = f'http://{Host}:{environment.server_port}'
     out = PullClient(base_url, security_name, names.password, timeout=ModuleCtx.Client_Timeout)
+    return out
+
+# ################################################################################################################################
+
+def publish_accepted(client:'PublishClient', topic_name:'str', data:'str') -> 'str':
+    """ Publishes a message, again after each refusal during a fault, and returns the ID of the message accepted.
+    """
+    deadline = time.monotonic() + ModuleCtx.Wait_Timeout
+
+    while True:
+        try:
+            response = client.publish(topic_name, data)
+        except Exception as e:
+            if time.monotonic() > deadline:
+                raise Exception(f'Publication to {topic_name} not accepted within {ModuleCtx.Wait_Timeout}s -> {e}')
+            time.sleep(ModuleCtx.Poll_Interval)
+        else:
+            out = response['msg_id']
+            return out
+
+# ################################################################################################################################
+
+def wait_for_worker(runtime:'Runtime') -> 'None':
+    """ Waits until a worker of the server answers the runtime service, e.g. the worker that replaced a killed one.
+    """
+    def _answers() -> 'bool':
+        try:
+            _ = runtime.statuses()
+        except Exception:
+            return False
+        else:
+            return True
+
+    wait_for(_answers, 'The answer of the worker')
+
+# ################################################################################################################################
+
+def get_msg_ids(messages:'anylist') -> 'strset':
+    """ Returns the IDs of pulled messages.
+    """
+    out:'strset' = set()
+
+    for message in messages:
+        out.add(message['meta']['msg_id'])
+
     return out
 
 # ################################################################################################################################

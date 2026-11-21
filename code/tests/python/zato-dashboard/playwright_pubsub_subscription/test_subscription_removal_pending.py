@@ -9,64 +9,73 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import time
 
-# Zato
-from zato.common.crypto.api import CryptoManager
-from zato.common.test.playwright_pubsub import create_all_subscription_prerequisites, create_pull_subscription, \
-    find_row_by_link_text, navigate_to_page, open_edit_dialog, submit_edit_form, unpick_subscription_topic
+# Local
+from _support import ModuleCtx, change_topics, create_client, create_pull_subscription_to, create_topics, is_queued, \
+    new_marker, new_prefix, publish_accepted, queue_path, start_publication, subscription_item_id, \
+    wait_for_publication, wait_for_queued, wait_for_statuses
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anydict
 
     any_ = any_
+    anydict = anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Subscription_Page = '/zato/pubsub/subscription/'
-
-# ################################################################################################################################
-
-def test_subscription_removal_pending(
-    logged_in_page:'any_',
-    zato_dashboard:'any_',
-    sqlite_write_lock:'any_',
-) -> 'None':
-    """ A topic removed while the lock is held shows as pending removal until the lock is released.
+def test_subscription_removal_pending(logged_in_page:'any_', zato_dashboard:'anydict', write_lock:'any_') -> 'None':
+    """ A topic removed while the lock is held shows as pending removal, a message published to it does not appear
+    in the queue of the subscriber, and the topic disappears after the release.
     """
     page = logged_in_page
     base_url = zato_dashboard['dashboard_url']
-    prefix = 'ui.removal.' + CryptoManager.generate_hex_string(8) + '.'
+    prefix = new_prefix('removal')
 
-    prerequisites = create_all_subscription_prerequisites(page, base_url, prefix, '1')
-    create_pull_subscription(page, base_url, prerequisites['sec_name'], prerequisites['topic_name'])
+    client = create_client(page, base_url, prefix, 'client')
+    topics = create_topics(page, base_url, prefix, 2)
 
-    sqlite_write_lock.release()
-    time.sleep(1)
-    sqlite_write_lock.acquire()
+    removed = topics[0]
+    kept = topics[1]
+    removed_name = removed['name']
+    kept_name = kept['name']
 
-    navigate_to_page(page, base_url, _Subscription_Page)
-    row = find_row_by_link_text(page, prerequisites['sec_name'])
-    item_id = row.get_attribute('id').replace('tr_', '')
+    create_pull_subscription_to(page, base_url, client['name'], [removed_name, kept_name])
 
-    open_edit_dialog(page, 'pubsub.subscription', item_id)
-    unpick_subscription_topic(page, prerequisites['topic_name'])
-    submit_edit_form(page)
+    item_id = subscription_item_id(page, base_url, client['name'])
+    confirmed = {removed_name: ModuleCtx.Status_Confirmed, kept_name: ModuleCtx.Status_Confirmed}
+    wait_for_statuses(page, base_url, item_id, confirmed, 'The confirmation of both pairs')
 
-    navigate_to_page(page, base_url, _Subscription_Page)
-    page.wait_for_selector('.ps-pair-status-pending-removal, #data-table tbody tr', timeout=15000)
+    path = queue_path(page, base_url, item_id, ModuleCtx.Queue_State_All)
 
-    sqlite_write_lock.release()
+    # Remove the topic while no row of a pair can be deleted ..
+    write_lock.acquire()
+    _ = change_topics(page, base_url, item_id, [removed_name, kept_name], {removed_name: False})
 
-    deadline = time.monotonic() + 30
+    pending = {removed_name: ModuleCtx.Status_Pending_Removal, kept_name: ModuleCtx.Status_Confirmed}
+    wait_for_statuses(page, base_url, item_id, pending, 'The pending removal of the pair')
 
-    while time.monotonic() < deadline:
-        navigate_to_page(page, base_url, _Subscription_Page)
-        if page.locator('.ps-pair-status-pending-removal').count() == 0:
-            break
-        time.sleep(1)
+    # .. publish to it behind the lock and let the publication through ..
+    removed_marker = new_marker('removed')
+    start_publication(page, base_url, removed['item_id'], removed_marker)
+    time.sleep(ModuleCtx.Publish_Hold_Seconds)
+
+    write_lock.release()
+
+    status = wait_for_publication(page)
+    assert status.startswith(ModuleCtx.Publish_Accepted), status
+
+    # .. a message to the kept topic, published after it, reaches the queue while the first one does not ..
+    kept_marker = new_marker('kept')
+    publish_accepted(page, base_url, kept['item_id'], kept_marker)
+
+    wait_for_queued(page, base_url, path, kept_marker)
+    assert not is_queued(page, base_url, path, removed_marker)
+
+    # .. and the removed topic disappears from the subscription.
+    wait_for_statuses(page, base_url, item_id, {kept_name: ModuleCtx.Status_Confirmed}, 'The removal of the pair')
 
 # ################################################################################################################################
 # ################################################################################################################################

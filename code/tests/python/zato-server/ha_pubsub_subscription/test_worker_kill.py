@@ -6,13 +6,12 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import time
-from threading import Thread
+# pytest
+import pytest
 
-# Zato
-from _support import wait_for_no_unconfirmed, yaml_add_second_topic
-from live_containers.ready import wait_until
+# Local
+from _support import assert_rows_equal_list, wait_for_no_unconfirmed, wait_for_unconfirmed, wait_for_worker, \
+    yaml_subscription
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -25,41 +24,32 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_worker_kill(environment:'any_', pickup:'any_', runtime:'any_', names:'any_', client:'any_') -> 'None':
-    """ After SIGKILL of the worker the new worker rebuilds the subscription list and the reconciler commits.
+def test_worker_kill(environment:'any_', pickup:'any_', runtime:'any_', names:'any_', write_fault:'any_') -> 'None':
+    """ After SIGKILL of the worker while a pair is pending, the new worker rebuilds the subscription list
+    and the reconciler writes the row.
     """
-    holder = Thread(target=runtime.hold_locks, args=(names.topic_pull, 15.0), daemon=True)
-    holder.start()
+    sub_key = runtime.sub_key(names.security_pull)
+    added_pair = (sub_key, names.topic_second.lower())
 
-    pickup.apply('add-before-kill', yaml_add_second_topic(names))
+    # The pair is pending because the writes fail ..
+    write_fault.apply()
 
-    try:
+    pickup.apply('add-second-before-kill', yaml_subscription(names.security_pull, [names.topic_pull, names.topic_second]))
+    wait_for_unconfirmed(runtime)
+
+    # .. the worker is killed while answering the request that asks for it ..
+    with pytest.raises(Exception):
         runtime.kill_worker()
-    except Exception:
-        pass
 
-    holder.join(timeout=5)
-    time.sleep(2)
+    # .. the writes succeed again and the new worker answers ..
+    write_fault.remove()
+    wait_for_worker(runtime)
 
-    def _server_ready() -> 'bool':
-        try:
-            _ = client.invoke('zato.ping', {})
-            return True
-        except Exception:
-            return False
-
-    wait_until(_server_ready, 'server after worker kill')
+    # .. and it writes the row of the pair that it read from the configuration.
     wait_for_no_unconfirmed(runtime)
 
-    pairs = runtime.governed_pairs()
-    found = False
-
-    for _sub_key, topic_name in pairs:
-        if topic_name == names.topic_second.lower():
-            found = True
-            break
-
-    assert found
+    assert added_pair in runtime.governed_pairs()
+    assert_rows_equal_list(runtime)
 
 # ################################################################################################################################
 # ################################################################################################################################

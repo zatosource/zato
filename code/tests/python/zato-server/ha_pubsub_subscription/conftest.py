@@ -8,12 +8,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import shutil
 import sys
 import tempfile
 from collections.abc import Generator
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'zato-common', 'lib'))
-sys.path.insert(0, os.path.dirname(__file__))
+_here = os.path.dirname(__file__)
+_tests_dir = os.path.join(_here, '..', '..', 'zato-common')
+
+sys.path.insert(0, os.path.join(_tests_dir, 'pubsub_faults'))
+sys.path.insert(0, os.path.join(_tests_dir, 'lib'))
+sys.path.insert(0, _here)
 
 # pytest
 import pytest
@@ -21,15 +26,20 @@ import pytest
 # Zato
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 from zato.common.db_env.database_env import DatabaseEnv
-from zato.common.test.pubsub_database import get_db_mode, is_postgresql_mode, start_pubsub_database, stop_pubsub_database
+from zato.common.db_env.fence import ModuleCtx as FenceCtx
+from zato.common.test.pubsub_database import get_database_address, get_db_mode, get_runtime_dir, start_pubsub_database, \
+    stop_pubsub_database
+from zato.common.test.pubsub_profile import session_dns
 
 # Live environment
-from live_containers.ready import wait_until
-from live_environment.parts import Parts, tear_down
 from live_environment.quickstart import ZatoEnvironment
 
+# Fault tools
+from toxiproxy import Database_Proxy, Toxiproxy, Toxiproxy_Host
+
 # Local
-from _support import ModuleCtx as SupportCtx, Names, Pickup, Runtime, render_template
+from _support import DatabaseProxy, ModuleCtx as SupportCtx, Names, Pickup, Runtime, WriteFault, is_postgresql, \
+    render_template, wait_for
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,10 +56,9 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-zato_gen = Generator[ZatoEnvironment, None, None]
-
-_template_path = os.path.join(os.path.dirname(__file__), '_enmasse_template.yaml')
-_runtime_source = os.path.join(os.path.dirname(__file__), '_runtime_service.py')
+_template_path = os.path.join(_here, '_enmasse_template.yaml')
+_runtime_source = os.path.join(_here, '_runtime_service.py')
+_rest_services_source = os.path.join(_tests_dir, 'lib', 'pubsub_rest', '_services.py')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,26 +66,13 @@ _runtime_source = os.path.join(os.path.dirname(__file__), '_runtime_service.py')
 class SuiteCtx:
 
     Directory_Prefix = 'zato_ha_pubsub_subscription_'
+    Work_Directory_Prefix = 'zato_ha_pubsub_subscription_work_'
     Password_Prefix = 'test.ha.pubsub.subscription'
     Database_Label = 'ha-pubsub-subscription'
+    Toxiproxy_Label = 'ha-pubsub-subscription'
+    Generation_File_Name = 'database-generation'
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def server_environment(database:'PubSubDatabase | None') -> 'strstrdict':
-    """ Returns the environment variables of the live server of the suite.
-    """
-    out = {
-        AuditLogCtx.Env_Enabled: 'True',
-    }
-
-    if database is None:
-        out[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
-    else:
-        out.update(database.env)
-
-    return out
-
 # ################################################################################################################################
 
 def wait_for_runtime_service(client:'AdminClient') -> 'None':
@@ -88,29 +84,13 @@ def wait_for_runtime_service(client:'AdminClient') -> 'None':
         out = response['name'] == SupportCtx.Runtime_Service
         return out
 
-    wait_until(_is_deployed, f'service {SupportCtx.Runtime_Service}')
+    wait_for(_is_deployed, f'The deployment of service {SupportCtx.Runtime_Service}')
 
 # ################################################################################################################################
 
-def start_environment(parts:'Parts', extra_environment:'strstrdict', names:'Names') -> 'ZatoEnvironment':
-    """ Starts a live server with the initial subscriptions and the runtime service.
-    """
-    directory = tempfile.mkdtemp(prefix=SuiteCtx.Directory_Prefix)
-
-    out = ZatoEnvironment(directory, password_prefix=SuiteCtx.Password_Prefix)
-    parts.add('zato environment', out.stop)
-
-    out.create()
-    out.start(extra_environment)
-
-    with open(_runtime_source) as source_file:
-        source = source_file.read()
-
-    out.deploy(SupportCtx.Runtime_Service_File, source)
-    wait_for_runtime_service(out.client())
-
-    yaml = render_template(_template_path, names.placeholders())
-    _ = out.import_yaml('initial.yaml', yaml)
+def _read_source(path:'str') -> 'str':
+    with open(path) as source_file:
+        out = source_file.read()
 
     return out
 
@@ -127,22 +107,94 @@ def names() -> 'Names':
 # ################################################################################################################################
 
 @pytest.fixture(scope='module')
-def environment(names:'Names') -> 'zato_gen':
-    """ A live server on SQLite or on PostgreSQL with the initial subscriptions of the suite.
+def database() -> 'Generator[PubSubDatabase | None, None, None]':
+    """ The PostgreSQL container of the module on PostgreSQL, and nothing on SQLite.
     """
-    parts = Parts()
-    database = None
-    mode = get_db_mode()
+    if not is_postgresql():
+        yield None
+        return
+
+    out = start_pubsub_database(SuiteCtx.Database_Label, get_db_mode())
 
     try:
-        if is_postgresql_mode(mode):
-            database = start_pubsub_database(SuiteCtx.Database_Label, mode)
-            parts.add('pubsub database', lambda: stop_pubsub_database(database))
+        yield out
+    finally:
+        stop_pubsub_database(out)
 
-        yield start_environment(parts, server_environment(database), names)
+# ################################################################################################################################
+
+@pytest.fixture(scope='module')
+def database_proxy(database:'PubSubDatabase | None') -> 'Generator[DatabaseProxy | None, None, None]':
+    """ The proxy of Toxiproxy through which the server reaches PostgreSQL, and nothing on SQLite.
+    """
+    if database is None:
+        yield None
+        return
+
+    toxiproxy = Toxiproxy(SuiteCtx.Toxiproxy_Label)
+    toxiproxy.start()
+
+    try:
+        upstream_host = get_database_address(database)
+        listen_port = toxiproxy.add_proxy(Database_Proxy, database.port, upstream_host)
+
+        # The endpoint name of a managed mode resolves to the proxy
+        if database.profile_name:
+            session_dns.register(get_runtime_dir(), database.endpoint, Toxiproxy_Host)
+
+        yield DatabaseProxy(database, toxiproxy, listen_port)
 
     finally:
-        tear_down(parts)
+        toxiproxy.stop()
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='module')
+def server_env(database_proxy:'DatabaseProxy | None') -> 'Generator[strstrdict, None, None]':
+    """ The environment variables of the live server of the module, which a restart of the server reuses.
+    """
+    work_dir = tempfile.mkdtemp(prefix=SuiteCtx.Work_Directory_Prefix)
+
+    out = {
+        AuditLogCtx.Env_Enabled: 'True',
+        FenceCtx.Env_Generation_File: os.path.join(work_dir, SuiteCtx.Generation_File_Name),
+    }
+
+    if database_proxy is None:
+        out[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
+    else:
+        out.update(database_proxy.database.env)
+        out['Zato_Database_Port'] = f'{database_proxy.listen_port}'
+
+    try:
+        yield out
+    finally:
+        shutil.rmtree(work_dir, ignore_errors=True)
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='module')
+def environment(names:'Names', server_env:'strstrdict') -> 'Generator[ZatoEnvironment, None, None]':
+    """ A live server on SQLite or on PostgreSQL with the services of the suite and its initial subscriptions.
+    """
+    directory = tempfile.mkdtemp(prefix=SuiteCtx.Directory_Prefix)
+    out = ZatoEnvironment(directory, password_prefix=SuiteCtx.Password_Prefix)
+
+    try:
+        out.create()
+        out.start(server_env)
+
+        out.deploy(SupportCtx.Runtime_Service_File, _read_source(_runtime_source))
+        out.deploy(SupportCtx.REST_Services_File, _read_source(_rest_services_source))
+        wait_for_runtime_service(out.client())
+
+        definitions = render_template(_template_path, names.placeholders())
+        _ = out.import_yaml('initial.yaml', definitions)
+
+        yield out
+
+    finally:
+        out.stop()
 
 # ################################################################################################################################
 
@@ -166,10 +218,23 @@ def pickup(environment:'ZatoEnvironment') -> 'Pickup':
 
 @pytest.fixture(scope='module')
 def runtime(client:'AdminClient') -> 'Runtime':
-    """ The runtime service of the live server.
+    """ The services that the suite deployed into the live server.
     """
     out = Runtime(client)
     return out
+
+# ################################################################################################################################
+
+@pytest.fixture
+def write_fault(environment:'ZatoEnvironment', database_proxy:'DatabaseProxy | None') -> 'Generator[WriteFault, None, None]':
+    """ Fails the writes of the server to the pub/sub database while a test applies it, and removes it at the end.
+    """
+    out = WriteFault(environment, database_proxy)
+
+    try:
+        yield out
+    finally:
+        out.remove()
 
 # ################################################################################################################################
 # ################################################################################################################################

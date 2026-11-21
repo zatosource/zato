@@ -268,6 +268,10 @@
                         <tr>
                             <td></td>
                             <td>
+                                <label for="id_edit-is_active">
+                                    Active
+                                    {{ edit_form.is_active }}
+                                </label>
                                 <label for="id_edit-is_audit_log_active">
                                     Audit log
                                     {{ edit_form.is_audit_log_active }}
@@ -289,7 +293,6 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" name="edit-is_active" value="on" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>
             </div>

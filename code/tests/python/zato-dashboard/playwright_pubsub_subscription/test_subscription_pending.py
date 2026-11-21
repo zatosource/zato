@@ -6,67 +6,53 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import time
-
-# Zato
-from zato.common.crypto.api import CryptoManager
-from zato.common.test.playwright_pubsub import create_all_subscription_prerequisites, create_pull_subscription, \
-    navigate_to_page, open_publish_overlay, publish_via_overlay, get_item_id
+# Local
+from _support import ModuleCtx, create_client, create_pull_subscription_to, create_topics, new_marker, new_prefix, \
+    publish_accepted, queue_path, subscription_item_id, wait_for_queued, wait_for_statuses
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anydict
 
     any_ = any_
+    anydict = anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-_Subscription_Page = '/zato/pubsub/subscription/'
-_Topic_Page = '/zato/pubsub/topic/'
-
-# ################################################################################################################################
-
-def test_subscription_pending(logged_in_page:'any_', zato_dashboard:'any_', sqlite_write_lock:'any_') -> 'None':
-    """ A subscription created while the lock is held shows as pending until the lock is released.
+def test_subscription_pending(logged_in_page:'any_', zato_dashboard:'anydict', write_lock:'any_') -> 'None':
+    """ A subscription created while the lock is held shows as pending, the status clears after the release,
+    and a message published from the topic page appears in the queue of the subscriber.
     """
     page = logged_in_page
     base_url = zato_dashboard['dashboard_url']
-    prefix = 'ui.pending.' + CryptoManager.generate_hex_string(8) + '.'
+    prefix = new_prefix('pending')
 
-    prerequisites = create_all_subscription_prerequisites(page, base_url, prefix, '1')
+    client = create_client(page, base_url, prefix, 'client')
+    topics = create_topics(page, base_url, prefix, 1)
 
-    sqlite_write_lock.acquire()
-    create_pull_subscription(page, base_url, prerequisites['sec_name'], prerequisites['topic_name'])
+    topic = topics[0]
+    topic_name = topic['name']
 
-    navigate_to_page(page, base_url, _Subscription_Page)
-    page.wait_for_selector('.ps-pair-status-pending, #data-table tbody tr', timeout=15000)
+    # Create the subscription while no row of a pair can be written ..
+    write_lock.acquire()
+    create_pull_subscription_to(page, base_url, client['name'], [topic_name])
 
-    pending_count = page.locator('.ps-pair-status-pending').count()
+    item_id = subscription_item_id(page, base_url, client['name'])
+    wait_for_statuses(page, base_url, item_id, {topic_name: ModuleCtx.Status_Pending}, 'The pending status of the pair')
 
-    sqlite_write_lock.release()
+    # .. the status clears once the row can be written ..
+    write_lock.release()
+    wait_for_statuses(page, base_url, item_id, {topic_name: ModuleCtx.Status_Confirmed}, 'The confirmation of the pair')
 
-    deadline = time.monotonic() + 30
+    # .. and a message published from the topic page reaches the queue of the subscriber.
+    marker = new_marker('pending')
+    publish_accepted(page, base_url, topic['item_id'], marker)
 
-    while time.monotonic() < deadline:
-        navigate_to_page(page, base_url, _Subscription_Page)
-        if page.locator('.ps-pair-status-pending').count() == 0:
-            break
-        time.sleep(1)
-
-    assert page.locator('.ps-pair-status-pending').count() == 0 or pending_count >= 0
-
-    navigate_to_page(page, base_url, _Topic_Page)
-    topic_id = get_item_id(page, prerequisites['topic_name'])
-    open_publish_overlay(page, topic_id)
-    publish_via_overlay(page, 'ui.pending.message')
-
-    navigate_to_page(page, base_url, _Subscription_Page)
-    page.click('a[href*="pubsub/subscription/queue"]')
-    page.wait_for_selector('#data-table, .queue-browser, body', timeout=10000)
+    path = queue_path(page, base_url, item_id, ModuleCtx.Queue_State_All)
+    wait_for_queued(page, base_url, path, marker)
 
 # ################################################################################################################################
 # ################################################################################################################################
