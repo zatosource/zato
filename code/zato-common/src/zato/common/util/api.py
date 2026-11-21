@@ -1258,7 +1258,8 @@ def get_client_from_server_conf(
 
     # .. make sure the server is available ..
     if require_server:
-        wait_for_zato_ping(client.address, initial_wait_time)
+        if not wait_for_zato_ping(client.address, initial_wait_time):
+            raise Exception(f'Server at {client.address} could not be reached')
 
     # .. return the client to our caller now.
     return client

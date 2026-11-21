@@ -31,6 +31,9 @@ from zato.common.pubsub.sql.sqlite_write import write_items_sqlite
 from zato.common.test.zato_database import file_database_engine
 from zato.common.util.api import utcnow
 
+# Zato - Rust
+from zato_common_core.zato_common_core import SubscriptionList
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -162,7 +165,7 @@ def _write_publication(engine:'Engine', pending:'PendingPublication') -> 'None':
     """ Writes one publication through the Rust write path of pub/sub in a transaction of its own.
     """
     with engine.begin() as connection:
-        write_items_sqlite(connection, [pending], [], [], [], [])
+        _ = write_items_sqlite(connection, [pending], [], [], [], [], SubscriptionList())
 
 # ################################################################################################################################
 

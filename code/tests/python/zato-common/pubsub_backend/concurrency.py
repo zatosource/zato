@@ -36,6 +36,7 @@ if 0:
     from zato.common.audit_log.api import AuditLog
     from zato.common.pubsub.sql.backend import PublishResult
     from zato.common.typing_ import anydict, anylist, intlist, strlist
+    from zato_common_core.zato_common_core import SubscriptionList
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -84,8 +85,8 @@ class _RecordingWriter(PubSubWriter):
     """ A writer that records how many items each of its transactions held.
     """
 
-    def __init__(self, audit_log:'AuditLog') -> 'None':
-        super().__init__(audit_log)
+    def __init__(self, audit_log:'AuditLog', subscription_list:'SubscriptionList') -> 'None':
+        super().__init__(audit_log, subscription_list)
         self.transaction_sizes:'intlist' = []
 
         # When set, the next commit waits for this event before it writes anything
@@ -116,9 +117,9 @@ def _new_backend() -> 'tuple[SQLPubSubBackend, _RecordingWriter]':
     delete_all_rows()
 
     audit_log = new_test_audit_log()
-    writer = _RecordingWriter(audit_log)
-
     backend = SQLPubSubBackend(audit_log=audit_log)
+
+    writer = _RecordingWriter(audit_log, backend.subscription_list)
     backend._writer = writer
 
     backend.subscribe(_sub_key_1, _topic)

@@ -133,6 +133,36 @@ class PubSubSubscriptionImporter:
 
 # ################################################################################################################################
 
+    def _normalize_topic_item(self, topic_item:'any_') -> 'stranydict':
+        """ Returns the name and flags of one topic_list entry, which may be a name string or a dict.
+        """
+        if isinstance(topic_item, str):
+            out = {
+                'name': topic_item,
+                'is_pub_enabled': True,
+                'is_delivery_enabled': True,
+            }
+            return out
+
+        if 'is_pub_enabled' in topic_item:
+            is_pub_enabled = topic_item['is_pub_enabled']
+        else:
+            is_pub_enabled = True
+
+        if 'is_delivery_enabled' in topic_item:
+            is_delivery_enabled = topic_item['is_delivery_enabled']
+        else:
+            is_delivery_enabled = True
+
+        out = {
+            'name': topic_item['name'],
+            'is_pub_enabled': is_pub_enabled,
+            'is_delivery_enabled': is_delivery_enabled,
+        }
+        return out
+
+# ################################################################################################################################
+
     def create_pubsub_subscription_definition(self, definition:'stranydict', session:'SASession') -> 'PubSubSubscription':
         """ Creates a new pubsub subscription definition in the database.
         """
@@ -159,7 +189,15 @@ class PubSubSubscriptionImporter:
         instance.push_type = definition.get('push_type')
         instance.rest_push_endpoint_id = definition.get('rest_push_endpoint_id')
         instance.push_service_name = definition.get('push_service_name')
-        instance.is_delivery_active = definition.get('is_delivery_active', True)
+        if 'is_delivery_active' in definition:
+            instance.is_delivery_active = definition['is_delivery_active']
+        else:
+            instance.is_delivery_active = True
+
+        if 'is_pub_active' in definition:
+            instance.is_pub_active = definition['is_pub_active']
+        else:
+            instance.is_pub_active = True
 
         logger.info('CREATE: sub_key=%s, sec_base_id=%s', instance.sub_key, instance.sec_base_id)
         logger.info('CREATE: before session.add, session.new=%s', list(session.new))
@@ -191,13 +229,15 @@ class PubSubSubscriptionImporter:
         # Create subscription-topic associations
         logger.info('Creating topic associations for subscription ID %s with topics %s', instance.id, definition['topic_id_list'])
 
-        for topic_id in definition['topic_id_list']:
-            logger.info('Adding topic association: subscription_id=%s, topic_id=%s', instance.id, topic_id)
+        for topic_entry in definition['topic_entries']:
+            logger.info('Adding topic association: subscription_id=%s, topic_id=%s', instance.id, topic_entry['topic_id'])
 
             sub_topic:'any_' = PubSubSubscriptionTopic()
             sub_topic.subscription_id = instance.id
-            sub_topic.topic_id = topic_id
+            sub_topic.topic_id = topic_entry['topic_id']
             sub_topic.pattern_matched = 'enmasse'
+            sub_topic.is_pub_enabled = topic_entry['is_pub_enabled']
+            sub_topic.is_delivery_enabled = topic_entry['is_delivery_enabled']
             session.add(sub_topic)
 
         session.commit()
@@ -225,17 +265,28 @@ class PubSubSubscriptionImporter:
         instance.push_type = definition.get('push_type')
         instance.rest_push_endpoint_id = definition.get('rest_push_endpoint_id')
         instance.push_service_name = definition.get('push_service_name')
-        instance.is_delivery_active = definition.get('is_delivery_active', True)
+
+        if 'is_delivery_active' in definition:
+            instance.is_delivery_active = definition['is_delivery_active']
+        else:
+            instance.is_delivery_active = True
+
+        if 'is_pub_active' in definition:
+            instance.is_pub_active = definition['is_pub_active']
+        else:
+            instance.is_pub_active = True
 
         set_instance_opaque_attrs(instance, definition)
 
         # Update subscription-topic associations
         session.query(PubSubSubscriptionTopic).filter_by(subscription_id=instance.id).delete()
-        for topic_id in definition['topic_id_list']:
+        for topic_entry in definition['topic_entries']:
             sub_topic:'any_' = PubSubSubscriptionTopic()
             sub_topic.subscription_id = instance.id
-            sub_topic.topic_id = topic_id
+            sub_topic.topic_id = topic_entry['topic_id']
             sub_topic.pattern_matched = 'enmasse'
+            sub_topic.is_pub_enabled = topic_entry['is_pub_enabled']
+            sub_topic.is_delivery_enabled = topic_entry['is_delivery_enabled']
             session.add(sub_topic)
 
         session.commit()
@@ -398,18 +449,38 @@ class PubSubSubscriptionImporter:
             logger.info('Processing YAML pubsub subscription definition: subscriber=%s, topics=%s, delivery_type=%s',
                        subscriber_name, topic_list, delivery_type)
 
-            # Get topic IDs
+            # Get topic IDs and the flags of each pair
             topic_id_list = []
-            for topic_name in topic_list:
-                topic_id = self.get_topic_id_by_name(topic_name, session)
+            topic_entries = []
+
+            for topic_item in topic_list:
+                topic_entry = self._normalize_topic_item(topic_item)
+                topic_id = self.get_topic_id_by_name(topic_entry['name'], session)
                 topic_id_list.append(topic_id)
+                topic_entries.append({
+                    'topic_id': topic_id,
+                    'is_pub_enabled': topic_entry['is_pub_enabled'],
+                    'is_delivery_enabled': topic_entry['is_delivery_enabled'],
+                })
 
             # Prepare subscription definition
+            if 'is_delivery_active' in yaml_def:
+                is_delivery_active = yaml_def['is_delivery_active']
+            else:
+                is_delivery_active = True
+
+            if 'is_pub_active' in yaml_def:
+                is_pub_active = yaml_def['is_pub_active']
+            else:
+                is_pub_active = True
+
             subscription_def = {
                 'sec_base_id': sec_base_id,
                 'delivery_type': delivery_type,
                 'topic_id_list': topic_id_list,
-                'is_delivery_active': yaml_def.get('is_delivery_active', True),
+                'topic_entries': topic_entries,
+                'is_delivery_active': is_delivery_active,
+                'is_pub_active': is_pub_active,
                 'username': subscriber_name,
                 'name': yaml_def.get('name', subscriber_name)
             }
@@ -426,7 +497,10 @@ class PubSubSubscriptionImporter:
 
             # Add other opaque attributes
             for key, value in yaml_def.items():
-                if key not in ['security', 'topic_list', 'delivery_type', 'push_rest_endpoint', 'push_service', 'is_delivery_active']:
+                if key not in [
+                    'security', 'topic_list', 'delivery_type', 'push_rest_endpoint', 'push_service',
+                    'is_delivery_active', 'is_pub_active',
+                ]:
                     subscription_def[key] = value
 
             should_create = self.should_create_pubsub_subscription_definition(yaml_def, db_defs, sec_base_id, push_service_name)

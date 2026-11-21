@@ -52,7 +52,11 @@ class PubSubSubscriptionExporter:
             PubSubSubscription.push_type,
             PubSubSubscription.rest_push_endpoint_id,
             PubSubSubscription.push_service_name,
+            PubSubSubscription.is_delivery_active,
+            PubSubSubscription.is_pub_active,
             PubSubTopic.name.label('topic_name'),
+            PubSubSubscriptionTopic.is_pub_enabled,
+            PubSubSubscriptionTopic.is_delivery_enabled,
             SecurityBase.name.label('sec_name'),
             HTTPSOAP.name.label('rest_push_endpoint_name')
         ).\
@@ -98,6 +102,8 @@ class PubSubSubscriptionExporter:
                     subscription_data['security'] = security_name
 
                 subscription_data['delivery_type'] = delivery_type
+                subscription_data['is_delivery_active'] = item.is_delivery_active
+                subscription_data['is_pub_active'] = item.is_pub_active
                 subscription_data['topic_list'] = []
 
                 # Add push-specific fields
@@ -117,8 +123,20 @@ class PubSubSubscriptionExporter:
 
             # Add topic to the subscription's topic list
             subscription_data = subscription_groups[group_key]
-            if topic_name not in subscription_data['topic_list']:
-                subscription_data['topic_list'].append(topic_name)
+            topic_entry = {
+                'name': topic_name,
+                'is_pub_enabled': item.is_pub_enabled,
+                'is_delivery_enabled': item.is_delivery_enabled,
+            }
+
+            already_listed = False
+            for existing in subscription_data['topic_list']:
+                if existing['name'] == topic_name:
+                    already_listed = True
+                    break
+
+            if not already_listed:
+                subscription_data['topic_list'].append(topic_entry)
 
         # Convert grouped subscriptions to export format
         for subscription_data in subscription_groups.values():

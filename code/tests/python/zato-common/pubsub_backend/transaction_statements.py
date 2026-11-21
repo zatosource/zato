@@ -51,6 +51,9 @@ _commit    = ('COMMIT', '')
 _savepoint = ('SAVEPOINT', '')
 _release   = ('RELEASE', '')
 
+# The read of the subscribers of a publication, which runs under the write lock on SQLite
+_select_subscribers = ('SELECT', 'pubsub_topic_sub')
+
 # The verbs that are recorded, with the position of the table among the words of a statement or None for no table
 _verb_table_position:'anydict' = {
     'INSERT': 2,
@@ -281,7 +284,8 @@ def record_transactions(engine:'Engine') -> 'recordergen':
 
 def get_expected(dialect_name:'str', parts:'anylist') -> 'anylist':
     """ Returns the statements of a transaction of the given parts, opened and committed. On SQLite, the driver opens
-    the transaction before the first statement that writes, so the selects that precede it run before it.
+    the transaction before the first statement that writes, reads the subscribers or reads the candidates of a lease,
+    so the other selects that precede it run before it.
     """
     out:'anylist' = []
     needs_begin = dialect_name == 'sqlite'
@@ -289,8 +293,8 @@ def get_expected(dialect_name:'str', parts:'anylist') -> 'anylist':
     for part in parts:
         for verb_table in part:
 
-            # The first statement that writes opens the transaction on SQLite ..
-            if needs_begin and verb_table[0] != 'SELECT':
+            # The first statement that writes, reads the subscribers or belongs to a lease opens the transaction on SQLite ..
+            if needs_begin and (verb_table[0] != 'SELECT' or verb_table == _select_subscribers or part is statements_lease):
                 out.append(_begin)
                 needs_begin = False
 

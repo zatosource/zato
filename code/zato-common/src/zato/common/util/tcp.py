@@ -178,8 +178,10 @@ def wait_for_zato(address, url_path, timeout=60, interval=0.1, needs_log=True):
 
 def wait_for_zato_ping(address, timeout=60, interval=0.1, needs_log=True):
     """ Waits for timeout seconds until address replies to a request sent to /zato/ping.
+    Returns whether the address replied within the timeout.
     """
-    wait_for_zato(address, '/zato/ping', timeout, interval, needs_log)
+    out = wait_for_zato(address, '/zato/ping', timeout, interval, needs_log)
+    return out
 
 # ################################################################################################################################
 

@@ -95,6 +95,9 @@ from zato.server.scheduler_.adapter import SchedulerODBAdapter
 from zato.server.scheduler_.client import ModuleCtx as SchedulerStreamCtx, SchedulerClient
 from zato.server.scheduler_.run_state import SchedulerRunState
 
+# Zato - Rust
+from zato_common_core.zato_common_core import SubscriptionList
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -237,6 +240,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
     worker: 'WorkerRuntime | ConfigRuntime'
 
     pubsub_backend: 'SQLPubSubBackend'
+    pubsub_subscription_list: 'SubscriptionList'
     shared_objects: 'SharedObjectStore'
     _scheduler_run_state: 'SchedulerRunState'
     pubsub_push_delivery: 'PushDelivery'
@@ -831,15 +835,64 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
     @staticmethod
     def start_server(parallel_server:'ParallelServer') -> 'None':
+        """ Starts the server, one stage after another.
+        """
 
         # Easier to type
         self = parallel_server
 
+        # The process, its directories and the server's row in the ODB come first ..
+        self._start_process()
+        server = self._start_odb()
+
+        # .. the OTLP export of the audit log, on only if an endpoint is configured ..
+        self._start_audit_export()
+
+        # .. things like initializing SQL data on demand ..
+        self._pre_initialize()
+
+        # .. the HTTP methods allowed, the configuration from the ODB and that of hot-deployment ..
+        self._start_http_methods()
+        self._start_config(server)
+        self._start_hot_deploy_config()
+
+        # .. API keys configuration ..
+        self.set_up_api_key_config()
+
+        # .. deploys services ..
+        locally_deployed = self._after_init_common(server) # type: ignore
+
+        # .. the config manager with its connectors, the hot-deployment directories and the config dispatcher ..
+        self._start_config_manager()
+        self._start_hot_deploy_directories()
+        self._start_config_dispatcher()
+
+        self._after_init_accepted(locally_deployed)
+
+        # .. startup services, the files of the pickup directory and the documents built from the services ..
+        self._start_startup_services()
+        self._start_deployment()
+
+        # .. pub/sub, the scheduler and the listeners ..
+        self._start_pubsub_backend()
+        self._start_scheduler()
+        self._start_listeners()
+
+        self.log_environment_details()
+
+        # .. and what a server runs once after it starts.
+        self._start_first_start_duties()
+
+        logger.info('Started `%s` (pid: %s)', server.name, self.pid)
+
+# ################################################################################################################################
+
+    def _start_process(self) -> 'None':
+        """ Records the process, creates the directories of events and generates the deployment key of this run.
+        """
+
         # The PID of the process that actually runs the server
         self.pid = os.getpid()
-
-        # Used later on
-        use_tls = as_bool(self.fs_server_config.crypto.use_tls)
 
         # This changed in 3.2 so we need to take both into account
         self.work_dir = self.fs_server_config.main.get('work_dir') or self.fs_server_config.hot_deploy.get('work_dir')
@@ -860,6 +913,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # This is to handle SIGURG signals.
         if is_posix:
             register_diag_handlers()
+
+# ################################################################################################################################
+
+    def _start_odb(self) -> 'any_':
+        """ Connects to the ODB and returns the row of this server in it.
+        """
 
         # Store the ODB configuration, create an ODB connection pool and have self.odb use it
         self.config.odb_data = self.get_config_odb_data(self)
@@ -891,11 +950,14 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         from zato.server.metrics import set_server_info
         set_server_info(self.name)
 
-        # The OTLP export of the audit log, on only if an endpoint is configured
-        self._start_audit_export()
+        return server
 
-        # Things like initializing SQL data on demand
-        self._pre_initialize()
+# ################################################################################################################################
+
+    def _start_http_methods(self) -> 'None':
+        """ Logs the address the server binds to and builds the HTTP methods that channels can be invoked with.
+        """
+        use_tls = as_bool(self.fs_server_config.crypto.use_tls)
 
         logger.info(
             'Server `%s` (pid: %s) binds to `http%s://%s:%s`',
@@ -909,6 +971,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # As above, as a regular expression to be used in pattern matching
         self.http_methods_allowed_re = build_methods_allowed_re(self.http_methods_allowed)
 
+# ################################################################################################################################
+
+    def _start_config(self, server:'any_') -> 'None':
+        """ Reads in the configuration of the server from the ODB.
+        """
+
         # Build the object responsible for quota tiers - it must exist before the config is set up
         # because tier references are resolved to concrete rules at config-build time.
         self.quota_tiers_manager = QuotaTiersManager(self)
@@ -916,6 +984,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # Reads in all configuration from ODB
         self.config_manager = ConfigManager(self.config, self)
         self.set_up_config(server) # type: ignore
+
+# ################################################################################################################################
+
+    def _start_hot_deploy_config(self) -> 'None':
+        """ Builds the configuration of hot-deployment.
+        """
 
         # Normalize hot-deploy configuration
         self.hot_deploy_config = Bunch()
@@ -948,11 +1022,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # .. and it belongs to the service store.
         self.service_store.max_batch_size = max_batch_size
 
-        # API keys configuration
-        self.set_up_api_key_config()
+# ################################################################################################################################
 
-        # Deploys services
-        locally_deployed = self._after_init_common(server) # type: ignore
+    def _start_config_manager(self) -> 'None':
+        """ Initializes the config manager, including connectors, and the objects of security built on top of it.
+        """
 
         # Build objects responsible for groups
         self.groups_manager = GroupsManager(self)
@@ -966,6 +1040,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         # Bearer tokens (OAuth)
         self.bearer_token_manager = BearerTokenManager(self)
+
+# ################################################################################################################################
+
+    def _start_hot_deploy_directories(self) -> 'None':
+        """ Resolves the working directories of hot-deployment.
+        """
 
         # Hot-deployment directories.
         for name in('current_work_dir', 'backup_work_dir', 'last_backup_work_dir', 'delete_after_pickup'):
@@ -986,6 +1066,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 self.hot_deploy_config[name] = os.path.normpath(os.path.join(
                     self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
 
+# ################################################################################################################################
+
+    def _start_config_dispatcher(self) -> 'None':
+        """ Builds the config dispatcher and the pub/sub permissions of the server.
+        """
+
         # Set up the broker client
         self.config_dispatcher = ConfigDispatcher(server=self)
 
@@ -998,8 +1084,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # Let the config manager know the broker client is ready
         self.config_manager.set_config_dispatcher(self.config_dispatcher)
 
-        self._after_init_accepted(locally_deployed)
+# ################################################################################################################################
 
+    def _start_startup_services(self) -> 'None':
+        """ Invokes the startup services and applies the local configuration.
+        """
         self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.BEFORE_STARTUP_SERVICES, kwargs={
             'server': self,
         })
@@ -1016,6 +1105,12 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # Stops the environment after N seconds
         if self.stop_after:
             _ = spawn_greenlet(self._stop_after_timeout)
+
+# ################################################################################################################################
+
+    def _start_deployment(self) -> 'None':
+        """ Deploys the files of the pickup directory and builds what depends on all the services being deployed.
+        """
 
         # Invoke startup callables
         self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.AFTER_STARTED, kwargs={
@@ -1038,10 +1133,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             if is_first_start():
                 self.handle_enmasse_auto_from()
 
-        self._start_pubsub_backend()
+# ################################################################################################################################
 
-        # Connect to the scheduler.
-        self._start_scheduler()
+    def _start_listeners(self) -> 'None':
+        """ Starts the listeners of the queue bridge, of the API portal and of the rule engine.
+        """
 
         # The config process processes no messages, so it starts no listener of the queue bridge,
         # of the API portal or of the rule engine.
@@ -1050,7 +1146,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
             self._start_api_portal_listener()
             self._start_rule_engine_change_listener()
 
-        self.log_environment_details()
+# ################################################################################################################################
+
+    def _start_first_start_duties(self) -> 'None':
+        """ Starts what a fresh environment and the file transfer demo need after the server starts.
+        """
 
         # A fresh environment - one with no user services to deploy and no user-defined
         # objects - receives the configured demo config sets on its first start. The pass
@@ -1061,8 +1161,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # The file transfer demo, if it is on, needs its local servers back after a restart, which one process runs
         if is_config_owner():
             _ = spawn_greenlet(self.resume_demo_file_transfer)
-
-        logger.info('Started `%s` (pid: %s)', server.name, self.pid)
 
 # ################################################################################################################################
 
@@ -1965,10 +2063,19 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # Messages, queues and delivery state are in the Zato database that the Zato_Database_* variables select.
         audit_log = AuditLog(self.name)
 
+        # The subscriber and topic pairs of config.db, which the first synchronization below builds,
+        # and which publications and fetches read from then on.
+        self.pubsub_subscription_list = SubscriptionList()
+
+        # The names of the topics of config.db that are inactive, which publications refuse
+        self.pubsub_inactive_topics = set()
+
         self.pubsub_backend = SQLPubSubBackend(
             audit_log=audit_log,
             crypto_manager=self.crypto_manager,
             encrypt_at_rest=self.encrypt_at_rest,
+            subscription_list=self.pubsub_subscription_list,
+            inactive_topics=self.pubsub_inactive_topics,
         )
 
         # On PostgreSQL, this server becomes the active one before it reads any pub/sub state, so that it starts
@@ -1998,6 +2105,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 
         for sub_key in self.config_manager._push_subs:
             self.pubsub_push_delivery.start_sub_key(sub_key)
+
+        # The reconciler commits the difference between the subscription list and the rows
+        from zato.server.base.config_manager.pubsub_reconciler import start_subscription_reconciler
+        start_subscription_reconciler(self.config_manager)
 
         # Pub/sub can deliver now, so the AMQP channels that topics in a broker read their messages back through can start
         self.config_manager.init_pubsub_amqp_channels()

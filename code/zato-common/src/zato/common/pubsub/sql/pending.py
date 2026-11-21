@@ -11,11 +11,13 @@ from dataclasses import dataclass
 
 # Zato
 from zato.common.pubsub.sql.dedup import get_fingerprint
+from zato.common.typing_ import list_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from zato.common.pubsub.subscription_list import pairlist
     from zato.common.typing_ import anydict, anylist, callable_, intdict, intlist, intlistnone, strlist
 
     # Dummy assignments to satisfy type checkers
@@ -25,6 +27,7 @@ if 0:
     intdict = intdict
     intlist = intlist
     intlistnone = intlistnone
+    pairlist = pairlist
     strlist = strlist
 
 # ################################################################################################################################
@@ -36,6 +39,7 @@ pending_ack_list         = list['PendingAck']
 pending_atomic_list      = list['PendingAtomic']
 pending_lease_list       = list['PendingLease']
 pending_attempts_list    = list['PendingAttempts']
+pending_sync_list        = list_['PendingSync']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -160,6 +164,25 @@ class PendingAttempts:
     exception: 'BaseException | None'
 
 # ################################################################################################################################
+
+@dataclass(init=False)
+class PendingSync:
+    """ The inserts and deletes of governed subscriber and topic pairs that bring the rows of the pub/sub database
+    in line with the subscription list, written in one transaction of the commit queue.
+    """
+
+    # The pairs whose rows the transaction inserts and deletes
+    added: 'pairlist'
+    removed: 'pairlist'
+
+    # The pairs whose rows the transaction wrote, filled after the commit
+    committed_added: 'pairlist'
+    committed_removed: 'pairlist'
+
+    # Why the pairs could not be written, while the other items of its commit could
+    exception: 'BaseException | None'
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def new_pending_publication(message_values:'anydict', received_ms:'int', dedup_window_ms:'int') -> 'PendingPublication':
@@ -263,7 +286,21 @@ def new_pending_attempts(delivery_ids:'intlist') -> 'PendingAttempts':
 
 # ################################################################################################################################
 
-def reset_item(item:'PendingPublication | PendingAck | PendingAtomic | PendingLease | PendingAttempts') -> 'None':
+def new_pending_sync(added:'pairlist', removed:'pairlist') -> 'PendingSync':
+    """ Returns the inserts and deletes of governed pairs that are yet to be written.
+    """
+    out = PendingSync()
+    out.added = added
+    out.removed = removed
+    out.committed_added = []
+    out.committed_removed = []
+    out.exception = None
+
+    return out
+
+# ################################################################################################################################
+
+def reset_item(item:'PendingPublication | PendingAck | PendingAtomic | PendingLease | PendingAttempts | PendingSync') -> 'None':
     """ Clears what a commit that was rolled back stored in one of its items.
     """
     if isinstance(item, PendingPublication):
@@ -285,6 +322,11 @@ def reset_item(item:'PendingPublication | PendingAck | PendingAtomic | PendingLe
 
     elif isinstance(item, PendingAttempts):
         item.attempts = {}
+        item.exception = None
+
+    elif isinstance(item, PendingSync):
+        item.committed_added = []
+        item.committed_removed = []
         item.exception = None
 
     else:

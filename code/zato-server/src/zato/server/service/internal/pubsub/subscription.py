@@ -151,13 +151,23 @@ def _get_pattern_matched(session:'any_', sec_base:'any_', topic_name:'str') -> '
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_topic_link(topic_name:'str', is_pub_enabled:'bool', is_delivery_enabled:'bool') -> 'str':
+def get_topic_link(
+    topic_name:'str',
+    is_pub_enabled:'bool',
+    is_delivery_enabled:'bool',
+    status:'str'='confirmed',
+    ) -> 'str':
 
     pub_class = 'is-pub-enabled-true' if is_pub_enabled else 'is-pub-enabled-false'
     delivery_class = 'is-delivery-enabled-true' if is_delivery_enabled else 'is-delivery-enabled-false'
 
     topic_link = '<a href="/zato/pubsub/topic/?query={}" class="{} {}">{}</a>'.format(
         quote(topic_name), pub_class, delivery_class, topic_name)
+
+    if status != 'confirmed':
+        topic_link = topic_link + ' <span class="ps-pair-status ps-pair-status-{}">{}</span>'.format(
+            status, status)
+
     return topic_link
 
 # ################################################################################################################################
@@ -171,7 +181,7 @@ class GetList(AdminService):
     input = '-needs_password', *query_parameters
     output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', AsIs('topic_link_list'), 'sec_base_id', \
         'sec_name', 'security', 'username', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name', \
-        '-rest_push_endpoint_name', AsIs('-topic_name_list'), '-password', Int('-pending_depth')
+        '-rest_push_endpoint_name', AsIs('-topic_name_list'), '-password', Int('-pending_depth'), '-has_unconfirmed'
 
     def get_data(self, session:'any_') -> 'anylist':
 
@@ -181,9 +191,17 @@ class GetList(AdminService):
         # Query always returns password now, but we only need to use it if requested
         result = self._search(pubsub_subscription_list, session, None, False)
 
+        # The status of each pair of the subscription list, by sub key and topic
+        subscription_list = self.server.pubsub_subscription_list
+        status_by_pair:'anydict' = {}
+
+        for sub_key, topic_name, status in subscription_list.statuses():
+            status_by_pair[(sub_key, topic_name)] = status
+
         # Group by subscription ID
         subscriptions_by_id:'anydict' = {}
         topics_by_id:'anydict' = {}
+        sub_key_to_id:'anydict' = {}
 
         for item in result:
             sub_id = item.id
@@ -210,15 +228,24 @@ class GetList(AdminService):
                         item_dict['password'] = password
 
                 subscriptions_by_id[sub_id] = item_dict
+                sub_key_to_id[item_dict['sub_key']] = sub_id
 
                 # Initialize topics list for this subscription
                 topics_by_id[sub_id] = []
 
             # Store topic with flags if not already present
+            pair = (item.sub_key, topic_name)
+
+            if pair in status_by_pair:
+                pair_status = status_by_pair[pair]
+            else:
+                pair_status = subscription_list.STATUS_CONFIRMED
+
             topic_dict = {
                 'topic_name': topic_name,
                 'is_pub_enabled': is_pub_enabled,
-                'is_delivery_enabled': is_delivery_enabled
+                'is_delivery_enabled': is_delivery_enabled,
+                'status': pair_status,
             }
 
             # Check if this topic is already in the list
@@ -230,6 +257,27 @@ class GetList(AdminService):
 
             if not topic_exists:
                 topics_by_id[sub_id].append(topic_dict)
+
+        # Pairs pending removal that still belong to a subscription of config.db ..
+        for (sub_key, topic_name), status in status_by_pair.items():
+
+            if status != subscription_list.STATUS_PENDING_REMOVAL:
+                continue
+
+            if sub_id := sub_key_to_id.get(sub_key):
+                topic_exists = False
+                for existing_topic in topics_by_id[sub_id]:
+                    if existing_topic['topic_name'] == topic_name:
+                        topic_exists = True
+                        break
+
+                if not topic_exists:
+                    topics_by_id[sub_id].append({
+                        'topic_name': topic_name,
+                        'is_pub_enabled': False,
+                        'is_delivery_enabled': False,
+                        'status': status,
+                    })
 
         # Build (sub_key, topic_name) pairs for the pending depth lookup ..
         sub_topic_pairs:'anylist' = []
@@ -245,6 +293,7 @@ class GetList(AdminService):
 
         # .. and process data for each subscription.
         data:'anylist' = []
+        any_unconfirmed = False
 
         for sub_id, sub_dict in subscriptions_by_id.items():
 
@@ -255,8 +304,12 @@ class GetList(AdminService):
             topic_link_list:'anylist' = []
 
             for topic in sorted_topics:
-                topic_link = get_topic_link(topic['topic_name'], topic['is_pub_enabled'], topic['is_delivery_enabled'])
+                topic_link = get_topic_link(
+                    topic['topic_name'], topic['is_pub_enabled'], topic['is_delivery_enabled'], topic['status'])
                 topic_link_list.append(topic_link)
+
+                if topic['status'] != subscription_list.STATUS_CONFIRMED:
+                    any_unconfirmed = True
 
             # .. store fields including the pending depth.
             sub_key = sub_dict['sub_key']
@@ -268,6 +321,60 @@ class GetList(AdminService):
                 sub_dict['pending_depth'] = 0
 
             data.append(sub_dict)
+
+        # Subscriptions deleted from config.db whose pairs are still pending removal
+        deleted_topics:'anydict' = {}
+
+        for (sub_key, topic_name), status in status_by_pair.items():
+
+            if status != subscription_list.STATUS_PENDING_REMOVAL:
+                continue
+
+            if sub_key in sub_key_to_id:
+                continue
+
+            any_unconfirmed = True
+
+            if sub_key not in deleted_topics:
+                deleted_topics[sub_key] = []
+
+            deleted_topics[sub_key].append({
+                'topic_name': topic_name,
+                'is_pub_enabled': False,
+                'is_delivery_enabled': False,
+                'status': status,
+            })
+
+        for sub_key, topic_list in deleted_topics.items():
+
+            sorted_topics = sorted(topic_list, key=itemgetter('topic_name'))
+            topic_link_list:'anylist' = []
+
+            for topic in sorted_topics:
+                topic_link = get_topic_link(topic['topic_name'], False, False, topic['status'])
+                topic_link_list.append(topic_link)
+
+            data.append({
+                'id': None,
+                'sub_key': sub_key,
+                'is_delivery_active': False,
+                'is_pub_active': False,
+                'created': None,
+                'topic_link_list': ', '.join(topic_link_list),
+                'topic_name_list': sorted_topics,
+                'sec_base_id': None,
+                'sec_name': None,
+                'security': '',
+                'username': '',
+                'delivery_type': '',
+                'push_type': None,
+                'rest_push_endpoint_id': None,
+                'push_service_name': None,
+                'pending_depth': 0,
+            })
+
+        if data:
+            data[0]['has_unconfirmed'] = any_unconfirmed or subscription_list.has_unconfirmed()
 
         out = elems_with_opaque(data)
         return out

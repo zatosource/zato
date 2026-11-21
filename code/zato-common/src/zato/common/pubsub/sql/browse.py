@@ -38,6 +38,9 @@ _default_page_size = PubSub.Message.Default_Max_Messages
 # The cursor value meaning "start from the beginning" - or from the end when browsing in reverse.
 _cursor_start = '-'
 
+# The cursor value meaning that the walk is complete.
+_cursor_end = ''
+
 # The message columns every browse entry consumes.
 _browse_columns = [
     message_table.c.id,
@@ -103,6 +106,12 @@ class SQLBrowseAPI(SQLBackendCore):
         Returns (messages, next_cursor) for cursor-based pagination.
         When reverse=True, returns newest messages first.
         """
+        # The messages of a pair that the subscription list no longer configures are withheld until its rows are removed ..
+        if self.subscription_list.withholds_pair(sub_key, topic_name.lower()):
+            out = ([], _cursor_end)
+            return out
+
+        # .. and the others are read by the handler of their state.
         handler_name = _browse_state_handlers[state]
         handler = getattr(self, handler_name)
         out = handler(topic_name, sub_key, cursor, page_size, needs_data, reverse)

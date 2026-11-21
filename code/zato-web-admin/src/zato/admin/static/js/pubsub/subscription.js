@@ -11,6 +11,10 @@ $.fn.zato.pubsub.subscription.config = {
     serviceURL: '/zato/service/?query={0}',
     secDefLabel: 'Security definition',
     serviceLabel: 'Service',
+    statusPollIntervalMs: 1000,
+    statusConfirmed: 'confirmed',
+    statusPending: 'pending',
+    statusPendingRemoval: 'pending-removal',
 };
 
 // Tri-state checkbox functionality
@@ -239,18 +243,14 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, insta
                         // Set tri-state based on pub/delivery flags
                         checkbox.addClass('tri-state');
 
-                        if (topic.is_pub_enabled && topic.is_delivery_enabled) {
-                            checkbox.prop('checked', true);
-                            checkbox.removeClass('indeterminate');
-                        } else if (!topic.is_pub_enabled && !topic.is_delivery_enabled) {
-                            checkbox.prop('checked', false);
-                            checkbox.removeClass('indeterminate');
-                        } else {
-                            checkbox.prop('checked', false);
-                            checkbox.addClass('indeterminate');
-                        }
-
+                        checkbox.prop('checked', true);
+                        checkbox.removeClass('indeterminate');
                         setupTriStateCheckbox(checkbox[0]);
+
+                        $(targetDivId + ' input.topic-pub-enabled[data-topic="' + topic.topic_name + '"]').prop(
+                            'checked', topic.is_pub_enabled);
+                        $(targetDivId + ' input.topic-delivery-enabled[data-topic="' + topic.topic_name + '"]').prop(
+                            'checked', topic.is_delivery_enabled);
                     } else {
                     }
                 });
@@ -284,6 +284,41 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, insta
 
 // /////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.pubsub.subscription.pairStatusBadges = function(topicNameList) {
+    var config = $.fn.zato.pubsub.subscription.config;
+    var html = '';
+
+    if (!topicNameList) {
+        return html;
+    }
+
+    for (var topicIdx = 0; topicIdx < topicNameList.length; topicIdx++) {
+        var topic = topicNameList[topicIdx];
+        if (topic.status === config.statusConfirmed) {
+            continue;
+        }
+        html += '<span class="ps-pair-status ps-pair-status-' + topic.status + '">' + topic.status + '</span>';
+    }
+
+    return html;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.pubsub.subscription.maybeStartStatusPoll = function() {
+    var config = $.fn.zato.pubsub.subscription.config;
+
+    if (!$('.ps-pair-status').length) {
+        return;
+    }
+
+    window.setTimeout(function() {
+        window.location.reload();
+    }, config.statusPollIntervalMs);
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $(document).ready(function() {
     $('#data-table').tablesorter();
     $.fn.zato.data_table.password_required = false;
@@ -291,6 +326,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.pubsub.subscription.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms([]);
+    $.fn.zato.pubsub.subscription.maybeStartStatusPoll();
 
     // Add an open callback to the edit dialog for proper initialization
     $('#edit-div').dialog('option', 'open', function() {
@@ -403,20 +439,17 @@ $(document).ready(function() {
         // Remove any existing topic_data inputs
         $form.find('input[name="topic_data"]').remove();
 
-        // Add checked topics as enabled
-        $(topicDivId + ' input[name="topic_name"]:checked:not(.indeterminate)').each(function() {
+        // Add selected topics with their publishing and delivery flags
+        $(topicDivId + ' input[name="topic_name"]:checked, ' + topicDivId + ' input[name="topic_name"].indeterminate').each(function() {
             var $checkbox = $(this);
             var topicName = $checkbox.val();
-            var topicDataObj = {topic_name: topicName, is_pub_enabled: true, is_delivery_enabled: true};
-            var topicData = JSON.stringify(topicDataObj).replace(/"/g, '&quot;');
-            $form.append('<input type="hidden" name="topic_data" value="' + topicData + '">');
-        });
-
-        // Add indeterminate topics as disabled
-        $(topicDivId + ' input[name="topic_name"].indeterminate').each(function() {
-            var $checkbox = $(this);
-            var topicName = $checkbox.val();
-            var topicDataObj = {topic_name: topicName, is_pub_enabled: false, is_delivery_enabled: true};
+            var isPubEnabled = $(topicDivId + ' input.topic-pub-enabled[data-topic="' + topicName + '"]').prop('checked');
+            var isDeliveryEnabled = $(topicDivId + ' input.topic-delivery-enabled[data-topic="' + topicName + '"]').prop('checked');
+            var topicDataObj = {
+                topic_name: topicName,
+                is_pub_enabled: isPubEnabled,
+                is_delivery_enabled: isDeliveryEnabled
+            };
             var topicData = JSON.stringify(topicDataObj).replace(/"/g, '&quot;');
             $form.append('<input type="hidden" name="topic_data" value="' + topicData + '">');
         });
@@ -615,7 +648,8 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 
     var delivery_css_class = is_delivery_active ? 'ps-badge-deliv-enabled' : 'ps-badge-deliv-disabled';
     var pub_css_class = is_pub_active ? 'ps-badge-pub-enabled' : 'ps-badge-pub-disabled';
-    row += '<td style="text-align:center"><div class="enabled-for-inner"><div class="ps-status-cell"><span class="ps-badge ' + delivery_css_class + '">Delivery</span><span class="ps-badge ' + pub_css_class + '">Pub</span></div></div></td>';
+    var pair_status_badges = $.fn.zato.pubsub.subscription.pairStatusBadges(item.topic_name_list);
+    row += '<td style="text-align:center"><div class="enabled-for-inner"><div class="ps-status-cell"><span class="ps-badge ' + delivery_css_class + '">Delivery</span><span class="ps-badge ' + pub_css_class + '">Pub</span>' + pair_status_badges + '</div></div></td>';
 
     if(item.delivery_type === 'pull') {
         row += '<td style="text-align:center"><div class="col-center-left">Pull</div></td>';

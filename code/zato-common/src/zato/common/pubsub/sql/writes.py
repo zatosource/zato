@@ -21,7 +21,7 @@ from zato.common.audit_log.bulk_insert import insert_pending_events
 from zato.common.db_env.commit_queue import CommitQueue
 from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.engine import call_database
-from zato.common.db_env.errors import is_conflict, is_value_error
+from zato.common.db_env.errors import is_conflict, is_lock_timeout, is_value_error
 from zato.common.db_env.outage import OutageTracker
 from zato.common.db_env.pg8000_copy import copy_rows
 from zato.common.db_env.plain_sql import PlainStatement
@@ -32,10 +32,12 @@ from zato.common.pubsub.sql.dedup import get_existing_fingerprints, rewrite_fing
 from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID
 from zato.common.pubsub.sql.fenced_ack import check_fenced, delete_fenced, PubSubAckConflict
 from zato.common.pubsub.sql.payloads import drop_payloads, get_chunks, get_message_ids
-from zato.common.pubsub.sql.pending import PendingAck, PendingAtomic, PendingAttempts, PendingPublication, reset_item
+from zato.common.pubsub.sql.pending import PendingAck, PendingAtomic, PendingAttempts, PendingPublication, PendingSync, \
+    new_pending_sync, reset_item
 from zato.common.pubsub.sql.pull import lease_messages
 from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
 from zato.common.pubsub.sql.sqlite_write import write_items_sqlite
+from zato.common.pubsub.sql.subscription_sync import apply_syncs, set_lock_timeout
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,8 +46,10 @@ if 0:
     from sqlalchemy.engine import Connection, Engine
     from zato.common.audit_log.api import AuditLog
     from zato.common.pubsub.sql.pending import PendingLease, pending_ack_list, pending_atomic_list, pending_attempts_list, \
-        pending_lease_list, pending_publication_list
+        pending_lease_list, pending_publication_list, pending_sync_list
+    from zato.common.pubsub.subscription_list import pairlist
     from zato.common.typing_ import any_, anydict, anylist, intlist, strlist
+    from zato_common_core.zato_common_core import SubscriptionList
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
@@ -59,6 +63,9 @@ if 0:
     pending_attempts_list = pending_attempts_list
     pending_lease_list = pending_lease_list
     pending_publication_list = pending_publication_list
+    pending_sync_list = pending_sync_list
+    pairlist = pairlist
+    SubscriptionList = SubscriptionList
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -88,6 +95,11 @@ _subscribers_query = _subscribers_query.where(
 # On PostgreSQL, an unsubscription deletes the subscription row and only then the pending deliveries,
 # so its delete must wait until each publication that read the row has committed its deliveries.
 _subscribers_query_plain = PlainStatement(_subscribers_query.with_for_update(read=True, key_share=True))
+
+# The row of a pair pending in the subscription list, which a publication inserts in its own commit,
+# leaving a row that a concurrent transaction committed first as it is.
+_topic_sub_insert = postgresql_insert(topic_sub_table).on_conflict_do_nothing()
+_topic_sub_insert_plain = PlainStatement(_topic_sub_insert)
 
 # A message whose identifier exists already is not inserted, and the statement returns the messages it inserted ..
 _message_inserts:'anydict' = {}
@@ -138,10 +150,13 @@ class PubSubWriter:
     The audit events of the items commit in the transaction of the items.
     """
 
-    def __init__(self, audit_log:'AuditLog') -> 'None':
+    def __init__(self, audit_log:'AuditLog', subscription_list:'SubscriptionList') -> 'None':
 
         # The audit log whose events commit in the transactions of the items
         self.audit_log = audit_log
+
+        # The subscriber and topic pairs of config.db, which publications read once they hold the lock on the rows of their topics
+        self.subscription_list = subscription_list
 
         commit_max_messages = get_commit_max_messages()
         commits_in_flight = get_commits_in_flight()
@@ -213,6 +228,22 @@ class PubSubWriter:
 
 # ################################################################################################################################
 
+    def sync_pairs(self, added:'pairlist', removed:'pairlist') -> 'None':
+        """ Inserts and deletes the governed pairs of the subscription list in one transaction of the commit queue.
+        """
+        pending = new_pending_sync(added, removed)
+        pair_count = len(added) + len(removed)
+
+        if pair_count < 1:
+            pair_count = 1
+
+        self._commit_queue.write(pending, weight=pair_count, is_urgent=False)
+
+        if pending.exception:
+            raise pending.exception
+
+# ################################################################################################################################
+
     def _write_batch(self, batch:'anylist') -> 'None':
         """ Writes all the items of one batch, in a thread of the pool under gevent with SQLite.
         """
@@ -253,12 +284,16 @@ class PubSubWriter:
 
             except DBAPIError as e:
 
-                # A value of one item that PostgreSQL rejects fails the whole commit, so each item of the batch
-                # is written again in a transaction of its own and only the caller of the item at fault receives the error ..
-                if len(batch) > 1 and is_value_error(e):
-                    logger.info('Pub/sub commit rejected a value, writing its %d items one by one -> %s', len(batch), e.orig)
-                    out = self._write_items_one_by_one(engine, batch)
-                    break
+                # A value of one item that PostgreSQL rejects, or a lock that one item waits for past the timeout,
+                # fails the whole commit, so each item of the batch is written again in a transaction of its own
+                # and only the caller of the item at fault receives the error ..
+                if len(batch) > 1:
+                    if is_value_error(e) or is_lock_timeout(e):
+                        logger.info(
+                            'Pub/sub commit split after a rejected value or a lock timeout, writing its %d items one by one -> %s',
+                            len(batch), e.orig)
+                        out = self._write_items_one_by_one(engine, batch)
+                        break
 
                 attempt += 1
 
@@ -287,9 +322,10 @@ class PubSubWriter:
                 audit_events = self._write_items(engine, [item])
                 out.extend(audit_events)
             except DBAPIError as e:
-                if not is_value_error(e):
+                if is_value_error(e) or is_lock_timeout(e):
+                    item.exception = e
+                else:
                     raise
-                item.exception = e
 
         return out
 
@@ -305,6 +341,7 @@ class PubSubWriter:
         atomics:'pending_atomic_list' = []
         attempts_list:'pending_attempts_list' = []
         leases:'pending_lease_list' = []
+        syncs:'pending_sync_list' = []
 
         for item in batch:
             if isinstance(item, PendingPublication):
@@ -315,29 +352,43 @@ class PubSubWriter:
                 atomics.append(item)
             elif isinstance(item, PendingAttempts):
                 attempts_list.append(item)
+            elif isinstance(item, PendingSync):
+                syncs.append(item)
             else:
                 leases.append(item)
 
         # Each acknowledged message, with the acknowledgement that its full delivery counts towards
         ack_by_message_id:'anydict' = {}
 
+        # The pairs of the subscription list whose rows the publications insert
+        added_pairs:'pairlist' = []
+
         with engine.begin() as connection:
 
-            # On SQLite, the items are written in Rust with the GIL released, in the same order as below ..
+            # Every pub/sub transaction on PostgreSQL waits for a lock only as long as a SQLite write does
+            set_lock_timeout(connection)
+
+            # The pairs of the subscription list are written first so that the publications of the same commit see their rows ..
+            if syncs:
+                apply_syncs(connection, syncs)
+
+            # On SQLite, the remaining items are written in Rust with the GIL released, in the same order as below ..
             if connection.dialect.name == Type_SQLite:
-                write_items_sqlite(connection, publications, acks, atomics, attempts_list, leases)
+                if publications or acks or atomics or attempts_list or leases:
+                    added_pairs = write_items_sqlite(
+                        connection, publications, acks, atomics, attempts_list, leases, self.subscription_list)
 
             else:
 
                 if publications:
-                    self._insert_publications(connection, publications)
+                    self._insert_publications(connection, publications, added_pairs)
 
                 if acks:
                     self._delete_acks(connection, acks, ack_by_message_id)
 
                 # Each fenced acknowledgement commits with its publications or not at all, without failing the others ..
                 for atomic in atomics:
-                    self._write_atomic(connection, atomic, ack_by_message_id)
+                    self._write_atomic(connection, atomic, ack_by_message_id, added_pairs)
 
                 # .. a push attempt is recorded only for a delivery that this transaction has not acknowledged ..
                 for attempts in attempts_list:
@@ -348,7 +399,7 @@ class PubSubWriter:
                 # .. a pull leases nothing that this transaction has acknowledged already ..
                 for lease in leases:
                     rows, attempts = lease_messages(
-                        connection, lease.sub_key, lease.max_messages, lease.max_len, lease.now_ms, lease.leased_until_ms)
+                        connection, self.subscription_list, lease.sub_key, lease.max_messages, lease.max_len, lease.now_ms, lease.leased_until_ms)
                     lease.rows = rows
                     lease.attempts = attempts
                     lease.on_leased(lease)
@@ -365,11 +416,25 @@ class PubSubWriter:
             if out:
                 _ = insert_pending_events(connection, out)
 
+        # The rows that the publications and the syncs wrote count as committed only now that the transaction committed.
+        if added_pairs:
+            self.subscription_list.mark_committed(added_pairs)
+
+        for sync in syncs:
+            if sync.committed_added or sync.committed_removed:
+                self.subscription_list.mark_committed(sync.committed_added, sync.committed_removed)
+
         return out
 
 # ################################################################################################################################
 
-    def _write_atomic(self, connection:'Connection', atomic:'PendingAtomic', ack_by_message_id:'anydict') -> 'None':
+    def _write_atomic(
+        self,
+        connection:'Connection',
+        atomic:'PendingAtomic',
+        ack_by_message_id:'anydict',
+        added_pairs:'pairlist',
+        ) -> 'None':
         """ Writes a fenced acknowledgement with its publications in the caller's transaction. Each reason for which
         the item fails is checked before anything of it is written, so that an item that fails writes nothing,
         and on PostgreSQL the item is also enclosed in a savepoint, against a concurrent commit that changes
@@ -396,7 +461,7 @@ class PubSubWriter:
         # .. whereas after the first write of an item, only a savepoint can undo it on its own.
         try:
             if atomic.publications:
-                self._insert_publications(connection, atomic.publications)
+                self._insert_publications(connection, atomic.publications, added_pairs)
 
             if atomic.is_strict:
                 for pending in atomic.publications:
@@ -454,8 +519,14 @@ class PubSubWriter:
 
 # ################################################################################################################################
 
-    def _get_subscribers(self, connection:'Connection', publications:'pending_publication_list') -> 'anydict':
-        """ Returns the subscriber keys of each topic the publications go to, read within the caller's transaction.
+    def _get_subscribers(
+        self,
+        connection:'Connection',
+        publications:'pending_publication_list',
+        added_pairs:'pairlist',
+        ) -> 'anydict':
+        """ Returns the subscriber keys of each topic the publications go to, decided by the subscription list
+        from the rows read and locked within the caller's transaction, and inserts the rows of the pending pairs.
         """
         topic_names:'anylist' = []
 
@@ -465,14 +536,33 @@ class PubSubWriter:
             if topic_name not in topic_names:
                 topic_names.append(topic_name)
 
-        out:'anydict' = {}
+        row_sub_keys:'anydict' = {}
 
+        for topic_name in topic_names:
+            row_sub_keys[topic_name] = []
+
+        # The rows of the topics are locked first ..
         for row in _subscribers_query_plain.execute(connection, {'write_topic_names': topic_names}):
+            row_sub_keys[row.topic_name].append(row.sub_key)
 
-            if row.topic_name not in out:
-                out[row.topic_name] = []
+        # .. the subscription list decides the subscribers of each topic only under that lock ..
+        out:'anydict' = {}
+        topic_sub_rows:'anylist' = []
 
-            out[row.topic_name].append(row.sub_key)
+        for topic_name in topic_names:
+            sub_keys, added = self.subscription_list.decide_subscribers(topic_name, row_sub_keys[topic_name])
+
+            if sub_keys:
+                out[topic_name] = sub_keys
+
+            for sub_key, added_topic_name in added:
+                topic_sub_rows.append({'sub_key': sub_key, 'topic_name': added_topic_name})
+
+            added_pairs.extend(added)
+
+        # .. and the pending pairs receive their rows in the same commit as the messages.
+        if topic_sub_rows:
+            _ = _topic_sub_insert_plain.insert_rows(connection, topic_sub_rows)
 
         return out
 
@@ -531,7 +621,12 @@ class PubSubWriter:
 
 # ################################################################################################################################
 
-    def _insert_publications(self, connection:'Connection', publications:'pending_publication_list') -> 'None':
+    def _insert_publications(
+        self,
+        connection:'Connection',
+        publications:'pending_publication_list',
+        added_pairs:'pairlist',
+        ) -> 'None':
         """ Writes the dedup records of the publications, then inserts the messages of those whose dedup records
         were written and one delivery row per message and subscriber.
         """
@@ -543,7 +638,7 @@ class PubSubWriter:
             return
 
         # .. the subscribers as of this very commit ..
-        subscribers = self._get_subscribers(connection, publications)
+        subscribers = self._get_subscribers(connection, publications, added_pairs)
 
         message_rows:'anylist' = []
 

@@ -171,11 +171,16 @@ class SQLAdminAPI(SQLBrowseAPI):
 
         for sub_key, topic_name in sub_topic_pairs:
             topic_name = topic_name.lower()
-            requested_pairs.add((sub_key, topic_name))
 
             if sub_key not in out:
                 out[sub_key] = 0
                 sub_keys.append(sub_key)
+
+            # .. a pair that the subscription list no longer configures counts towards nothing ..
+            if self.subscription_list.withholds_pair(sub_key, topic_name):
+                continue
+
+            requested_pairs.add((sub_key, topic_name))
 
         if not sub_keys:
             return out
@@ -201,6 +206,11 @@ class SQLAdminAPI(SQLBrowseAPI):
         """
         topic_name = topic_name.lower()
 
+        # A pair that the subscription list no longer configures has its messages withheld ..
+        if self.subscription_list.withholds_pair(sub_key, topic_name):
+            return 0
+
+        # .. and the others are counted by their state.
         if state == 'pending':
             out = self._count_pending(sub_key, topic_name)
             return out

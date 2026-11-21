@@ -162,6 +162,13 @@ def parse_publication(
     if not server.config_manager.is_pubsub_topic_active(topic_name):
         raise PublicationError(f'Topic {topic_name} is inactive', _status_forbidden, FORBIDDEN)
 
+    # .. a subscriber whose publishing is switched off may not publish ..
+    sub_key = server.pubsub_subscriptions.get_sub_key_by_username(username)
+
+    if sub_key:
+        if not server.pubsub_subscription_list.is_publish_allowed(sub_key, topic_name):
+            raise PublicationError('Publication not allowed for this subscription', _status_forbidden, FORBIDDEN)
+
     # .. a message without data is not one ..
     data = _get_optional(fields, 'data')
 

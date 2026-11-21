@@ -32,10 +32,10 @@ class SQLState:
     Idle_In_Transaction_Session_Timeout = '25P03'
 
 # The conflicts with concurrent transactions after which PostgreSQL rolled the transaction back as a whole.
+# A lock timeout is not among them, a batch that reaches one is split so that only the callers of the locked rows fail.
 _conflict_states = {
     SQLState.Deadlock_Detected,
     SQLState.Serialization_Failure,
-    SQLState.Lock_Not_Available,
 }
 
 # The conditions in which a transaction that failed may be started again unchanged.
@@ -88,6 +88,16 @@ def is_value_error(error:'DBAPIError') -> 'bool':
     sqlstate_class = sqlstate[:2]
 
     out = sqlstate_class in _value_error_classes
+    return out
+
+# ################################################################################################################################
+
+def is_lock_timeout(error:'DBAPIError') -> 'bool':
+    """ Whether PostgreSQL ended the wait for a lock after the lock timeout of the transaction.
+    """
+    sqlstate = get_sqlstate(error)
+    out = sqlstate == SQLState.Lock_Not_Available
+
     return out
 
 # ################################################################################################################################

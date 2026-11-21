@@ -10,9 +10,10 @@ use pyo3::types::{PyBool, PyBytes, PyDict, PyFloat, PyList, PyString, PyTuple};
 use rusqlite::types::Value;
 
 use crate::audit_insert::{bound_value, check_library_version, open_handle, sqlite_py_err};
+use crate::pubsub_subscription_list::{Pair, SubscriptionList};
 use crate::pubsub_write_sql::{
-    AckInput, AckResult, AtomicInput, AtomicResult, BatchError, BatchInput, BatchResults, DedupKey, FencedEntry, ItemError, Layout,
-    LeaseInput, LeaseResult, PublicationInput, PublicationResult, Statements, write_batch,
+    AckInput, AckResult, AtomicInput, AtomicResult, BatchContext, BatchError, BatchInput, BatchResults, DedupKey, FencedEntry, ItemError,
+    Layout, LeaseInput, LeaseResult, PublicationInput, PublicationResult, Statements, write_batch,
 };
 
 /// The module of the `SQLite` driver of Python.
@@ -66,6 +67,7 @@ impl SqlitePubSubWriter {
         let statements = Statements {
             begin: statement("begin")?,
             select_subscribers: statement("select_subscribers")?,
+            insert_topic_sub: statement("insert_topic_sub")?,
             upsert_dedup_record: statement("upsert_dedup_record")?,
             select_dedup_record: statement("select_dedup_record")?,
             update_dedup_fingerprint: statement("update_dedup_fingerprint")?,
@@ -126,13 +128,15 @@ impl SqlitePubSubWriter {
     }
 
     /// Writes the items of a batch, given by kind, in the transaction of the connection and stores on each item
-    /// what became of it. Returns the identifier of each repeated publication, with the name of how it repeats an earlier one.
+    /// what became of it. Returns the identifier of each repeated publication, with the name of how it repeats an earlier one,
+    /// and the subscriber and topic pairs whose rows the publications inserted.
     fn write_items(
         &self,
         py: Python<'_>,
         connection: &Bound<'_, PyAny>,
         items: &Bound<'_, PyDict>,
-    ) -> PyResult<Vec<(String, &'static str)>> {
+        subscription_list: &Bound<'_, SubscriptionList>,
+    ) -> PyResult<(Vec<(String, &'static str)>, Vec<Pair>)> {
         let items = items.as_any();
         let publications = items.get_item("publications")?.cast_into::<PyList>()?;
         let acks = items.get_item("acks")?.cast_into::<PyList>()?;
@@ -149,14 +153,24 @@ impl SqlitePubSubWriter {
         };
 
         let sqlite = open_handle(connection, self.connection_type.bind(py))?;
-        let statements = &self.statements;
-        let layout = &self.layout;
+        let shared_list = subscription_list.get().shared();
         let mut results = BatchResults::for_batch(&batch);
         let batch_ref = &batch;
         let results_ref = &mut results;
+        let statements = &self.statements;
+        let layout = &self.layout;
+        let list_ref = &shared_list;
 
         // Everything from here on is written without the GIL, so the other threads of the interpreter run in the meantime
-        let written = py.detach(move || write_batch(&sqlite, statements, layout, batch_ref, results_ref));
+        let written = py.detach(move || {
+            let context = BatchContext {
+                sqlite: &sqlite,
+                statements,
+                layout,
+                subscription_list: list_ref,
+            };
+            write_batch(&context, batch_ref, results_ref)
+        });
 
         // A batch that SQLite refused is rolled back as a whole, so nothing of it is stored on the items
         if let Err(BatchError::Sqlite(error)) = written {
@@ -202,7 +216,7 @@ impl SqlitePubSubWriter {
             return Err(PyErr::from_value(exception));
         }
 
-        Ok(out)
+        Ok((out, results.added_pairs))
     }
 }
 

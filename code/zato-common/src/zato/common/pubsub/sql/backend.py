@@ -25,9 +25,11 @@ from zato.common.pubsub.sql.admin import SQLAdminAPI
 from zato.common.pubsub.sql.config import get_batch_size, get_pull_lease_seconds
 from zato.common.pubsub.sql.publication import add_published_event, build_publication, check_scope_publication, \
     complete_publication, complete_publications
-from zato.common.pubsub.sql.pull import fetch_query, has_lease_candidates, outgoing_fetch_query, payload_query
+from zato.common.pubsub.sql.pull import delivered_topics_parameters, fetch_query, has_lease_candidates, outgoing_fetch_query, \
+    payload_query
 from zato.common.pubsub.sql.schema import delivery_table, topic_sub_table
 from zato.common.pubsub.sql.pending import new_fenced_ack, new_pending_atomic, new_pending_lease
+from zato.common.pubsub.sql.subscription_sync import read_governed_pairs
 from zato.common.typing_ import list_, tuple_
 from zato.server.metrics import zato_pubsub_messages_delivered_total
 
@@ -38,7 +40,10 @@ if 0:
     from sqlalchemy.engine import Engine
     from zato.common.pubsub.sql.pending import PendingAck, PendingLease, pending_publication_list
     from zato.common.pubsub.sql.publication import built_publication_list
+    from zato.common.pubsub.subscription_list import pairlist
     from zato.common.typing_ import any_, anydict, anylist, anylistnone, intlist, intnone, strdict, strlist, strnone
+
+    pairlist = pairlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -116,6 +121,12 @@ class SQLPubSubBackend(SQLAdminAPI):
         A subscriber service that publishes while it processes a push delivery batch receives the id of a message
         that is stored if and only if the batch commits. A batch that does not commit is delivered again.
         """
+        topic_name = topic_name.lower()
+
+        # A topic of config.db that is inactive is refused here, before any message is built
+        if topic_name in self.inactive_topics:
+            raise Exception(f'Topic `{topic_name}` is inactive')
+
         built = build_publication(
             self,
             topic_name,
@@ -291,9 +302,58 @@ class SQLPubSubBackend(SQLAdminAPI):
 
 # ################################################################################################################################
 
+    def sync_subscription_pairs(self, added:'pairlist', removed:'pairlist') -> 'None':
+        """ Inserts and deletes the governed pairs of the subscription list in one transaction of the commit queue.
+        """
+        self._writer.sync_pairs(added, removed)
+
+# ################################################################################################################################
+
+    def get_governed_pairs(self) -> 'pairlist':
+        """ Returns the governed subscriber and topic pairs whose rows are committed in the pub/sub database.
+        """
+        with self.engine.connect() as connection:
+            out = read_governed_pairs(connection)
+
+        return out
+
+# ################################################################################################################################
+
+    def cleanup_pair_deliveries(self, removed:'pairlist') -> 'None':
+        """ Removes the delivery rows of pairs whose subscription rows were deleted, a bounded batch at a time.
+        """
+        for sub_key, topic_name in removed:
+            self._cleanup_pair_deliveries(sub_key, topic_name)
+
+# ################################################################################################################################
+
+    def _cleanup_pair_deliveries(self, sub_key:'str', topic_name:'str') -> 'None':
+        """ Removes the pending deliveries of one pair that no longer has a subscription row.
+        """
+        batch_size = get_batch_size()
+        cleaned_up_count = 0
+
+        while True:
+
+            batch_started = monotonic()
+
+            batch_count = call_database(self.engine, self._unsubscribe_batch, self.engine, sub_key, topic_name, batch_size)
+
+            if not batch_count:
+                break
+
+            cleaned_up_count += batch_count
+            self._yield_after_batch(monotonic() - batch_started)
+
+        if cleaned_up_count:
+            logger.info('Cleaned up deliveries of a removed pair -> sub_key:%s, topic_name:%s, cleaned_up_count:%d',
+                sub_key, topic_name, cleaned_up_count)
+
+# ################################################################################################################################
+
     def subscribe(self, sub_key:'str', topic_name:'str') -> 'None':
         """ Subscribe a user to a topic. Only messages published from this point on
-        are delivered to the subscriber.
+        are delivered to the subscriber. Mechanism-owned subscriptions alone use this path.
         """
 
         # Normalize topic name to lowercase for case-insensitivity ..
@@ -435,6 +495,10 @@ class SQLPubSubBackend(SQLAdminAPI):
             query = fetch_query
             parameters['fetch_now_ms'] = self._database_now_ms()
 
+            # A governed subscriber receives the messages of the topics that the subscription list hands out to it alone
+            delivered_topics = delivered_topics_parameters(self.subscription_list, sub_key, 'fetch')
+            parameters.update(delivered_topics)
+
         payload_cache = self.payload_cache
 
         # A payload is kept only if no edit took place from this point to the moment it is kept
@@ -555,7 +619,7 @@ class SQLPubSubBackend(SQLAdminAPI):
         out:'anylist' = []
 
         # A pull that would hand out nothing does not wait for a commit ..
-        if not has_lease_candidates(self.engine, sub_key, now_ms):
+        if not has_lease_candidates(self.engine, self.subscription_list, sub_key, now_ms):
             return out
 
         # .. while any other one leases its messages in a commit that it may share with other writes.

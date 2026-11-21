@@ -425,7 +425,7 @@ def _get_topics_for_patterns(request:'HttpRequest', subscriber_patterns:'strlist
 # ################################################################################################################################
 
 def _build_topic_checkbox_html(all_topics:'set') -> 'str':
-    """ Build HTML for topic checkboxes.
+    """ Build HTML for topic checkboxes with publishing and delivery controls.
     """
     html_parts = []
     html_parts.append('<table id="multi-select-table" class="multi-select-table">')
@@ -434,14 +434,28 @@ def _build_topic_checkbox_html(all_topics:'set') -> 'str':
         sorted_topics = _sort_topics_by_name(all_topics)
         for topic_id, topic_name in sorted_topics:
             checkbox_id = f'topic_checkbox_{topic_id}'
+            pub_id = f'topic_pub_{topic_id}'
+            delivery_id = f'topic_delivery_{topic_id}'
             html_parts.append('<tr>')
             html_parts.append('<td>')
-            html_parts.append(f'<input type="checkbox" id="{checkbox_id}" data-id="{topic_id}" name="topic_name" value="{topic_name}" />')
+            html_parts.append(
+                f'<input type="checkbox" id="{checkbox_id}" data-id="{topic_id}" '
+                f'name="topic_name" value="{topic_name}" />')
             html_parts.append('</td>')
             html_parts.append('<td>')
             html_parts.append(f'<label for="{checkbox_id}">')
             html_parts.append(f'<a href="/zato/pubsub/topic/?query={topic_name}" target="_blank">{topic_name}</a>')
             html_parts.append('</label>')
+            html_parts.append('</td>')
+            html_parts.append('<td>')
+            html_parts.append(
+                f'<label><input type="checkbox" id="{pub_id}" class="topic-pub-enabled" '
+                f'data-topic="{topic_name}" checked /> Pub</label>')
+            html_parts.append('</td>')
+            html_parts.append('<td>')
+            html_parts.append(
+                f'<label><input type="checkbox" id="{delivery_id}" class="topic-delivery-enabled" '
+                f'data-topic="{topic_name}" checked /> Delivery</label>')
             html_parts.append('</td>')
             html_parts.append('</tr>')
     else:

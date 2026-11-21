@@ -12,6 +12,7 @@ from logging import getLogger
 # Zato
 from zato.common.api import PubSub
 from zato.common.broker_message import Server as BrokerMessageServer
+from zato_common_core.zato_common_core import SubscriptionList
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -203,6 +204,11 @@ class PubSubFacade:
 # ################################################################################################################################
 
     def subscribe(self, topic_name:'str', sub_key:'str') -> 'None':
+        """ Subscribes an ad hoc subscriber to a topic. A sub key in the governed format is refused.
+        """
+        if SubscriptionList.is_governed(sub_key):
+            raise Exception(f'Sub key `{sub_key}` is reserved for subscriptions of config.db')
+
         self.server.pubsub_backend.subscribe(sub_key, topic_name)
 
 # ################################################################################################################################

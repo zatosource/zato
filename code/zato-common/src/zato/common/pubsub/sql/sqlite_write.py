@@ -15,7 +15,7 @@ from sqlite3 import Error as SQLiteError, sqlite_version
 from typing import NamedTuple
 
 # SQLAlchemy
-from sqlalchemy import and_, bindparam, exists, false, literal_column, null, select
+from sqlalchemy import and_, bindparam, exists, false, func, literal_column, null, or_, select
 from sqlalchemy.dialects import sqlite
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import DBAPIError
@@ -43,13 +43,17 @@ if 0:
     from sqlalchemy.sql.expression import ClauseElement
     from zato.common.pubsub.sql.pending import pending_ack_list, pending_atomic_list, pending_attempts_list, \
         pending_lease_list, pending_publication_list
+    from zato.common.pubsub.subscription_list import pairlist
     from zato.common.typing_ import any_, anylist, strlist
+    from zato_common_core.zato_common_core import SubscriptionList
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
     anylist = anylist
     ClauseElement = ClauseElement
     Connection = Connection
+    pairlist = pairlist
+    SubscriptionList = SubscriptionList
     pending_ack_list = pending_ack_list
     pending_atomic_list = pending_atomic_list
     pending_attempts_list = pending_attempts_list
@@ -65,8 +69,8 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The statement that opens the transaction the driver opens itself before a statement that changes rows
-_begin_statement = 'BEGIN'
+# The statement that opens the transaction with the write lock, which publications hold before they read the subscription list
+_begin_statement = 'BEGIN IMMEDIATE'
 
 # The dialect that the statements are compiled for
 _dialect = sqlite.dialect()
@@ -120,6 +124,10 @@ def _compile(statement:'ClauseElement', parameter_names:'strlist') -> 'str':
 # The subscribers of one topic.
 _select_subscribers = select(topic_sub_table.c.sub_key)
 _select_subscribers = _select_subscribers.where(topic_sub_table.c.topic_name == bindparam('topic_name'))
+
+# The row of one subscriber and topic pair that a publication inserts for a pair pending in the subscription list.
+_insert_topic_sub = sqlite_insert(topic_sub_table).values(sub_key=bindparam('sub_key'), topic_name=bindparam('topic_name'))
+_insert_topic_sub = _insert_topic_sub.on_conflict_do_nothing()
 
 # The upsert of the dedup record of one message ID, which returns the ID unless a dedup record within its window remains.
 _dedup_values = {}
@@ -182,11 +190,15 @@ _record_attempt = _record_attempt.returning(delivery_table.c.attempt)
 # The deliverable rows of one subscriber that no pull holds a lease on, or whose lease has run out, in the order of the queue.
 _lease_join = delivery_table.join(message_table, message_table.c.id == delivery_table.c.message_id)
 
+# The topics that the subscription list hands out to the subscriber arrive as one JSON array, or as NULL when it restricts none.
+_delivered_topics = select(literal_column('value')).select_from(func.json_each(bindparam('delivered_topics')))
+
 _select_lease_candidates = select(delivery_table.c.id, message_table.c.data_size).select_from(_lease_join)
 _select_lease_candidates = _select_lease_candidates.where(and_(
     delivery_table.c.sub_key == bindparam('sub_key'),
     delivery_table.c.expiration_ms > bindparam('now_ms'),
     delivery_table.c.leased_until_ms < bindparam('now_ms'),
+    or_(bindparam('delivered_topics').is_(null()), delivery_table.c.topic_name.in_(_delivered_topics)),
 ))
 _select_lease_candidates = _select_lease_candidates.order_by(
     delivery_table.c.priority.desc(), delivery_table.c.message_id.asc())
@@ -232,6 +244,7 @@ _drop_payload = _drop_payload.returning(message_table.c.id)
 # The statements of the transaction, each with the parameters in the order in which the writer binds them,
 # and each checked against the mechanism of the write before a batch is written.
 _select_subscribers = _compile(_select_subscribers, ['topic_name'])
+_insert_topic_sub = _compile(_insert_topic_sub, ['sub_key', 'topic_name'])
 _upsert_dedup_record = _compile(_upsert_dedup_record, _dedup_parameter_names)
 _select_dedup_record = _compile(dedup_record_query, ['dedup_kind', 'dedup_scope', 'dedup_message_id'])
 _update_dedup_fingerprint = _compile(_update_dedup_fingerprint, ['dedup_kind', 'dedup_scope', 'dedup_message_id'])
@@ -243,14 +256,15 @@ _select_message_id = _compile(_select_message_id, ['msg_id'])
 _select_ack_delivery = _compile(_select_ack_delivery, ['message_id', 'sub_key'])
 _delete_delivery = _compile(_delete_delivery, ['delivery_id'])
 _record_attempt = _compile(_record_attempt, ['delivery_id'])
-_select_lease_candidates = _compile(_select_lease_candidates, ['sub_key', 'now_ms', 'now_ms', 'max_messages'])
+_select_lease_candidates = _compile(
+    _select_lease_candidates, ['sub_key', 'now_ms', 'now_ms', 'delivered_topics', 'delivered_topics', 'max_messages'])
 _lease_delivery = _compile(_lease_delivery, ['lease_leased_until_ms', 'delivery_id', 'now_ms'])
 _select_leased_message = _compile(_select_leased_message, ['message_id'])
 _select_fenced_delivery = _compile(_select_fenced_delivery, ['sub_key', 'msg_id'])
 _drop_payload = _compile(_drop_payload, ['message_id'])
 
 _write_statements = [
-    _begin_statement, _select_subscribers, _upsert_dedup_record, _select_dedup_record, _update_dedup_fingerprint,
+    _begin_statement, _select_subscribers, _insert_topic_sub, _upsert_dedup_record, _select_dedup_record, _update_dedup_fingerprint,
     _insert_message, _select_existing_message, _insert_delivery, _select_message_id, _select_ack_delivery, _delete_delivery,
     _record_attempt, _select_lease_candidates, _lease_delivery, _select_leased_message, _select_fenced_delivery, _drop_payload,
 ]
@@ -260,6 +274,7 @@ _writer = SQLitePubSubWriter({
     'statements': {
         'begin': _begin_statement,
         'select_subscribers': _select_subscribers,
+        'insert_topic_sub': _insert_topic_sub,
         'upsert_dedup_record': _upsert_dedup_record,
         'select_dedup_record': _select_dedup_record,
         'update_dedup_fingerprint': _update_dedup_fingerprint,
@@ -299,9 +314,11 @@ def write_items_sqlite(
     atomics:'pending_atomic_list',
     attempts_list:'pending_attempts_list',
     leases:'pending_lease_list',
-    ) -> 'None':
+    subscription_list:'SubscriptionList',
+    ) -> 'pairlist':
     """ Writes the items of a batch in the open transaction of the connection with the GIL released, stores on each item
     what became of it, and builds the messages of each pull from the rows that it leased.
+    Returns the subscriber and topic pairs whose rows the publications inserted.
     """
     # The items join the transaction of the caller, which must therefore be open already ..
     if not connection.in_transaction():
@@ -323,7 +340,7 @@ def write_items_sqlite(
 
     # .. the statements run in Rust, which raises the exceptions of the driver ..
     try:
-        repeats = _writer.write_items(dbapi_connection, items)
+        repeats, added_pairs = _writer.write_items(dbapi_connection, items, subscription_list)
     except SQLiteError as error:
         raise DBAPIError.instance(None, None, error, SQLiteError) from error
 
@@ -334,6 +351,8 @@ def write_items_sqlite(
     # .. and each pull builds its messages, whose receptions commit with its lease.
     for lease in leases:
         lease.on_leased(lease)
+
+    return added_pairs
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -440,8 +440,13 @@ class CommandsFacade:
 
     def _on_enmasse_completed(self, result:'CommandResult') -> 'None':
 
-        logger.info('Enmasse stdout -> `%s`', result.stdout.strip())
-        logger.info('Enmasse stderr -> `%s`', result.stderr.strip())
+        if result.is_ok:
+            logger.info('Enmasse stdout -> `%s`', result.stdout.strip())
+            logger.info('Enmasse stderr -> `%s`', result.stderr.strip())
+        else:
+            logger.error(
+                'Enmasse import failed, exit_code=%s, stderr=`%s`, stdout=`%s`',
+                result.exit_code, result.stderr.strip(), result.stdout.strip())
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -34,6 +34,10 @@
             --pubsub-pub-enabled-color: #101010;
             --pubsub-pub-disabled-color: #999;
             --pubsub-pub-disabled-bg: #eee;
+            --pubsub-pair-pending-color: #8a6d00;
+            --pubsub-pair-pending-bg: #fff3c4;
+            --pubsub-pair-pending-removal-color: #8a3b00;
+            --pubsub-pair-pending-removal-bg: #ffe0c2;
         }
 
         .ps-badge {
@@ -66,6 +70,29 @@
         .ps-badge-pub-disabled {
             color: var(--pubsub-pub-disabled-color);
             background: var(--pubsub-pub-disabled-bg);
+        }
+
+        .ps-pair-status {
+            display: inline-block;
+            margin-left: 4px;
+            padding: var(--pubsub-badge-padding);
+            border-radius: var(--pubsub-badge-radius);
+            font-size: var(--pubsub-badge-font-size);
+            font-weight: var(--pubsub-badge-font-weight);
+            letter-spacing: var(--pubsub-badge-letter-spacing);
+            text-transform: uppercase;
+            line-height: 1.15;
+            white-space: nowrap;
+        }
+
+        .ps-pair-status-pending {
+            color: var(--pubsub-pair-pending-color);
+            background: var(--pubsub-pair-pending-bg);
+        }
+
+        .ps-pair-status-pending-removal {
+            color: var(--pubsub-pair-pending-removal-color);
+            background: var(--pubsub-pair-pending-removal-bg);
         }
 
         .ps-status-cell {
@@ -473,7 +500,7 @@
                         {% endif %}
 
                         <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><span class="ps-sub-key" data-sub-key="{{ item.sub_key }}">{{ item.sub_key }}</span></td>
-                        <td style="text-align:center"><div class="enabled-for-inner"><div class="ps-status-cell"><span class="ps-badge {{ item.is_delivery_active|yesno:'ps-badge-deliv-enabled,ps-badge-deliv-disabled' }}">Delivery</span><span class="ps-badge {{ item.is_pub_active|yesno:'ps-badge-pub-enabled,ps-badge-pub-disabled' }}">Pub</span></div></div></td>
+                        <td style="text-align:center"><div class="enabled-for-inner"><div class="ps-status-cell"><span class="ps-badge {{ item.is_delivery_active|yesno:'ps-badge-deliv-enabled,ps-badge-deliv-disabled' }}">Delivery</span><span class="ps-badge {{ item.is_pub_active|yesno:'ps-badge-pub-enabled,ps-badge-pub-disabled' }}">Pub</span>{% for topic in item.topic_name_list %}{% if topic.status != 'confirmed' %}<span class="ps-pair-status ps-pair-status-{{ topic.status }}">{{ topic.status }}</span>{% endif %}{% endfor %}</div></div></td>
 
                         <td style="text-align:center"><div class="col-center-left">
                             {% if item.delivery_type == 'pull' %}

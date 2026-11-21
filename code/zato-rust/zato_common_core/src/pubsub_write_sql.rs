@@ -4,11 +4,14 @@
 //! in the order in which the transaction of Python runs its statements, so that the same rows are written
 //! and the same statements open the transaction.
 
+use std::cell::RefCell;
 use std::collections::hash_map::Entry;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use rusqlite::types::Value;
 use rusqlite::{Connection, params, params_from_iter};
+
+use crate::pubsub_subscription_list::{Decision, Pair, SharedList};
 
 // ################################################################################################################################
 // ################################################################################################################################
@@ -20,6 +23,9 @@ pub struct Statements {
 
     /// The subscribers of one topic.
     pub select_subscribers: String,
+
+    /// The insert of the row of one subscriber and topic pair, which a row that exists already leaves as it is.
+    pub insert_topic_sub: String,
 
     /// The upsert of the dedup record of one message identifier, returning the identifier unless a dedup record
     /// within its window remains.
@@ -322,6 +328,9 @@ pub struct BatchResults {
 
     /// What each pull leased.
     pub leases: Vec<LeaseResult>,
+
+    /// The subscriber and topic pairs whose rows the publications of the batch inserted.
+    pub added_pairs: Vec<Pair>,
 }
 
 impl BatchResults {
@@ -342,6 +351,7 @@ impl BatchResults {
             atomics,
             attempts: vec![Vec::new(); batch.attempts.len()],
             leases: default_results(batch.leases.len()),
+            added_pairs: Vec::new(),
         }
     }
 }
@@ -400,19 +410,34 @@ fn default_results<Item: Default>(count: usize) -> Vec<Item> {
 /// Writes the items of a batch in the transaction of the connection, storing in the results what became of each item.
 ///
 /// The results of the items written before an error remain stored.
-pub fn write_batch(
-    sqlite: &Connection,
-    statements: &Statements,
-    layout: &Layout,
-    batch: &BatchInput,
-    results: &mut BatchResults,
-) -> Result<(), BatchError> {
+pub fn write_batch(context: &BatchContext<'_>, batch: &BatchInput, results: &mut BatchResults) -> Result<(), BatchError> {
     let writer = Writer {
-        sqlite,
-        statements,
-        layout,
+        sqlite: context.sqlite,
+        statements: context.statements,
+        layout: context.layout,
+        subscription_list: context.subscription_list,
+        added_pairs: RefCell::new(Vec::new()),
     };
-    writer.write(batch, results)
+    let written = writer.write(batch, results);
+
+    // The pairs are reported even after an error, since the caller marks them only once the transaction commits
+    results.added_pairs = writer.added_pairs.into_inner();
+    written
+}
+
+/// What the items of one batch are written with.
+pub struct BatchContext<'batch> {
+    /// The connection over the handle of the Python driver.
+    pub sqlite: &'batch Connection,
+
+    /// The statements of the transaction.
+    pub statements: &'batch Statements,
+
+    /// The positions of the columns that the transaction reads or changes.
+    pub layout: &'batch Layout,
+
+    /// The subscription list, which publications and pulls read once the transaction holds the write lock.
+    pub subscription_list: &'batch SharedList,
 }
 
 /// The connection and the statements that the items of one batch are written with.
@@ -425,6 +450,12 @@ struct Writer<'batch> {
 
     /// The positions of the columns that the transaction reads or changes.
     layout: &'batch Layout,
+
+    /// The subscription list, which publications and pulls read once the transaction holds the write lock.
+    subscription_list: &'batch SharedList,
+
+    /// The pairs whose rows the publications of the batch inserted.
+    added_pairs: RefCell<Vec<Pair>>,
 }
 
 impl Writer<'_> {
@@ -476,21 +507,38 @@ impl Writer<'_> {
     fn insert_publications(&self, publications: &[PublicationInput], results: &mut [PublicationResult]) -> rusqlite::Result<()> {
         let layout = self.layout;
 
-        // The subscribers as of this very transaction, read once per topic ..
+        // The write lock is taken first, so that no subscription change commits between the decision and the message ..
+        self.begin()?;
+
+        // .. the rows of each topic as of this very transaction are read once per topic, the subscription list decides
+        // .. the subscribers from them under that lock, and the pending pairs receive their rows in the same commit as the messages ..
         let mut select = self.sqlite.prepare_cached(&self.statements.select_subscribers)?;
-        let mut by_topic: HashMap<&str, Vec<String>> = HashMap::new();
+        let mut insert_topic_sub = self.sqlite.prepare_cached(&self.statements.insert_topic_sub)?;
+        let mut decisions: HashMap<&str, Decision> = HashMap::new();
         let mut subscribers = Vec::with_capacity(publications.len());
 
         for publication in publications {
-            let sub_keys = match by_topic.entry(publication.topic_name.as_str()) {
-                Entry::Occupied(entry) => entry.get().clone(),
+            let decision = match decisions.entry(publication.topic_name.as_str()) {
+                Entry::Occupied(entry) => entry.into_mut(),
                 Entry::Vacant(entry) => {
                     let rows = select.query_map([&publication.topic_name], |row| row.get::<_, String>(0))?;
-                    let sub_keys = rows.collect::<rusqlite::Result<Vec<_>>>()?;
-                    entry.insert(sub_keys).clone()
+                    let row_sub_keys = rows.collect::<rusqlite::Result<Vec<_>>>()?;
+
+                    // The guard is released before the inserts, so a change of the list never waits for a statement
+                    let decision = self
+                        .subscription_list
+                        .read()
+                        .decide_subscribers(&publication.topic_name, row_sub_keys);
+
+                    for (sub_key, topic_name) in &decision.added {
+                        insert_topic_sub.execute(params![sub_key, topic_name])?;
+                    }
+                    self.added_pairs.borrow_mut().extend(decision.added.iter().cloned());
+
+                    entry.insert(decision)
                 }
             };
-            subscribers.push(sub_keys);
+            subscribers.push(decision.subscribers.clone());
         }
 
         // .. a topic without subscribers has its messages stored without their payloads ..
@@ -501,8 +549,6 @@ impl Writer<'_> {
         let not_encrypted = Value::Integer(0);
         let mut dedup_outcomes: HashMap<&str, bool> = HashMap::new();
         let mut written = Vec::with_capacity(publications.len());
-
-        self.begin()?;
 
         for (publication, sub_keys) in publications.iter().zip(&subscribers) {
             // .. the first publication of an identifier writes its dedup record, and the later ones share its outcome,
@@ -936,12 +982,24 @@ impl Writer<'_> {
     fn lease_messages(&self, lease: &LeaseInput, result: &mut LeaseResult) -> rusqlite::Result<()> {
         let layout = self.layout;
 
-        // The candidates in the order of the queue ..
+        // The write lock is taken first, so that the topics handed out are those of the subscription list as of this transaction ..
+        self.begin()?;
+
+        let delivered_topics = self.subscription_list.read().delivered_topics(&lease.sub_key);
+        let delivered_topics = delivered_topics.map(|topics| encode_topics(&topics)).transpose()?;
+
+        // .. the candidates in the order of the queue, of the topics handed out alone ..
         let mut select = self.sqlite.prepare_cached(&self.statements.select_lease_candidates)?;
+        let parameters = params![
+            lease.sub_key,
+            lease.now_ms,
+            lease.now_ms,
+            delivered_topics,
+            delivered_topics,
+            lease.max_messages
+        ];
         let candidates = select
-            .query_map(params![lease.sub_key, lease.now_ms, lease.now_ms, lease.max_messages], |row| {
-                Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?))
-            })?
+            .query_map(parameters, |row| Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?)))?
             .collect::<rusqlite::Result<Vec<_>>>()?;
 
         if candidates.is_empty() {
@@ -971,8 +1029,6 @@ impl Writer<'_> {
         // .. leased unless a concurrent pull leased them first ..
         let mut update = self.sqlite.prepare_cached(&self.statements.lease_delivery)?;
         let mut message_ids = Vec::with_capacity(delivery_ids.len());
-
-        self.begin()?;
 
         for delivery_id in delivery_ids {
             let mut rows = update.query(params![lease.leased_until_ms, delivery_id, lease.now_ms])?;
@@ -1087,6 +1143,17 @@ fn resolve_dedup(
     }
 
     Ok(())
+}
+
+/// Encodes the names of topics as the JSON array that `json_each` of `SQLite` reads.
+fn encode_topics(topics: &[String]) -> rusqlite::Result<String> {
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "the JSON text is the parameter that json_each of SQLite reads, not an intermediate format between Python and Rust"
+    )]
+    let encoded = serde_json::to_string(topics);
+
+    encoded.map_err(|error| rusqlite::Error::ToSqlConversionFailure(error.into()))
 }
 
 /// Returns the message of the error of a publication whose identifier belongs to a different message.

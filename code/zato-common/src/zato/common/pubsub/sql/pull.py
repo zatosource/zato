@@ -12,7 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # until its lease runs out. The subscriber's acknowledgement removes the rows.
 
 # SQLAlchemy
-from sqlalchemy import and_, bindparam, select
+from sqlalchemy import and_, bindparam, Boolean, or_, select
 
 # Zato
 from zato.common.api import HTTP_SOAP
@@ -23,17 +23,54 @@ from zato.common.pubsub.sql.schema import delivery_table, message_retry_columns,
 
 if 0:
     from sqlalchemy.engine import Connection, Engine
+    from sqlalchemy.sql.elements import ColumnElement
     from zato.common.typing_ import anydict, anylist, intdict, intlist
+    from zato_common_core.zato_common_core import SubscriptionList
 
     # Dummy assignments to satisfy type checkers
     anylist = anylist
+    ColumnElement = ColumnElement
     Connection = Connection
     Engine = Engine
+    SubscriptionList = SubscriptionList
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 _retry = HTTP_SOAP.Retry
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _delivered_topics_filter(prefix:'str') -> 'ColumnElement[bool]':
+    """ Returns the condition that keeps the delivery rows of the topics that the subscription list hands out
+    to a subscriber, which holds for every row when the list restricts none.
+    """
+    is_unrestricted = bindparam(f'{prefix}_is_unrestricted', type_=Boolean())
+    delivered_topics = bindparam(f'{prefix}_delivered_topics', expanding=True)
+
+    out = or_(is_unrestricted, delivery_table.c.topic_name.in_(delivered_topics))
+    return out
+
+# ################################################################################################################################
+
+def delivered_topics_parameters(subscription_list:'SubscriptionList', sub_key:'str', prefix:'str') -> 'anydict':
+    """ Returns the parameters of the condition of _delivered_topics_filter for one subscriber.
+    """
+    delivered_topics = subscription_list.delivered_topics(sub_key)
+
+    if delivered_topics is None:
+        out = {
+            f'{prefix}_is_unrestricted': True,
+            f'{prefix}_delivered_topics': [],
+        }
+    else:
+        out = {
+            f'{prefix}_is_unrestricted': False,
+            f'{prefix}_delivered_topics': delivered_topics,
+        }
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,6 +116,7 @@ fetch_query = fetch_query.select_from(_fetch_join)
 fetch_query = fetch_query.where(and_(
     delivery_table.c.sub_key == bindparam('fetch_sub_key'),
     delivery_table.c.expiration_ms > bindparam('fetch_now_ms'),
+    _delivered_topics_filter('fetch'),
 ))
 fetch_query = fetch_query.order_by(*_order_by)
 fetch_query = fetch_query.limit(bindparam('fetch_max_messages'))
@@ -106,6 +144,7 @@ _lease_candidates_query = _lease_candidates_query.where(and_(
     delivery_table.c.sub_key == bindparam('lease_sub_key'),
     delivery_table.c.expiration_ms > bindparam('lease_now_ms'),
     delivery_table.c.leased_until_ms < bindparam('lease_now_ms'),
+    _delivered_topics_filter('lease'),
 ))
 _lease_candidates_query = _lease_candidates_query.order_by(*_order_by)
 _lease_candidates_query = _lease_candidates_query.limit(bindparam('lease_max_messages'))
@@ -117,6 +156,7 @@ _lease_probe_query = _lease_probe_query.where(and_(
     delivery_table.c.sub_key == bindparam('probe_sub_key'),
     delivery_table.c.expiration_ms > bindparam('probe_now_ms'),
     delivery_table.c.leased_until_ms < bindparam('probe_now_ms'),
+    _delivered_topics_filter('probe'),
 ))
 _lease_probe_query = _lease_probe_query.limit(1)
 
@@ -142,14 +182,13 @@ _leased_messages_query = _leased_messages_query.order_by(message_table.c.priorit
 # ################################################################################################################################
 # ################################################################################################################################
 
-def has_lease_candidates(engine:'Engine', sub_key:'str', now_ms:'int') -> 'bool':
+def has_lease_candidates(engine:'Engine', subscription_list:'SubscriptionList', sub_key:'str', now_ms:'int') -> 'bool':
     """ Whether one subscriber has a deliverable row that no pull holds a lease on, read without a lock and without
     a write, so that a pull that would hand out nothing does not wait for a commit.
     """
-    parameters:'anydict' = {
-        'probe_sub_key': sub_key,
-        'probe_now_ms': now_ms,
-    }
+    parameters = delivered_topics_parameters(subscription_list, sub_key, 'probe')
+    parameters['probe_sub_key'] = sub_key
+    parameters['probe_now_ms'] = now_ms
 
     with engine.connect() as connection:
         row = connection.execute(_lease_probe_query, parameters).first()
@@ -161,6 +200,7 @@ def has_lease_candidates(engine:'Engine', sub_key:'str', now_ms:'int') -> 'bool'
 
 def lease_messages(
     connection:'Connection',
+    subscription_list:'SubscriptionList',
     sub_key:'str',
     max_messages:'int',
     max_len:'int',
@@ -173,13 +213,14 @@ def lease_messages(
     never reaches the subscriber loses nothing.
     """
     attempts:'intdict' = {}
-    parameters:'anydict' = {
-        'lease_sub_key': sub_key,
-        'lease_now_ms': now_ms,
-        'lease_max_messages': max_messages,
-    }
 
-    # Lock the candidates ..
+    # The topics handed out are those of the subscription list as of the moment the candidates are locked ..
+    parameters = delivered_topics_parameters(subscription_list, sub_key, 'lease')
+    parameters['lease_sub_key'] = sub_key
+    parameters['lease_now_ms'] = now_ms
+    parameters['lease_max_messages'] = max_messages
+
+    # .. lock the candidates ..
     candidates = connection.execute(_lease_candidates_query, parameters).fetchall()
 
     if not candidates:

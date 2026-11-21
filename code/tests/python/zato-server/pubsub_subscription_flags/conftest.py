@@ -1,0 +1,12 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# The live flags suite reuses the fixtures of the server HA environments.
+
+# ################################################################################################################################
+# ################################################################################################################################

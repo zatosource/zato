@@ -1326,57 +1326,55 @@ class ConfigManager(_ConfigManagerBase):
 # ################################################################################################################################
 
     def init_pubsub(self) -> 'None':
-        """ Registers in the pub/sub backend the ODB subscriptions that appeared after the server started,
-        e.g. ones imported by enmasse, starts push delivery for the push ones among them, and stops push delivery
-        for the subscriptions that are no longer push subscriptions with active delivery.
+        """ Replaces the subscription list from config.db, writes the difference to the pub/sub database,
+        rebuilds push delivery for the push subscriptions with active delivery, and stops push delivery
+        for the subscriptions that are no longer among them.
         """
         from contextlib import closing
         from zato.common.odb.query.pubsub import pubsub_subscription_topic_pairs
+        from zato.common.worker_slot import is_config_process
+        from zato.server.base.config_manager.pubsub_subscription_sync import replace_from_odb
+
+        if is_config_process():
+            return
+
+        _ = replace_from_odb(self)
 
         _push = PubSub.Delivery_Type.Push
-        synced = 0
+        push_subs = {} # type: dict[str, list]
 
         with closing(self.server.odb.session()) as session:
 
             rows = pubsub_subscription_topic_pairs(session)
 
             for row in rows:
-                topic_name = row.name
-                sub_key = row.sub_key
 
-                # A pair the backend already has is a no-op here ..
-                self.server.pubsub_backend.subscribe(sub_key, topic_name)
-                synced += 1
-
-                # .. pull subscriptions and push subscriptions whose delivery is paused need no delivery greenlet,
-                # .. their messages wait in their queues, and one that this server still runs is stopped ..
-                if row.delivery_type == _push:
-                    needs_greenlet = row.is_delivery_active
-                else:
-                    needs_greenlet = False
-
-                if not needs_greenlet:
-                    if sub_key in self._push_subs:
-                        self.server.pubsub_push_delivery.stop_sub_key(sub_key)
-                        _ = self._push_subs.pop(sub_key)
+                if row.delivery_type != _push:
                     continue
 
-                # .. push subscriptions this server does not deliver to yet need a config and a greenlet.
-                if sub_key not in self._push_subs:
-                    self._push_subs[sub_key] = []
+                if not row.is_delivery_active:
+                    continue
 
-                config_list = self._push_subs[sub_key]
+                sub_key = row.sub_key
 
-                for sub_config in config_list:
-                    if sub_config['topic_name'] == topic_name:
-                        break
-                else:
-                    sub_config = self._build_push_sub_config(session, row)
-                    config_list.append(sub_config)
-                    self.server.pubsub_push_delivery.start_sub_key(sub_key)
+                if sub_key not in push_subs:
+                    push_subs[sub_key] = []
 
-        noun = 'pair' if synced == 1 else 'pairs'
-        logger.info('Reloaded %d ODB subscription-topic %s into the pub/sub backend', synced, noun)
+                push_subs[sub_key].append(self._build_push_sub_config(session, row))
+
+        # Stop greenlets of subscriptions that are no longer push with active delivery ..
+        for sub_key in list(self._push_subs):
+            if sub_key not in push_subs:
+                self.server.pubsub_push_delivery.stop_sub_key(sub_key)
+
+        self._push_subs = push_subs
+
+        for sub_key in self._push_subs:
+            self.server.pubsub_push_delivery.start_sub_key(sub_key)
+
+        pair_count = sum(len(config_list) for config_list in push_subs.values())
+        noun = 'pair' if pair_count == 1 else 'pairs'
+        logger.info('Reloaded the subscription list (%d push %s)', pair_count, noun)
 
 # ################################################################################################################################
 
@@ -1412,48 +1410,52 @@ class ConfigManager(_ConfigManagerBase):
 # ################################################################################################################################
 
     def _sync_pubsub_subscriptions(self) -> 'None':
-        """ Registers all ODB subscriptions in the pub/sub backend at server startup
-        and builds the push delivery configs from scratch.
+        """ Replaces the subscription list from config.db at server startup, writes the difference
+        to the pub/sub database, and builds the push delivery configs from scratch.
         """
         from contextlib import closing
         from zato.common.odb.query.pubsub import pubsub_subscription_topic_pairs
+        from zato.common.worker_slot import is_config_process
+        from zato.server.base.config_manager.pubsub_subscription_sync import replace_from_odb
+
+        if is_config_process():
+            return
+
+        logger.info('Syncing ODB subscriptions to the subscription list')
+
+        _ = replace_from_odb(self)
 
         _push = PubSub.Delivery_Type.Push
-
-        logger.info('Syncing ODB subscriptions to the pub/sub backend')
+        push_subs = {} # type: dict[str, list]
 
         with closing(self.server.odb.session()) as session:
 
             rows = pubsub_subscription_topic_pairs(session)
 
-            synced = 0
-            push_subs = {} # type: dict[str, list]
-
             for row in rows:
-                topic_name = row.name
+
+                if row.delivery_type != _push:
+                    continue
+
+                if not row.is_delivery_active:
+                    continue
+
                 sub_key = row.sub_key
-                self.server.pubsub_backend.subscribe(sub_key, topic_name)
-                synced += 1
 
-                # A push subscription whose delivery is paused has no push config, its messages wait in its queue
-                if row.delivery_type == _push:
-                    if row.is_delivery_active:
-                        sub_config = self._build_push_sub_config(session, row)
+                if sub_key not in push_subs:
+                    push_subs[sub_key] = []
 
-                        if sub_key not in push_subs:
-                            push_subs[sub_key] = []
-                        push_subs[sub_key].append(sub_config)
+                push_subs[sub_key].append(self._build_push_sub_config(session, row))
 
-            self._push_subs = push_subs
+        self._push_subs = push_subs
 
-        noun = 'pair' if synced == 1 else 'pairs'
         push_count = sum(len(config_list) for config_list in push_subs.values())
-        logger.info('Synced %d ODB subscription-topic %s to the pub/sub backend (%d push)', synced, noun, push_count)
+        logger.info('Synced the subscription list (%d push)', push_count)
 
 # ################################################################################################################################
 
     def _read_pubsub_topics(self) -> 'anylist':
-        """ Returns the name and the opaque attributes of each topic.
+        """ Returns the name, whether it is active, and the opaque attributes of each topic.
         """
         from contextlib import closing
         from zato.common.odb.model import PubSubTopic
@@ -1467,7 +1469,7 @@ class ConfigManager(_ConfigManagerBase):
 
             for row in rows:
                 opaque = parse_instance_opaque_attr(row)
-                out.append((row.name, opaque))
+                out.append((row.name, row.is_active, opaque))
 
         return out
 
@@ -1482,7 +1484,7 @@ class ConfigManager(_ConfigManagerBase):
 
         topic_backends = {} # type: dict[str, dict]
 
-        for topic_name, opaque in self._read_pubsub_topics():
+        for topic_name, _is_active, opaque in self._read_pubsub_topics():
 
             # Topics without opaque attributes predate backend types and are built-in,
             # and built-in topics never have registry entries.
@@ -1510,9 +1512,14 @@ class ConfigManager(_ConfigManagerBase):
 
     def _sync_pubsub_topics(self) -> 'None':
         """ Registers with the pub/sub backend the topics whose audit log was turned off and the ones whose payloads
-        leave with the audit export.
+        leave with the audit export, and records which topics of config.db are inactive.
         """
-        for topic_name, opaque in self._read_pubsub_topics():
+        inactive_topics = set()
+
+        for topic_name, is_active, opaque in self._read_pubsub_topics():
+
+            if not is_active:
+                inactive_topics.add(topic_name)
 
             # A topic whose audit log was turned off explicitly writes no audit events
             if opaque.get('is_audit_log_active') is False:
@@ -1521,6 +1528,10 @@ class ConfigManager(_ConfigManagerBase):
             # A topic's message payloads leave with the audit export only if the topic says so
             if opaque.get('is_audit_export_payload_active') is True:
                 self.server.pubsub_backend.set_topic_payload_flag(topic_name, True)
+
+        # The set is the same object the backend holds, so it is updated in place
+        self.server.pubsub_inactive_topics.clear()
+        self.server.pubsub_inactive_topics.update(inactive_topics)
 
 # ################################################################################################################################
 
@@ -2874,86 +2885,78 @@ class ConfigManager(_ConfigManagerBase):
 
     def on_config_event_PUBSUB_SUBSCRIPTION_CREATE(self, msg:'bunch_') -> 'None':
 
+        from zato.common.worker_slot import is_config_process
+        from zato.server.base.config_manager.pubsub_subscription_sync import sync_subscription_create, topic_name_of
+
         sub_key = msg.sub_key
         sec_name = msg.sec_name
         username = msg.username
         delivery_type = msg.delivery_type
+
+        # The REST endpoint URL is read before any memory change of the subscription
+        rest_push_url = self._resolve_push_url(msg)
 
         # The subscriptions store holds API clients, a subscriber that is a service has no username ..
         if username:
             self.server.pubsub_subscriptions.register_user(username, sec_name, sub_key)
 
         for topic_item in msg.topic_name_list:
-            topic_name = topic_item['topic_name'] if isinstance(topic_item, dict) else topic_item.topic_name
+            topic_name = topic_name_of(topic_item)
             self._add_pubsub_sub_config(sub_key, topic_name, delivery_type, msg)
 
-            # .. set up the Redis consumer group so the subscriber can immediately
-            # .. receive messages published after this point.
-            self.server.pubsub_backend.subscribe(sub_key, topic_name)
+        # .. push delivery and the subscription list belong to the worker alone ..
+        if not is_config_process():
 
-        # .. and if this is a push subscription, its delivery greenlet needs to run
-        # .. from the moment the subscription exists, without waiting for an edit or a restart,
-        # .. unless its delivery is paused, in which case its messages wait in its queue.
-        if delivery_type == PubSub.Delivery_Type.Push:
-            if msg.is_delivery_active:
-                self._setup_push_delivery(sub_key, msg)
+            if delivery_type == PubSub.Delivery_Type.Push:
+                if msg.is_delivery_active:
+                    self._setup_push_delivery(sub_key, msg, rest_push_url)
+
+            sync_subscription_create(self, msg)
 
     def on_config_event_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'bunch_') -> 'None':
+
+        from zato.common.worker_slot import is_config_process
+        from zato.server.base.config_manager.pubsub_subscription_sync import sync_subscription_edit, topic_name_of
 
         sub_key = msg.sub_key
         delivery_type = msg.delivery_type
 
-        # Collect old topic names before we remove them from memory ..
-        old_topic_names:'list[str]' = []
-
-        for topic_name, sub_list in self.config_store.pubsub_subs.items():
-            for item in sub_list:
-                if item['sub_key'] == sub_key:
-                    old_topic_names.append(topic_name)
+        # The REST endpoint URL is read before any memory change of the subscription
+        rest_push_url = self._resolve_push_url(msg)
 
         new_topic_names:'list[str]' = []
 
         for topic_item in msg.topic_name_list:
-            topic_name = topic_item['topic_name'] if isinstance(topic_item, dict) else topic_item.topic_name
+            topic_name = topic_name_of(topic_item)
             new_topic_names.append(topic_name)
-
-        # .. unsubscribe only from the topics the subscription no longer has, which discards their pending messages,
-        # .. while the messages of the topics it keeps stay in its queue ..
-        for topic_name in old_topic_names:
-            if topic_name not in new_topic_names:
-                self.server.pubsub_backend.unsubscribe(sub_key, topic_name)
 
         # .. remove old in-memory configs ..
         self._remove_pubsub_sub_configs_by_sub_key(sub_key)
 
-        # .. add new in-memory configs and subscribe in the backend, which is a no-op for the topics kept ..
+        # .. add the new in-memory configs ..
         for topic_name in new_topic_names:
             self._add_pubsub_sub_config(sub_key, topic_name, delivery_type, msg)
-            self.server.pubsub_backend.subscribe(sub_key, topic_name)
 
-        # .. stop the old delivery greenlet (GAP 15) ..
-        self.server.pubsub_push_delivery.stop_sub_key(sub_key)
+        # .. push delivery and the subscription list belong to the worker alone ..
+        if not is_config_process():
 
-        # .. remove old push delivery config (GAP 14) ..
-        _ = self._push_subs.pop(sub_key, None)
+            self.server.pubsub_push_delivery.stop_sub_key(sub_key)
+            _ = self._push_subs.pop(sub_key, None)
 
-        # .. if the new delivery type is push, rebuild _push_subs and start the greenlet (GAP 14 + 15),
-        # .. unless its delivery is paused, in which case its messages wait in its queue until it is resumed.
-        if delivery_type == PubSub.Delivery_Type.Push:
-            if msg.is_delivery_active:
-                self._setup_push_delivery(sub_key, msg)
+            if delivery_type == PubSub.Delivery_Type.Push:
+                if msg.is_delivery_active:
+                    self._setup_push_delivery(sub_key, msg, rest_push_url)
+
+            sync_subscription_edit(self, msg)
 
 # ################################################################################################################################
 
-    def _setup_push_delivery(self, sub_key:'str', msg:'bunch_') -> 'None':
-        """ Fills in _push_subs for a push subscription and starts its delivery greenlet.
+    def _resolve_push_url(self, msg:'bunch_') -> 'str':
+        """ Returns the REST push URL of a subscription event, reading the endpoint from the ODB when needed.
         """
         push_type = getattr(msg, 'push_type', None)
-        push_service_name = getattr(msg, 'push_service_name', None)
         rest_push_endpoint_id = getattr(msg, 'rest_push_endpoint_id', None)
-
-        # .. resolve the REST endpoint URL from ODB if needed ..
-        rest_push_url = ''
+        out = ''
 
         if push_type == PubSub.Push_Type.REST:
             if rest_push_endpoint_id:
@@ -2964,13 +2967,28 @@ class ConfigManager(_ConfigManagerBase):
                         HTTPSOAP.id == rest_push_endpoint_id
                     ).first()
                     if endpoint:
-                        host = endpoint.host or ''
-                        rest_push_url = host + endpoint.url_path
+                        host = endpoint.host
+                        if host is None:
+                            host = ''
+                        out = host + endpoint.url_path
+
+        return out
+
+# ################################################################################################################################
+
+    def _setup_push_delivery(self, sub_key:'str', msg:'bunch_', rest_push_url:'str') -> 'None':
+        """ Fills in _push_subs for a push subscription and starts its delivery greenlet.
+        """
+        from zato.server.base.config_manager.pubsub_subscription_sync import topic_name_of
+
+        push_type = getattr(msg, 'push_type', None)
+        push_service_name = getattr(msg, 'push_service_name', None)
+        rest_push_endpoint_id = getattr(msg, 'rest_push_endpoint_id', None)
 
         self._push_subs[sub_key] = []
 
         for topic_item in msg.topic_name_list:
-            topic_name = topic_item['topic_name'] if isinstance(topic_item, dict) else topic_item.topic_name
+            topic_name = topic_name_of(topic_item)
             sub_config = {
                 'sub_key': sub_key,
                 'topic_name': topic_name,
@@ -2986,17 +3004,10 @@ class ConfigManager(_ConfigManagerBase):
 # ################################################################################################################################
 
     def cleanup_subscription(self, sub_key:'str', username:'strnone') -> 'None':
-        """ Cleans up all in-memory and Redis state for a single subscription.
+        """ Cleans up all in-memory state for a single subscription and queues the removal of its rows.
         """
-        # .. collect topic names this sub_key belongs to before we remove them from memory ..
-        topic_names = [
-            topic_name for topic_name, sub_list in self.config_store.pubsub_subs.items()
-            if any(item['sub_key'] == sub_key for item in sub_list)
-        ]
-
-        # .. clean up Redis state for each topic ..
-        for topic_name in topic_names:
-            self.server.pubsub_backend.unsubscribe(sub_key, topic_name)
+        from zato.common.worker_slot import is_config_process
+        from zato.server.base.config_manager.pubsub_subscription_sync import sync_subscription_delete
 
         # .. remove in-memory subscription configs ..
         self._remove_pubsub_sub_configs_by_sub_key(sub_key)
@@ -3005,11 +3016,11 @@ class ConfigManager(_ConfigManagerBase):
         if username:
             self.server.pubsub_subscriptions.remove_user(username)
 
-        # .. remove push delivery config ..
-        _ = self._push_subs.pop(sub_key, None)
-
-        # .. stop the delivery greenlet for this sub_key ..
-        self.server.pubsub_push_delivery.stop_sub_key(sub_key)
+        # .. remove push delivery config and the subscription list in the worker alone ..
+        if not is_config_process():
+            _ = self._push_subs.pop(sub_key, None)
+            self.server.pubsub_push_delivery.stop_sub_key(sub_key)
+            sync_subscription_delete(self, sub_key)
 
 # ################################################################################################################################
 
@@ -3089,6 +3100,12 @@ class ConfigManager(_ConfigManagerBase):
         self.server.pubsub_backend.set_topic_audit_flag(msg.topic_name, msg.is_audit_log_active)
         self.server.pubsub_backend.set_topic_payload_flag(msg.topic_name, msg.get('is_audit_export_payload_active', False))
 
+        # .. and whether publications to it are accepted.
+        if getattr(msg, 'is_active', True):
+            self.server.pubsub_inactive_topics.discard(msg.topic_name)
+        else:
+            self.server.pubsub_inactive_topics.add(msg.topic_name)
+
         # .. and AMQP-backed topics additionally get a registry entry.
         if msg.backend_type == PubSub.Backend_Type.AMQP:
 
@@ -3121,13 +3138,18 @@ class ConfigManager(_ConfigManagerBase):
         # Handle name change ..
         if old_name != new_name:
 
+            from zato.common.worker_slot import is_config_process
+            from zato.server.base.config_manager.pubsub_subscription_sync import sync_topic_rename
+
             # .. update in-memory pattern matcher ..
             matcher = self.server.pubsub_pattern_matcher
             for client_id in list(matcher._clients):
                 matcher.rename_topic(client_id, old_name, new_name)
 
-            # .. rename Redis keys and subscriber sets ..
-            self.server.pubsub_backend.rename_topic(old_name, new_name)
+            # .. the subscription list first, then the rows of the pub/sub database ..
+            if not is_config_process():
+                sync_topic_rename(self, old_name, new_name)
+                self.server.pubsub_backend.rename_topic(old_name, new_name)
 
             # .. re-key pubsub_subs from old topic name to new topic name ..
             sub_configs = self.config_store.pubsub_subs.pop(old_name, None)
@@ -3142,19 +3164,13 @@ class ConfigManager(_ConfigManagerBase):
                     if sub_config['topic_name'] == old_name:
                         sub_config['topic_name'] = new_name
 
-        # Handle is_active change ..
+        # Handle is_active change - an inactive topic keeps its push configuration so that
+        # the messages already queued for it are still delivered (19.2) ..
         if is_active is False:
-
-            # .. the topic name to use is the new name (which may be the same as old) ..
-            topic_name = new_name
-
-            # .. remove in-memory subscription and push delivery configs for this topic.
-            self._remove_topic_sub_configs(topic_name)
+            self.server.pubsub_inactive_topics.add(new_name)
 
         elif is_active is True:
-
-            # .. re-activation: re-sync subscriptions for this topic from ODB.
-            self._resync_topic_subscriptions(new_name)
+            self.server.pubsub_inactive_topics.discard(new_name)
 
         # Handle backend changes - the entry is rebuilt from scratch, which also covers renames
         # and a topic moving from one channel to another ..
@@ -3241,6 +3257,9 @@ class ConfigManager(_ConfigManagerBase):
 
     def on_config_event_PUBSUB_TOPIC_DELETE(self, msg:'bunch_') -> 'None':
 
+        from zato.common.worker_slot import is_config_process
+        from zato.server.base.config_manager.pubsub_subscription_sync import sync_topic_delete
+
         topic_name = msg.topic_name
 
         self.pubsub_topic_manager.forget_topic(topic_name)
@@ -3253,11 +3272,14 @@ class ConfigManager(_ConfigManagerBase):
         for client_id in list(matcher._clients):
             matcher.delete_topic(client_id, topic_name)
 
-        # .. delete Redis keys, subscriber sets, and disk files ..
-        self.server.pubsub_backend.delete_topic(topic_name)
+        # .. the subscription list first, then the rows of the pub/sub database ..
+        if not is_config_process():
+            sync_topic_delete(self, topic_name)
+            self.server.pubsub_backend.delete_topic(topic_name)
 
         # .. remove in-memory subscription and push delivery configs for this topic ..
         self._remove_topic_sub_configs(topic_name)
+        self.server.pubsub_inactive_topics.discard(topic_name)
 
         # .. and if the topic was AMQP-backed, drop its registry entry.
         _ = self._topic_backends.pop(topic_name, None)

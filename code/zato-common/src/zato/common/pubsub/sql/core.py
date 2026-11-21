@@ -32,6 +32,9 @@ from zato.common.util.memory_trim import start_memory_trimmer
 from zato.common.util.time_ import datetime_to_ms
 from zato.common.worker_slot import is_first_start
 
+# Zato - Rust
+from zato_common_core.zato_common_core import SubscriptionList
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -82,10 +85,25 @@ class SQLBackendCore:
         audit_log:'AuditLog',
         crypto_manager:'CryptoManager | None' = None,
         encrypt_at_rest:'bool' = False,
+        subscription_list:'SubscriptionList | None' = None,
+        inactive_topics:'strset | None' = None,
         ) -> 'None':
 
         # The audit log that records the operations of the backend in their transactions
         self.audit_log = audit_log
+
+        # The subscriber and topic pairs of config.db, which publications and fetches read. A backend outside of a server
+        # has a list that startup never builds, so its publications use the rows of the pub/sub database as they are.
+        if subscription_list is None:
+            subscription_list = SubscriptionList()
+
+        self.subscription_list = subscription_list
+
+        # The names of the topics of config.db that are inactive. Topics outside config.db are never among them.
+        if inactive_topics is None:
+            inactive_topics = set()
+
+        self.inactive_topics = inactive_topics
 
         # Payloads are encrypted before insert and decrypted after select when configured.
         self.crypto_manager = crypto_manager
@@ -108,7 +126,7 @@ class SQLBackendCore:
         self._last_yield = monotonic()
 
         # Publications and acknowledgements of concurrent callers share their commits, with their audit events.
-        self._writer = PubSubWriter(audit_log)
+        self._writer = PubSubWriter(audit_log, subscription_list)
 
         # The generation that this server raised on PostgreSQL, if it took over the database.
         self.generation_guard:'GenerationGuard | None' = None
