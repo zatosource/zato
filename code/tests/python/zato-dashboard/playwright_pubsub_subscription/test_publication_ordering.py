@@ -81,7 +81,7 @@ def test_publication_committed_before_removal(logged_in_page:'any_', zato_dashbo
         write_lock.acquire()
 
         marker = new_marker('first')
-        start_publication(publisher_page, base_url, setup.removed['item_id'], marker)
+        start_publication(publisher_page, base_url, setup.removed, marker)
         time.sleep(ModuleCtx.Publish_Hold_Seconds)
 
         write_lock.release()
@@ -120,7 +120,7 @@ def test_publication_held_behind_removal(logged_in_page:'any_', zato_dashboard:'
         write_lock.acquire()
 
         marker = new_marker('second')
-        start_publication(publisher_page, base_url, setup.removed['item_id'], marker)
+        start_publication(publisher_page, base_url, setup.removed, marker)
 
         _ = save_edit(operator_page)
         wait_for_statuses(operator_page, base_url, setup.item_id, setup.pending, 'The pending removal of the pair')
@@ -132,7 +132,7 @@ def test_publication_held_behind_removal(logged_in_page:'any_', zato_dashboard:'
 
         # .. so a message to the kept topic, published after it, reaches the queue while it does not.
         kept_marker = new_marker('kept')
-        publish_accepted(publisher_page, base_url, setup.kept['item_id'], kept_marker)
+        publish_accepted(publisher_page, base_url, setup.kept, kept_marker)
 
         wait_for_queued(publisher_page, base_url, setup.path, kept_marker)
         assert not is_queued(publisher_page, base_url, setup.path, marker)

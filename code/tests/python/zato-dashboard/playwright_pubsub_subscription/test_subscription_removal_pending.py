@@ -59,7 +59,7 @@ def test_subscription_removal_pending(logged_in_page:'any_', zato_dashboard:'any
 
     # .. publish to it behind the lock and let the publication through ..
     removed_marker = new_marker('removed')
-    start_publication(page, base_url, removed['item_id'], removed_marker)
+    start_publication(page, base_url, removed, removed_marker)
     time.sleep(ModuleCtx.Publish_Hold_Seconds)
 
     write_lock.release()
@@ -69,7 +69,7 @@ def test_subscription_removal_pending(logged_in_page:'any_', zato_dashboard:'any
 
     # .. a message to the kept topic, published after it, reaches the queue while the first one does not ..
     kept_marker = new_marker('kept')
-    publish_accepted(page, base_url, kept['item_id'], kept_marker)
+    publish_accepted(page, base_url, kept, kept_marker)
 
     wait_for_queued(page, base_url, path, kept_marker)
     assert not is_queued(page, base_url, path, removed_marker)

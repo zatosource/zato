@@ -79,7 +79,7 @@ def _check_subscriber(
     wait_for_statuses(page, base_url, item_id, confirmed, 'The confirmation of the added pair')
 
     added_marker = new_marker('added')
-    publish_accepted(page, base_url, added['item_id'], added_marker)
+    publish_accepted(page, base_url, added, added_marker)
     wait_for_queued(page, base_url, path, added_marker)
 
     # .. and remove a topic while the lock is held, after which a message published to it does not.
@@ -93,10 +93,10 @@ def _check_subscriber(
     wait_for_statuses(page, base_url, item_id, {added_name: ModuleCtx.Status_Confirmed}, 'The removal of the pair')
 
     removed_marker = new_marker('removed')
-    publish_accepted(page, base_url, first['item_id'], removed_marker)
+    publish_accepted(page, base_url, first, removed_marker)
 
     kept_marker = new_marker('kept')
-    publish_accepted(page, base_url, added['item_id'], kept_marker)
+    publish_accepted(page, base_url, added, kept_marker)
 
     wait_for_queued(page, base_url, path, kept_marker)
     assert not is_queued(page, base_url, path, removed_marker)

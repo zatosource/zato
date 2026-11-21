@@ -8,12 +8,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Local
 from _support import ModuleCtx, client_publish_accepted, client_pull, create_client, create_pull_subscription_to, \
-    create_topics, is_client_refused, is_queued, new_marker, new_prefix, open_subscription_edit, publish, \
-    publish_accepted, queue_path, save_edit, server_url, subscription_item_id, wait_for, wait_for_not_queued, \
+    create_topics, is_client_refused, is_queued, navigate_to_topic, new_marker, new_prefix, open_subscription_edit, \
+    publish, publish_accepted, queue_path, save_edit, server_url, subscription_item_id, wait_for, wait_for_not_queued, \
     wait_for_queued, wait_for_statuses
 
 # Zato
-from zato.common.test.playwright_pubsub import create_service_subscription, navigate_to_page, open_edit_dialog, \
+from zato.common.test.playwright_pubsub import create_service_subscription, open_edit_dialog, \
     submit_edit_form
 
 # ################################################################################################################################
@@ -114,9 +114,9 @@ class Setup:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _set_topic_active(page:'Page', base_url:'str', topic_id:'str', is_active:'bool') -> 'None':
-    navigate_to_page(page, base_url, ModuleCtx.Topic_Page)
-    open_edit_dialog(page, 'topic', topic_id)
+def _set_topic_active(page:'Page', base_url:'str', topic:'anydict', is_active:'bool') -> 'None':
+    navigate_to_topic(page, base_url, topic)
+    open_edit_dialog(page, 'topic', topic['item_id'])
     page.set_checked(TestCtx.Topic_Active, is_active)
     submit_edit_form(page, ModuleCtx.Dialog_Timeout)
 
@@ -137,7 +137,6 @@ def test_inactive_topic(logged_in_page:'any_', zato_dashboard:'anydict') -> 'Non
     page = logged_in_page
     setup = Setup(page, zato_dashboard, 'flags.topic')
     base_url = setup.base_url
-    first_id = setup.first['item_id']
 
     # A push subscriber to the first topic, whose delivery is off so that its messages stay queued ..
     create_service_subscription(page, base_url, [TestCtx.Push_Service], setup.first_name)
@@ -149,11 +148,11 @@ def test_inactive_topic(logged_in_page:'any_', zato_dashboard:'anydict') -> 'Non
     push_path = queue_path(page, base_url, push_id, ModuleCtx.Queue_State_Pending)
 
     queued_marker = new_marker('queued')
-    publish_accepted(page, base_url, first_id, queued_marker)
+    publish_accepted(page, base_url, setup.first, queued_marker)
     wait_for_queued(page, base_url, push_path, queued_marker)
 
     # .. deactivate the topic ..
-    _set_topic_active(page, base_url, first_id, False)
+    _set_topic_active(page, base_url, setup.first, False)
 
     # .. the client's publications to it are refused while those to the other topic are accepted ..
     setup.wait_for_refused(setup.first_name)
@@ -162,7 +161,7 @@ def test_inactive_topic(logged_in_page:'any_', zato_dashboard:'anydict') -> 'Non
 
     # .. a message published from the topic page is refused as well and reaches no queue ..
     refused_marker = new_marker('refused')
-    status = publish(page, base_url, first_id, refused_marker)
+    status = publish(page, base_url, setup.first, refused_marker)
     assert not status.startswith(ModuleCtx.Publish_Accepted), status
 
     assert not is_queued(page, base_url, setup.pending_path, refused_marker)
@@ -173,7 +172,7 @@ def test_inactive_topic(logged_in_page:'any_', zato_dashboard:'anydict') -> 'Non
     wait_for_not_queued(page, base_url, push_path, queued_marker)
 
     # .. and the reactivated topic accepts publications again.
-    _set_topic_active(page, base_url, first_id, True)
+    _set_topic_active(page, base_url, setup.first, True)
 
     def _is_accepted() -> 'bool':
         marker = new_marker('reactivated')

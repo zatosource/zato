@@ -52,7 +52,7 @@ def test_subscription_delete_pending(logged_in_page:'any_', zato_dashboard:'anyd
     path = queue_path(page, base_url, item_id, ModuleCtx.Queue_State_All)
     queued_marker = new_marker('queued')
 
-    publish_accepted(page, base_url, topic['item_id'], queued_marker)
+    publish_accepted(page, base_url, topic, queued_marker)
     wait_for_queued(page, base_url, path, queued_marker)
 
     # .. delete the subscription while no row of a pair can be deleted ..
@@ -69,7 +69,7 @@ def test_subscription_delete_pending(logged_in_page:'any_', zato_dashboard:'anyd
 
     # .. a publication held behind the lock reaches no queue of the pairs after the release ..
     held_marker = new_marker('held')
-    start_publication(page, base_url, topic['item_id'], held_marker)
+    start_publication(page, base_url, topic, held_marker)
     time.sleep(ModuleCtx.Publish_Hold_Seconds)
 
     write_lock.release()

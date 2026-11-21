@@ -525,11 +525,18 @@ def wait_for_not_queued(page:'Page', base_url:'str', path:'str', marker:'str') -
 # ################################################################################################################################
 # ################################################################################################################################
 
-def start_publication(page:'Page', base_url:'str', topic_id:'str', marker:'str') -> 'None':
+def navigate_to_topic(page:'Page', base_url:'str', topic:'anydict') -> 'None':
+    """ Opens the topic page filtered by the name of one topic, which the paginated list may not show on its first page.
+    """
+    navigate_to_page(page, base_url, ModuleCtx.Topic_Page + '?query=' + topic['name'])
+
+# ################################################################################################################################
+
+def start_publication(page:'Page', base_url:'str', topic:'anydict', marker:'str') -> 'None':
     """ Publishes a message from the topic page without waiting for the result.
     """
-    navigate_to_page(page, base_url, ModuleCtx.Topic_Page)
-    open_publish_overlay(page, topic_id)
+    navigate_to_topic(page, base_url, topic)
+    open_publish_overlay(page, topic['item_id'])
 
     _ = page.evaluate(_set_payload_script, marker)
     page.click('#invoker-modal-invoke-button')
@@ -546,20 +553,20 @@ def wait_for_publication(page:'Page') -> 'str':
 
 # ################################################################################################################################
 
-def publish(page:'Page', base_url:'str', topic_id:'str', marker:'str') -> 'str':
+def publish(page:'Page', base_url:'str', topic:'anydict', marker:'str') -> 'str':
     """ Publishes a message from the topic page and returns the status line of the result.
     """
-    start_publication(page, base_url, topic_id, marker)
+    start_publication(page, base_url, topic, marker)
 
     out = wait_for_publication(page)
     return out
 
 # ################################################################################################################################
 
-def publish_accepted(page:'Page', base_url:'str', topic_id:'str', marker:'str') -> 'None':
+def publish_accepted(page:'Page', base_url:'str', topic:'anydict', marker:'str') -> 'None':
     """ Publishes a message from the topic page and raises unless the server accepted it.
     """
-    status = publish(page, base_url, topic_id, marker)
+    status = publish(page, base_url, topic, marker)
 
     if not status.startswith(ModuleCtx.Publish_Accepted):
         raise Exception(f'The publication of {marker} was not accepted, the status was `{status}`')

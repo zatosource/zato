@@ -48,7 +48,7 @@ def _wait_for_delivery(page:'Page', base_url:'str', path:'str', topic:'anydict')
     """
     def _is_delivered() -> 'bool':
         marker = new_marker('recovered')
-        publish_accepted(page, base_url, topic['item_id'], marker)
+        publish_accepted(page, base_url, topic, marker)
 
         def _is_queued() -> 'bool':
             out = is_queued(page, base_url, path, marker)
@@ -138,10 +138,10 @@ def test_config_process_kill(logged_in_page:'any_', zato_dashboard:'anydict', fi
     # .. and the topic that the page does not show delivers nothing to it.
     else:
         added_marker = new_marker('absent')
-        publish_accepted(page, base_url, added['item_id'], added_marker)
+        publish_accepted(page, base_url, added, added_marker)
 
         first_marker = new_marker('present')
-        publish_accepted(page, base_url, first['item_id'], first_marker)
+        publish_accepted(page, base_url, first, first_marker)
 
         wait_for_queued(page, base_url, path, first_marker)
         assert not is_queued(page, base_url, path, added_marker)

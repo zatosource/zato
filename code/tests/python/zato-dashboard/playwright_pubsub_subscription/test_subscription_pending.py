@@ -49,7 +49,7 @@ def test_subscription_pending(logged_in_page:'any_', zato_dashboard:'anydict', w
 
     # .. and a message published from the topic page reaches the queue of the subscriber.
     marker = new_marker('pending')
-    publish_accepted(page, base_url, topic['item_id'], marker)
+    publish_accepted(page, base_url, topic, marker)
 
     path = queue_path(page, base_url, item_id, ModuleCtx.Queue_State_All)
     wait_for_queued(page, base_url, path, marker)

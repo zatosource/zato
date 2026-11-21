@@ -96,7 +96,7 @@ def test_delivery_toggle_pending(logged_in_page:'any_', zato_dashboard:'anydict'
 
     # .. and a message published to the added topic reaches the queue of the subscriber.
     marker = new_marker('delivery')
-    publish_accepted(page, base_url, added['item_id'], marker)
+    publish_accepted(page, base_url, added, marker)
 
     path = queue_path(page, base_url, item_id, ModuleCtx.Queue_State_All)
     wait_for_queued(page, base_url, path, marker)
