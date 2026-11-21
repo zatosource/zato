@@ -27,8 +27,7 @@ from queue_delivery.channel.type_under_test import Attempts_Per_Round, Channel_D
     Channel_DLQ_Keep, Channel_DLQ_Retry, Channel_No_DLQ, Channel_No_Retries, Channel_Orders, DLQ_Retry_Channel_Rounds, \
     DLQ_Retry_Interval, Forward_Topic, Orders_Max_Retries, Orders_Sleep_Time, Refused_Error_Text
 from queue_delivery.channel_scenarios.base import acceptance_of, ChannelScenarioBase, order, sequences_of
-from queue_delivery.client import get_client, get_queue, is_broker_backend, restart_server, wait_for_audit_events, \
-    wait_for_queue_empty
+from queue_delivery.client import get_client, get_queue, restart_server, wait_for_audit_events, wait_for_queue_empty
 from queue_delivery.dlq import get_dlq, get_topic_messages, invoke, Retry_Message, run_dlq_rule, subscribe_topic, \
     wait_for_dlq_count
 
@@ -194,11 +193,6 @@ class DeliveryScenarios(ChannelScenarioBase):
 
         queue = wait_for_queue_empty(client, conn_name)
         assert queue['depth'] == 0
-
-        # The DLQ is in the pub/sub database whichever backend the queue has
-        if is_broker_backend():
-            assert queue['messages'] == []
-            assert len(get_dlq(client, conn_name)['messages']) == 1
 
 # ################################################################################################################################
 

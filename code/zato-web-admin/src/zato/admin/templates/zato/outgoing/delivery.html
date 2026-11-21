@@ -80,7 +80,6 @@
                         class="dashboard-tab{% if active_tab == 'queue' %} dashboard-tab-active{% endif %}"
                         data-tab="queue"
                         role="tab"
-                        {% if not is_queue_browsable %}disabled{% endif %}
                         aria-selected="{% if active_tab == 'queue' %}true{% else %}false{% endif %}">
                     <span class="dashboard-tab-label">Delivery queue</span>
                 </button>
@@ -101,11 +100,9 @@
                  id="delivery-tab-panel-queue"
                  role="tabpanel"
                  {% if active_tab != 'queue' %}hidden{% endif %}>
-                {% if is_queue_browsable %}
-                    {% with tab=queue_tab %}
-                        {% include "zato/outgoing/delivery-tab.html" %}
-                    {% endwith %}
-                {% endif %}
+                {% with tab=queue_tab %}
+                    {% include "zato/outgoing/delivery-tab.html" %}
+                {% endwith %}
             </div>
             {% endif %}
 

@@ -202,32 +202,26 @@ class Publish(PubSubRESTService):
 
         topic_name = publication.topic_name
 
-        # .. publish either to the AMQP broker or to the pub/sub database, depending on the topic's backend ..
-        backend_config = self.server.config_manager.get_pubsub_topic_backend(topic_name)
-
-        if backend_config:
-            result = self.server.config_manager.pubsub_publish_to_amqp(backend_config, publication.data, topic_name, cid)
-        else:
-
-            # .. where a message ID of the client's own that stands for another message is a conflict ..
-            try:
-                result = self.server.pubsub_backend.publish(
-                    topic_name,
-                    publication.data,
-                    priority=publication.priority,
-                    expiration=publication.expiration,
-                    correl_id=publication.correl_id,
-                    in_reply_to=publication.in_reply_to,
-                    ext_client_id=publication.ext_client_id,
-                    publisher=username,
-                    pub_time=publication.pub_time,
-                    cid=cid,
-                    msg_id=publication.msg_id,
-                )
-            except PubSubDuplicateMsgID as e:
-                error = (str(e), _status_conflict, CONFLICT)
-                self.set_error(error)
-                return
+        # .. publish to the pub/sub database, where a message ID of the client's own that stands for another message
+        # .. is a conflict ..
+        try:
+            result = self.server.pubsub_backend.publish(
+                topic_name,
+                publication.data,
+                priority=publication.priority,
+                expiration=publication.expiration,
+                correl_id=publication.correl_id,
+                in_reply_to=publication.in_reply_to,
+                ext_client_id=publication.ext_client_id,
+                publisher=username,
+                pub_time=publication.pub_time,
+                cid=cid,
+                msg_id=publication.msg_id,
+            )
+        except PubSubDuplicateMsgID as e:
+            error = (str(e), _status_conflict, CONFLICT)
+            self.set_error(error)
+            return
 
         # Build response
         self.response.payload.is_ok = True

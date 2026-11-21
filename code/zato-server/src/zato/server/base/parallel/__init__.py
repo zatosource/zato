@@ -104,7 +104,6 @@ from zato_common_core.zato_common_core import SubscriptionList
 if 0:
 
     from zato.common.ext.bunch import Bunch as bunch_
-    from kombu.transport.pyamqp import Message as KombuMessage
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, intset, list_, strdict, strbytes, \
@@ -120,7 +119,6 @@ if 0:
     bunch_ = bunch_
     ClaimResult = ClaimResult
     ConfigRuntime = ConfigRuntime
-    KombuMessage = KombuMessage
     ODBManager = ODBManager
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
@@ -2110,9 +2108,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         from zato.server.base.config_manager.pubsub_reconciler import start_subscription_reconciler
         start_subscription_reconciler(self.config_manager)
 
-        # Pub/sub can deliver now, so the AMQP channels that topics in a broker read their messages back through can start
-        self.config_manager.init_pubsub_amqp_channels()
-
         logger.info('PubSub SQL backend started')
 
 # ################################################################################################################################
@@ -2293,9 +2288,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # .. now reload it ..
         self.config_manager.init()
         self.config_manager.init_pubsub()
-
-        # .. pub/sub is up at this point, so the AMQP channels its topics read from start right away ..
-        self.config_manager.init_pubsub_amqp_channels()
 
         # .. MCP gateways are skipped in init_generic_connections, and by the time
         # a config reload runs, all services are already deployed, so their wrappers

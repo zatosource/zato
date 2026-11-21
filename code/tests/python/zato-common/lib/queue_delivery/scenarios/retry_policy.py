@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The queue retries as the connection's retry fields say, on every pub/sub backend.
+# The queue retries as the connection's retry fields say.
 
 # Zato
 from zato.common.api import HTTP_SOAP, PubSub

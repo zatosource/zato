@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The DLQ rule, on every pub/sub backend.
+# The DLQ rule.
 
 # stdlib
 import time

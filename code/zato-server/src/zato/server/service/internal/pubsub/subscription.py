@@ -24,11 +24,11 @@ logger = getLogger(__name__)
 from zato.common.api import PubSub, query_parameters
 from zato.common.odb.model import HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
 from zato.common.odb.query import pubsub_subscription_list
-from zato.common.pubsub.util import evaluate_pattern_match, get_security_definition, set_time_since
-from zato.common.util.api import as_bool, new_sub_key, utcnow
+from zato.common.pubsub.util import evaluate_pattern_match, get_security_definition
+from zato.common.util.api import as_bool, new_sub_key
 from zato.common.typing_ import cast_
 from zato.common.util.sql import elems_with_opaque
-from zato.server.service import AsIs, Int, PubSubMessage, Service
+from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -86,7 +86,7 @@ def _build_topic_objects_list(topic_data_list:'any_'=None, topics:'any_'=None, t
 
 if 0:
     from zato.common.ext.bunch import Bunch
-    from zato.common.typing_ import any_, anydict, anylist, intnone, strdict
+    from zato.common.typing_ import any_, anydict, anylist, intnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1042,143 +1042,6 @@ class Unsubscribe(_BaseModifyTopicList):
                 all_topic_names.append(item)
 
         return all_topic_names
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class HandleDelivery(Service):
-
-    def build_business_message(self, input:'strdict', sub_key:'str', delivery_count:'int') -> 'PubSubMessage':
-
-        msg = PubSubMessage()
-
-        msg.msg_id = input['msg_id']
-        msg.correl_id = input['correl_id']
-
-        msg.data = input['data']
-        msg.size = input['size']
-
-        msg.publisher = input['publisher']
-
-        msg.pub_time_iso = input['pub_time_iso']
-        msg.recv_time_iso = input['recv_time_iso']
-
-        msg.priority = input['priority']
-        msg.delivery_count = delivery_count
-
-        msg.expiration = input['expiration']
-        msg.expiration_time_iso = input['expiration_time_iso']
-
-        msg.sub_key = sub_key
-        msg.topic_name = input['topic_name']
-
-        # Calculate and set time deltas
-        current_time = utcnow()
-        set_time_since(input, input['pub_time_iso'], input['recv_time_iso'], current_time)
-        msg.time_since_pub = input['time_since_pub']
-        msg.time_since_recv = input['time_since_recv']
-
-        # These are optional
-        if ext_client_id := input.get('ext_client_id'):
-            msg.ext_client_id = ext_client_id
-
-        if in_reply_to := input.get('in_reply_to'):
-            msg.in_reply_to = in_reply_to
-
-        return msg
-
-# ################################################################################################################################
-
-    def build_rest_message(self, input:'strdict', outgoing_connection_config:'strdict') -> 'strdict':
-
-        # .. our message to produce ..
-        out_msg = {}
-
-        # .. now, go through everything we received ..
-        for input_key, input_value in input.items():
-
-            # .. special case the publisher because we don't want to reveal the username as is ..
-            if input_key == 'publisher':
-
-                # .. go through all the Basic Auth definitions ..
-                for sec_config in self.server.config_manager.config_store.basic_auth.values():
-
-                    # .. dive deeper ..
-                    sec_config = sec_config['config']
-
-                    # .. OK, we have our match ..
-                    if sec_config['username'] == input_value:
-                        publisher = sec_config['name']
-                        break
-
-                # .. no match, e.g. it was deleted before we could handle the message ..
-                else:
-                    publisher = 'notset'
-
-                # .. assign the publisher we found ..
-                out_msg['publisher'] = publisher
-
-            # .. assign all the other parameters ..
-            else:
-                out_msg[input_key] = input_value
-
-        # .. calculate and set time deltas ..
-        current_time = utcnow()
-        set_time_since(out_msg, input['pub_time_iso'], input['recv_time_iso'], current_time)
-
-        # .. and finally return the message to our caller.
-        return out_msg
-
-# ################################################################################################################################
-
-    def handle(self):
-
-        # Local aliases
-        input:'strdict' = self.request.raw
-
-        # Extract the metadata - and delete it from input because we don't want to deliver it
-        meta = input.pop('_zato_meta')
-
-        # Get the individual variables
-        sub_key = meta['sub_key']
-        delivery_count = meta['delivery_count']
-
-        # Get the detailed configuration of the subscriber ..
-        config = self.server.config_manager.get_pubsub_sub_config(sub_key)
-
-        push_type = config['push_type']
-
-        # .. we go here if we're to invoke a specific service
-        if push_type == _push_type.Service:
-
-            # .. the service we need to invoke ..
-            service_name = config['push_service_name']
-
-            # .. turn the incoming message into a business one ..
-            msg = self.build_business_message(input, sub_key, delivery_count)
-
-            # .. now, we can invoke our push service
-            _ = self.invoke(service_name, msg)
-
-        # .. and we go here if we're invoking a REST endpoint.
-        elif push_type == _push_type.REST:
-
-            # .. the REST connection we'll be invoking ..
-            conn_name = config['rest_push_endpoint_name']
-
-            # .. get the actual connection ..
-            conn = self.out.rest[conn_name].conn
-
-            # .. build the message to send ..
-            out_msg = self.build_rest_message(input, config)
-
-            # .. and OK, we can now invoke the connection
-            _ = conn.post(self.cid, out_msg)
-
-        # .. if we're here, it's an unrecognized push type and we cannot handle this message.
-        else:
-            msg = f'Unrecognized push_type: {repr(input.get("push_type"))} ({input.get("msg_id")} - {input.get("correl_id")})'
-            raise Exception(msg)
 
 # ################################################################################################################################
 # ################################################################################################################################

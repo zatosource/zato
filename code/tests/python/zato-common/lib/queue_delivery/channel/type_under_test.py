@@ -154,7 +154,7 @@ class ChannelTypeUnderTest:
     # The URL path of each channel, by the same keys
     url_paths:'strdict' = {}
 
-    # The keys of the channels that have no queue, so no topic in a broker either
+    # The keys of the channels that have no queue
     keys_without_queue = (Channel_Without_Queue,)
 
     # The server needs nothing in its environment beyond what every server gets

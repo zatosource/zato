@@ -19,7 +19,7 @@ from zato.common.pubsub.outgoing import get_outgoing_topic_name
 from queue_delivery.channel.client import set_behaviour, wait_for_accepted
 from queue_delivery.channel.type_under_test import Channel_Hooked, Channel_Orders, Hook_Response_Prefix, Orders_Max_Retries
 from queue_delivery.channel_scenarios.base import ChannelScenarioBase, order
-from queue_delivery.client import get_audit_attrs, get_audit_bodies, get_audit_events, get_client, is_broker_backend, \
+from queue_delivery.client import get_audit_attrs, get_audit_bodies, get_audit_events, get_client, \
     wait_for_audit_events, wait_for_queue_empty
 
 # ################################################################################################################################
@@ -109,13 +109,8 @@ class AuditScenarios(ChannelScenarioBase):
 
         _ = wait_for_queue_empty(client, conn_name)
 
-        # The delivery's conclusion is the last event written - on a broker it is written under the cid
-        # of the consumer that took the message off the broker, so here it is the service's response that is waited for
-        if is_broker_backend():
-            _ = wait_for_audit_events(cid, AuditEvent.Service_Response, 1)
-        else:
-            delivered = wait_for_audit_events(cid, AuditEvent.Delivered, 1)
-            assert len(delivered) == 1
+        delivered = wait_for_audit_events(cid, AuditEvent.Delivered, 1)
+        assert len(delivered) == 1
 
         events = get_audit_events(cid)
 
@@ -149,13 +144,12 @@ class AuditScenarios(ChannelScenarioBase):
         self._check_body_attrs(service_response)
 
         # .. and the delivery concluded with the message delivered, on the same topic and with the same id
-        if not is_broker_backend():
-            delivered = _of_type(events, AuditEvent.Delivered)
-            assert len(delivered) == 1
-            assert delivered[0]['source'] == AuditSource.PubSub
-            assert delivered[0]['object_name'] == topic_name
-            assert delivered[0]['msg_id'] == published[0]['msg_id']
-            assert delivered[0]['outcome'] == AuditOutcome.OK
+        delivered = _of_type(events, AuditEvent.Delivered)
+        assert len(delivered) == 1
+        assert delivered[0]['source'] == AuditSource.PubSub
+        assert delivered[0]['object_name'] == topic_name
+        assert delivered[0]['msg_id'] == published[0]['msg_id']
+        assert delivered[0]['outcome'] == AuditOutcome.OK
 
         # Nothing failed along the way
         assert _of_type(events, AuditEvent.Delivery_Failed) == []
@@ -198,9 +192,8 @@ class AuditScenarios(ChannelScenarioBase):
         events = get_audit_events(cid)
         self._check_service_events(_of_source(events, AuditSource.Service), Channel_Orders, expected_runs)
 
-        if not is_broker_backend():
-            delivered = _of_type(events, AuditEvent.Delivered)
-            assert len(delivered) == 1
+        delivered = _of_type(events, AuditEvent.Delivered)
+        assert len(delivered) == 1
 
 # ################################################################################################################################
 

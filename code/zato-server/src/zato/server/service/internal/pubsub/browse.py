@@ -178,15 +178,7 @@ class GetMessageList(_BrowseService):
         conn_name, wrapper = self._get_conn(conn_type, conn_id)
         page = get_page_description(conn_type)
 
-        # A queue on an external pub/sub backend cannot be browsed.
         conn_has_queue = has_queue(conn_type)
-
-        if conn_has_queue:
-            topic_name = get_outgoing_topic_name(conn_type, conn_name)
-            topic_backend = self.server.config_manager.get_pubsub_topic_backend(topic_name)
-            is_queue_browsable = topic_backend is None
-        else:
-            is_queue_browsable = False
 
         documents = self._get_documents(kind, conn_type, conn_id, conn_name)
 
@@ -234,7 +226,6 @@ class GetMessageList(_BrowseService):
         self.response.payload = {
             'conn_name': conn_name,
             'has_queue': conn_has_queue,
-            'is_queue_browsable': is_queue_browsable,
             'queue_depth': queue_depth,
             'dlq_depth': dlq_depth,
             'dlq_settings': dlq_settings,

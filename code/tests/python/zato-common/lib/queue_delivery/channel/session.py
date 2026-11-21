@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# What a channel suite's conftest.py builds its session fixture out of - one server per pub/sub backend, started before
-# enmasse runs because a channel points to a service and the service has to be deployed first.
+# What a channel suite's conftest.py builds its session fixture out of - one server, started before enmasse runs
+# because a channel points to a service and the service has to be deployed first.
 
 # stdlib
 import atexit
@@ -27,8 +27,7 @@ from zato.common.test.conftest_base_pubsub import find_free_port, render_templat
 from zato.common.test.pickup_listener import PickupListener
 
 # Test support
-from queue_delivery.amqp import build_amqp_yaml, declare_broker_queues
-from queue_delivery.backends import pubsub_path_env, start_backend
+from queue_delivery.backends import get_db_path, pubsub_path_env
 from queue_delivery.channel.client import Counting_Pickup_Name
 from queue_delivery.type_under_test import TestConfig
 
@@ -36,9 +35,7 @@ from queue_delivery.type_under_test import TestConfig
 # ################################################################################################################################
 
 if 0:
-    from certificates import CertificatePaths
     from zato.common.typing_ import any_
-    from queue_delivery.backends import Backend
     from queue_delivery.channel.type_under_test import ChannelTypeUnderTest
 
 # ################################################################################################################################
@@ -67,22 +64,19 @@ _import_timeout = 180
 # ################################################################################################################################
 
 class ChannelSession:
-    """ One server on one backend, with the channels of a transport's template on it.
+    """ One server, with the channels of a transport's template on it.
     """
 
-    def __init__(self, type_under_test:'ChannelTypeUnderTest', backend_name:'str') -> 'None':
+    def __init__(self, type_under_test:'ChannelTypeUnderTest') -> 'None':
         self.type_under_test = type_under_test
-        self.backend_name = backend_name
 
         self.suite_name = type_under_test.suite_name
         self.logger_name = f'zato.test.queue_delivery_{self.suite_name}'
 
         self.state = SessionState(
             self.logger_name,
-            f'server-logs-queue-delivery-{self.suite_name}-{backend_name}.txt',
+            f'server-logs-queue-delivery-{self.suite_name}.txt',
         )
-
-        self.backend:'Backend' = cast_('Backend', None)
 
         # The listener of the pickup directory, which is not running if the session did not start in full
         self.pickup_listener:'PickupListener | None' = None
@@ -139,8 +133,8 @@ class ChannelSession:
 
 # ################################################################################################################################
 
-    def start(self, certificate_paths:'CertificatePaths') -> 'None':
-        """ Starts the backend and the server, imports the channels and points TestConfig at it all.
+    def start(self) -> 'None':
+        """ Starts the server, imports the channels and points TestConfig at it all.
         """
         # Leftover servers from interrupted previous runs
         _ = subprocess.run(['pkill', '-f', 'zato.server.main'], capture_output=True)
@@ -150,38 +144,26 @@ class ChannelSession:
 
         _ = atexit.register(self.state.cleanup)
 
-        test_data_directory = mkdtemp(prefix=f'zato_queue_delivery_{self.suite_name}_{self.backend_name}_')
+        test_data_directory = mkdtemp(prefix=f'zato_queue_delivery_{self.suite_name}_')
         self.state.test_data_directory = test_data_directory
 
-        backend = start_backend(self.backend_name, test_data_directory, certificate_paths)
-        self.backend = backend
-
-        logger.info('Backend %s ready: %.1fs', self.backend_name, time.monotonic() - start_time)
+        db_path = get_db_path(test_data_directory)
 
         zato_base = os.environ['ZATO_TEST_BASE_DIR']
         zato_bin = os.path.join(zato_base, 'code', 'bin', 'zato')
 
         invoke_password = 'test.invoke.' + CryptoManager.generate_hex_string()
 
-        # Every process started from here on inherits the backend as its database
-        self._exit_stack.enter_context(pubsub_path_env(backend.db_path))
+        # Every process started from here on inherits the SQLite file as its database
+        self._exit_stack.enter_context(pubsub_path_env(db_path))
 
-        # On a broker backend every channel's topic is an AMQP-backed one, and the topics go in before the server
-        # starts, which is when it reads which topics have a backend of their own. The channels themselves wait
-        # until the server runs, as their services are deployed only then.
-        if backend.broker:
-            amqp_type:'any_' = self.type_under_test
-            declare_broker_queues(backend.broker, amqp_type)
-            pre_start_yaml = build_amqp_yaml(backend.broker, amqp_type)
-        else:
-            pre_start_yaml = ''
-
+        # The channels are imported once the server runs, as their services are deployed only then
         server_directory = run_quickstart_and_enmasse(
             state=self.state,
             logger=logger,
             zato_bin=zato_bin,
             invoke_password=invoke_password,
-            rendered_yaml=pre_start_yaml,
+            rendered_yaml='',
             quickstart_prefix=f'zato_queue_delivery_{self.suite_name}_qs_',
         )
 
@@ -212,15 +194,17 @@ class ChannelSession:
 
         self._import_channels(zato_bin, server_directory, rendered_yaml, test_data_directory)
 
-        logger.info('Total setup on %s: %.1fs', self.backend_name, time.monotonic() - start_time)
+        logger.info('Total setup: %.1fs', time.monotonic() - start_time)
 
-        TestConfig.type_under_test = cast_('any_', self.type_under_test)
+        type_under_test:'any_' = self.type_under_test
+
+        TestConfig.type_under_test = type_under_test
         TestConfig.base_url = f'http://127.0.0.1:{server_port}'
         TestConfig.password = invoke_password
         TestConfig.server_directory = server_directory
         TestConfig.server_port = server_port
         TestConfig.zato_bin = zato_bin
-        TestConfig.backend = backend
+        TestConfig.db_path = db_path
         TestConfig.pickup_listener = self.pickup_listener
         TestConfig.state = self.state
         TestConfig.receivers = {}
@@ -228,14 +212,13 @@ class ChannelSession:
 # ################################################################################################################################
 
     def stop(self) -> 'None':
-        """ Stops the listener of the pickup directory, the server and the backend.
+        """ Stops the listener of the pickup directory and the server.
         """
         if self.pickup_listener:
             self.pickup_listener.stop()
 
         self.state.cleanup()
         self._exit_stack.close()
-        self.backend.stop()
 
 # ################################################################################################################################
 # ################################################################################################################################

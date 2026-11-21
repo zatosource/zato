@@ -39,26 +39,6 @@
             top: 50%;
             transform: translateY(-50%);
         }
-
-        .zato-topic-backend-badge {
-            font-size: 0.8em;
-            font-weight: bold;
-            padding: 0.05rem 0.5rem;
-            border-radius: 10px;
-            white-space: nowrap;
-        }
-
-        .zato-topic-backend-badge-builtin {
-            background-color: rgba(9, 54, 213, 0.08);
-            color: #0936d5;
-            border: 1px solid rgba(9, 54, 213, 0.2);
-        }
-
-        .zato-topic-backend-badge-amqp {
-            background-color: rgba(255, 102, 0, 0.1);
-            color: #b35900;
-            border: 1px solid rgba(255, 102, 0, 0.25);
-        }
     </style>
 {% endblock %}
 
@@ -90,7 +70,6 @@
             '_selection',
             'name',
 
-            '_backend',
             '_description',
             '_publishers',
             '_subscribers',
@@ -107,12 +86,6 @@
             'publisher_count',
 
             'subscriber_count',
-            'backend_type',
-            'amqp_outconn_name',
-
-            'amqp_exchange',
-            'amqp_routing_key',
-            'amqp_channel_name',
             'is_audit_log_active',
         ]
     }
@@ -142,7 +115,6 @@
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
 
-                        <th style="text-align:center"><a href="#">Backend</a></th>
                         <th><a href="#">Description</a></th>
                         <th class='ignore' style="text-align:center"><a href="#">Publishers</a></th>
                         <th class='ignore' style="text-align:center"><a href="#">Subscribers</a></th>
@@ -159,12 +131,6 @@
 
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
                     </tr>
                 </thead>
 
@@ -176,13 +142,6 @@
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
 
-                        <td style="text-align:center">
-                            {% if item.backend_type == 'amqp' %}
-                                <span class="zato-topic-backend-badge zato-topic-backend-badge-amqp">AMQP</span>
-                            {% else %}
-                                <span class="zato-topic-backend-badge zato-topic-backend-badge-builtin">Built-in</span>
-                            {% endif %}
-                        </td>
                         <td>{{ item.description|no_value_indicator }}</td>
                         <td class='ignore' style="text-align:center">{{ item.publisher_count }}</td>
                         <td class='ignore' style="text-align:center">{{ item.subscriber_count }}</td>
@@ -199,12 +158,6 @@
                         <td class='ignore'>{{ item.publisher_count }}</td>
 
                         <td class='ignore'>{{ item.subscriber_count }}</td>
-                        <td class='ignore'>{{ item.backend_type }}</td>
-                        <td class='ignore'>{{ item.amqp_outconn_name }}</td>
-
-                        <td class='ignore'>{{ item.amqp_exchange }}</td>
-                        <td class='ignore'>{{ item.amqp_routing_key }}</td>
-                        <td class='ignore'>{{ item.amqp_channel_name }}</td>
                         <td class='ignore'>{{ item.is_audit_log_active }}</td>
                     </tr>
                 {% endfor %}

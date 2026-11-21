@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import shutil
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -18,45 +17,25 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 import pytest
 
 # Test support
-from queue_delivery.backends import get_backend_names
 from queue_delivery.channel.client import reset_after_test, reset_before_test
 from queue_delivery.channel.session import ChannelSession
-from queue_delivery.session import generate_session_certificates, make_certificate_directory
 from _type import rest_channel_type
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from collections.abc import Iterator
-    from certificates import CertificatePaths
     from zato.common.typing_ import any_
 
-    certificatesgen = Iterator[CertificatePaths]
-
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.fixture(scope='session')
-def certificate_paths() -> 'certificatesgen':
-    """ Generates the throwaway CA along with server and client certificates once per session.
+@pytest.fixture(scope='session', autouse=True)
+def zato_server() -> 'any_':
+    """ One quickstart server, with the REST channels of the template on it.
     """
-    directory = make_certificate_directory()
-
-    out = generate_session_certificates(directory)
-    yield out
-
-    shutil.rmtree(directory, ignore_errors=True)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@pytest.fixture(scope='session', params=get_backend_names(), autouse=True)
-def zato_server(request:'any_', certificate_paths:'CertificatePaths') -> 'any_':
-    """ One quickstart server per pub/sub backend, with the REST channels of the template on it.
-    """
-    session = ChannelSession(rest_channel_type, request.param)
-    session.start(certificate_paths)
+    session = ChannelSession(rest_channel_type)
+    session.start()
 
     yield
 

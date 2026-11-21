@@ -42,17 +42,16 @@ class HarnessScenarios(ScenarioBase):
         """ The server's pub/sub database is the one the session fixture started, and it can be reached from the test.
         """
         client = get_client()
-        backend = TestConfig.backend
 
         server_side = get_pubsub_backend(client)
 
         assert server_side['type'] == _sqlite_backend_name
-        assert server_side['path'] == backend.db_path
+        assert server_side['path'] == TestConfig.db_path
 
         engine = get_pubsub_db_engine()
 
         assert engine.url.get_backend_name() == _sqlite_backend_name
-        assert engine.url.database == backend.db_path
+        assert engine.url.database == TestConfig.db_path
 
         with engine.connect() as connection:
             _ = connection.execute(select(func.count()).select_from(message_table)).scalar()

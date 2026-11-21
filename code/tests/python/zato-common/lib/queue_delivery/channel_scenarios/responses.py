@@ -24,7 +24,7 @@ from queue_delivery.channel.type_under_test import Channel_Counting, Channel_Hoo
     Channel_Static, Channel_Static_Text, Channel_Static_XML, Hook_Response_Prefix, Slow_Hook_Delay, Static_Response_JSON, \
     Static_Response_Text, Static_Response_XML
 from queue_delivery.channel_scenarios.base import ChannelScenarioBase, order
-from queue_delivery.client import get_client, is_broker_backend, wait_for_audit_events, wait_for_queue_empty
+from queue_delivery.client import get_client, wait_for_audit_events, wait_for_queue_empty
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,8 +73,7 @@ class ResponseScenarios(ChannelScenarioBase):
             received = wait_for_received(client, 1)
             assert len(received) == 1
 
-            if not is_broker_backend():
-                assert len(self.queued_msg_ids(client, key)) == 1
+            assert len(self.queued_msg_ids(client, key)) == 1
 
         finally:
             accept_all(client)
@@ -130,12 +129,11 @@ class ResponseScenarios(ChannelScenarioBase):
             assert published[0]['msg_id'] == msg_id, (published[0]['msg_id'], msg_id)
 
             # .. and the one the delivery page lists, where the queue can be browsed
-            if not is_broker_backend():
-                assert self.queued_msg_ids(client, key) == [msg_id]
+            assert self.queued_msg_ids(client, key) == [msg_id]
 
-                page = self.browse(client, key)
-                assert len(page['items']) == 1
-                assert page['items'][0]['msg_id'] == msg_id
+            page = self.browse(client, key)
+            assert len(page['items']) == 1
+            assert page['items'][0]['msg_id'] == msg_id
 
             out = {
                 'text': text,

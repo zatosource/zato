@@ -22,7 +22,6 @@ from zato.common.typing_ import cast_
 if 0:
     from zato.common.test.pickup_listener import PickupListener
     from zato.common.typing_ import any_, anydict, strdict, strstrdict
-    from queue_delivery.backends import Backend
     from queue_delivery.receiver import RecordedRequest, RecordingReceiver
 
 # ################################################################################################################################
@@ -66,7 +65,7 @@ Connection_Keys = (
     Conn_DLQ_Discard,
 )
 
-# The connection whose switch is off has no queue and no topic in a broker
+# The connection whose switch is off has no queue
 Conn_Without_Queue = Conn_Plain
 
 # The topic the forwarding connection's DLQ messages are published to
@@ -103,7 +102,7 @@ class TypeUnderTest:
     # The connection names of the type's template, by the keys of Connection_Keys
     connections:'strdict' = {}
 
-    # The keys of the connections that have no queue, so no topic in a broker either
+    # The keys of the connections that have no queue
     keys_without_queue = (Conn_Without_Queue,)
 
     # The type's enmasse template with the port placeholders of its receivers
@@ -189,7 +188,8 @@ class TestConfig:
     server_port = 0
     zato_bin = ''
 
-    backend:'Backend' = cast_('Backend', None)
+    # The SQLite file of the server's pub/sub database
+    db_path = ''
 
     # The file-transfer listener of the pickup directory of the server
     pickup_listener:'PickupListener' = cast_('PickupListener', None)

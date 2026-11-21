@@ -78,14 +78,6 @@ def get_client() -> 'AdminClient':
 
 # ################################################################################################################################
 
-def is_broker_backend() -> 'bool':
-    """ Whether the queues of the current server live in a broker rather than in its pub/sub database.
-    """
-    out = TestConfig.backend.is_broker
-    return out
-
-# ################################################################################################################################
-
 def get_receiver(key:'str') -> 'RecordingReceiver':
     """ The endpoint of the connection known by that key.
     """

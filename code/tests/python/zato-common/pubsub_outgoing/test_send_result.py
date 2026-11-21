@@ -106,8 +106,6 @@ class SendOrQueueTestCase(unittest.TestCase):
 
         self.server.config_manager.get_outgoing_publish_lock.return_value = threading.RLock()
 
-        self.server.config_manager.get_pubsub_topic_backend.return_value = None
-
         # The backend stores each message under the id it is given
         def _publish(*args:'any_', **kwargs:'any_') -> 'PublishResult':
             out = PublishResult()

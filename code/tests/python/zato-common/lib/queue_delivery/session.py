@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# What a type's conftest.py builds its fixtures out of - the certificates of a session, one server per pub/sub
-# backend with an endpoint per connection of the type's template, and the reset every test starts and ends with.
+# What a type's conftest.py builds its fixtures out of - one server with an endpoint per connection of the type's
+# template, and the reset every test starts and ends with.
 
 # stdlib
 import atexit
@@ -21,14 +21,11 @@ from tempfile import mkdtemp
 
 # Zato
 from zato.common.crypto.api import CryptoManager
-from zato.common.typing_ import cast_
 from zato.common.test.conftest_base_pubsub import find_free_port, render_template, run_quickstart_and_enmasse, \
     SessionState, start_server_process
 
 # Test support
-from certificates import generate_certificates
-from queue_delivery.amqp import add_amqp_config, declare_broker_queues
-from queue_delivery.backends import pubsub_path_env, start_backend
+from queue_delivery.backends import get_db_path, pubsub_path_env
 from queue_delivery.client import get_client, wait_for_queue_empty
 from queue_delivery.dlq import discard_all_dlqs
 from queue_delivery.type_under_test import Connection_Keys, TestConfig
@@ -37,9 +34,7 @@ from queue_delivery.type_under_test import Connection_Keys, TestConfig
 # ################################################################################################################################
 
 if 0:
-    from certificates import CertificatePaths
     from zato.common.typing_ import strstrdict
-    from queue_delivery.backends import Backend
     from queue_delivery.receiver import RecordingReceiver
     from queue_delivery.type_under_test import TypeUnderTest
 
@@ -53,31 +48,25 @@ _shared_services_source = os.path.join(os.path.dirname(__file__), 'shared_servic
 # The shared services land in the pickup under this name, next to the type's own
 _shared_services_pickup_name = 'queue_delivery_shared_services.py'
 
-# The database users inside the containers must be able to traverse into the certificate directory
-_certificate_dir_mode = 0o755
-
 _leftover_kill_wait = 2
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Session:
-    """ One server on one backend, with the receivers of a type's connections around it.
+    """ One server, with the receivers of a type's connections around it.
     """
 
-    def __init__(self, type_under_test:'TypeUnderTest', backend_name:'str') -> 'None':
+    def __init__(self, type_under_test:'TypeUnderTest') -> 'None':
         self.type_under_test = type_under_test
-        self.backend_name = backend_name
 
         self.suite_name = type_under_test.suite_name
         self.logger_name = f'zato.test.queue_delivery_{self.suite_name}'
 
         self.state = SessionState(
             self.logger_name,
-            f'server-logs-queue-delivery-{self.suite_name}-{backend_name}.txt',
+            f'server-logs-queue-delivery-{self.suite_name}.txt',
         )
-
-        self.backend:'Backend' = cast_('Backend', None)
 
         # Holds the pub/sub database environment for as long as the session runs
         self._exit_stack = ExitStack()
@@ -109,8 +98,8 @@ class Session:
 
 # ################################################################################################################################
 
-    def start(self, certificate_paths:'CertificatePaths') -> 'None':
-        """ Starts the backend, the receivers and the server, and points TestConfig at them.
+    def start(self) -> 'None':
+        """ Starts the receivers and the server, and points TestConfig at them.
         """
         # Leftover servers from interrupted previous runs
         _ = subprocess.run(['pkill', '-f', 'zato.server.main'], capture_output=True)
@@ -120,12 +109,9 @@ class Session:
 
         _ = atexit.register(self.state.cleanup)
 
-        self.state.test_data_directory = mkdtemp(prefix=f'zato_queue_delivery_{self.suite_name}_{self.backend_name}_')
+        self.state.test_data_directory = mkdtemp(prefix=f'zato_queue_delivery_{self.suite_name}_')
 
-        backend = start_backend(self.backend_name, self.state.test_data_directory, certificate_paths)
-        self.backend = backend
-
-        logger.info('Backend %s ready: %.1fs', self.backend_name, time.monotonic() - start_time)
+        db_path = get_db_path(self.state.test_data_directory)
 
         zato_base = os.environ['ZATO_TEST_BASE_DIR']
         zato_bin = os.path.join(zato_base, 'code', 'bin', 'zato')
@@ -135,12 +121,8 @@ class Session:
         placeholders = self._start_receivers()
         rendered_yaml = render_template(self.type_under_test.template_path, placeholders)
 
-        if backend.broker:
-            declare_broker_queues(backend.broker, self.type_under_test)
-            rendered_yaml = add_amqp_config(rendered_yaml, backend.broker, self.type_under_test)
-
-        # Every process started from here on inherits the backend as its database
-        self._exit_stack.enter_context(pubsub_path_env(backend.db_path))
+        # Every process started from here on inherits the SQLite file as its database
+        self._exit_stack.enter_context(pubsub_path_env(db_path))
 
         server_directory = run_quickstart_and_enmasse(
             state=self.state,
@@ -172,7 +154,7 @@ class Session:
             patch_server_conf_bind=True,
         )
 
-        logger.info('Total setup on %s: %.1fs', self.backend_name, time.monotonic() - start_time)
+        logger.info('Total setup: %.1fs', time.monotonic() - start_time)
 
         TestConfig.type_under_test = self.type_under_test
         TestConfig.base_url = f'http://127.0.0.1:{server_port}'
@@ -180,37 +162,18 @@ class Session:
         TestConfig.server_directory = server_directory
         TestConfig.server_port = server_port
         TestConfig.zato_bin = zato_bin
-        TestConfig.backend = backend
+        TestConfig.db_path = db_path
         TestConfig.state = self.state
 
 # ################################################################################################################################
 
     def stop(self) -> 'None':
-        """ Stops the server, the receivers and the backend.
+        """ Stops the server and the receivers.
         """
         self.state.cleanup()
         self._exit_stack.close()
-        self.backend.stop()
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def make_certificate_directory() -> 'str':
-    """ A directory the throwaway CA and the certificates of a session go to.
-    """
-    out = mkdtemp(prefix='zato-queue-delivery-certificates-')
-    os.chmod(out, _certificate_dir_mode)
-
-    return out
-
-# ################################################################################################################################
-
-def generate_session_certificates(directory:'str') -> 'CertificatePaths':
-    """ The throwaway CA along with server and client certificates of a session.
-    """
-    out = generate_certificates(directory)
-    return out
-
 # ################################################################################################################################
 
 def reset_before_test() -> 'None':

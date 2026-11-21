@@ -17,7 +17,7 @@ from zato.common.pubsub.outgoing import Attempts_None
 from queue_delivery.channel.client import accept_all, Refuse_Everything, set_behaviour
 from queue_delivery.channel.type_under_test import Attempts_Per_Round, Channel_DLQ_Keep, Refused_Error_Text
 from queue_delivery.channel_scenarios.base import ChannelScenarioBase, order
-from queue_delivery.client import get_client, is_broker_backend, msg_ids_of, wait_for_queue_empty
+from queue_delivery.client import get_client, msg_ids_of, wait_for_queue_empty
 from queue_delivery.dlq import wait_for_dlq_count
 from queue_delivery.scenarios.browse import Kind_DLQ, Kind_Queue, Row_Columns
 
@@ -64,26 +64,21 @@ class BrowseScenarios(ChannelScenarioBase):
             assert queue_page['dlq_settings'][_dlq.Field_Use_DLQ] is True
             assert queue_page['dlq_settings'][_dlq.Field_Action] == _dlq.Action.Keep
 
-            if is_broker_backend():
-                assert queue_page['is_queue_browsable'] is False
-                assert queue_page['items'] == []
-            else:
-                assert queue_page['is_queue_browsable'] is True
-                assert queue_page['total'] == 1
+            assert queue_page['total'] == 1
 
-                row = queue_page['items'][0]
-                assert sorted(row) == sorted(Row_Columns)
+            row = queue_page['items'][0]
+            assert sorted(row) == sorted(Row_Columns)
 
-                assert row['cid'].startswith(waiting['cid']), (row['cid'], waiting)
-                assert row['pub_time_iso']
-                # A channel's request is queued before any attempt, there is no direct one
-                assert row['attempts'] == Attempts_None
-                assert row['rounds'] == 0
-                assert row['moved_time_iso'] == ''
-                assert row['error'] == ''
-                assert row['reason'] == ''
+            assert row['cid'].startswith(waiting['cid']), (row['cid'], waiting)
+            assert row['pub_time_iso']
+            # A channel's request is queued before any attempt, there is no direct one
+            assert row['attempts'] == Attempts_None
+            assert row['rounds'] == 0
+            assert row['moved_time_iso'] == ''
+            assert row['error'] == ''
+            assert row['reason'] == ''
 
-                self.t.check_destination(Channel_DLQ_Keep, row['destination'])
+            self.t.check_destination(Channel_DLQ_Keep, row['destination'])
 
             dlq_page = self.browse(client, Channel_DLQ_Keep, Kind_DLQ)
 

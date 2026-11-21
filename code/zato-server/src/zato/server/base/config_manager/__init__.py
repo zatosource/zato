@@ -22,9 +22,6 @@ from traceback import format_exc
 # Bunch
 from zato.common.ext.bunch import bunchify
 
-# gevent
-from gevent import sleep
-
 # orjson
 from orjson import dumps
 
@@ -33,7 +30,6 @@ from zato.common.ext.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
      HTTP_SOAP, PARAMS_PRIORITY, PubSub, SEC_DEF_TYPE, simple_types, URL_TYPE, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
-from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, Server as BrokerMessageServer, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
@@ -41,12 +37,10 @@ from zato.common.facade import _service_name_to_topic, _service_sub_key_prefix, 
 from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.pubsub.outgoing import http_soap_outgoing_types
-from zato.common.pubsub.sql.backend import PublishResult
 from zato.common.typing_ import cast_
-from zato.common.util.api import asbool, fs_safe_name, import_module_from_path, new_cid_server, new_msg_id, parse_datetime, \
-    update_apikey_username_to_channel, utcnow, visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
-from zato.common.util.retry import get_remaining_time, get_sleep_time
-from zato.server.base.config_manager.common import _pubsub_amqp_bridge_service, ConfigManagerImpl
+from zato.common.util.api import asbool, fs_safe_name, import_module_from_path, new_cid_server, \
+    update_apikey_username_to_channel, visit_py_source, wait_for_dict_key, wait_for_dict_key_by_get_func
+from zato.server.base.config_manager.common import ConfigManagerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.connector import ConnectorStore, Connector_Type
@@ -87,7 +81,6 @@ logger = logging.getLogger(__name__)
 
 if 0:
     from zato.common.ext.bunch import Bunch as bunch_
-    from kombu.transport.pyamqp import Message as KombuMessage
     from zato.common.config_dispatcher import ConfigDispatcher
     from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, strdict, strlist, strnone, tupnone
     from zato.server.base.parallel import ParallelServer
@@ -107,15 +100,8 @@ _needs_details = asbool(os.environ.get('Zato_Needs_Details'))
 # ################################################################################################################################
 # ################################################################################################################################
 
-_pubsub_max_retry_time = 20 # PubSub.Max_Retry_Time
-
-# Re-exported for the tests and the harnesses that import it from here
-_pubsub_amqp_bridge_service = _pubsub_amqp_bridge_service
-
 # Connection config keys that are not sent to the queue bridge.
 _queue_bridge_skipped_keys = ('conn', 'parent')
-
-_outgoing_sub_key_prefix = PubSub.Outgoing.Sub_Key_Prefix
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -284,10 +270,6 @@ class ConfigManager(_ConfigManagerBase):
         # Pub/sub push subscriptions keyed by sub_key -> list of sub config dicts
         self._push_subs = {} # type: dict[str, list]
 
-        # Pub/sub topic backends keyed by topic_name -> backend config dict.
-        # Only AMQP-backed topics have entries here, absence means the built-in backend.
-        self._topic_backends = {} # type: dict[str, dict]
-
         # Cache of service names that have already had their topic auto-created
         self._service_topic_cache = set() # type: set[str]
 
@@ -426,9 +408,6 @@ class ConfigManager(_ConfigManagerBase):
         # Create all the expected connections and objects
         self.init_sql()
         self.init_http_soap()
-
-        # Which topics live in a broker, and which AMQP channels read them back, has to be known before the channels start
-        self._load_pubsub_topic_backends()
 
         # AMQP
         self.init_amqp()
@@ -749,15 +728,13 @@ class ConfigManager(_ConfigManagerBase):
 # ################################################################################################################################
 
     def init_amqp(self) -> 'None':
-        """ Initializes all AMQP connections, except for the channels that pub/sub topics read their messages back through -
-        the broker hands a waiting message over the moment a consumer connects, so those wait for pub/sub to be up.
+        """ Initializes all AMQP connections.
         """
         channels = self.config_store.channel_amqp.get_config_list()
         outconns = self.config_store.out_amqp.get_config_list()
 
         for item in channels:
-            if not self.is_pubsub_amqp_channel(item['name']):
-                self._create_amqp_channel(item)
+            self._create_amqp_channel(item)
 
         for item in outconns:
             name = item['name']
@@ -768,18 +745,6 @@ class ConfigManager(_ConfigManagerBase):
                 self.amqp_api.create_outconn(name, item)
             except Exception:
                 logger.warning('Could not create AMQP outconn `%s`, e:`%s`', name, format_exc())
-
-# ################################################################################################################################
-
-    def init_pubsub_amqp_channels(self) -> 'None':
-        """ Creates the AMQP channels that pub/sub topics read their messages back through. This runs once pub/sub is up,
-        so the first message a consumer receives already has somewhere to go.
-        """
-        channels = self.config_store.channel_amqp.get_config_list()
-
-        for item in channels:
-            if self.is_pubsub_amqp_channel(item['name']):
-                self._create_amqp_channel(item)
 
 # ################################################################################################################################
 
@@ -1213,118 +1178,6 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
-    def _handle_pubsub_public_message(
-        self,
-        body:'any_',
-        delivery_count:'int',
-        config:'strdict'
-    ) -> 'None':
-
-        # Enrich the body with our own metadata ..
-        _zato_meta = body['_zato_meta'] = {}
-        _zato_meta['sub_key'] = config['queue']
-        _zato_meta['delivery_count'] = delivery_count
-
-        # .. our delivery service - it will decide how to deliver the message ..
-        service = 'zato.pubsub.subscription.handle-delivery'
-
-        # .. do invoke it now.
-        _ = self.invoke(service, body)
-
-# ################################################################################################################################
-
-    def on_pubsub_public_message_callback(self, body:'any_', msg:'KombuMessage', sec_name:'str', config:'strdict') -> 'None':
-
-        # Local variables
-        application_headers = msg.properties['application_headers']
-
-        # .. this will be increasing ..
-        delivery_count = application_headers.get('x-delivery-count') or 0
-
-        # .. but we count from 0 so we need to add 1 to get a human-friendly number ..
-        delivery_count += 1
-
-        # .. try to deliver our message ..
-        try:
-
-            # .. invoke the callback ..
-            self._handle_pubsub_public_message(body, delivery_count, config)
-
-            # .. if we are here, it means everything went fine so we can acknoledge the message with the broker ..
-            msg.ack()
-
-            # .. and let's return explicitly.
-            return
-
-        except Exception as e:
-
-            # OK, we have an exception so we will potentially retry the delivery ..
-            e = e
-
-            # .. topic name is the same as the routing key for this message ..
-            topic_name = msg.delivery_info['routing_key']
-
-            # .. we can extract our consumer from its consumer tag ..
-            subscriber = msg.delivery_info['consumer_tag']
-            subscriber = subscriber.split('/')
-            subscriber = subscriber[0]
-            subscriber = subscriber.split('.')
-            subscriber = subscriber[0]
-
-            # .. this may be missing in case someone sent a message manually ..
-            msg_id = application_headers.get('zato_msg_id') or 'zpsm.NotGiven'
-
-            # .. we need to know when the message was published ..
-            pub_time = application_headers.get('zato_pub_time') or ''
-
-            # .. this may not exist if someone publishes a message directly to a queue ..
-            if not pub_time:
-                pub_time = utcnow()
-
-            else:
-                # .. make sure we have a timezone available ..
-                if '+' not in pub_time:
-                    pub_time += '+00:00'
-
-                # .. otherwse, make use of it ..
-                else:
-                    pub_time = parse_datetime(pub_time)
-
-            # .. OK, do we have any time left for retries ..
-            remaining_time = get_remaining_time(pub_time, _pubsub_max_retry_time)
-
-            # .. if yes, check for how long we should sleep ..
-            sleep_time = get_sleep_time(pub_time, _pubsub_max_retry_time, delivery_count)
-
-            has_time_left = remaining_time.total_seconds() > 0
-            has_sleep_time = sleep_time > 0
-
-            if has_time_left and has_sleep_time:
-
-                log_msg = f'Subscriber: `{subscriber}`' + \
-                          f' -> topic: `{topic_name}`' + \
-                          f' -> Msg ID: `{msg_id}`' + \
-                          f' -> sleeping for {sleep_time:.1f}s' + \
-                          f' (attempt={delivery_count} -> remaining={remaining_time})' + \
-                          f' e=`{format_exc()}`'
-                logger.info(log_msg)
-
-                # .. do sleep now ..
-                sleep(sleep_time)
-
-                # .. and then reject and enqueue the message, thus ensuring it will be redelivered ..
-                msg.reject(requeue=True)
-
-            # .. if we go here, it means we run out of time, so we need to accept that message ..
-            # .. so it won't be redelivered anymore.
-            else:
-                log_msg = f'Subscriber: `{subscriber}` -> topic: `{topic_name}`' + \
-                          f' -> Msg ID: `{msg_id}` -> Max wait time reached (attempts={delivery_count})'
-                logger.info(log_msg)
-                msg.ack()
-
-# ################################################################################################################################
-
     def init_pubsub(self) -> 'None':
         """ Replaces the subscription list from config.db, writes the difference to the pub/sub database,
         rebuilds push delivery for the push subscriptions with active delivery, and stops push delivery
@@ -1475,41 +1328,6 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
-    def _load_pubsub_topic_backends(self) -> 'None':
-        """ Loads the AMQP-backed topics from the ODB into the in-memory backend registry. This runs before any connector
-        is built, so the AMQP channels that such topics read their messages back through dispatch to pub/sub from the first
-        message they receive.
-        """
-        _amqp = PubSub.Backend_Type.AMQP
-
-        topic_backends = {} # type: dict[str, dict]
-
-        for topic_name, _is_active, opaque in self._read_pubsub_topics():
-
-            # Topics without opaque attributes predate backend types and are built-in,
-            # and built-in topics never have registry entries.
-            if 'backend_type' not in opaque:
-                continue
-
-            if opaque['backend_type'] != _amqp:
-                continue
-
-            topic_backends[topic_name] = {
-                'backend_type': _amqp,
-                'amqp_outconn_name': opaque['amqp_outconn_name'],
-                'amqp_exchange': opaque['amqp_exchange'],
-                'amqp_routing_key': opaque['amqp_routing_key'],
-                'amqp_channel_name': opaque['amqp_channel_name'],
-            }
-
-        self._topic_backends = topic_backends
-
-        topic_count = len(self._topic_backends)
-        suffix = 'topic' if topic_count == 1 else 'topics'
-        logger.info('Loaded %d AMQP-backed pub/sub %s into the backend registry', topic_count, suffix)
-
-# ################################################################################################################################
-
     def _sync_pubsub_topics(self) -> 'None':
         """ Registers with the pub/sub backend the topics whose audit log was turned off and the ones whose payloads
         leave with the audit export, and records which topics of config.db are inactive.
@@ -1532,169 +1350,6 @@ class ConfigManager(_ConfigManagerBase):
         # The set is the same object the backend holds, so it is updated in place
         self.server.pubsub_inactive_topics.clear()
         self.server.pubsub_inactive_topics.update(inactive_topics)
-
-# ################################################################################################################################
-
-    def get_pubsub_topic_backend(self, topic_name:'str') -> 'dictnone':
-        """ Returns the backend config for an AMQP-backed topic or None for built-in topics.
-        """
-        return self._topic_backends.get(topic_name)
-
-# ################################################################################################################################
-
-    def is_pubsub_amqp_channel(self, channel_name:'str') -> 'bool':
-        """ Whether an AMQP-backed topic reads its messages back through this channel.
-        """
-        for backend_config in self._topic_backends.values():
-            if backend_config['amqp_channel_name'] == channel_name:
-                return True
-
-        return False
-
-# ################################################################################################################################
-
-    def pubsub_publish_to_amqp(
-        self,
-        backend_config:'strdict',
-        data:'any_',
-        topic_name:'str',
-        cid:'str',
-        msg_id:'str'='',
-        ) -> 'PublishResult':
-        """ Publishes a message to the AMQP broker configured for a topic. Returns the same
-        result shape as the built-in Redis backend so the caller-facing API is identical.
-        """
-        _ = self.amqp_invoke(
-            backend_config['amqp_outconn_name'],
-            data,
-            exchange=backend_config['amqp_exchange'],
-            routing_key=backend_config['amqp_routing_key'],
-        )
-
-        # The broker does not return any identifier, so the message keeps the id its publisher gave it,
-        # which is what the audit log has to carry too, and one is generated only if the publisher gave none.
-        if not msg_id:
-            msg_id = new_msg_id()
-
-        result = PublishResult()
-        result.msg_id = msg_id
-
-        # The audit log stores payloads as text so free-text search covers them.
-        if isinstance(data, str):
-            audit_data = data
-        else:
-            audit_data = dumps(data).decode('utf-8')
-
-        # The publish target, in one field, so it reads like an address.
-        endpoint = '{} -> {} -> {}'.format(
-            backend_config['amqp_outconn_name'],
-            backend_config['amqp_exchange'],
-            backend_config['amqp_routing_key'],
-        )
-
-        # Record the publish in the audit log.
-        self.server.pubsub_backend.audit_log.insert(AuditSource.PubSub, AuditEvent.Published, topic_name,
-            cid=cid,
-            msg_id=result.msg_id,
-            endpoint=endpoint,
-            size=len(audit_data),
-            outcome=AuditOutcome.OK,
-            data=audit_data,
-        )
-
-        return result
-
-# ################################################################################################################################
-
-    def get_pubsub_topic_by_amqp_channel(self, channel_name:'str') -> 'str':
-        """ Returns the name of the AMQP-backed topic that consumes from the given channel.
-        """
-        for topic_name, backend_config in self._topic_backends.items():
-            if backend_config['amqp_channel_name'] == channel_name:
-                return topic_name
-
-        raise Exception('No AMQP-backed topic found for channel `{}`'.format(channel_name))
-
-# ################################################################################################################################
-
-    def pubsub_deliver_amqp_message(self, topic_name:'str', body:'any_', cid:'str') -> 'None':
-        """ Delivers a message consumed from an AMQP channel directly to all push subscribers
-        of its topic, without Redis involvement. Any delivery failure propagates to the caller
-        so the AMQP message is not acked and the broker redelivers it.
-        """
-        from json import dumps as json_dumps
-        from requests import post as requests_post
-
-        _push_type_service = PubSub.Push_Type.Service
-        _push_type_rest = PubSub.Push_Type.REST
-
-        audit_log = self.server.pubsub_backend.audit_log
-
-        # The audit log stores payloads as text so free-text search covers them.
-        if isinstance(body, str):
-            audit_data = body
-        else:
-            audit_data = json_dumps(body)
-
-        for config_list in self._push_subs.values():
-            for sub_config in config_list:
-
-                # Only subscribers of this particular topic are of interest.
-                if sub_config['topic_name'] != topic_name:
-                    continue
-
-                # The delivery target is either a service or a REST endpoint.
-                if sub_config['push_type'] == _push_type_service:
-                    endpoint = sub_config['push_service_name']
-                else:
-                    endpoint = sub_config['rest_push_url']
-
-                # Deliver the message, recording the outcome in the audit log either way.
-                # A failed delivery re-raises so the AMQP message is not acked and the broker redelivers it.
-                try:
-                    if sub_config['push_type'] == _push_type_service:
-                        _ = self.server.invoke(sub_config['push_service_name'], body)
-
-                    elif sub_config['push_type'] == _push_type_rest:
-
-                        # Dicts are serialized to JSON, strings and bytes go out as they are.
-                        if isinstance(body, (dict, list)):
-                            payload = json_dumps(body)
-                        else:
-                            payload = body
-
-                        response = requests_post(
-                            sub_config['rest_push_url'],
-                            data=payload,
-                            headers={'Content-Type': 'application/json'},
-                        )
-                        response.raise_for_status()
-
-                except Exception:
-                    audit_log.insert(AuditSource.PubSub, AuditEvent.Delivery_Failed, topic_name,
-                        cid=cid,
-                        endpoint=endpoint,
-                        sub_key=sub_config['sub_key'],
-                        size=len(audit_data),
-                        outcome=AuditOutcome.Error,
-                        data=audit_data,
-                    )
-                    raise
-
-                else:
-                    audit_log.insert(AuditSource.PubSub, AuditEvent.Delivered, topic_name,
-                        cid=cid,
-                        endpoint=endpoint,
-                        sub_key=sub_config['sub_key'],
-                        size=len(audit_data),
-                        outcome=AuditOutcome.OK,
-                        data=audit_data,
-                    )
-
-                    # A message of an outgoing connection's queue that its delivery service concluded has left the
-                    # broker, so it leaves the depth that gates the connection's direct attempts as well
-                    if sub_config['sub_key'].startswith(_outgoing_sub_key_prefix):
-                        self.outgoing_queue_depth.lower(sub_config['sub_key'], 1)
 
 # ################################################################################################################################
 
@@ -3106,18 +2761,6 @@ class ConfigManager(_ConfigManagerBase):
         else:
             self.server.pubsub_inactive_topics.add(msg.topic_name)
 
-        # .. and AMQP-backed topics additionally get a registry entry.
-        if msg.backend_type == PubSub.Backend_Type.AMQP:
-
-            backend_config = {
-                'backend_type': msg.backend_type,
-                'amqp_outconn_name': msg.amqp_outconn_name,
-                'amqp_exchange': msg.amqp_exchange,
-                'amqp_routing_key': msg.amqp_routing_key,
-                'amqp_channel_name': msg.amqp_channel_name,
-            }
-            self._topic_backends[msg.topic_name] = backend_config
-
 # ################################################################################################################################
 
     def on_config_event_PUBSUB_TOPIC_EDIT(self, msg:'bunch_') -> 'None':
@@ -3165,34 +2808,12 @@ class ConfigManager(_ConfigManagerBase):
                         sub_config['topic_name'] = new_name
 
         # Handle is_active change - an inactive topic keeps its push configuration so that
-        # the messages already queued for it are still delivered (19.2) ..
+        # the messages already queued for it are still delivered (19.2).
         if is_active is False:
             self.server.pubsub_inactive_topics.add(new_name)
 
         elif is_active is True:
             self.server.pubsub_inactive_topics.discard(new_name)
-
-        # Handle backend changes - the entry is rebuilt from scratch, which also covers renames
-        # and a topic moving from one channel to another ..
-        backend_type = getattr(msg, 'backend_type', None)
-
-        # .. messages without backend fields come from paths that do not manage backends ..
-        if backend_type is not None:
-
-            # .. drop the previous entry ..
-            _ = self._topic_backends.pop(old_name, None)
-
-            # .. and re-register under the new name if the topic is still AMQP-backed.
-            if backend_type == PubSub.Backend_Type.AMQP:
-
-                backend_config = {
-                    'backend_type': backend_type,
-                    'amqp_outconn_name': msg.amqp_outconn_name,
-                    'amqp_exchange': msg.amqp_exchange,
-                    'amqp_routing_key': msg.amqp_routing_key,
-                    'amqp_channel_name': msg.amqp_channel_name,
-                }
-                self._topic_backends[new_name] = backend_config
 
 # ################################################################################################################################
 
@@ -3277,12 +2898,9 @@ class ConfigManager(_ConfigManagerBase):
             sync_topic_delete(self, topic_name)
             self.server.pubsub_backend.delete_topic(topic_name)
 
-        # .. remove in-memory subscription and push delivery configs for this topic ..
+        # .. and remove in-memory subscription and push delivery configs for this topic.
         self._remove_topic_sub_configs(topic_name)
         self.server.pubsub_inactive_topics.discard(topic_name)
-
-        # .. and if the topic was AMQP-backed, drop its registry entry.
-        _ = self._topic_backends.pop(topic_name, None)
 
 # ################################################################################################################################
 

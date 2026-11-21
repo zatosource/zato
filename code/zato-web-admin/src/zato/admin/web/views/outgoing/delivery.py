@@ -298,7 +298,6 @@ def index(req:'any_', conn_type:'str', conn_id:'int') -> 'TemplateResponse':
         'conn_id': conn_id,
         'conn_name': data['conn_name'],
         'has_queue': has_queue,
-        'is_queue_browsable': data['is_queue_browsable'],
         'has_invoker': data['invoker'] is not None,
         'queue_tab': tabs[Kind_Queue],
         'dlq_tab': tabs[Kind_DLQ],

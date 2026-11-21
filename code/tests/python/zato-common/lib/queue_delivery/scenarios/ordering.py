@@ -6,14 +6,13 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# A message never overtakes the ones waiting before it, on every pub/sub backend.
+# A message never overtakes the ones waiting before it.
 
 # Zato
 from zato.common.pubsub.outgoing import Attempts_Direct, Attempts_None, Key_Attempts, Key_Data, Key_Request
 
 # Test support
-from queue_delivery.client import get_client, get_queue, is_broker_backend, restart_server, send, send_many, \
-    wait_for_queue_depth
+from queue_delivery.client import get_client, get_queue, restart_server, send, send_many, wait_for_queue_depth
 from queue_delivery.scenarios.base import ScenarioBase
 from queue_delivery.type_under_test import Conn_Orders
 
@@ -48,15 +47,13 @@ class OrderingScenarios(ScenarioBase):
         queue = get_queue(client, conn_name)
         assert queue['depth'] == 2
 
-        if not is_broker_backend():
+        attempts = {}
+        for message in queue['messages']:
+            envelope = message['envelope']
+            body = self.t.body_of_envelope_data(envelope[Key_Request][Key_Data])
+            attempts[body['seq']] = envelope[Key_Attempts]
 
-            attempts = {}
-            for message in queue['messages']:
-                envelope = message['envelope']
-                body = self.t.body_of_envelope_data(envelope[Key_Request][Key_Data])
-                attempts[body['seq']] = envelope[Key_Attempts]
-
-            assert attempts == {1: Attempts_Direct, 2: Attempts_None}
+        assert attempts == {1: Attempts_Direct, 2: Attempts_None}
 
         receiver.accept_all()
 
@@ -162,9 +159,7 @@ class OrderingScenarios(ScenarioBase):
         queue = get_queue(client, conn_name)
         assert queue['depth'] == 2
 
-        # A queue in a broker cannot be browsed, its depth is all the server knows of it
-        if not is_broker_backend():
-            assert len(queue['messages']) == 2
+        assert len(queue['messages']) == 2
 
         third = send(client, conn_name, {'seq': 3})
 

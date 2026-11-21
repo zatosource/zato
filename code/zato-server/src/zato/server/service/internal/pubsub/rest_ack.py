@@ -233,10 +233,6 @@ class AckMessages(PubSubRESTService):
 
             publication = parse_publication(self.server, username, self.cid, item)
 
-            # A topic of the AMQP backend cannot take part in a transaction of the pub/sub database.
-            if self.server.config_manager.get_pubsub_topic_backend(publication.topic_name):
-                raise AckInputError(f'Topic {publication.topic_name} is not stored in the pub/sub database')
-
             built = build_publication(
                 self.server.pubsub_backend,
                 publication.topic_name,

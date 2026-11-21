@@ -2,19 +2,6 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.topic.config = {
-    backendBadgeLabels: {
-        'builtin': 'Built-in',
-        'amqp': 'AMQP',
-    },
-    backendBadgeClasses: {
-        'builtin': 'zato-topic-backend-badge zato-topic-backend-badge-builtin',
-        'amqp': 'zato-topic-backend-badge zato-topic-backend-badge-amqp',
-    },
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-
 $.fn.zato.pubsub.topic.highlight = function(text) {
     return '<span class="how-it-works-highlight">' + text + '</span>';
 }
@@ -104,17 +91,10 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
     var is_active = item.is_active == true
     var is_audit_log_active = item.is_audit_log_active == true;
 
-    // Build the backend badge from the topic's backend type ..
-    var config = $.fn.zato.pubsub.topic.config;
-    var backendBadgeLabel = config.backendBadgeLabels[item.backend_type];
-    var backendBadgeClass = config.backendBadgeClasses[item.backend_type];
-    var backendBadge = String.format('<span class="{0}">{1}</span>', backendBadgeClass, backendBadgeLabel);
-
-    // .. and assemble the whole row.
+    // Assemble the whole row.
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
-    row += String.format("<td style='text-align:center'>{0}</td>", backendBadge);
     row += String.format('<td>{0}</td>', item.description || $.fn.zato.empty_value);
     row += String.format("<td class='ignore' style='text-align:center'>{0}</td>", item.publisher_count);
     row += String.format("<td class='ignore' style='text-align:center'>{0}</td>", item.subscriber_count);
@@ -128,11 +108,6 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.description);
     row += String.format("<td class='ignore'>{0}</td>", item.publisher_count);
     row += String.format("<td class='ignore'>{0}</td>", item.subscriber_count);
-    row += String.format("<td class='ignore'>{0}</td>", item.backend_type);
-    row += String.format("<td class='ignore'>{0}</td>", item.amqp_outconn_name);
-    row += String.format("<td class='ignore'>{0}</td>", item.amqp_exchange);
-    row += String.format("<td class='ignore'>{0}</td>", item.amqp_routing_key);
-    row += String.format("<td class='ignore'>{0}</td>", item.amqp_channel_name);
     row += String.format("<td class='ignore'>{0}</td>", is_audit_log_active);
 
     if(include_tr) {

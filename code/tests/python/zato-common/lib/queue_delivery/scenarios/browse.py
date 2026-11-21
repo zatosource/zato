@@ -7,13 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The services behind the delivery page - the listing of a queue and of a DLQ, the search, the pages, one message in
-# full, the refresh, the actions on selected messages and the edit of a message, on every pub/sub backend.
+# full, the refresh, the actions on selected messages and the edit of a message.
 
 # stdlib
 from json import dumps
-
-# pytest
-import pytest
 
 # Zato
 from zato.common.api import HTTP_SOAP, PubSub
@@ -21,8 +18,8 @@ from zato.common.pubsub.dlq import Header_Moved_Time, Key_DLQ
 from zato.common.pubsub.outgoing import Attempts_Direct, Key_Data, Key_Request
 
 # Test support
-from queue_delivery.client import edit_connection, get_client, get_queue, is_broker_backend, msg_ids_of, send, \
-    wait_for_queue_depth, wait_for_queue_empty
+from queue_delivery.client import edit_connection, get_client, get_queue, msg_ids_of, send, wait_for_queue_depth, \
+    wait_for_queue_empty
 from queue_delivery.dlq import get_dlq, invoke, send_to_dlq, wait_for_dlq_count
 from queue_delivery.scenarios.base import ScenarioBase
 from queue_delivery.type_under_test import Conn_DLQ_Keep, Conn_Orders, DLQ_Conn_Max_Retries, DLQ_Conn_Sleep_Time
@@ -69,9 +66,6 @@ Action_Discard = 'discard'
 
 # The columns of one row of either tab
 Row_Columns = ('msg_id', 'cid', 'pub_time_iso', 'attempts', 'rounds', 'destination', 'moved_time_iso', 'error', 'reason')
-
-_broker_skip_reason = 'The queue of a broker backend cannot be browsed'
-_not_a_broker_reason = 'The queue of this backend is in the pub/sub database'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -154,27 +148,21 @@ class BrowseScenarios(ScenarioBase):
             assert queue_page['cur_page'] == 1
             assert queue_page['num_pages'] == 1
 
-            if is_broker_backend():
-                assert queue_page['is_queue_browsable'] is False
-                assert queue_page['items'] == []
-                assert queue_page['total'] == 0
-            else:
-                assert queue_page['is_queue_browsable'] is True
-                assert queue_page['total'] == 1
+            assert queue_page['total'] == 1
 
-                row = queue_page['items'][0]
-                assert sorted(row) == sorted(Row_Columns)
+            row = queue_page['items'][0]
+            assert sorted(row) == sorted(Row_Columns)
 
-                assert row['msg_id'] == waiting['msg_id']
-                assert row['cid'] == waiting['cid']
-                assert row['pub_time_iso']
-                assert row['attempts'] == Attempts_Direct
-                assert row['rounds'] == 0
-                assert row['moved_time_iso'] == ''
-                assert row['error'] == ''
-                assert row['reason'] == ''
+            assert row['msg_id'] == waiting['msg_id']
+            assert row['cid'] == waiting['cid']
+            assert row['pub_time_iso']
+            assert row['attempts'] == Attempts_Direct
+            assert row['rounds'] == 0
+            assert row['moved_time_iso'] == ''
+            assert row['error'] == ''
+            assert row['reason'] == ''
 
-                self.t.check_destination(Conn_DLQ_Keep, row['destination'])
+            self.t.check_destination(Conn_DLQ_Keep, row['destination'])
 
             dlq_page = self._list(client, Conn_DLQ_Keep, Kind_DLQ)
 
@@ -344,9 +332,6 @@ class BrowseScenarios(ScenarioBase):
     def test_discarding_a_queue_message_lowers_the_depth_and_the_one_behind_goes_out(self) -> 'None':
         """ Two messages wait, the first is discarded from the queue tab.
         """
-        if is_broker_backend():
-            pytest.skip(_broker_skip_reason)
-
         client = get_client()
         receiver = self.receiver(Conn_Orders)
         conn_name = self.conn(Conn_Orders)
@@ -404,9 +389,6 @@ class BrowseScenarios(ScenarioBase):
     def test_update_message_changes_what_the_next_attempt_sends(self) -> 'None':
         """ A waiting message is edited and the edited body is what arrives.
         """
-        if is_broker_backend():
-            pytest.skip(_broker_skip_reason)
-
         client = get_client()
         receiver = self.receiver(Conn_Orders)
         conn_name = self.conn(Conn_Orders)
@@ -443,44 +425,6 @@ class BrowseScenarios(ScenarioBase):
 
         queue = wait_for_queue_depth(client, conn_name, 0)
         assert queue['depth'] == 0
-
-# ################################################################################################################################
-
-    def test_on_a_broker_the_queue_is_not_browsable_while_the_dlq_still_lists(self) -> 'None':
-        """ The queue tab of a broker-backed connection has no rows, its DLQ tab has.
-        """
-        if not is_broker_backend():
-            pytest.skip(_not_a_broker_reason)
-
-        client = get_client()
-        receiver = self.receiver(Conn_DLQ_Keep)
-        conn_name = self.conn(Conn_DLQ_Keep)
-
-        in_dlq = fill_dlq_with(client, conn_name, receiver, [{'seq': 1}])
-
-        receiver.refuse_all()
-
-        waiting = send(client, conn_name, {'seq': 2})
-        assert waiting['is_in_queue'] is True
-
-        try:
-            queue_page = self._list(client, Conn_DLQ_Keep, Kind_Queue)
-
-            assert queue_page['is_queue_browsable'] is False
-            assert queue_page['items'] == []
-            assert queue_page['queue_depth'] == 1
-            assert queue_page['dlq_depth'] == 1
-
-            dlq_page = self._list(client, Conn_DLQ_Keep, Kind_DLQ)
-
-            assert dlq_page['is_queue_browsable'] is False
-            assert msg_ids_of(dlq_page['items']) == msg_ids_of(in_dlq)
-
-        finally:
-            receiver.accept_all()
-
-        _ = receiver.wait_for_accepted(1)
-        _ = wait_for_queue_empty(client, conn_name)
 
 # ################################################################################################################################
 # ################################################################################################################################

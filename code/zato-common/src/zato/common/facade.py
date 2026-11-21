@@ -120,27 +120,6 @@ class PubSubFacade:
         if is_service:
             topic_name = self._ensure_service_topic(topic_name)
 
-        # .. service auto-topics always use the built-in backend so the backend registry
-        # .. is consulted only for regular topics ..
-        if not topic_name.startswith(_service_topic_prefix):
-            backend_config = self.server.config_manager.get_pubsub_topic_backend(topic_name)
-
-            # .. AMQP-backed topics go to the broker through their outgoing connection.
-            if backend_config:
-
-                # The CID is optional on input so it is normalized to a string here.
-                cid = kwargs.get('cid')
-                if cid is None:
-                    cid = ''
-
-                # A publisher that stores the message under its own id, as the outgoing queues do, gives it here
-                msg_id = kwargs.get('msg_id')
-                if msg_id is None:
-                    msg_id = ''
-
-                out = self.server.config_manager.pubsub_publish_to_amqp(backend_config, data, topic_name, cid, msg_id)
-                return out
-
         # .. the CID stays in kwargs so the audit log can cross-reference this publication,
         # .. and it also serves as the correlation ID unless the caller gave one explicitly ..
         if 'cid' in kwargs:

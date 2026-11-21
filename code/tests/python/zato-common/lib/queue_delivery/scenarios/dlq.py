@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# A message whose attempts ran out moves to its connection's DLQ, and the DLQ services, on every pub/sub backend.
+# A message whose attempts ran out moves to its connection's DLQ, and the DLQ services.
 
 # Zato
 from zato.common.api import PubSub
@@ -17,7 +17,7 @@ from zato.common.pubsub.outgoing import get_outgoing_topic_name, Key_CID, Key_Co
     Key_Msg_ID, Key_Pub_Time, Key_Request
 
 # Test support
-from queue_delivery.client import get_client, get_queue, is_broker_backend, restart_server, send, wait_for_audit_events, \
+from queue_delivery.client import get_client, get_queue, restart_server, send, wait_for_audit_events, \
     wait_for_queue_empty
 from queue_delivery.dlq import Discard_All_Messages, Discard_Message, Forward_All_Messages, Forward_Message, get_dlq, \
     get_topic_messages, Get_Queue_List, invoke, Retry_All_Messages, Retry_Message, send_to_dlq, subscribe_topic, \
@@ -116,11 +116,6 @@ class DLQScenarios(ScenarioBase):
 
         queue = wait_for_queue_empty(client, conn_name)
         assert queue['depth'] == 0
-
-        # The DLQ is in the pub/sub database whichever backend the queue has
-        if is_broker_backend():
-            assert queue['messages'] == []
-            assert len(get_dlq(client, conn_name)['messages']) == 1
 
 # ################################################################################################################################
 

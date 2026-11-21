@@ -328,8 +328,6 @@ class OutgoingPublisherTestCase(unittest.TestCase):
         self.lock = threading.RLock()
         self.server.config_manager.get_outgoing_publish_lock.return_value = self.lock
 
-        self.server.config_manager.get_pubsub_topic_backend.return_value = None
-
         publish_result = PublishResult()
         publish_result.msg_id = 'test-message-id-001'
         self.server.pubsub_backend.publish.return_value = publish_result
@@ -456,36 +454,6 @@ class OutgoingPublisherTestCase(unittest.TestCase):
         keyword = call_args[1]
 
         self.assertEqual(keyword['publisher'], PubSub.Outgoing.Delivery_Service)
-
-# ################################################################################################################################
-
-    def test_publish_to_an_amqp_backed_topic_goes_to_the_broker(self) -> 'None':
-        """ A publication to an AMQP-backed topic goes to the broker and nothing reaches the database.
-        """
-        backend_config = {'backend_type': 'amqp'}
-        self.server.config_manager.get_pubsub_topic_backend.return_value = backend_config
-
-        broker_result = PublishResult()
-        broker_result.msg_id = 'test-broker-message-id'
-        self.server.config_manager.pubsub_publish_to_amqp.return_value = broker_result
-
-        out = self.publisher.publish('Order 1234')
-
-        self.server.pubsub_backend.publish.assert_not_called()
-
-        call_args = self.server.config_manager.pubsub_publish_to_amqp.call_args
-        positional = call_args[0]
-
-        self.assertIs(positional[0], backend_config)
-        self.assertEqual(positional[2], self.topic_name)
-
-        envelope = loads(positional[1])
-        self.assertEqual(envelope['conn_id'], _conn_id)
-        self.assertEqual(envelope['request']['data'], 'Order 1234')
-
-        # The caller learns the envelope's id, not the broker's
-        self.assertEqual(out.msg_id, envelope['msg_id'])
-        self.assertNotEqual(out.msg_id, 'test-broker-message-id')
 
 # ################################################################################################################################
 # ################################################################################################################################

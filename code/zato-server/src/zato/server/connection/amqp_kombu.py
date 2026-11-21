@@ -250,13 +250,7 @@ class Consumer:
         # A single correlation ID for the while lifetime of this consumer, no matter how many it (re-)connects to the broker
         self.cid = new_cid_queue_consumer()
 
-        # Public pub/sub queues require special configuration
-        if config.queue.startswith('zpsk') or config.queue in {'server', 'pubsub', 'scheduler'}:
-            queue_arguments={}
-        else:
-            queue_arguments = None
-
-        queue = Queue(config.queue, queue_arguments=queue_arguments)
+        queue = Queue(config.queue)
 
         self.config = config
         self.name = self.config.name

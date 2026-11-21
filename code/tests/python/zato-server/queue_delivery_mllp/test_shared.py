@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Every shared scenario of queue delivery, run through outgoing MLLP connections on every pub/sub backend.
+# Every shared scenario of queue delivery, run through outgoing MLLP connections.
 
 # Test support
 from queue_delivery.scenarios import SharedScenarios

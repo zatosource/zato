@@ -50,14 +50,13 @@ class Index(_Index):
     paginate = True
 
     output_required = 'id', 'name', 'is_active'
-    output_optional = 'description', 'publisher_count', 'subscriber_count', 'backend_type', 'amqp_outconn_name', \
-        'amqp_exchange', 'amqp_routing_key', 'amqp_channel_name', 'is_audit_log_active'
+    output_optional = 'description', 'publisher_count', 'subscriber_count', 'is_audit_log_active'
     output_repeated = True
 
     def handle(self) -> 'anydict':
         out = {
-            'create_form': CreateForm(req=self.req),
-            'edit_form': EditForm(prefix='edit', req=self.req),
+            'create_form': CreateForm(),
+            'edit_form': EditForm(prefix='edit'),
             'show_search_form': True,
         }
 
@@ -73,8 +72,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     input_required = 'name', 'is_active'
-    input_optional = 'description', 'backend_type', 'amqp_outconn_name', 'amqp_exchange', 'amqp_routing_key', \
-        'amqp_channel_name', 'is_audit_log_active'
+    input_optional = 'description', 'is_audit_log_active'
     output_required = 'id', 'name'
 
     def success_message(self, item:'any_') -> 'str':

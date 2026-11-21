@@ -22,7 +22,7 @@ from zato.common.odb.query import pubsub_subscription_topic_names, pubsub_topic_
 from zato.common.pubsub.matcher import PatternMatcher
 from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.sql import elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
-from zato.server.service import Boolean, Service
+from zato.server.service import Boolean
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -34,50 +34,10 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_backend_fields = ('backend_type', 'amqp_outconn_name', 'amqp_exchange', 'amqp_routing_key', 'amqp_channel_name')
-
 _min_priority     = PubSub.Message.Priority_Min
 _max_priority     = PubSub.Message.Priority_Max
 _default_priority = PubSub.Message.Priority_Default
 _min_expiration   = 1
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _ensure_backend_input(input:'any_') -> 'None':
-    """ Fills in backend type defaults and validates AMQP requirements before the input is persisted.
-    """
-    if not input.backend_type:
-        input.backend_type = PubSub.Backend_Type_Default
-
-    if input.backend_type == PubSub.Backend_Type.AMQP:
-
-        if not input.amqp_outconn_name:
-            raise Exception('An outgoing AMQP connection is required for AMQP-backed topics')
-
-        if not input.amqp_exchange:
-            raise Exception('An exchange is required for AMQP-backed topics')
-
-        # The routing key is optional and defaults to the topic name at write time,
-        # so the stored value is always present and publish time reads it directly.
-        if not input.amqp_routing_key:
-            input.amqp_routing_key = input.name
-
-# ################################################################################################################################
-
-def _get_backend_config_from_opaque(opaque:'any_') -> 'Bunch':
-    """ Extracts backend fields from a topic's opaque attributes, with built-in defaults for topics
-    that were created before backend types existed.
-    """
-    out = Bunch()
-
-    for name in _backend_fields:
-        if name in opaque:
-            out[name] = opaque[name]
-        else:
-            out[name] = PubSub.Backend_Type_Default if name == 'backend_type' else ''
-
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -88,8 +48,8 @@ class GetList(AdminService):
     _filter_by = PubSubTopic.name, PubSubTopic.description,
 
     input = query_parameters
-    output = 'id', 'name', 'is_active', '-description', '-publisher_count', '-subscriber_count', '-backend_type', \
-        '-amqp_outconn_name', '-amqp_exchange', '-amqp_routing_key', '-amqp_channel_name', Boolean('-is_audit_log_active')
+    output = 'id', 'name', 'is_active', '-description', '-publisher_count', '-subscriber_count', \
+        Boolean('-is_audit_log_active')
 
     def get_data(self, session:'any_') -> 'any_':
         result = self._search(pubsub_topic_list, session, None, False)
@@ -105,12 +65,6 @@ class GetList(AdminService):
 
         data = elems_with_opaque(data)
 
-        # Topics created before backend types existed have no backend information in their
-        # opaque attributes, which means they use the built-in backend.
-        for item_dict in data:
-            if 'backend_type' not in item_dict:
-                item_dict['backend_type'] = PubSub.Backend_Type_Default
-
         return data
 
     def handle(self):
@@ -124,8 +78,7 @@ class Create(AdminService):
     """ Creates a new pub/sub topic.
     """
     changes_config = True
-    input = 'name', 'is_active', '-description', '-backend_type', '-amqp_outconn_name', \
-        '-amqp_exchange', '-amqp_routing_key', '-amqp_channel_name', Boolean('-is_audit_log_active')
+    input = 'name', 'is_active', '-description', Boolean('-is_audit_log_active')
     output = 'id', 'name'
 
     def handle(self):
@@ -136,9 +89,6 @@ class Create(AdminService):
 
         # Validate topic name
         validate_topic_name(input.name)
-
-        # Fill in the backend type default and validate AMQP requirements
-        _ensure_backend_input(input)
 
         with closing(self.odb.session()) as session:
             try:
@@ -168,19 +118,13 @@ class Create(AdminService):
                 raise
             else:
 
-                # The server is notified about every new topic so it can register
-                # its audit log state, and AMQP-backed topics additionally need
-                # their publish calls routed to the AMQP broker along with
-                # the inbound channel override, which is why the backend fields go out too.
+                # The server is notified about every new topic so it can register its audit log state.
                 pubsub_msg = Bunch()
                 pubsub_msg.cid = self.cid
                 pubsub_msg.action = PUBSUB.TOPIC_CREATE.value
                 pubsub_msg.topic_name = input.name
                 pubsub_msg.is_audit_log_active = input.is_audit_log_active
                 pubsub_msg.is_audit_export_payload_active = input.get('is_audit_export_payload_active', False)
-
-                for name in _backend_fields:
-                    pubsub_msg[name] = input[name]
 
                 self.config_dispatcher.publish(pubsub_msg)
 
@@ -194,8 +138,7 @@ class Edit(AdminService):
     """ Updates a pub/sub topic.
     """
     changes_config = True
-    input = 'name', 'is_active', '-id', '-description', '-backend_type', '-amqp_outconn_name', \
-        '-amqp_exchange', '-amqp_routing_key', '-amqp_channel_name', Boolean('-is_audit_log_active')
+    input = 'name', 'is_active', '-id', '-description', Boolean('-is_audit_log_active')
     output = 'id', 'name'
 
     def handle(self):
@@ -207,9 +150,6 @@ class Edit(AdminService):
 
         # Validate topic name
         validate_topic_name(input.name)
-
-        # Fill in the backend type default and validate AMQP requirements
-        _ensure_backend_input(input)
 
         with closing(self.odb.session()) as session:
             try:
@@ -234,12 +174,8 @@ class Edit(AdminService):
                 old_name = topic.name
                 old_is_active = topic.is_active
 
-                # Snapshot backend fields before they are overwritten so the config event
-                # can tell servers what to undo, e.g. which channel override to restore.
-                old_opaque = parse_instance_opaque_attr(topic)
-                old_backend = _get_backend_config_from_opaque(old_opaque)
-
                 # The previous audit log state is needed to detect toggles
+                old_opaque = parse_instance_opaque_attr(topic)
                 old_is_audit_log_active = old_opaque.get('is_audit_log_active')
 
                 set_instance_opaque_attrs(topic, input)
@@ -258,18 +194,12 @@ class Edit(AdminService):
                 raise
             else:
 
-                # Notify the broker if the name, active status, audit log state or backend configuration changed ..
+                # Notify the broker if the name, active status or audit log state changed ..
                 name_changed = input.name != old_name
                 active_changed = input.is_active != old_is_active
                 audit_changed = input.is_audit_log_active != old_is_audit_log_active
-                backend_changed = False
 
-                for name in _backend_fields:
-                    if input[name] != old_backend[name]:
-                        backend_changed = True
-                        break
-
-                has_changes = name_changed or active_changed or audit_changed or backend_changed
+                has_changes = name_changed or active_changed or audit_changed
 
                 if has_changes:
 
@@ -284,14 +214,6 @@ class Edit(AdminService):
                     # The payload export flag has no Dashboard field, so the servers are told what is stored
                     stored_opaque = parse_instance_opaque_attr(topic)
                     pubsub_msg.is_audit_export_payload_active = stored_opaque.get('is_audit_export_payload_active', False)
-
-                    # Carry both the new backend fields and the previous channel name
-                    # so servers can move the channel override if needed.
-                    for name in _backend_fields:
-                        pubsub_msg[name] = input[name]
-
-                    pubsub_msg.old_backend_type = old_backend.backend_type
-                    pubsub_msg.old_amqp_channel_name = old_backend.amqp_channel_name
 
                     self.config_dispatcher.publish(pubsub_msg)
 
@@ -447,35 +369,6 @@ class GetPublisherCount(AdminService):
 
         # .. and return the count.
         self.response.payload = {'publisher_count': publisher_count}
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class OnAMQPMessage(Service):
-    """ Bridges messages consumed from an AMQP channel into the channel's topic,
-    delivering them directly to the topic's push subscribers.
-    """
-
-    name = 'zato.pubsub.topic.on-amqp-message'
-
-    def handle(self) -> 'None':
-
-        # The channel that consumed this message is the key to finding the topic ..
-        channel_name = self.channel.name
-
-        # .. the body is delivered as-is, without any envelope ..
-        body = self.request.raw
-
-        config_manager = self.server.config_manager
-
-        # .. map the channel to its AMQP-backed topic ..
-        topic_name = config_manager.get_pubsub_topic_by_amqp_channel(channel_name)
-
-        # .. and hand the message over to all of the topic's push subscribers, with this
-        # .. invocation's CID so all deliveries of one broker message share it in the audit log.
-        # .. Any delivery failure propagates from this call, which means the AMQP message
-        # .. is not acked and the broker will redeliver it.
-        config_manager.pubsub_deliver_amqp_message(topic_name, body, self.cid)
 
 # ################################################################################################################################
 # ################################################################################################################################

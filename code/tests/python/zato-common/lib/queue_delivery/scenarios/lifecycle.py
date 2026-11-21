@@ -8,9 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # A connection's queue and DLQ follow the connection - a rename moves them, a delete takes them along.
 
-# pytest
-import pytest
-
 # SQLAlchemy
 from sqlalchemy import func, select
 
@@ -21,8 +18,8 @@ from zato.common.pubsub.sql.schema import delivery_table
 from zato.server.connection.outgoing_delivery import register_delivery_handlers
 
 # Test support
-from queue_delivery.client import create_connection, delete_connection, edit_connection, get_client, get_pubsub_db_engine, \
-    get_queue, get_topic_subscribers, is_broker_backend, msg_ids_of, send, wait_for_queue_empty
+from queue_delivery.client import create_connection, delete_connection, edit_connection, get_client, \
+    get_pubsub_db_engine, get_queue, get_topic_subscribers, msg_ids_of, send, wait_for_queue_empty
 from queue_delivery.dlq import get_dlq, send_to_dlq
 from queue_delivery.scenarios.base import ScenarioBase
 from queue_delivery.type_under_test import Conn_DLQ_Keep
@@ -36,7 +33,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-_broker_skip_reason = 'The topics of a broker backend are bound to their queues by name in enmasse'
 
 _renamed_suffix = '.renamed'
 _throwaway_suffix = '.throwaway'
@@ -85,9 +81,6 @@ class LifecycleScenarios(ScenarioBase):
     def test_a_rename_moves_the_queue_and_the_dlq_to_the_new_name(self) -> 'None':
         """ A message waits in the queue and another in the DLQ when the connection is renamed.
         """
-        if is_broker_backend():
-            pytest.skip(_broker_skip_reason)
-
         client = get_client()
         receiver = self.receiver(Conn_DLQ_Keep)
 
@@ -144,9 +137,6 @@ class LifecycleScenarios(ScenarioBase):
     def test_a_delete_takes_the_queue_and_the_dlq_along(self) -> 'None':
         """ A message waits in the queue and another in the DLQ when the connection is deleted.
         """
-        if is_broker_backend():
-            pytest.skip(_broker_skip_reason)
-
         client = get_client()
         receiver = self.receiver(Conn_DLQ_Keep)
 

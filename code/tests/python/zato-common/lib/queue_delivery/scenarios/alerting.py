@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The alerts about queue delivery, on every pub/sub backend - a sweep of the live server raises an alert about a
+# The alerts about queue delivery - a sweep of the live server raises an alert about a
 # connection whose DLQ holds a message and about one whose queue is deeper than the connection's own threshold,
 # each filed under the type's audit source and the connection's name, and says nothing once the depths are gone.
 # The sweep reads the audit log too, and the refusals the other scenarios scripted are still in it, so only the two

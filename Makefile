@@ -937,7 +937,7 @@ Zato_Test_Resolver_Source  := $(CURDIR)/code/zato-common/src/zato/common/test/na
 Zato_Test_Resolver_Dir     := /tmp/zato-test-resolver
 Zato_Test_Resolver_Library := $(Zato_Test_Resolver_Dir)/resolver.so
 
-test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing delivery.
+test-pubsub: ## Every pub/sub functional test - core, SQL and outgoing delivery.
 	$(Zato_Log_Reset)
 	$(MAKE) test-sql-conformance-fast $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -1039,11 +1039,6 @@ test-pubsub: ## Every pub/sub functional test - core, SQL, AMQP and outgoing del
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_outgoing_live \
 		-W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend_amqp/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend_amqp \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	$(MAKE) test-pubsub-exactly-once $(Zato_Log)
 
 # The soak tests of every suite outside HA, which test-soak runs after every other target of test-all,
@@ -1070,7 +1065,7 @@ test-soak-scheduler-failover: ## The soak test of the active-passive scheduler f
 test-soak: ## Every soak test, resuming from the target that last failed. RESTART=1 to start from scratch.
 	$(call Zato_Test_Walk,$(Zato_Test_Soak),$(Zato_Test_Soak_Resume_File))
 
-test-queue-delivery-rest: ## Queue delivery of outgoing REST connections, live, on every pub/sub backend.
+test-queue-delivery-rest: ## Queue delivery of outgoing REST connections, live.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/queue_delivery_rest/ \
@@ -1078,7 +1073,7 @@ test-queue-delivery-rest: ## Queue delivery of outgoing REST connections, live, 
 		-W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-queue-delivery-soap: ## Queue delivery of outgoing SOAP connections, live, on every pub/sub backend.
+test-queue-delivery-soap: ## Queue delivery of outgoing SOAP connections, live.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/queue_delivery_soap/ \
@@ -1086,7 +1081,7 @@ test-queue-delivery-soap: ## Queue delivery of outgoing SOAP connections, live, 
 		-W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-queue-delivery-fhir: ## Queue delivery of outgoing FHIR connections, live, on every pub/sub backend.
+test-queue-delivery-fhir: ## Queue delivery of outgoing FHIR connections, live.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/queue_delivery_fhir/ \
@@ -1094,7 +1089,7 @@ test-queue-delivery-fhir: ## Queue delivery of outgoing FHIR connections, live, 
 		-W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-queue-delivery-mllp: ## Queue delivery of outgoing MLLP connections, live, on every pub/sub backend.
+test-queue-delivery-mllp: ## Queue delivery of outgoing MLLP connections, live.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/queue_delivery_mllp/ \
@@ -1102,7 +1097,7 @@ test-queue-delivery-mllp: ## Queue delivery of outgoing MLLP connections, live, 
 		-W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-queue-delivery-channel-rest: ## The queue of REST channels - enmasse with a SQLite ODB, then live on every pub/sub backend.
+test-queue-delivery-channel-rest: ## The queue of REST channels - enmasse with a SQLite ODB, then live.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_delivery_channel_rest.py \
@@ -1111,7 +1106,7 @@ test-queue-delivery-channel-rest: ## The queue of REST channels - enmasse with a
 		-W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-queue-delivery-channel-soap: ## The queue of SOAP channels - enmasse with a SQLite ODB, then live on every pub/sub backend.
+test-queue-delivery-channel-soap: ## The queue of SOAP channels - enmasse with a SQLite ODB, then live.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_delivery_channel_soap.py \
@@ -1790,7 +1785,7 @@ test-kafka: rust-target-prune ## Kafka unit tests - the Rust bridge and the enma
 
 # The three suites below each start their own queue bridge, whose HTTP API listens on one fixed port,
 # which is why they run one after another and never side by side.
-test-kafka-live: ## Kafka tests against live Kafka in Docker - one instance plain and TLS, the three-instance cluster and queue delivery on every pub/sub backend.
+test-kafka-live: ## Kafka tests against live Kafka in Docker - one instance plain and TLS, the three-instance cluster and queue delivery.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) Zato_Test_Kafka=1 $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/kafka/ \

@@ -48,9 +48,6 @@ class TestPubSubFacadePublish(unittest.TestCase):
         self.server.config_manager._service_topic_lock = threading.RLock()
         self.server.config_manager._push_subs = {}
 
-        # .. all topics in these tests use the built-in backend ..
-        self.server.config_manager.get_pubsub_topic_backend.return_value = None
-
         # .. the service store knows about two services ..
         self.server.service_store.name_to_impl_name = {
             'my.api.customer.new': 'my_api_customer_new.MyApiCustomerNew',
@@ -229,7 +226,6 @@ class TestPubSubFacadePublishInputModel(unittest.TestCase):
         self.server.config_manager._service_topic_cache = set()
         self.server.config_manager._service_topic_lock = threading.RLock()
         self.server.config_manager._push_subs = {}
-        self.server.config_manager.get_pubsub_topic_backend.return_value = None
         self.server.service_store.name_to_impl_name = {
             'my.typed.service': 'my_typed_service.MyTypedService',
         }

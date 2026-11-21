@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# What a send with the queue switch on comes back with, on every pub/sub backend.
+# What a send with the queue switch on comes back with.
 
 # Zato
 from zato.common.pubsub.outgoing import Attempts_Direct, Key_Attempts, Key_CID, Key_Conn_Name, Key_Conn_Type, Key_Request
