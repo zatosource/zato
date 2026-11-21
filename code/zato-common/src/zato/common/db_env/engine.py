@@ -246,14 +246,37 @@ def get_sqlite_file_engine(
     metadata_tuple = (metadata,)
     _create_sqlite_schema(db_path, out, metadata_tuple)
 
-    # .. retain the engine for subsequent callers ..
-    _sqlite_file_engine_cache[cache_key] = out
+    # .. and retain it for subsequent callers, unless another caller retained one first.
+    out = _retain_engine(_sqlite_file_engine_cache, cache_key, out, file_engine.needs_background_checkpoint, db_path)
+    return out
 
-    # .. and start the checkpoints of the WAL that the commits no longer run, in one process of the server,
-    # retaining the checkpointer by the engine's key so dispose_cached_engines can stop its thread. Both caches
-    # are filled before the thread starts, because under gevent the start yields to other greenlets, and a greenlet
-    # that found the caches empty would start a second checkpointer that no cache retains.
-    if file_engine.needs_background_checkpoint:
+# ################################################################################################################################
+
+def _retain_engine(
+    cache:'anydict',
+    cache_key:'any_',
+    engine:'Engine',
+    needs_background_checkpoint:'bool',
+    db_path:'str',
+    ) -> 'Engine':
+    """ Retains a newly built engine in its cache and returns it, or disposes of it and returns the engine
+    that another caller retained under the same key while this one was being built. The schema creation
+    and the start of a checkpointer yield to other greenlets under gevent, so two callers can build an engine
+    for the same key, and only the first one retained is used, with a single checkpointer.
+    """
+
+    # One caller wins the key ..
+    out = cache.setdefault(cache_key, engine)
+
+    # .. and the engine of any other caller is closed ..
+    if out is not engine:
+        engine.dispose()
+        return out
+
+    # .. while the winner starts the checkpoints of the WAL that the commits no longer run, in one process
+    # of the server, with the checkpointer retained before its thread starts, so that dispose_cached_engines
+    # can stop it.
+    if needs_background_checkpoint:
         if is_config_owner():
             checkpointer = WALCheckpointer(out, db_path=db_path)
             _checkpointer_cache[cache_key] = checkpointer
@@ -426,17 +449,8 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
     else:
         create_schemas(out, config.metadata_tuple)
 
-    # .. cache the engine for all future callers ..
-    _engine_cache[cache_key] = out
-
-    # .. and start the checkpoints of the WAL that the commits no longer run, in one process of the server,
-    # with both caches filled before the thread starts, as in get_sqlite_file_engine.
-    if env_engine.needs_background_checkpoint:
-        if is_config_owner():
-            checkpointer = WALCheckpointer(out, db_path=env_engine.db_path)
-            _checkpointer_cache[cache_key] = checkpointer
-            checkpointer.start()
-
+    # .. and cache the engine for all future callers, unless another caller cached one first.
+    out = _retain_engine(_engine_cache, cache_key, out, env_engine.needs_background_checkpoint, env_engine.db_path)
     return out
 
 # ################################################################################################################################

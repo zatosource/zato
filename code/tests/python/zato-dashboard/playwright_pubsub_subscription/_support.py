@@ -318,7 +318,7 @@ class Pickup:
                 raise Exception(f'The server could not import {file_name}, see {self.log_path}')
 
             if completed > completed_before:
-                out = started == completed
+                out = started == completed + failed
             else:
                 out = False
 
