@@ -402,6 +402,19 @@ class Node:
 
 # ################################################################################################################################
 
+    def is_serving(self) -> 'bool':
+        """ Returns whether the role endpoint of the node answers 200, by which HAProxy sends clients to its server.
+        """
+        try:
+            with urlopen(self.role_url, timeout=ModuleCtx.Request_Timeout) as response:
+                out = response.status == OK
+        except (OSError, URLError):
+            out = False
+
+        return out
+
+# ################################################################################################################################
+
     def is_active(self) -> 'bool':
         report = self.read_role()
 

@@ -10,6 +10,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import time
+from http.client import OK
+from urllib.error import URLError
+from urllib.request import urlopen
 
 # Zato
 from topology import docker, ModuleCtx as TopologyCtx, remove_container
@@ -19,6 +23,17 @@ from topology import docker, ModuleCtx as TopologyCtx, remove_container
 
 if 0:
     from zato.common.typing_ import strlist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ModuleCtx:
+
+    # How long one request through HAProxy may take, in seconds
+    Request_Timeout = 5
+
+    # The path that a request through HAProxy is sent to
+    Ping_Path = '/zato/ping'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -86,6 +101,32 @@ class HAProxy:
             '-v', f'{config_path}:/usr/local/etc/haproxy/haproxy.cfg:ro',
             TopologyCtx.HAProxy_Image,
         )
+
+# ################################################################################################################################
+
+    def is_routing(self) -> 'bool':
+        """ Returns whether a request through HAProxy reaches a Zato server and is answered 200.
+        """
+        try:
+            with urlopen(self.base_url + ModuleCtx.Ping_Path, timeout=ModuleCtx.Request_Timeout) as response:
+                out = response.status == OK
+        except (OSError, URLError):
+            out = False
+
+        return out
+
+# ################################################################################################################################
+
+    def wait_until_routing(self, timeout:'float') -> 'None':
+        """ Waits until HAProxy routes requests to a Zato server, which follows the role endpoint of the active node
+        by up to one check interval.
+        """
+        deadline = time.monotonic() + timeout
+
+        while not self.is_routing():
+            if time.monotonic() > deadline:
+                raise Exception(f'HAProxy does not route to a server after {timeout}s')
+            time.sleep(TopologyCtx.Poll_Interval)
 
 # ################################################################################################################################
 

@@ -207,7 +207,11 @@ class HAEnvironment:
                     if report['role'] == ModuleCtx.Role_Standby and is_named_by_record(active, self.referee.read_record()):
                         remaining = deadline - time.monotonic()
                         _ = active.wait_until_server_up(remaining)
-                        return active
+
+                        # The node serves clients only once its own readiness check has seen the server answer,
+                        # which may follow the first answer of the server by one readiness interval.
+                        if active.is_serving():
+                            return active
 
             time.sleep(ModuleCtx.Poll_Interval)
 
@@ -525,11 +529,13 @@ def clear_receivers(session:'HASession') -> 'None':
 
 @contextmanager
 def until_removed(env:'HAEnvironment') -> 'any_':
-    """ Yields an environment once its pair is ready - one node active with its server up and the other
-    its standby, and removes it when the test completes.
+    """ Yields an environment once its pair is ready - one node active with its server up, the other
+    its standby and HAProxy routing to the active node, and removes it when the test completes.
     """
     try:
+        deadline = time.monotonic() + ModuleCtx.Pair_Ready_Timeout
         _ = env.wait_for_pair(ModuleCtx.Pair_Ready_Timeout)
+        env.haproxy.wait_until_routing(deadline - time.monotonic())
         yield env
     finally:
         remove_environment(env)
