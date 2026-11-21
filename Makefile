@@ -41,8 +41,13 @@
 	hl7-haproxy hl7-backend-mllp hl7-backend-rest hl7-send-message \
 	quickstart dashboard server listener haproxy dev sbom scalar-update themes css
 
-SHELL := /bin/bash
-.SHELLFLAGS := -o pipefail -c
+# Each recipe line runs under bash with pipefail through code/tests/recipe_shell.sh, which records a line that fails
+# in /tmp/zato-test-failures.txt with its target. Make expands .SHELLFLAGS for each line, with the target in $@.
+SHELL := $(CURDIR)/code/tests/recipe_shell.sh
+.SHELLFLAGS = --target=$@ -o pipefail -c
+
+# The test targets that make was asked for, which tells recipe_shell.sh that the lines it runs belong to a test run
+export Zato_Test_Goal := $(strip $(filter test%,$(MAKECMDGOALS)) $(Zato_Test_Goal))
 MAKEFLAGS += --silent --no-print-directory
 
 CARGO_ENV := $(HOME)/.cargo/env
@@ -76,8 +81,10 @@ TS := ts '%Y-%m-%d %H:%M:%S'
 # What a test target's recipe lines end with - the output timestamped on the console and
 # appended to /tmp/logs-<target name>.txt, which Zato_Log_Reset on the first line truncates.
 # Written as a line suffix rather than a wrapper target so that a target stays one target.
+# Zato_Log_Reset also records the start of the target in /tmp/zato-test-failures.txt, so that the failures
+# recorded after it are known to come from that run.
 Zato_Log       = 2>&1 | $(TS) | tee -a /tmp/logs-$@.txt
-Zato_Log_Reset = rm -f /tmp/logs-$@.txt
+Zato_Log_Reset = rm -f /tmp/logs-$@.txt; echo ">>> ZATO TEST TARGET STARTED $$(date '+%Y-%m-%d %H:%M:%S') $@" >> /tmp/zato-test-failures.txt
 
 Zato_Test_Python := $(ZATO_PY)
 include $(CURDIR)/code/tests/check.mk
@@ -825,19 +832,25 @@ test-ha-push-delivery: ## The commit of the concluded messages of a push deliver
 
 Zato_Test_FSFault_Control := $(Zato_Test_FSFault_Dir)/control
 
-test-ha-pubsub-subscription-in-process: ## Governed subscription rows of the configuration database on a server assembled in-process, on SQLite and on PostgreSQL, with fsfault.so loaded.
+test-ha-pubsub-subscription-in-process: ## Governed subscription rows of the configuration database on a server assembled in-process, on SQLite and on PostgreSQL, with fsfault.so loaded, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(Zato_Log_Reset)
 	mkdir -p $(Zato_Test_FSFault_Dir)
 	gcc -O2 -Wall -Wextra -shared -fPIC -o $(Zato_Test_FSFault_Library) $(Zato_Test_FSFault_Source) -ldl -lpthread
 	printf 'prefix=\n' > $(Zato_Test_FSFault_Control)
 	$(MAKE) common-core-build $(Zato_Log)
+	$(LOAD_CARGO_ENV) && cargo test --manifest-path $(ZATO_RUST)/zato_common_core/Cargo.toml --lib pubsub_subscription_list $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/importers/test_importer_enmasse_pubsub_subscription_flags.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/exporters/test_exporter_enmasse_pubsub_subscription_flags.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ha_pubsub_subscription_enmasse_flags \
+		-W ignore::DeprecationWarning $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	for mode in sqlite postgresql; do \
 		LD_PRELOAD=$(Zato_Test_FSFault_Library) ZATO_FSFAULT_CONTROL=$(Zato_Test_FSFault_Control) \
 		Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) \
 		$(ZATO_PY) -m gevent.monkey --module pytest \
 			$(Zato_Test_HA_Dir_pubsub-subscription-in-process)/ \
 			-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ha_pubsub_subscription_in_process_$$mode \
-			-W ignore::DeprecationWarning $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
+			-W ignore::DeprecationWarning $(Zato_Test_HA_Stepwise) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
 	done
 
 test-ha-pubsub-subscription: ## Governed subscription rows of the configuration database on a live server, on SQLite and on PostgreSQL, with disk, lock, process and network faults, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
@@ -854,13 +867,13 @@ test-ha-pubsub-subscription: ## Governed subscription rows of the configuration 
 		Zato_Test_PubSub_DB_Mode=$$mode $(call Zato_Test_HA_Pytest,pubsub-subscription-$(subst -,_,$$mode),$(addprefix $(Zato_Test_HA_Dir_pubsub-subscription)/,$(Zato_Test_HA_Modules_pubsub-subscription)) $(Zato_Test_Without_Soak)) || exit $$?; \
 	done
 
-test-ha-pubsub-subscription-ui: ## Governed subscription rows of the configuration database in Dashboard, on SQLite and on PostgreSQL.
+test-ha-pubsub-subscription-ui: ## Governed subscription rows of the configuration database in Dashboard, on SQLite and on PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(Zato_Log_Reset)
 	for mode in sqlite postgresql; do \
 		Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 			$(Zato_Test_HA_Dir_pubsub-subscription-ui)/ \
 			-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ha_pubsub_subscription_ui_$$mode \
-			-o log_cli_level=WARNING -W ignore::DeprecationWarning $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
+			-o log_cli_level=WARNING -W ignore::DeprecationWarning $(Zato_Test_HA_Stepwise) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
 	done
 
 test-ha-postgresql: ## Active-standby pair on PostgreSQL without its soak tests, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.

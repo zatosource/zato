@@ -166,7 +166,7 @@ def test_lock_on_queue_count_and_delivery(postgresql_server:'any_') -> 'None':
 
     sub_key = sub_key_for_topic(subscription_list, Topic_Pull)
 
-    _ = backend.publish(Topic_Pull, 'seed.' + CryptoManager.generate_hex_string(8))
+    seed_result = backend.publish(Topic_Pull, 'seed.' + CryptoManager.generate_hex_string(8))
 
     queue_lock = _RowLock(
         backend.engine,
@@ -175,38 +175,42 @@ def test_lock_on_queue_count_and_delivery(postgresql_server:'any_') -> 'None':
     )
     queue_lock.acquire()
 
+    # The triggers of PostgreSQL append change rows to pubsub_queue_count, so no publication needs a row that is locked
     try:
         other_result = backend.publish(Topic_Push_Rest, 'queue.other.' + CryptoManager.generate_hex_string(8))
         assert other_result.msg_id
 
-        raised = False
+        started = monotonic()
+        locked_result = backend.publish(Topic_Pull, 'queue.locked.' + CryptoManager.generate_hex_string(8))
+        elapsed_ms = (monotonic() - started) * 1000
 
-        try:
-            _ = backend.publish(Topic_Pull, 'queue.locked.' + CryptoManager.generate_hex_string(8))
-        except Exception:
-            raised = True
-
-        assert raised
+        assert locked_result.msg_id
+        assert elapsed_ms < Lock_Timeout_Ms * 0.5
 
     finally:
         queue_lock.release()
 
     delivery_lock = _RowLock(
         backend.engine,
-        'select 1 from pubsub_delivery where sub_key = :sub_key and topic_name = :topic_name for update limit 1',
-        {'sub_key': sub_key, 'topic_name': Topic_Pull.lower()},
+        'select 1 from pubsub_delivery where sub_key = :sub_key and message_id = ' +
+        '(select id from pubsub_message where msg_id = :msg_id) for update',
+        {'sub_key': sub_key, 'msg_id': seed_result.msg_id},
     )
     delivery_lock.acquire()
 
+    # An acknowledgement needs the delivery row that is locked, while publications insert rows of their own
     try:
         other_result = backend.publish(Topic_Push_Rest, 'delivery.other.' + CryptoManager.generate_hex_string(8))
         assert other_result.msg_id
+
+        same_topic_result = backend.publish(Topic_Pull, 'delivery.same.' + CryptoManager.generate_hex_string(8))
+        assert same_topic_result.msg_id
 
         raised = False
         started = monotonic()
 
         try:
-            _ = backend.fetch_messages(sub_key, max_messages=1)
+            _ = backend.ack_messages(sub_key, [seed_result.msg_id])
         except Exception:
             raised = True
 
@@ -214,9 +218,14 @@ def test_lock_on_queue_count_and_delivery(postgresql_server:'any_') -> 'None':
 
         assert raised
         assert elapsed_ms >= Lock_Timeout_Ms * 0.5
+        assert elapsed_ms < Lock_Timeout_Ms * 3
 
     finally:
         delivery_lock.release()
+
+    # The acknowledgement that the lock failed commits once the lock is released
+    removed_count = backend.ack_pulled(sub_key, [seed_result.msg_id])
+    assert removed_count == 1
 
 # ################################################################################################################################
 # ################################################################################################################################

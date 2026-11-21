@@ -57,6 +57,11 @@ class ModuleCtx:
     # Each commit waits for the first standby in this list that streams
     Synchronous_Standby_Names = 'FIRST 1 (s1, s2)'
 
+    # The suffix of the name under which the base backup of a standby streams the WAL of the primary. The name differs
+    # from the name of the standby, because the primary lists the replication connection of the base backup
+    # in pg_stat_replication as streaming.
+    Base_Backup_Name_Suffix = '_base_backup'
+
     # The name under which the nodes reach the instance accepting writes
     Endpoint_Name = 'postgresql'
 
@@ -261,11 +266,12 @@ class PostgreSQLCluster(Backend):
 
 # ################################################################################################################################
 
-    def _get_conninfo(self, instance:'Instance') -> 'str':
-        """ Returns how a standby connects to the instance accepting writes, under the name of the endpoint.
+    def _get_conninfo(self, application_name:'str') -> 'str':
+        """ Returns how a standby, or its base backup, connects under the given name to the instance accepting writes,
+        under the name of the endpoint.
         """
         out = f'host={ModuleCtx.Endpoint_Name} port={ModuleCtx.Port} user={DatabaseCtx.Username} ' + \
-              f'password={self.password} application_name={instance.name} sslmode=require'
+              f'password={self.password} application_name={application_name} sslmode=require'
 
         return out
 
@@ -276,7 +282,8 @@ class PostgreSQLCluster(Backend):
         """
         self._prepare_data_dir(instance)
 
-        conninfo = self._get_conninfo(instance)
+        conninfo = self._get_conninfo(instance.name)
+        base_backup_conninfo = self._get_conninfo(instance.name + ModuleCtx.Base_Backup_Name_Suffix)
         data_dir = ModuleCtx.Container_Data_Dir
 
         replication_settings = [
@@ -293,7 +300,7 @@ class PostgreSQLCluster(Backend):
         # The base backup is taken at the first start only, and each later start of the container keeps the data it has.
         script = ' && '.join([
             f'{{ [ -f {data_dir}/PG_VERSION ] || ' +
-            f'pg_basebackup -d "{conninfo}" -D {data_dir} -X stream -c fast -C -S {instance.name} -R; }}',
+            f'pg_basebackup -d "{base_backup_conninfo}" -D {data_dir} -X stream -c fast -C -S {instance.name} -R; }}',
             'exec ' + ' '.join(postgres_command),
         ])
 

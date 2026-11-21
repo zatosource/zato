@@ -41,6 +41,10 @@ if 0:
 # The name under which the standby connects to the primary, which synchronous replication waits for.
 _standby_name = 'standby1'
 
+# The name under which the base backup streams the WAL of the primary. It differs from the name of the standby, because
+# the primary lists the replication connection of the base backup in pg_stat_replication as streaming.
+_base_backup_name = 'standby1_base_backup'
+
 # How long the standby may take to be built and to stream from the primary, in seconds, and how often it is checked.
 _ready_timeout = 300
 _ready_poll_interval = 0.5
@@ -144,8 +148,9 @@ def _run_on_primary(database:'ReplicatedDatabase', statements:'strlist') -> 'Non
 
 # ################################################################################################################################
 
-def _get_conninfo(database:'ReplicatedDatabase', host:'str', port:'int') -> 'str':
-    """ Returns how a standby connects to the server it streams from at the given address.
+def _get_conninfo(database:'ReplicatedDatabase', host:'str', port:'int', application_name:'str') -> 'str':
+    """ Returns how a standby, or its base backup, connects under the given name to the server it streams from
+    at the given address.
     """
     primary = database.primary
 
@@ -155,13 +160,13 @@ def _get_conninfo(database:'ReplicatedDatabase', host:'str', port:'int') -> 'str
         ssl_mode = 'require'
 
     out = f'host={host} port={port} user={primary.admin_username} password={primary.admin_password} ' + \
-          f'application_name={_standby_name} sslmode={ssl_mode}'
+          f'application_name={application_name} sslmode={ssl_mode}'
 
     return out
 
 # ################################################################################################################################
 
-def _standby_conninfo(database:'ReplicatedDatabase') -> 'str':
+def _standby_conninfo(database:'ReplicatedDatabase', application_name:'str') -> 'str':
     """ Returns how the standby connects to the primary - through the port the primary publishes on the host,
     or to the address of the primary on the network of the containers in the managed modes.
     """
@@ -172,7 +177,7 @@ def _standby_conninfo(database:'ReplicatedDatabase') -> 'str':
     else:
         host = '127.0.0.1'
 
-    out = _get_conninfo(database, host, primary.port)
+    out = _get_conninfo(database, host, primary.port, application_name)
     return out
 
 # ################################################################################################################################
@@ -188,7 +193,8 @@ def _start_standby(database:'ReplicatedDatabase') -> 'None':
     os.makedirs(database.standby_dir)
     os.chmod(database.standby_dir, 0o700)
 
-    conninfo = _standby_conninfo(database)
+    conninfo = _standby_conninfo(database, _standby_name)
+    base_backup_conninfo = _standby_conninfo(database, _base_backup_name)
     data_dir = '/var/lib/postgresql/data'
 
     replication_settings = [
@@ -205,7 +211,7 @@ def _start_standby(database:'ReplicatedDatabase') -> 'None':
         postgres_command.append(f'-c "{setting}"')
 
     script = ' && '.join([
-        f'pg_basebackup -d "{conninfo}" -D {data_dir} -X stream -c fast -C -S {_standby_name} -R',
+        f'pg_basebackup -d "{base_backup_conninfo}" -D {data_dir} -X stream -c fast -C -S {_standby_name} -R',
         'exec ' + ' '.join(postgres_command),
     ])
 

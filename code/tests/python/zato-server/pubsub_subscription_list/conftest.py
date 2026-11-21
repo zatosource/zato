@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # gevent
 from gevent import monkey
-monkey.patch_all()
+_ = monkey.patch_all()
 
 # pytest
 import pytest

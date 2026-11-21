@@ -7,18 +7,31 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
+from zato.common.json_internal import loads
 from zato_common_core.zato_common_core import SubscriptionList
 
-from .conftest import Topic_Pull, Topic_Second
-from .helpers import add_topic_pending, remove_topic_pending, status_of, sub_key_for_topic
+from .conftest import Topic_Pull
+from .helpers import remove_topic_pending, status_of, sub_key_for_topic
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anylist
 
     any_ = any_
+    anylist = anylist
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _get_subscriptions(parallel:'any_') -> 'anylist':
+    """ Returns the subscriptions that get-list returns in-process, whose response is serialized to JSON.
+    """
+    response = parallel.invoke('zato.pubsub.subscription.get-list', {}, skip_response_elem=True)
+
+    out = loads(response)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,22 +67,25 @@ def test_get_list_returns_pending_status(in_process_server:'any_') -> 'None':
     subscription_list = parallel.pubsub_subscription_list
 
     sub_key = sub_key_for_topic(subscription_list, Topic_Pull)
-    add_topic_pending(subscription_list, sub_key, Topic_Second)
 
-    assert status_of(subscription_list, sub_key, Topic_Second) == SubscriptionList.STATUS_PENDING
+    # get-list lists the pairs of config.db, so the pending pair is one of config.db whose row the list does not consider committed
+    subscription_list.mark_committed([], [(sub_key, Topic_Pull.lower())])
 
-    response = parallel.invoke('zato.pubsub.subscription.get-list', {}, skip_response_elem=True)
+    assert status_of(subscription_list, sub_key, Topic_Pull) == SubscriptionList.STATUS_PENDING
+
+    subscriptions = _get_subscriptions(parallel)
+
+    # get-list reports whether any pair is unconfirmed in the first subscription only
+    assert subscriptions[0]['has_unconfirmed']
 
     found = False
 
-    for item in response:
+    for item in subscriptions:
         if item['sub_key'] != sub_key:
             continue
 
-        assert item['has_unconfirmed']
-
         for topic in item['topic_name_list']:
-            if topic['topic_name'] == Topic_Second.lower():
+            if topic['topic_name'] == Topic_Pull.lower():
                 assert topic['status'] == SubscriptionList.STATUS_PENDING
                 found = True
                 break
@@ -95,11 +111,11 @@ def test_get_list_returns_pending_removal_and_depths_omit_it(in_process_server:'
     assert status_of(subscription_list, sub_key, Topic_Pull) == SubscriptionList.STATUS_PENDING_REMOVAL
     assert subscription_list.withholds_pair(sub_key, Topic_Pull.lower())
 
-    response = parallel.invoke('zato.pubsub.subscription.get-list', {}, skip_response_elem=True)
+    subscriptions = _get_subscriptions(parallel)
 
     found = False
 
-    for item in response:
+    for item in subscriptions:
         if item['sub_key'] != sub_key:
             continue
 

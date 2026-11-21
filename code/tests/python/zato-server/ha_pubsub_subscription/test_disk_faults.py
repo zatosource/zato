@@ -33,7 +33,7 @@ if 0:
 def _ensure_fsfault_control() -> 'None':
     if SupportCtx.Env_FSFault_Control not in os.environ:
         control_file = tempfile.NamedTemporaryFile(prefix='fsfault-control-', delete=False)
-        control_file.write(b'prefix=\n')
+        _ = control_file.write(b'prefix=\n')
         control_file.close()
         os.environ[SupportCtx.Env_FSFault_Control] = control_file.name
 

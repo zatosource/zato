@@ -48,7 +48,7 @@ def test_worker_kill(environment:'any_', pickup:'any_', runtime:'any_', names:'a
         except Exception:
             return False
 
-    wait_until(_server_ready, 'server after worker kill', timeout=120)
+    wait_until(_server_ready, 'server after worker kill')
     wait_for_no_unconfirmed(runtime)
 
     pairs = runtime.governed_pairs()

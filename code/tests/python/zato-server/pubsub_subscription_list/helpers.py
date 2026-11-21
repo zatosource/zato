@@ -16,13 +16,13 @@ from zato_common_core.zato_common_core import SubscriptionList
 
 if 0:
     from zato.common.test.pubsub_in_process import InProcessServer
-    from zato.common.typing_ import any_, anydict, pairlist, strlist
+    from zato.common.typing_ import any_, anydict, list_, strlist, tuple_
 
     InProcessServer = InProcessServer
     any_ = any_
     anydict = anydict
-    pairlist = pairlist
     strlist = strlist
+    pairlist = list_[tuple_[str, str]]
 
 # ################################################################################################################################
 # ################################################################################################################################

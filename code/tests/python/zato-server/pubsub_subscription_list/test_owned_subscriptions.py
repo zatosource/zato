@@ -38,7 +38,7 @@ def test_facade_refuses_governed_sub_key(in_process_server:'any_') -> 'None':
     server, _push_endpoint = in_process_server
     facade = PubSubFacade(server.server, 'test.owned.subscriptions')
 
-    sub_key = 'sk' + CryptoManager.generate_hex_string(32)
+    sub_key = 'sk' + CryptoManager.generate_hex_string(128)
     assert SubscriptionList.is_governed(sub_key)
 
     raised = False
@@ -77,7 +77,7 @@ def test_mechanism_owned_rows_untouched_on_reload(in_process_server:'any_') -> '
     governed = backend.get_governed_pairs()
 
     for sub_key, topic in owned:
-        for pair_sub_key, pair_topic in governed:
+        for pair_sub_key, _ in governed:
             assert pair_sub_key != sub_key
 
 # ################################################################################################################################

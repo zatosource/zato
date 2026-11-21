@@ -18,12 +18,12 @@ from zato.common.odb.model import PubSubSubscription, PubSubSubscriptionTopic, P
 if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.cli.enmasse.exporter import EnmasseYAMLExporter
-    from zato.common.typing_ import anydict, strlist
+    from zato.common.typing_ import anydict, dictlist
     SASession = SASession
     EnmasseYAMLExporter = EnmasseYAMLExporter
     anydict = anydict
-    strlist = strlist
-    pubsub_subscription_def_list = strlist
+    dictlist = dictlist
+    pubsub_subscription_def_list = dictlist
 
 # ################################################################################################################################
 # ################################################################################################################################

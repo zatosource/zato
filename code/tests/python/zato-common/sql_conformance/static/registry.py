@@ -182,7 +182,7 @@ Rust_Writers = (
         method='write_items',
         statements_name='_write_statements',
         statement_keys=(
-            'begin', 'select_subscribers', 'upsert_dedup_record', 'select_dedup_record', 'update_dedup_fingerprint',
+            'begin', 'select_subscribers', 'insert_topic_sub', 'upsert_dedup_record', 'select_dedup_record', 'update_dedup_fingerprint',
             'insert_message', 'select_existing_message', 'insert_delivery', 'select_message_id', 'select_ack_delivery',
             'delete_delivery', 'record_attempt', 'select_lease_candidates', 'lease_delivery', 'select_leased_message',
             'select_fenced_delivery', 'drop_payload',

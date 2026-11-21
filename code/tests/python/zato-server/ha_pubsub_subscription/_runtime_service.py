@@ -12,8 +12,8 @@ import signal
 import time
 
 # Zato
-from zato.common.db_env.database import Type_PostgreSQL
-from zato.common.db_env.engine import get_database_engine
+from zato.common.db_env.common import Type_PostgreSQL
+from zato.common.db_env.database import get_database_engine
 from zato.server.service import Service
 
 # ################################################################################################################################
