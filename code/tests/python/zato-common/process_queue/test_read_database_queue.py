@@ -55,13 +55,12 @@ class ModuleCtx:
     # How long the test waits for a process to report, in seconds
     Report_Timeout = 20.0
 
-    # The shared object that the worker writes before the turn is held and reads while it is held
+    # The shared object that the worker writes before the turn is held and reads while it is held,
+    # and the one that it attempts to write while the turn is held
     Object_Type = 'test.read-database-queue'
     Object_Name = 'object.1'
+    Second_Object_Name = 'object.2'
     Object_Data = {'key': 'value'}
-
-    # What the write of the worker returns when it runs
-    Write_Result = 'written'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -85,7 +84,7 @@ def _hold_turn(region:'SharedRegion', conn:'Connection') -> 'None':
 
 def _read_while_turn_held(region:'SharedRegion', db_path:'str', conn:'Connection') -> 'None':
     """ Writes a shared object while the queue is free, then, once the test reports that the config process holds
-    the turn, reads the object through the store and writes through call_database, and reports the outcome of each.
+    the turn, reads the object through the store and writes another one through it, and reports the outcome of each.
     """
     exit_code = 1
 
@@ -97,7 +96,7 @@ def _read_while_turn_held(region:'SharedRegion', db_path:'str', conn:'Connection
         _ = monkey.patch_all()
         from zato.common.common_db.schema import metadata
         from zato.common.common_db.store import SharedObjectStore
-        from zato.common.db_env.engine import call_database, create_schema, new_zato_engine, set_process_queue
+        from zato.common.db_env.engine import create_schema, new_zato_engine, set_process_queue
         from zato.common.db_env.process_queue import ProcessQueue
 
         engine = new_zato_engine(f'sqlite:///{db_path}')
@@ -129,11 +128,9 @@ def _read_while_turn_held(region:'SharedRegion', db_path:'str', conn:'Connection
             read_outcome = (shared_object.data, names) # type: ignore
 
         # .. while a write receives no turn ..
-        def write() -> 'str':
-            return ModuleCtx.Write_Result
-
         try:
-            write_outcome = call_database(engine, write)
+            write_outcome = store.compare_and_set(
+                ModuleCtx.Object_Type, ModuleCtx.Second_Object_Name, ModuleCtx.Object_Data, None)
         except Exception as exception:
             write_outcome = type(exception).__name__
 

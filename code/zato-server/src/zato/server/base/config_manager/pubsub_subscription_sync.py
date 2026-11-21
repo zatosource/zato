@@ -219,7 +219,16 @@ def replace_from_odb(config_manager:'ConfigManager') -> 'pairlist':
         rows = pubsub_subscription_topic_pairs(session)
 
     subscribers = build_subscribers(rows)
-    committed = backend.get_governed_pairs()
+
+    # The subscriptions of config.db take effect whether or not the pub/sub database can be read. If it cannot,
+    # the list keeps the rows that it considers committed and the reconciler writes the difference once it can.
+    try:
+        committed = backend.get_governed_pairs()
+    except Exception:
+        logger.warning('Pub/sub subscription rows could not be read, the subscription list is replaced from config.db alone',
+            exc_info=True)
+        subscription_list.replace_subscribers(subscribers)
+        return []
 
     subscription_list.replace(subscribers, committed)
 

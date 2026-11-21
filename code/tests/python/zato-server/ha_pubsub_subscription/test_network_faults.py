@@ -40,6 +40,11 @@ class ModuleCtx:
     # How many messages are published to each topic during the partial loss
     Publication_Count = 10
 
+    # How long the pair added during the total loss may take to become pending, in seconds. The reload of the config process
+    # and then that of the worker each wait for the TCP user timeout of a pooled connection and for the connect timeout
+    # of a new one before they find PostgreSQL out of reach.
+    Total_Loss_Wait_Timeout = 360.0
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -78,16 +83,24 @@ def test_network_faults(
 
     fault = PacketFault(Container(database_proxy.database.container_name), Packet_Loss)
 
-    # No packet reaches PostgreSQL while the server applies the addition ..
+    # No packet reaches PostgreSQL while the server applies the addition. The reload of the config process cannot read
+    # the run state of the scheduler, so the import is reported as failed, and the worker, which reloads all the same,
+    # takes the subscription from config.db with its pair pending ..
+    _, completed_before, failed_before = pickup.count_markers()
+    retries_before = pickup.count_reload_retries()
     fault.apply(Total_Loss)
 
     try:
-        pickup.apply('add-second-during-total-loss',
+        file_name = pickup.place('add-second-during-total-loss',
             yaml_subscription(names.security_pull, [names.topic_pull, names.topic_second]))
-        wait_for_unconfirmed(runtime)
+        wait_for_unconfirmed(runtime, ModuleCtx.Total_Loss_Wait_Timeout)
     finally:
         fault.remove()
 
+    pickup.wait_for_failed_import(completed_before, failed_before, file_name)
+
+    # .. and once PostgreSQL is reachable again, the config process completes its reload and the rows of the pair are written.
+    pickup.wait_for_reload_retry(retries_before)
     wait_for_no_unconfirmed(runtime)
 
     assert added_pair in runtime.governed_pairs()

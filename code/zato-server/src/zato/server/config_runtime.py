@@ -18,7 +18,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # gevent
-from gevent import get_hub, signal_handler, spawn
+from gevent import get_hub, signal_handler, sleep, spawn
 from gevent.event import Event
 
 # Zato
@@ -35,6 +35,7 @@ from zato.server.config_runner import bind_config_runner
 from zato.server.control.client import ControlClient
 from zato.server.control.envelope import MessageType, new_message
 from zato.server.outgoing_region import bind_outgoing_control
+from zato.server.reload_retry import next_reload_retry_delay, Reload_Retry_Initial_Seconds
 from zato.server.worker_liveness import reopen_worker_logs
 
 # ################################################################################################################################
@@ -90,6 +91,10 @@ class ConfigRuntime:
 
         # The arbiter is told only once that another server took over the pub/sub database
         self.is_replaced_reported = False
+
+        # A reload that failed is retried by one greenlet until a reload succeeds
+        self.is_reload_retry_needed = False
+        self.is_reload_retrying = False
 
         self.client = ControlClient(ctx.control_fd, ctx.body_dir, self.on_event, self.on_query, self.on_drain,
             self.on_reload, reopen_worker_logs)
@@ -205,6 +210,59 @@ class ConfigRuntime:
         """
         message = new_message(MessageType.Reload, None)
         self.client.send(message)
+
+# ################################################################################################################################
+
+    def schedule_reload_retry(self) -> 'None':
+        """ Reloads the configuration of this process again, after a reload that failed, until a reload succeeds.
+        """
+        self.is_reload_retry_needed = True
+
+        # One greenlet retries at a time, and a later failure only keeps it retrying
+        if self.is_reload_retrying:
+            return
+
+        _ = spawn(self._retry_reload)
+
+# ################################################################################################################################
+
+    def cancel_reload_retry(self) -> 'None':
+        """ Stops the retries of a failed reload, after a reload that succeeded.
+        """
+        self.is_reload_retry_needed = False
+
+# ################################################################################################################################
+
+    def _retry_reload(self) -> 'None':
+        """ Reloads the configuration of this process after a growing delay, each time once no worker loads configuration,
+        until a reload succeeds, which a reload of the worker then follows, or until the process drains.
+        """
+        self.is_reload_retrying = True
+        retry_delay = Reload_Retry_Initial_Seconds
+
+        while self.is_reload_retry_needed and not self.is_draining:
+
+            sleep(retry_delay)
+
+            # A reload that a service ran during the delay succeeded, or the process began to drain
+            if not self.is_reload_retry_needed:
+                break
+
+            if self.is_draining:
+                break
+
+            try:
+                _ = self.gate.run(self.server.reload_config)
+            except Exception:
+                retry_delay = next_reload_retry_delay(retry_delay)
+                logger.warning('Could not reload the configuration of the config process, reloading it again in %ss -> %s',
+                    retry_delay, format_exc())
+            else:
+                self.is_reload_retry_needed = False
+                logger.info('Configuration of the config process reloaded after a failed reload')
+                self.request_worker_reload()
+
+        self.is_reload_retrying = False
 
 # ################################################################################################################################
 

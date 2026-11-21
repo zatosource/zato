@@ -214,6 +214,30 @@ impl ListState {
         self.mark_committed(committed, Vec::new());
     }
 
+    /// Returns the pairs whose rows the list considers committed, ordered by sub key and topic.
+    #[must_use]
+    pub fn committed_pairs(&self) -> Vec<Pair> {
+        let mut out = Vec::new();
+
+        for (sub_key, topics) in &self.committed {
+            for topic in topics {
+                out.push((sub_key.clone(), topic.clone()));
+            }
+        }
+
+        out.sort();
+        out
+    }
+
+    /// Replaces the subscriptions with those of `config.db` and keeps the rows that the list considers committed,
+    /// for a reload during which the rows cannot be read from the pub/sub database.
+    pub fn replace_subscribers(&mut self, subscribers: Vec<(String, Subscriber)>) {
+        // The rows remain committed whatever the subscriptions that they were recorded under,
+        // and a later comparison with the rows of the database corrects them
+        let committed = self.committed_pairs();
+        *self = Self::from_parts(subscribers, committed);
+    }
+
     /// Returns the configured sub keys of a topic.
     #[must_use]
     pub fn pairs_for_topic(&self, topic: &str) -> Vec<String> {
@@ -542,6 +566,20 @@ impl SubscriptionList {
     /// Replaces the rows that the list considers committed with the rows read from the pub/sub database.
     fn replace_committed(&self, committed: Vec<Pair>) {
         self.state.write().replace_committed(committed);
+    }
+
+    /// Replaces the subscriptions with those of `config.db` and keeps the rows that the list considers committed,
+    /// for a reload during which the rows cannot be read from the pub/sub database.
+    fn replace_subscribers(&self, subscribers: &Bound<'_, PyDict>) -> PyResult<()> {
+        let mut parsed = Vec::with_capacity(subscribers.len());
+        for (sub_key, subscriber) in subscribers.iter() {
+            parsed.push((sub_key.extract::<String>()?, extract_subscriber(&subscriber)?));
+        }
+
+        // The committed rows are read and the subscriptions replaced under one write lock,
+        // so that no commit recorded in the meantime is lost
+        self.state.write().replace_subscribers(parsed);
+        Ok(())
     }
 
     /// Returns whether the list governs a sub key.

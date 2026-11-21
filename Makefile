@@ -869,6 +869,7 @@ test-ha-pubsub-subscription: ## Governed subscription rows of the configuration 
 			*) echo ">>> $$module is not in Zato_Test_HA_Modules_pubsub-subscription" $(Zato_Log); exit 1;; \
 		esac; \
 	done
+	$(MAKE) common-core-build $(Zato_Log)
 	$(MAKE) ha-node-build $(Zato_Log)
 	$(MAKE) scheduler-build $(Zato_Log)
 	for mode in sqlite postgresql; do \
@@ -907,6 +908,7 @@ test-tmp-store-reads: ## The reads of the shared object store outside of the wri
 test-ha-pubsub-subscription-ui: ## Governed subscription rows of the configuration database in Dashboard, on SQLite and on PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(Zato_Log_Reset)
 	$(Zato_Test_FSFault_Build)
+	$(MAKE) common-core-build $(Zato_Log)
 	for mode in sqlite postgresql; do \
 		$(Zato_Test_FSFault_Env) Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 			$(Zato_Test_HA_Dir_pubsub-subscription-ui)/ \

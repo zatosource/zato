@@ -179,6 +179,24 @@ fn replace_committed_takes_the_rows_read_from_the_database() {
 }
 
 #[test]
+fn replace_subscribers_keeps_the_committed_rows() {
+    let committed = vec![pair(SUB_KEY_ORDERS, TOPIC_ORDERS), pair(SUB_KEY_INVOICES, TOPIC_INVOICES)];
+    let mut state = state_with(&committed);
+
+    let subscribers = vec![(
+        SUB_KEY_ORDERS.to_owned(),
+        subscriber(&[(TOPIC_ORDERS, FLAGS_ON), (TOPIC_RENAMED, FLAGS_ON)]),
+    )];
+    state.replace_subscribers(subscribers);
+
+    assert_eq!(state.committed_pairs(), committed);
+
+    let (pending, removals) = state.differences();
+    assert_eq!(pending, vec![pair(SUB_KEY_ORDERS, TOPIC_RENAMED)]);
+    assert_eq!(removals, vec![pair(SUB_KEY_INVOICES, TOPIC_INVOICES)]);
+}
+
+#[test]
 fn withholds_topics_pending_removal_and_topics_without_delivery() {
     let no_delivery = PairFlags {
         is_pub_enabled: true,

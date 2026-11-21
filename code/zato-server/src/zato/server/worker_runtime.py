@@ -34,6 +34,7 @@ from zato.server.config_forward import apply_forward_result, new_forward_body
 from zato.server.config_runner import bind_config_runner
 from zato.server.control.client import ControlClient
 from zato.server.outgoing_region import bind_outgoing_control, handle_outgoing_query
+from zato.server.reload_retry import next_reload_retry_delay, Reload_Retry_Initial_Seconds
 from zato.server.worker_liveness import reopen_worker_logs, write_heartbeat
 
 # ################################################################################################################################
@@ -254,11 +255,13 @@ class WorkerRuntime:
 # ################################################################################################################################
 
     def reload(self) -> 'None':
-        """ Reads the configuration again after the mark of the config process, as many times as it was requested.
+        """ Reads the configuration again after the mark of the config process, as many times as it was requested,
+        and again after a growing delay after each reload that failed, until a reload succeeds or the worker drains.
         """
         self.is_reloading = True
+        retry_delay = Reload_Retry_Initial_Seconds
 
-        while self.is_reload_requested:
+        while self.is_reload_requested and not self.is_draining:
             self.is_reload_requested = False
 
             load_cid = self.request_load()
@@ -266,12 +269,23 @@ class WorkerRuntime:
             try:
                 self.server.reload_config()
             except Exception:
-                logger.exception('Could not reload the configuration of the worker')
+                logger.exception('Could not reload the configuration of the worker, reloading it again in %ss', retry_delay)
+                self.is_reload_requested = True
+                is_failed = True
+            else:
+                is_failed = False
 
             self.client.report_load_done(load_cid)
 
             # A file deployed in a process that terminated before it relayed the deployment is in effect here as well
             self.server.deploy_pickup_dir(is_relayed=True)
+
+            # The next reload after a failed one waits, so that a database that cannot be reached is not polled at once
+            if is_failed:
+                sleep(retry_delay)
+                retry_delay = next_reload_retry_delay(retry_delay)
+            else:
+                retry_delay = Reload_Retry_Initial_Seconds
 
         self.is_reloading = False
 
