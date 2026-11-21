@@ -97,6 +97,9 @@ function setupTriStateCheckbox(checkbox) {
 // because a reopened form can coincidentally hold the same value the in-flight request was issued for.
 $.fn.zato.pubsub.subscription._topic_request_generation = 0;
 
+// The dialog session whose topics the edit form rendered last
+$.fn.zato.pubsub.subscription._edit_rendered_generation = null;
+
 $.fn.zato.pubsub.subscription._bump_topic_request_generation = function() {
     $.fn.zato.pubsub.subscription._topic_request_generation += 1;
     return $.fn.zato.pubsub.subscription._topic_request_generation;
@@ -177,15 +180,27 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, insta
     // Check current content before setting
     var beforeContent = $(targetDivId).html();
 
+    // The first render of an edit dialog session shows the saved subscription. The rows left over
+    // from a previous session hold the state of that session, so they are not carried over.
+    var isEditSessionStart = isEditMode && request_generation !== $.fn.zato.pubsub.subscription._edit_rendered_generation;
+    if (isEditMode) {
+        $.fn.zato.pubsub.subscription._edit_rendered_generation = request_generation;
+    }
+
     // Snapshot the checkbox state by topic name, as a re-render, e.g. one triggered by live form updates
     // or a duplicate AJAX response, must not wipe out selections already made in the open form.
     var previousState = {};
-    $(targetDivId + ' input[name="topic_name"]').each(function() {
-        previousState[this.value] = {
-            "checked": this.checked,
-            "indeterminate": $(this).hasClass('indeterminate')
-        };
-    });
+    if (!isEditSessionStart) {
+        $(targetDivId + ' input[name="topic_name"]').each(function() {
+            var topicName = this.value;
+            previousState[topicName] = {
+                'checked': this.checked,
+                'indeterminate': $(this).hasClass('indeterminate'),
+                'isPubEnabled': $(targetDivId + ' input.topic-pub-enabled[data-topic="' + topicName + '"]').prop('checked'),
+                'isDeliveryEnabled': $(targetDivId + ' input.topic-delivery-enabled[data-topic="' + topicName + '"]').prop('checked')
+            };
+        });
+    }
 
     // Set the HTML content
     $(targetDivId).html(htmlContent);
@@ -193,12 +208,15 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, insta
     // Re-apply the snapshotted state to the freshly rendered checkboxes, before the tri-state setup
     // below reads their state to initialize itself. Topics new to this render have no snapshot entry.
     $(targetDivId + ' input[name="topic_name"]').each(function() {
-        var state = previousState[this.value];
+        var topicName = this.value;
+        var state = previousState[topicName];
         if (state) {
             this.checked = state.checked;
             if (state.indeterminate) {
                 $(this).addClass('indeterminate');
             }
+            $(targetDivId + ' input.topic-pub-enabled[data-topic="' + topicName + '"]').prop('checked', state.isPubEnabled);
+            $(targetDivId + ' input.topic-delivery-enabled[data-topic="' + topicName + '"]').prop('checked', state.isDeliveryEnabled);
         }
     });
 
@@ -232,8 +250,12 @@ $.fn.zato.pubsub.populate_sec_def_topics_callback = function(data, status, insta
                     topicNames = [instance.topic_name_list];
                 }
 
-                // Check the checkboxes for subscribed topics
+                // Check the checkboxes for subscribed topics, except for the topics the open form
+                // already displayed, whose state is the operator's unsaved choice restored above.
                 topicNames.forEach(function(topic, index) {
+                    if (previousState[topic.topic_name]) {
+                        return;
+                    }
                     var checkbox = $(targetDivId + ' input[name="topic_name"][value="' + topic.topic_name + '"]');
 
                     if (checkbox.length) {
