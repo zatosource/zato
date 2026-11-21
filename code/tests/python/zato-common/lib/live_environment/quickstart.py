@@ -28,7 +28,7 @@ from zato.common.util.config import get_config_object, update_config_file
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, intnone, strstrdict
+    from zato.common.typing_ import any_, floatnone, intnone, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -347,10 +347,11 @@ class ZatoEnvironment:
 
 # ################################################################################################################################
 
-    def client(self) -> 'AdminClient':
-        """ A client invoking services on the server with the environment's own password.
+    def client(self, timeout:'floatnone'=None) -> 'AdminClient':
+        """ A client invoking services on the server with the environment's own password, with each call bounded
+        by the timeout, in seconds, if one is given.
         """
-        out = AdminClient(f'http://{Host}:{self.server_port}', self.password)
+        out = AdminClient(f'http://{Host}:{self.server_port}', self.password, timeout)
         return out
 
 # ################################################################################################################################

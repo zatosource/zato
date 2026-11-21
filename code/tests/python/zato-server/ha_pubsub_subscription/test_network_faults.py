@@ -41,8 +41,8 @@ class ModuleCtx:
     Publication_Count = 10
 
     # How long the pair added during the total loss may take to become pending, in seconds. The reload of the config process
-    # and then that of the worker each wait for the TCP user timeout of a pooled connection and for the connect timeout
-    # of a new one before they find PostgreSQL out of reach.
+    # and then that of the worker each fail their reads of PostgreSQL within the read timeout of a pooled connection
+    # and the connect timeout of a new one.
     Total_Loss_Wait_Timeout = 360.0
 
 # ################################################################################################################################

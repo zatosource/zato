@@ -77,6 +77,10 @@ class ModuleCtx:
     # How long one REST call of a publisher or a subscriber may take, in seconds
     Client_Timeout = 60.0
 
+    # How long one call of the services that the suite deployed may take, in seconds - above the read timeout
+    # and the connect timeout of PostgreSQL, within which a call that waits for the database fails
+    Runtime_Client_Timeout = 180.0
+
     # The status of a pair whose rows match the subscription list
     Status_Confirmed = 'confirmed'
 

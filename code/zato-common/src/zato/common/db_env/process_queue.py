@@ -76,13 +76,10 @@ class ProcessQueue:
 
 # ################################################################################################################################
 
-    def _wait_for_turn(self) -> 'bool':
+    def _wait_for_turn(self, deadline:'float') -> 'bool':
         """ Returns whether the turn came before the deadline. The wake-ups of the place are drained before each poll,
         so one that arrives during a poll makes the next wait return at once.
         """
-        now = monotonic()
-        deadline = now + self.deadline_seconds
-
         poller = _poll()
         poller.register(self.wake_fd, POLLIN)
 
@@ -111,11 +108,21 @@ class ProcessQueue:
     def run(self, func:'callable_', args:'anytuple') -> 'any_':
         """ Runs one write when the turn of this process comes, and releases the turn when the write completes.
         """
+        deadline = monotonic() + self.deadline_seconds
+        out = self._run_before(deadline, func, args)
+        return out
+
+# ################################################################################################################################
+
+    def _run_before(self, deadline:'float', func:'callable_', args:'anytuple') -> 'any_':
+        """ Runs one write if the turn of this process comes before the deadline, and releases the turn
+        when the write completes.
+        """
         # Take a ticket in the queue ..
         _ = self.region.queue_enter(self.queue, self.place)
 
         # .. wait for the turn, and withdraw the ticket when the deadline passes ..
-        has_turn = self._wait_for_turn()
+        has_turn = self._wait_for_turn(deadline)
 
         if not has_turn:
             self.region.queue_abandon(self.queue, self.place)
@@ -134,9 +141,20 @@ class ProcessQueue:
 
     def run_under_lock(self, lock:'any_', func:'callable_', args:'anytuple') -> 'any_':
         """ Runs one write under the thread lock of the file in this process, then in the queue of the server.
+        One deadline covers both waits, so a write behind a slow commit of its own process withdraws
+        as one behind a commit of the other process does.
         """
-        with lock:
-            out = self.run(func, args)
+        deadline = monotonic() + self.deadline_seconds
+
+        if not lock.acquire(timeout=self.deadline_seconds):
+            message = f'No turn under the thread lock of writer queue {self.queue} for place {self.place} ' + \
+                f'within {self.deadline_seconds}s'
+            raise ProcessQueueTimeout(message)
+
+        try:
+            out = self._run_before(deadline, func, args)
+        finally:
+            lock.release()
 
         return out
 

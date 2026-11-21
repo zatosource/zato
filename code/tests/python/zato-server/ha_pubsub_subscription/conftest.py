@@ -202,7 +202,7 @@ def environment(names:'Names', server_env:'strstrdict') -> 'Generator[ZatoEnviro
 def client(environment:'ZatoEnvironment') -> 'AdminClient':
     """ A client of the module's live server.
     """
-    out = environment.client()
+    out = environment.client(SupportCtx.Runtime_Client_Timeout)
     return out
 
 # ################################################################################################################################

@@ -11,23 +11,29 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import time
+from typing import NamedTuple
 
 # pytest
 import pytest
 
 # SQLAlchemy
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 
 # Zato
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.connection import build_connect_args_from_values, build_engine_url_from_values, \
-    DatabaseDurabilityError, PostgreSQL_Connect_Timeout_Seconds, Provider_Failover_Roles
+    DatabaseDurabilityError, PostgreSQL_Connect_Timeout_Seconds, PostgreSQL_Read_Timeout_Seconds, \
+    PostgreSQL_Statement_Timeout_Ms, Provider_Failover_Roles
 from zato.common.db_env.database import dispose_database_engine, get_database_engine, get_database_values
 from zato.common.db_env.engine import new_zato_engine
-from zato.common.test.pubsub_database import connect, pubsub_db_env, PubSubDBMode, start_pubsub_database, \
-    stop_pubsub_database
+from zato.common.test.pubsub_database import connect, get_database_address, pubsub_db_env, PubSubDBMode, \
+    start_pubsub_database, stop_pubsub_database
 from zato.common.test.pubsub_replication import start_replicated_database, stop_replicated_database
 from zato.common.test.sql_conformance.forbidden import get_server_refusal_arguments, ModuleCtx as ForbiddenModuleCtx
+
+# Toxiproxy
+from toxiproxy import Database_Proxy, Stream_Downstream, Toxiproxy, Toxiproxy_Host
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,11 +42,12 @@ if 0:
     from collections.abc import Iterator
     from sqlalchemy.engine import Engine
     from zato.common.test.pubsub_database import PubSubDatabase
-    from zato.common.typing_ import strlist
+    from zato.common.typing_ import strlist, strstrdict
 
     Engine = Engine
     Iterator = Iterator
     PubSubDatabase = PubSubDatabase
+    strstrdict = strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,6 +71,28 @@ class ModuleCtx:
 
     # How much longer than the connect timeout a connection attempt or a statement is allowed to take, in seconds
     Connect_Margin_Seconds = 5
+
+    # The environment variable with the port of the Zato database
+    Env_Port = 'Zato_Database_Port'
+
+    # The setting of the statement timeout of a session, which pg_settings shows in milliseconds
+    Statement_Timeout_Setting = 'statement_timeout'
+
+    # The label of the container of Toxiproxy in front of the database of this module
+    Toxiproxy_Label = 'durability-engines'
+
+    # The toxic that drops every reply of PostgreSQL and keeps the connection open, which a timeout of 0 means
+    Toxic_Hold_Replies = 'timeout'
+    Toxic_Hold_Replies_Attributes = {'timeout': 0}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DatabaseProxy(NamedTuple):
+    """ The container of Toxiproxy in front of the database of the module and the environment that points at its proxy.
+    """
+    toxiproxy: 'Toxiproxy'
+    env: 'strstrdict'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -116,6 +145,58 @@ def _get_session_level(engine:'Engine') -> 'str':
 
 # ################################################################################################################################
 
+def _get_statement_timeout_ms(engine:'Engine') -> 'int':
+    """ Returns the statement timeout of a new session of an engine, in milliseconds.
+    """
+    query = text('select setting from pg_settings where name = :name')
+
+    with engine.connect() as connection:
+        setting = connection.execute(query, {'name': ModuleCtx.Statement_Timeout_Setting}).scalar_one()
+
+    out = int(setting)
+    return out
+
+# ################################################################################################################################
+
+def _select_one(engine:'Engine') -> 'int':
+    with engine.connect() as connection:
+        out = connection.execute(text('select 1')).scalar_one()
+    return out
+
+# ################################################################################################################################
+
+def _assert_unanswered_statement_bounded(engine:'Engine', toxiproxy:'Toxiproxy') -> 'None':
+    """ A statement whose reply the proxy drops fails within the read timeout, plus the connect timeout of the new
+    connection that the pre-ping of an engine opens in place of the one that failed, and the engine runs its next
+    statement once the replies pass again.
+    """
+
+    # A statement through the proxy succeeds ..
+    assert _select_one(engine) == 1
+
+    # .. the proxy then drops every reply of PostgreSQL and keeps the connection open ..
+    toxiproxy.add_toxic(Database_Proxy, ModuleCtx.Toxic_Hold_Replies, ModuleCtx.Toxic_Hold_Replies_Attributes,
+        Stream_Downstream)
+
+    try:
+        started = time.monotonic()
+
+        with pytest.raises(DBAPIError):
+            _ = _select_one(engine)
+
+        elapsed = time.monotonic() - started
+
+    finally:
+        toxiproxy.remove_toxics(Database_Proxy)
+
+    limit = PostgreSQL_Read_Timeout_Seconds + PostgreSQL_Connect_Timeout_Seconds + ModuleCtx.Connect_Margin_Seconds
+    assert elapsed < limit, elapsed
+
+    # .. and once the replies pass again, the next statement runs on a connection that replaced the failed one.
+    assert _select_one(engine) == 1
+
+# ################################################################################################################################
+
 def _get_levels() -> 'tuple[str, str]':
     """ Returns the commit level of a new session of the Zato database and of a new session of a database of Zato
     that the environment does not configure.
@@ -146,6 +227,28 @@ def database() -> 'Iterator[PubSubDatabase]':
     finally:
         dispose_database_engine()
         stop_pubsub_database(out)
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='module')
+def database_proxy(database:'PubSubDatabase') -> 'Iterator[DatabaseProxy]':
+    """ A container of Toxiproxy with a proxy in front of the database of the module.
+    """
+    toxiproxy = Toxiproxy(ModuleCtx.Toxiproxy_Label)
+    toxiproxy.start()
+
+    try:
+        upstream_host = get_database_address(database)
+        listen_port = toxiproxy.add_proxy(Database_Proxy, database.port, upstream_host)
+
+        env = dict(database.env)
+        env[ModuleCtx.Env_Host] = Toxiproxy_Host
+        env[ModuleCtx.Env_Port] = f'{listen_port}'
+
+        yield DatabaseProxy(toxiproxy, env)
+
+    finally:
+        toxiproxy.stop()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -301,6 +404,54 @@ def test_statement_longer_than_connect_timeout(database:'PubSubDatabase') -> 'No
 
     with engine.connect() as connection:
         _ = connection.execute(text('select pg_sleep(:seconds)'), {'seconds': sleep_seconds})
+
+# ################################################################################################################################
+
+def test_statement_timeout_of_both_engines(database:'PubSubDatabase') -> 'None':
+    """ A new session of the Zato database and of a database of Zato that the environment does not configure
+    runs with the statement timeout of Zato.
+    """
+    dispose_database_engine()
+
+    try:
+        assert _get_statement_timeout_ms(get_database_engine()) == PostgreSQL_Statement_Timeout_Ms
+    finally:
+        dispose_database_engine()
+
+    configuration_engine = _new_configuration_engine()
+
+    try:
+        assert _get_statement_timeout_ms(configuration_engine) == PostgreSQL_Statement_Timeout_Ms
+    finally:
+        configuration_engine.dispose()
+
+# ################################################################################################################################
+
+def test_unanswered_statement_of_zato_database_bounded(database_proxy:'DatabaseProxy') -> 'None':
+    """ A statement of the Zato database whose reply a proxy that keeps the connection open never forwards
+    fails within a bounded time.
+    """
+    dispose_database_engine()
+
+    try:
+        with pubsub_db_env(database_proxy.env):
+            _assert_unanswered_statement_bounded(get_database_engine(), database_proxy.toxiproxy)
+    finally:
+        dispose_database_engine()
+
+# ################################################################################################################################
+
+def test_unanswered_statement_of_configuration_engine_bounded(database_proxy:'DatabaseProxy') -> 'None':
+    """ A statement of a database of Zato that the environment does not configure, whose reply a proxy that keeps
+    the connection open never forwards, fails within a bounded time.
+    """
+    with pubsub_db_env(database_proxy.env):
+        configuration_engine = _new_configuration_engine()
+
+    try:
+        _assert_unanswered_statement_bounded(configuration_engine, database_proxy.toxiproxy)
+    finally:
+        configuration_engine.dispose()
 
 # ################################################################################################################################
 # ################################################################################################################################

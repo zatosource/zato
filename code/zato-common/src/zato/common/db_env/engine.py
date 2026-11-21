@@ -23,14 +23,14 @@ from gevent.monkey import get_original, is_module_patched
 # SQLAlchemy
 from sqlalchemy import create_engine, text
 from sqlalchemy import event as sa_event
-from sqlalchemy.engine import Dialect
+from sqlalchemy.engine import Dialect, make_url
 from sqlalchemy.pool import QueuePool
 
 # Zato
 from zato.common.db_env.common import get_env_values, Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.connection import build_connect_args_from_values, build_engine_url_from_values, \
-    clear_postgresql_connect_timeout, DatabaseDurabilityError, PostgreSQL_Connect_Timeout_Seconds, \
-    set_postgresql_keepalive, set_postgresql_no_delay, set_postgresql_session, set_sqlite_pragmas, verify_postgresql_server
+    DatabaseDurabilityError, PostgreSQL_Connect_Timeout_Seconds, set_postgresql_keepalive, set_postgresql_no_delay, \
+    set_postgresql_read_timeout, set_postgresql_session, set_sqlite_pragmas, verify_postgresql_server
 from zato.common.db_env.fence import install_fence
 from zato.common.db_env.pg8000_common import Driver_Name as PG8000_Driver_Name
 from zato.common.db_env.process_queue import ProcessQueue
@@ -359,6 +359,19 @@ def _get_cache_key(config:'EnvDBConfig') -> 'strtuple':
 
 # ################################################################################################################################
 
+def _install_postgresql_settings(engine:'Engine') -> 'None':
+    """ Makes each new PostgreSQL connection of an engine of Zato read its replies within a bounded time, send its segments
+    without delay, detect an unreachable peer, run its session with the settings of durability and of the statement timeout,
+    and refuse a server under which a commit could be acknowledged before it is durable.
+    """
+    sa_event.listen(engine, 'connect', set_postgresql_read_timeout)
+    sa_event.listen(engine, 'connect', set_postgresql_no_delay)
+    sa_event.listen(engine, 'connect', set_postgresql_keepalive)
+    sa_event.listen(engine, 'connect', set_postgresql_session)
+    sa_event.listen(engine, 'connect', verify_postgresql_server)
+
+# ################################################################################################################################
+
 def _new_env_engine(config:'EnvDBConfig') -> '_EnvEngine':
     """ Builds an SQLAlchemy engine for an environment-configured database, with the settings of its connections,
     and says whether its WAL is to be checkpointed in the background.
@@ -399,13 +412,9 @@ def _new_env_engine(config:'EnvDBConfig') -> '_EnvEngine':
     # .. every write runs within one of the mechanisms of the Zato database ..
     sa_event.listen(engine, 'before_cursor_execute', check_write_path)
 
-    # .. PostgreSQL needs each socket to send its segments without delay, with no timeout once it is established ..
+    # .. PostgreSQL needs the limits and the settings of each connection ..
     if db_type == Type_PostgreSQL:
-        sa_event.listen(engine, 'connect', clear_postgresql_connect_timeout)
-        sa_event.listen(engine, 'connect', set_postgresql_no_delay)
-        sa_event.listen(engine, 'connect', set_postgresql_keepalive)
-        sa_event.listen(engine, 'connect', set_postgresql_session)
-        sa_event.listen(engine, 'connect', verify_postgresql_server)
+        _install_postgresql_settings(engine)
 
         # .. each transaction confirms that the server it runs for was not replaced by another one ..
         install_fence(engine)
@@ -471,15 +480,27 @@ def new_zato_engine(engine_url:'any_', **engine_kwargs:'any_') -> 'Engine':
     settings.db or a database of the Dashboard, with the same settings of durability on each of its connections
     as the engines of the Zato database.
     """
-    out = create_engine(engine_url, **engine_kwargs)
-    db_type = out.dialect.name
+    db_type = make_url(engine_url).get_backend_name()
 
+    # A new connection to PostgreSQL is established within a bounded time, with the connection arguments of the caller ..
+    if db_type == Type_PostgreSQL:
+
+        if 'connect_args' in engine_kwargs:
+            connect_args = dict(engine_kwargs['connect_args'])
+        else:
+            connect_args = {}
+
+        connect_args['timeout'] = PostgreSQL_Connect_Timeout_Seconds
+        engine_kwargs['connect_args'] = connect_args
+
+    out = create_engine(engine_url, **engine_kwargs)
+
+    # .. and each connection receives the settings of its type of database.
     if db_type == Type_SQLite:
         sa_event.listen(out, 'connect', set_sqlite_pragmas)
 
     elif db_type == Type_PostgreSQL:
-        sa_event.listen(out, 'connect', set_postgresql_session)
-        sa_event.listen(out, 'connect', verify_postgresql_server)
+        _install_postgresql_settings(out)
 
     else:
         raise DatabaseDurabilityError(f'Unsupported database type `{db_type}` of a database of Zato')

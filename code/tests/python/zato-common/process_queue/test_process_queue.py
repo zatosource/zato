@@ -352,6 +352,36 @@ def test_two_queues_of_one_process_keep_their_own_wake_ups() -> 'None':
     waiter.join(_report_timeout)
 
 # ################################################################################################################################
+
+def test_a_write_behind_a_write_of_its_own_process_raises_at_its_deadline() -> 'None':
+    region = _new_region()
+    process_queue = ProcessQueue(region, _first_queue, _worker_place, _short_deadline)
+
+    # Another write of the same process holds the thread lock of the file past the deadline ..
+    lock = threading.Lock()
+    _ = lock.acquire()
+
+    # .. so the write withdraws at its deadline without having run ..
+    calls = []
+    started = time.monotonic()
+
+    try:
+        with pytest.raises(ProcessQueueTimeout):
+            _ = process_queue.run_under_lock(lock, calls.append, ('written',))
+    finally:
+        lock.release()
+
+    elapsed = time.monotonic() - started
+
+    assert calls == []
+    assert elapsed >= _short_deadline
+    assert elapsed < _prompt_wake_up
+
+    # .. and a write after the lock is released runs at once.
+    _ = process_queue.run_under_lock(lock, calls.append, ('written',))
+    assert calls == ['written']
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':

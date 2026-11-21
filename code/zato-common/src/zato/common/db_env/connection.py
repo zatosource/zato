@@ -63,6 +63,16 @@ _user_timeout_ms = 60_000
 # of SYN retransmissions of over two minutes.
 PostgreSQL_Connect_Timeout_Seconds = 10
 
+# How long PostgreSQL runs one statement of a session of Zato before it cancels it, in milliseconds,
+# including the time the statement waits for locks.
+PostgreSQL_Statement_Timeout_Ms = 60_000
+
+# How long a connection waits for the next part of a reply before it fails, in seconds - the statement timeout
+# and the time that the cancellation error of PostgreSQL needs to arrive. A TCP proxy between Zato and PostgreSQL
+# acknowledges the data and answers the keepalive probes itself, so only this timeout detects a database
+# that stopped answering behind it.
+PostgreSQL_Read_Timeout_Seconds = 70
+
 # How long a PostgreSQL session may hold a transaction open without activity, in milliseconds.
 _idle_in_transaction_timeout_ms = 60_000
 
@@ -118,9 +128,10 @@ def set_postgresql_no_delay(dbapi_connection:'any_', connection_record:'any_') -
 # ################################################################################################################################
 
 def set_postgresql_keepalive(dbapi_connection:'any_', connection_record:'any_') -> 'None':
-    """ Makes a pg8000 connection detect a peer that is no longer reachable. An idle connection sends keepalive probes
-    well before the idle limits of cloud load balancers and NAT gateways, and a connection whose sent data remains
-    unacknowledged fails after a bounded time instead of waiting for the kernel's retransmission limit of many minutes.
+    """ Makes a pg8000 connection detect a peer that is no longer reachable on a direct connection. An idle connection
+    sends keepalive probes well before the idle limits of cloud load balancers and NAT gateways, and a connection whose
+    sent data remains unacknowledged fails after a bounded time instead of waiting for the kernel's retransmission limit
+    of many minutes. Behind a TCP proxy, the read timeout of the socket detects a peer that is no longer reachable.
     """
     sock = dbapi_connection._usock
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
@@ -131,12 +142,12 @@ def set_postgresql_keepalive(dbapi_connection:'any_', connection_record:'any_') 
 
 # ################################################################################################################################
 
-def clear_postgresql_connect_timeout(dbapi_connection:'any_', connection_record:'any_') -> 'None':
-    """ Removes the timeout that bounds the establishment of a pg8000 connection from its socket. The driver keeps
-    the timeout for every later read as well, which would end a statement that legitimately waits longer, e.g. for a lock,
-    while a peer that no longer answers is detected by the keepalive probes and the user timeout of the socket.
+def set_postgresql_read_timeout(dbapi_connection:'any_', connection_record:'any_') -> 'None':
+    """ Replaces the timeout that bounds the establishment of a pg8000 connection with the read timeout of its socket,
+    which is longer than the statement timeout of the session, so a statement that PostgreSQL runs within its limit
+    completes, and a reply that does not arrive fails the connection, which the pool then replaces.
     """
-    dbapi_connection._usock.settimeout(None)
+    dbapi_connection._usock.settimeout(PostgreSQL_Read_Timeout_Seconds)
 
 # ################################################################################################################################
 
@@ -156,6 +167,7 @@ def set_postgresql_session(dbapi_connection:'any_', connection_record:'any_') ->
         _ = cursor.execute('set synchronous_commit = on')
 
     _ = cursor.execute(f"set idle_in_transaction_session_timeout = '{_idle_in_transaction_timeout_ms}ms'")
+    _ = cursor.execute(f"set statement_timeout = '{PostgreSQL_Statement_Timeout_Ms}ms'")
     cursor.close()
     dbapi_connection.commit()
 
