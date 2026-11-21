@@ -326,7 +326,8 @@ class InProcessServer:
         """ Creates a quickstart environment with one server, whose directory the server runs from.
         """
         quickstart_dir = os.path.join(self.work_dir, ModuleCtx.Quickstart_Dir_Name)
-        password = CryptoManager.generate_password(to_str=True)
+        # A urlsafe password may begin with `-`, which argparse takes for a flag
+        password = 'in.process.' + CryptoManager.generate_hex_string()
 
         command = [
             get_zato_command(), 'quickstart', 'create', quickstart_dir, '--force',

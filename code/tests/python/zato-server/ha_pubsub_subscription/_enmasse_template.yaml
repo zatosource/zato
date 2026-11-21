@@ -1,0 +1,38 @@
+security:
+
+  - name: {security_pull}
+    username: {security_pull}
+    password: {password}
+    type: basic_auth
+
+  - name: {security_second}
+    username: {security_second}
+    password: {password}
+    type: basic_auth
+
+pubsub_topic:
+
+  - name: {topic_pull}
+  - name: {topic_second}
+
+pubsub_permission:
+
+  - security: {security_pull}
+    pub: ['{topic_pull}', '{topic_second}']
+    sub: ['{topic_pull}', '{topic_second}']
+
+  - security: {security_second}
+    pub: ['{topic_pull}', '{topic_second}']
+    sub: ['{topic_pull}', '{topic_second}']
+
+pubsub_subscription:
+
+  - security: {security_pull}
+    delivery_type: pull
+    topic_list:
+      - {topic_pull}
+
+  - security: {security_second}
+    delivery_type: pull
+    topic_list:
+      - {topic_second}

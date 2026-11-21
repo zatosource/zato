@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato_common_core.zato_common_core import SubscriptionList
 
+from .conftest import Topic_Pull, Topic_Second
+from .helpers import add_topic_pending, remove_topic_pending, status_of, sub_key_for_topic
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -40,6 +43,76 @@ def test_has_unconfirmed_false_when_synced(in_process_server:'any_') -> 'None':
     subscription_list = server.server.pubsub_subscription_list
 
     assert not subscription_list.has_unconfirmed()
+
+# ################################################################################################################################
+
+def test_get_list_returns_pending_status(in_process_server:'any_') -> 'None':
+    """ get-list returns the pending status of a pair that has no row yet.
+    """
+    server, _push_endpoint = in_process_server
+    parallel = server.server
+    subscription_list = parallel.pubsub_subscription_list
+
+    sub_key = sub_key_for_topic(subscription_list, Topic_Pull)
+    add_topic_pending(subscription_list, sub_key, Topic_Second)
+
+    assert status_of(subscription_list, sub_key, Topic_Second) == SubscriptionList.STATUS_PENDING
+
+    response = parallel.invoke('zato.pubsub.subscription.get-list', {}, skip_response_elem=True)
+
+    found = False
+
+    for item in response:
+        if item['sub_key'] != sub_key:
+            continue
+
+        assert item['has_unconfirmed']
+
+        for topic in item['topic_name_list']:
+            if topic['topic_name'] == Topic_Second.lower():
+                assert topic['status'] == SubscriptionList.STATUS_PENDING
+                found = True
+                break
+
+    assert found
+
+# ################################################################################################################################
+
+def test_get_list_returns_pending_removal_and_depths_omit_it(in_process_server:'any_') -> 'None':
+    """ get-list returns pending removal, and depths withhold that pair.
+    """
+    server, _push_endpoint = in_process_server
+    parallel = server.server
+    subscription_list = parallel.pubsub_subscription_list
+    backend = parallel.pubsub_backend
+
+    sub_key = sub_key_for_topic(subscription_list, Topic_Pull)
+
+    _ = backend.publish(Topic_Pull, 'before.removal')
+
+    remove_topic_pending(subscription_list, sub_key, Topic_Pull)
+
+    assert status_of(subscription_list, sub_key, Topic_Pull) == SubscriptionList.STATUS_PENDING_REMOVAL
+    assert subscription_list.withholds_pair(sub_key, Topic_Pull.lower())
+
+    response = parallel.invoke('zato.pubsub.subscription.get-list', {}, skip_response_elem=True)
+
+    found = False
+
+    for item in response:
+        if item['sub_key'] != sub_key:
+            continue
+
+        for topic in item['topic_name_list']:
+            if topic['topic_name'] == Topic_Pull.lower():
+                assert topic['status'] == SubscriptionList.STATUS_PENDING_REMOVAL
+                found = True
+                break
+
+        depths = backend.get_pending_depths([(sub_key, Topic_Pull.lower())])
+        assert depths[sub_key] == 0
+
+    assert found
 
 # ################################################################################################################################
 # ################################################################################################################################

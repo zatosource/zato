@@ -114,12 +114,14 @@ pubsub_subscription:
 
 # ################################################################################################################################
 
+_push_service_class = 'Push' + _suffix.replace('-', '_')
+
 _push_service_source = f'''
 # -*- coding: utf-8 -*-
 
 from zato.server.service import Service
 
-class {_suffix.replace("-", "_").title().replace("_", "")}Push(Service):
+class {_push_service_class}(Service):
     name = '{Service_Push_Name}'
 
     def handle(self):
