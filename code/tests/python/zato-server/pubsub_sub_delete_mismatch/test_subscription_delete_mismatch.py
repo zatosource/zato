@@ -11,6 +11,7 @@ import logging
 import time
 
 # Zato
+from zato.common.db_env.connection import PostgreSQL_Statement_Timeout_Ms
 from zato.common.test import pubsub_db
 
 # ################################################################################################################################
@@ -26,9 +27,8 @@ logger = logging.getLogger('zato.test.pubsub_sub_delete_mismatch')
 
 _settle_time = 0.5
 
-# How long the rows of a deleted subscription may take to be removed, and how often they are checked, in seconds.
-_removal_timeout = 10
-_removal_poll_interval = 0.05
+# The rows of a deleted subscription are removed by one statement of the worker, which the database cancels after this long.
+_removal_timeout = PostgreSQL_Statement_Timeout_Ms / 1000
 
 _security_name = 'test.mismatch.security.subscriber'
 
@@ -138,7 +138,7 @@ def _wait_until_unsubscribed(sub_key:'str') -> 'None':
     while topics := pubsub_db.get_subscribed_topics(sub_key):
         assert time.monotonic() < deadline, \
             f'Expected no subscriptions left {_removal_timeout}s after subscription delete, found {topics}'
-        time.sleep(_removal_poll_interval)
+        time.sleep(_settle_time)
 
 # ################################################################################################################################
 # ################################################################################################################################

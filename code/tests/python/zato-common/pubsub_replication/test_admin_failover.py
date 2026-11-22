@@ -127,8 +127,9 @@ def _fail_over_during(database:'ReplicatedDatabase', operation:'Callable[[], any
 
     assert not greenlet.ready(), 'The operation completed before the primary was lost'
 
-    kill_primary(database)
+    # The primary ends while docker kill runs, so the operation may fail before the command returns.
     killed_at = monotonic()
+    kill_primary(database)
 
     # The connection that held the lock ended with the primary, so closing it may report a network error.
     try:
