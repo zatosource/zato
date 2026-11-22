@@ -164,7 +164,7 @@ class LazyFSMount:
         self._write_config()
         os.mkfifo(self.fifo_path)
 
-        _ = _docker('rm', '-f', self.container_name, check=False)
+        _ = _docker('rm', '-f', '-v', self.container_name, check=False)
 
         _ = _docker(
             'run', '-d',
@@ -215,7 +215,7 @@ class LazyFSMount:
         if _is_mounted(self.mount_dir):
             raise Exception(f'LazyFS could not be unmounted from {self.mount_dir}: {out.returncode} {out.stderr.strip()}')
 
-        _ = _docker('rm', '-f', self.container_name, check=False)
+        _ = _docker('rm', '-f', '-v', self.container_name, check=False)
 
         os.rmdir(self.mount_dir)
         _ = shutil.move(self.root_dir, self.mount_dir)

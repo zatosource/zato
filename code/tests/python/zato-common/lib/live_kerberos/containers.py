@@ -142,7 +142,7 @@ exec krb5kdc -n
 def _remove_stale_container() -> 'None':
     """ Removes a container left over from a previous, possibly interrupted, run.
     """
-    _ = subprocess.run(['docker', 'rm', '-f', ModuleCtx.KDC_Container_Name], capture_output=True, check=False)
+    _ = subprocess.run(['docker', 'rm', '-f', '-v', ModuleCtx.KDC_Container_Name], capture_output=True, check=False)
 
 # ################################################################################################################################
 

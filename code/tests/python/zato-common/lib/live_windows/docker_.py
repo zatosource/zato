@@ -37,7 +37,7 @@ def remove_directory(path:'Path', image:'str') -> 'None':
 def remove_container(name:'str') -> 'None':
     """ Removes a container, whether it runs or not, and does nothing if there is no such container.
     """
-    _ = subprocess.run(['docker', 'rm', '-f', name], capture_output=True, check=False)
+    _ = subprocess.run(['docker', 'rm', '-f', '-v', name], capture_output=True, check=False)
 
 # ################################################################################################################################
 

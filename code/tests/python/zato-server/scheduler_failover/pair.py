@@ -180,7 +180,7 @@ def format_date(value:'datetime') -> 'str':
 def _start_redis(container_name:'str', port:'int') -> 'None':
     """ Starts the Redis of one server, which keeps nothing on disk, and waits until it accepts connections.
     """
-    _ = docker('rm', '-f', container_name, check=False)
+    _ = docker('rm', '-f', '-v', container_name, check=False)
 
     _ = docker(
         'run', '-d',
@@ -471,7 +471,7 @@ def remove_pair(pair:'SchedulerPair') -> 'None':
         save_container_logs(server.server, pair.work_dir)
         remove_container(server.server)
 
-        _ = docker('rm', '-f', server.redis_container, check=False)
+        _ = docker('rm', '-f', '-v', server.redis_container, check=False)
 
         if server.database_proxy:
             server.database_proxy.stop()

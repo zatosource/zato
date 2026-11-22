@@ -125,7 +125,7 @@ def _run_or_raise(arguments:'strlist', what:'str') -> 'None':
 def remove_container(name:'str'=ModuleCtx.Container) -> 'None':
     """ Removes the container, running or not, along with whatever a previous run left behind under the name.
     """
-    _ = _run(['rm', '-f', name])
+    _ = _run(['rm', '-f', '-v', name])
 
 # ################################################################################################################################
 

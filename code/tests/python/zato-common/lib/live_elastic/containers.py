@@ -166,8 +166,8 @@ def _pull(image:'str') -> 'None':
 def remove_stack() -> 'None':
     """ Removes both containers and their network, whatever state a previous run left them in.
     """
-    _ = _run(['rm', '-f', ModuleCtx.Kibana_Container])
-    _ = _run(['rm', '-f', ModuleCtx.ES_Container])
+    _ = _run(['rm', '-f', '-v', ModuleCtx.Kibana_Container])
+    _ = _run(['rm', '-f', '-v', ModuleCtx.ES_Container])
     _ = _run(['network', 'rm', ModuleCtx.Network])
 
 # ################################################################################################################################

@@ -494,7 +494,7 @@ def stop_replicated_database(database:'ReplicatedDatabase') -> 'None':
     database.proxy_process.kill()
     _ = database.proxy_process.wait()
 
-    _ = subprocess.run(['docker', 'rm', '-f', database.standby_container], capture_output=True, check=False)
+    _ = subprocess.run(['docker', 'rm', '-f', '-v', database.standby_container], capture_output=True, check=False)
     stop_pubsub_database(database.primary)
 
 # ################################################################################################################################

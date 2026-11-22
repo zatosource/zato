@@ -318,7 +318,7 @@ def test_takeover_from_cut_off_server(failover_env:'FailoverEnvironment') -> 'No
 
     http_proxy = LinkProxy(server_a.port, internal_port, os.path.join(env.work_dir, 'proxy-http.log'))
 
-    _ = docker('rm', '-f', server_a.container_name)
+    _ = docker('rm', '-f', '-v', server_a.container_name)
     database_proxy.start()
     http_proxy.start()
 

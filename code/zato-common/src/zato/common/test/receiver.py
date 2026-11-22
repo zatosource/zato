@@ -250,13 +250,13 @@ class _RequestHandler(BaseHTTPRequestHandler):
         content_length = int(content_length_header)
         body = self.rfile.read(content_length)
 
-        logger.info('Received POST %s (%d bytes)', self.path, content_length)
+        logger.debug('Received POST %s (%d bytes)', self.path, content_length)
 
         # .. evaluate the behavior ..
         behavior = self.server.behavior
         result = behavior.evaluate(body)
 
-        logger.info('Evaluated -> status_code=%d, should_persist=%s', result.status_code, result.should_persist)
+        logger.debug('Evaluated -> status_code=%d, should_persist=%s', result.status_code, result.should_persist)
 
         # .. record the request, by which a test accounts for each repeated copy of a message ..
         self._record_request(result.status_code)
@@ -280,7 +280,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
 
             os.rename(temporary_path, file_path)
 
-            logger.info('Persisted payload to %s', file_path)
+            logger.debug('Persisted payload to %s', file_path)
 
             # .. signal that a delivery arrived ..
             delivery_event = self.server.delivery_event

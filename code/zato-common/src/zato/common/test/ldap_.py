@@ -80,7 +80,7 @@ class LDAPTestServer:
     def _remove_stale_container(self) -> 'None':
         """ Removes a container left over from a previous, possibly interrupted, run.
         """
-        _ = subprocess_run(['docker', 'rm', '-f', self.container_name], capture_output=True, check=False)
+        _ = subprocess_run(['docker', 'rm', '-f', '-v', self.container_name], capture_output=True, check=False)
 
 # ################################################################################################################################
 

@@ -54,7 +54,7 @@ class OdooServer(NamedTuple):
 def _remove_stale_container(name:'str') -> 'None':
     """ Removes a container left over from a previous, possibly interrupted, run.
     """
-    _ = subprocess.run(['docker', 'rm', '-f', name], capture_output=True, check=False)
+    _ = subprocess.run(['docker', 'rm', '-f', '-v', name], capture_output=True, check=False)
 
 # ################################################################################################################################
 

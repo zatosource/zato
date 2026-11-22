@@ -77,7 +77,7 @@ class KafkaServer(NamedTuple):
 def _remove_stale_container(name:'str') -> 'None':
     """ Removes a container left over from a previous, possibly interrupted, run.
     """
-    _ = subprocess.run(['docker', 'rm', '-f', name], capture_output=True, check=False)
+    _ = subprocess.run(['docker', 'rm', '-f', '-v', name], capture_output=True, check=False)
 
 # ################################################################################################################################
 
@@ -631,7 +631,7 @@ class KafkaCluster:
         because a stopped one has to be startable again.
         """
         for instance in self.instances:
-            _ = subprocess.run(['docker', 'rm', '-f', instance.container_name], capture_output=True, check=False)
+            _ = subprocess.run(['docker', 'rm', '-f', '-v', instance.container_name], capture_output=True, check=False)
 
         _ = subprocess.run(['docker', 'network', 'rm', ClusterCtx.Network], capture_output=True, check=False)
 

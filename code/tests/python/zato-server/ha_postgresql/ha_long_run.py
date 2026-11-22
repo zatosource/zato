@@ -62,6 +62,10 @@ class ModuleCtx:
     Workload_Publish_Interval = 0.1
     Timed_Publish_Interval = 0.1
 
+    # The loggers that log each publication, pull, acknowledgment and push delivery at the debug level,
+    # which a long run raises to the info level, since at its rate they write over a gigabyte to the logs an hour
+    Per_Message_Loggers = ('zato.common.test.client', 'zato.test.pubsub_push.receiver')
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -89,6 +93,9 @@ def wait_until(reporter:'MinuteReporter', deadline:'float') -> 'None':
 def start_traffic(env:'HAEnvironment') -> 'tuple[Workload, TimedPublisher, MinuteReporter]':
     """ Starts the paced traffic of a long run through HAProxy and its reports.
     """
+    for name in ModuleCtx.Per_Message_Loggers:
+        logging.getLogger(name).setLevel(logging.INFO)
+
     workload = Workload(cast_('any_', env), cast_('any_', [env.haproxy]), ModuleCtx.Workload_Publish_Interval)
     workload.start()
 
@@ -111,6 +118,9 @@ def stop_traffic(env:'HAEnvironment', publisher:'TimedPublisher', reporter:'Minu
 
     publisher.stop()
     reporter.stop()
+
+    for name in ModuleCtx.Per_Message_Loggers:
+        logging.getLogger(name).setLevel(logging.NOTSET)
 
     return out
 

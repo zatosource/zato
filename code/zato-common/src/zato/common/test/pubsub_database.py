@@ -385,7 +385,7 @@ def remove_stale_containers() -> 'None':
     container_ids = result.stdout.split()
 
     if container_ids:
-        _ = subprocess.run(['docker', 'rm', '-f', *container_ids], capture_output=True, check=False)
+        _ = subprocess.run(['docker', 'rm', '-f', '-v', *container_ids], capture_output=True, check=False)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -668,7 +668,7 @@ def _start_bouncer(database:'PubSubDatabase') -> 'None':
     database.bouncer_container = f'{database.container_name}-bouncer'
     address = get_container_address(database.container_name)
 
-    _ = subprocess.run(['docker', 'rm', '-f', database.bouncer_container], capture_output=True, check=False)
+    _ = subprocess.run(['docker', 'rm', '-f', '-v', database.bouncer_container], capture_output=True, check=False)
 
     start_bouncer(database.bouncer_container, database.work_dir, database.certs_dir, address, database.port,
         ModuleCtx.DB_Name, ModuleCtx.Username, database.password)
@@ -693,7 +693,7 @@ def replace_container(database:'PubSubDatabase', image:'str'='', extra_settings:
 
     _ = subprocess.run(['docker', 'stop', database.container_name], check=True, capture_output=True)
     time.sleep(downtime_seconds)
-    _ = subprocess.run(['docker', 'rm', '-f', database.container_name], check=True, capture_output=True)
+    _ = subprocess.run(['docker', 'rm', '-f', '-v', database.container_name], check=True, capture_output=True)
 
     if extra_settings:
         database.settings = database.settings + extra_settings
@@ -762,9 +762,9 @@ def stop_pubsub_database(database:'PubSubDatabase') -> 'None':
         return
 
     if database.bouncer_container:
-        _ = subprocess.run(['docker', 'rm', '-f', database.bouncer_container], capture_output=True, check=False)
+        _ = subprocess.run(['docker', 'rm', '-f', '-v', database.bouncer_container], capture_output=True, check=False)
 
-    _ = subprocess.run(['docker', 'rm', '-f', database.container_name], capture_output=True, check=False)
+    _ = subprocess.run(['docker', 'rm', '-f', '-v', database.container_name], capture_output=True, check=False)
     shutil.rmtree(database.work_dir, ignore_errors=True)
 
 # ################################################################################################################################

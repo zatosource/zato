@@ -179,7 +179,7 @@ def build_server_env(server:'ContainerServer', database:'PubSubDatabase') -> 'No
 def run_container(server:'ContainerServer') -> 'None':
     """ Starts a server in a new container.
     """
-    _ = docker('rm', '-f', server.container_name, check=False)
+    _ = docker('rm', '-f', '-v', server.container_name, check=False)
 
     command = _container_command(server, 'run')
     command.insert(2, '-d')
@@ -191,14 +191,14 @@ def run_container(server:'ContainerServer') -> 'None':
 def create_container(server:'ContainerServer') -> 'None':
     """ Creates the stopped container of a standby server.
     """
-    _ = docker('rm', '-f', server.container_name, check=False)
+    _ = docker('rm', '-f', '-v', server.container_name, check=False)
     command = _container_command(server, 'create')
     _ = subprocess.run(command, capture_output=True, text=True, check=True)
 
 # ################################################################################################################################
 
 def remove_container(server:'ContainerServer') -> 'None':
-    _ = docker('rm', '-f', server.container_name, check=False)
+    _ = docker('rm', '-f', '-v', server.container_name, check=False)
 
 # ################################################################################################################################
 
@@ -326,7 +326,7 @@ def read_audit_takeovers(database:'PubSubDatabase', after_generation:'int') -> '
 def reset_pair(env:'FailoverEnvironment') -> 'int':
     """ Makes server A the active server and server B a stopped standby, and returns the current generation.
     """
-    _ = docker('rm', '-f', env.server_b.container_name, check=False)
+    _ = docker('rm', '-f', '-v', env.server_b.container_name, check=False)
     run_container(env.server_a)
     _ = wait_until_up(env.server_a)
     create_container(env.server_b)

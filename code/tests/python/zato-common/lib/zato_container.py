@@ -88,7 +88,7 @@ def build_image() -> 'None':
 def remove_container(container_name:'str') -> 'None':
     """ Removes the container with all its processes, if it exists.
     """
-    _ = subprocess.run(['docker', 'rm', '--force', container_name], capture_output=True, text=True)
+    _ = subprocess.run(['docker', 'rm', '--force', '--volumes', container_name], capture_output=True, text=True)
 
 # ################################################################################################################################
 

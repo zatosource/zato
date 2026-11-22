@@ -133,7 +133,7 @@ def _run_docker_publishing_port(
         # Docker creates the container before it sets its networking up, so a failed creation leaves one behind
         # that would make the next attempt fail on the name - a failed start of an existing one leaves nothing new.
         if is_create:
-            _ = _run_docker(['rm', '--force', container_name])
+            _ = _run_docker(['rm', '--force', '--volumes', container_name])
 
         time.sleep(_start_retry_sleep)
         result = _run_docker(arguments, timeout=timeout)
@@ -241,7 +241,7 @@ def _ensure_container_running() -> 'None':
             if _is_port_published(Ollama_Container_Name, _ollama_internal_port):
                 return
 
-        result = _run_docker(['rm', '--force', Ollama_Container_Name])
+        result = _run_docker(['rm', '--force', '--volumes', Ollama_Container_Name])
 
         if result.returncode != 0:
             raise Exception(f'Could not remove Ollama -> {result.stderr}')
@@ -392,7 +392,7 @@ def _ensure_console_container_running() -> 'None':
         if _is_port_published(Console_Container_Name, _console_internal_port):
             return
 
-        result = _run_docker(['rm', '--force', Console_Container_Name])
+        result = _run_docker(['rm', '--force', '--volumes', Console_Container_Name])
 
         if result.returncode != 0:
             raise Exception(f'Could not remove the console -> {result.stderr}')

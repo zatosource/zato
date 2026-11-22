@@ -190,7 +190,7 @@ class PublishClient:
         request.add_header('Authorization', f'Basic {self._auth}')
         request.add_header('Content-Type', 'application/json')
 
-        logger.info('Publishing to %s: %s', topic_name, payload)
+        logger.debug('Publishing to %s: %s', topic_name, payload)
 
         try:
             with urlopen(request, timeout=self.timeout) as response:
@@ -201,7 +201,7 @@ class PublishClient:
             raise Exception(f'Publish to {topic_name} returned HTTP {error.code}: {error_text}')
 
         out = json.loads(raw)
-        logger.info('Publish response from %s: %s', topic_name, out)
+        logger.debug('Publish response from %s: %s', topic_name, out)
         return out
 
 # ################################################################################################################################
@@ -229,7 +229,7 @@ class PublishClient:
             auth = encoded.decode()
             request.add_header('Authorization', f'Basic {auth}')
 
-        logger.info('Publishing to %s (username=%s)', topic_name, username)
+        logger.debug('Publishing to %s (username=%s)', topic_name, username)
 
         try:
             with urlopen(request, timeout=self.timeout) as response:
@@ -244,7 +244,7 @@ class PublishClient:
         else:
             response_body = {}
 
-        logger.info('Publish result: status=%d, body=%s', status_code, response_body)
+        logger.debug('Publish result: status=%d, body=%s', status_code, response_body)
 
         out = PublishResult(status_code=status_code, body=response_body)
         return out
@@ -303,10 +303,10 @@ class PullClient:
         if max_len:
             payload['max_len'] = max_len
 
-        logger.info('Pulling messages: %s', payload)
+        logger.debug('Pulling messages: %s', payload)
 
         out = self._post('/pubsub/messages/get', payload)
-        logger.info('Pull response: %s', out)
+        logger.debug('Pull response: %s', out)
 
         if needs_ack:
             msg_ids:'strlist' = []
@@ -325,7 +325,7 @@ class PullClient:
         """ Acknowledges pulled messages and returns the response dict.
         """
         out = self._post('/pubsub/messages/ack', {'msg_ids': msg_ids})
-        logger.info('Ack response: %s', out)
+        logger.debug('Ack response: %s', out)
         return out
 
 # ################################################################################################################################
