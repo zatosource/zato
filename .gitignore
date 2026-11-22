@@ -44,6 +44,7 @@ code/sec-wall-trunk-src/*
 code/share/*
 code/src/*
 code/support-linux/bin/uvx
+code/tests/.pytest_*
 code/tmp
 code/util/extra/
 code/uv.lock
