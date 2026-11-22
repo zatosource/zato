@@ -24,6 +24,12 @@ const TIMERS: Timers = Timers {
     takeover: Duration::from_millis(40),
 };
 
+/// Timers whose takeover time no test outlasts, under which only a released record is taken over during a test.
+const LONG_TAKEOVER_TIMERS: Timers = Timers {
+    heartbeat: Duration::from_millis(10),
+    takeover: Duration::from_hours(1),
+};
+
 /// How long a test waits for every timer to expire.
 const PAST_TIMERS: Duration = Duration::from_millis(60);
 
@@ -61,10 +67,15 @@ struct TestNode {
 impl TestNode {
     /// Returns node A with `record` in the referee and the generation of the record in its generation file.
     fn new(record: Option<RefereeRecord>) -> Self {
+        Self::with_timers(record, TIMERS)
+    }
+
+    /// Returns node A with `record` in the referee, the generation of the record in its generation file and `timers`.
+    fn with_timers(record: Option<RefereeRecord>, timers: Timers) -> Self {
         let referee = Arc::new(MemoryReferee::holding(record, FIRST_VERSION));
         let probe = Arc::new(MemoryProbe::default());
         let dir = tempfile::tempdir().unwrap();
-        let mut config = test_support::node_config(NODE_A, dir.path(), TIMERS);
+        let mut config = test_support::node_config(NODE_A, dir.path(), timers);
         config.server_health = HEALTH;
         generation::write(&config.generation_file(), FIRST_GENERATION).unwrap();
 
@@ -606,12 +617,12 @@ fn a_failure_found_by_a_standby_is_discarded() {
 
 #[test]
 fn a_standby_takes_over_a_released_record_at_its_next_heartbeat() {
-    let mut node = TestNode::under_released(NODE_B);
+    let released = RefereeRecord::new(FIRST_GENERATION, NODE_B).released_by();
+    let mut node = TestNode::with_timers(Some(released), LONG_TAKEOVER_TIMERS);
+    node.control.shared.state.lock().role = Role::Standby;
 
-    // The first read of the released record takes it over, without waiting for the takeover time.
-    let started = Instant::now();
+    // The first read of the released record takes it over, which the takeover time of an hour leaves to the release alone.
     node.control.watch_lease().unwrap();
-    assert!(started.elapsed() < TIMERS.takeover);
 
     let next = FIRST_GENERATION + 1;
     assert_eq!(node.role(), (Role::Active, next));

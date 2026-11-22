@@ -29,7 +29,7 @@
 	test-fabric-live fabric-cleanup fabric-tutorial fabric-loading-tables fabric-lookup-tables fabric-looking-up-data \
 	fabric-api-on-fabric-data fabric-scheduled-reports fabric-files fabric-sending-events fabric-receiving-events \
 	fabric-reading-events fabric-notebook-results fabric-pipelines-and-reports fabric-local-systems \
-	test-all test-all-no-static test test-all-reset test-all-no-static-reset test-clean-test-all test-clean test-perf \
+	test-all test-all-no-static test test-all-reset test-all-no-static-reset test-clear-test-all test-clear test-perf \
 	health-ruff health-clippy \
 	format format-zato \
 	clippy clippy-zato \
@@ -2202,10 +2202,10 @@ test-all-reset: ## Forget where the last test-all stopped.
 test-all-no-static-reset: ## Forget where the last test-all-no-static stopped.
 	rm -f $(Zato_Test_No_Static_Resume_File)
 
-test-clean-test-all: ## Run test-all from a clean state instead of resuming a previous run.
+test-clear-test-all: ## Run test-all from a clear state instead of resuming a previous run.
 	$(MAKE) RESTART=1 test-all
 
-test-clean: ## Forget where every test target stopped, so that each next run starts from the beginning.
+test-clear: ## Forget where every test target stopped, so that each next run starts from the beginning.
 	rm -f $(CURDIR)/code/tests/.test-*-resume
 	rm -rf $(CURDIR)/code/tests/.pytest_cache_*
 
