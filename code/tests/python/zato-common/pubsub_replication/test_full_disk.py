@@ -23,7 +23,7 @@ from zato.common.test.pubsub_replication import ReplicatedDatabase
 # local
 from checks import check_counts_equal_rows, check_delivery
 from environment import get_replication_mode
-from tools import build_fsfault
+from tools import get_fsfault_docker_args
 from workload import stop_running_workloads, Workload
 
 # ################################################################################################################################
@@ -32,9 +32,7 @@ from workload import stop_running_workloads, Workload
 # Where the tablespace of the pub/sub tables is mounted in the container.
 _tablespace_dir = '/pubsub_ts'
 
-# Where the library of the file system faults and its control file are mounted in the container.
-_container_fsfault_path = '/zato-fault/fsfault.so'
-_container_control_dir = '/zato-fault-control'
+# The name of the control file of the file system faults in the container.
 _control_name = 'postgresql'
 
 # While the storage is full, every write and every allocation of space in the tablespace fails with ENOSPC,
@@ -121,20 +119,13 @@ def test_full_disk() -> 'None':
     tablespace_host_dir = os.path.join(work_dir, 'tablespace')
     os.makedirs(tablespace_host_dir, mode=0o700)
 
-    # .. and the processes of the container preload the library of the file system faults.
+    # .. and every process of the container preloads the library of the file system faults.
     control_dir = os.path.join(work_dir, 'fsfault-control')
     os.makedirs(control_dir)
     control_path = os.path.join(control_dir, _control_name)
 
-    fsfault_path = build_fsfault()
-
-    docker_args = [
-        '-v', f'{tablespace_host_dir}:{_tablespace_dir}:rw',
-        '-v', f'{fsfault_path}:{_container_fsfault_path}:ro',
-        '-v', f'{control_dir}:{_container_control_dir}:ro',
-        '-e', f'LD_PRELOAD={_container_fsfault_path}',
-        '-e', f'ZATO_FSFAULT_CONTROL={_container_control_dir}/{_control_name}',
-    ]
+    docker_args = ['-v', f'{tablespace_host_dir}:{_tablespace_dir}:rw']
+    docker_args.extend(get_fsfault_docker_args(work_dir, control_dir, _control_name))
 
     primary = start_pubsub_database('full-disk', mode, extra_docker_args=docker_args)
 

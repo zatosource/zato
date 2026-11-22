@@ -28,7 +28,7 @@ from fault_server import get_fault_fixture_arguments, Server_Config
 from process import get_process_env, new_scope, ProcessEnvironment
 from pubsub_rest.capture import limit_captured_logs
 from pubsub_rest.server import PubSubServer
-from tools import build_fsfault
+from tools import get_fsfault_docker_args
 from toxiproxy import Database_Proxy, Toxiproxy, Toxiproxy_Host
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
 from zato.common.db_env.database import get_database_engine
@@ -66,9 +66,8 @@ _delivered_max_messages = '10000'
 # The server of each test.
 _server = PubSubServer('pubsub-faults')
 
-# Where the container of PostgreSQL sees the library of the file system faults and the directory of its control file.
-_container_fsfault_path = '/zato-fault/fsfault.so'
-_container_control_dir = '/zato-fault/control'
+# The name of the control file of the faults of the PostgreSQL container.
+_database_control_name = 'postgresql'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -269,14 +268,7 @@ def process_environment() -> 'environmentgen':
         control_dir = os.path.join(work_dir, 'fsfault-control')
         os.makedirs(control_dir)
 
-        fsfault_path = build_fsfault()
-
-        docker_args = [
-            '-v', f'{fsfault_path}:{_container_fsfault_path}:ro',
-            '-v', f'{control_dir}:{_container_control_dir}:ro',
-            '-e', f'LD_PRELOAD={_container_fsfault_path}',
-            '-e', f'ZATO_FSFAULT_CONTROL={_container_control_dir}/postgresql',
-        ]
+        docker_args = get_fsfault_docker_args(work_dir, control_dir, _database_control_name)
 
         database = start_pubsub_database('process-faults', mode, extra_docker_args=docker_args)
         env.update(database.env)

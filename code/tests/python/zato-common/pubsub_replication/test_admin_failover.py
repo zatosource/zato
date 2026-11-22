@@ -13,6 +13,9 @@ from time import monotonic
 from gevent import sleep, spawn
 from gevent.pool import Pool
 
+# pg8000
+from pg8000.exceptions import InterfaceError
+
 # Zato
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.test.audit_log_ import new_test_audit_log
@@ -49,6 +52,9 @@ _batch_size = '10'
 # How long an operation may take, and how often its progress is checked, in seconds.
 _operation_timeout = 300
 _poll_interval = 0.05
+
+# The lock that holds the writes of an operation to the deliveries while the counts of the test still read them.
+_lock_mode = 'exclusive'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -113,10 +119,22 @@ def _fail_over_during(database:'ReplicatedDatabase', operation:'Callable[[], any
         assert monotonic() < deadline, 'The operation committed nothing'
         sleep(_poll_interval)
 
+    # .. while a lock on the deliveries holds its next batch, so the operation is still in progress
+    # .. for the whole time that the primary takes to end ..
+    lock_connection = connect_active(database)
+    lock_cursor = lock_connection.cursor()
+    lock_cursor.execute(f'lock table pubsub_delivery in {_lock_mode} mode')
+
     assert not greenlet.ready(), 'The operation completed before the primary was lost'
 
     kill_primary(database)
     killed_at = monotonic()
+
+    # The connection that held the lock ended with the primary, so closing it may report a network error.
+    try:
+        lock_connection.close()
+    except InterfaceError:
+        pass
 
     _ = promote_standby(database)
 
