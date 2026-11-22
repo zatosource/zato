@@ -26,6 +26,10 @@ logger = logging.getLogger('zato.test.pubsub_sub_delete_mismatch')
 
 _settle_time = 0.5
 
+# How long the rows of a deleted subscription may take to be removed, and how often they are checked, in seconds.
+_removal_timeout = 10
+_removal_poll_interval = 0.05
+
 _security_name = 'test.mismatch.security.subscriber'
 
 # ################################################################################################################################
@@ -125,6 +129,18 @@ def _delete_subscription(admin:'any_', sub_id:'int') -> 'None':
     _ = admin.invoke('zato.pubsub.subscription.delete', {'id': sub_id})
 
 # ################################################################################################################################
+
+def _wait_until_unsubscribed(sub_key:'str') -> 'None':
+    """ Waits until the pub/sub database holds no subscription rows of the given sub_key.
+    """
+    deadline = time.monotonic() + _removal_timeout
+
+    while topics := pubsub_db.get_subscribed_topics(sub_key):
+        assert time.monotonic() < deadline, \
+            f'Expected no subscriptions left {_removal_timeout}s after subscription delete, found {topics}'
+        time.sleep(_removal_poll_interval)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestSubscriptionDeleteMismatch:
@@ -154,19 +170,13 @@ class TestSubscriptionDeleteMismatch:
         assert sub_key in pubsub_db.get_topic_subscribers(topic_name), \
             'Expected sub_key among the topic subscribers before delete'
 
-        # .. delete the subscription ..
+        # .. delete the subscription, whose rows the worker removes in a greenlet of its own after the delete returns ..
         _delete_subscription(admin, sub['id'])
-        time.sleep(_settle_time)
+        _wait_until_unsubscribed(sub_key)
 
-        # .. verify the subscription state is cleaned ..
-        assert topic_name not in pubsub_db.get_subscribed_topics(sub_key), \
-            'Expected the topic removed from the sub_key subscriptions after delete'
+        # .. verify the subscription state is cleaned.
         assert sub_key not in pubsub_db.get_topic_subscribers(topic_name), \
             'Expected sub_key removed from the topic subscribers after delete'
-
-        # .. verify the sub_key has no remaining subscriptions.
-        assert pubsub_db.get_subscribed_topics(sub_key) == [], \
-            'Expected no subscriptions left after subscription delete'
 
 # ################################################################################################################################
 
