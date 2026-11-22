@@ -67,6 +67,20 @@ _enmasse_timeout = 120
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _get_topic_names(exported_item:'anydict') -> 'strlist':
+    """ Returns the sorted names of the topics of an exported subscription, each of which is listed with its flags.
+    """
+    out:'strlist' = []
+
+    for topic in exported_item['topic_list']:
+        out.append(topic['name'])
+
+    out.sort()
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class TestServiceSubscriber(unittest.TestCase):
     """ Subscriptions whose subscriber is a service, without a security definition - how they are stored,
     how messages are pushed to them, and how enmasse imports and exports them.
@@ -455,12 +469,12 @@ class TestServiceSubscriber(unittest.TestCase):
 
         self.assertNotIn('security', receiver_1_item)
         self.assertEqual(receiver_1_item['delivery_type'], PubSub.Delivery_Type.Push)
-        self.assertEqual(sorted(receiver_1_item['topic_list']), sorted([_topic_orders, _topic_invoices]))
+        self.assertEqual(_get_topic_names(receiver_1_item), sorted([_topic_orders, _topic_invoices]))
 
         receiver_2_item = exported_by_service[_receiver_2]
 
         self.assertNotIn('security', receiver_2_item)
-        self.assertEqual(receiver_2_item['topic_list'], [_topic_orders])
+        self.assertEqual(_get_topic_names(receiver_2_item), [_topic_orders])
 
 # ################################################################################################################################
 # ################################################################################################################################

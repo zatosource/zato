@@ -57,8 +57,9 @@ _checkpoint_seconds = 10
 # What PostgreSQL reports once no connection slot is left.
 _no_slots_left = ('too many clients', 'remaining connection slots are reserved')
 
-# The tables of pub/sub, in the order in which they are locked.
-_tables_query = "select tablename from pg_tables where schemaname = 'public' and tablename like 'pubsub%%' order by 1"
+# The tables of pub/sub, in the order in which they are locked, including the dedup records that each publication writes.
+_tables_query = "select tablename from pg_tables where schemaname = 'public' " + \
+    "and (tablename like 'pubsub%%' or tablename = 'zato_message_dedup') order by 1"
 
 # The backends of pub/sub, apart from those of the faults themselves.
 _backends_query = "select pid from pg_stat_activity where backend_type = 'client backend' and usename = %s " + \

@@ -13,7 +13,7 @@ import pytest
 from sqlalchemy import inspect, text
 
 # Zato
-from zato.common.db_env.database import get_database_engine
+from zato.common.db_env.database import database_config, get_database_engine
 from zato.common.pubsub.sql.schema import metadata
 from zato.common.test.pubsub_database import get_suite_modes, pubsub_db_env, PubSubDBMode, start_pubsub_database, \
     stop_pubsub_database
@@ -24,21 +24,10 @@ from zato.common.test.pubsub_database import get_suite_modes, pubsub_db_env, Pub
 if 0:
     from sqlalchemy.engine import Connection
     from zato.common.test.pubsub_database import PubSubDatabase
-    from zato.common.typing_ import any_, strlist
+    from zato.common.typing_ import any_, strlist, strset
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-_expected_tables = {
-    'zato_active',
-    'pubsub_delivery',
-    'pubsub_message',
-    'pubsub_publish_count',
-    'pubsub_queue_count',
-    'pubsub_topic_count',
-    'pubsub_topic_sub',
-    'pubsub_trace',
-}
 
 # The count tables hold insert-only change rows on PostgreSQL, so their keys are indexed, not unique.
 _count_key_indexes = {
@@ -84,6 +73,19 @@ def pubsub_database(request:'pytest.FixtureRequest') -> 'any_':
 
 # ################################################################################################################################
 
+def _get_expected_tables() -> 'strset':
+    """ Returns the names of the tables of every schema of the Zato database, all of which the engine creates.
+    """
+    out:'strset' = set()
+
+    for schema_metadata in database_config.metadata_tuple:
+        for table_name in schema_metadata.tables:
+            out.add(table_name)
+
+    return out
+
+# ################################################################################################################################
+
 def _get_options(connection:'Connection', relation_query:'str', table_name:'str') -> 'strlist':
     """ Returns the storage parameters of a table or of its TOAST table.
     """
@@ -109,7 +111,7 @@ def test_postgresql_schema(pubsub_database:'PubSubDatabase') -> 'None':
 
         # The tables ..
         table_names = set(inspector.get_table_names())
-        assert table_names == _expected_tables, table_names
+        assert table_names == _get_expected_tables(), table_names
 
         # .. the count tables have no primary key, only an index of their keys ..
         for table_name, index_name in _count_key_indexes.items():
@@ -179,7 +181,7 @@ def test_postgresql_schema_created_once(pubsub_database:'PubSubDatabase') -> 'No
         metadata.create_all(engine)
 
         inspector = inspect(engine)
-        assert set(inspector.get_table_names()) == _expected_tables
+        assert set(inspector.get_table_names()) == _get_expected_tables()
 
 # ################################################################################################################################
 # ################################################################################################################################
