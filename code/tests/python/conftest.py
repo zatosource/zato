@@ -73,6 +73,13 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The conftest modules of the suites import the shared test library when pytest loads them, which precedes pytest_configure,
+# and this conftest is loaded before them.
+sys.path.append(ModuleCtx.Test_Lib_Dir)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def _stop_process_wide_threads() -> 'None':
     """ Disposes every cached engine of this process, which stops the background WAL checkpointers, and stops
     the memory trimmer that the pub/sub backend starts, the flushers, the retention runner and the merger of the search indexes
@@ -138,7 +145,6 @@ def _use_disk_temporary_dir(config:'pytest.Config') -> 'None':
 def pytest_configure(config:'pytest.Config') -> 'None':
     """ Loads the plugin that reports each failure the moment it occurs and places the temporary directories on a disk.
     """
-    sys.path.append(ModuleCtx.Test_Lib_Dir)
     config.pluginmanager.import_plugin(ModuleCtx.Failure_Reports_Plugin)
 
     _use_disk_temporary_dir(config)

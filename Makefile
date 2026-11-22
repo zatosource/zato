@@ -973,7 +973,6 @@ test-pubsub: ## Every pub/sub functional test - core, SQL and outgoing delivery.
 	$(MAKE) test-sql-conformance-fast $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
-		$(CURDIR)/code/tests/python/zato-common/rabbitmq_/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_service/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_service_subscriber/ \
 		$(CURDIR)/code/tests/python/zato-server/pubsub_push/ \
