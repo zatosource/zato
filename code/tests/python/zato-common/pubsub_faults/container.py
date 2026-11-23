@@ -7,8 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The controls that the fault suites apply to one test container - the files of its cgroup, its network namespace
-# and its processes. The cgroup files are owned by root, so they are written by a short-lived helper container
-# that mounts the cgroup tree, and the network namespace is changed by a helper container that joins it.
+# and its processes. The cgroup files are owned by root, so a short-lived helper container that mounts the cgroup tree
+# gives the files that the faults write to the user of the tests once, before any fault, and the faults then write them
+# directly. A limit of io.max on the disk of the host holds back the writeback of that disk for the whole host,
+# during which the Docker daemon cannot start a helper container, so the removal of a fault never depends on one.
+# The network namespace is changed by a helper container that joins it.
 
 # stdlib
 import os
@@ -27,8 +30,11 @@ if 0:
 _host_cgroup_root   = '/sys/fs/cgroup/system.slice'
 _helper_cgroup_root = '/host-cgroup/system.slice'
 
-# The image of the helper that writes to the cgroup files.
+# The image of the helper that gives the cgroup files to the user of the tests.
 _helper_image = 'alpine:latest'
+
+# The files of the cgroup of a container that the faults write.
+_fault_cgroup_files = ('io.max', 'cpu.max', 'memory.max', 'memory.high')
 
 # The image of the helper that runs tc in the network namespace of a container, built when first needed.
 _tc_image = 'zato-pubsub-test-tc:1'
@@ -101,6 +107,23 @@ class Container:
         self.cgroup_dir = os.path.join(_host_cgroup_root, scope_name)
         self.helper_cgroup_dir = os.path.join(_helper_cgroup_root, scope_name)
 
+        self._take_fault_cgroup_files()
+
+# ################################################################################################################################
+
+    def _take_fault_cgroup_files(self) -> 'None':
+        """ Gives the files of the cgroup that the faults write to the user of the tests.
+        """
+        paths:'strlist' = []
+
+        for file_name in _fault_cgroup_files:
+            paths.append(os.path.join(self.helper_cgroup_dir, file_name))
+
+        script = f'chown {os.getuid()}:{os.getgid()} ' + ' '.join(paths)
+
+        _ = run_command(['docker', 'run', '--rm', '--privileged', '-v', '/sys/fs/cgroup:/host-cgroup',
+            _helper_image, 'sh', '-c', script])
+
 # ################################################################################################################################
 
     def read_cgroup(self, file_name:'str') -> 'str':
@@ -111,11 +134,8 @@ class Container:
 # ################################################################################################################################
 
     def write_cgroup(self, file_name:'str', value:'str') -> 'None':
-        path = os.path.join(self.helper_cgroup_dir, file_name)
-        script = f"echo '{value}' > {path}"
-
-        _ = run_command(['docker', 'run', '--rm', '--privileged', '-v', '/sys/fs/cgroup:/host-cgroup',
-            _helper_image, 'sh', '-c', script])
+        with open(os.path.join(self.cgroup_dir, file_name), 'w') as cgroup_file:
+            _ = cgroup_file.write(value)
 
 # ################################################################################################################################
 
