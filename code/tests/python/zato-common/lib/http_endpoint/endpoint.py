@@ -17,6 +17,7 @@ import socket
 import ssl
 import struct
 from dataclasses import dataclass, field as dc_field
+from functools import partial
 from http.client import OK, responses as http_responses
 from itertools import count
 
@@ -25,20 +26,30 @@ from gevent import sleep as gevent_sleep
 from gevent.server import StreamServer
 from gevent.ssl import SSLContext as GeventSSLContext
 
+# Zato
+from zato.common.test.reservation import start_on_reserved_port
+
 # Test support
 from http_endpoint.endpoint_certificates import CertificateSet
+from http_endpoint.listener import bind_listener
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from zato.common.test.reservation import PortReservation
     from zato.common.typing_ import any_, strlist
 
+    reservation_list = list[PortReservation]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The address every listener binds to
+# The address the listeners bind to unless an endpoint is given another one
 Host = '127.0.0.1'
+
+# The purpose under which the ports of the listeners are reserved
+_port_purpose = 'http-test-endpoint'
 
 # How much one receive call reads
 _read_size = 65536
@@ -189,8 +200,9 @@ class TestEndpoint:
     """ The local endpoint of the suite - its listeners, the responses configured per path and the requests received.
     """
 
-    def __init__(self, directory:'str') -> 'None':
+    def __init__(self, directory:'str', host:'str'=Host) -> 'None':
         self.certificates = CertificateSet(directory)
+        self.host = host
 
         self.http_port = 0
         self.https_port = 0
@@ -198,6 +210,7 @@ class TestEndpoint:
         self.https_mtls_port = 0
 
         self._servers:'list[StreamServer]' = []
+        self._reservations:'reservation_list' = []
         self._responses:'dict[str, endpoint_response_list]' = {}
         self._requests:'recorded_request_list' = []
         self._connection_ids = count(1)
@@ -229,10 +242,13 @@ class TestEndpoint:
 # ################################################################################################################################
 
     def stop(self) -> 'None':
-        """ Stops all the listeners and removes the certificates.
+        """ Stops all the listeners, releases their ports and removes the certificates.
         """
         for server in self._servers:
             server.stop()
+
+        for reservation in self._reservations:
+            reservation.release()
 
         self.certificates.remove()
 
@@ -249,38 +265,31 @@ class TestEndpoint:
 # ################################################################################################################################
 
     def _start_server(self, context:'ssl.SSLContext | None') -> 'int':
-        """ Starts one listener on a free port and returns the port.
+        """ Starts one listener on a reserved port and returns the port.
         """
-        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        listener.bind((Host, 0))
-        listener.listen(1024)
+        bind = partial(bind_listener, self.host)
+        started = start_on_reserved_port(_port_purpose, bind)
+        self._reservations.append(started.reservation)
 
-        # The server accepts connections until the listener has none pending, which requires a non-blocking listener
-        # in a process that gevent did not patch.
-        listener.setblocking(False)
+        listener = started.result
 
-        if context:
-            server = StreamServer(listener, self._handle_connection, ssl_context=context)
-        else:
-            server = StreamServer(listener, self._handle_connection)
-
+        server = StreamServer(listener, partial(self._handle_connection, context))
         server.start()
         self._servers.append(server)
 
-        out = listener.getsockname()[1]
+        out = started.reservation.port
         return out
 
 # ################################################################################################################################
 
     @property
     def http_base(self) -> 'str':
-        out = f'http://{Host}:{self.http_port}'
+        out = f'http://{self.host}:{self.http_port}'
         return out
 
     @property
     def https_base(self) -> 'str':
-        out = f'https://{Host}:{self.https_port}'
+        out = f'https://{self.host}:{self.https_port}'
         return out
 
     @property
@@ -290,12 +299,12 @@ class TestEndpoint:
 
     @property
     def https_mismatch_base(self) -> 'str':
-        out = f'https://{Host}:{self.https_mismatch_port}'
+        out = f'https://{self.host}:{self.https_mismatch_port}'
         return out
 
     @property
     def https_mtls_base(self) -> 'str':
-        out = f'https://{Host}:{self.https_mtls_port}'
+        out = f'https://{self.host}:{self.https_mtls_port}'
         return out
 
 # ################################################################################################################################
@@ -359,13 +368,19 @@ class TestEndpoint:
 
 # ################################################################################################################################
 
-    def _handle_connection(self, sock:'any_', address:'any_') -> 'None':
+    def _handle_connection(self, context:'ssl.SSLContext | None', sock:'any_', address:'any_') -> 'None':
         """ Serves the requests of one connection until either side ends it.
         """
         connection_id = next(self._connection_ids)
         port = sock.getsockname()[1]
 
         try:
+
+            # The TLS handshake runs here rather than in the server, so a client that fails it
+            # ends the connection in the same way as a client that goes away mid-request.
+            if context:
+                sock = context.wrap_socket(sock, server_side=True)
+
             client_common_name = self._get_client_common_name(sock)
             buffer = b''
 

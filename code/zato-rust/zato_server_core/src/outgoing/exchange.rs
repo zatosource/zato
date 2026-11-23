@@ -12,6 +12,7 @@ use socket2::{Domain, Protocol, SockAddr, Socket, Type};
 
 use super::error::TransportError;
 use super::response::{ChunkedDecoder, Framing, HeadStatus, ResponseHead, parse_head};
+use super::scope::{NetworkScope, retain_scope};
 use super::stream::{IoContext, IoError, Stream};
 use super::tls::server_name;
 use super::wait::ResolveError;
@@ -38,6 +39,9 @@ pub struct Peer<'call> {
 
     /// The timeout of the connection, in seconds, or `None` if it has none.
     pub timeout: Option<f64>,
+
+    /// The network scope that each address connected to must have, if the call requires one.
+    pub required_scope: Option<NetworkScope>,
 }
 
 impl Peer<'_> {
@@ -73,6 +77,16 @@ impl Peer<'_> {
     /// The error of a failed TLS session.
     fn tls_error(&self, reason: &str) -> TransportError {
         TransportError::Tls(self.max_retries(&format!("SSLError({reason:?})")))
+    }
+
+    /// The error of a host none of whose addresses has the required scope.
+    fn scope_refused(&self, scope: NetworkScope) -> TransportError {
+        TransportError::ScopeRefused(format!(
+            "{}: No address of host `{}` is within the required network scope `{}`",
+            self.pool_name(),
+            self.host,
+            scope.name()
+        ))
     }
 }
 
@@ -116,9 +130,20 @@ pub struct OutgoingRequest<'call> {
     pub start: Instant,
 }
 
-/// Opens a new connection to the endpoint, trying each of its addresses in turn.
+/// Opens a new connection to the endpoint, trying each of its addresses in turn, or only each of those
+/// within the required scope if the call requires one.
 pub fn connect(ctx: &IoContext<'_, '_>, peer: &Peer<'_>, tls_config: Option<&Arc<ClientConfig>>) -> Result<Stream, TransportError> {
-    let addresses = resolve(ctx, peer)?;
+    let mut addresses = resolve(ctx, peer)?;
+
+    // The scope is checked on the very addresses connected to, after the resolution of this call
+    if let Some(scope) = peer.required_scope {
+        addresses = retain_scope(addresses, scope);
+
+        if addresses.is_empty() {
+            return Err(peer.scope_refused(scope));
+        }
+    }
+
     let mut last_error = None;
 
     for address in addresses {

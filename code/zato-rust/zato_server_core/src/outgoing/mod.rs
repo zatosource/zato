@@ -20,6 +20,9 @@ mod pool;
 /// Parsing of a response and decoding of a chunked body.
 mod response;
 
+/// The network scopes of the addresses connections are established to.
+mod scope;
+
 /// Connections read and written without blocking the process.
 mod stream;
 

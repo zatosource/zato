@@ -69,6 +69,11 @@ _ping_poll_interval   = 0.5
 # How long the token endpoint says its tokens are valid for, in seconds
 _token_expires_in = 3600
 
+# The variable that points the quickstart, the server and enmasse at the SQLite file of the environment of the suite,
+# which would otherwise be the default database in the home directory, and the name of that file
+_database_path_variable = 'Zato_Database_Path'
+_database_file_name = 'zato.db'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -88,6 +93,10 @@ class _SessionState:
             shutil.rmtree(self.temp_directory, ignore_errors=True)
 
         self.temp_directory = ''
+
+        # The cleanup runs at the end of the session and again at exit
+        if _database_path_variable in os.environ:
+            del os.environ[_database_path_variable]
 
 _state = _SessionState()
 _ = atexit.register(_state.cleanup)
@@ -160,6 +169,9 @@ def zato_server(endpoint:'TestEndpoint') -> 'any_':
     """
     port = _find_free_port()
     _state.temp_directory = tempfile.mkdtemp(prefix='zato_rest_outgoing_live_test_')
+
+    # The quickstart, the server and enmasse inherit the database of the environment of the suite
+    os.environ[_database_path_variable] = os.path.join(_state.temp_directory, _database_file_name)
 
     quickstart_command = [
         Zato_Bin, 'quickstart', 'create', _state.temp_directory,

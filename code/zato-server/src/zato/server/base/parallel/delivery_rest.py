@@ -6,6 +6,11 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from http.client import PERMANENT_REDIRECT, TEMPORARY_REDIRECT
+from logging import getLogger
+from urllib.parse import urljoin, urlsplit, urlunsplit
+
 # requests
 from requests.exceptions import HTTPError
 
@@ -17,8 +22,56 @@ from zato_common_core.zato_common_core import encode_push_envelope_parts
 
 if 0:
     from zato.common.pubsub.sql.payload_cache import PayloadCache
-    from zato.common.typing_ import any_, anydict
+    from zato.common.typing_ import any_, anydict, strnone
     from zato.server.config import ConfigStore
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# How many redirects one attempt of a push follows
+Max_Push_Redirects = 5
+
+# The statuses of a redirect that keeps the method and the body of the request
+_redirect_statuses = {TEMPORARY_REDIRECT, PERMANENT_REDIRECT}
+
+# The schemes of an address a push is redirected to
+_scheme_http = 'http'
+_scheme_https = 'https'
+_redirect_schemes = {_scheme_http, _scheme_https}
+
+# The network scopes of the first push of an attempt under which its redirects are followed
+_redirect_scopes = {'public', 'private', 'loopback'}
+
+# The header of a redirect that names its target, by the lowercase name the transport stores it under
+_header_location = 'location'
+
+# The range of the characters of a Location value, which excludes whitespace, control characters and non-ASCII characters
+_location_char_min = 0x21
+_location_char_max = 0x7e
+
+# The lowest port of an address
+_port_min = 1
+
+# What is logged for each redirect followed
+_redirect_message = 'Push of `%s` for `%s` redirected with %s from `%s` to `%s`'
+_moved_message = _redirect_message + ', the endpoint of the subscription moved permanently'
+
+_redirect_messages = {
+    TEMPORARY_REDIRECT: _redirect_message,
+    PERMANENT_REDIRECT: _moved_message,
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class PushRedirectError(Exception):
+    """ A redirect of a push that is not followed, which fails the attempt.
+    """
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,7 +87,9 @@ _payload_key = 'data'
 # by the lowercase name the transport stores it under
 _header_content_length = 'content-length'
 
-# The ranges of the status codes of client and server errors
+# The ranges of the status codes of a success, of client errors and of server errors
+_success_min = 200
+_success_max = 300
 _client_error_min = 400
 _server_error_min = 500
 _server_error_max = 600
@@ -82,14 +137,118 @@ def get_rest_push_url(config_store:'ConfigStore', sub_config:'anydict') -> 'str'
 
 # ################################################################################################################################
 
-def _raise_for_status(url:'str', status_code:'int', reason:'str') -> 'None':
-    """ Raises the error requests raises for a response with a status code of a client or a server error.
+def _check_location(location:'str') -> 'None':
+    """ Raises for a Location value that contains whitespace, control characters or characters outside ASCII.
     """
+    if not location:
+        raise PushRedirectError('Redirect with an empty Location header')
+
+    for char in location:
+        code = ord(char)
+
+        if code < _location_char_min:
+            raise PushRedirectError(f'Redirect to {location!r} with a character outside of the range of a Location')
+
+        if code > _location_char_max:
+            raise PushRedirectError(f'Redirect to {location!r} with a character outside of the range of a Location')
+
+# ################################################################################################################################
+
+def _resolve_location(url:'str', location:'str') -> 'str':
+    """ Resolves a Location value against the current address and returns the next address, without a fragment,
+    raising for an address that is not a valid address of an HTTP or HTTPS endpoint.
+    """
+    resolved = urljoin(url, location)
+    parts = urlsplit(resolved)
+
+    # A scheme in upper case is accepted and lowercased ..
+    scheme = parts.scheme.lower()
+
+    if scheme not in _redirect_schemes:
+        raise PushRedirectError(f'Redirect to `{location}` with a scheme other than http and https')
+
+    # .. user information is not accepted ..
+    if '@' in parts.netloc:
+        raise PushRedirectError(f'Redirect to `{location}` with user information')
+
+    # .. a host is required ..
+    if not parts.hostname:
+        raise PushRedirectError(f'Redirect to `{location}` without a host')
+
+    # .. and so is a valid port, if one is given.
+    try:
+        port = parts.port
+    except ValueError:
+        raise PushRedirectError(f'Redirect to `{location}` with an invalid port')
+
+    if port is not None:
+        if port < _port_min:
+            raise PushRedirectError(f'Redirect to `{location}` with an invalid port')
+
+    out = urlunsplit((scheme, parts.netloc, parts.path, parts.query, ''))
+    return out
+
+# ################################################################################################################################
+
+def get_push_redirect(
+    url:'str',
+    status_code:'int',
+    header_store:'anydict',
+    hop_count:'int',
+    first_scope:'strnone',
+    ) -> 'strnone':
+    """ Returns the address that a response to a push redirects to, or None for a response that is not a redirect
+    to be followed. Raises for a redirect that is not followed - a redirect beyond the limit, a redirect
+    of a push whose first address has no network scope or is link-local, and a redirect to an address
+    that is not valid, uses another scheme than HTTP or HTTPS, or uses HTTP after HTTPS.
+    """
+    # Only the statuses that keep the method and the body are followed ..
+    if status_code not in _redirect_statuses:
+        return None
+
+    # .. within the network scope of the first push of the attempt ..
+    if first_scope not in _redirect_scopes:
+        raise PushRedirectError(f'Redirect {status_code} from `{url}` in the network scope `{first_scope}` is not followed')
+
+    # .. up to a fixed number of times ..
+    if hop_count >= Max_Push_Redirects:
+        raise PushRedirectError(f'Redirect {status_code} from `{url}` beyond the limit of {Max_Push_Redirects} redirects')
+
+    # .. to the address the redirect names ..
+    if not (location := header_store.get(_header_location)):
+        raise PushRedirectError(f'Redirect {status_code} from `{url}` without a Location header')
+
+    location = location[1]
+    _check_location(location)
+
+    out = _resolve_location(url, location)
+
+    # .. never using HTTP after HTTPS.
+    current_scheme = urlsplit(url).scheme
+    next_scheme = urlsplit(out).scheme
+
+    if current_scheme == _scheme_https:
+        if next_scheme == _scheme_http:
+            raise PushRedirectError(f'Redirect {status_code} from `{url}` to `{out}` uses HTTP after HTTPS')
+
+    return out
+
+# ################################################################################################################################
+
+def _raise_for_status(url:'str', status_code:'int', reason:'str') -> 'None':
+    """ Raises for a response with any status code other than a success. A push is delivered only when its endpoint
+    accepts it with a 2xx status, and a redirect that a push does not follow leaves the message undelivered.
+    """
+    if _success_min <= status_code < _success_max:
+        return
+
     if _client_error_min <= status_code < _server_error_min:
         raise HTTPError(f'{status_code} Client Error: {reason} for url: {url}')
 
     if _server_error_min <= status_code < _server_error_max:
         raise HTTPError(f'{status_code} Server Error: {reason} for url: {url}')
+
+    raise HTTPError(f'{status_code} Not a success: {reason} for url: {url}')
 
 # ################################################################################################################################
 
@@ -122,8 +281,23 @@ def deliver_to_rest(
     escaped = payload_cache.get_escaped(message['msg_id'], message[_payload_key])
     parts = (prefix, escaped, suffix)
 
-    status_code, reason, header_store, response_body, _, _ = outconn.conn.invoke_pubsub_push(url, headers, parts)
+    status_code, reason, header_store, response_body, _, _, first_scope = outconn.conn.invoke_pubsub_push(url, headers, parts)
 
+    # Each redirect followed sends the same parts and headers to the next address, within the scope of the first push ..
+    hop_count = 0
+
+    while next_url := get_push_redirect(url, status_code, header_store, hop_count, first_scope):
+
+        log_message = _redirect_messages[status_code]
+        logger.info(log_message, message['msg_id'], sub_config['sub_key'], status_code, url, next_url)
+
+        hop_count += 1
+        url = next_url
+
+        status_code, reason, header_store, response_body, _, _, _ = outconn.conn.invoke_pubsub_push(
+            url, headers, parts, first_scope)
+
+    # .. and the response of the last address decides the outcome of the attempt.
     _raise_for_status(url, status_code, reason)
 
     # A response that ends before the length it declared is a failed attempt - the endpoint closed the connection

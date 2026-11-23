@@ -254,9 +254,18 @@ def test_a_failed_escaping_fails_every_push_waiting_for_it() -> 'None':
     payload = _new_payload('Order 12345 for John Smith', 100)
     _put(cache, _msg_id, payload)
 
-    pushes = _spawn_pushes(cache, payload, _failed_push_count)
+    # The hub does not report the error of the escaping, which the test causes, as an error of the threadpool
+    # and of each push that receives it ..
+    hub = gevent.get_hub()
+    not_error = hub.NOT_ERROR
+    hub.NOT_ERROR = not_error + (_EscapeError,)
 
-    # Every push waiting for the escaping receives its error ..
+    try:
+        pushes = _spawn_pushes(cache, payload, _failed_push_count)
+    finally:
+        hub.NOT_ERROR = not_error
+
+    # .. every push waiting for the escaping receives its error ..
     for push in pushes:
         assert isinstance(push.exception, _EscapeError)
 

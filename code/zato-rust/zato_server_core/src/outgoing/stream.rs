@@ -4,7 +4,7 @@
 //! to become ready, with the timeout of the connection, and is then repeated.
 
 use std::io::{ErrorKind, IoSlice, Read, Write};
-use std::net::TcpStream;
+use std::net::{SocketAddr, TcpStream};
 use std::os::fd::AsRawFd;
 
 use pyo3::prelude::*;
@@ -108,6 +108,14 @@ impl Stream {
         match self {
             Self::Plain(tcp) => is_plain_reusable(tcp),
             Self::Tls(tls) => tls.is_reusable(),
+        }
+    }
+
+    /// The address of the endpoint the connection is established to.
+    pub fn peer_address(&self) -> std::io::Result<SocketAddr> {
+        match self {
+            Self::Plain(tcp) => tcp.peer_addr(),
+            Self::Tls(tls) => tls.tcp.peer_addr(),
         }
     }
 }

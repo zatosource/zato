@@ -30,6 +30,9 @@ pub enum TransportError {
 
     /// The connection was closed or reset while the body of the response was being read.
     ChunkedEncoding(String),
+
+    /// No resolved address of the host is within the network scope the call requires, so no connection was established.
+    ScopeRefused(String),
 }
 
 /// The requests exception classes the errors are raised as, imported once per transport.
@@ -76,6 +79,7 @@ impl RequestsExceptions {
             TransportError::Connection(message) => (&self.connection_error, message),
             TransportError::Tls(message) => (&self.ssl_error, message),
             TransportError::ChunkedEncoding(message) => (&self.chunked_encoding_error, message),
+            TransportError::ScopeRefused(message) => (&self.connection_error, message),
         };
 
         // Instantiating a requests exception does not fail for a message argument, but if it ever did,

@@ -659,11 +659,11 @@ test-rest: ## REST channel and outgoing audit log tests.
 
 test-rest-outgoing: ## Outgoing REST invocation tests, in-process and through a running server.
 	$(Zato_Log_Reset)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 		$(CURDIR)/code/tests/python/zato-server/rest_outgoing_invocation/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest_outgoing_invocation -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 		$(CURDIR)/code/tests/python/zato-server/rest_outgoing_invocation_live/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest_outgoing_invocation_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)

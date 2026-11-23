@@ -12,6 +12,9 @@ from http.client import OK
 # pytest
 import pytest
 
+# requests
+from requests.exceptions import ConnectionError as RequestsConnectionError
+
 # Zato - Rust
 from zato_server_core.zato_server_core import HTTPTransport
 
@@ -48,6 +51,12 @@ _headers = {
 
 # The text that the parts repeat
 _filler = b'Order "12345" for John Smith\n'
+
+# The network scope of the address of the local endpoint
+_loopback_scope = 'loopback'
+
+# What the error of a call names when no address of the host has the scope the call requires
+_scope_refused_text = 'required network scope'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -202,6 +211,97 @@ def test_push_on_a_closed_connection_is_sent_again(endpoint:'TestEndpoint', path
 
     assert closed_request.connection_id == first_request.connection_id
     assert repeated_request.connection_id != first_request.connection_id
+
+# ################################################################################################################################
+
+@pytest.mark.parametrize('host', ['127.0.0.1', 'localhost'])
+def test_response_names_the_scope_of_the_peer(endpoint:'TestEndpoint', path:'str', host:'str') -> 'None':
+
+    transport = _new_transport(None)
+    parts = _new_parts()
+
+    url = f'http://{host}:{endpoint.http_port}{path}'
+    out = _invoke(transport, url, parts)
+
+    tuple_length = len(out)
+    peer_scope = out[6]
+
+    assert tuple_length == 7
+    assert peer_scope == _loopback_scope
+
+# ################################################################################################################################
+
+def test_required_loopback_scope_is_sent(endpoint:'TestEndpoint', path:'str') -> 'None':
+
+    transport = _new_transport(None)
+    parts = _new_parts()
+    url = endpoint.http_base + path
+    expected = b''.join(parts)
+
+    out = transport.invoke_parts('POST', url, _headers, parts, _loopback_scope)
+
+    status_code = out[0]
+    peer_scope = out[6]
+
+    assert status_code == OK
+    assert peer_scope == _loopback_scope
+
+    request = endpoint.get_request(path)
+    assert request.body == expected
+
+# ################################################################################################################################
+
+@pytest.mark.parametrize('required_scope', ['public', 'private'])
+def test_required_scope_of_another_network_is_refused(endpoint:'TestEndpoint', path:'str', required_scope:'str') -> 'None':
+
+    transport = _new_transport(None)
+    parts = _new_parts()
+    url = endpoint.http_base + path
+
+    with pytest.raises(RequestsConnectionError, match=_scope_refused_text):
+        _ = transport.invoke_parts('POST', url, _headers, parts, required_scope)
+
+    requests = endpoint.get_requests(path)
+    assert requests == []
+
+# ################################################################################################################################
+
+@pytest.mark.parametrize('required_scope', ['link-local', 'internal', ''])
+def test_scope_that_cannot_be_required_is_rejected(endpoint:'TestEndpoint', path:'str', required_scope:'str') -> 'None':
+
+    transport = _new_transport(None)
+    parts = _new_parts()
+    url = endpoint.http_base + path
+
+    with pytest.raises(ValueError, match='Unknown required network scope'):
+        _ = transport.invoke_parts('POST', url, _headers, parts, required_scope)
+
+    requests = endpoint.get_requests(path)
+    assert requests == []
+
+# ################################################################################################################################
+
+def test_pooled_connection_of_another_scope_is_not_reused(endpoint:'TestEndpoint', path:'str') -> 'None':
+
+    transport = _new_transport(None)
+    parts = _new_parts()
+    url = endpoint.http_base + path
+
+    # A call without a required scope leaves its connection in the pool ..
+    _ = _invoke(transport, url, parts)
+
+    # .. which a call that requires another scope does not send on, so the call fails before anything is sent ..
+    with pytest.raises(RequestsConnectionError, match=_scope_refused_text):
+        _ = transport.invoke_parts('POST', url, _headers, parts, 'private')
+
+    # .. and the connection remains in the pool for a call that requires its own scope.
+    out = transport.invoke_parts('POST', url, _headers, parts, _loopback_scope)
+
+    status_code = out[0]
+    assert status_code == OK
+
+    first_request, second_request = endpoint.get_requests(path)
+    assert second_request.connection_id == first_request.connection_id
 
 # ################################################################################################################################
 # ################################################################################################################################

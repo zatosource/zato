@@ -298,7 +298,12 @@ class RESTCallMixin:
         _has_json_content_type = 'application/json' in (response.headers.get('Content-Type') or '')
 
         # .. are we actually handling JSON in this response .. ?
-        _is_json:'bool' = _has_data_format_json or _has_json_content_type
+        # .. an error response is parsed as JSON only if it declares JSON, because its body may come
+        # .. from a proxy or a framework in front of the API, and the caller receives its status and text as they are ..
+        if response.ok:
+            _is_json:'bool' = _has_data_format_json or _has_json_content_type
+        else:
+            _is_json:'bool' = _has_json_content_type
 
         # .. if yes, try to parse the response accordingly ..
         if _is_json:

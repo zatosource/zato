@@ -395,7 +395,7 @@ def build_response(
 ) -> 'TransportResponse':
     """ Builds a response from what the Rust transport returned and stores its cookies in the session.
     """
-    status_code, reason, header_store, body, elapsed_us, set_cookie_list = result
+    status_code, reason, header_store, body, elapsed_us, set_cookie_list, _ = result
 
     # The headers arrive in the form a CaseInsensitiveDict keeps them in, so none is copied
     headers = cast_('any_', CaseInsensitiveDict.__new__(CaseInsensitiveDict))

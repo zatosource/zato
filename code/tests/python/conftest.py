@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import atexit
 import gc
 import importlib.util
 import os
@@ -26,6 +27,7 @@ if 0:
 
     nonegen = generator_[None, None, None]
     strlist = strlist
+    threadlist = list[threading.Thread]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -76,6 +78,13 @@ class ModuleCtx:
 # The conftest modules of the suites import the shared test library when pytest loads them, which precedes pytest_configure,
 # and this conftest is loaded before them.
 sys.path.append(ModuleCtx.Test_Lib_Dir)
+
+# Test support
+from logging_teardown import silence_logging_teardown # noqa: E402
+
+# The log handlers of every run are flushed at exit, before the final garbage collection of the interpreter,
+# which would otherwise take the lock of the logging module after gevent can no longer switch greenlets.
+_ = atexit.register(silence_logging_teardown)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -169,6 +178,15 @@ def pytest_collection_modifyitems(items:'list[pytest.Item]') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _get_started_threads() -> 'threadlist':
+    """ Returns the threads that the threading module started. A dummy thread stands for a greenlet of a process
+    that gevent patched, or for a thread that the threading module did not start, and it cannot be joined.
+    """
+    out = [thread for thread in threading.enumerate() if not isinstance(thread, threading._DummyThread)]
+    return out
+
+# ################################################################################################################################
+
 @pytest.fixture(autouse=True)
 def no_thread_outlives_its_test() -> 'nonegen':
     """ Fails a test that leaves a thread running in this process. Later tests fork workers from this process,
@@ -177,21 +195,21 @@ def no_thread_outlives_its_test() -> 'nonegen':
     and a test that needs an engine again receives a new one. Threads are compared by name, so a test that stops
     a thread of its session and starts it again under the same name leaves nothing behind.
     """
-    threads_before = Counter(thread.name for thread in threading.enumerate())
+    threads_before = Counter(thread.name for thread in _get_started_threads())
 
     yield
 
     _stop_process_wide_threads()
 
-    threads_after = Counter(thread.name for thread in threading.enumerate())
+    threads_after = Counter(thread.name for thread in _get_started_threads())
     remaining = threads_after - threads_before
 
     # A thread that ends shortly after the test is not left behind
-    for thread in threading.enumerate():
+    for thread in _get_started_threads():
         if thread.name in remaining:
             thread.join(ModuleCtx.Thread_End_Timeout)
 
-    threads_after = Counter(thread.name for thread in threading.enumerate())
+    threads_after = Counter(thread.name for thread in _get_started_threads())
 
     remaining_names:'strlist' = sorted((threads_after - threads_before).elements())
 
