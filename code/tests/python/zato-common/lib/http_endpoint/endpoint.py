@@ -60,6 +60,13 @@ _linger_reset = struct.pack('ii', 1, 0)
 # How many bytes of a body are sent before a connection is cut during the response
 _partial_body_size = 3
 
+# The status that RFC 9110 reserves and http.client does not name
+_switch_proxy = 306
+
+# The reason phrase of each status that a response can be built with
+_reasons = dict(http_responses)
+_reasons[_switch_proxy] = 'Switch Proxy'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -125,7 +132,7 @@ class EndpointResponse:
             headers = []
 
         if not reason:
-            reason = http_responses[status]
+            reason = _reasons[status]
 
         self.status = status
         self.reason = reason
