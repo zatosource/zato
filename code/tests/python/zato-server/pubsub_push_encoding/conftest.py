@@ -12,8 +12,11 @@ import re
 import sys
 import tempfile
 
-# The definition of the suite and the test endpoint are shared with other suites
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'zato-common', 'lib')))
+# The support module of the suite is in its own directory, and the definition of the suite and the test endpoint
+# are shared with other suites
+_here = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _here)
+sys.path.insert(0, os.path.join(_here, '..', '..', 'zato-common', 'lib'))
 
 # pytest
 import pytest # noqa: E402
