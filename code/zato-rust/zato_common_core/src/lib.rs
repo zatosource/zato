@@ -34,7 +34,8 @@ fn zato_common_core(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<pubsub_write::SqlitePubSubWriter>()?;
     module.add_class::<pubsub_subscription_list::SubscriptionList>()?;
     module.add_function(wrap_pyfunction!(json::encode_pull_response, module)?)?;
-    module.add_function(wrap_pyfunction!(json::encode_push_envelope, module)?)?;
+    module.add_function(wrap_pyfunction!(json::escape_push_payload, module)?)?;
+    module.add_function(wrap_pyfunction!(json::encode_push_envelope_parts, module)?)?;
     module.add_function(wrap_pyfunction!(search_text::extract_search_text, module)?)?;
     module.add_function(wrap_pyfunction!(time::utc_now, module)?)?;
     Ok(())

@@ -27,7 +27,7 @@ from support import Basic_Password, Basic_Username, get_basic_authorization, new
 # ################################################################################################################################
 
 if 0:
-    from endpoint import TestEndpoint
+    from http_endpoint.endpoint import TestEndpoint
     from support import ServerStub
 
 # ################################################################################################################################

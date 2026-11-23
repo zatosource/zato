@@ -16,14 +16,14 @@ from http.client import OK
 from gevent import joinall, spawn
 
 # Test support
-from endpoint import CloseMode, EndpointResponse
+from http_endpoint.endpoint import CloseMode, EndpointResponse
 from support import new_connection, Test_CID
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from endpoint import TestEndpoint
+    from http_endpoint.endpoint import TestEndpoint
     from support import ServerStub
     from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
 

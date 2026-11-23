@@ -25,7 +25,7 @@ from zato.server.service import BusinessCentralAdapter
 
 # Test support
 from adapter_support import new_adapter
-from endpoint import EndpointResponse
+from http_endpoint.endpoint import EndpointResponse
 from models import Customer
 
 # ################################################################################################################################
@@ -33,7 +33,7 @@ from models import Customer
 
 if 0:
     from zato.common.typing_ import any_, anydict, strdict
-    from endpoint import TestEndpoint
+    from http_endpoint.endpoint import TestEndpoint
 
 # ################################################################################################################################
 # ################################################################################################################################

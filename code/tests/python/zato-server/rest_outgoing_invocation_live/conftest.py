@@ -27,10 +27,10 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 _this_directory = os.path.dirname(__file__)
-_endpoint_directory = os.path.join(_this_directory, '..', 'rest_outgoing_invocation')
+_lib_directory = os.path.abspath(os.path.join(_this_directory, '..', '..', 'zato-common', 'lib'))
 
 sys.path.insert(0, _this_directory)
-sys.path.insert(0, _endpoint_directory)
+sys.path.insert(0, _lib_directory)
 
 # pytest
 import pytest  # noqa: E402
@@ -41,7 +41,7 @@ from zato.common.test import kill_server_process  # noqa: E402
 from zato.common.util.config import get_config_object, update_config_file  # noqa: E402
 
 # Test support
-from endpoint import EndpointResponse, TestEndpoint  # noqa: E402
+from http_endpoint.endpoint import EndpointResponse, TestEndpoint  # noqa: E402
 from live_config import Basic_Password, build_config_yaml, Client_Secret, InvokeClient, OAuth_Token, OAuth_Token_Path, \
     run_enmasse, Zato_Bin  # noqa: E402
 

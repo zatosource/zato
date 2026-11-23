@@ -16,8 +16,9 @@ import re
 import sys
 import tempfile
 
-# The test support modules live next to the tests and are imported flat
+# The test support modules live next to the tests and are imported flat, the test endpoint is shared with other suites
 sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'zato-common', 'lib')))
 
 # pytest
 import pytest
@@ -27,7 +28,7 @@ from zato.common.crypto.api import CryptoManager
 from zato_server_core.zato_server_core import init_rest_log
 
 # Test support
-from endpoint import TestEndpoint, UnresponsiveListener
+from http_endpoint.endpoint import TestEndpoint, UnresponsiveListener
 from support import configure_rest_log, ServerStub
 
 # ################################################################################################################################

@@ -6,19 +6,17 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# gevent
-from gevent import get_hub
-
 # requests
 from requests.exceptions import HTTPError
 
 # Zato - Rust
-from zato_common_core.zato_common_core import encode_push_envelope
+from zato_common_core.zato_common_core import encode_push_envelope_parts
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from zato.common.pubsub.sql.payload_cache import PayloadCache
     from zato.common.typing_ import any_, anydict
     from zato.server.config import ConfigStore
 
@@ -28,6 +26,9 @@ if 0:
 # The headers of a push request that identify the message and its attempt
 _header_msg_id = 'X-Zato-Msg-ID'
 _header_delivery_attempt = 'X-Zato-Delivery-Attempt'
+
+# The key of a push envelope that holds the payload
+_payload_key = 'data'
 
 # The header of a push response that declares the length of its body, absent from a chunked response,
 # by the lowercase name the transport stores it under
@@ -92,7 +93,12 @@ def _raise_for_status(url:'str', status_code:'int', reason:'str') -> 'None':
 
 # ################################################################################################################################
 
-def deliver_to_rest(config_store:'ConfigStore', message:'anydict', sub_config:'anydict') -> 'None':
+def deliver_to_rest(
+    config_store:'ConfigStore',
+    payload_cache:'PayloadCache',
+    message:'anydict',
+    sub_config:'anydict',
+    ) -> 'None':
     """ Delivers a raw message by posting it to the REST endpoint of its subscription,
     through the pub/sub transport of the outgoing REST connection of the endpoint.
     """
@@ -110,12 +116,13 @@ def deliver_to_rest(config_store:'ConfigStore', message:'anydict', sub_config:'a
         _header_delivery_attempt: str(message['delivery_attempt']),
     }
 
-    # The body is encoded in a thread of the pool, which writes the JSON without the GIL,
-    # so that the event loop serves other requests while the payload is escaped.
-    hub = get_hub()
-    body = hub.threadpool.apply(encode_push_envelope, (envelope,))
+    # The body is the envelope around its payload. The envelope has the attempt of this push, so it is encoded
+    # for each push, whereas the payload is escaped once and shared by every push of the message.
+    prefix, suffix = encode_push_envelope_parts(envelope, _payload_key)
+    escaped = payload_cache.get_escaped(message['msg_id'], message[_payload_key])
+    parts = (prefix, escaped, suffix)
 
-    status_code, reason, header_store, response_body, _, _ = outconn.conn.invoke_pubsub_push(url, headers, body)
+    status_code, reason, header_store, response_body, _, _ = outconn.conn.invoke_pubsub_push(url, headers, parts)
 
     _raise_for_status(url, status_code, reason)
 

@@ -15,7 +15,7 @@
 	test-soak test-soak-pubsub test-soak-scheduler-failover \
 	test-arbiter \
 	test-rate-limiting test-enmasse test-cli \
-	test-pubsub test-pubsub-perf test-pubsub-perf-latency test-pubsub-exactly-once test-sql-conformance test-sql-conformance-fast test-sql-conformance-static test-perf-rules test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
+	test-pubsub test-pubsub-perf test-pubsub-perf-latency test-pubsub-exactly-once test-sql-conformance test-sql-conformance-fast test-sql-conformance-static test-pubsub-encoding test-pubsub-encoding-rust test-perf-rules test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
 	test-mcp test-bearer test-graphql test-grpc \
 	test-edifact test-soap test-openapi test-api-portal-live \
@@ -1003,6 +1003,11 @@ Zato_Test_Step_Tests_pubsub-core  := \
 	$(CURDIR)/code/tests/python/zato-server/pubsub_publish_retry/ \
 	$(CURDIR)/code/tests/python/zato-common/pubsub_payload_cache/
 
+Zato_Test_Step_Runner_pubsub-encoding := $(Zato_Test_PubSub_Plain)
+Zato_Test_Step_Tests_pubsub-encoding  := \
+	$(CURDIR)/code/tests/python/zato-common/pubsub_encoding/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_push_encoding/
+
 Zato_Test_Step_Runner_pubsub-failover := $(Zato_Test_PubSub_Plain)
 Zato_Test_Step_Tests_pubsub-failover  := $(CURDIR)/code/tests/python/zato-server/pubsub_failover/
 
@@ -1063,7 +1068,7 @@ Zato_Test_Step_Tests_pubsub-outgoing-live  := $(CURDIR)/code/tests/python/zato-s
 # The steps of test-pubsub in the order they run, the step of exactly-once delivery, which runs its own walk, last,
 # and the step that the target is currently on.
 Zato_Test_PubSub_Steps := sql-conformance-static sql-conformance-engines \
-	pubsub-core pubsub-failover pubsub-replication pubsub-faults \
+	pubsub-core pubsub-encoding pubsub-failover pubsub-replication pubsub-faults \
 	$(foreach mode,$(Zato_Test_PubSub_Managed_Modes),pubsub-managed-$(mode)) \
 	$(foreach mode,$(Zato_Test_PubSub_Stability_Modes),pubsub-stability-$(mode)) \
 	$(foreach mode,$(Zato_Test_PubSub_Stability_Modes),pubsub-subscription-flags-$(mode)) \
@@ -1076,6 +1081,7 @@ test-pubsub: ## Every pub/sub functional test - core, SQL and outgoing delivery,
 	$(Zato_Log_Reset)
 	mkdir -p $(Zato_Test_Resolver_Dir)
 	gcc -shared -fPIC -o $(Zato_Test_Resolver_Library) $(Zato_Test_Resolver_Source) -ldl -lresolv
+	$(MAKE) test-pubsub-encoding-rust
 	@resume=''; \
 	if [ -f $(Zato_Test_PubSub_Resume_File) ]; then \
 		resume=$$(cat $(Zato_Test_PubSub_Resume_File)); \
@@ -1334,6 +1340,15 @@ test-sql-conformance-fast: ## The static scans and the engine settings of SQL co
 test-sql-conformance-static: ## The static scans of SQL conformance.
 	$(Zato_Log_Reset)
 	@$(call Zato_Test_Step_Run_Once,sql-conformance-static)
+
+test-pubsub-encoding-rust: ## The Rust unit tests of the split push envelope encoder and of the vectored writes of the outgoing HTTP transport.
+	$(LOAD_CARGO_ENV) && cargo test --manifest-path $(ZATO_RUST)/zato_common_core/Cargo.toml --lib json $(Zato_Log)
+	$(LOAD_CARGO_ENV) && cargo test --manifest-path $(ZATO_RUST)/zato_server_core/Cargo.toml --lib outgoing $(Zato_Log)
+
+test-pubsub-encoding: ## Push payload encoding once per message - the Rust unit tests, the Python unit tests and the live tests of broadcast, edit, retry and the vectored transport, which test-pubsub runs as a step of its own.
+	$(Zato_Log_Reset)
+	$(MAKE) test-pubsub-encoding-rust
+	@$(call Zato_Test_Step_Run_Once,pubsub-encoding)
 
 test-perf-rules: ## The settings gate of performance figures and the scan of every performance suite.
 	$(Zato_Log_Reset)

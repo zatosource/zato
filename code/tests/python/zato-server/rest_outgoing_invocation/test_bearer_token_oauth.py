@@ -21,14 +21,14 @@ from zato.common.api import DATA_FORMAT, SEC_DEF_TYPE
 from zato.common.exception import BackendInvocationError
 
 # Test support
-from endpoint import EndpointResponse
+from http_endpoint.endpoint import EndpointResponse
 from support import Client_ID, Client_Secret, new_connection, Test_CID, Token_Path_Suffix
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from endpoint import TestEndpoint
+    from http_endpoint.endpoint import TestEndpoint
     from support import ServerStub
     from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
 

@@ -19,14 +19,14 @@ import pytest
 from zato.common.api import ContentType
 
 # Test support
-from endpoint import EndpointResponse
+from http_endpoint.endpoint import EndpointResponse
 from support import new_connection, Test_CID
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from endpoint import TestEndpoint
+    from http_endpoint.endpoint import TestEndpoint
     from support import ServerStub
 
 # ################################################################################################################################

@@ -25,7 +25,7 @@ from gevent import sleep as gevent_sleep
 from gevent.server import StreamServer
 
 # Test support
-from endpoint_certificates import CertificateSet
+from http_endpoint.endpoint_certificates import CertificateSet
 
 # ################################################################################################################################
 # ################################################################################################################################

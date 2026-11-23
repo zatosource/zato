@@ -3,7 +3,7 @@
 //! Every socket is non-blocking. An operation that would block waits through gevent for the socket
 //! to become ready, with the timeout of the connection, and is then repeated.
 
-use std::io::{ErrorKind, Read, Write};
+use std::io::{ErrorKind, IoSlice, Read, Write};
 use std::net::TcpStream;
 use std::os::fd::AsRawFd;
 
@@ -77,11 +77,19 @@ impl Stream {
         Ok(Self::Tls(Box::new(tls)))
     }
 
-    /// Writes all of the data, waiting for the socket to become writable as often as needed.
-    pub fn write_all(&mut self, ctx: &IoContext<'_, '_>, data: &[u8]) -> Result<(), IoError> {
+    /// Writes the head of a request and then each part of its body, without joining them into one buffer,
+    /// waiting for the socket to become writable as often as needed.
+    pub fn write_all_vectored(&mut self, ctx: &IoContext<'_, '_>, head: &[u8], parts: &[&[u8]]) -> Result<(), IoError> {
         match self {
-            Self::Plain(tcp) => write_all_plain(ctx, tcp, data),
-            Self::Tls(tls) => tls.write_all(ctx, data),
+            Self::Plain(tcp) => write_all_vectored_plain(ctx, tcp, head, parts),
+            Self::Tls(tls) => {
+                // The session copies plaintext into its records in any case, so each part is passed to it in turn
+                tls.write_all(ctx, head)?;
+                for part in parts {
+                    tls.write_all(ctx, part)?;
+                }
+                Ok(())
+            }
         }
     }
 
@@ -104,22 +112,41 @@ impl Stream {
     }
 }
 
-/// Writes all of the data to a plain TCP connection.
-fn write_all_plain(ctx: &IoContext<'_, '_>, tcp: &mut TcpStream, data: &[u8]) -> Result<(), IoError> {
-    let mut offset = 0;
+/// Writes the head and the parts of a request to a plain TCP connection, with one vectored write per syscall.
+fn write_all_vectored_plain(ctx: &IoContext<'_, '_>, tcp: &mut TcpStream, head: &[u8], parts: &[&[u8]]) -> Result<(), IoError> {
+    // The slices are built for each request, because a write advances them past what was sent
+    let mut slices = Vec::with_capacity(parts.len().saturating_add(1));
+    slices.push(IoSlice::new(head));
+    slices.extend(parts.iter().map(|part| IoSlice::new(part)));
 
-    while let Some(remaining) = data.get(offset..) {
-        if remaining.is_empty() {
-            break;
-        }
+    let fd = tcp.as_raw_fd();
 
+    write_all_slices(
+        &mut slices,
         // The syscall runs without the GIL, so that other interpreter threads proceed meanwhile
-        match ctx.py.detach(|| tcp.write(remaining)) {
-            Ok(0) => return Err(IoError::System(ErrorKind::WriteZero.into())),
-            Ok(written) => offset += written,
+        |current| ctx.py.detach(|| tcp.write_vectored(current)),
+        // The send buffer is full, so this greenlet waits while the others run
+        || Ok(ctx.gevent.wait_writable(ctx.py, fd, ctx.timeout)?),
+    )
+}
 
-            // The send buffer is full, so this greenlet waits while the others run
-            Err(err) if err.kind() == ErrorKind::WouldBlock => ctx.gevent.wait_writable(ctx.py, tcp.as_raw_fd(), ctx.timeout)?,
+/// Writes all of the slices through a vectored write, advancing past each partial write
+/// and waiting whenever the writer would block.
+fn write_all_slices(
+    slices: &mut [IoSlice<'_>],
+    mut write: impl FnMut(&[IoSlice<'_>]) -> std::io::Result<usize>,
+    mut wait_writable: impl FnMut() -> Result<(), IoError>,
+) -> Result<(), IoError> {
+    let mut remaining = slices;
+
+    // Empty slices at the front would make a write of zero bytes look like a closed connection
+    IoSlice::advance_slices(&mut remaining, 0);
+
+    while !remaining.is_empty() {
+        match write(remaining) {
+            Ok(0) => return Err(IoError::System(ErrorKind::WriteZero.into())),
+            Ok(written) => IoSlice::advance_slices(&mut remaining, written),
+            Err(err) if err.kind() == ErrorKind::WouldBlock => wait_writable()?,
             Err(err) if err.kind() == ErrorKind::Interrupted => {}
             Err(err) => return Err(IoError::System(err)),
         }
@@ -281,3 +308,7 @@ impl TlsStream {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "stream_tests.rs"]
+mod tests;

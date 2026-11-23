@@ -89,8 +89,8 @@ struct Call<'call, 'py> {
     /// The headers of the call.
     headers: &'call Bound<'py, PyDict>,
 
-    /// The body, if any.
-    body: Option<&'call Bound<'py, PyBytes>>,
+    /// The parts of the body, in order, none if the call has no body.
+    body: &'call [&'call [u8]],
 
     /// Whether the request carries the `Authorization` header the credentials of the connection produce.
     is_authorized: bool,
@@ -230,11 +230,35 @@ impl HTTPTransport {
         headers: &Bound<'py, PyDict>,
         body: Option<&Bound<'py, PyBytes>>,
     ) -> PyResult<Option<Bound<'py, PyTuple>>> {
+        let parts: Vec<&[u8]> = body.map(PyBytesMethods::as_bytes).into_iter().collect();
         let call = Call {
             method,
             url,
             headers,
-            body,
+            body: &parts,
+            is_authorized: false,
+        };
+
+        self.complete(&call)
+    }
+
+    /// Sends a request whose body is the given parts in order, each borrowed from Python without a copy
+    /// and written without being joined to the others, and returns what `invoke` returns.
+    #[pyo3(signature = (method, url, headers, parts))]
+    fn invoke_parts<'py>(
+        &self,
+        method: &str,
+        url: &str,
+        headers: &Bound<'py, PyDict>,
+        parts: &Bound<'py, PyTuple>,
+    ) -> PyResult<Option<Bound<'py, PyTuple>>> {
+        let parts: Vec<Bound<'py, PyBytes>> = parts.iter().map(Bound::cast_into::<PyBytes>).collect::<Result<_, _>>()?;
+        let parts: Vec<&[u8]> = parts.iter().map(PyBytesMethods::as_bytes).collect();
+        let call = Call {
+            method,
+            url,
+            headers,
+            body: &parts,
             is_authorized: false,
         };
 
@@ -251,11 +275,12 @@ impl HTTPTransport {
         headers: &Bound<'py, PyDict>,
         body: Option<&Bound<'py, PyBytes>>,
     ) -> PyResult<Option<Bound<'py, PyTuple>>> {
+        let parts: Vec<&[u8]> = body.map(PyBytesMethods::as_bytes).into_iter().collect();
         let call = Call {
             method,
             url,
             headers,
-            body,
+            body: &parts,
             is_authorized: true,
         };
 
@@ -301,8 +326,10 @@ impl HTTPTransport {
         let target = address::parse(call.url).ok_or(TransportError::NeedsRequests)?;
         let settings = self.call_settings(target.is_tls, call.is_authorized)?;
 
-        // requests sends an empty body as no body at all
-        let body = call.body.map(PyBytesMethods::as_bytes).filter(|body| !body.is_empty());
+        // Empty parts carry nothing to write, and requests sends an empty body as no body at all
+        let parts: Vec<&[u8]> = call.body.iter().copied().filter(|part| !part.is_empty()).collect();
+        let total_len: usize = parts.iter().map(|part| part.len()).sum();
+        let body_len = (!parts.is_empty()).then_some(total_len);
 
         let input = HeadInput {
             method: &method,
@@ -310,7 +337,7 @@ impl HTTPTransport {
             host_header: &target.host_header,
             defaults: &settings.defaults,
             headers: call.headers,
-            body_len: body.map(<[u8]>::len),
+            body_len,
             authorization: settings.authorization.as_ref().map(|value| value.as_slice()),
         };
 
@@ -318,20 +345,22 @@ impl HTTPTransport {
             .map_err(TransportError::Python)?
             .ok_or(TransportError::NeedsRequests)?;
 
-        // A small body is written together with the head, so the request takes a single write
-        let separate_body = match body {
-            Some(body) if body.len() <= MAX_INLINE_BODY_LEN => {
-                head.extend_from_slice(body);
-                None
+        // A small body is written together with the head, so the request takes a single write,
+        // whereas the parts of a larger one are written as they are, without being joined
+        let separate_parts: &[&[u8]] = if total_len <= MAX_INLINE_BODY_LEN {
+            for part in &parts {
+                head.extend_from_slice(part);
             }
-            other => other,
+            &[]
+        } else {
+            &parts
         };
 
         let invocation = Invocation {
             target,
             request: OutgoingRequest {
                 head: &head,
-                body: separate_body,
+                body: separate_parts,
                 is_head: method == "HEAD",
                 start,
             },

@@ -24,14 +24,14 @@ from zato.common.audit_log.common import TransportStatus
 from zato.common.exception import BackendInvocationError
 
 # Test support
-from endpoint import CloseMode, EndpointResponse, Host
+from http_endpoint.endpoint import CloseMode, EndpointResponse, Host
 from support import new_connection, Test_CID
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from endpoint import TestEndpoint
+    from http_endpoint.endpoint import TestEndpoint
     from support import ServerStub
 
 # ################################################################################################################################

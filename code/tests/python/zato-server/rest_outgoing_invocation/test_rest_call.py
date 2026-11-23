@@ -24,7 +24,7 @@ from zato.common.typing_ import list_
 from zato.common.util import http_retry
 
 # Test support
-from endpoint import CloseMode, EndpointResponse, Host
+from http_endpoint.endpoint import CloseMode, EndpointResponse, Host
 from models import Customer
 from support import new_connection, Test_CID
 
@@ -33,7 +33,7 @@ from support import new_connection, Test_CID
 
 if 0:
     from zato.common.typing_ import any_
-    from endpoint import TestEndpoint
+    from http_endpoint.endpoint import TestEndpoint
     from support import ServerStub
 
 # ################################################################################################################################

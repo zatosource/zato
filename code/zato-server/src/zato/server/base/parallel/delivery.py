@@ -658,7 +658,7 @@ class PushDelivery:
 # ################################################################################################################################
 
     def _deliver_to_rest(self, message:'anydict', sub_config:'anydict') -> 'None':
-        deliver_to_rest(self.server.config_manager.config_store, message, sub_config)
+        deliver_to_rest(self.server.config_manager.config_store, self.backend.payload_cache, message, sub_config)
 
 # ################################################################################################################################
 # ################################################################################################################################

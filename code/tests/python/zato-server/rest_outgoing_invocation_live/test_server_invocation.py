@@ -16,7 +16,7 @@ from http.client import NOT_FOUND, OK
 from json import dumps, loads
 
 # Test support
-from endpoint import EndpointResponse
+from http_endpoint.endpoint import EndpointResponse
 from live_config import Basic_Outconn_Name, Basic_Password, Basic_Username, Invoke_Service_Name, OAuth_Outconn_Name, \
     OAuth_Path, OAuth_Token, OAuth_Token_Path
 
@@ -25,7 +25,7 @@ from live_config import Basic_Outconn_Name, Basic_Password, Basic_Username, Invo
 
 if 0:
     from zato.common.typing_ import any_, anydict
-    from endpoint import RecordedRequest, TestEndpoint
+    from http_endpoint.endpoint import RecordedRequest, TestEndpoint
     from live_config import InvokeClient
 
 # ################################################################################################################################

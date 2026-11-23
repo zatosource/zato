@@ -73,8 +73,9 @@ _accepted_on_retry = [Behavior_Slow_Reader, Behavior_Late_OK, Behavior_Mid_Close
 # The endpoints whose messages are accepted at the first attempt.
 _accepted_at_once = [_healthy, 'link-latency', 'link-bandwidth', 'link-slicer']
 
-# The endpoints whose messages are given up once their retries run out.
-_given_up = [Behavior_Silent, Behavior_TLS_Stall, 'link-black-hole', 'link-reset', 'link-cut']
+# The endpoints whose messages are given up once their retries run out. A delivery does not follow a redirect,
+# so each attempt to the redirecting endpoint fails.
+_given_up = [Behavior_Silent, Behavior_TLS_Stall, Behavior_Redirect, 'link-black-hole', 'link-reset', 'link-cut']
 
 # The path that every endpoint is pushed to on its host
 _url_path = '/'
@@ -288,9 +289,9 @@ def _check(run:'_Run') -> 'None':
         copies_accepted = 2 if name == Behavior_Late_OK else 1
         assert len(accepted) == message_counts[name] * copies_accepted, (name, accepted)
 
-    # .. a redirect reached its target, which received each message once ..
-    target_attempts = _get_attempts(endpoints[_redirect_target])
-    assert len(target_attempts) == message_counts[Behavior_Redirect], target_attempts
+    # .. a redirect was not followed, so its target received no request ..
+    target_requests = endpoints[_redirect_target].requests
+    assert not target_requests, target_requests
 
     # .. and each message that was never accepted was given up with an audit event.
     for name in _given_up:

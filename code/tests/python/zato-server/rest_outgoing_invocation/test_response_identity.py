@@ -23,7 +23,7 @@ from zato.common.api import DATA_FORMAT
 from zato.server.reqresp.response import Response as ServiceResponse
 
 # Test support
-from endpoint import EndpointResponse
+from http_endpoint.endpoint import EndpointResponse
 from support import new_connection, Test_CID
 
 # ################################################################################################################################
@@ -31,7 +31,7 @@ from support import new_connection, Test_CID
 
 if 0:
     from zato.common.typing_ import any_
-    from endpoint import TestEndpoint
+    from http_endpoint.endpoint import TestEndpoint
     from support import ServerStub
 
 # ################################################################################################################################

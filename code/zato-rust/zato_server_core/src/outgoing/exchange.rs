@@ -106,8 +106,8 @@ pub struct OutgoingRequest<'call> {
     /// The request line, the headers and, if it is small enough, the body, written at once.
     pub head: &'call [u8],
 
-    /// The body, if it is not part of the head.
-    pub body: Option<&'call [u8]>,
+    /// The parts of the body, in order, or none if the body is part of the head or the request has no body.
+    pub body: &'call [&'call [u8]],
 
     /// Whether the request is a HEAD request, whose response has no body.
     pub is_head: bool,
@@ -361,11 +361,7 @@ struct Exchange<'call, 'ctx, 'py> {
 impl Exchange<'_, '_, '_> {
     /// Writes the request to the connection.
     fn send(&mut self, request: &OutgoingRequest<'_>) -> Result<(), ExchangeFailure> {
-        let mut result = self.stream.write_all(self.ctx, request.head);
-
-        if let (Ok(()), Some(body)) = (&result, request.body) {
-            result = self.stream.write_all(self.ctx, body);
-        }
+        let result = self.stream.write_all_vectored(self.ctx, request.head, request.body);
 
         // A connection the endpoint closed while it was idle in the pool fails here with an OS error
         result.map_err(|err| ExchangeFailure {

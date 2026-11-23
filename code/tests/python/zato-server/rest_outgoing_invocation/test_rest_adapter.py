@@ -25,7 +25,7 @@ from zato.server.service import RESTAdapter
 
 # Test support
 from adapter_support import new_adapter
-from endpoint import CloseMode, EndpointResponse
+from http_endpoint.endpoint import CloseMode, EndpointResponse
 from models import Customer
 from support import new_connection, read_log_lines, Test_CID, Token_Path_Suffix
 
@@ -34,7 +34,7 @@ from support import new_connection, read_log_lines, Test_CID, Token_Path_Suffix
 
 if 0:
     from zato.common.typing_ import any_, strdict
-    from endpoint import TestEndpoint
+    from http_endpoint.endpoint import TestEndpoint
     from support import ServerStub
 
 # ################################################################################################################################

@@ -47,7 +47,7 @@ from zato_server_core.zato_server_core import HTTPTransport
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anytuple, dictnone, stranydict, strlist, strstrdict
+    from zato.common.typing_ import any_, anytuple, bytestuple, dictnone, stranydict, strlist, strstrdict
     from zato.server.base.parallel import ParallelServer
     ParallelServer = ParallelServer
 
@@ -424,9 +424,9 @@ class BaseHTTPSOAPWrapper(AuthMixin, TransportMixin):
 
 # ################################################################################################################################
 
-    def invoke_pubsub_push(self, url:'str', headers:'stranydict', body:'bytes') -> 'anytuple':
-        """ Sends one push of a pub/sub message through the pub/sub transport of the connection, verifying TLS
-        as the connection is configured to, and returns what the transport returned.
+    def invoke_pubsub_push(self, url:'str', headers:'stranydict', parts:'bytestuple') -> 'anytuple':
+        """ Sends one push of a pub/sub message, whose body is the given parts in order, through the pub/sub transport
+        of the connection, verifying TLS as the connection is configured to, and returns what the transport returned.
         """
         transport = self.pubsub_transport
 
@@ -443,7 +443,7 @@ class BaseHTTPSOAPWrapper(AuthMixin, TransportMixin):
                 self._pubsub_tls = tls
 
         # .. and a push the transport does not send is a failed attempt.
-        out = transport.invoke('POST', url, headers, body)
+        out = transport.invoke_parts('POST', url, headers, parts)
 
         if out is None:
             raise Exception(f'Push to `{url}` of connection `{self.config["name"]}` not sent by the transport')

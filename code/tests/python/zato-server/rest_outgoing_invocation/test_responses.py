@@ -25,7 +25,7 @@ from zato.common.api import DATA_FORMAT
 from zato.common.exception import BadRequest
 
 # Test support
-from endpoint import EndpointResponse
+from http_endpoint.endpoint import EndpointResponse
 from models import Customer
 from support import new_connection, Test_CID
 
@@ -33,7 +33,7 @@ from support import new_connection, Test_CID
 # ################################################################################################################################
 
 if 0:
-    from endpoint import TestEndpoint
+    from http_endpoint.endpoint import TestEndpoint
     from support import ServerStub
 
 # ################################################################################################################################

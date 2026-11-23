@@ -23,14 +23,14 @@ from zato.common.exception import BackendInvocationError
 from zato.common.util import http_retry
 
 # Test support
-from endpoint import CloseMode, EndpointResponse
+from http_endpoint.endpoint import CloseMode, EndpointResponse
 from support import Basic_Password, Basic_Username, new_connection, read_log_lines, Token_Path_Suffix
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from endpoint import TestEndpoint
+    from http_endpoint.endpoint import TestEndpoint
     from support import ServerStub
 
 # ################################################################################################################################

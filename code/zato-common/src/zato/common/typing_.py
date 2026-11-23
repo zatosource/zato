@@ -102,6 +102,7 @@ binaryio_     = binaryio_
 boolnone      = optional[bool]
 byteslist     = list_[bytes]
 bytesnone     = optional[bytes]
+bytestuple    = tuple_[bytes, ...]
 callable_     = callable_[..., any_]
 callnone      = optional[callable_]
 cast_         = cast_

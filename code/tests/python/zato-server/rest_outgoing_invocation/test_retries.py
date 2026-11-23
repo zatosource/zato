@@ -23,14 +23,14 @@ from zato.common.exception import BackendInvocationError
 from zato.common.util import http_retry
 
 # Test support
-from endpoint import CloseMode, EndpointResponse
+from http_endpoint.endpoint import CloseMode, EndpointResponse
 from support import new_connection, Test_CID
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from endpoint import TestEndpoint
+    from http_endpoint.endpoint import TestEndpoint
     from support import ServerStub
 
 # ################################################################################################################################

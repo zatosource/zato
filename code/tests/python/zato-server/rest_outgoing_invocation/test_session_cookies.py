@@ -10,14 +10,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Cookie header of the caller sent in place of the cookies of the session.
 
 # Test support
-from endpoint import EndpointResponse
+from http_endpoint.endpoint import EndpointResponse
 from support import new_connection, Test_CID
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from endpoint import TestEndpoint
+    from http_endpoint.endpoint import TestEndpoint
     from support import ServerStub
 
 # ################################################################################################################################

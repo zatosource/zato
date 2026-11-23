@@ -24,7 +24,7 @@ from support import Test_CID
 if 0:
     from zato.common.typing_ import any_, anydict, stranydict
     from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
-    from endpoint import TestEndpoint
+    from http_endpoint.endpoint import TestEndpoint
 
 # ################################################################################################################################
 # ################################################################################################################################

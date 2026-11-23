@@ -17,14 +17,14 @@ from zato.server.service import SAPAdapter
 
 # Test support
 from adapter_support import new_adapter, new_odata_client
-from endpoint import EndpointResponse
+from http_endpoint.endpoint import EndpointResponse
 from models import Customer
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from endpoint import TestEndpoint
+    from http_endpoint.endpoint import TestEndpoint
 
 # ################################################################################################################################
 # ################################################################################################################################
