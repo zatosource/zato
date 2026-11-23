@@ -123,7 +123,10 @@ def test_endpoint_placeholders_from_input(endpoint:'TestEndpoint', path:'str') -
         base_url = address
         endpoint = 'companies({company_id})/customers({customer_id})'
 
-    _ = _run(CustomerAdapter, data={'company_id': 'eu-central', 'customer_id': 123})
+    endpoint.set_response(path + '/companies(eu-central)/customers(123)', _json_response(_customer))
+
+    adapter = _run(CustomerAdapter, data={'company_id': 'eu-central', 'customer_id': 123})
+    assert adapter.response.payload == _customer
 
     request = endpoint.get_request(path + '/companies(eu-central)/customers(123)')
     assert request.method == 'GET'
@@ -147,7 +150,10 @@ def test_placeholders_from_config_file(endpoint:'TestEndpoint', path:'str') -> '
         }
     }
 
-    _ = _run(CustomerAdapter, config=config)
+    endpoint.set_response(path + '/companies(eu-central)/customers', _json_response(_customer_list))
+
+    adapter = _run(CustomerAdapter, config=config)
+    assert adapter.response.payload == _customer_list
 
     request = endpoint.get_request(path + '/companies(eu-central)/customers')
     assert request.method == 'GET'
