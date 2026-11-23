@@ -87,7 +87,7 @@ Verify "normal" operation.
 
             # some Exchange servers send two WWW-Authenticate headers, one with the NTLM challenge
             # and another with the 'Negotiate' keyword - make sure we operate on the right one
-            m = re.match('(NTLM [A-Za-z0-9+\-/=]+)', auth_header_value)
+            m = re.match(r'(NTLM [A-Za-z0-9+\-/=]+)', auth_header_value)
             if m:
                 auth_header_value, = m.groups()
 
