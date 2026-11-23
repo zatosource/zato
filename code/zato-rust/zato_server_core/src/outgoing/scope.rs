@@ -53,7 +53,6 @@ const SEGMENT_BITS: u32 = 16;
 /// The network scope of an address.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NetworkScope {
-
     /// An address reachable through the internet.
     Public,
 
@@ -114,13 +113,16 @@ fn classify_v4(address: Ipv4Addr) -> Option<NetworkScope> {
         return None;
     }
 
+    // The shared address space of carrier-grade NAT is not routed publicly, so it counts as private
+    let is_rfc1918 = address.is_private();
+    let is_shared_space = is_shared(first, second);
+    let is_private = is_rfc1918 || is_shared_space;
+
     let scope = if address.is_loopback() {
         NetworkScope::Loopback
     } else if address.is_link_local() {
         NetworkScope::LinkLocal
-    } else if address.is_private() {
-        NetworkScope::Private
-    } else if is_shared(first, second) {
+    } else if is_private {
         NetworkScope::Private
     } else {
         NetworkScope::Public

@@ -20,10 +20,11 @@ from gevent import sleep, spawn
 import pytest
 
 # Zato
-from endpoints import Behavior_Late_OK, Behavior_Mid_Close, Behavior_Normal, Behavior_Redirect, Behavior_Silent, \
-    Behavior_Slow_Reader, Behavior_TLS_Stall, Endpoint
+from endpoints import Behavior_Late_OK, Behavior_Mid_Close, Behavior_Normal, Behavior_Redirect, Behavior_Redirect_Found, \
+    Behavior_Redirect_Loop, Behavior_Redirect_Permanent, Behavior_Silent, Behavior_Slow_Reader, Behavior_TLS_Stall, Endpoint
 from fault_server import Server_Config
 from toxiproxy import Stream_Upstream, Toxiproxy
+from zato.server.base.parallel.delivery_rest import Max_Push_Redirects
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,7 +45,6 @@ if 0:
 
 # The endpoints - the name, the behavior, how many messages it receives and the retry settings of its messages.
 _healthy = 'healthy'
-_redirect_target = 'redirect-target'
 
 _endpoints:'anylist' = [
     (_healthy, Behavior_Normal, 600, (3, 1)),
@@ -54,7 +54,19 @@ _endpoints:'anylist' = [
     (Behavior_Silent, Behavior_Silent, 2, (1, 1)),
     (Behavior_TLS_Stall, Behavior_TLS_Stall, 2, (1, 1)),
     (Behavior_Redirect, Behavior_Redirect, 20, (3, 1)),
+    (Behavior_Redirect_Permanent, Behavior_Redirect_Permanent, 20, (3, 1)),
+    (Behavior_Redirect_Found, Behavior_Redirect_Found, 3, (1, 1)),
+    (Behavior_Redirect_Loop, Behavior_Redirect_Loop, 3, (1, 1)),
 ]
+
+# The endpoints that redirect to an endpoint of their own, which accepts everything.
+_redirected_to_target = [Behavior_Redirect, Behavior_Redirect_Permanent, Behavior_Redirect_Found]
+
+# The endpoints whose redirect is followed, so that their targets receive each message once.
+_followed = [Behavior_Redirect, Behavior_Redirect_Permanent]
+
+# How many requests each attempt of a message sends to the endpoint that redirects to itself.
+_loop_request_count = Max_Push_Redirects + 1
 
 # The endpoints behind a proxy of Toxiproxy - the name, the toxic and its attributes, how many messages it receives
 # and the retry settings of its messages. Each toxic applies to what the delivery sends.
@@ -73,9 +85,17 @@ _accepted_on_retry = [Behavior_Slow_Reader, Behavior_Late_OK, Behavior_Mid_Close
 # The endpoints whose messages are accepted at the first attempt.
 _accepted_at_once = [_healthy, 'link-latency', 'link-bandwidth', 'link-slicer']
 
-# The endpoints whose messages are given up once their retries run out. A delivery does not follow a redirect,
-# so each attempt to the redirecting endpoint fails.
-_given_up = [Behavior_Silent, Behavior_TLS_Stall, Behavior_Redirect, 'link-black-hole', 'link-reset', 'link-cut']
+# The endpoints whose messages are given up once their retries run out. A delivery refuses a 302,
+# and a redirect to the endpoint itself exceeds the limit of redirects, so each attempt to them fails.
+_given_up = [
+    Behavior_Silent,
+    Behavior_TLS_Stall,
+    Behavior_Redirect_Found,
+    Behavior_Redirect_Loop,
+    'link-black-hole',
+    'link-reset',
+    'link-cut',
+]
 
 # The path that every endpoint is pushed to on its host
 _url_path = '/'
@@ -97,6 +117,12 @@ def _get_subscriber_name(name:'str') -> 'str':
 
 def _get_topic_name(name:'str') -> 'str':
     out = f'faults.endpoints.{name}'
+    return out
+
+# ################################################################################################################################
+
+def _get_target_name(name:'str') -> 'str':
+    out = f'{name}-target'
     return out
 
 # ################################################################################################################################
@@ -128,13 +154,18 @@ class _Run:
 
     def start_endpoints(self) -> 'None':
 
-        # The target of the redirect accepts everything ..
-        target = Endpoint(_redirect_target, Behavior_Normal)
-        self.endpoints[_redirect_target] = target
-
-        # .. each other endpoint is reached directly ..
+        # Each endpoint is reached directly, and the target of each redirect accepts everything ..
         for name, behavior, message_count, retry_settings in _endpoints:
-            endpoint = Endpoint(name, behavior, target.port)
+
+            if name in _redirected_to_target:
+                target_name = _get_target_name(name)
+                target = Endpoint(target_name, Behavior_Normal)
+                self.endpoints[target_name] = target
+                redirect_port = target.port
+            else:
+                redirect_port = None
+
+            endpoint = Endpoint(name, behavior, redirect_port)
             self._add(name, endpoint, message_count, retry_settings)
 
             scheme = 'https' if behavior == Behavior_TLS_Stall else 'http'
@@ -289,9 +320,28 @@ def _check(run:'_Run') -> 'None':
         copies_accepted = 2 if name == Behavior_Late_OK else 1
         assert len(accepted) == message_counts[name] * copies_accepted, (name, accepted)
 
-    # .. a redirect was not followed, so its target received no request ..
-    target_requests = endpoints[_redirect_target].requests
-    assert not target_requests, target_requests
+    # .. a 307 and a 308 were followed, so their targets received each message once, at its first attempt ..
+    for name in _followed:
+        target_name = _get_target_name(name)
+        target_attempts = _get_attempts(endpoints[target_name])
+        assert len(target_attempts) == message_counts[name], (target_name, target_attempts)
+
+        for msg_id, msg_attempts in target_attempts.items():
+            assert msg_attempts == [1], (target_name, msg_id, msg_attempts)
+
+    # .. a 302 was refused, so its target received no request ..
+    found_target_name = _get_target_name(Behavior_Redirect_Found)
+    found_target_requests = endpoints[found_target_name].requests
+    assert not found_target_requests, found_target_requests
+
+    # .. a redirect to the endpoint itself was followed until the limit of redirects at each attempt ..
+    loop_attempts = _get_attempts(endpoints[Behavior_Redirect_Loop])
+    assert len(loop_attempts) == message_counts[Behavior_Redirect_Loop], loop_attempts
+
+    for msg_id, msg_attempts in loop_attempts.items():
+        for attempt in set(msg_attempts):
+            request_count = msg_attempts.count(attempt)
+            assert request_count == _loop_request_count, (msg_id, attempt, request_count)
 
     # .. and each message that was never accepted was given up with an audit event.
     for name in _given_up:
@@ -327,7 +377,8 @@ def endpoint_run(endpoint_work_dir:'str') -> 'rungen':
 
 def test_endpoints(endpoint_work_dir:'str', endpoint_run:'_Run', server:'PubSubServer') -> 'None':
     """ Push endpoints that read slowly, never respond, respond late, close in the middle of a response, stall
-    the TLS handshake or redirect, and push links that are slow, limited, sliced, held, reset or cut.
+    the TLS handshake or redirect with 307, 308, 302 or to themselves, and push links that are slow, limited, sliced,
+    held, reset or cut.
     """
     run = endpoint_run
 

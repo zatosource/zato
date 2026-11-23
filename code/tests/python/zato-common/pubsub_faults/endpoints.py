@@ -8,11 +8,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Push endpoints of item 15.12, each a TCP server of its own that reads and answers HTTP requests itself, so that it can
 # read a request one byte per second, never respond, respond after the delivery timeout, close the connection
-# in the middle of a response, stall the TLS handshake or redirect.
+# in the middle of a response, stall the TLS handshake, redirect to another endpoint or redirect to itself.
 
 # stdlib
 from dataclasses import dataclass
-from http.client import OK, responses, TEMPORARY_REDIRECT
+from http.client import FOUND, OK, PERMANENT_REDIRECT, responses, TEMPORARY_REDIRECT
 from time import monotonic
 
 # gevent
@@ -40,7 +40,20 @@ Behavior_Silent      = 'silent'
 Behavior_Late_OK     = 'late-ok'
 Behavior_Mid_Close   = 'mid-close'
 Behavior_TLS_Stall   = 'tls-stall'
-Behavior_Redirect    = 'redirect'
+
+# The behaviors of the endpoints that redirect - a 307 and a 308, which a delivery follows, a 302, which it refuses,
+# and a 307 to the endpoint itself, which it follows until the limit of redirects.
+Behavior_Redirect           = 'redirect'
+Behavior_Redirect_Permanent = 'redirect-permanent'
+Behavior_Redirect_Found     = 'redirect-found'
+Behavior_Redirect_Loop      = 'redirect-loop'
+
+Redirect_Statuses = {
+    Behavior_Redirect: TEMPORARY_REDIRECT,
+    Behavior_Redirect_Permanent: PERMANENT_REDIRECT,
+    Behavior_Redirect_Found: FOUND,
+    Behavior_Redirect_Loop: TEMPORARY_REDIRECT,
+}
 
 # How long a silent endpoint or a stalled TLS handshake holds a connection, how long a late response takes,
 # which is beyond the timeout of the delivery, and how often a slow reader reads one byte, in seconds.
@@ -57,7 +70,7 @@ _response_ok = f'HTTP/1.1 {OK} {responses[OK]}\r\nContent-Type: application/json
 _response_partial = f'HTTP/1.1 {OK} {responses[OK]}\r\nContent-Type: application/json\r\nContent-Length: 100\r\n' + \
     '\r\n{"part'
 
-_response_redirect = f'HTTP/1.1 {TEMPORARY_REDIRECT} {responses[TEMPORARY_REDIRECT]}\r\nLocation: http://{_host}:{{}}/\r\n' + \
+_response_redirect = 'HTTP/1.1 {status} {reason}\r\nLocation: http://' + _host + ':{port}/\r\n' + \
     'Content-Length: 0\r\nConnection: close\r\n\r\n'
 
 _header_msg_id = 'x-zato-msg-id'
@@ -120,7 +133,7 @@ def _send(client:'socket', response:'str') -> 'None':
 
 class Endpoint:
     """ One push endpoint with one behavior, which a misbehaving endpoint applies to the first attempt
-    of each message only, apart from a silent one, a stalled TLS handshake and a redirect, which apply it to every attempt.
+    of each message only, apart from a silent one, a stalled TLS handshake and a redirect, which apply it to every request.
     """
 
     def __init__(self, name:'str', behavior:'str', redirect_port:'intnone'=None) -> 'None':
@@ -190,6 +203,22 @@ class Endpoint:
 
 # ################################################################################################################################
 
+    def _redirect(self, client:'socket') -> 'None':
+        """ Answers with the status of the behavior and the address of the target of the redirect.
+        """
+        status = Redirect_Statuses[self.behavior]
+        reason = responses[status]
+
+        if self.behavior == Behavior_Redirect_Loop:
+            port = self.port
+        else:
+            port = self.redirect_port
+
+        response = _response_redirect.format(status=status, reason=reason, port=port)
+        _send(client, response)
+
+# ################################################################################################################################
+
     def _handle(self, client:'socket', address:'any_') -> 'None':
 
         request = EndpointRequest()
@@ -230,10 +259,9 @@ class Endpoint:
             sleep(_hold_seconds)
             return
 
-        # .. a redirect sends the delivery to another endpoint ..
-        if self.behavior == Behavior_Redirect:
-            response = _response_redirect.format(self.redirect_port)
-            _send(client, response)
+        # .. a redirect sends the delivery to another endpoint, or to this one in a loop ..
+        if self.behavior in Redirect_Statuses:
+            self._redirect(client)
             return
 
         # .. the first attempt receives a late or a partial response ..

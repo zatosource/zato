@@ -105,7 +105,10 @@ fn ipv6_scopes() {
         (v6([0x2606, 0x4700, 0, 0, 0, 0, 0, 0x1111]), Some(NetworkScope::Public)),
         (v6([0xfc00, 0, 0, 0, 0, 0, 0, 1]), Some(NetworkScope::Private)),
         (v6([0xfd00, 0, 0, 0, 0, 0, 0, 1]), Some(NetworkScope::Private)),
-        (v6([0xfdff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff]), Some(NetworkScope::Private)),
+        (
+            v6([0xfdff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff]),
+            Some(NetworkScope::Private),
+        ),
         (v6([0, 0, 0, 0, 0, 0, 0, 1]), Some(NetworkScope::Loopback)),
         (v6([0xfe80, 0, 0, 0, 0, 0, 0, 1]), Some(NetworkScope::LinkLocal)),
         (v6([0xfebf, 0xffff, 0, 0, 0, 0, 0, 1]), Some(NetworkScope::LinkLocal)),
@@ -141,7 +144,6 @@ fn nat64_by_embedded_address() {
         (v6([0x0064, 0xff9b, 0, 0, 0, 0, 0xa9fe, 0xa9fe]), Some(NetworkScope::LinkLocal)),
         (v6([0x0064, 0xff9b, 0, 0, 0, 0, 0x0808, 0x0808]), Some(NetworkScope::Public)),
         (v6([0x0064, 0xff9b, 0, 0, 0, 0, 0, 0]), None),
-
         // An address under 64:ff9b::/32 outside of the /96 prefix is not a NAT64 address of an IPv4 address
         (v6([0x0064, 0xff9b, 1, 0, 0, 0, 0x7f00, 0x0001]), Some(NetworkScope::Public)),
     ]);

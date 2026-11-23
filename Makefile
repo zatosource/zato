@@ -8,7 +8,7 @@
 	analytics update cron-update update-on-prem-gateway stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge on-prem-gateway on-prem-gateway-hub file-listener sftp api-portal api-portal-demo api-portal-tutorial b2b-portal mcp-demo \
 	help install-deps install-fhir-converter \
-	test-server test-server-fuzz test-rest test-rest-fuzz test-rest-outgoing test-rest-perf test-rest-channel test-rest-channel-perf test-scheduler test-scheduler-failover \
+	test-server test-server-fuzz test-rest test-rest-fuzz test-rest-outgoing test-rest-redirects test-rest-perf test-rest-channel test-rest-channel-perf test-scheduler test-scheduler-failover \
 	test-ha test-ha-core test-ha-pubsub-subscription-in-process test-ha-push-delivery test-ha-pubsub-subscription \
 	test-ha-postgresql-local test-ha-power-loss test-ha-pubsub-subscription-ui test-ha-postgresql \
 	test-ha-postgresql-kubernetes test-ha-postgresql-soak \
@@ -666,6 +666,22 @@ test-rest-outgoing: ## Outgoing REST invocation tests, in-process and through a 
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
 		$(CURDIR)/code/tests/python/zato-server/rest_outgoing_invocation_live/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rest_outgoing_invocation_live -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+
+test-rest-redirects: ## Pub/sub push redirects - the network scopes in Rust, the redirect policy, the follow loop against local endpoints and the delivery through a running server.
+	$(Zato_Log_Reset)
+	$(LOAD_CARGO_ENV) && cargo test --manifest-path $(ZATO_RUST)/zato_server_core/Cargo.toml --lib outgoing::scope $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_push_redirect/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_push_redirect -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_push_redirect_wire/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_push_redirect_wire -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/pubsub_push_redirect_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_push_redirect_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 test-rest-perf: ## Outgoing REST invocations measured as server CPU time per invocation.
