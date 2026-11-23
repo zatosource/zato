@@ -23,6 +23,7 @@ from itertools import count
 # gevent
 from gevent import sleep as gevent_sleep
 from gevent.server import StreamServer
+from gevent.ssl import SSLContext as GeventSSLContext
 
 # Test support
 from http_endpoint.endpoint_certificates import CertificateSet
@@ -238,7 +239,10 @@ class TestEndpoint:
 # ################################################################################################################################
 
     def _new_server_context(self, cert_path:'str', key_path:'str') -> 'ssl.SSLContext':
-        out = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+
+        # The client sockets of a server cooperate with gevent only if the context is a context of gevent,
+        # which a process that gevent did not patch does not create through the ssl module.
+        out = GeventSSLContext(ssl.PROTOCOL_TLS_SERVER)
         out.load_cert_chain(cert_path, key_path)
         return out
 
@@ -251,6 +255,10 @@ class TestEndpoint:
         listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         listener.bind((Host, 0))
         listener.listen(1024)
+
+        # The server accepts connections until the listener has none pending, which requires a non-blocking listener
+        # in a process that gevent did not patch.
+        listener.setblocking(False)
 
         if context:
             server = StreamServer(listener, self._handle_connection, ssl_context=context)
