@@ -679,9 +679,12 @@ def call_database(engine:'Engine', func:'callable_', *args:'any_', prepare:'call
         else:
             out = threadpool.apply(run, run_args)
 
+    # The preparation of an engine that does not need the pool still runs in it, because it digests and indexes payloads
+    # without the GIL, which would otherwise hold up every greenlet of the hub for as long as it runs.
     else:
         if prepare:
-            prepare()
+            hub = get_hub()
+            _ = hub.threadpool.apply(prepare)
 
         out = run_in_write_path(*call_args)
 

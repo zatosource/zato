@@ -88,6 +88,9 @@ Duty_Cycles = [(1, 0.2), (60, 5)]
 # Where a freezing script in the container records its process identifier.
 _freeze_pid_file = '/tmp/zato-pubsub-test-freeze.pid'
 
+# The state that /proc/<pid>/status reports for a process that SIGSTOP stopped.
+_stopped_state = 'T (stopped)'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -486,10 +489,13 @@ class FreezeFault(Fault):
             self._greenlets = []
             os.kill(self.pid, signal.SIGCONT)
 
-        # A backend that the fault froze may have ended in the meantime, which is why its resumption may fail.
+        # A backend that the fault froze may have ended in the meantime, which is why its resumption may fail,
+        # but a process that still exists must not remain stopped.
         else:
-            script = f'kill $(cat {_freeze_pid_file}) 2>/dev/null; kill -CONT {self.pid} 2>/dev/null; true'
-            _ = self.container.execute(script)
+            script = f'kill $(cat {_freeze_pid_file}) 2>/dev/null; kill -CONT {self.pid} 2>/dev/null; ' + \
+                f'grep "^State:" /proc/{self.pid}/status 2>/dev/null; true'
+            state = self.container.execute(script)
+            assert _stopped_state not in state, f'Process {self.pid} of type `{self.target}` remains stopped: {state}'
 
         self.pid = 0
 

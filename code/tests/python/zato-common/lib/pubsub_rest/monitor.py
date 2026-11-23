@@ -65,6 +65,10 @@ _min_free_disk_gb = 20
 # The percentile of the latencies that each minute reports.
 _percentile = 0.99
 
+# The fewest latencies of which the percentile is not the slowest one. Below that, the percentile is the maximum,
+# as in the final part of a minute of a run, and is reported without being checked.
+_min_percentile_samples = round(1 / (1 - _percentile)) + 1
+
 # How many percent one processor used for a whole interval is.
 _full_processor_percent = 100
 
@@ -295,6 +299,21 @@ class Monitor:
 
 # ################################################################################################################################
 
+    def _check_p99(self, report:'MinuteReport', name:'str', latencies:'floatlist', p99:'float', limit:'float') -> 'None':
+        """ Compares the p99 of one kind of latency with its limit, unless there are too few latencies for the p99
+        to differ from the slowest one.
+        """
+        sample_count = len(latencies)
+
+        if sample_count < _min_percentile_samples:
+            report.details.append(f'{name} p99 {p99:.3f}s of {sample_count} sample(s) not checked, ' +
+                f'below {_min_percentile_samples} samples')
+
+        elif p99 > limit:
+            report.failures.append(f'{name} p99 {p99:.3f}s above {limit}s')
+
+# ################################################################################################################################
+
     def _check(self, report:'MinuteReport', counters:'MinuteCounters') -> 'None':
         """ Compares the measurements of a minute with the limits of the suite.
         """
@@ -307,15 +326,9 @@ class Monitor:
             report.details.append(f'drive flush stalled {report.drive_flush * _ms_per_second:.0f} ms, latency not checked')
 
         else:
-
-            if report.publish_p99 > limits.publish_p99_seconds:
-                report.failures.append(f'publish p99 {report.publish_p99:.3f}s above {limits.publish_p99_seconds}s')
-
-            if report.pull_p99 > limits.pull_p99_seconds:
-                report.failures.append(f'pull p99 {report.pull_p99:.3f}s above {limits.pull_p99_seconds}s')
-
-            if report.push_p99 > limits.push_p99_seconds:
-                report.failures.append(f'push p99 {report.push_p99:.3f}s above {limits.push_p99_seconds}s')
+            self._check_p99(report, 'publish', counters.publish_seconds, report.publish_p99, limits.publish_p99_seconds)
+            self._check_p99(report, 'pull', counters.pull_seconds, report.pull_p99, limits.pull_p99_seconds)
+            self._check_p99(report, 'push', counters.push_seconds, report.push_p99, limits.push_p99_seconds)
 
         if self.checks_rate and not report.is_exempt:
             min_rate = self.traffic.rate * limits.min_rate_ratio
@@ -399,6 +412,10 @@ class Monitor:
             'pull p99 %.3f s, push p99 %.3f s, message rows %d, failures %s', report.index, report.since_start,
             report.publish_rate, report.pull_rate, report.push_rate, report.publish_p99, report.pull_p99, report.push_p99,
             report.message_rows, report.failures)
+
+        logger.info('Interval %d resources -> server CPU %.0f%%, server RSS %.0f MB, delivery rows %d, WAL %.0f MB, ' +
+            'longest drive flush %.0f ms, details %s', report.index, report.cpu_percent, report.rss_mb, report.delivery_rows,
+            report.wal_mb, report.drive_flush * _ms_per_second, report.details)
 
         return report
 
