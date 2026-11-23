@@ -211,13 +211,14 @@ class DiskFault(Fault):
 # ################################################################################################################################
 
 class CPUFault(Fault):
-    """ Item 15.7 - cpu.max limits the container to a share of the CPU time it used in the baseline,
-    and a total loss freezes all of its processes.
+    """ Item 15.7 - cpu.max limits the container to a share of the CPU time that the baseline container used
+    in the baseline, and a total loss freezes all of its processes.
     """
     name = 'cpu'
 
-    def __init__(self, container:'Container') -> 'None':
+    def __init__(self, container:'Container', baseline_container:'Container') -> 'None':
         self.container = container
+        self.baseline_container = baseline_container
         self.baseline_cpus = 0.0
         self._baseline_started = 0.0
         self._baseline_usage = 0
@@ -226,13 +227,13 @@ class CPUFault(Fault):
 
     def start_baseline(self) -> 'None':
         self._baseline_started = monotonic()
-        self._baseline_usage = self.container.read_cpu_usage_usec()
+        self._baseline_usage = self.baseline_container.read_cpu_usage_usec()
 
 # ################################################################################################################################
 
     def end_baseline(self) -> 'None':
         elapsed = monotonic() - self._baseline_started
-        used_usec = self.container.read_cpu_usage_usec() - self._baseline_usage
+        used_usec = self.baseline_container.read_cpu_usage_usec() - self._baseline_usage
         used_seconds = used_usec / _usec_per_second
 
         self.baseline_cpus = used_seconds / elapsed

@@ -49,7 +49,7 @@ def test_disk_delay_and_cpu(fault_database:'FaultDatabase', server:'PubSubServer
     """
     disk = DiskFault(fault_database.container, fault_database.device)
     delay = PacketFault(fault_database.container, Packet_Delay)
-    cpu = CPUFault(fault_database.container)
+    cpu = CPUFault(fault_database.container, fault_database.container)
 
     fault = CombinedFault('disk-50-packet-delay-20-and-cpu-50', [(disk, _level), (delay, 20), (cpu, _level)])
 
@@ -77,9 +77,13 @@ def test_memory_during_drain(fault_database:'FaultDatabase', server:'PubSubServe
 # ################################################################################################################################
 
 def test_cpu_during_failover(failover_database:'ReplicatedDatabase', server:'PubSubServer') -> 'None':
-    """ The standby is short of 90 percent of its CPU when the primary ends and the standby is promoted.
+    """ The standby is short of 90 percent of the CPU that the primary used in the baseline when the primary ends
+    and the standby is promoted, because the standby takes over the load of the primary.
     """
-    cpu = CPUFault(Container(failover_database.standby_container))
+    standby = Container(failover_database.standby_container)
+    primary = Container(failover_database.primary.container_name)
+
+    cpu = CPUFault(standby, primary)
 
     fault = FailoverFault('cpu-90-during-failover', failover_database, cpu, 90)
 

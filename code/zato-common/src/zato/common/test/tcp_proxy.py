@@ -128,6 +128,11 @@ class Proxy:
             client_socket.close()
             return
 
+        # Each chunk is forwarded as soon as it is read. Otherwise, the Nagle algorithm holds every chunk after the first
+        # of a response until the peer acknowledges the previous one, which a delayed acknowledgment postpones by up to 40 ms.
+        client_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        upstream_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+
         connection = _Connection(client_socket, upstream_socket)
         self.connections.add(connection)
 

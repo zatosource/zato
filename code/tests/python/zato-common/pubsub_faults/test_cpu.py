@@ -45,7 +45,7 @@ def test_cpu(fault_database:'FaultDatabase', server:'PubSubServer', level:'int')
     """ Item 15.7 - PostgreSQL loses a share of the CPU time that it used in the baseline, and all of its processes
     are frozen at a total loss.
     """
-    fault = CPUFault(fault_database.container)
+    fault = CPUFault(fault_database.container, fault_database.container)
 
     label = get_label(fault.name, level)
 
