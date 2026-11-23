@@ -13,6 +13,7 @@ _ = monkey.patch_all()
 # stdlib
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 
@@ -68,6 +69,9 @@ _server = PubSubServer('pubsub-faults')
 
 # The name of the control file of the faults of the PostgreSQL container.
 _database_control_name = 'postgresql'
+
+# The name of the copy of the log of each container of the failover, which outlives the container.
+_failover_log_copy_name = 'pubsub-faults-failover-{}.txt'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -171,8 +175,21 @@ def failover_database() -> 'replicatedgen':
             yield replicated
             get_database_engine().dispose()
     finally:
+        _copy_container_log(replicated.primary.container_name, 'primary')
+        _copy_container_log(replicated.standby_container, 'standby')
         stop_replicated_database(replicated)
         shutil.rmtree(work_dir, ignore_errors=True)
+
+# ################################################################################################################################
+
+def _copy_container_log(container_name:'str', role:'str') -> 'None':
+    """ Copies the log of a database container of the failover, with its slow statements, checkpoints and autovacuum runs,
+    to the temporary directory, where it remains after the container is removed.
+    """
+    path = os.path.join(tempfile.gettempdir(), _failover_log_copy_name.format(role))
+
+    with open(path, 'wb') as log_file:
+        _ = subprocess.run(['docker', 'logs', container_name], stdout=log_file, stderr=subprocess.STDOUT, check=True)
 
 # ################################################################################################################################
 
