@@ -97,7 +97,6 @@ include $(CURDIR)/code/tests/check.mk
 Zato_Health := $(Zato_Health_Root)
 Zato_Libs   := $(CURDIR)/code/zato-libs
 
-FAIL_ON_FIRST   ?=
 SKIP_PASSED_F   ?=
 FROM_LAST_F     ?=
 SLOW_F          ?=
@@ -107,7 +106,7 @@ PERF_TIER       ?=
 HEAVY           ?=
 JSON            ?=
 
-FAIL_FAST     := $(if $(FAIL_ON_FIRST),-x,)
+FAIL_FAST     := -x
 SKIP_PASSED   := $(if $(SKIP_PASSED_F),--ff,)
 FROM_LAST     := $(if $(FROM_LAST_F),--lf,)
 FROM_LAST_CS  := $(if $(FROM_LAST_F),--ff,)
@@ -968,108 +967,124 @@ Zato_Test_Resolver_Source  := $(CURDIR)/code/zato-common/src/zato/common/test/na
 Zato_Test_Resolver_Dir     := /tmp/zato-test-resolver
 Zato_Test_Resolver_Library := $(Zato_Test_Resolver_Dir)/resolver.so
 
-test-pubsub: ## Every pub/sub functional test - core, SQL and outgoing delivery.
+# The runners of the suites of test-pubsub - a plain pytest process and a pytest process patched by gevent before pytest
+# loads its plugins, some of which import ssl.
+Zato_Test_PubSub_Plain          := -m pytest -W ignore::DeprecationWarning
+Zato_Test_PubSub_Gevent         := -m gevent.monkey --module pytest -W ignore::DeprecationWarning
+Zato_Test_PubSub_Gevent_Process := -m gevent.monkey --module pytest -W "ignore:This process:DeprecationWarning"
+
+Zato_Test_Step_Runner_pubsub-core := $(Zato_Test_PubSub_Plain)
+Zato_Test_Step_Tests_pubsub-core  := \
+	$(CURDIR)/code/tests/python/zato-common/pubsub/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_service/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_service_subscriber/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_push/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_cleanup/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_combined/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_concurrent/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_push/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_ack_atomicity/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_cli/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_endpoint_delete/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_new_sub/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_sec_delete/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_sec_edit/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_sub_edit/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_sub_delete/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_sub_delete_mismatch/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_subscribe_atomic/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_perm_edit/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_topic_delete/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_topic_delete_atomic/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_topic_rename/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_topic_rename_atomic/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_unsub_atomic/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_publish_retry/ \
+	$(CURDIR)/code/tests/python/zato-common/pubsub_payload_cache/
+
+Zato_Test_Step_Runner_pubsub-failover := $(Zato_Test_PubSub_Plain)
+Zato_Test_Step_Tests_pubsub-failover  := $(CURDIR)/code/tests/python/zato-server/pubsub_failover/
+
+Zato_Test_Step_Runner_pubsub-replication := $(Zato_Test_PubSub_Gevent)
+Zato_Test_Step_Tests_pubsub-replication  := $(CURDIR)/code/tests/python/zato-common/pubsub_replication/
+
+# The faults apply to a PostgreSQL container.
+Zato_Test_Step_Env_pubsub-faults    := Zato_Test_PubSub_DB_Mode=postgresql
+Zato_Test_Step_Runner_pubsub-faults := $(Zato_Test_PubSub_Gevent)
+Zato_Test_Step_Tests_pubsub-faults  := $(CURDIR)/code/tests/python/zato-common/pubsub_faults/ $(Zato_Test_Without_Soak)
+
+# The managed suites run on the managed profile $(1), with the resolver library preloaded.
+define Zato_Test_PubSub_Managed_Step
+Zato_Test_Step_Env_pubsub-managed-$(1)    := LD_PRELOAD=$(Zato_Test_Resolver_Library) Zato_Test_PubSub_DB_Mode=$(1)
+Zato_Test_Step_Runner_pubsub-managed-$(1) := $(Zato_Test_PubSub_Gevent)
+Zato_Test_Step_Tests_pubsub-managed-$(1)  := $(CURDIR)/code/tests/python/zato-common/pubsub_managed/
+endef
+
+# The stability suites and the suites of the subscription flags run on the pub/sub database $(1).
+define Zato_Test_PubSub_Stability_Step
+Zato_Test_Step_Env_pubsub-stability-$(1)              := Zato_Test_PubSub_DB_Mode=$(1)
+Zato_Test_Step_Runner_pubsub-stability-$(1)           := $(Zato_Test_PubSub_Gevent)
+Zato_Test_Step_Tests_pubsub-stability-$(1)            := $(CURDIR)/code/tests/python/zato-server/pubsub_stability/ $(Zato_Test_Without_Soak)
+Zato_Test_Step_Env_pubsub-subscription-flags-$(1)     := Zato_Test_PubSub_DB_Mode=$(1)
+Zato_Test_Step_Runner_pubsub-subscription-flags-$(1)  := $(Zato_Test_PubSub_Gevent)
+Zato_Test_Step_Tests_pubsub-subscription-flags-$(1)   := $(Zato_Test_HA_Dir_pubsub-subscription-flags)/ $(Zato_Test_Without_Soak)
+endef
+
+$(foreach mode,$(Zato_Test_PubSub_Managed_Modes),$(eval $(call Zato_Test_PubSub_Managed_Step,$(mode))))
+$(foreach mode,$(Zato_Test_PubSub_Stability_Modes),$(eval $(call Zato_Test_PubSub_Stability_Step,$(mode))))
+
+Zato_Test_Step_Runner_pubsub-config-store := $(Zato_Test_PubSub_Plain)
+Zato_Test_Step_Tests_pubsub-config-store  := \
+	$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_topic.py \
+	$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_subscription.py \
+	$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_permission.py \
+	$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_permission_revoke.py \
+	$(CURDIR)/code/tests/python/zato-server/service/test_service_publish.py
+
+Zato_Test_Step_Runner_pubsub-backend := $(Zato_Test_PubSub_Gevent_Process)
+Zato_Test_Step_Tests_pubsub-backend  := \
+	$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_pubsub_backend_sqlite.py \
+	$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_store_sqlite.py \
+	$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_pubsub_backend_postgresql.py \
+	$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_store_postgresql.py \
+	$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_generation_postgresql.py \
+	$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_clock.py
+
+Zato_Test_Step_Runner_pubsub-outgoing := $(Zato_Test_PubSub_Gevent_Process)
+Zato_Test_Step_Tests_pubsub-outgoing  := \
+	$(CURDIR)/code/tests/python/zato-common/pubsub/test_outgoing.py \
+	$(CURDIR)/code/tests/python/zato-common/pubsub_outgoing/ \
+	$(CURDIR)/code/tests/python/zato-server/outgoing_delivery/
+
+Zato_Test_Step_Runner_pubsub-outgoing-live := $(Zato_Test_PubSub_Plain)
+Zato_Test_Step_Tests_pubsub-outgoing-live  := $(CURDIR)/code/tests/python/zato-server/pubsub_outgoing/
+
+# The steps of test-pubsub in the order they run, the step of exactly-once delivery, which runs its own walk, last,
+# and the step that the target is currently on.
+Zato_Test_PubSub_Steps := sql-conformance-static sql-conformance-engines \
+	pubsub-core pubsub-failover pubsub-replication pubsub-faults \
+	$(foreach mode,$(Zato_Test_PubSub_Managed_Modes),pubsub-managed-$(mode)) \
+	$(foreach mode,$(Zato_Test_PubSub_Stability_Modes),pubsub-stability-$(mode)) \
+	$(foreach mode,$(Zato_Test_PubSub_Stability_Modes),pubsub-subscription-flags-$(mode)) \
+	pubsub-config-store pubsub-backend pubsub-outgoing pubsub-outgoing-live
+Zato_Test_PubSub_Exactly_Once_Step := pubsub-exactly-once
+Zato_Test_PubSub_Resume_File       := $(CURDIR)/code/tests/.test-pubsub-resume
+
+test-pubsub: ## Every pub/sub functional test - core, SQL and outgoing delivery, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+	@if [ -n "$(RESTART)" ]; then rm -f $(Zato_Test_PubSub_Resume_File); fi
 	$(Zato_Log_Reset)
-	$(MAKE) test-sql-conformance-fast $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-common/pubsub/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_service/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_service_subscriber/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_push/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_cleanup/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_combined/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_concurrent/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_clear_queue_push/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_ack_atomicity/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_cli/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_endpoint_delete/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_new_sub/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_sec_delete/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_sec_edit/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_edit/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_delete/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_sub_delete_mismatch/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_subscribe_atomic/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_perm_edit/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_delete/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_delete_atomic/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_rename/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_topic_rename_atomic/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_unsub_atomic/ \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_publish_retry/ \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_payload_cache/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_failover/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_failover -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-# Each of these suites runs in a pytest process of its own, patched by gevent before pytest loads its plugins,
-# some of which import ssl. The faults apply to a PostgreSQL container, the managed suites run on each managed profile,
-# with the resolver library preloaded, and the stability suites run on SQLite and PostgreSQL.
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_replication/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_replication -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	Zato_Test_PubSub_DB_Mode=postgresql ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_faults/ $(Zato_Test_Without_Soak) \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_faults -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	mkdir -p $(Zato_Test_Resolver_Dir)
 	gcc -shared -fPIC -o $(Zato_Test_Resolver_Library) $(Zato_Test_Resolver_Source) -ldl -lresolv
-	for mode in $(Zato_Test_PubSub_Managed_Modes); do \
-		LD_PRELOAD=$(Zato_Test_Resolver_Library) Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) \
-		$(ZATO_PY) -m gevent.monkey --module pytest \
-			$(CURDIR)/code/tests/python/zato-common/pubsub_managed/ \
-			-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_managed_$$mode -W ignore::DeprecationWarning \
-			$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
-	done
-	for mode in $(Zato_Test_PubSub_Stability_Modes); do \
-		Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
-			$(CURDIR)/code/tests/python/zato-server/pubsub_stability/ $(Zato_Test_Without_Soak) \
-			-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_stability_$$mode -W ignore::DeprecationWarning \
-			$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
-	done
-	for mode in $(Zato_Test_PubSub_Stability_Modes); do \
-		Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
-			$(Zato_Test_HA_Dir_pubsub-subscription-flags)/ $(Zato_Test_Without_Soak) \
-			-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_subscription_flags_$$mode -W ignore::DeprecationWarning \
-			$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
-	done
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_topic.py \
-		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_subscription.py \
-		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_permission.py \
-		$(CURDIR)/code/tests/python/zato-server/config_store/test_pubsub_permission_revoke.py \
-		$(CURDIR)/code/tests/python/zato-server/service/test_service_publish.py \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_config_store -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_pubsub_backend_sqlite.py \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_store_sqlite.py \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_pubsub_backend_postgresql.py \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_store_postgresql.py \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_generation_postgresql.py \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_clock.py \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_backend \
-		-W "ignore:This process:DeprecationWarning" \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
-		$(CURDIR)/code/tests/python/zato-common/pubsub/test_outgoing.py \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_outgoing/ \
-		$(CURDIR)/code/tests/python/zato-server/outgoing_delivery/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_outgoing \
-		-W "ignore:This process:DeprecationWarning" \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-server/pubsub_outgoing/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_outgoing_live \
-		-W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	$(MAKE) test-pubsub-exactly-once $(Zato_Log)
+	@resume=''; \
+	if [ -f $(Zato_Test_PubSub_Resume_File) ]; then \
+		resume=$$(cat $(Zato_Test_PubSub_Resume_File)); \
+		echo ">>> Resuming from $$resume" $(Zato_Log); \
+	fi; \
+	$(foreach step,$(Zato_Test_PubSub_Steps),$(call Zato_Test_Step,$(step),$(Zato_Test_PubSub_Resume_File))) \
+	echo "$(Zato_Test_PubSub_Exactly_Once_Step)" > $(Zato_Test_PubSub_Resume_File); \
+	$(MAKE) test-pubsub-exactly-once $(Zato_Log) || exit $$?; \
+	rm -f $(Zato_Test_PubSub_Resume_File)
 
 # The soak tests of every suite outside HA, which test-soak runs after every other target of test-all,
 # while test-ha runs the soak tests of HA after every other HA target.
@@ -1187,7 +1202,7 @@ test-pubsub-perf-latency: ## Pub/sub capacity through a live server on PostgreSQ
 		$(ZATO_PY) -m pytest -W ignore::DeprecationWarning \
 			$(Zato_Test_PubSub_Perf_Dir)/test_capacity.py -v -s --tb=short \
 			-o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_perf_latency \
-			$(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
+			$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
 	done
 
 # The live suites of exactly-once delivery.
@@ -1276,13 +1291,14 @@ Zato_Test_Step_Run_Once = \
 		-v -s --tb=short -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_$(subst -,_,$(1)) \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?;
 
-# Runs the step $(1) of the walk with the resume file $(2), unless the walk is still looking for the step it resumes from.
+# Runs the step $(1) of the walk with the resume file $(2), unless the walk is still looking for the step it resumes from,
+# with the environment variables of the step, if it defines any.
 Zato_Test_Step = \
 	if [ -z "$$resume" ] || [ "$$resume" = "$(1)" ]; then \
 		resume=''; \
 		echo "$(1)" > $(2); \
 		echo ">>> $(1)" $(Zato_Log); \
-		ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) $(Zato_Test_Step_Runner_$(1)) $(Zato_Test_Step_Tests_$(1)) \
+		$(Zato_Test_Step_Env_$(1)) ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) $(Zato_Test_Step_Runner_$(1)) $(Zato_Test_Step_Tests_$(1)) \
 			-v -s --tb=short -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_$(subst -,_,$(1)) \
 			$(Zato_Test_Step_Stepwise) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
 	fi;
@@ -1311,7 +1327,7 @@ Zato_Perf_Linked_Targets   :=
 test-sql-conformance: ## SQL conformance - static scans, engine settings and write acknowledgments, resuming from the step that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(call Zato_Test_Step_Walk,$(Zato_Test_SQL_Conformance_Steps),$(Zato_Test_SQL_Conformance_Resume_File))
 
-test-sql-conformance-fast: ## The static scans and the engine settings of SQL conformance, which test-pubsub and test-ha run first.
+test-sql-conformance-fast: ## The static scans and the engine settings of SQL conformance, which test-pubsub and test-ha run first, test-pubsub as steps of its own walk.
 	$(Zato_Log_Reset)
 	@$(foreach step,$(Zato_Test_SQL_Conformance_Fast_Steps),$(call Zato_Test_Step_Run_Once,$(step)))
 
@@ -1334,11 +1350,11 @@ Zato_Test_Enmasse_Disabled := \
 # of their own, discovery below already covers them and running them twice proves nothing.
 test-enmasse: ## Enmasse tests - every importer, every exporter, the round trips and secret rotation against live services.
 	$(Zato_Log_Reset)
-	cd $(CURDIR)/code/zato-cli/test/zato/enmasse_ && $(ZATO_PY) -m unittest -v \
+	cd $(CURDIR)/code/zato-cli/test/zato/enmasse_ && $(ZATO_PY) -m unittest -v --failfast \
 		$$(find . -name 'test_*.py' $(foreach name,$(Zato_Test_Enmasse_Disabled),! -name $(name)) | sort) $(Zato_Log)
 # Secret rotation needs the live services switched on, which the discovery above leaves off
 	Zato_Test_Live_SQL=1 Zato_Test_FTP=1 Zato_Test_SFTP=1 Zato_Test_SMB=1 Zato_Test_MongoDB=1 \
-		$(ZATO_PY) -m unittest discover -s $(CURDIR)/code/zato-cli/test/zato/enmasse_ -p 'test_secret_rotation_live.py' -v $(Zato_Log)
+		$(ZATO_PY) -m unittest discover -s $(CURDIR)/code/zato-cli/test/zato/enmasse_ -p 'test_secret_rotation_live.py' -v --failfast $(Zato_Log)
 
 test-enmasse-delete-live: ## Enmasse should_delete against a live server - every object created and deleted through the pickup directory.
 	$(Zato_Log_Reset)
