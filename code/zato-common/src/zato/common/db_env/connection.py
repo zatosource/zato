@@ -6,46 +6,42 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# How connections to environment-configured databases are built - SQLite pragmas,
-# SSL contexts, driver-specific connection arguments and SQLAlchemy URLs.
+# How connections to the Zato database are built - SSL contexts, driver-specific connection arguments,
+# SQLAlchemy URLs and the settings of Django.
 
 # stdlib
 import socket
 import ssl
 
 # SQLAlchemy
-from sqlalchemy import text
 from sqlalchemy.engine import URL
-
-# Zato
-from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
-from zato.common.sqlite_connection import register_sqlite_functions as register_sqlite_functions, set_sqlite_pragmas, \
-    SQLite_Busy_Timeout_Ms as SQLite_Busy_Timeout_Ms
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from ssl import SSLContext
-    from sqlalchemy.engine import Connection
     from zato.common.typing_ import any_, stranydict
 
     # Dummy assignments to satisfy type checkers
-    Connection = Connection
     SSLContext = SSLContext
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# SQLAlchemy dialects for each database type
-_dialects = {
-    Type_PostgreSQL: 'postgresql+pg8000',
-}
+# The SQLAlchemy dialect and driver of the Zato database
+Dialect_Name = 'postgresql+pg8000'
 
-# Default ports for each database type
-_default_ports = {
-    Type_PostgreSQL: 5432,
-}
+# The port of the Zato database when none is given
+Default_Port = 5432
+
+# The Django backend of the Zato database
+Django_Engine = 'django.db.backends.postgresql'
+
+# How Django connects to a server whose certificate it verifies, and to one whose certificate it does not
+_django_ssl_mode_verify    = 'verify-full'
+_django_ssl_mode_no_verify = 'require'
+_django_ssl_mode_disabled  = 'disable'
 
 # How long a PostgreSQL connection stays idle before it sends its first keepalive probe, in seconds - below
 # the idle limits of cloud load balancers and NAT gateways, which drop idle flows silently after 240 to 350 seconds.
@@ -92,10 +88,6 @@ Durability_Level_Relaxed = 'relaxed'
 _durability_level_query = """
 select current_setting('{}', true)
 """.strip().format(Durability_Level_Setting)
-
-# The journal mode and the level of synchronization that every SQLite connection of Zato runs with.
-SQLite_Journal_Mode = 'wal'
-SQLite_Synchronous = 'full'
 
 # The standbys that stream the write-ahead log of the server, without the logical replication connections,
 # which receive changes that are already durable.
@@ -237,26 +229,11 @@ def verify_postgresql_server(dbapi_connection:'any_', connection_record:'any_') 
 # ################################################################################################################################
 
 def set_django_connection(sender:'any_', connection:'any_', **kwargs:'any_') -> 'None':
-    """ Gives each connection that Django opens to a database of Zato the same settings of durability
+    """ Gives each connection that Django opens to the Zato database the same settings of durability
     as the connections of the engine factory.
     """
-    if connection.vendor == Type_SQLite:
-        set_sqlite_pragmas(connection.connection, None)
-
-    elif connection.vendor == Type_PostgreSQL:
-        set_postgresql_session(connection.connection, None)
-        verify_postgresql_server(connection.connection, None)
-
-    else:
-        raise DatabaseDurabilityError(f'Unsupported database vendor `{connection.vendor}`')
-
-# ################################################################################################################################
-
-def set_sqlite_busy_timeout(connection:'Connection', timeout_ms:'int') -> 'None':
-    """ Sets how long writes on this connection wait for another writer before giving up, in milliseconds.
-    The setting stays with the connection for as long as it lives in its pool.
-    """
-    _ = connection.execute(text(f'pragma busy_timeout={timeout_ms}'))
+    set_postgresql_session(connection.connection, None)
+    verify_postgresql_server(connection.connection, None)
 
 # ################################################################################################################################
 
@@ -287,20 +264,16 @@ def build_ssl_context_from_values(values:'stranydict') -> 'SSLContext':
 
 # ################################################################################################################################
 
-def build_connect_args_from_values(values:'stranydict', db_type:'str') -> 'stranydict':
+def build_connect_args_from_values(values:'stranydict') -> 'stranydict':
     """ Returns driver-specific connection arguments, including SSL ones if SSL is enabled
-    and an explicit opt-out of TLS for PostgreSQL if it is not, all built out of a dict of connection values.
+    and an explicit opt-out of TLS if it is not, all built out of a dict of connection values.
     """
 
     # Our response to produce
     out:'stranydict' = {}
 
-    # SSL never applies to SQLite files ..
-    if db_type == Type_SQLite:
-        return out
-
-    # .. it is off unless requested explicitly, which pg8000 needs to be told about,
-    # .. because without a context it attempts an unverified TLS connection first ..
+    # SSL is off unless requested explicitly, which pg8000 needs to be told about,
+    # because without a context it attempts an unverified TLS connection first ..
     if not values['ssl']:
         out['ssl_context'] = False
         return out
@@ -312,30 +285,85 @@ def build_connect_args_from_values(values:'stranydict', db_type:'str') -> 'stran
 
 # ################################################################################################################################
 
-def build_engine_url_from_values(values:'stranydict', db_type:'str') -> 'str | URL':
-    """ Builds the SQLAlchemy URL for a database out of a dict of connection values.
+def get_port_from_values(values:'stranydict') -> 'int':
+    """ Returns the port of the Zato database out of a dict of connection values.
     """
+    if port := values['port']:
+        out = int(port)
+    else:
+        out = Default_Port
 
-    # SQLite needs a file path only ..
-    if db_type == Type_SQLite:
-        db_path = values['name']
-        out = f'sqlite:///{db_path}'
-        return out
+    return out
 
-    # .. everything else is a network database with full credentials.
-    dialect  = _dialects[db_type]
+# ################################################################################################################################
+
+def get_password_from_values(values:'stranydict') -> 'str':
+    """ Returns the password of the Zato database out of a dict of connection values, read from its file if one is given.
+    """
+    if password_file := values['password_file']:
+        with open(password_file) as password_file_handle:
+            password = password_file_handle.read()
+        out = password.strip()
+    else:
+        out = values['password']
+
+    return out
+
+# ################################################################################################################################
+
+def build_engine_url_from_values(values:'stranydict') -> 'URL':
+    """ Builds the SQLAlchemy URL of the Zato database out of a dict of connection values.
+    """
     host     = values['host']
     username = values['username']
     password = values['password']
     db_name  = values['name']
+    port     = get_port_from_values(values)
 
-    if port := values['port']:
-        port = int(port)
+    # The URL is built from its parts so that characters such as @, / or % in a password are passed as they are.
+    out = URL.create(Dialect_Name, username=username, password=password, host=host, port=port, database=db_name)
+    return out
+
+# ################################################################################################################################
+
+def build_django_database_from_values(values:'stranydict') -> 'stranydict':
+    """ Builds the entry of Django's DATABASES setting for the Zato database out of a dict of connection values.
+    """
+    password = get_password_from_values(values)
+    port     = get_port_from_values(values)
+
+    # The options of the connection depend on whether SSL is on ..
+    options:'stranydict' = {}
+
+    # .. and whether the server certificate is verified ..
+    if values['ssl']:
+        if values['ssl_verify']:
+            options['sslmode'] = _django_ssl_mode_verify
+        else:
+            options['sslmode'] = _django_ssl_mode_no_verify
+
+        # .. the certificate authority and the client certificate are given only when configured ..
+        if ssl_ca_file := values['ssl_ca_file']:
+            options['sslrootcert'] = ssl_ca_file
+
+        if ssl_cert_file := values['ssl_cert_file']:
+            options['sslcert'] = ssl_cert_file
+            options['sslkey'] = values['ssl_key_file']
+
+    # .. while a connection without SSL opts out of it explicitly.
     else:
-        port = _default_ports[db_type]
+        options['sslmode'] = _django_ssl_mode_disabled
 
-    # .. the URL is built from its parts so that characters such as @, / or % in a password are passed as they are.
-    out = URL.create(dialect, username=username, password=password, host=host, port=port, database=db_name)
+    out:'stranydict' = {
+        'ENGINE': Django_Engine,
+        'HOST': values['host'],
+        'PORT': port,
+        'USER': values['username'],
+        'PASSWORD': password,
+        'NAME': values['name'],
+        'OPTIONS': options,
+    }
+
     return out
 
 # ################################################################################################################################

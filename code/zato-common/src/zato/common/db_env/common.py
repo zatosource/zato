@@ -15,15 +15,12 @@ from datetime import timezone
 from logging import getLogger
 
 # SQLAlchemy
-from sqlalchemy import DateTime, LargeBinary, String, Text
+from sqlalchemy import DateTime, LargeBinary, String
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.sql.functions import Function, FunctionElement
+from sqlalchemy.sql.functions import FunctionElement
 from sqlalchemy.types import TypeDecorator
 
 # Zato
-from zato.common.defaults import default_env_base_dir
-from zato.common.sqlite_connection import compress_text, decompress_text, SQLite_Decompress_Function, Type_SQLite
-from zato.common.typing_ import cast_
 from zato.common.util.eval_ import as_bool
 
 # ################################################################################################################################
@@ -35,13 +32,12 @@ if 0:
     from sqlalchemy.engine import Dialect
     from sqlalchemy.sql.compiler import SQLCompiler
     from sqlalchemy.types import TypeEngine
-    from zato.common.typing_ import any_, anytuple, stranydict, strlist, strnone, strset, strtuple
+    from zato.common.typing_ import any_, anytuple, stranydict, strlist, strset, strtuple
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
     anytuple = anytuple
     strlist = strlist
-    strnone = strnone
     strset = strset
     strtuple = strtuple
     datetime = datetime
@@ -58,11 +54,8 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Recognized database types, along with Type_SQLite
+# The SQLAlchemy dialect name of the Zato database
 Type_PostgreSQL = 'postgresql'
-
-# What is used when the type variable is not set
-Default_Type = Type_SQLite
 
 # SSL is off unless requested explicitly
 Default_SSL = False
@@ -82,18 +75,16 @@ Default_Pool_Size = 80
 # Binary content, raw bytes on every database.
 Binary_Type = LargeBinary()
 
-# The hour a timestamp falls in, in the form YYYY-MM-DDTHH, as Python and each database format it.
+# The hour a timestamp falls in, in the form YYYY-MM-DDTHH, as Python and PostgreSQL format it.
 Hour_Period_Format = '%Y-%m-%dT%H'
-_sqlite_hour_format = '%Y-%m-%dT%H'
 _postgresql_hour_format = 'YYYY-MM-DD"T"HH24'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class UTC_DateTime(TypeDecorator):
-    """ A point in time in UTC. It accepts timezone-aware datetimes, keeps them in UTC and returns them timezone-aware
-    in UTC on every database. PostgreSQL stores a timestamp with a time zone and SQLite stores the text form
-    SQLAlchemy defines for its DATETIME type.
+    """ A point in time in UTC. It accepts timezone-aware datetimes, stores them as a timestamp with a time zone
+    and returns them timezone-aware in UTC.
     """
     impl = DateTime
     cache_ok = True
@@ -112,13 +103,8 @@ class UTC_DateTime(TypeDecorator):
         if value is None:
             return None
 
-        # .. every value is stored in UTC ..
+        # .. and every value is stored in UTC.
         out = value.astimezone(timezone.utc)
-
-        # .. and SQLite, whose type has no time zone, receives it without one.
-        if dialect.name != Type_PostgreSQL:
-            out = out.replace(tzinfo=None)
-
         return out
 
 # ################################################################################################################################
@@ -129,90 +115,15 @@ class UTC_DateTime(TypeDecorator):
         if value is None:
             return None
 
-        # .. PostgreSQL returns the time in the time zone of the session ..
-        if dialect.name == Type_PostgreSQL:
-            out = value.astimezone(timezone.utc)
-
-        # .. while SQLite returns it in UTC without a time zone.
-        else:
-            out = value.replace(tzinfo=timezone.utc)
-
-        return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def text_of_compressed(column:'any_', dialect_name:'str') -> 'any_':
-    """ The SQL expression of the text of a column of CompressedText, for a select that applies SQL functions to the text,
-    which on SQLite calls SQLite_Decompress_Function and on PostgreSQL is the column itself.
-    """
-    if dialect_name == Type_SQLite:
-        out = Function(SQLite_Decompress_Function, column, type_=Text())
-    else:
-        out = column
-
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class CompressedText(TypeDecorator):
-    """ Text that SQLite stores compressed with zlib, as a BLOB, and PostgreSQL stores as text,
-    which PostgreSQL compresses itself once a value exceeds its threshold for compression.
-    """
-    impl = Text
-    cache_ok = True
-
-    def load_dialect_impl(self, dialect:'Dialect') -> 'TypeEngine':
-
-        if dialect.name == Type_SQLite:
-            out = LargeBinary()
-        else:
-            out = Text()
-
-        return out
-
-# ################################################################################################################################
-
-    def process_bind_param(self, value:'strnone', dialect:'Dialect') -> 'str | bytes | None':
-
-        # A column that is not set stays NULL ..
-        if value is None:
-            return None
-
-        # .. SQLite receives the text compressed ..
-        if dialect.name == Type_SQLite:
-            out = compress_text(value)
-
-        # .. and PostgreSQL receives it as it is.
-        else:
-            out = value
-
-        return out
-
-# ################################################################################################################################
-
-    def process_result_value(self, value:'str | bytes | None', dialect:'Dialect') -> 'strnone':
-
-        # A column that is not set is returned as None ..
-        if value is None:
-            return None
-
-        # .. SQLite returns the compressed text ..
-        if dialect.name == Type_SQLite:
-            out = decompress_text(cast_('bytes', value))
-
-        # .. and PostgreSQL returns the text itself.
-        else:
-            out = cast_('str', value)
-
+        # .. and PostgreSQL returns the time in the time zone of the session, which is converted to UTC.
+        out = value.astimezone(timezone.utc)
         return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class _HourPeriod(FunctionElement):
-    """ The hour a timestamp column falls in, as the text YYYY-MM-DDTHH, compiled to the date function of each database.
+    """ The hour a timestamp column falls in, as the text YYYY-MM-DDTHH, compiled to the date function of PostgreSQL.
     """
     type = String()
     name = 'hour_period'
@@ -234,14 +145,6 @@ def to_hour_period(value:'datetime') -> 'str':
     value_utc = value.astimezone(timezone.utc)
 
     out = value_utc.strftime(Hour_Period_Format)
-    return out
-
-# ################################################################################################################################
-
-@compiles(_HourPeriod, Type_SQLite)
-def compile_hour_period_sqlite(element:'_HourPeriod', compiler:'SQLCompiler', **kwargs:'any_') -> 'str':
-    column = compiler.process(element.clauses, **kwargs)
-    out = f"strftime('{_sqlite_hour_format}', {column})"
     return out
 
 # ################################################################################################################################
@@ -317,7 +220,7 @@ def get_env_value(name:'str', alias_names:'strtuple') -> 'str':
 
 class EnvDBConfig:
     """ Describes one environment-configured database - the environment variables
-    selecting it, its default SQLite file name and the schemas it needs.
+    selecting it and the schemas it needs.
     """
 
     def __init__(
@@ -325,31 +228,16 @@ class EnvDBConfig:
         *,
         env_prefix:'str',
         alias_env_prefixes:'strtuple',
-        sqlite_file_name:'str',
         metadata_tuple:'anytuple',
-        needs_pool:'bool' = False,
-        needs_background_checkpoint:'bool' = False,
         ) -> 'None':
 
         self.env_prefix = env_prefix
-        self.sqlite_file_name = sqlite_file_name
 
         # The prefixes under which each variable is read, in this order, when it is not set under env_prefix
         self.alias_env_prefixes = alias_env_prefixes
         self.metadata_tuple = metadata_tuple
 
-        # Whether SQLite connections are pooled - SQLAlchemy's default for file-based SQLite
-        # is no pooling at all, which makes every transaction open and close the database file,
-        # and each close checkpoints the WAL, costing more than ten milliseconds. Stores with
-        # many small transactions, such as pub/sub, need a real pool instead.
-        self.needs_pool = needs_pool
-
-        # Whether the WAL of a SQLite database is checkpointed in a thread of its own rather than by the commits
-        self.needs_background_checkpoint = needs_background_checkpoint
-
         # The full names of the environment variables selecting and configuring the database
-        self.env_type     = f'{env_prefix}Type'
-        self.env_path     = f'{env_prefix}Path'
         self.env_host     = f'{env_prefix}Host'
         self.env_port     = f'{env_prefix}Port'
         self.env_username = f'{env_prefix}Username'
@@ -389,28 +277,6 @@ class EnvDBConfig:
         return out
 
 # ################################################################################################################################
-
-    def get_sqlite_path(self) -> 'str':
-        """ Returns the full path to the default SQLite file of this database.
-        """
-        out = os.path.join(default_env_base_dir, self.sqlite_file_name)
-        return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def get_env_sqlite_path(config:'EnvDBConfig') -> 'strnone':
-    """ Returns the path to the SQLite file of an environment-configured database, or None if the database is a network one.
-    """
-    values = get_env_values(config)
-
-    if values['type'] == Type_SQLite:
-        out = values['name']
-    else:
-        out = None
-
-    return out
-
 # ################################################################################################################################
 
 def get_env_values(config:'EnvDBConfig') -> 'stranydict':
@@ -421,21 +287,8 @@ def get_env_values(config:'EnvDBConfig') -> 'stranydict':
     # Our response to produce
     out:'stranydict' = {}
 
-    # The type has a well-known default ..
-    if db_type := config.get_value(config.env_type):
-        out['type'] = db_type
-    else:
-        out['type'] = Default_Type
-
-    # .. a SQLite file is given by its path, which defaults to the file in the environment directory,
-    # .. and a network database by its name ..
-    if out['type'] == Type_SQLite:
-        if path := config.get_value(config.env_path):
-            out['name'] = path
-        else:
-            out['name'] = config.get_sqlite_path()
-    else:
-        out['name'] = config.get_value(config.env_name)
+    # The database is given by its name ..
+    out['name'] = config.get_value(config.env_name)
 
     # .. the network location and credentials are empty unless given ..
     out['host']     = config.get_value(config.env_host)

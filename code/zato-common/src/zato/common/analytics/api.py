@@ -12,17 +12,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # request counts, error counts by source, size and duration sums and latency
 # histogram bucket counts. Because the aggregates are extracted before the audit
 # rows expire, audit retention does not bound the trends - hourly rows are kept
-# indefinitely at negligible size. The store is always a local SQLite file.
-
-# stdlib
-import os
-
-# SQLAlchemy
-from sqlalchemy import BigInteger, Column, Index, Integer, MetaData, String, Table, Text
+# indefinitely at negligible size. The store is a set of tables in the Zato database.
 
 # Zato
-from zato.common.db_env import get_sqlite_file_engine
-from zato.common.defaults import default_env_base_dir
+from zato.common.analytics.schema import usage_table, watermark_table
+from zato.common.db_env.database import get_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,16 +30,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The name of the SQLite file holding the analytics store
-analytics_db_file_name = 'analytics.db'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ModuleCtx:
-
-    # The environment variable with the full path to the analytics store's SQLite file
-    Env_Path = 'Zato_Analytics_DB_Path'
+# The tables of the store, re-exported for the callers of this module
+__all__ = ['usage_table', 'watermark_table']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -78,62 +64,10 @@ Caller_Anonymous = 'Anonymous'
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Maximum length of short string columns
-_short_column_len = 255
-
-# The SQLite schema of the analytics store
-metadata = MetaData()
-
-# One row per hour, channel, caller and status class
-usage_table = Table('usage', metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('period', String(_short_column_len)),
-    Column('source', String(_short_column_len)),
-    Column('channel', String(_short_column_len)),
-    Column('caller', String(_short_column_len)),
-    Column('status_class', String(_short_column_len)),
-    Column('request_count', BigInteger),
-    Column('error_count_auth', BigInteger),
-    Column('error_count_rate_limit', BigInteger),
-    Column('error_count_upstream', BigInteger),
-    Column('error_count_gateway', BigInteger),
-    Column('size_sum', BigInteger),
-    Column('duration_sum_ms', BigInteger),
-    Column('latency_buckets', Text),
-    Index('idx_usage_period', 'period'),
-    Index('idx_usage_channel', 'channel', 'period'),
-    Index('idx_usage_caller', 'caller', 'period'),
-)
-
-# The one row remembering the last audit event the rollup has already aggregated
-watermark_table = Table('watermark', metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('last_event_id', BigInteger),
-)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def get_analytics_db_path() -> 'str':
-    """ Returns the full path to the analytics store's SQLite file - the one the environment
-    variable points to or, without it, the default file under the environment directory.
-    """
-    if out := os.environ.get(ModuleCtx.Env_Path, ''):
-        pass
-    else:
-        out = os.path.join(default_env_base_dir, analytics_db_file_name)
-
-    return out
-
-# ################################################################################################################################
-
 def get_analytics_engine() -> 'Engine':
-    """ Returns an SQLAlchemy engine for the analytics store's SQLite file, creating the schema if needed.
-    The path is resolved on each call, so a changed environment variable selects another file at once.
+    """ Returns the SQLAlchemy engine of the Zato database, which holds the tables of the analytics store.
     """
-    db_path = get_analytics_db_path()
-    out = get_sqlite_file_engine(db_path, metadata, needs_pool=False, needs_background_checkpoint=False)
-
+    out = get_database_engine()
     return out
 
 # ################################################################################################################################
