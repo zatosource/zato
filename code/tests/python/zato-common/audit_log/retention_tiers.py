@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from datetime import timedelta
+from json import loads
 from shutil import rmtree
 from tempfile import mkdtemp
 
@@ -74,6 +75,10 @@ _mllp_pair_count = 6
 
 # How many rows one chunk of the row tier takes in that scenario - fewer than the pairs, so the run has several
 _chunk_size = 4
+
+# The kinds of the archive lines that hold attribute rows and lineage link rows
+_archive_kind_attr = 'attr'
+_archive_kind_link = 'link'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -245,7 +250,7 @@ def run_retention_tiers_scenario() -> 'None':
         assert row is not None
         assert row['data'] == 'a recent payload retention never touches'
 
-        # .. and everything that was pruned or deleted went to the archive first.
+        # .. everything that was pruned or deleted went to the archive first ..
         archive_files = os.listdir(archive_dir)
         assert len(archive_files) == 1, archive_files
 
@@ -259,6 +264,32 @@ def run_retention_tiers_scenario() -> 'None':
         assert 'the payload of a row past the retention window' in archive_content
         assert 'the body of a row past the retention window' in archive_content
         assert 'a recent payload retention never touches' not in archive_content
+
+        # .. including the attributes and the lineage links of the deleted event, while the attributes
+        # of the event whose content was pruned stay in the database and out of the archive.
+        attr_entries:'anylist' = []
+        link_entries:'anylist' = []
+
+        for line in archive_content.splitlines():
+            entry = loads(line)
+
+            if entry['kind'] == _archive_kind_attr:
+                attr_entries.append(entry)
+
+            elif entry['kind'] == _archive_kind_link:
+                link_entries.append(entry)
+
+        assert len(attr_entries) == 1, attr_entries
+        assert len(link_entries) == 1, link_entries
+
+        attr_entry = attr_entries[0]
+        assert attr_entry['event_id'] == expired_id
+        assert attr_entry['value'] == 'ADT^A08'
+
+        link_entry = link_entries[0]
+        assert link_entry['parent_event_id'] == expired_id
+        assert link_entry['child_event_id'] == recent_id
+        assert link_entry['link_type'] == AuditLink.Resubmit_Of
 
     finally:
         _ = os.environ.pop(Env_Content_Retention_Days, None)

@@ -177,8 +177,46 @@ def _archive_value(value:'datetime | bytes') -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _sync_dir(path:'str') -> 'None':
+    """ Syncs the entries of a directory to stable storage.
+    """
+    dir_fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+
+    try:
+        os.fsync(dir_fd)
+    finally:
+        os.close(dir_fd)
+
+# ################################################################################################################################
+
+def _make_archive_dir(path:'str') -> 'None':
+    """ Creates the archive directory along with its missing ancestors, syncing the parent of each directory created.
+    """
+    missing:'strlist' = []
+
+    # Collect the missing directories, from the innermost outward ..
+    current = os.path.abspath(path)
+
+    while not os.path.isdir(current):
+        missing.append(current)
+        current = os.path.dirname(current)
+
+    # .. and create them from the outermost inward, each persisted in its parent.
+    for dir_path in reversed(missing):
+
+        try:
+            os.mkdir(dir_path)
+        except FileExistsError:
+            continue
+
+        parent_dir = os.path.dirname(dir_path)
+        _sync_dir(parent_dir)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Archiver:
-    """ Writes rows to a JSON Lines archive file before they are deleted -
+    """ Writes rows to a JSON Lines archive file and syncs it to stable storage before they are deleted -
     active only when the archive directory is configured in the environment.
     """
 
@@ -202,9 +240,10 @@ class Archiver:
 
     def _create_archive_file(self) -> 'str':
         """ Creates the archive file of this run, which no other run writes to. A run whose file name is taken,
-        by a run that started within the same second, adds a sequence number to the name.
+        by a run that started within the same second, adds a sequence number to the name. The file and its entry
+        in the directory are synced to stable storage before the method returns.
         """
-        os.makedirs(self.archive_dir, exist_ok=True)
+        _make_archive_dir(self.archive_dir)
 
         sequence = Archive_First_Sequence
 
@@ -218,19 +257,28 @@ class Archiver:
 
             archive_path = os.path.join(self.archive_dir, file_name)
 
-            # .. and the file is created only if no other run created it first.
+            # .. the file is created only if no other run created it first ..
             try:
                 archive_fd = os.open(archive_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, Archive_File_Mode)
             except FileExistsError:
                 sequence += 1
             else:
-                os.close(archive_fd)
+
+                # .. and it is persisted along with its entry in the directory.
+                try:
+                    os.fsync(archive_fd)
+                finally:
+                    os.close(archive_fd)
+
+                _sync_dir(self.archive_dir)
+
                 return archive_path
 
 # ################################################################################################################################
 
     def write_rows(self, kind:'str', rows:'anylist') -> 'None':
-        """ Appends rows of one kind - event, body or content - to the archive file.
+        """ Appends rows of one kind - event, body, attr, link or content - to the archive file and syncs the file
+        to stable storage before returning, so that the rows are persisted before the retention deletes them.
         """
         if not rows:
             return
@@ -248,6 +296,10 @@ class Archiver:
 
                 _ = archive_file.write(line_json)
                 _ = archive_file.write('\n')
+
+            # The rows are on stable storage before the deletion of the chunk is committed.
+            archive_file.flush()
+            os.fsync(archive_file.fileno())
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -344,11 +396,24 @@ def _get_expired_ids(engine:'Engine', source:'str', cutoff:'datetime') -> 'intli
 
 # ################################################################################################################################
 
+def _get_link_condition(ids:'intlist') -> 'any_':
+    """ Returns the condition matching the lineage links in which any of the given events is the child or the parent.
+    """
+    is_child_event = event_link_table.c.child_event_id.in_(ids)
+    is_parent_event = event_link_table.c.parent_event_id.in_(ids)
+
+    out = or_(is_child_event, is_parent_event)
+    return out
+
+# ################################################################################################################################
+
 def _archive_events(engine:'Engine', archiver:'Archiver', ids:'intlist') -> 'None':
-    """ Archives full event rows, with their payloads, and their bodies before deletion.
+    """ Archives full event rows, with their payloads, and their bodies, attributes and lineage links before deletion.
     """
     is_wanted_event = event_table.c.id.in_(ids)
     is_body_of_event = event_body_table.c.event_id.in_(ids)
+    is_attr_of_event = event_attr_table.c.event_id.in_(ids)
+    link_condition = _get_link_condition(ids)
 
     event_query = select(event_table, event_data)
     event_query = event_query.where(is_wanted_event)
@@ -356,8 +421,16 @@ def _archive_events(engine:'Engine', archiver:'Archiver', ids:'intlist') -> 'Non
     body_query = select(event_body_table)
     body_query = body_query.where(is_body_of_event)
 
+    attr_query = select(event_attr_table)
+    attr_query = attr_query.where(is_attr_of_event)
+
+    link_query = select(event_link_table)
+    link_query = link_query.where(link_condition)
+
     event_rows:'anylist' = []
     body_rows:'anylist' = []
+    attr_rows:'anylist' = []
+    link_rows:'anylist' = []
 
     with engine.connect() as connection:
 
@@ -369,14 +442,25 @@ def _archive_events(engine:'Engine', archiver:'Archiver', ids:'intlist') -> 'Non
             body_row = dict(row._mapping)
             body_rows.append(body_row)
 
+        for row in connection.execute(attr_query):
+            attr_row = dict(row._mapping)
+            attr_rows.append(attr_row)
+
+        for row in connection.execute(link_query):
+            link_row = dict(row._mapping)
+            link_rows.append(link_row)
+
     archiver.write_rows('event', event_rows)
     archiver.write_rows('body', body_rows)
+    archiver.write_rows('attr', attr_rows)
+    archiver.write_rows('link', link_rows)
 
 # ################################################################################################################################
 
 def archive_events(engine:'Engine', archiver:'Archiver', ids:'intlist') -> 'None':
-    """ Archives the full rows of the given events with their bodies when the archive directory is configured,
-    for a source with a retention of its own, which calls it before it deletes the events.
+    """ Archives the full rows of the given events with their bodies, attributes and lineage links
+    when the archive directory is configured, for a source with a retention of its own,
+    which calls it before it deletes the events.
     """
     if archiver.is_active():
         _archive_events(engine, archiver, ids)
@@ -402,9 +486,7 @@ def _delete_events(engine:'Engine', ids:'intlist') -> 'None':
     """ Deletes one chunk of events along with their attributes, bodies and lineage links,
     and the payloads that no other event references.
     """
-    is_child_event = event_link_table.c.child_event_id.in_(ids)
-    is_parent_event = event_link_table.c.parent_event_id.in_(ids)
-    link_condition = or_(is_child_event, is_parent_event)
+    link_condition = _get_link_condition(ids)
 
     is_attr_of_event = event_attr_table.c.event_id.in_(ids)
     is_body_of_event = event_body_table.c.event_id.in_(ids)
