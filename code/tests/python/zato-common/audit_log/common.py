@@ -75,7 +75,7 @@ def _count_events(source:'str', object_name:'str', query:'str'='') -> 'int':
     """
     engine = get_database_engine()
 
-    where_conditions = build_search_conditions(engine.dialect.name, [source], [object_name], query=query)
+    where_conditions = build_search_conditions([source], [object_name], query=query)
 
     count_query = select(func.count())
     count_query = count_query.select_from(event_table)

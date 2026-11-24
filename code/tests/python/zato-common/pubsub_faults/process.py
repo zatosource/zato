@@ -37,11 +37,11 @@ _scope_numbers = count(1)
 # ################################################################################################################################
 
 class ProcessEnvironment:
-    """ The database of the faults of single servers - a SQLite file or a PostgreSQL container whose processes
-    preload the library of the file system faults - and the control files of that library.
+    """ The database of the faults of single servers - a PostgreSQL container whose processes preload the library
+    of the file system faults - and the control files of that library.
     """
 
-    def __init__(self, work_dir:'str', database:'PubSubDatabase | None') -> 'None':
+    def __init__(self, work_dir:'str', database:'PubSubDatabase') -> 'None':
         self.work_dir = work_dir
         self.database = database
 

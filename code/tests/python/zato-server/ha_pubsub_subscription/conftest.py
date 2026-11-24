@@ -25,11 +25,10 @@ import pytest
 
 # Zato
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
-from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.db_env.fence import ModuleCtx as FenceCtx
-from zato.common.test.pubsub_database import get_database_address, get_db_mode, get_runtime_dir, start_pubsub_database, \
-    stop_pubsub_database
+from zato.common.test.pubsub_database import get_database_address, get_runtime_dir
 from zato.common.test.pubsub_profile import session_dns
+from zato.common.test.zato_database import get_test_server
 
 # Live environment
 from live_environment.quickstart import ZatoEnvironment
@@ -38,8 +37,7 @@ from live_environment.quickstart import ZatoEnvironment
 from toxiproxy import Database_Proxy, Toxiproxy, Toxiproxy_Host
 
 # Local
-from _support import DatabaseProxy, ModuleCtx as SupportCtx, Names, Pickup, Runtime, WriteFault, is_postgresql, \
-    render_template, wait_for
+from _support import DatabaseProxy, ModuleCtx as SupportCtx, Names, Pickup, Runtime, WriteFault, render_template, wait_for
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -68,7 +66,6 @@ class SuiteCtx:
     Directory_Prefix = 'zato_ha_pubsub_subscription_'
     Work_Directory_Prefix = 'zato_ha_pubsub_subscription_work_'
     Password_Prefix = 'test.ha.pubsub.subscription'
-    Database_Label = 'ha-pubsub-subscription'
     Toxiproxy_Label = 'ha-pubsub-subscription'
     Generation_File_Name = 'database-generation'
 
@@ -107,30 +104,18 @@ def names() -> 'Names':
 # ################################################################################################################################
 
 @pytest.fixture(scope='module')
-def database() -> 'Generator[PubSubDatabase | None, None, None]':
-    """ The PostgreSQL container of the module on PostgreSQL, and nothing on SQLite.
+def database() -> 'PubSubDatabase':
+    """ The PostgreSQL server that holds the database of the module's live server.
     """
-    if not is_postgresql():
-        yield None
-        return
-
-    out = start_pubsub_database(SuiteCtx.Database_Label, get_db_mode())
-
-    try:
-        yield out
-    finally:
-        stop_pubsub_database(out)
+    out = get_test_server()
+    return out
 
 # ################################################################################################################################
 
 @pytest.fixture(scope='module')
-def database_proxy(database:'PubSubDatabase | None') -> 'Generator[DatabaseProxy | None, None, None]':
-    """ The proxy of Toxiproxy through which the server reaches PostgreSQL, and nothing on SQLite.
+def database_proxy(database:'PubSubDatabase') -> 'Generator[DatabaseProxy, None, None]':
+    """ The proxy of Toxiproxy through which the server reaches PostgreSQL.
     """
-    if database is None:
-        yield None
-        return
-
     toxiproxy = Toxiproxy(SuiteCtx.Toxiproxy_Label)
     toxiproxy.start()
 
@@ -150,21 +135,17 @@ def database_proxy(database:'PubSubDatabase | None') -> 'Generator[DatabaseProxy
 # ################################################################################################################################
 
 @pytest.fixture(scope='module')
-def server_env(database_proxy:'DatabaseProxy | None') -> 'Generator[strstrdict, None, None]':
+def server_env(database_proxy:'DatabaseProxy') -> 'Generator[strstrdict, None, None]':
     """ The environment variables of the live server of the module, which a restart of the server reuses.
+    The server reaches its database through the proxy.
     """
     work_dir = tempfile.mkdtemp(prefix=SuiteCtx.Work_Directory_Prefix)
 
     out = {
         AuditLogCtx.Env_Enabled: 'True',
         FenceCtx.Env_Generation_File: os.path.join(work_dir, SuiteCtx.Generation_File_Name),
+        'Zato_Database_Port': f'{database_proxy.listen_port}',
     }
-
-    if database_proxy is None:
-        out[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
-    else:
-        out.update(database_proxy.database.env)
-        out['Zato_Database_Port'] = f'{database_proxy.listen_port}'
 
     try:
         yield out
@@ -175,7 +156,7 @@ def server_env(database_proxy:'DatabaseProxy | None') -> 'Generator[strstrdict, 
 
 @pytest.fixture(scope='module')
 def environment(names:'Names', server_env:'strstrdict') -> 'Generator[ZatoEnvironment, None, None]':
-    """ A live server on SQLite or on PostgreSQL with the services of the suite and its initial subscriptions.
+    """ A live server with the services of the suite and its initial subscriptions.
     """
     directory = tempfile.mkdtemp(prefix=SuiteCtx.Directory_Prefix)
     out = ZatoEnvironment(directory, password_prefix=SuiteCtx.Password_Prefix)
@@ -226,7 +207,7 @@ def runtime(client:'AdminClient') -> 'Runtime':
 # ################################################################################################################################
 
 @pytest.fixture
-def write_fault(environment:'ZatoEnvironment', database_proxy:'DatabaseProxy | None') -> 'Generator[WriteFault, None, None]':
+def write_fault(environment:'ZatoEnvironment', database_proxy:'DatabaseProxy') -> 'Generator[WriteFault, None, None]':
     """ Fails the writes of the server to the pub/sub database while a test applies it, and removes it at the end.
     """
     out = WriteFault(environment, database_proxy)

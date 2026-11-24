@@ -81,10 +81,10 @@ def _get_attrs(event_id:'int') -> 'any_':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_a_store_writes_one_event_with_the_path_and_size(tmp_path:'os.PathLike') -> 'None':
+def test_a_store_writes_one_event_with_the_path_and_size() -> 'None':
     """ Writing a file to a share is one event with everything an auditor asks about.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         smb_client = ClientRecorder()
         conn = new_smb_connection(smb_client)
@@ -119,10 +119,10 @@ def test_a_store_writes_one_event_with_the_path_and_size(tmp_path:'os.PathLike')
 
 # ################################################################################################################################
 
-def test_a_raising_store_writes_the_error_outcome(tmp_path:'os.PathLike') -> 'None':
+def test_a_raising_store_writes_the_error_outcome() -> 'None':
     """ A share that went away leaves an error entry before the caller learns about it.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         conn = new_smb_connection(RaisingClient())
 
@@ -143,10 +143,10 @@ def test_a_raising_store_writes_the_error_outcome(tmp_path:'os.PathLike') -> 'No
 
 # ################################################################################################################################
 
-def test_the_flag_turned_on_stores_the_bytes(tmp_path:'os.PathLike') -> 'None':
+def test_the_flag_turned_on_stores_the_bytes() -> 'None':
     """ A connection that asked for its files to be kept can have them reread.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         conn = new_smb_connection(ClientRecorder(), should_store_content=True)
         conn.write(File_Content, Remote_Path)
@@ -166,10 +166,10 @@ def test_the_flag_turned_on_stores_the_bytes(tmp_path:'os.PathLike') -> 'None':
 
 # ################################################################################################################################
 
-def test_the_flag_turned_off_stores_no_bytes(tmp_path:'os.PathLike') -> 'None':
+def test_the_flag_turned_off_stores_no_bytes() -> 'None':
     """ By default the trail says what moved but never carries the file itself.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         conn = new_smb_connection(ClientRecorder())
         conn.write(File_Content, Remote_Path)
@@ -182,11 +182,11 @@ def test_the_flag_turned_off_stores_no_bytes(tmp_path:'os.PathLike') -> 'None':
 
 # ################################################################################################################################
 
-def test_an_oversized_file_keeps_its_metadata_only(tmp_path:'os.PathLike', monkeypatch:'any_') -> 'None':
+def test_an_oversized_file_keeps_its_metadata_only(monkeypatch:'any_') -> 'None':
     """ A file bigger than the cap is still on record - its name and size stay,
     its bytes do not.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         # A cap smaller than the file about to be moved
         monkeypatch.setenv(Env_Max_Attachment_Size, '10')
@@ -210,10 +210,10 @@ def test_an_oversized_file_keeps_its_metadata_only(tmp_path:'os.PathLike', monke
 
 # ################################################################################################################################
 
-def test_a_delete_writes_one_event_too(tmp_path:'os.PathLike') -> 'None':
+def test_a_delete_writes_one_event_too() -> 'None':
     """ Taking a file off a share is as much of an operation as putting it there.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         smb_client = ClientRecorder()
         conn = new_smb_connection(smb_client)
@@ -236,10 +236,10 @@ def test_a_delete_writes_one_event_too(tmp_path:'os.PathLike') -> 'None':
 
 # ################################################################################################################################
 
-def test_a_move_writes_one_event_with_both_paths(tmp_path:'os.PathLike') -> 'None':
+def test_a_move_writes_one_event_with_both_paths() -> 'None':
     """ Renaming a file on a share is one event saying where the file went.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         to_path = 'MyShare/documents/archive/results.csv'
 
@@ -266,10 +266,10 @@ def test_a_move_writes_one_event_with_both_paths(tmp_path:'os.PathLike') -> 'Non
 
 # ################################################################################################################################
 
-def test_a_raising_move_writes_the_error_outcome(tmp_path:'os.PathLike') -> 'None':
+def test_a_raising_move_writes_the_error_outcome() -> 'None':
     """ A rename the share refused leaves an error entry before the caller learns about it.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         to_path = 'MyShare/documents/archive/results.csv'
 

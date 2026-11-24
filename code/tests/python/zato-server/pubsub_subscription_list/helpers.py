@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.pubsub.subscription_list import new_topic_flags
 from zato_common_core.zato_common_core import SubscriptionList
 
@@ -15,24 +14,14 @@ from zato_common_core.zato_common_core import SubscriptionList
 # ################################################################################################################################
 
 if 0:
-    from zato.common.test.pubsub_in_process import InProcessServer
     from zato.common.typing_ import any_, anydict, list_, strlist, tuple_
 
-    InProcessServer = InProcessServer
     any_ = any_
     anydict = anydict
     strlist = strlist
     pairlist = list_[tuple_[str, str]]
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def sqlite_db_path(server:'InProcessServer') -> 'str':
-    """ Returns the path of the SQLite file of the in-process server.
-    """
-    out = server.db_env[DatabaseEnv.Env_Path]
-    return out
-
 # ################################################################################################################################
 
 def sub_key_for_topic(subscription_list:'any_', topic_name:'str') -> 'str':

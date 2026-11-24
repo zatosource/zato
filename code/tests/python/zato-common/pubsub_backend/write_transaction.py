@@ -20,8 +20,8 @@ import gevent
 from sqlalchemy import select
 
 # Zato
-from common import delete_all_rows, delete_audit_rows, get_delivery_rows, get_dialect_name, get_event_rows, \
-    get_message_rows, write_in_one_commit
+from common import delete_all_rows, delete_audit_rows, get_delivery_rows, get_event_rows, get_message_rows, \
+    write_in_one_commit
 from transaction_statements import assert_one_transaction, get_atomic_statements, get_event_statements, get_expected, \
     record_transactions, statements_ack, statements_attempts, statements_drop, statements_lease, statements_publication, \
     TransactionRecorder
@@ -207,16 +207,13 @@ def _write(backend:'SQLPubSubBackend', items:'anylist') -> 'TransactionRecorder'
 def _run_compositions() -> 'None':
     """ Each kind of item alone in a batch runs its own statements, in one transaction.
     """
-    dialect_name = get_dialect_name()
-    publication = statements_publication[dialect_name]
-    drop = statements_drop[dialect_name]
-    one_event = get_event_statements(dialect_name, 1, True)
+    one_event = get_event_statements(1, True)
 
     # A publication with its audit event ..
     backend = _new_backend()
     recorder = _write(backend, [_new_publication(backend)])
 
-    assert_one_transaction(recorder, get_expected(dialect_name, [publication, one_event]))
+    assert_one_transaction(recorder, get_expected([statements_publication, one_event]))
 
     # .. an acknowledgement, which drops the payload of the message that it fully delivered ..
     backend = _new_backend()
@@ -225,7 +222,7 @@ def _run_compositions() -> 'None':
     ack = new_pending_ack(_sub_key_main, [prepared.main_msg_ids[0]], None)
     recorder = _write(backend, [ack])
 
-    assert_one_transaction(recorder, get_expected(dialect_name, [statements_ack, drop]))
+    assert_one_transaction(recorder, get_expected([statements_ack, statements_drop]))
 
     # .. a fenced acknowledgement with its receipt ..
     backend = _new_backend()
@@ -234,8 +231,8 @@ def _run_compositions() -> 'None':
     atomic = _new_atomic(backend, prepared, prepared.input_attempt)
     recorder = _write(backend, [atomic])
 
-    parts = [get_atomic_statements(dialect_name), drop, one_event]
-    assert_one_transaction(recorder, get_expected(dialect_name, parts))
+    parts = [get_atomic_statements(), statements_drop, one_event]
+    assert_one_transaction(recorder, get_expected(parts))
 
     # .. the push attempts of two deliveries ..
     backend = _new_backend()
@@ -244,7 +241,7 @@ def _run_compositions() -> 'None':
     attempts = new_pending_attempts(prepared.main_delivery_ids[:2])
     recorder = _write(backend, [attempts])
 
-    assert_one_transaction(recorder, get_expected(dialect_name, [statements_attempts]))
+    assert_one_transaction(recorder, get_expected([statements_attempts]))
 
     # .. and a lease with the audit events of the messages that it hands out, whose payloads their publications stored.
     backend = _new_backend()
@@ -252,8 +249,8 @@ def _run_compositions() -> 'None':
 
     recorder = _write(backend, [_new_lease(backend)])
 
-    parts = [statements_lease, get_event_statements(dialect_name, _main_count, False)]
-    assert_one_transaction(recorder, get_expected(dialect_name, parts))
+    parts = [statements_lease, get_event_statements(_main_count, False)]
+    assert_one_transaction(recorder, get_expected(parts))
 
 # ################################################################################################################################
 
@@ -287,8 +284,6 @@ def _run_every_kind() -> 'None':
     """ A batch with an item of every kind writes them in the order of the kinds, whatever the order of the items,
     and each item sees what the items written before it did.
     """
-    dialect_name = get_dialect_name()
-
     backend = _new_backend()
     prepared = _prepare(backend)
 
@@ -306,16 +301,16 @@ def _run_every_kind() -> 'None':
 
     # .. and their statements run in the order of the kinds, with the payloads dropped after every write of delivery rows ..
     parts = [
-        statements_publication[dialect_name],
+        statements_publication,
         statements_ack,
-        get_atomic_statements(dialect_name),
+        get_atomic_statements(),
         statements_attempts,
         statements_lease,
-        statements_drop[dialect_name],
-        get_event_statements(dialect_name, _every_kind_event_count, True),
+        statements_drop,
+        get_event_statements(_every_kind_event_count, True),
     ]
 
-    assert_one_transaction(recorder, get_expected(dialect_name, parts))
+    assert_one_transaction(recorder, get_expected(parts))
 
     # .. the publication stored its message with one delivery row ..
     assert publication.exception is None

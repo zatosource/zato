@@ -9,15 +9,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 from datetime import datetime, timezone
-from shutil import rmtree
-from tempfile import mkdtemp
 from unittest import TestCase
 
 # SQLAlchemy
 from sqlalchemy import select
 
 # Zato
-from live_sql.env import database_env
 from support import attributes_of, build_config, decode_records, wait_for_bodies, wait_for_exported, wait_until, FakeSender, \
     Server_Name
 from zato.common.api import SCHEDULER
@@ -31,7 +28,7 @@ from zato.common.audit_log.export.mapping import ModuleCtx as MappingCtx
 from zato.common.audit_log.file_transfer import record_file_transfer
 from zato.common.audit_log.file_transfer_run import update_run_event
 from zato.common.audit_log.scheduler import record_job_complete, record_job_start, record_job_timeout
-from zato.common.db_env.database_env import DatabaseEnv
+from zato.common.test.zato_database import zato_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -98,15 +95,12 @@ def wait_for_bodies_briefly(sender:'FakeSender') -> 'bool':
 # ################################################################################################################################
 
 class _HookTestCase(TestCase):
-    """ An audit log on a temporary SQLite file with the export on, over a fake sender.
+    """ An audit log in a Zato database of the test with the export on, over a fake sender.
     """
 
     def setUp(self) -> 'None':
-        self.directory = mkdtemp(prefix='zato-audit-export-')
-        db_path = os.path.join(self.directory, DatabaseEnv.File_Name)
-
-        self.env = database_env({'type': DatabaseEnv.Type_SQLite, 'path': db_path})
-        _ = self.env.__enter__()
+        self.database = zato_database_engine()
+        _ = self.database.__enter__()
 
         self.saved_enabled = os.environ.pop(AuditLogCtx.Env_Enabled, None)
 
@@ -125,8 +119,7 @@ class _HookTestCase(TestCase):
         if self.saved_enabled is not None:
             os.environ[AuditLogCtx.Env_Enabled] = self.saved_enabled
 
-        _ = self.env.__exit__(None, None, None)
-        rmtree(self.directory, ignore_errors=True)
+        _ = self.database.__exit__(None, None, None)
 
 # ################################################################################################################################
 

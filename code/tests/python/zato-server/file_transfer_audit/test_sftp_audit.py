@@ -129,7 +129,7 @@ def _new_local_file(tmp_path:'os.PathLike') -> 'str':
 def test_an_upload_writes_one_event_with_the_path_and_size(tmp_path:'os.PathLike') -> 'None':
     """ Uploading a file to a server is one event with everything an auditor asks about.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         local_path = _new_local_file(tmp_path)
 
@@ -174,7 +174,7 @@ def test_an_upload_writes_one_event_with_the_path_and_size(tmp_path:'os.PathLike
 def test_a_raising_upload_writes_the_error_outcome(tmp_path:'os.PathLike') -> 'None':
     """ A server that went away leaves an error entry before the caller learns about it.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         local_path = _new_local_file(tmp_path)
 
@@ -200,7 +200,7 @@ def test_a_raising_upload_writes_the_error_outcome(tmp_path:'os.PathLike') -> 'N
 def test_no_bytes_are_ever_stored(tmp_path:'os.PathLike') -> 'None':
     """ The trail says what moved but never carries the file itself.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         local_path = _new_local_file(tmp_path)
 
@@ -215,10 +215,10 @@ def test_no_bytes_are_ever_stored(tmp_path:'os.PathLike') -> 'None':
 
 # ################################################################################################################################
 
-def test_a_delete_writes_one_event_too(tmp_path:'os.PathLike') -> 'None':
+def test_a_delete_writes_one_event_too() -> 'None':
     """ Taking a file off a server is as much of an operation as putting it there.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         sftp_client = ClientRecorder()
         conn = new_sftp_connection(sftp_client)
@@ -243,10 +243,10 @@ def test_a_delete_writes_one_event_too(tmp_path:'os.PathLike') -> 'None':
 
 # ################################################################################################################################
 
-def test_a_move_writes_one_event_with_both_paths(tmp_path:'os.PathLike') -> 'None':
+def test_a_move_writes_one_event_with_both_paths() -> 'None':
     """ Renaming a file on a server is one event saying where the file went.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         to_path = '/documents/archive/results.csv'
 
@@ -276,10 +276,10 @@ def test_a_move_writes_one_event_with_both_paths(tmp_path:'os.PathLike') -> 'Non
 
 # ################################################################################################################################
 
-def test_a_raising_move_writes_the_error_outcome(tmp_path:'os.PathLike') -> 'None':
+def test_a_raising_move_writes_the_error_outcome() -> 'None':
     """ A rename the server refused leaves an error entry before the caller learns about it.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         to_path = '/documents/archive/results.csv'
 
@@ -310,7 +310,7 @@ def test_a_raising_move_writes_the_error_outcome(tmp_path:'os.PathLike') -> 'Non
 def test_the_flag_turned_on_stores_the_bytes(tmp_path:'os.PathLike') -> 'None':
     """ A connection that asked for its files to be kept can have them reread.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         local_path = _new_local_file(tmp_path)
 
@@ -342,7 +342,7 @@ def test_a_read_to_spool_writes_the_file_and_one_event(tmp_path:'os.PathLike', m
 
     data = sample_bytes(Encoding.CP1255)
 
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         sftp_client = ClientRecorder()
         sftp_client.content_by_path[Remote_Path] = data
@@ -383,7 +383,7 @@ def test_a_failed_read_to_spool_leaves_no_spool_file(tmp_path:'os.PathLike', mon
     os.makedirs(spool_directory)
     monkeypatch.setenv(Env_Spool_Directory, spool_directory)
 
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         conn = new_sftp_connection(RaisingClient())
 
@@ -412,7 +412,7 @@ def test_a_read_returns_the_bytes_and_leaves_no_spool_file(tmp_path:'os.PathLike
 
     data = sample_bytes(Encoding.CP1253)
 
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         sftp_client = ClientRecorder()
         sftp_client.content_by_path[Remote_Path] = data
@@ -427,7 +427,7 @@ def test_a_read_returns_the_bytes_and_leaves_no_spool_file(tmp_path:'os.PathLike
 def test_an_oversized_upload_keeps_its_metadata_only(tmp_path:'os.PathLike', monkeypatch:'any_') -> 'None':
     """ An uploaded file over the cap is on record by its name and size, without its bytes.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         monkeypatch.setenv(Env_Max_Attachment_Size, _small_cap)
 
@@ -459,7 +459,7 @@ def test_a_read_back_downloads_the_upload_and_compares_its_checksum(
     os.makedirs(spool_directory)
     monkeypatch.setenv(Env_Spool_Directory, spool_directory)
 
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         local_path = _new_local_file(tmp_path)
 
@@ -496,7 +496,7 @@ def test_a_read_back_mismatch_raises_and_is_recorded(tmp_path:'os.PathLike', mon
     os.makedirs(spool_directory)
     monkeypatch.setenv(Env_Spool_Directory, spool_directory)
 
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         local_path = _new_local_file(tmp_path)
 

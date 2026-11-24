@@ -50,7 +50,7 @@ class ModuleCtx:
 
 @pytest.fixture(scope='session')
 def postgresql_server() -> 'servergen':
-    """ A plain PostgreSQL server started on demand in a container, holding the audit log.
+    """ A plain PostgreSQL server started on demand in a container, holding the Zato database.
     """
     server = start_postgresql(
         container_name=ModuleCtx.PostgreSQL_Container,

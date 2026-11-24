@@ -22,6 +22,7 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common.test.process_util import kill_process_tree
+from zato.common.test.zato_database import isolated_database_env
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -128,6 +129,10 @@ class TestEnmassePickup(TestCase):
         # We will use the server's own pickup directory for enmasse files.
         # The file listener watches this directory and processes enmasse YAML files
         # via the server's REST API, just like in production.
+
+        # The environment has a PostgreSQL database of its own, which the Zato_Database_* variables of this process
+        # select until the class completes, so quickstart, the server and the enmasse calls all read the same database.
+        _ = cls.enterClassContext(isolated_database_env())
 
         qs_env = os.environ.copy()
         qs_env.pop('COVERAGE_PROCESS_START', None)

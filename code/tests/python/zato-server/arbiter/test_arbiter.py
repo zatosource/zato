@@ -15,9 +15,8 @@ import time
 import pytest
 
 # Zato
-from arbiter_common import Condition_Timeout, config_started, is_running, new_config, none_running, Probe, Queue, \
-    Region_Config, start_arbiter, start_arbiter_process, Starts_Metric, stop_arbiter, wait_until, worker_replaced, \
-    Writes_Metric
+from arbiter_common import Condition_Timeout, config_started, is_running, new_config, none_running, Probe, \
+    Region_Config, start_arbiter, start_arbiter_process, Starts_Metric, stop_arbiter, wait_until, worker_replaced
 from zato_ipc_core.zato_ipc_core import SharedRegion
 
 # ################################################################################################################################
@@ -75,28 +74,6 @@ def test_a_terminated_worker_is_replaced(tmp_path:'Path') -> 'None':
     assert replacement != pid
 
     stop_arbiter(arbiter, [replacement], tmp_dir)
-
-# ################################################################################################################################
-
-def test_the_place_of_a_terminated_worker_is_withdrawn(tmp_path:'Path') -> 'None':
-    tmp_dir = str(tmp_path)
-    region = SharedRegion(Region_Config)
-    probe = Probe()
-    arbiter = start_arbiter(region, probe, 'hold_turn', tmp_dir)
-    pid = probe.worker_pid()
-
-    # The worker holds the turn of the queue while the config process waits for it ..
-    assert wait_until(region.queue_has_place, (Queue, region.config_place))
-    assert not probe.reached(Writes_Metric, 1)
-
-    # .. the worker is terminated ..
-    os.kill(pid, signal.SIGKILL)
-
-    # .. and the config process makes its write once the arbiter withdrew the place of the worker.
-    assert wait_until(probe.reached, (Writes_Metric, 1))
-
-    assert wait_until(worker_replaced, (probe, 2))
-    stop_arbiter(arbiter, [probe.worker_pid(), probe.config_pid.value], tmp_dir)
 
 # ################################################################################################################################
 

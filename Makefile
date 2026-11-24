@@ -1095,41 +1095,47 @@ test-soak-scheduler-failover: ## The soak test of the active-passive scheduler f
 test-soak: ## Every soak test, resuming from the target that last failed. RESTART=1 to start from scratch.
 	$(call Zato_Test_Walk,$(Zato_Test_Soak),$(Zato_Test_Soak_Resume_File))
 
-test-queue-delivery-rest: ## Queue delivery of outgoing REST connections, live.
+test-queue-delivery-rest: ## Queue delivery of outgoing REST connections - enmasse with a PostgreSQL ODB, then live.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_delivery_outgoing_rest.py \
 		$(CURDIR)/code/tests/python/zato-server/queue_delivery_rest/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_queue_delivery_rest \
 		-W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-queue-delivery-soap: ## Queue delivery of outgoing SOAP connections, live.
+test-queue-delivery-soap: ## Queue delivery of outgoing SOAP connections - enmasse with a PostgreSQL ODB, then live.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_delivery_outgoing_soap.py \
 		$(CURDIR)/code/tests/python/zato-server/queue_delivery_soap/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_queue_delivery_soap \
 		-W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-queue-delivery-fhir: ## Queue delivery of outgoing FHIR connections, live.
+test-queue-delivery-fhir: ## Queue delivery of outgoing FHIR connections - enmasse with a PostgreSQL ODB, then live.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_delivery_outgoing_fhir.py \
 		$(CURDIR)/code/tests/python/zato-server/queue_delivery_fhir/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_queue_delivery_fhir \
 		-W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-queue-delivery-mllp: ## Queue delivery of outgoing MLLP connections, live.
+test-queue-delivery-mllp: ## Queue delivery of outgoing MLLP connections - enmasse with a PostgreSQL ODB, then live.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_delivery_outgoing_mllp.py \
 		$(CURDIR)/code/tests/python/zato-server/queue_delivery_mllp/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_queue_delivery_mllp \
 		-W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-queue-delivery-channel-rest: ## The queue of REST channels - enmasse with a PostgreSQL ODB, then live.
+test-queue-delivery-channel-rest: ## The queue of REST channels - enmasse with a PostgreSQL ODB, the importer and the exporter of the delivery keys of REST and SOAP channels included, then live.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/importers/test_importer_enmasse_channel_delivery.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/exporters/test_exporter_enmasse_channel_delivery.py \
 		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_delivery_channel_rest.py \
 		$(CURDIR)/code/tests/python/zato-server/queue_delivery_channel_rest/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_queue_delivery_channel_rest \
@@ -1342,10 +1348,17 @@ Zato_Test_Enmasse_Disabled := \
 # Every enmasse suite lives here - the importers, the exporters and the round trips for
 # every connection type. Targets for a given connection type do not carry enmasse tests
 # of their own, discovery below already covers them and running them twice proves nothing.
-test-enmasse: ## Enmasse tests - every importer, every exporter, the round trips and secret rotation against live services.
+test-enmasse: ## Enmasse tests - every importer, every exporter, the file writer, is_active and should_delete on a PostgreSQL ODB, the round trips and secret rotation against live services.
 	$(Zato_Log_Reset)
 	cd $(CURDIR)/code/zato-cli/test/zato/enmasse_ && $(ZATO_PY) -m unittest -v --failfast \
 		$$(find . -name 'test_*.py' $(foreach name,$(Zato_Test_Enmasse_Disabled),! -name $(name)) | sort) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_file_writer.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_is_active.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_should_delete.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/importers/test_importer_enmasse_sql_extra.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_enmasse -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 # Secret rotation needs the live services switched on, which the discovery above leaves off
 	Zato_Test_Live_SQL=1 Zato_Test_FTP=1 Zato_Test_SFTP=1 Zato_Test_SMB=1 Zato_Test_MongoDB=1 \
 		$(ZATO_PY) -m unittest discover -s $(CURDIR)/code/zato-cli/test/zato/enmasse_ -p 'test_secret_rotation_live.py' -v --failfast $(Zato_Log)
@@ -1570,7 +1583,7 @@ test-outconn-tls-local-docker: ## Replaced client certificates of outgoing REST 
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 
-test-sql: ## Every SQL test - Redshift against a local protocol simulator, offline and through a live Zato server.
+test-sql: ## Every SQL test - Redshift against a local protocol simulator, offline and through a live Zato server, and the SQL audit log of outgoing MySQL and PostgreSQL connections against live containers and of outgoing SQLite connections.
 	$(Zato_Log_Reset)
 	$(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/sql_cloud/ \
@@ -1579,6 +1592,12 @@ test-sql: ## Every SQL test - Redshift against a local protocol simulator, offli
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/sql_cloud_live/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sql_cloud_live -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/sql_outgoing_audit/test_sql_audit_sqlite.py \
+		$(CURDIR)/code/tests/python/zato-server/sql_outgoing_audit/test_sql_audit_postgresql.py \
+		$(CURDIR)/code/tests/python/zato-server/sql_outgoing_audit/test_sql_audit_mysql.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sql_audit -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 test-aws: ## AWS connection tests through a live Zato server against a simulated AWS environment.
@@ -1670,7 +1689,7 @@ test-sdk: ## Connector SDK tests through a live Zato server against a suite-owne
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sdk_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-oracle-db: ## Outgoing Oracle DB connection tests against a live Oracle container, including a live Zato server, stored procedure calls, concurrent queries from greenlets and the SQL audit log.
+test-oracle-db: ## Outgoing Oracle DB connection tests against a live Oracle container, including a live Zato server, stored procedure calls, concurrent queries from greenlets, the SQL audit log, and the facility synchronization project on a live Zato server with its scheduler, with faults injected at each step of a run.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/oracle_db_live/ \
@@ -1679,6 +1698,10 @@ test-oracle-db: ## Outgoing Oracle DB connection tests against a live Oracle con
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/sql_outgoing_audit/test_sql_audit_oracle.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sql_audit_oracle -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/facility_sync_live/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_facility_sync_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 test-mssql-db: ## Outgoing MS SQL connection tests against a live MS SQL Developer container, including a live Zato server, queries, stored procedure calls and the SQL audit log.
@@ -1737,7 +1760,7 @@ test-salesforce: ## Salesforce connection tests - a live Zato server against a s
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 
-test-hl7: ## Every HL7 test - parsing, FHIR, MLLP channels, outgoing connections, other languages and volume.
+test-hl7: ## Every HL7 test - parsing, FHIR, MLLP channels, outgoing connections, the enmasse import and export of MLLP and FHIR connections, the Dashboard views of MLLP channels, other languages and volume.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/mllp/ \
@@ -1750,6 +1773,22 @@ test-hl7: ## Every HL7 test - parsing, FHIR, MLLP channels, outgoing connections
 		$(CURDIR)/code/tests/python/zato-common/demo_seed/ \
 		--ignore=$(CURDIR)/code/tests/python/zato-common/mllp/fuzz \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7 -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/importers/test_importer_enmasse_channel_mllp.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/importers/test_importer_enmasse_outgoing_fhir.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/exporters/test_exporter_enmasse_channel_mllp.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/exporters/test_exporter_enmasse_outgoing_fhir.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_channel_mllp.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_outgoing_fhir.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_outgoing_mllp.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_tls_outgoing_mllp.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_enmasse -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+# The wizard's views configure Django in their conftest and run in a pytest process of their own
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/mllp_wizard_views/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_mllp_wizard_views -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/mllp_channels/ \
@@ -1784,15 +1823,29 @@ test-hl7: ## Every HL7 test - parsing, FHIR, MLLP channels, outgoing connections
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_fhir -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-ui: ## Every dashboard test - the UI kit, the audit log, the whole Playwright suite and the web-admin access checks.
+test-ui: ## Every dashboard test - the UI kit, the sign-in of Dashboard users, the audit log, the URL configuration, the alerts tab, the headers of the middleware client, the whole Playwright suite and the web-admin access checks.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/webapp_ui/ \
+		$(CURDIR)/code/tests/python/zato-common/webapp_auth/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_webapp_ui \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+# Each of these suites configures Django in its conftest with settings of its own and runs in a pytest process of its own
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-dashboard/audit_log_views/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_audit_log_views -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/urls_config/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_urls_config -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/alerts_tab/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_alerts_tab -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-dashboard/middleware_client/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_middleware_client -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	$(ZATO_PY) $(CURDIR)/code/tests/python/zato-common/audit_log/run_matrix.py $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
@@ -1867,12 +1920,31 @@ test-audit-log: ## Audit log tests against live PostgreSQL, plain and TLS, plus 
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_audit_log_reprocess -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-alerting: ## Alerting engine tests - rules, actions, dedup, lifecycle and collectors, fully offline.
+test-alerting: ## Alerting engine tests - rules, actions, dedup, lifecycle, collectors and the alert configuration of objects, the enmasse import and export of alert configuration, the alerts of generic and HTTP connections on a PostgreSQL configuration database, and the alert explanations, offline and through a live server with an LLM in a container.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/alerting/ \
 		$(CURDIR)/code/tests/python/zato-common/alerting_explain/ \
+		$(CURDIR)/code/tests/python/zato-common/alerting_object_config/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_alerting -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-cli/alerting_enmasse/ \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/importers/test_importer_enmasse_alerts.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/exporters/test_exporter_enmasse_alerts.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_alerts_channel_mllp.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_alerts_channel_soap.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_alerts_outgoing_fhir.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_alerts_outgoing_llm.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_alerts_outgoing_mllp.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_alerts_outgoing_rest.py \
+		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_alerts_outgoing_soap.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_alerting_enmasse -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/generic_alerts/ \
+		$(CURDIR)/code/tests/python/zato-server/http_soap_alerts/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_connection_alerts -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/alert_explanation/ \
@@ -1946,11 +2018,18 @@ test-smb-ui: ## Live SMB tests through the Dashboard against Windows Server 2025
 		-x -v -s -p no:cacheprovider -o log_cli_level=WARNING -o faulthandler_timeout=120 -W ignore::DeprecationWarning \
 		$(PYTEST_ARGS) $(Zato_Log)
 
-test-smb: ## Live SMB tests against Windows Server 2025, 2022 and 2019 guests and a Japanese Windows Server 2025 guest - the offline checks, the file exchange flows, reliability, the Dashboard and failover, in that order.
+test-smb: ## Live SMB tests against Windows Server 2025, 2022 and 2019 guests and a Japanese Windows Server 2025 guest - the offline checks, the audit, store and reprocess suites against stubs, the file exchange flows, reliability, the Dashboard and failover, in that order.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/live_windows_offline/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_smb_windows_offline -W ignore::DeprecationWarning \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_smb_audit.py \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_file_transfer_audit.py \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_store_data_types.py \
+		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_reprocess.py \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_smb_audit -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	trap '$(Zato_SMB_Windows_CLI) stop' EXIT; \
 	$(Zato_SMB_Windows_CLI) start $(Zato_Log) && \

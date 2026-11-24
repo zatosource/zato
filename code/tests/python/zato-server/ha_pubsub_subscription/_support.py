@@ -11,14 +11,17 @@ import os
 import time
 from dataclasses import dataclass
 
+# pg8000
+import pg8000.dbapi
+
 # PyYAML
 import yaml
 
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.client import PublishClient, PullClient
-from zato.common.test.pubsub_database import connect, get_db_mode, is_postgresql_mode
-from zato.common.test.pubsub_in_process_support import SQLiteWriteLock
+from zato.common.test.pubsub_database import build_ssl_context, ModuleCtx as DatabaseModuleCtx
+from zato.common.test.zato_database import ModuleCtx as ZatoDatabaseCtx
 
 # Live environment
 from live_environment.quickstart import Host
@@ -65,9 +68,6 @@ class ModuleCtx:
     Marker_Completed = 'Enmasse stderr'
     Marker_Failed    = 'Enmasse import failed'
 
-    # The marker the config process writes once it reloads its configuration after a reload that failed
-    Marker_Reload_Retried = 'Configuration of the config process reloaded after a failed reload'
-
     Log_Path = os.path.join('logs', 'server.log')
 
     # How long a condition that the suite waits for may take to hold, in seconds, and how often it is checked
@@ -87,6 +87,9 @@ class ModuleCtx:
     # The lock that a session of the test holds on PostgreSQL to fail the writes of subscription rows past the lock timeout
     # of the server, which leaves plain reads of the table and every other table to proceed
     Table_Write_Lock = 'lock table pubsub_topic_sub in exclusive mode'
+
+    # How long a session of the test may take to connect to PostgreSQL, in seconds
+    Connect_Timeout = 10
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -200,41 +203,6 @@ class Pickup:
             return out
 
         wait_for(_is_imported, f'The import of {what}')
-
-# ################################################################################################################################
-
-    def wait_for_failed_import(self, completed_before:'int', failed_before:'int', what:'str') -> 'None':
-        """ Waits until the server fails one more enmasse import and has none running, and raises if one completed.
-        """
-        def _is_failed() -> 'bool':
-            started, completed, failed = self.count_markers()
-
-            if completed > completed_before:
-                raise Exception(f'The server imported {what}, which was expected to fail, see {self.log_path}')
-
-            out = failed > failed_before and started == completed + failed
-            return out
-
-        wait_for(_is_failed, f'The failed import of {what}')
-
-# ################################################################################################################################
-
-    def count_reload_retries(self) -> 'int':
-        """ How many times the log of the server says the config process reloaded its configuration after a failed reload.
-        """
-        out = self._read_log().count(ModuleCtx.Marker_Reload_Retried)
-        return out
-
-# ################################################################################################################################
-
-    def wait_for_reload_retry(self, retries_before:'int') -> 'None':
-        """ Waits until the config process reloads its configuration once more after a failed reload.
-        """
-        def _is_retried() -> 'bool':
-            out = self.count_reload_retries() > retries_before
-            return out
-
-        wait_for(_is_retried, 'The reload of the config process after a failed reload')
 
 # ################################################################################################################################
 
@@ -361,35 +329,40 @@ class Runtime:
 # ################################################################################################################################
 
 class WriteFault:
-    """ Fails the writes of the server to the subscription rows of the pub/sub database while its reads proceed -
-    on SQLite through the write lock held by a process of its own past the deadline of the writes, and on PostgreSQL
+    """ Fails the writes of the server to the subscription rows of the pub/sub database while its reads proceed,
     through an exclusive lock of the table of subscription rows held by a session of the test past the lock timeout.
     """
 
-    def __init__(self, environment:'ZatoEnvironment', database_proxy:'DatabaseProxy | None') -> 'None':
-        self.database_proxy = database_proxy
-        self.sqlite_lock = SQLiteWriteLock(environment.audit_db_path)
-
-        if database_proxy is None:
-            self.table_lock = None
-        else:
-            self.table_lock = RowLock(database_proxy.database, ModuleCtx.Table_Write_Lock, [])
+    def __init__(self, environment:'ZatoEnvironment', database_proxy:'DatabaseProxy') -> 'None':
+        self.table_lock = RowLock(database_proxy.database, environment, ModuleCtx.Table_Write_Lock, [])
 
 # ################################################################################################################################
 
     def apply(self) -> 'None':
-        if self.table_lock is None:
-            self.sqlite_lock.acquire()
-        else:
-            self.table_lock.acquire()
+        self.table_lock.acquire()
 
 # ################################################################################################################################
 
     def remove(self) -> 'None':
-        if self.table_lock is None:
-            self.sqlite_lock.release()
-        else:
-            self.table_lock.release()
+        self.table_lock.release()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def connect_environment(database:'PubSubDatabase', environment:'ZatoEnvironment') -> 'pg8000.dbapi.Connection':
+    """ Opens a pg8000 connection to the database of a live environment, outside of any engine and of the proxy.
+    """
+    if database.env.get('Zato_Database_SSL'):
+        ssl_context = build_ssl_context(database)
+    else:
+        ssl_context = False
+
+    db_name = environment.database_env[ZatoDatabaseCtx.Env_Name]
+
+    out = pg8000.dbapi.connect(user=DatabaseModuleCtx.Username, password=database.password, host=database.host,
+        port=database.port, database=db_name, ssl_context=ssl_context, timeout=ModuleCtx.Connect_Timeout)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -398,8 +371,15 @@ class RowLock:
     """ Holds a lock on rows of a pub/sub table of PostgreSQL from a session of the test.
     """
 
-    def __init__(self, database:'PubSubDatabase', statement:'str', params:'anylist') -> 'None':
+    def __init__(
+        self,
+        database:'PubSubDatabase',
+        environment:'ZatoEnvironment',
+        statement:'str',
+        params:'anylist',
+        ) -> 'None':
         self.database = database
+        self.environment = environment
         self.statement = statement
         self.params = params
         self.connection = None
@@ -409,7 +389,7 @@ class RowLock:
     def acquire(self) -> 'None':
         """ Opens a session, whose first statement begins its transaction, and locks the rows.
         """
-        self.connection = connect(self.database)
+        self.connection = connect_environment(self.database, self.environment)
         cursor = self.connection.cursor()
         cursor.execute(self.statement, self.params)
 
@@ -479,14 +459,6 @@ def assert_rows_equal_list(runtime:'Runtime') -> 'None':
     listed = runtime.listed_pairs()
 
     assert rows == listed, f'Rows {sorted(rows)} differ from the subscription list {sorted(listed)}'
-
-# ################################################################################################################################
-
-def is_postgresql() -> 'bool':
-    """ Whether the suite runs on PostgreSQL.
-    """
-    out = is_postgresql_mode(get_db_mode())
-    return out
 
 # ################################################################################################################################
 

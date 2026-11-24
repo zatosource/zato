@@ -6,19 +6,16 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# pytest
-import pytest
-
 # Zato
 from zato.common.crypto.api import CryptoManager
 
 # Fault tools
 from container import Container
-from faults import Packet_Loss, PacketFault, Total_Loss
+from faults import Packet_Loss, PacketFault
 
 # Local
-from _support import assert_rows_equal_list, get_msg_ids, is_postgresql, publish_accepted, publish_client, pull_all, \
-    pull_client, wait_for, wait_for_no_unconfirmed, wait_for_unconfirmed, yaml_subscription
+from _support import assert_rows_equal_list, get_msg_ids, publish_accepted, publish_client, pull_all, pull_client, wait_for, \
+    wait_for_no_unconfirmed, yaml_subscription
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,16 +36,6 @@ class ModuleCtx:
 
     # How many messages are published to each topic during the partial loss
     Publication_Count = 10
-
-    # How long the pair added during the total loss may take to become pending, in seconds. The reload of the config process
-    # and then that of the worker each fail their reads of PostgreSQL within the read timeout of a pooled connection
-    # and the connect timeout of a new one.
-    Total_Loss_Wait_Timeout = 360.0
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-pytestmark = pytest.mark.skipif(not is_postgresql(), reason='The network faults apply to the link to PostgreSQL')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,8 +61,8 @@ def test_network_faults(
     names:'any_',
     database_proxy:'any_',
     ) -> 'None':
-    """ Total packet loss during a reload and partial loss during enmasse files and publications end with rows equal
-    to the subscription list, every message delivered to its subscribers and none to a removed pair.
+    """ Partial packet loss during enmasse files and publications ends with rows equal to the subscription list,
+    every message delivered to its subscribers and none to a removed pair.
     """
     sub_key = runtime.sub_key(names.security_pull)
     added_pair = (sub_key, names.topic_second.lower())
@@ -83,30 +70,15 @@ def test_network_faults(
 
     fault = PacketFault(Container(database_proxy.database.container_name), Packet_Loss)
 
-    # No packet reaches PostgreSQL while the server applies the addition. The reload of the config process cannot read
-    # the run state of the scheduler, so the import is reported as failed, and the worker, which reloads all the same,
-    # takes the subscription from config.db with its pair pending ..
-    _, completed_before, failed_before = pickup.count_markers()
-    retries_before = pickup.count_reload_retries()
-    fault.apply(Total_Loss)
-
-    try:
-        file_name = pickup.place('add-second-during-total-loss',
-            yaml_subscription(names.security_pull, [names.topic_pull, names.topic_second]))
-        wait_for_unconfirmed(runtime, ModuleCtx.Total_Loss_Wait_Timeout)
-    finally:
-        fault.remove()
-
-    pickup.wait_for_failed_import(completed_before, failed_before, file_name)
-
-    # .. and once PostgreSQL is reachable again, the config process completes its reload and the rows of the pair are written.
-    pickup.wait_for_reload_retry(retries_before)
+    # The subscriber is subscribed to both topics ..
+    pickup.apply('add-second', yaml_subscription(names.security_pull, [names.topic_pull, names.topic_second]))
     wait_for_no_unconfirmed(runtime)
 
     assert added_pair in runtime.governed_pairs()
     assert_rows_equal_list(runtime)
 
-    # .. and a part of them is lost while it applies the removal and messages are published to both topics.
+    # .. and a part of the packets to PostgreSQL is lost while the server applies the removal
+    # and messages are published to both topics.
     publisher = publish_client(environment, names)
     fault.apply(ModuleCtx.Partial_Loss)
 

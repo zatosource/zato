@@ -31,17 +31,15 @@ from http_soap_stub import Service_Name
 # ################################################################################################################################
 
 if 0:
-    from pathlib import Path
     from zato.common.typing_ import any_
     any_ = any_
-    Path = Path
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @pytest.fixture
-def session_factory(tmp_path:'Path') -> 'any_':
-    """ A sessionmaker over a fresh SQLite database file with the tables the services touch.
+def session_factory() -> 'any_':
+    """ A sessionmaker over a new PostgreSQL database with the tables the services touch.
     """
     tables = [
         Service.__table__,
@@ -49,7 +47,7 @@ def session_factory(tmp_path:'Path') -> 'any_':
         HTTPSOAP.__table__,
     ]
 
-    with config_database_engine(tmp_path, tables) as engine:
+    with config_database_engine(tables) as engine:
         factory = sessionmaker(bind=engine)
 
         session = factory()

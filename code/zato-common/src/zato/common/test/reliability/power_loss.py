@@ -106,6 +106,7 @@ class PowerLossServer:
             invoke_password=self.invoke_password,
             rendered_yaml=rendered_yaml,
             quickstart_prefix=f'zato_power_loss_{self.name}_',
+            extra_env=self.database_env,
             quickstart_parent_dir=self.parent_dir,
         )
 

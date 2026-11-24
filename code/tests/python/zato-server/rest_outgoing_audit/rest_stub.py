@@ -11,23 +11,20 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # and the environment that points the audit log at a throwaway database.
 
 # stdlib
-import os
 from contextlib import contextmanager
 from http.client import BAD_REQUEST
 
 # Zato
-from live_sql.env import database_env
 from zato.common.api import URL_TYPE
 from zato.common.soap.common import SOAPVersion
+from zato.common.test.zato_database import zato_database_engine
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
-from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from collections.abc import Iterator
-    from zato.common.typing_ import any_
 
     envgen = Iterator[None]
 
@@ -48,17 +45,10 @@ Address_Path = '/api'
 # ################################################################################################################################
 
 @contextmanager
-def rest_audit_env(tmp_path:'any_') -> 'envgen':
-    """ Points the audit log at a throwaway SQLite database for the duration of a test.
+def rest_audit_env() -> 'envgen':
+    """ Points the audit log at a throwaway PostgreSQL database for the duration of a test.
     """
-    db_path = os.path.join(str(tmp_path), 'zato.db')
-
-    details = {
-        'type': DatabaseEnv.Type_SQLite,
-        'path': db_path,
-    }
-
-    with database_env(details):
+    with zato_database_engine():
         yield
 
 # ################################################################################################################################

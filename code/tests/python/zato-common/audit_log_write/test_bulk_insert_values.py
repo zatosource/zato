@@ -58,9 +58,6 @@ _batch_sizes = (1, 15, 16, 50)
 # The batch size of the tests that do not depend on the insert path
 _event_count = 16
 
-# The zlib level that SQLite stores text with
-_compression_level = 1
-
 # The text of the body row of the attachment of an event
 _attachment_data = '{"filename": "invoice.pdf", "content_type": "application/pdf", "size": 34, "is_content_kept": true}'
 
@@ -285,32 +282,18 @@ def test_payloads_shared_across_batches(audit_backend:'str') -> 'None':
 # ################################################################################################################################
 
 def test_stored_form(audit_backend:'str') -> 'None':
-    """ SQLite stores the text of payloads and bodies compressed with zlib at its fastest level, and the times
-    as text, while PostgreSQL stores the text as it is given.
+    """ The text of payloads and bodies is stored as it is given.
     """
     written = _write_value_batch(_event_count)
     engine = get_database_engine()
 
-    is_sqlite = audit_backend == Backend_SQLite
-
-    stored_type:'any_'
-
-    if is_sqlite:
-        stored_type = LargeBinary
-    else:
-        stored_type = Text
-
-    payload_query = select(event_payload_table.c.digest, type_coerce(event_payload_table.c.data, stored_type))
-    body_query = select(event_body_table.c.event_id, event_body_table.c.kind, type_coerce(event_body_table.c.data, stored_type))
+    payload_query = select(event_payload_table.c.digest, type_coerce(event_payload_table.c.data, Text))
+    body_query = select(event_body_table.c.event_id, event_body_table.c.kind, type_coerce(event_body_table.c.data, Text))
     body_query = body_query.where(event_body_table.c.kind != AuditBody.Attachment)
-
-    time_query = select(event_table.c.id, type_coerce(event_table.c.event_time, String),
-        type_coerce(event_table.c.pub_time, String))
 
     with engine.connect() as connection:
         stored_payloads = connection.execute(payload_query).all()
         stored_bodies = connection.execute(body_query).all()
-        stored_times = connection.execute(time_query).all()
 
     # The text of each payload and of each body ..
     texts_by_digest:'anydict' = {}
@@ -326,38 +309,15 @@ def test_stored_form(audit_backend:'str') -> 'None':
 
     assert stored_bodies
 
-    # .. is stored compressed on SQLite and as it is on PostgreSQL.
+    # .. is stored as it is.
     for digest, stored in stored_payloads:
         if digest in texts_by_digest:
             text = texts_by_digest[digest]
-
-            if is_sqlite:
-                assert stored == zlib.compress(text.encode('utf8'), _compression_level), digest
-            else:
-                assert stored == text, digest
+            assert stored == text, digest
 
     for event_id, kind, stored in stored_bodies:
         text = bodies_by_key[event_id, kind]
-
-        if is_sqlite:
-            assert stored == zlib.compress(text.encode('utf8'), _compression_level), (event_id, kind)
-        else:
-            assert stored == text, (event_id, kind)
-
-    # The times of the value events are stored by SQLite in the text form of SQLAlchemy.
-    if is_sqlite:
-        pub_times:'anydict' = {}
-
-        for spec, pending in zip(written.specs, written.batch):
-            if spec.pub_time == Pub_Time:
-                pub_times[pending.event_id] = _sqlite_pub_time
-            else:
-                pub_times[pending.event_id] = None
-
-        for event_id, event_time, pub_time in stored_times:
-            if event_id in pub_times:
-                assert event_time == _sqlite_event_time, event_id
-                assert pub_time == pub_times[event_id], event_id
+        assert stored == text, (event_id, kind)
 
 # ################################################################################################################################
 

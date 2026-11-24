@@ -107,10 +107,10 @@ def test_service_input_is_serialized_to_json_in_request_order() -> 'None':
 
 # ################################################################################################################################
 
-def test_a_store_of_a_service_input_writes_json(tmp_path:'os.PathLike') -> 'None':
+def test_a_store_of_a_service_input_writes_json() -> 'None':
     """ A service that writes its own input to a file leaves the request's fields as a JSON document.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         smb_client = ClientRecorder()
         conn = new_smb_connection(smb_client)
@@ -124,10 +124,10 @@ def test_a_store_of_a_service_input_writes_json(tmp_path:'os.PathLike') -> 'None
 
 # ################################################################################################################################
 
-def test_a_queued_delivery_of_a_service_input_spools_json(tmp_path:'os.PathLike') -> 'None':
+def test_a_queued_delivery_of_a_service_input_spools_json() -> 'None':
     """ A queued delivery of a service's input spools the same JSON document a direct store writes.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         conn = new_smb_connection(ClientRecorder())
         publisher = PublisherRecorder()
@@ -142,8 +142,8 @@ def test_a_queued_delivery_of_a_service_input_spools_json(tmp_path:'os.PathLike'
 
 # ################################################################################################################################
 
-def test_a_queued_delivery_of_text_spools_its_bytes(tmp_path:'os.PathLike') -> 'None':
-    with audit_db_env(tmp_path):
+def test_a_queued_delivery_of_text_spools_its_bytes() -> 'None':
+    with audit_db_env():
 
         conn = new_smb_connection(ClientRecorder())
         publisher = PublisherRecorder()

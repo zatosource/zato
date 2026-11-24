@@ -15,6 +15,7 @@ import sys
 import tempfile
 import time
 import shutil
+from contextlib import ExitStack
 
 # This directory must stay first so `import conftest` in test modules resolves to this very file,
 # not to the conftest of the config_store suite added below.
@@ -35,8 +36,8 @@ from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.process_util import kill_process_tree
 from zato.common.util.config import get_config_object, update_config_file
+from zato.common.test.zato_database import isolated_database_env
 from zato.common.typing_ import cast_
-from zato.common.db_env.database_env import DatabaseEnv
 
 # Live environment
 from live_environment.scheduler import SchedulerProcess
@@ -193,6 +194,13 @@ def zato_server(request:'any_'):
     port = _find_free_port()
     _tmpdir = tempfile.mkdtemp(prefix='zato_sched_test_')
 
+    # The Zato database of the session is a new PostgreSQL database, which quickstart, the server and the scheduler
+    # select through the Zato_Database_* variables of this process. The job execution history resides in it,
+    # and the history tests read it back through the server's own services.
+    database_scope = ExitStack()
+    request.addfinalizer(database_scope.close)
+    _ = database_scope.enter_context(isolated_database_env())
+
     qs_env = os.environ.copy()
     _ = qs_env.pop('COVERAGE_PROCESS_START', None)
 
@@ -226,19 +234,13 @@ def zato_server(request:'any_'):
 
     broker_port = _find_free_port()
 
-    # A fresh audit database per session, with the audit log explicitly enabled -
-    # job execution history lives there and the history tests read it back through
-    # the server's own services.
-    audit_db_path = os.path.join(_tmpdir, 'zato.db')
-
+    # The audit log is explicitly enabled, since the job execution history resides in it.
     env = os.environ.copy()
     env['Zato_Config_Bind_Port'] = str(port)
     env['Zato_Broker_HTTP_Port'] = str(broker_port)
     scheduler_environment = _scheduler.server_environment()
     env.update(scheduler_environment)
     env[AuditLogCtx.Env_Enabled] = 'True'
-    env[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
-    env[DatabaseEnv.Env_Path] = audit_db_path
     _ = env.pop('COVERAGE_PROCESS_START', None)
     if coveragerc_path:
         env['COVERAGE_PROCESS_START'] = coveragerc_path

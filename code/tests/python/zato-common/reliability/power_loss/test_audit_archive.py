@@ -7,13 +7,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The retention of the audit log archives the events it deletes into a file on LazyFS, and every event
-# that the retention deleted is in the archive after a loss of power. The database is SQLite.
+# that the retention deleted is in the archive after a loss of power. The PostgreSQL database keeps its data
+# directory on LazyFS too, and both lose their power together.
 
 # stdlib
 import errno
 import os
 import shutil
-import sqlite3
 from datetime import timedelta
 from json import loads
 
@@ -24,42 +24,53 @@ import pytest
 from sqlalchemy import select
 
 # Zato
-from live_sql.env import database_env
+from checks import DatabaseReader
 from zato.common.audit_log.api import event_table, get_source_env_suffix, AuditEvent, AuditLog, AuditSource, \
     Env_Retention_Days_Prefix
 from zato.common.audit_log.retention import Env_Archive_Dir
 from zato.common.db_env.database import dispose_database_engine, get_database_engine
-from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.test.direct_sql.seed import seed_audit_events
+from zato.common.test.pubsub_database import connect, kill_container, pubsub_db_env, PubSubDBMode, start_container, \
+    start_pubsub_database, stop_container, stop_pubsub_database
 from zato.common.test.reliability.lazyfs import LazyFSMount
 from zato.common.test.sql_conformance.disk import get_disk_dir
+from zato.common.test.zato_database import zato_database_engine
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    import pg8000.dbapi
     from pytest import MonkeyPatch
+    from zato.common.test.pubsub_database import PubSubDatabase
     from zato.common.typing_ import any_, anylist, intlist, intstrdict
 
     # Dummy assignments to satisfy type checkers
     MonkeyPatch = MonkeyPatch
+    PubSubDatabase = PubSubDatabase
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ModuleCtx:
 
-    # The directory of the test and the tool container of its mount
-    Dir_Name = 'power-loss-audit-archive'
-    Container_Name = 'zato-test-lazyfs-power-loss-audit-archive'
+    # The label of the database container, the tool container of the mount of its data directory
+    # and the directory of its data
+    Database_Label = 'power-loss-audit-archive'
+    Database_Container_Name = 'zato-test-lazyfs-power-loss-audit-archive-postgresql'
+    Data_Dir_Name = 'data'
+
+    # The directory of the archive and the tool container of its mount
+    Archive_Dir_Name = 'power-loss-audit-archive'
+    Archive_Container_Name = 'zato-test-lazyfs-power-loss-audit-archive'
 
     # The server and the channel the events are written under
     Server_Name = 'test-audit-archive-server'
     Channel_Name = 'audit.test.archive'
 
     # The directory of the archive, under the directory of the test
-    Archive_Dir_Name = 'archive'
+    Archive_Subdir_Name = 'archive'
 
     # How many events are seeded, how old they are and how many days of them the retention keeps
     Event_Count = 3
@@ -76,16 +87,46 @@ _env_source_retention_days = f'{Env_Retention_Days_Prefix}{get_source_env_suffix
 # ################################################################################################################################
 
 @pytest.fixture
-def mount() -> 'any_':
-    """ A LazyFS mount over the directory of the database and of the archive.
+def database() -> 'any_':
+    """ A PostgreSQL container whose data directory is on LazyFS. Yields the database and the mount of its data.
     """
-    base_dir = get_disk_dir(ModuleCtx.Dir_Name)
+    out = start_pubsub_database(ModuleCtx.Database_Label, PubSubDBMode.PostgreSQL)
+
+    try:
+        # The data that the container created at its start becomes the content of LazyFS ..
+        stop_container(out)
+
+        data_dir = os.path.join(out.work_dir, ModuleCtx.Data_Dir_Name)
+        lazyfs_dir = os.path.join(out.work_dir, 'lazyfs')
+
+        mount = LazyFSMount(ModuleCtx.Database_Container_Name, out.work_dir, lazyfs_dir, data_dir)
+        mount.mount()
+
+        # .. and the container works on LazyFS from now on.
+        try:
+            start_container(out)
+            yield out, mount
+        finally:
+            stop_container(out)
+            mount.unmount()
+
+    finally:
+        stop_pubsub_database(out)
+
+# ################################################################################################################################
+
+@pytest.fixture
+def archive_mount() -> 'any_':
+    """ A LazyFS mount over the directory of the archive.
+    """
+    base_dir = get_disk_dir(ModuleCtx.Archive_Dir_Name)
     shutil.rmtree(base_dir)
 
     mount_dir = os.path.join(base_dir, 'files')
+    lazyfs_dir = os.path.join(base_dir, 'lazyfs')
     os.makedirs(mount_dir)
 
-    out = LazyFSMount(ModuleCtx.Container_Name, base_dir, os.path.join(base_dir, 'lazyfs'), mount_dir)
+    out = LazyFSMount(ModuleCtx.Archive_Container_Name, base_dir, lazyfs_dir, mount_dir)
     out.mount()
 
     try:
@@ -140,20 +181,20 @@ def _seed_expired_events(audit_log:'AuditLog') -> 'intstrdict':
 
 # ################################################################################################################################
 
-def _read_stored_ids(db_path:'str') -> 'intlist':
-    """ Returns the ids of the events in the database, which is opened read-only.
+def _read_stored_ids(database:'PubSubDatabase') -> 'intlist':
+    """ Returns the ids of the events in the database, read outside of the engine of the test.
     """
-    query = f'select id from {event_table.name}'
+    def connect_database() -> 'pg8000.dbapi.Connection':
+        out = connect(database)
+        return out
+
+    reader = DatabaseReader(connect_database)
+    rows = reader.read_rows(f'select id from {event_table.name}')
 
     out:'intlist' = []
 
-    connection = sqlite3.connect(f'file:{db_path}?mode=ro', uri=True)
-
-    try:
-        for row in connection.execute(query):
-            out.append(row[0])
-    finally:
-        connection.close()
+    for row in rows:
+        out.append(row[0])
 
     return out
 
@@ -200,20 +241,15 @@ def _fail_fsync(fd:'int') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_archive_survives_power_loss(mount:'LazyFSMount', monkeypatch:'MonkeyPatch') -> 'None':
+def test_archive_survives_power_loss(database:'any_', archive_mount:'LazyFSMount', monkeypatch:'MonkeyPatch') -> 'None':
     """ Every event that the retention deleted before the loss of power is in the archive afterwards.
     """
-    db_path = os.path.join(mount.mount_dir, DatabaseEnv.File_Name)
-    archive_dir = os.path.join(mount.mount_dir, ModuleCtx.Archive_Dir_Name)
+    pubsub_database, data_mount = database
 
+    archive_dir = os.path.join(archive_mount.mount_dir, ModuleCtx.Archive_Subdir_Name)
     _set_retention_env(monkeypatch, archive_dir)
 
-    details = {
-        'type': DatabaseEnv.Type_SQLite,
-        'path': db_path,
-    }
-
-    with database_env(details):
+    with pubsub_db_env(pubsub_database.env):
 
         try:
 
@@ -225,13 +261,19 @@ def test_archive_survives_power_loss(mount:'LazyFSMount', monkeypatch:'MonkeyPat
             now = utcnow()
             audit_log._run_retention(now)
 
-        # .. and the database is closed before the loss of power.
+        # .. the engine of the test is closed ..
         finally:
             dispose_database_engine()
 
-    mount.discard_unsynced()
+    # .. the database and the archive lose their power together ..
+    kill_container(pubsub_database)
+    data_mount.discard_unsynced()
+    archive_mount.discard_unsynced()
 
-    stored_ids = _read_stored_ids(db_path)
+    # .. and the database starts again on what its storage kept.
+    start_container(pubsub_database)
+
+    stored_ids = _read_stored_ids(pubsub_database)
     archived = _read_archived_events(archive_dir)
 
     deleted_ids:'intlist' = []
@@ -251,46 +293,33 @@ def test_archive_survives_power_loss(mount:'LazyFSMount', monkeypatch:'MonkeyPat
 def test_failed_archive_sync_keeps_chunk(tmp_path:'os.PathLike', monkeypatch:'MonkeyPatch') -> 'None':
     """ A retention whose archive cannot be synced to stable storage deletes no events.
     """
-    db_path = os.path.join(str(tmp_path), DatabaseEnv.File_Name)
-    archive_dir = os.path.join(str(tmp_path), ModuleCtx.Archive_Dir_Name)
-
+    archive_dir = os.path.join(str(tmp_path), ModuleCtx.Archive_Subdir_Name)
     _set_retention_env(monkeypatch, archive_dir)
 
-    details = {
-        'type': DatabaseEnv.Type_SQLite,
-        'path': db_path,
-    }
+    with zato_database_engine() as engine:
 
-    with database_env(details):
+        # The events are older than the retention ..
+        audit_log = AuditLog(ModuleCtx.Server_Name)
+        payloads = _seed_expired_events(audit_log)
 
-        try:
+        now = utcnow()
 
-            # The events are older than the retention ..
-            audit_log = AuditLog(ModuleCtx.Server_Name)
-            payloads = _seed_expired_events(audit_log)
+        # .. the device fails every fsync of the archive and the retention stops with the error ..
+        with monkeypatch.context() as fsync_patch:
 
-            now = utcnow()
+            fsync_patch.setattr(os, 'fsync', _fail_fsync)
 
-            # .. the device fails every fsync of the archive and the retention stops with the error ..
-            with monkeypatch.context() as fsync_patch:
+            with pytest.raises(OSError):
+                audit_log._run_retention(now)
 
-                fsync_patch.setattr(os, 'fsync', _fail_fsync)
+        # .. and every event is still in the database.
+        query = select(event_table.c.id)
 
-                with pytest.raises(OSError):
-                    audit_log._run_retention(now)
+        stored_ids:'intlist' = []
 
-            # .. and every event is still in the database.
-            engine = get_database_engine()
-            query = select(event_table.c.id)
-
-            stored_ids:'intlist' = []
-
-            with engine.connect() as connection:
-                for row in connection.execute(query):
-                    stored_ids.append(row[0])
-
-        finally:
-            dispose_database_engine()
+        with engine.connect() as connection:
+            for row in connection.execute(query):
+                stored_ids.append(row[0])
 
     for event_id in payloads:
         assert event_id in stored_ids, f'Event {event_id} was deleted without an archive, stored: {stored_ids}'

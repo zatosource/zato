@@ -6,17 +6,12 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import os
-from contextlib import contextmanager
-
 # SQLAlchemy
 from sqlalchemy import select
 
 # Zato
-from live_sql.env import database_env
 from zato.common.analytics.api import get_analytics_engine, get_latency_bucket_index, usage_table, watermark_table, \
-    Latency_Bucket_Count, Latency_Buckets_Ms, ModuleCtx as AnalyticsCtx
+    Latency_Bucket_Count, Latency_Buckets_Ms
 from zato.common.analytics.query import get_percentile, period_to_datetime
 from zato.common.analytics.rollup import run_rollup
 from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
@@ -29,10 +24,8 @@ from zato.common.test.direct_sql.seed import seed_rows
 # ################################################################################################################################
 
 if 0:
-    from collections.abc import Iterator
-    from zato.common.typing_ import anydict, anylist, intlist, stranydict
+    from zato.common.typing_ import anydict, anylist, intlist
 
-    envgen = Iterator[None]
     anylist = anylist
     intlist = intlist
 
@@ -57,40 +50,6 @@ _period_one = '2026-07-14T10'
 _period_two = '2026-07-14T11'
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-@contextmanager
-def analytics_path_env(analytics_db_path:'str') -> 'envgen':
-    """ Points the analytics store at a given SQLite file for the duration of a block.
-    """
-
-    # Save what is set now so it can be restored later ..
-    saved = os.environ.pop(AnalyticsCtx.Env_Path, None)
-
-    # .. apply the file under test ..
-    os.environ[AnalyticsCtx.Env_Path] = analytics_db_path
-
-    try:
-        yield
-
-    # .. and restore the previous environment afterwards.
-    finally:
-        _ = os.environ.pop(AnalyticsCtx.Env_Path, None)
-
-        if saved is not None:
-            os.environ[AnalyticsCtx.Env_Path] = saved
-
-# ################################################################################################################################
-
-@contextmanager
-def analytics_test_env(details:'stranydict', analytics_db_path:'str') -> 'envgen':
-    """ Points the audit log at a given backend and the analytics store at a given SQLite file
-    for the duration of a test.
-    """
-    with database_env(details):
-        with analytics_path_env(analytics_db_path):
-            yield
-
 # ################################################################################################################################
 
 def _insert_event(
@@ -134,7 +93,7 @@ def _insert_event(
 # ################################################################################################################################
 
 def _clean_tables() -> 'None':
-    """ Starts from empty tables because containers and SQLite files can be reused between runs.
+    """ Starts from empty tables because containers can be reused between runs.
     """
     audit_engine = get_database_engine()
     reset_table_rows(audit_engine, [event_table])

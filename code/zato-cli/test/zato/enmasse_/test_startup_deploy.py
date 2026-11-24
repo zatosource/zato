@@ -22,6 +22,7 @@ from unittest import main, TestCase
 
 # Zato
 from zato.common.test.process_util import kill_process_tree
+from zato.common.test.zato_database import isolated_database_env
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -226,6 +227,10 @@ class TestDockerPostStartEnmasseImport(TestCase):
         cls.port = _find_free_port()
         cls.broker_port = _find_free_port()
 
+        # The environment has a PostgreSQL database of its own, which the Zato_Database_* variables of this process
+        # select until the class completes, so quickstart, the server and the enmasse calls all read the same database.
+        _ = cls.enterClassContext(isolated_database_env())
+
         cls.server_dir, err = _create_quickstart(cls._tmpdir, _PASSWORD)
         if err:
             shutil.rmtree(cls._tmpdir, ignore_errors=True)
@@ -349,6 +354,10 @@ class TestDockerProjectRootFileListener(TestCase):
         cls.port = _find_free_port()
         cls.broker_port = _find_free_port()
 
+        # The environment has a PostgreSQL database of its own, which the Zato_Database_* variables of this process
+        # select until the class completes, so quickstart, the server and the enmasse calls all read the same database.
+        _ = cls.enterClassContext(isolated_database_env())
+
         cls.server_dir, err = _create_quickstart(cls._tmpdir, _PASSWORD)
         if err:
             shutil.rmtree(cls._tmpdir, ignore_errors=True)
@@ -462,6 +471,10 @@ class TestDockerProjectRootFromEnvIni(TestCase):
         cls._tmpdir = tempfile.mkdtemp(prefix='zato_docker_envini_projroot_test_')
         cls.port = _find_free_port()
         cls.broker_port = _find_free_port()
+
+        # The environment has a PostgreSQL database of its own, which the Zato_Database_* variables of this process
+        # select until the class completes, so quickstart, the server and the enmasse calls all read the same database.
+        _ = cls.enterClassContext(isolated_database_env())
 
         cls.server_dir, err = _create_quickstart(cls._tmpdir, _PASSWORD)
         if err:

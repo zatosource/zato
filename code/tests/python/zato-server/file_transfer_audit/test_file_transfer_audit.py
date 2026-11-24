@@ -25,12 +25,11 @@ from zato.common.file_transfer.api import Default_Verify_How
 from sqlalchemy import select
 
 # Zato
-from live_sql.env import database_env
 from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
+from zato.common.test.zato_database import zato_database_engine
 from zato.server.connection.smb import SMBConnection
-from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -111,20 +110,10 @@ class LocalDirectoryWrapper:
 # ################################################################################################################################
 
 @contextmanager
-def _audit_db_env(tmp_path:'any_', check_name:'str') -> 'envgen':
-    """ Points the audit log at a throwaway SQLite database of one check's own.
+def _audit_db_env() -> 'envgen':
+    """ Points the audit log at a throwaway PostgreSQL database of one check's own.
     """
-    directory = os.path.join(str(tmp_path), check_name)
-    os.makedirs(directory)
-
-    db_path = os.path.join(directory, 'zato.db')
-
-    details = {
-        'type': DatabaseEnv.Type_SQLite,
-        'path': db_path,
-    }
-
-    with database_env(details):
+    with zato_database_engine():
         yield
 
 # ################################################################################################################################
@@ -161,7 +150,7 @@ def _get_events() -> 'anylist':
 def test_a_store_is_recorded(tmp_path:'any_') -> 'None':
     """ Writing a file leaves one store event with the size and outcome.
     """
-    with _audit_db_env(tmp_path, 'store'):
+    with _audit_db_env():
 
         conn = _new_connection(tmp_path, 'store')
         conn.write(Test_File_Data, Test_File_Name)
@@ -191,7 +180,7 @@ def test_a_store_is_recorded(tmp_path:'any_') -> 'None':
 def test_a_read_is_recorded(tmp_path:'any_') -> 'None':
     """ Reading a file leaves one read event with the size that came back.
     """
-    with _audit_db_env(tmp_path, 'read'):
+    with _audit_db_env():
 
         conn = _new_connection(tmp_path, 'read')
         conn.write(Test_File_Data, Test_File_Name)
@@ -219,7 +208,7 @@ def test_a_failed_read_is_recorded(tmp_path:'any_') -> 'None':
     """ A read that found nothing leaves one error event before the caller
     learns about it.
     """
-    with _audit_db_env(tmp_path, 'failed-read'):
+    with _audit_db_env():
 
         conn = _new_connection(tmp_path, 'failed-read')
 
@@ -248,7 +237,7 @@ def test_a_failed_read_is_recorded(tmp_path:'any_') -> 'None':
 def test_a_delete_is_recorded(tmp_path:'any_') -> 'None':
     """ Deleting a file leaves one delete event.
     """
-    with _audit_db_env(tmp_path, 'delete'):
+    with _audit_db_env():
 
         conn = _new_connection(tmp_path, 'delete')
         conn.write(Test_File_Data, Test_File_Name)

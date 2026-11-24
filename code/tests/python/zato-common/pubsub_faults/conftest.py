@@ -34,11 +34,10 @@ from toxiproxy import Database_Proxy, Toxiproxy, Toxiproxy_Host
 from wal import reserve_wal_segments
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
 from zato.common.db_env.database import get_database_engine
-from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.db_env.fence import ModuleCtx as FenceCtx
 from zato.common.pubsub.sql.config import ModuleCtx
-from zato.common.test.pubsub_database import get_database_address, get_db_mode, get_runtime_dir, is_postgresql_mode, \
-    PubSubDatabase, pubsub_db_env, start_pubsub_database, stop_pubsub_database
+from zato.common.test.pubsub_database import get_database_address, get_db_mode, get_runtime_dir, PubSubDatabase, \
+    pubsub_db_env, start_pubsub_database, stop_pubsub_database
 from zato.common.test.pubsub_profile import session_dns
 from zato.common.test.pubsub_replication import ReplicatedDatabase, start_replicated_database, stop_replicated_database
 
@@ -107,7 +106,6 @@ def fault_database() -> 'databasegen':
     with the generation file and the retention of the run.
     """
     mode = get_db_mode()
-    assert is_postgresql_mode(mode), f'The faults apply to a PostgreSQL container and the mode is `{mode}`'
 
     work_dir = tempfile.mkdtemp(prefix='zato-pubsub-faults-', dir=get_runtime_dir())
     database = start_pubsub_database('faults', mode)
@@ -136,7 +134,6 @@ def standby_database() -> 'databasegen':
     waits for the standby. The server reaches the primary through the proxy of the replication.
     """
     mode = get_db_mode()
-    assert is_postgresql_mode(mode), f'The synchronous standby is a PostgreSQL container and the mode is `{mode}`'
 
     work_dir = tempfile.mkdtemp(prefix='zato-pubsub-standby-faults-', dir=get_runtime_dir())
     replicated = start_replicated_database('faults-standby', mode, is_sync=True)
@@ -166,7 +163,6 @@ def failover_database() -> 'replicatedgen':
     """ A primary with a synchronous standby for one failover, after which the standby is the only database left.
     """
     mode = get_db_mode()
-    assert is_postgresql_mode(mode), f'The failover is between PostgreSQL containers and the mode is `{mode}`'
 
     work_dir = tempfile.mkdtemp(prefix='zato-pubsub-failover-faults-', dir=get_runtime_dir())
     replicated = start_replicated_database('faults-failover', mode, is_sync=True)
@@ -202,34 +198,27 @@ def _copy_container_log(container_name:'str', role:'str') -> 'None':
 
 @pytest.fixture(scope='module')
 def endpoint_work_dir() -> 'strgen':
-    """ The pub/sub database of the push endpoints in the mode that Zato_Test_PubSub_DB_Mode selects,
-    a SQLite file or a PostgreSQL container, and the directory of the run.
+    """ The PostgreSQL container of the push endpoints in the mode that Zato_Test_PubSub_DB_Mode selects,
+    and the directory of the run.
     """
     mode = get_db_mode()
     work_dir = tempfile.mkdtemp(prefix='zato-pubsub-endpoints-', dir=get_runtime_dir())
+
+    database = start_pubsub_database('endpoints', mode)
+    reserve_wal_segments(database)
 
     env:'strstrdict' = {
         FenceCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
         ModuleCtx.Env_Delivered_Max_Messages: _delivered_max_messages,
     }
-
-    database = None
-
-    if is_postgresql_mode(mode):
-        database = start_pubsub_database('endpoints', mode)
-        reserve_wal_segments(database)
-        env.update(database.env)
-    else:
-        env[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
-        env[DatabaseEnv.Env_Path] = os.path.join(work_dir, 'zato.db')
+    env.update(database.env)
 
     try:
         with pubsub_db_env(env):
             yield work_dir
             get_database_engine().dispose()
     finally:
-        if database:
-            stop_pubsub_database(database)
+        stop_pubsub_database(database)
         shutil.rmtree(work_dir, ignore_errors=True)
 
 # ################################################################################################################################
@@ -239,7 +228,6 @@ def stream_database() -> 'streamgen':
     """ The PostgreSQL container of the stream faults, which the server reaches through a proxy of Toxiproxy.
     """
     mode = get_db_mode()
-    assert is_postgresql_mode(mode), f'The stream faults apply to the link to PostgreSQL and the mode is `{mode}`'
 
     work_dir = tempfile.mkdtemp(prefix='zato-pubsub-stream-faults-', dir=get_runtime_dir())
     database = start_pubsub_database('stream-faults', mode)
@@ -277,40 +265,32 @@ def stream_database() -> 'streamgen':
 
 @pytest.fixture(scope='module')
 def process_environment() -> 'environmentgen':
-    """ The database of the faults of single processes in the mode that Zato_Test_PubSub_DB_Mode selects -
-    a SQLite file or a PostgreSQL container whose processes preload the library of the file system faults.
+    """ The PostgreSQL container of the faults of single processes in the mode that Zato_Test_PubSub_DB_Mode selects,
+    whose processes preload the library of the file system faults.
     """
     mode = get_db_mode()
     work_dir = tempfile.mkdtemp(prefix='zato-pubsub-process-faults-', dir=get_runtime_dir())
+
+    control_dir = os.path.join(work_dir, 'fsfault-control')
+    os.makedirs(control_dir)
+
+    docker_args = get_fsfault_docker_args(work_dir, control_dir, _database_control_name)
+    docker_args.extend(_database_restart_policy)
+
+    database = start_pubsub_database('process-faults', mode, extra_docker_args=docker_args)
+    reserve_wal_segments(database)
 
     env:'strstrdict' = {
         FenceCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
         ModuleCtx.Env_Delivered_Max_Messages: _delivered_max_messages,
     }
-
-    database = None
-
-    if is_postgresql_mode(mode):
-        control_dir = os.path.join(work_dir, 'fsfault-control')
-        os.makedirs(control_dir)
-
-        docker_args = get_fsfault_docker_args(work_dir, control_dir, _database_control_name)
-        docker_args.extend(_database_restart_policy)
-
-        database = start_pubsub_database('process-faults', mode, extra_docker_args=docker_args)
-        reserve_wal_segments(database)
-        env.update(database.env)
-
-    else:
-        env[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
-        env[DatabaseEnv.Env_Path] = os.path.join(work_dir, 'zato.db')
+    env.update(database.env)
 
     try:
         with pubsub_db_env(env):
             yield ProcessEnvironment(work_dir, database)
     finally:
-        if database:
-            stop_pubsub_database(database)
+        stop_pubsub_database(database)
         shutil.rmtree(work_dir, ignore_errors=True)
 
 # ################################################################################################################################

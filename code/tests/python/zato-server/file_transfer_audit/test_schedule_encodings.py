@@ -118,7 +118,7 @@ def test_the_service_reads_the_text_in_the_encoding_of_the_schedule(
 
     data = sample_bytes(encoding)
 
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         service = _run(tmp_path, data, encoding=encoding)
 
@@ -153,7 +153,7 @@ def test_a_byte_order_mark_is_not_part_of_the_text(tmp_path:'any_', encoding:'st
 
     data = sample_bytes(encoding, should_add_byte_order_mark=True)
 
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         service = _run(tmp_path, data, encoding=encoding)
 
@@ -168,7 +168,7 @@ def test_windows_line_breaks_are_not_part_of_lines(tmp_path:'any_', encoding:'st
 
     data = sample_bytes(encoding, '\r\n')
 
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         service = _run(tmp_path, data, encoding=encoding)
 
@@ -182,7 +182,7 @@ def test_a_schedule_without_an_encoding_reads_utf_8(tmp_path:'any_') -> 'None':
     schedule = new_schedule()
     assert 'encoding' not in schedule
 
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         service = _run(tmp_path, sample_bytes(Encoding.UTF_8))
 
@@ -194,7 +194,7 @@ def test_a_schedule_without_an_encoding_reads_utf_8(tmp_path:'any_') -> 'None':
 @mark.parametrize('encoding', (Encoding.CP1250, Encoding.CP1253, Encoding.CP1255, Encoding.ISO_8859_2))
 def test_a_file_in_another_encoding_fails_its_delivery(tmp_path:'any_', spool_directory:'str', encoding:'str') -> 'None':
 
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         service = _run(tmp_path, sample_bytes(encoding), encoding=Encoding.UTF_8)
 
@@ -225,7 +225,7 @@ def test_a_file_is_read_in_many_chunks(tmp_path:'any_') -> 'None':
     # The file is far bigger than one chunk of the client
     assert len(data) > Read_Chunk_Size * 100
 
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         service = _run(tmp_path, data, encoding=encoding)
 
@@ -239,7 +239,7 @@ def test_stored_content_is_the_bytes_as_read(tmp_path:'any_', encoding:'str') ->
 
     data = sample_bytes(encoding)
 
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         service, context, _ = new_environment(tmp_path, service_class=TextServiceStub, should_store_content=True,
             file_content=data)
@@ -257,7 +257,7 @@ def test_stored_content_is_the_bytes_as_read(tmp_path:'any_', encoding:'str') ->
 
 def test_a_read_broken_off_midway_leaves_no_spool_file(tmp_path:'any_', spool_directory:'str') -> 'None':
 
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         service, _, _ = new_environment(tmp_path, client_class=_BrokenReadClient)
         conn = service.smb[Connection_Name]
@@ -290,7 +290,7 @@ def test_stored_content_over_the_cap_keeps_only_its_metadata(tmp_path:'any_', mo
     max_size = len(data) - 1
     monkeypatch.setenv(Env_Max_Attachment_Size, str(max_size))
 
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         service, context, _ = new_environment(tmp_path, service_class=TextServiceStub, should_store_content=True,
             file_content=data)

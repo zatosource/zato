@@ -13,12 +13,14 @@ import socket
 import subprocess
 import tempfile
 import time
+from contextlib import ExitStack
 from shutil import rmtree
 from typing import NamedTuple
 
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.process_util import kill_process_tree
+from zato.common.test.zato_database import isolated_database_env
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,6 +51,7 @@ _server_start_timeout = 120
 class TestEnvironment(NamedTuple):
     base_dir: str
     server_dir: str
+    database_scope: 'ExitStack'
     server_process: 'any_' = None
     listener_process: 'any_' = None
 
@@ -161,6 +164,12 @@ def create_environment(prefix:'str', needs_server:'bool'=False) -> 'TestEnvironm
     base_dir = tempfile.mkdtemp(prefix=prefix)
     password = 'test.enmasse.' + CryptoManager.generate_hex_string()
 
+    # The environment has a PostgreSQL database of its own, which the Zato_Database_* variables of this process select
+    # for as long as the environment exists, so quickstart, the server, the listener and the enmasse calls
+    # of the tests all read the same database.
+    database_scope = ExitStack()
+    _ = database_scope.enter_context(isolated_database_env())
+
     command = [
         _zato_bin, 'quickstart', 'create', base_dir,
         '--no-scheduler',
@@ -173,6 +182,7 @@ def create_environment(prefix:'str', needs_server:'bool'=False) -> 'TestEnvironm
     result = subprocess.run(command, capture_output=True, text=True, timeout=_create_timeout, env=create_env)
     if result.returncode != 0:
         rmtree(base_dir, ignore_errors=True)
+        database_scope.close()
         raise Exception(f'quickstart create failed:\n{result.stdout}\n{result.stderr}')
 
     server_dir = os.path.join(base_dir, 'server1')
@@ -187,11 +197,13 @@ def create_environment(prefix:'str', needs_server:'bool'=False) -> 'TestEnvironm
             server_process, listener_process = _start_server(base_dir, server_dir, password)
         except Exception:
             rmtree(base_dir, ignore_errors=True)
+            database_scope.close()
             raise
 
     out = TestEnvironment(
         base_dir=base_dir,
         server_dir=server_dir,
+        database_scope=database_scope,
         server_process=server_process,
         listener_process=listener_process,
     )
@@ -200,11 +212,12 @@ def create_environment(prefix:'str', needs_server:'bool'=False) -> 'TestEnvironm
 # ################################################################################################################################
 
 def delete_environment(environment:'TestEnvironment') -> 'None':
-    """ Stops the environment's processes, if any, and removes it along with its embedded ODB.
+    """ Stops the environment's processes, if any, and removes it along with its database.
     """
     kill_process_tree(environment.listener_process)
     kill_process_tree(environment.server_process)
     rmtree(environment.base_dir, ignore_errors=True)
+    environment.database_scope.close()
 
 # ################################################################################################################################
 # ################################################################################################################################

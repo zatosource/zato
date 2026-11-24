@@ -202,10 +202,10 @@ def download_path(tmp_path:'any_') -> 'str':
 # ################################################################################################################################
 
 @mark.parametrize('protocol', _protocols, ids=repr)
-def test_an_upload_sends_the_file_from_a_file_object(tmp_path:'any_', local_path:'str', protocol:'_Protocol') -> 'None':
+def test_an_upload_sends_the_file_from_a_file_object(local_path:'str', protocol:'_Protocol') -> 'None':
     """ An upload hands the client the local file to read, never its bytes, and records one verified store.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         client = protocol.client_class()
         conn = protocol.new_connection(client)
@@ -231,10 +231,10 @@ def test_an_upload_sends_the_file_from_a_file_object(tmp_path:'any_', local_path
 # ################################################################################################################################
 
 @mark.parametrize('protocol', _protocols, ids=repr)
-def test_an_upload_keeps_the_bytes_when_asked(tmp_path:'any_', local_path:'str', protocol:'_Protocol') -> 'None':
+def test_an_upload_keeps_the_bytes_when_asked(local_path:'str', protocol:'_Protocol') -> 'None':
     """ A connection that keeps its files has the uploaded bytes read from the local file into the audit log.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         conn = protocol.new_connection(protocol.client_class(), should_store_content=True)
         conn.upload(local_path, protocol.remote_path)
@@ -248,14 +248,13 @@ def test_an_upload_keeps_the_bytes_when_asked(tmp_path:'any_', local_path:'str',
 
 @mark.parametrize('protocol', _protocols, ids=repr)
 def test_an_oversized_upload_keeps_its_metadata_only(
-    tmp_path:'any_',
     local_path:'str',
     protocol:'_Protocol',
     monkeypatch:'any_',
     ) -> 'None':
     """ An uploaded file over the cap is on record by its name and size, without its bytes.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         monkeypatch.setenv(Env_Max_Attachment_Size, _small_cap)
 
@@ -271,10 +270,10 @@ def test_an_oversized_upload_keeps_its_metadata_only(
 # ################################################################################################################################
 
 @mark.parametrize('protocol', _protocols, ids=repr)
-def test_a_raising_upload_records_the_error(tmp_path:'any_', local_path:'str', protocol:'_Protocol') -> 'None':
+def test_a_raising_upload_records_the_error(local_path:'str', protocol:'_Protocol') -> 'None':
     """ An upload the server refused leaves an error event with the size of the local file.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         conn = protocol.new_connection(protocol.raising_class())
 
@@ -292,13 +291,12 @@ def test_a_raising_upload_records_the_error(tmp_path:'any_', local_path:'str', p
 
 @mark.parametrize('protocol', _protocols, ids=repr)
 def test_a_read_back_compares_the_checksum_of_the_stored_upload(
-    tmp_path:'any_',
     local_path:'str',
     protocol:'_Protocol',
     ) -> 'None':
     """ A read-back verification computes the checksum of the stored file and records it next to the one sent.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         conn = protocol.new_connection(protocol.client_class())
         conn.wrapper.verify_how = VerifyHow.Read_Back
@@ -319,10 +317,10 @@ def test_a_read_back_compares_the_checksum_of_the_stored_upload(
 # ################################################################################################################################
 
 @mark.parametrize('protocol', _protocols, ids=repr)
-def test_a_read_back_compares_the_checksum_of_a_written_file(tmp_path:'any_', protocol:'_Protocol') -> 'None':
+def test_a_read_back_compares_the_checksum_of_a_written_file(protocol:'_Protocol') -> 'None':
     """ Bytes written from memory are verified by the same checksum read back one chunk at a time.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         conn = protocol.new_connection(protocol.client_class())
         conn.wrapper.verify_how = VerifyHow.Read_Back
@@ -338,10 +336,10 @@ def test_a_read_back_compares_the_checksum_of_a_written_file(tmp_path:'any_', pr
 # ################################################################################################################################
 
 @mark.parametrize('protocol', _protocols, ids=repr)
-def test_a_read_back_mismatch_raises_and_is_recorded(tmp_path:'any_', local_path:'str', protocol:'_Protocol') -> 'None':
+def test_a_read_back_mismatch_raises_and_is_recorded(local_path:'str', protocol:'_Protocol') -> 'None':
     """ A stored copy of the same size but different bytes fails the verification.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         conn = protocol.new_connection(protocol.corrupting_class())
         conn.wrapper.verify_how = VerifyHow.Read_Back
@@ -362,11 +360,11 @@ def test_a_read_back_mismatch_raises_and_is_recorded(tmp_path:'any_', local_path
 # ################################################################################################################################
 
 @mark.parametrize('protocol', _protocols, ids=repr)
-def test_a_download_writes_the_local_file_and_one_event(tmp_path:'any_', download_path:'str', protocol:'_Protocol') -> 'None':
+def test_a_download_writes_the_local_file_and_one_event(download_path:'str', protocol:'_Protocol') -> 'None':
     """ A download writes the remote bytes to the local path and records one read with their checksum,
     the bytes kept when the connection asks for that.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         client = protocol.client_class()
         client.data_by_path[protocol.remote_path] = _file_content
@@ -395,10 +393,10 @@ def test_a_download_writes_the_local_file_and_one_event(tmp_path:'any_', downloa
 # ################################################################################################################################
 
 @mark.parametrize('protocol', _protocols, ids=repr)
-def test_a_failed_download_leaves_no_local_file(tmp_path:'any_', download_path:'str', protocol:'_Protocol') -> 'None':
+def test_a_failed_download_leaves_no_local_file(download_path:'str', protocol:'_Protocol') -> 'None':
     """ A download the server refused deletes what it began to write and leaves an error event.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         conn = protocol.new_connection(protocol.raising_class())
 

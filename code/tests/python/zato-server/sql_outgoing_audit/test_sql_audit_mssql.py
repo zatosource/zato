@@ -13,26 +13,24 @@ from common import run_mssql_callproc_audit_scenario, run_sql_audit_scenario, En
 # ################################################################################################################################
 
 if 0:
-    import os
     from live_sql.containers import DatabaseServer
 
-    os = os
     DatabaseServer = DatabaseServer
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_sql_audit_mssql(mssql_server:'DatabaseServer', tmp_path:'os.PathLike') -> 'None':
+def test_sql_audit_mssql(mssql_server:'DatabaseServer') -> 'None':
     """ The complete SQL audit scenario against a live MS SQL server.
     """
-    run_sql_audit_scenario(mssql_server.details, Engine_MSSQL, tmp_path)
+    run_sql_audit_scenario(mssql_server.details, Engine_MSSQL)
 
 # ################################################################################################################################
 
-def test_sql_audit_mssql_callproc(mssql_server:'DatabaseServer', tmp_path:'os.PathLike') -> 'None':
+def test_sql_audit_mssql_callproc(mssql_server:'DatabaseServer') -> 'None':
     """ Stored procedure calls against a live MS SQL server are on record like statements are.
     """
-    run_mssql_callproc_audit_scenario(mssql_server.details, tmp_path)
+    run_mssql_callproc_audit_scenario(mssql_server.details)
 
 # ################################################################################################################################
 # ################################################################################################################################

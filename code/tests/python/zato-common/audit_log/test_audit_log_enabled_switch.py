@@ -14,19 +14,19 @@ from contextlib import contextmanager
 from sqlalchemy import func, select
 
 # Zato
-from zato.common.db_env.engine import new_zato_engine
-from common import audit_log_env
 from zato.common.audit_log.api import event_table, is_audit_log_enabled, AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
-from zato.common.db_env.database_env import DatabaseEnv
+from zato.common.test.zato_database import zato_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from collections.abc import Iterator
+    from sqlalchemy.engine import Engine
     from zato.common.typing_ import intnone
 
+    Engine = Engine
     envgen = Iterator[None]
 
 # ################################################################################################################################
@@ -62,19 +62,14 @@ def _audit_log_enabled(is_enabled:'bool') -> 'envgen':
 
 # ################################################################################################################################
 
-def _count_events_in_file(db_path:'str') -> 'int':
-    """ Counts the audit events in an SQLite file directly, with a throwaway engine,
-    independently of whatever the environment variables currently point at.
+def _count_events(engine:'Engine') -> 'int':
+    """ Counts the audit events in the database of the test directly.
     """
-    engine = new_zato_engine(f'sqlite:///{db_path}')
-
     count_query = select(func.count()).select_from(event_table)
 
     with engine.connect() as connection:
         count_result = connection.execute(count_query)
         out = count_result.scalar()
-
-    engine.dispose()
 
     assert out is not None
     return out
@@ -110,20 +105,13 @@ def test_audit_log_enabled_default() -> 'None':
 
 # ################################################################################################################################
 
-def test_audit_log_enabled_switch(tmp_path:'os.PathLike') -> 'None':
+def test_audit_log_enabled_switch() -> 'None':
     """ One writer instance stops and resumes writing as the Enabled switch is flipped at runtime,
     with no restart and with no new writer, which is what the Config DB SQL screen relies on.
     Nothing is written while the switch is off and no error is raised either - the inserts
     are silent no-ops reporting no event id.
     """
-    db_path = os.path.join(str(tmp_path), 'audit-enabled.db')
-
-    details = {
-        'type': DatabaseEnv.Type_SQLite,
-        'path': db_path,
-    }
-
-    with audit_log_env(details):
+    with zato_database_engine() as engine:
 
         audit_log = AuditLog(_server_name)
 
@@ -133,7 +121,7 @@ def test_audit_log_enabled_switch(tmp_path:'os.PathLike') -> 'None':
             event_id = _insert_event(audit_log, 1)
 
             assert event_id is not None
-            assert _count_events_in_file(db_path) == 1
+            assert _count_events(engine) == 1
 
         # .. with the switch off, the very same instance writes nothing and reports no id ..
         with _audit_log_enabled(False):
@@ -143,7 +131,7 @@ def test_audit_log_enabled_switch(tmp_path:'os.PathLike') -> 'None':
             assert _insert_event(audit_log, 2) is None
             assert _insert_event(audit_log, 3) is None
 
-            assert _count_events_in_file(db_path) == 1
+            assert _count_events(engine) == 1
 
         # .. and turning it back on makes the very next event land, without any restart.
         with _audit_log_enabled(True):
@@ -151,7 +139,7 @@ def test_audit_log_enabled_switch(tmp_path:'os.PathLike') -> 'None':
             event_id = _insert_event(audit_log, 4)
 
             assert event_id is not None
-            assert _count_events_in_file(db_path) == 2
+            assert _count_events(engine) == 2
 
 # ################################################################################################################################
 # ################################################################################################################################

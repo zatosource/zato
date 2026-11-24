@@ -33,7 +33,7 @@ if 0:
 from llm_test_server import LLMTestServer
 
 # Zato
-from zato.common.db_env.database_env import DatabaseEnv
+from zato.common.test.zato_database import zato_database_engine
 
 # How long to wait for the test-managed Redis to accept connections
 _Redis_Wait_Timeout = 30
@@ -92,19 +92,12 @@ def llm_test_server() -> 'any_':
 # ################################################################################################################################
 
 @pytest.fixture(autouse=True)
-def audit_db_env(tmp_path:'any_') -> 'any_':
-    """ Points the audit database at a per-test SQLite file - the wrapper records every provider call
+def audit_db_env() -> 'any_':
+    """ Points the audit database at a new PostgreSQL database - the wrapper records every provider call
     and each test reads back only the rows it wrote itself.
     """
-    database_path = os.path.join(str(tmp_path), 'zato.db')
-
-    os.environ[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
-    os.environ[DatabaseEnv.Env_Path] = database_path
-
-    yield database_path
-
-    del os.environ[DatabaseEnv.Env_Type]
-    del os.environ[DatabaseEnv.Env_Path]
+    with zato_database_engine():
+        yield
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -13,19 +13,17 @@ from common import run_sql_audit_scenario, Engine_PostgreSQL
 # ################################################################################################################################
 
 if 0:
-    import os
     from live_sql.containers import DatabaseServer
 
-    os = os
     DatabaseServer = DatabaseServer
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_sql_audit_postgresql(postgresql_server:'DatabaseServer', tmp_path:'os.PathLike') -> 'None':
+def test_sql_audit_postgresql(postgresql_server:'DatabaseServer') -> 'None':
     """ The complete SQL audit scenario against a live PostgreSQL server.
     """
-    run_sql_audit_scenario(postgresql_server.details, Engine_PostgreSQL, tmp_path)
+    run_sql_audit_scenario(postgresql_server.details, Engine_PostgreSQL)
 
 # ################################################################################################################################
 # ################################################################################################################################

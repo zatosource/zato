@@ -58,10 +58,10 @@ def _get_events() -> 'anylist':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_a_received_message_writes_one_event_with_its_attachments(tmp_path:'os.PathLike') -> 'None':
+def test_a_received_message_writes_one_event_with_its_attachments() -> 'None':
     """ Reading a mailbox records each message with the files it arrived with.
     """
-    with imap_audit_env(tmp_path):
+    with imap_audit_env():
 
         conn = new_imap_connection(new_message_struct())
         messages = list(conn.get())
@@ -98,11 +98,11 @@ def test_a_received_message_writes_one_event_with_its_attachments(tmp_path:'os.P
 
 # ################################################################################################################################
 
-def test_the_service_still_reads_the_attachment_in_full(tmp_path:'os.PathLike') -> 'None':
+def test_the_service_still_reads_the_attachment_in_full() -> 'None':
     """ The audit write reads the attachment's bytes without consuming the stream
     the service receives afterwards.
     """
-    with imap_audit_env(tmp_path):
+    with imap_audit_env():
 
         conn = new_imap_connection(new_message_struct())
         _, message = list(conn.get())[0]
@@ -112,10 +112,10 @@ def test_the_service_still_reads_the_attachment_in_full(tmp_path:'os.PathLike') 
 
 # ################################################################################################################################
 
-def test_the_flag_turned_off_writes_nothing(tmp_path:'os.PathLike') -> 'None':
+def test_the_flag_turned_off_writes_nothing() -> 'None':
     """ A connection whose audit log is off reads its mailbox and leaves no trace.
     """
-    with imap_audit_env(tmp_path):
+    with imap_audit_env():
 
         conn = new_imap_connection(new_message_struct(), is_audit_log_active=False)
         messages = list(conn.get())
@@ -142,11 +142,11 @@ def _new_ms365_connection() -> 'Microsoft365IMAPConnection':
 
 # ################################################################################################################################
 
-def test_a_microsoft_365_message_writes_the_decoded_bytes(tmp_path:'os.PathLike') -> 'None':
+def test_a_microsoft_365_message_writes_the_decoded_bytes() -> 'None':
     """ A native Microsoft 365 message goes through the conversion and the audit write -
     the envelope carries the decoded bytes and the service-side stream still reads in full.
     """
-    with imap_audit_env(tmp_path):
+    with imap_audit_env():
 
         conn = _new_ms365_connection()
         native = new_native_ms365_message()

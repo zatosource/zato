@@ -9,12 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The checks that the replication suites run against whichever server is the primary at the end of a test.
 
 # stdlib
-import sqlite3
 from collections import Counter
 from time import monotonic
 
 # Zato
-from zato.common.test.pubsub_database import PubSubDBMode
 from zato.common.test.pubsub_replication import connect_active
 
 # local
@@ -25,26 +23,14 @@ from workload import Pull_Sub_Key, Pull_Topic, Push_Sub_Key, Push_Topic
 
 if 0:
     from zato.common.test.pubsub_replication import ReplicatedDatabase
-    from zato.common.typing_ import any_, anydict, strlist
+    from zato.common.typing_ import anydict, strlist
     from workload import Workload
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _connect(database:'ReplicatedDatabase') -> 'any_':
-    """ Opens a connection to the SQLite file of the test or to whichever PostgreSQL server is the primary now.
-    """
-    if database.mode == PubSubDBMode.SQLite:
-        out = sqlite3.connect(database.env['Zato_Database_Path'])
-    else:
-        out = connect_active(database)
-
-    return out
-
-# ################################################################################################################################
-
 def _fetch_all(database:'ReplicatedDatabase', query:'str') -> 'list':
-    connection = _connect(database)
+    connection = connect_active(database)
 
     try:
         cursor = connection.cursor()

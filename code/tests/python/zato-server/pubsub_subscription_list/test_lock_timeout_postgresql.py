@@ -67,10 +67,10 @@ class _RowLock:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_lock_on_topic_sub_fails_only_needing_publications(postgresql_server:'any_') -> 'None':
+def test_lock_on_topic_sub_fails_only_needing_publications(in_process_server:'any_') -> 'None':
     """ A lock on a pubsub_topic_sub row fails only the publications that need that row after the lock timeout.
     """
-    server, _push_endpoint = postgresql_server
+    server, _push_endpoint = in_process_server
     parallel = server.server
     backend = parallel.pubsub_backend
     subscription_list = parallel.pubsub_subscription_list
@@ -108,10 +108,10 @@ def test_lock_on_topic_sub_fails_only_needing_publications(postgresql_server:'an
 
 # ################################################################################################################################
 
-def test_enmasse_applies_while_row_lock_held(postgresql_server:'any_') -> 'None':
+def test_enmasse_applies_while_row_lock_held(in_process_server:'any_') -> 'None':
     """ An enmasse file placed while a row lock is held is applied, and the wait ends after the lock is released.
     """
-    server, _push_endpoint = postgresql_server
+    server, _push_endpoint = in_process_server
     parallel = server.server
     backend = parallel.pubsub_backend
     subscription_list = parallel.pubsub_subscription_list
@@ -156,10 +156,10 @@ pubsub_subscription:
 
 # ################################################################################################################################
 
-def test_lock_on_queue_count_and_delivery(postgresql_server:'any_') -> 'None':
+def test_lock_on_queue_count_and_delivery(in_process_server:'any_') -> 'None':
     """ Locks on pubsub_queue_count and pubsub_delivery fail only the callers that need those rows.
     """
-    server, _push_endpoint = postgresql_server
+    server, _push_endpoint = in_process_server
     parallel = server.server
     backend = parallel.pubsub_backend
     subscription_list = parallel.pubsub_subscription_list

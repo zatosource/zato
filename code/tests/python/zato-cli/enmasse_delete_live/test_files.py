@@ -102,7 +102,7 @@ def test_mcp_gateway(
 
     # .. and the audit trail has the deletion.
     def _has_deletion_event() -> 'bool':
-        found = events(environment.audit_db_path, event_type=AuditEvent.Config_Deleted, object_name=names['gateway'])
+        found = events(environment.database_env, event_type=AuditEvent.Config_Deleted, object_name=names['gateway'])
         out = len(found) == 1
         return out
 

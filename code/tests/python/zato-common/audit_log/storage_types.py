@@ -25,7 +25,7 @@ from zato.common.audit_log.payload import update_event_payload
 from zato.common.audit_log.search import build_search_conditions
 from zato.common.audit_log.writes import execute_audit_write, write_audit
 from zato.common.test.direct_sql.seed import seed_event_row, seed_rows
-from zato.common.db_env.common import hour_period, Type_SQLite
+from zato.common.db_env.common import hour_period
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,11 +62,6 @@ _object_name = 'audit.test.storage-types'
 # The searchable attribute that leads to a whole trace
 _attr_name = 'mrn'
 _attr_value = 'MRN-778899'
-
-# What each database adds to a statement when its own index narrows a search down
-_index_markers = {
-    Type_SQLite: 'event_search MATCH',
-}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -109,7 +104,7 @@ def _cids_in_time_order(engine:'Engine', *conditions:'any_') -> 'strlist':
 def _search(engine:'Engine', query:'str') -> 'strset':
     """ The cids of the events the free-text search finds.
     """
-    conditions = build_search_conditions(engine.dialect.name, [_search_source], [_object_name], query=query)
+    conditions = build_search_conditions([_search_source], [_object_name], query=query)
 
     statement = select(event_table.c.cid).where(*conditions)
 
@@ -117,19 +112,6 @@ def _search(engine:'Engine', query:'str') -> 'strset':
         result = connection.execute(statement)
         out = set(result.scalars())
 
-    return out
-
-# ################################################################################################################################
-
-def _search_sql(engine:'Engine', query:'str') -> 'str':
-    """ The statement a search compiles to on the given database.
-    """
-    conditions = build_search_conditions(engine.dialect.name, [_search_source], [_object_name], query=query)
-
-    statement = select(event_table.c.cid).where(*conditions)
-    compiled = statement.compile(dialect=engine.dialect)
-
-    out = str(compiled)
     return out
 
 # ################################################################################################################################
@@ -211,7 +193,7 @@ def run_hour_period_scenario() -> 'None':
 # ################################################################################################################################
 
 def run_search_scenario() -> 'None':
-    """ The free-text search finds through the index of each database the events with words that the words of a query
+    """ The free-text search finds through the index of the database the events with words that the words of a query
     are prefixes of, for terms in several scripts, with LIKE wildcards and quotes, and finds by LIKE the events
     for terms shorter than the words of the index.
     """
@@ -252,11 +234,6 @@ def run_search_scenario() -> 'None':
 
     # .. and an attribute value, which returns the whole trace.
     assert _search(engine, '778899') == {'trace'}
-
-    # A long term is narrowed down by the index of the database and a short one is not.
-    if marker := _index_markers.get(engine.dialect.name):
-        assert marker in _search_sql(engine, 'ORDER-2026')
-        assert marker not in _search_sql(engine, 'x')
 
     # The index follows updates ..
     replaced_data = 'item replaced'

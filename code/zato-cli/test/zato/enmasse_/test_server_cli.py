@@ -20,6 +20,9 @@ import yaml
 from logging import basicConfig, getLogger, WARN
 from unittest import main, TestCase
 
+# Zato
+from zato.common.test.zato_database import isolated_database_env
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -142,6 +145,10 @@ class TestEnmasseCLI(TestCase):
 
         cls.port = _find_free_port()
         _tmpdir = tempfile.mkdtemp(prefix='zato_enmasse_cli_test_')
+
+        # The environment has a PostgreSQL database of its own, which the Zato_Database_* variables of this process
+        # select until the class completes, so quickstart, the server and the enmasse calls all read the same database.
+        _ = cls.enterClassContext(isolated_database_env())
 
         qs_env = os.environ.copy()
         qs_env.pop('COVERAGE_PROCESS_START', None)

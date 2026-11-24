@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import sys
+from contextlib import ExitStack
 from logging import basicConfig, getLogger, WARN
 from tempfile import gettempdir, mkdtemp
 from unittest import main
@@ -26,6 +27,7 @@ from sh import ErrorReturnCode  # noqa: E402
 # Zato
 from zato.common.test import rand_string, rand_unicode  # noqa: E402
 from zato.common.test.enmasse_.base import BaseEnmasseTestCase  # noqa: E402
+from zato.common.test.pubsub_database import pubsub_db_env  # noqa: E402
 from zato.common.util.open_ import open_w  # noqa: E402
 
 # Live environment
@@ -218,6 +220,7 @@ class TestEnmasseAuditExportPayloadLive(BaseEnmasseTestCase):
     """
 
     zato:'ZatoEnvironment'
+    database_scope:'ExitStack'
 
     @classmethod
     def setUpClass(cls) -> 'None':
@@ -228,10 +231,16 @@ class TestEnmasseAuditExportPayloadLive(BaseEnmasseTestCase):
         cls.zato.create()
         cls.zato.start({})
 
+        # The enmasse processes of the tests read the configuration database of the environment
+        # through the Zato_Database_* variables of this process.
+        cls.database_scope = ExitStack()
+        _ = cls.database_scope.enter_context(pubsub_db_env(cls.zato.database_env))
+
 # ################################################################################################################################
 
     @classmethod
     def tearDownClass(cls) -> 'None':
+        cls.database_scope.close()
         cls.zato.stop()
 
 # ################################################################################################################################

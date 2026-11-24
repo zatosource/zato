@@ -26,14 +26,13 @@ from sqlalchemy.pool import NullPool
 
 # Zato
 from live_sql.containers import connect_mssql
-from live_sql.env import database_env
 from zato.common.api import MS_SQL
 from zato.common.audit_log.api import event_table, AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
-from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.odb.api import PoolStore
 from zato.common.oracledb import RowsOut, StringIn, StringOut
+from zato.common.test.zato_database import zato_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -159,20 +158,10 @@ _init_timeout_seconds = 5
 # ################################################################################################################################
 
 @contextmanager
-def _audit_db_env(tmp_path:'any_', check_name:'str') -> 'envgen':
-    """ Points the audit log at a throwaway SQLite database of one check's own.
+def _audit_db_env() -> 'envgen':
+    """ Points the audit log at a throwaway PostgreSQL database of one check's own.
     """
-    directory = os.path.join(str(tmp_path), check_name)
-    os.makedirs(directory)
-
-    db_path = os.path.join(directory, 'zato.db')
-
-    details = {
-        'type': DatabaseEnv.Type_SQLite,
-        'path': db_path,
-    }
-
-    with database_env(details):
+    with zato_database_engine():
         yield
 
 # ################################################################################################################################
@@ -384,11 +373,11 @@ def _get_endpoint(details:'stranydict') -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _check_no_opt_in_records_only_the_completion(details:'stranydict', engine_name:'str', tmp_path:'any_') -> 'None':
+def _check_no_opt_in_records_only_the_completion(details:'stranydict', engine_name:'str') -> 'None':
     """ A connection that never opted in leaves the completion event alone -
     the outcome and duration are on record, the statement's content is not.
     """
-    with _audit_db_env(tmp_path, 'no-opt-in'):
+    with _audit_db_env():
         with _new_connection(details, engine_name, '') as conn:
 
             rows = conn.execute(_select_all)
@@ -412,10 +401,10 @@ def _check_no_opt_in_records_only_the_completion(details:'stranydict', engine_na
 
 # ################################################################################################################################
 
-def _check_level_off_records_only_the_completion(details:'stranydict', engine_name:'str', tmp_path:'any_') -> 'None':
+def _check_level_off_records_only_the_completion(details:'stranydict', engine_name:'str') -> 'None':
     """ Saying off explicitly is the same as saying nothing.
     """
-    with _audit_db_env(tmp_path, 'level-off'):
+    with _audit_db_env():
         with _new_connection(details, engine_name, 'off') as conn:
 
             rows = conn.execute(_select_all)
@@ -431,11 +420,11 @@ def _check_level_off_records_only_the_completion(details:'stranydict', engine_na
 
 # ################################################################################################################################
 
-def _check_level_statement(details:'stranydict', engine_name:'str', tmp_path:'any_') -> 'None':
+def _check_level_statement(details:'stranydict', engine_name:'str') -> 'None':
     """ The statement level records the SQL text alone - no parameters, no rows -
     alongside the completion event every statement leaves.
     """
-    with _audit_db_env(tmp_path, 'level-statement'):
+    with _audit_db_env():
         with _new_connection(details, engine_name, 'statement') as conn:
 
             rows = conn.execute(_select_by_code, _select_params)
@@ -468,10 +457,10 @@ def _check_level_statement(details:'stranydict', engine_name:'str', tmp_path:'an
 
 # ################################################################################################################################
 
-def _check_level_statement_params(details:'stranydict', engine_name:'str', tmp_path:'any_') -> 'None':
+def _check_level_statement_params(details:'stranydict', engine_name:'str') -> 'None':
     """ The statement-params level adds the parameters and still keeps the rows out.
     """
-    with _audit_db_env(tmp_path, 'level-statement-params'):
+    with _audit_db_env():
         with _new_connection(details, engine_name, 'statement-params') as conn:
 
             _ = conn.execute(_select_by_code, _select_params)
@@ -487,11 +476,11 @@ def _check_level_statement_params(details:'stranydict', engine_name:'str', tmp_p
 
 # ################################################################################################################################
 
-def _check_level_full(details:'stranydict', engine_name:'str', tmp_path:'any_') -> 'None':
+def _check_level_full(details:'stranydict', engine_name:'str') -> 'None':
     """ The full level carries everything - the statement, its parameters
     and the rows that came back.
     """
-    with _audit_db_env(tmp_path, 'level-full'):
+    with _audit_db_env():
         with _new_connection(details, engine_name, 'full') as conn:
 
             rows = conn.execute(_select_by_code, _select_params)
@@ -509,11 +498,11 @@ def _check_level_full(details:'stranydict', engine_name:'str', tmp_path:'any_') 
 
 # ################################################################################################################################
 
-def _check_a_failed_statement_is_recorded(details:'stranydict', engine_name:'str', tmp_path:'any_') -> 'None':
+def _check_a_failed_statement_is_recorded(details:'stranydict', engine_name:'str') -> 'None':
     """ A statement the database refused leaves an error entry before the caller
     learns about it - the statement event and the completion event alike.
     """
-    with _audit_db_env(tmp_path, 'error-outcome'):
+    with _audit_db_env():
         with _new_connection(details, engine_name, 'statement') as conn:
 
             try:
@@ -541,10 +530,10 @@ def _check_a_failed_statement_is_recorded(details:'stranydict', engine_name:'str
 
 # ################################################################################################################################
 
-def _check_an_unknown_level_is_refused(details:'stranydict', engine_name:'str', tmp_path:'any_') -> 'None':
+def _check_an_unknown_level_is_refused(details:'stranydict', engine_name:'str') -> 'None':
     """ A level nobody defined refuses to build a connection at all.
     """
-    with _audit_db_env(tmp_path, 'unknown-level'):
+    with _audit_db_env():
 
         try:
             with _new_connection(details, engine_name, 'everything'):
@@ -559,11 +548,10 @@ def _check_an_unknown_level_is_refused(details:'stranydict', engine_name:'str', 
 def _check_execute_commits_a_statement_without_rows(
     details:'stranydict',
     engine_name:'str',
-    tmp_path:'any_',
     ) -> 'None':
     """ A statement without rows returns an empty list and commits before the connection is returned.
     """
-    with _audit_db_env(tmp_path, 'statement-without-rows'):
+    with _audit_db_env():
         with _new_connection(details, engine_name, '') as conn:
 
             result = conn.execute(_update_by_code, _update_params)
@@ -599,10 +587,10 @@ def _assert_paired_events(events:'anylist', outcome:'str') -> 'stranydict':
 
 # ################################################################################################################################
 
-def _check_callproc_level_off_records_only_the_completion(details:'stranydict', tmp_path:'any_') -> 'None':
+def _check_callproc_level_off_records_only_the_completion(details:'stranydict') -> 'None':
     """ A procedure call on a connection left at off leaves the completion event alone, like a statement does.
     """
-    with _audit_db_env(tmp_path, 'callproc-level-off'):
+    with _audit_db_env():
         with _new_connection(details, Engine_MSSQL, 'off') as conn:
 
             result_sets = conn.callproc(_proc_by_code, _proc_params)
@@ -619,10 +607,10 @@ def _check_callproc_level_off_records_only_the_completion(details:'stranydict', 
 
 # ################################################################################################################################
 
-def _check_callproc_level_statement(details:'stranydict', tmp_path:'any_') -> 'None':
+def _check_callproc_level_statement(details:'stranydict') -> 'None':
     """ A procedure call reads as the exec statement it amounts to - no parameters, no rows.
     """
-    with _audit_db_env(tmp_path, 'callproc-level-statement'):
+    with _audit_db_env():
         with _new_connection(details, Engine_MSSQL, 'statement') as conn:
 
             result_sets = conn.callproc(_proc_by_code, _proc_params)
@@ -636,10 +624,10 @@ def _check_callproc_level_statement(details:'stranydict', tmp_path:'any_') -> 'N
 
 # ################################################################################################################################
 
-def _check_callproc_level_statement_params(details:'stranydict', tmp_path:'any_') -> 'None':
+def _check_callproc_level_statement_params(details:'stranydict') -> 'None':
     """ The statement-params level adds the procedure's arguments, as the list they were given in.
     """
-    with _audit_db_env(tmp_path, 'callproc-level-statement-params'):
+    with _audit_db_env():
         with _new_connection(details, Engine_MSSQL, 'statement-params') as conn:
 
             _ = conn.callproc(_proc_by_code, _proc_params)
@@ -652,10 +640,10 @@ def _check_callproc_level_statement_params(details:'stranydict', tmp_path:'any_'
 
 # ################################################################################################################################
 
-def _check_callproc_level_full(details:'stranydict', tmp_path:'any_') -> 'None':
+def _check_callproc_level_full(details:'stranydict') -> 'None':
     """ The full level keeps the result sets as they were returned and counts the rows across all of them.
     """
-    with _audit_db_env(tmp_path, 'callproc-level-full'):
+    with _audit_db_env():
         with _new_connection(details, Engine_MSSQL, 'full') as conn:
 
             # One result set with one row ..
@@ -669,7 +657,7 @@ def _check_callproc_level_full(details:'stranydict', tmp_path:'any_') -> 'None':
             assert summary['rows'] == [[_seed_rows[1]]]
             assert summary['row_count'] == 1
 
-    with _audit_db_env(tmp_path, 'callproc-level-full-twice'):
+    with _audit_db_env():
         with _new_connection(details, Engine_MSSQL, 'full') as conn:
 
             # .. two result sets with two rows each.
@@ -685,10 +673,10 @@ def _check_callproc_level_full(details:'stranydict', tmp_path:'any_') -> 'None':
 
 # ################################################################################################################################
 
-def _check_callproc_failure_is_recorded(details:'stranydict', tmp_path:'any_') -> 'None':
+def _check_callproc_failure_is_recorded(details:'stranydict') -> 'None':
     """ A procedure the database does not have leaves an error entry before the caller learns about it.
     """
-    with _audit_db_env(tmp_path, 'callproc-error'):
+    with _audit_db_env():
         with _new_connection(details, Engine_MSSQL, 'statement') as conn:
 
             try:
@@ -705,11 +693,11 @@ def _check_callproc_failure_is_recorded(details:'stranydict', tmp_path:'any_') -
 
 # ################################################################################################################################
 
-def _check_callproc_yield_records_after_exhaustion(details:'stranydict', tmp_path:'any_') -> 'None':
+def _check_callproc_yield_records_after_exhaustion(details:'stranydict') -> 'None':
     """ A streamed procedure call is on record once its last result set was handed over,
     and its rows are never kept, not even at the full level.
     """
-    with _audit_db_env(tmp_path, 'callproc-yield'):
+    with _audit_db_env():
         with _new_connection(details, Engine_MSSQL, 'full') as conn:
 
             generator = conn.callproc(_proc_twice, [], use_yield=True)
@@ -728,10 +716,10 @@ def _check_callproc_yield_records_after_exhaustion(details:'stranydict', tmp_pat
 
 # ################################################################################################################################
 
-def _check_session_execute_is_audited(details:'stranydict', tmp_path:'any_') -> 'None':
+def _check_session_execute_is_audited(details:'stranydict') -> 'None':
     """ A statement run through the session the connection hands out is on record like one run through conn.execute.
     """
-    with _audit_db_env(tmp_path, 'session-execute'):
+    with _audit_db_env():
         with _new_connection(details, Engine_MSSQL, 'full') as conn:
 
             session = conn.session()
@@ -748,10 +736,10 @@ def _check_session_execute_is_audited(details:'stranydict', tmp_path:'any_') -> 
 
 # ################################################################################################################################
 
-def _check_session_callproc_is_audited(details:'stranydict', tmp_path:'any_') -> 'None':
+def _check_session_callproc_is_audited(details:'stranydict') -> 'None':
     """ A procedure called through the session the connection hands out is on record like one called through conn.callproc.
     """
-    with _audit_db_env(tmp_path, 'session-callproc'):
+    with _audit_db_env():
         with _new_connection(details, Engine_MSSQL, 'full') as conn:
 
             session = conn.session()
@@ -769,10 +757,10 @@ def _check_session_callproc_is_audited(details:'stranydict', tmp_path:'any_') ->
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _check_oracle_callproc_level_statement(details:'stranydict', tmp_path:'any_') -> 'None':
+def _check_oracle_callproc_level_statement(details:'stranydict') -> 'None':
     """ An Oracle procedure call reads as the PL/SQL block it amounts to - no parameters, no rows.
     """
-    with _audit_db_env(tmp_path, 'oracle-callproc-level-statement'):
+    with _audit_db_env():
         with _new_connection(details, Engine_Oracle, 'statement') as conn:
 
             label_out = StringOut()
@@ -789,10 +777,10 @@ def _check_oracle_callproc_level_statement(details:'stranydict', tmp_path:'any_'
 
 # ################################################################################################################################
 
-def _check_oracle_callproc_level_statement_params(details:'stranydict', tmp_path:'any_') -> 'None':
+def _check_oracle_callproc_level_statement_params(details:'stranydict') -> 'None':
     """ The statement-params level adds the input values - an OUT parameter has none and reads as None.
     """
-    with _audit_db_env(tmp_path, 'oracle-callproc-level-statement-params'):
+    with _audit_db_env():
         with _new_connection(details, Engine_Oracle, 'statement-params') as conn:
 
             _ = conn.callproc(_oracle_proc_label, [StringIn('LAB-002'), StringOut()])
@@ -805,10 +793,10 @@ def _check_oracle_callproc_level_statement_params(details:'stranydict', tmp_path
 
 # ################################################################################################################################
 
-def _check_oracle_callproc_level_full(details:'stranydict', tmp_path:'any_') -> 'None':
+def _check_oracle_callproc_level_full(details:'stranydict') -> 'None':
     """ The full level keeps what the OUT parameters returned - a plain value or the rows of a REF CURSOR.
     """
-    with _audit_db_env(tmp_path, 'oracle-callproc-level-full'):
+    with _audit_db_env():
         with _new_connection(details, Engine_Oracle, 'full') as conn:
 
             # A single value through an OUT parameter ..
@@ -822,7 +810,7 @@ def _check_oracle_callproc_level_full(details:'stranydict', tmp_path:'any_') -> 
             assert summary['rows'] == ['Second']
             assert summary['row_count'] == 1
 
-    with _audit_db_env(tmp_path, 'oracle-callproc-level-full-rows'):
+    with _audit_db_env():
         with _new_connection(details, Engine_Oracle, 'full') as conn:
 
             # .. and all the rows through a REF CURSOR.
@@ -841,10 +829,10 @@ def _check_oracle_callproc_level_full(details:'stranydict', tmp_path:'any_') -> 
 
 # ################################################################################################################################
 
-def _check_oracle_callproc_failure_is_recorded(details:'stranydict', tmp_path:'any_') -> 'None':
+def _check_oracle_callproc_failure_is_recorded(details:'stranydict') -> 'None':
     """ A procedure Oracle does not have leaves an error entry before the caller learns about it.
     """
-    with _audit_db_env(tmp_path, 'oracle-callproc-error'):
+    with _audit_db_env():
         with _new_connection(details, Engine_Oracle, 'statement') as conn:
 
             try:
@@ -866,7 +854,7 @@ def _check_sqlite_completion_of_an_ok_statement(tmp_path:'any_') -> 'None':
     """ A statement that ran leaves one completion event with its outcome,
     duration and the database file as the endpoint.
     """
-    with _audit_db_env(tmp_path, 'sqlite-ok'):
+    with _audit_db_env():
 
         db_path = os.path.join(str(tmp_path), 'sqlite-ok.db')
         _seed_sqlite_table(db_path)
@@ -896,7 +884,7 @@ def _check_sqlite_completion_of_a_failed_statement(tmp_path:'any_') -> 'None':
     """ A statement the database refused leaves one completion event
     with the error outcome, before the caller learns about it.
     """
-    with _audit_db_env(tmp_path, 'sqlite-error'):
+    with _audit_db_env():
 
         db_path = os.path.join(str(tmp_path), 'sqlite-error.db')
         _seed_sqlite_table(db_path)
@@ -924,7 +912,7 @@ def _check_sqlite_opt_in_pairs_statement_and_completion(tmp_path:'any_') -> 'Non
     """ A connection that opted into statement auditing leaves the statement event
     and the completion event, paired up on one correlation id.
     """
-    with _audit_db_env(tmp_path, 'sqlite-opt-in'):
+    with _audit_db_env():
 
         db_path = os.path.join(str(tmp_path), 'sqlite-opt-in.db')
         _seed_sqlite_table(db_path)
@@ -951,7 +939,7 @@ def _check_sqlite_opt_in_pairs_statement_and_completion(tmp_path:'any_') -> 'Non
 def _check_sqlite_execute_commits_a_statement_without_rows(tmp_path:'any_') -> 'None':
     """ An SQLite statement without rows returns an empty list and commits before the connection is returned.
     """
-    with _audit_db_env(tmp_path, 'sqlite-statement-without-rows'):
+    with _audit_db_env():
 
         db_path = os.path.join(str(tmp_path), 'sqlite-statement-without-rows.db')
         _seed_sqlite_table(db_path)
@@ -979,7 +967,7 @@ def run_sqlite_completion_scenario(tmp_path:'any_') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def run_sql_audit_scenario(details:'stranydict', engine_name:'str', tmp_path:'any_') -> 'None':
+def run_sql_audit_scenario(details:'stranydict', engine_name:'str') -> 'None':
     """ The complete SQL audit scenario every backend must pass.
     """
 
@@ -987,27 +975,27 @@ def run_sql_audit_scenario(details:'stranydict', engine_name:'str', tmp_path:'an
     _seed_table(details, engine_name)
 
     # No opt-in and an explicit off leave the completion event alone
-    _check_no_opt_in_records_only_the_completion(details, engine_name, tmp_path)
-    _check_level_off_records_only_the_completion(details, engine_name, tmp_path)
+    _check_no_opt_in_records_only_the_completion(details, engine_name)
+    _check_level_off_records_only_the_completion(details, engine_name)
 
     # Each level carries exactly what it promised and nothing more
-    _check_level_statement(details, engine_name, tmp_path)
-    _check_level_statement_params(details, engine_name, tmp_path)
-    _check_level_full(details, engine_name, tmp_path)
+    _check_level_statement(details, engine_name)
+    _check_level_statement_params(details, engine_name)
+    _check_level_full(details, engine_name)
 
     # A failed statement is recorded before the caller learns about it
-    _check_a_failed_statement_is_recorded(details, engine_name, tmp_path)
+    _check_a_failed_statement_is_recorded(details, engine_name)
 
     # A level nobody defined refuses to build a connection at all
-    _check_an_unknown_level_is_refused(details, engine_name, tmp_path)
+    _check_an_unknown_level_is_refused(details, engine_name)
 
     # A statement without rows commits before the connection is returned.
-    _check_execute_commits_a_statement_without_rows(details, engine_name, tmp_path)
+    _check_execute_commits_a_statement_without_rows(details, engine_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def run_mssql_callproc_audit_scenario(details:'stranydict', tmp_path:'any_') -> 'None':
+def run_mssql_callproc_audit_scenario(details:'stranydict') -> 'None':
     """ Stored procedure calls against MS SQL are on record like statements are,
     whether called through the connection or through the session it hands out.
     """
@@ -1016,27 +1004,27 @@ def run_mssql_callproc_audit_scenario(details:'stranydict', tmp_path:'any_') -> 
     _seed_table(details, Engine_MSSQL)
 
     # Off leaves the completion event alone
-    _check_callproc_level_off_records_only_the_completion(details, tmp_path)
+    _check_callproc_level_off_records_only_the_completion(details)
 
     # Each level carries exactly what it promised and nothing more
-    _check_callproc_level_statement(details, tmp_path)
-    _check_callproc_level_statement_params(details, tmp_path)
-    _check_callproc_level_full(details, tmp_path)
+    _check_callproc_level_statement(details)
+    _check_callproc_level_statement_params(details)
+    _check_callproc_level_full(details)
 
     # A failed call is recorded before the caller learns about it
-    _check_callproc_failure_is_recorded(details, tmp_path)
+    _check_callproc_failure_is_recorded(details)
 
     # A streamed call is recorded once it was consumed
-    _check_callproc_yield_records_after_exhaustion(details, tmp_path)
+    _check_callproc_yield_records_after_exhaustion(details)
 
     # The session path is the connection path
-    _check_session_execute_is_audited(details, tmp_path)
-    _check_session_callproc_is_audited(details, tmp_path)
+    _check_session_execute_is_audited(details)
+    _check_session_callproc_is_audited(details)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def run_oracle_callproc_audit_scenario(details:'stranydict', tmp_path:'any_') -> 'None':
+def run_oracle_callproc_audit_scenario(details:'stranydict') -> 'None':
     """ Stored procedure calls against Oracle are on record like statements are.
     """
 
@@ -1044,12 +1032,12 @@ def run_oracle_callproc_audit_scenario(details:'stranydict', tmp_path:'any_') ->
     _seed_table(details, Engine_Oracle)
 
     # Each level carries exactly what it promised and nothing more
-    _check_oracle_callproc_level_statement(details, tmp_path)
-    _check_oracle_callproc_level_statement_params(details, tmp_path)
-    _check_oracle_callproc_level_full(details, tmp_path)
+    _check_oracle_callproc_level_statement(details)
+    _check_oracle_callproc_level_statement_params(details)
+    _check_oracle_callproc_level_full(details)
 
     # A failed call is recorded before the caller learns about it
-    _check_oracle_callproc_failure_is_recorded(details, tmp_path)
+    _check_oracle_callproc_failure_is_recorded(details)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The retention of the audit log archives the attributes and the lineage links of the events it deletes
-# along with the events themselves. The database is SQLite.
+# along with the events themselves.
 
 # stdlib
 import errno
@@ -22,14 +22,13 @@ import pytest
 from sqlalchemy import func, select
 
 # Zato
-from live_sql.env import database_env
 from zato.common.audit_log.api import event_attr_table, event_link_table, event_table, get_source_env_suffix, AuditEvent, \
     AuditLink, AuditLog, AuditSource, Env_Retention_Days_Prefix
 from zato.common.audit_log.attr_rows import build_attr_rows
 from zato.common.audit_log.retention import Env_Archive_Dir
-from zato.common.db_env.database import dispose_database_engine, get_database_engine
-from zato.common.db_env.database_env import DatabaseEnv
+from zato.common.db_env.database import get_database_engine
 from zato.common.test.direct_sql.seed import seed_audit_events
+from zato.common.test.zato_database import zato_database_engine
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -80,10 +79,9 @@ _env_source_retention_days = f'{Env_Retention_Days_Prefix}{get_source_env_suffix
 
 @pytest.fixture
 def archive_dir(tmp_path:'os.PathLike', monkeypatch:'MonkeyPatch') -> 'strgen':
-    """ A SQLite database and an archive directory, both in the directory of the test,
+    """ A Zato database of the test and an archive directory in the directory of the test,
     with the retention of the source of the events set. Yields the archive directory.
     """
-    db_path = os.path.join(str(tmp_path), DatabaseEnv.File_Name)
     out = os.path.join(str(tmp_path), ModuleCtx.Archive_Dir_Name)
 
     retention_days = f'{ModuleCtx.Retention_Days}'
@@ -91,16 +89,8 @@ def archive_dir(tmp_path:'os.PathLike', monkeypatch:'MonkeyPatch') -> 'strgen':
     monkeypatch.setenv(Env_Archive_Dir, out)
     monkeypatch.setenv(_env_source_retention_days, retention_days)
 
-    details = {
-        'type': DatabaseEnv.Type_SQLite,
-        'path': db_path,
-    }
-
-    with database_env(details):
-        try:
-            yield out
-        finally:
-            dispose_database_engine()
+    with zato_database_engine():
+        yield out
 
 # ################################################################################################################################
 # ################################################################################################################################

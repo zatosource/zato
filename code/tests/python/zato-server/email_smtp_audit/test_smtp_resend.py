@@ -115,7 +115,7 @@ def _record_original() -> 'anydict':
 class TestSMTPResend:
 
     def test_the_same_message_goes_out_again_in_full(self, tmp_path:'any_') -> 'None':
-        with smtp_audit_env(tmp_path):
+        with smtp_audit_env():
 
             original = _record_original()
 
@@ -150,7 +150,7 @@ class TestSMTPResend:
 # ################################################################################################################################
 
     def test_the_attempt_is_its_own_row_linked_to_the_one_it_repeats(self, tmp_path:'any_') -> 'None':
-        with smtp_audit_env(tmp_path):
+        with smtp_audit_env():
 
             original = _record_original()
 
@@ -180,7 +180,7 @@ class TestSMTPResend:
 # ################################################################################################################################
 
     def test_a_refused_send_is_recorded_and_reported(self, tmp_path:'any_') -> 'None':
-        with smtp_audit_env(tmp_path):
+        with smtp_audit_env():
 
             original = _record_original()
 
@@ -207,7 +207,7 @@ class TestSMTPResend:
 # ################################################################################################################################
 
     def test_an_attachment_over_the_cap_refuses_the_whole_resend(self, tmp_path:'any_') -> 'None':
-        with smtp_audit_env(tmp_path):
+        with smtp_audit_env():
 
             # The cap is below the attachment, so the row keeps the file's metadata alone.
             os.environ[Env_Max_Attachment_Size] = '4'
@@ -239,7 +239,7 @@ class TestSMTPResend:
 # ################################################################################################################################
 
     def test_a_row_from_before_the_resend_existed_is_refused_clearly(self, tmp_path:'any_') -> 'None':
-        with smtp_audit_env(tmp_path):
+        with smtp_audit_env():
 
             audit_log = AuditLog(Server_Name)
 
@@ -266,7 +266,7 @@ class TestSMTPResend:
 class TestPingSource:
 
     def test_a_ping_is_written_apart_from_the_messages(self, tmp_path:'any_') -> 'None':
-        with smtp_audit_env(tmp_path):
+        with smtp_audit_env():
 
             connection = new_smtp_connection()
 

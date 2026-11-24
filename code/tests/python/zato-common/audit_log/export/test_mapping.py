@@ -7,18 +7,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 from datetime import datetime, timezone
 from json import dumps
-from shutil import rmtree
-from tempfile import mkdtemp
 from unittest import TestCase
 
 # OpenTelemetry
 from opentelemetry.proto.logs.v1.logs_pb2 import SEVERITY_NUMBER_ERROR, SEVERITY_NUMBER_INFO, SEVERITY_NUMBER_WARN
 
 # Zato
-from live_sql.env import database_env
 from support import attributes_of, build_queued, to_queued, CapturingAuditLog, Default_Event_Time, Server_Name
 from zato.common.api import SCHEDULER
 from zato.common.audit_log.calls import record_remote_call
@@ -35,8 +31,8 @@ from zato.common.alerting.model import AlertRule, Finding
 from zato.common.bearer_token_identity import build_auth_block, Auth_Type_Bearer_JWT
 from zato.common.hl7.audit import audit_message_received
 from zato.common.model.security import BearerAuthInfo, BearerRefusalReason
+from zato.common.test.zato_database import zato_database_engine
 from zato.server.connection.mcp.audit import build_audit_event, build_rate_limit_audit_event
-from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -625,16 +621,10 @@ class TestSources(TestCase):
     def test_scheduler(self) -> 'None':
 
         # The start of a run writes its first log entry straight to the database, so the test has one of its own
-        directory = mkdtemp(prefix='zato-audit-mapping-')
-        db_path = os.path.join(directory, 'zato.db')
-
-        try:
-            with database_env({'type': DatabaseEnv.Type_SQLite, 'path': db_path}):
-                _ = record_job_start(self.audit_log, 'nightly.cleanup',
-                    cid='cid-job-1', job_id=12, current_run=3, planned_fire_time=_planned_fire_time,
-                    delay_ms=15, service='demo.cleanup')
-        finally:
-            rmtree(directory, ignore_errors=True)
+        with zato_database_engine():
+            _ = record_job_start(self.audit_log, 'nightly.cleanup',
+                cid='cid-job-1', job_id=12, current_run=3, planned_fire_time=_planned_fire_time,
+                delay_ms=15, service='demo.cleanup')
 
         record, attributes = _build_record(self.audit_log.last())
 

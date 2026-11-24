@@ -68,7 +68,8 @@ def test_get_list_returns_pending_status(in_process_server:'any_') -> 'None':
 
     sub_key = sub_key_for_topic(subscription_list, Topic_Pull)
 
-    # get-list lists the pairs of config.db, so the pending pair is one of config.db whose row the list does not consider committed
+    # get-list lists the pairs of the configuration database, so the pending pair is one of them whose row the list
+    # does not consider committed
     subscription_list.mark_committed([], [(sub_key, Topic_Pull.lower())])
 
     assert status_of(subscription_list, sub_key, Topic_Pull) == SubscriptionList.STATUS_PENDING

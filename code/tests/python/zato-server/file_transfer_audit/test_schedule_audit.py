@@ -76,7 +76,7 @@ def test_a_processed_file_shares_one_cid_and_carries_the_schedule(tmp_path:'any_
     the hand-over, the archive move and the ack - under the file's own cid, with the run's
     cid in every schedule-level event and the run summary written last.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         service, context, base_dir = new_environment(tmp_path)
         context[_scheduler.Extra_Schedule] = new_schedule(should_claim=True)
@@ -155,7 +155,7 @@ def test_a_run_summary_counts_a_failure_next_to_a_success(tmp_path:'any_') -> 'N
                 raise Exception(Service_Error)
             super().invoke(service_name, item, cid)
 
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         service, context, base_dir = new_environment(tmp_path,
             service_class=OneFileFails, file_names=['bad.csv', 'good.csv'])
@@ -186,7 +186,7 @@ def test_a_lost_claim_is_recorded(tmp_path:'any_') -> 'None':
     """ A file another consumer claimed first is skipped, which the trail says
     without counting the file as processed or failed.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         service, context, _ = new_environment(tmp_path, client_class=ClaimRefusingClient)
         context[_scheduler.Extra_Schedule] = new_schedule(should_claim=True)
@@ -218,7 +218,7 @@ def test_a_failing_service_leaves_the_error_and_the_file(tmp_path:'any_') -> 'No
     """ A target service that is down leaves a delivery-failed event with the error text
     and the file stays in place for the next run.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         service, context, base_dir = new_environment(tmp_path, service_class=FailingServiceStub)
         context[_scheduler.Extra_Schedule] = new_schedule()
@@ -250,7 +250,7 @@ def test_a_failing_service_leaves_the_error_and_the_file(tmp_path:'any_') -> 'No
 def test_a_deleting_schedule_says_so_in_the_ack(tmp_path:'any_') -> 'None':
     """ A schedule that deletes what it took says so in the file's ack.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         service, context, base_dir = new_environment(tmp_path)
         context[_scheduler.Extra_Schedule] = new_schedule(on_success=_scheduler.OnSuccess.Delete)
@@ -272,7 +272,7 @@ def test_a_deleting_schedule_says_so_in_the_ack(tmp_path:'any_') -> 'None':
 def test_the_read_carries_a_checksum(tmp_path:'any_') -> 'None':
     """ The read event carries a SHA-256 digest of the bytes as a searchable attribute.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         service, context, _ = new_environment(tmp_path)
         context[_scheduler.Extra_Schedule] = new_schedule()
@@ -291,7 +291,7 @@ def test_content_is_stored_on_read_when_opted_in(tmp_path:'any_') -> 'None':
     """ A connection with content storage turned on keeps the picked-up bytes
     as an attachment of the read event.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         service, context, _ = new_environment(tmp_path, should_store_content=True)
         context[_scheduler.Extra_Schedule] = new_schedule()
@@ -314,7 +314,7 @@ def test_a_missing_directory_leaves_a_run_summary_with_the_note(tmp_path:'any_')
     """ When the polled directory does not exist, the run summary is still written
     and its status names the reason.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         service, context, _ = new_environment(tmp_path)
         context[_scheduler.Extra_Schedule] = new_schedule(directory='share/not-there')
@@ -341,7 +341,7 @@ def test_a_claim_left_by_an_interrupted_run_is_released(tmp_path:'any_') -> 'Non
     """ A run that stopped in the middle of a file leaves the file under its claim name,
     and the next run renames it back before it lists the directory, so the file is delivered.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         service, context, base_dir = new_environment(tmp_path)
 
@@ -383,7 +383,7 @@ def test_a_file_whose_ack_failed_is_acked_by_the_next_run(tmp_path:'any_') -> 'N
     """ A file delivered while its ack fails stays under its claim name, and the next run acks it
     before it lists the directory, without delivering it again.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         service, context, base_dir = new_environment(tmp_path, client_class=AckRefusingClient)
         context[_scheduler.Extra_Schedule] = new_schedule(should_claim=True)
@@ -427,7 +427,7 @@ def test_a_claim_that_could_not_be_released_is_released_by_the_next_run(tmp_path
     """ A file whose delivery fails stays under its claim name when the claim cannot be released,
     and the next run releases it before it lists the directory, so the file is delivered.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         service, context, base_dir = new_environment(tmp_path,
             client_class=ReleaseRefusingClient, service_class=FailingOnceServiceStub)

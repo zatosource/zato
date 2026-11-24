@@ -159,7 +159,7 @@ def test_a_reprocess_reinvokes_the_service_with_the_archived_bytes(tmp_path:'any
     """ A reprocess hands the archived bytes to the schedule's target service again
     and leaves the new attempt as its own event linked to the original one.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         _run_one_schedule(tmp_path, should_store_content=True)
 
@@ -201,7 +201,7 @@ def test_a_reprocess_reads_the_text_in_the_encoding_of_the_original_delivery(tmp
     """ The encoding the schedule read the file in is part of the delivery event,
     so a reprocess hands the file over with the same encoding.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         _run_one_schedule(tmp_path, should_store_content=True, file_content=sample_bytes(encoding), encoding=encoding)
 
@@ -227,7 +227,7 @@ def test_a_failed_reprocess_is_recorded_too(tmp_path:'any_') -> 'None':
     """ A reprocess whose target service is still down comes back as a report
     with the error inside, and the failed attempt is on record with the same links.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         _run_one_schedule(tmp_path, should_store_content=True)
 
@@ -253,7 +253,7 @@ def test_an_event_without_stored_content_refuses(tmp_path:'any_') -> 'None':
     """ When the read event stored no bytes, there is nothing to hand to the service again
     and the report carries the error saying so.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         _run_one_schedule(tmp_path, should_store_content=False)
 
@@ -273,7 +273,7 @@ def test_an_event_without_stored_content_refuses(tmp_path:'any_') -> 'None':
 def test_only_deliveries_can_be_reprocessed(tmp_path:'any_') -> 'None':
     """ A run summary is not a file hand-over - asking to reprocess one refuses.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         _run_one_schedule(tmp_path, should_store_content=True)
 

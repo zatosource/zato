@@ -100,11 +100,11 @@ def _raising_invoke_http(error:'Exception | None'=None) -> 'any_':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_a_response_carries_its_http_status(tmp_path:'os.PathLike') -> 'None':
+def test_a_response_carries_its_http_status() -> 'None':
     """ A call that went through leaves a pair under one cid, and the response row
     carries the HTTP status the endpoint answered with.
     """
-    with rest_audit_env(tmp_path):
+    with rest_audit_env():
 
         wrapper = new_rest_wrapper()
         wrapper.invoke_http = _replying_invoke_http(ResponseStub(OK, 'OK', '{"result":"created"}'))
@@ -147,11 +147,11 @@ def test_a_response_carries_its_http_status(tmp_path:'os.PathLike') -> 'None':
 
 # ################################################################################################################################
 
-def test_an_error_response_keeps_its_status(tmp_path:'os.PathLike') -> 'None':
+def test_an_error_response_keeps_its_status() -> 'None':
     """ A refused call's response row says which status refused it, not merely that
     something went wrong.
     """
-    with rest_audit_env(tmp_path):
+    with rest_audit_env():
 
         wrapper = new_rest_wrapper()
         wrapper.invoke_http = _replying_invoke_http(
@@ -171,11 +171,11 @@ def test_an_error_response_keeps_its_status(tmp_path:'os.PathLike') -> 'None':
 
 # ################################################################################################################################
 
-def test_a_ping_writes_a_request_response_pair(tmp_path:'os.PathLike') -> 'None':
+def test_a_ping_writes_a_request_response_pair() -> 'None':
     """ A ping leaves the same pair a regular invocation does, under one cid,
     with the response row carrying the HTTP status.
     """
-    with rest_audit_env(tmp_path):
+    with rest_audit_env():
 
         wrapper = new_rest_wrapper()
         wrapper.invoke_http = _replying_invoke_http(ResponseStub(OK, 'OK', ''))
@@ -212,11 +212,11 @@ def test_a_ping_writes_a_request_response_pair(tmp_path:'os.PathLike') -> 'None'
 
 # ################################################################################################################################
 
-def test_a_failed_ping_writes_the_error(tmp_path:'os.PathLike') -> 'None':
+def test_a_failed_ping_writes_the_error() -> 'None':
     """ A ping the endpoint never answered is recorded with what stopped it,
     before the caller learns about the failure.
     """
-    with rest_audit_env(tmp_path):
+    with rest_audit_env():
 
         wrapper = new_rest_wrapper()
         wrapper.invoke_http = _raising_invoke_http()
@@ -243,10 +243,10 @@ def test_a_failed_ping_writes_the_error(tmp_path:'os.PathLike') -> 'None':
 
 # ################################################################################################################################
 
-def test_a_ping_of_an_unaudited_connection_writes_nothing(tmp_path:'os.PathLike') -> 'None':
+def test_a_ping_of_an_unaudited_connection_writes_nothing() -> 'None':
     """ A connection whose audit log is off pings and leaves no trace.
     """
-    with rest_audit_env(tmp_path):
+    with rest_audit_env():
 
         wrapper = new_rest_wrapper(is_audit_log_active=False)
         wrapper.invoke_http = _replying_invoke_http(ResponseStub(OK, 'OK', ''))
@@ -257,11 +257,11 @@ def test_a_ping_of_an_unaudited_connection_writes_nothing(tmp_path:'os.PathLike'
 
 # ################################################################################################################################
 
-def test_a_health_checks_ping_writes_its_pair_with_the_audit_log_off(tmp_path:'os.PathLike') -> 'None':
+def test_a_health_checks_ping_writes_its_pair_with_the_audit_log_off() -> 'None':
     """ A scheduled health check asks for its pings to be written whatever the connection's own
     audit log says, so the alerts can measure a check of a connection that is otherwise unaudited.
     """
-    with rest_audit_env(tmp_path):
+    with rest_audit_env():
 
         wrapper = new_rest_wrapper(is_audit_log_active=False)
         wrapper.invoke_http = _replying_invoke_http(ResponseStub(OK, 'OK', ''))
@@ -281,7 +281,7 @@ def test_a_health_checks_ping_writes_its_pair_with_the_audit_log_off(tmp_path:'o
 
 # ################################################################################################################################
 
-def test_a_transport_failure_writes_its_status(tmp_path:'os.PathLike') -> 'None':
+def test_a_transport_failure_writes_its_status() -> 'None':
     """ A call that never received a response is recorded with the kind of failure in its status,
     a timeout, a refused connection and a TLS failure each under a name of its own.
     """
@@ -291,7 +291,7 @@ def test_a_transport_failure_writes_its_status(tmp_path:'os.PathLike') -> 'None'
         (RequestsSSLError('Certificate verify failed'), TransportStatus.TLS_Error),
     ]
 
-    with rest_audit_env(tmp_path):
+    with rest_audit_env():
 
         for idx, (error, expected_status) in enumerate(cases):
 
@@ -318,11 +318,11 @@ def test_a_transport_failure_writes_its_status(tmp_path:'os.PathLike') -> 'None'
 
 # ################################################################################################################################
 
-def test_a_failed_pings_status_names_the_failure(tmp_path:'os.PathLike') -> 'None':
+def test_a_failed_pings_status_names_the_failure() -> 'None':
     """ A health check's ping that timed out is recorded under the health source with the timeout in its status,
     which is what lets the alerts tell a check that never came back apart from one that was answered with an error.
     """
-    with rest_audit_env(tmp_path):
+    with rest_audit_env():
 
         wrapper = new_rest_wrapper(is_audit_log_active=False)
         wrapper.invoke_http = _raising_invoke_http(RequestsTimeout('Read timed out'))
@@ -345,11 +345,11 @@ def test_a_failed_pings_status_names_the_failure(tmp_path:'os.PathLike') -> 'Non
 
 # ################################################################################################################################
 
-def test_a_ping_writes_the_health_source(tmp_path:'os.PathLike') -> 'None':
+def test_a_ping_writes_the_health_source() -> 'None':
     """ Both rows a ping leaves belong to the connection's health source, and both still
     name the connection, so a check is found where the connection is looked for.
     """
-    with rest_audit_env(tmp_path):
+    with rest_audit_env():
 
         wrapper = new_rest_wrapper()
         wrapper.invoke_http = _replying_invoke_http(ResponseStub(OK, 'OK', ''))
@@ -365,11 +365,11 @@ def test_a_ping_writes_the_health_source(tmp_path:'os.PathLike') -> 'None':
 
 # ################################################################################################################################
 
-def test_a_failed_ping_writes_the_health_source(tmp_path:'os.PathLike') -> 'None':
+def test_a_failed_ping_writes_the_health_source() -> 'None':
     """ A ping that never got an answer is recorded on the health source too - the error
     rows are the ones a failure streak is counted from.
     """
-    with rest_audit_env(tmp_path):
+    with rest_audit_env():
 
         wrapper = new_rest_wrapper()
         wrapper.invoke_http = _raising_invoke_http()
@@ -392,11 +392,11 @@ def test_a_failed_ping_writes_the_health_source(tmp_path:'os.PathLike') -> 'None
 
 # ################################################################################################################################
 
-def test_business_traffic_keeps_the_traffic_source(tmp_path:'os.PathLike') -> 'None':
+def test_business_traffic_keeps_the_traffic_source() -> 'None':
     """ A regular call is unaffected by what a ping does - both its rows stay on the
     connection's traffic source.
     """
-    with rest_audit_env(tmp_path):
+    with rest_audit_env():
 
         wrapper = new_rest_wrapper()
         wrapper.invoke_http = _replying_invoke_http(ResponseStub(OK, 'OK', '{"result":"created"}'))
@@ -411,11 +411,11 @@ def test_business_traffic_keeps_the_traffic_source(tmp_path:'os.PathLike') -> 'N
 
 # ################################################################################################################################
 
-def test_a_ping_and_a_call_land_on_different_sources(tmp_path:'os.PathLike') -> 'None':
+def test_a_ping_and_a_call_land_on_different_sources() -> 'None':
     """ One connection pinged and called writes to two sources under the one name,
     which is the whole point - the same object measured as two streams.
     """
-    with rest_audit_env(tmp_path):
+    with rest_audit_env():
 
         wrapper = new_rest_wrapper()
         wrapper.invoke_http = _replying_invoke_http(ResponseStub(OK, 'OK', ''))
@@ -438,11 +438,11 @@ def test_a_ping_and_a_call_land_on_different_sources(tmp_path:'os.PathLike') -> 
 
 # ################################################################################################################################
 
-def test_a_soap_ping_writes_the_soap_health_source(tmp_path:'os.PathLike') -> 'None':
+def test_a_soap_ping_writes_the_soap_health_source() -> 'None':
     """ The transport decides which health source a check writes to, the same way it decides
     which traffic source a call writes to.
     """
-    with rest_audit_env(tmp_path):
+    with rest_audit_env():
 
         wrapper = new_soap_wrapper()
         wrapper.invoke_http = _replying_invoke_http(ResponseStub(OK, 'OK', ''))

@@ -37,11 +37,9 @@ from zato.common.test.direct_sql.seed import seed_config_objects
 # ################################################################################################################################
 
 if 0:
-    from pathlib import Path
     from zato.common.typing_ import any_, anydict, stranydict
     any_ = any_
     anydict = anydict
-    Path = Path
     stranydict = stranydict
 
 # ################################################################################################################################
@@ -88,8 +86,8 @@ def yaml_config() -> 'stranydict':
 # ################################################################################################################################
 
 @pytest.fixture
-def session(tmp_path:'Path') -> 'any_':
-    """ A real ODB session over a SQLite database file holding the service the channels invoke.
+def session() -> 'any_':
+    """ A real ODB session over a new PostgreSQL database holding the service the channels invoke.
     """
     tables = [
         GenericConnDef.__table__,
@@ -101,7 +99,7 @@ def session(tmp_path:'Path') -> 'any_':
         HTTPSOAP.__table__,
     ]
 
-    with config_database_engine(tmp_path, tables) as engine:
+    with config_database_engine(tables) as engine:
         session_factory = sessionmaker(bind=engine)
         session = session_factory()
 

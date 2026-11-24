@@ -7,19 +7,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 from contextlib import contextmanager
 from datetime import timedelta
 
 # Zato
-from common import audit_log_env, delete_all_events
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.reports import Range_Day
 from zato.common.audit_log.usage import get_object_options, get_usage, normalize_sources, usage_csv, Usage_Sources
 from zato.common.hl7.audit import audit_ack_sent
 from zato.common.test.direct_sql.seed import seed_event
+from zato.common.test.zato_database import zato_database_engine
 from zato.common.util.api import utcnow
-from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -67,18 +65,10 @@ _hostile_names = [
 # ################################################################################################################################
 
 @contextmanager
-def _usage_env(tmp_path:'os.PathLike') -> 'envgen':
-    """ A per-test SQLite audit database with the usage events seeded.
+def _usage_env() -> 'envgen':
+    """ A per-test Zato database with the usage events seeded.
     """
-    db_path = os.path.join(str(tmp_path), 'zato.db')
-
-    details = {
-        'type': DatabaseEnv.Type_SQLite,
-        'path': db_path,
-    }
-
-    with audit_log_env(details):
-        delete_all_events()
+    with zato_database_engine():
         _seed_events()
         yield
 
@@ -132,9 +122,9 @@ def _rows_for(rows:'anylist', name:'str') -> 'anylist':
 
 class TestGetUsage:
 
-    def test_only_the_completing_event_of_each_source_counts(self, tmp_path:'os.PathLike') -> 'None':
+    def test_only_the_completing_event_of_each_source_counts(self) -> 'None':
 
-        with _usage_env(tmp_path):
+        with _usage_env():
             now = utcnow()
             rows = get_usage(now, Range_Day, [], [])
 
@@ -156,9 +146,9 @@ class TestGetUsage:
 
 # ################################################################################################################################
 
-    def test_each_row_carries_its_source_and_caller(self, tmp_path:'os.PathLike') -> 'None':
+    def test_each_row_carries_its_source_and_caller(self) -> 'None':
 
-        with _usage_env(tmp_path):
+        with _usage_env():
             now = utcnow()
             rows = get_usage(now, Range_Day, [], [])
 
@@ -193,9 +183,9 @@ class TestGetUsage:
 
 # ################################################################################################################################
 
-    def test_the_call_times_follow_the_moments(self, tmp_path:'os.PathLike') -> 'None':
+    def test_the_call_times_follow_the_moments(self) -> 'None':
 
-        with _usage_env(tmp_path):
+        with _usage_env():
 
             # A reprocessed message is recorded after the traffic it came from, so it lands
             # with a higher id than the exchanges it happened before ..
@@ -217,9 +207,9 @@ class TestGetUsage:
 
 # ################################################################################################################################
 
-    def test_the_sources_filter_narrows_the_rows(self, tmp_path:'os.PathLike') -> 'None':
+    def test_the_sources_filter_narrows_the_rows(self) -> 'None':
 
-        with _usage_env(tmp_path):
+        with _usage_env():
             now = utcnow()
             rows = get_usage(now, Range_Day, [AuditSource.MLLP_Channel, AuditSource.MLLP_Outgoing], [])
 
@@ -228,9 +218,9 @@ class TestGetUsage:
 
 # ################################################################################################################################
 
-    def test_the_objects_filter_narrows_the_rows(self, tmp_path:'os.PathLike') -> 'None':
+    def test_the_objects_filter_narrows_the_rows(self) -> 'None':
 
-        with _usage_env(tmp_path):
+        with _usage_env():
             now = utcnow()
             rows = get_usage(now, Range_Day, [], [_rest_channel, _fhir_outgoing])
 
@@ -239,9 +229,9 @@ class TestGetUsage:
 
 # ################################################################################################################################
 
-    def test_unknown_sources_are_dropped(self, tmp_path:'os.PathLike') -> 'None':
+    def test_unknown_sources_are_dropped(self) -> 'None':
 
-        with _usage_env(tmp_path):
+        with _usage_env():
             now = utcnow()
 
             # Nothing the map does not know ever reaches a query - dropping every pick
@@ -256,9 +246,9 @@ class TestGetUsage:
 
 # ################################################################################################################################
 
-    def test_hostile_object_values_are_plain_values(self, tmp_path:'os.PathLike') -> 'None':
+    def test_hostile_object_values_are_plain_values(self) -> 'None':
 
-        with _usage_env(tmp_path):
+        with _usage_env():
             now = utcnow()
 
             # No error and no match - the values bind as query parameters
@@ -267,17 +257,11 @@ class TestGetUsage:
 
 # ################################################################################################################################
 
-    def test_the_link_carries_the_name_url_quoted(self, tmp_path:'os.PathLike') -> 'None':
-
-        audit_log_details = {
-            'type': DatabaseEnv.Type_SQLite,
-            'path': os.path.join(str(tmp_path), 'zato.db'),
-        }
+    def test_the_link_carries_the_name_url_quoted(self) -> 'None':
 
         hostile_name = 'name&with=query#chars'
 
-        with audit_log_env(audit_log_details):
-            delete_all_events()
+        with zato_database_engine():
 
             audit_log = AuditLog(_server_name)
             audit_log.insert(AuditSource.REST_Channel, AuditEvent.Response_Sent, hostile_name,
@@ -324,9 +308,9 @@ class TestNormalizeSources:
 
 class TestGetObjectOptions:
 
-    def test_names_are_grouped_under_their_sources(self, tmp_path:'os.PathLike') -> 'None':
+    def test_names_are_grouped_under_their_sources(self) -> 'None':
 
-        with _usage_env(tmp_path):
+        with _usage_env():
             options = get_object_options()
 
             assert options[AuditSource.REST_Channel] == [_rest_channel]
@@ -344,9 +328,9 @@ class TestGetObjectOptions:
 
 class TestUsageCSV:
 
-    def test_the_table_renders_with_the_type_column(self, tmp_path:'os.PathLike') -> 'None':
+    def test_the_table_renders_with_the_type_column(self) -> 'None':
 
-        with _usage_env(tmp_path):
+        with _usage_env():
             now = utcnow()
             rows = get_usage(now, Range_Day, [AuditSource.REST_Channel], [])
 

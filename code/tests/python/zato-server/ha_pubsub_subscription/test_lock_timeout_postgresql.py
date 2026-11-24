@@ -17,7 +17,7 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.pubsub.subscription_list import Lock_Timeout_Ms
 
 # Local
-from _support import assert_rows_equal_list, is_postgresql, publish_client, pull_client, RowLock, \
+from _support import assert_rows_equal_list, publish_client, pull_client, RowLock, \
     wait_for_no_unconfirmed, yaml_subscription
 
 # ################################################################################################################################
@@ -76,11 +76,6 @@ def _assert_blocked(elapsed_ms:'float') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
-pytestmark = pytest.mark.skipif(not is_postgresql(), reason='The lock timeout applies to PostgreSQL')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 def test_lock_on_topic_sub(
     environment:'any_',
     pickup:'any_',
@@ -95,7 +90,7 @@ def test_lock_on_topic_sub(
     added_pair = (sub_key, names.topic_second.lower())
     publisher = publish_client(environment, names)
 
-    lock = RowLock(database_proxy.database, ModuleCtx.Topic_Sub_Lock, [sub_key, names.topic_pull.lower()])
+    lock = RowLock(database_proxy.database, environment, ModuleCtx.Topic_Sub_Lock, [sub_key, names.topic_pull.lower()])
     lock.acquire()
 
     try:
@@ -132,7 +127,7 @@ def test_lock_on_queue_count(environment:'any_', runtime:'any_', names:'any_', d
     # A row of the queue exists once a message was queued for it
     _ = _publish_free(publisher, names.topic_pull)
 
-    lock = RowLock(database_proxy.database, ModuleCtx.Queue_Count_Lock, [sub_key, names.topic_pull.lower()])
+    lock = RowLock(database_proxy.database, environment, ModuleCtx.Queue_Count_Lock, [sub_key, names.topic_pull.lower()])
     lock.acquire()
 
     try:
@@ -163,7 +158,7 @@ def test_lock_on_delivery(environment:'any_', runtime:'any_', names:'any_', data
     assert seed_msg_id in pulled_msg_ids
 
     # .. its delivery is locked ..
-    lock = RowLock(database_proxy.database, ModuleCtx.Delivery_Lock, [sub_key, seed_msg_id])
+    lock = RowLock(database_proxy.database, environment, ModuleCtx.Delivery_Lock, [sub_key, seed_msg_id])
     lock.acquire()
 
     try:

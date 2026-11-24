@@ -40,14 +40,11 @@ _kill_after_ratio = 0.1
 # How long the cleanup process stays down after it was killed, in seconds.
 _restart_delay_seconds = 5
 
-# How long another transaction holds locks during a sweep, in seconds. On PostgreSQL these are row locks on traces,
-# held for less than the idle in transaction timeout of 60 seconds after which the server ends the session.
-# On SQLite it is the write lock of the database, which the publications of the traffic wait for as well,
-# so the hold is shorter than the limit of the publish p99 of one second.
-_postgresql_lock_seconds = 10
-_sqlite_lock_seconds = 0.5
+# How long another transaction holds row locks on traces during a sweep, in seconds - less than the idle
+# in transaction timeout of 60 seconds after which PostgreSQL ends the session.
+_lock_seconds = 10
 
-# How many traces the other transaction locks on PostgreSQL.
+# How many traces the other transaction locks.
 _locked_trace_count = 10_000
 
 # How long the traces may take to be removed in all, in seconds.
@@ -68,12 +65,6 @@ class _CleanupChaos:
     def __init__(self, server:'PubSubServer') -> 'None':
         self.server = server
         self.trace_topic = server.properties['trace_topic']
-
-        if server.get_database_statistics()['is_postgresql']:
-            self.lock_seconds = _postgresql_lock_seconds
-        else:
-            self.lock_seconds = _sqlite_lock_seconds
-
         self.process:'Popen[bytes]' = start_cleanup_process()
         self.kills = 0
         self.is_locked = False
@@ -109,7 +100,7 @@ class _CleanupChaos:
         self.is_locked = True
         self.log.append(f'Locks held with {count} traces left')
 
-        greenlet = spawn(self.server.hold_locks, self.trace_topic, _locked_trace_count, self.lock_seconds)
+        greenlet = spawn(self.server.hold_locks, self.trace_topic, _locked_trace_count, _lock_seconds)
         self.lock_greenlets.append(greenlet)
 
     def release_locks(self) -> 'None':

@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from copy import deepcopy
 
 # Zato
-from support import Backend_PostgreSQL, Event_Time, insert_seed_event, new_batch, read_rows, record_statements, \
+from support import Event_Time, insert_seed_event, new_batch, read_rows, record_statements, \
     Server_Name
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, AuditLog
 from zato.common.db_env.database import get_database_engine
@@ -38,8 +38,8 @@ _event_count = 50
 _event_skipped_columns = ('id',)
 _child_skipped_columns = ('id',)
 
-# The statements that write one batch on each database, as their verbs and tables
-_postgresql_statements = [
+# The statements that write one batch, as their verbs and tables
+_batch_statements = [
     ('SELECT', 'event_payload'),
     ('SELECT', 'generate_series'),
     ('INSERT', 'event_payload'),
@@ -47,15 +47,6 @@ _postgresql_statements = [
     ('COPY', 'event_attr'),
     ('COPY', 'event_body'),
     ('COPY', 'event_link'),
-]
-
-_sqlite_statements = [
-    ('SELECT', 'event_payload'),
-    ('INSERT', 'event_payload'),
-    ('INSERT', 'event'),
-    ('INSERT', 'event_attr'),
-    ('INSERT', 'event_body'),
-    ('INSERT', 'event_link'),
 ]
 
 # ################################################################################################################################
@@ -108,8 +99,7 @@ def _child_rows(table:'Table', event_column:'str', positions:'intdict') -> 'anyl
 
 def test_one_statement_per_table(audit_backend:'str') -> 'None':
     """ A batch of events is written with one statement per table, plus the select of the payloads stored already.
-    On PostgreSQL, the ids of the events are reserved from the sequence of the event table with a select of their own,
-    and on SQLite, each statement is prepared once and runs once for each row of its table.
+    The ids of the events are reserved from the sequence of the event table with a select of their own.
     """
     audit_log = AuditLog(Server_Name)
     seed_event_id = insert_seed_event(audit_log)
@@ -120,12 +110,7 @@ def test_one_statement_per_table(audit_backend:'str') -> 'None':
     with record_statements(engine) as recorder:
         audit_log.write_pending(batch)
 
-    if audit_backend == Backend_PostgreSQL:
-        expected = _postgresql_statements
-    else:
-        expected = _sqlite_statements
-
-    assert recorder.statements == expected
+    assert recorder.statements == _batch_statements
     assert recorder.commit_count == 1
 
     # Each event received its own id, in the order of the batch ..

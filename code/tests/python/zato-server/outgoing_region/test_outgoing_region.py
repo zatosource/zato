@@ -53,7 +53,6 @@ if 0:
 class ModuleCtx:
 
     Region_Config = {
-        'queue_count': 1,
         'lock_capacity': 8,
     }
 

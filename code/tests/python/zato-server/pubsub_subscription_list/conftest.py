@@ -15,6 +15,7 @@ import pytest
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.test.pubsub_database import get_db_mode
 from zato.common.test.pubsub_in_process import InProcessServer
 from zato.common.test.pubsub_in_process_support import RESTPushEndpoint
 
@@ -130,47 +131,24 @@ class {_push_service_class}(Service):
 
 # ################################################################################################################################
 
-@pytest.fixture(params=['sqlite', 'postgresql'])
-def in_process_server(request:'any_') -> 'any_':
-    """ An in-process server on SQLite or on PostgreSQL with the initial subscriptions of the suite.
+@pytest.fixture
+def in_process_server() -> 'any_':
+    """ An in-process server with the initial subscriptions of the suite.
     """
     push_endpoint = RESTPushEndpoint()
     push_endpoint.start()
 
     enmasse_yaml = _initial_enmasse(push_endpoint.address)
+    db_mode = get_db_mode()
 
     service_modules = {
         Service_Push_Module: _push_service_source,
     }
 
     server = InProcessServer(
-        db_mode=request.param,
+        db_mode=db_mode,
         enmasse_yaml=enmasse_yaml,
         service_modules=service_modules,
-    )
-    server.start()
-
-    try:
-        yield server, push_endpoint
-    finally:
-        server.stop()
-        push_endpoint.stop()
-
-# ################################################################################################################################
-
-@pytest.fixture
-def postgresql_server() -> 'any_':
-    """ An in-process server on PostgreSQL alone, for the lock timeout suite.
-    """
-    push_endpoint = RESTPushEndpoint()
-    push_endpoint.start()
-
-    enmasse_yaml = _initial_enmasse(push_endpoint.address)
-
-    server = InProcessServer(
-        db_mode='postgresql',
-        enmasse_yaml=enmasse_yaml,
-        service_modules={Service_Push_Module: _push_service_source},
     )
     server.start()
 

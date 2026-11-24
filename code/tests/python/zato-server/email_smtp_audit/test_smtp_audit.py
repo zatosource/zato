@@ -90,10 +90,10 @@ def _get_events() -> 'anylist':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_a_successful_send_writes_one_message_sent_event(tmp_path:'os.PathLike') -> 'None':
+def test_a_successful_send_writes_one_message_sent_event() -> 'None':
     """ A send that went through leaves one row - the wire truth of what left the server.
     """
-    with smtp_audit_env(tmp_path):
+    with smtp_audit_env():
 
         conn = new_smtp_connection()
         result = conn.send(_new_message(), cid=_cid)
@@ -123,10 +123,10 @@ def test_a_successful_send_writes_one_message_sent_event(tmp_path:'os.PathLike')
 
 # ################################################################################################################################
 
-def test_the_sent_attachments_are_stored_as_they_went_out(tmp_path:'os.PathLike') -> 'None':
+def test_the_sent_attachments_are_stored_as_they_went_out() -> 'None':
     """ Each attachment of a sent message is stored with its bytes as they left the server.
     """
-    with smtp_audit_env(tmp_path):
+    with smtp_audit_env():
 
         conn = new_smtp_connection()
         _ = conn.send(_new_message(), cid=_cid)
@@ -149,11 +149,11 @@ def test_the_sent_attachments_are_stored_as_they_went_out(tmp_path:'os.PathLike'
 
 # ################################################################################################################################
 
-def test_a_raising_transport_writes_the_error_and_the_send_still_returns_false(tmp_path:'os.PathLike') -> 'None':
+def test_a_raising_transport_writes_the_error_and_the_send_still_returns_false() -> 'None':
     """ A send the server refused is recorded with what stopped it, before the caller learns
     that nothing was sent.
     """
-    with smtp_audit_env(tmp_path):
+    with smtp_audit_env():
 
         conn = new_smtp_connection(transport_class=RaisingTransport)
         result = conn.send(_new_message(), cid=_cid)
@@ -171,10 +171,10 @@ def test_a_raising_transport_writes_the_error_and_the_send_still_returns_false(t
 
 # ################################################################################################################################
 
-def test_the_flag_turned_off_writes_nothing(tmp_path:'os.PathLike') -> 'None':
+def test_the_flag_turned_off_writes_nothing() -> 'None':
     """ A connection whose audit log is off sends and leaves no trace.
     """
-    with smtp_audit_env(tmp_path):
+    with smtp_audit_env():
 
         conn = new_smtp_connection(is_audit_log_active=False)
         result = conn.send(_new_message(), cid=_cid)
@@ -209,11 +209,11 @@ class _ConnectionsStub:
 
 # ################################################################################################################################
 
-def test_a_hop_delivery_and_the_send_it_causes_share_one_cid(tmp_path:'os.PathLike') -> 'None':
+def test_a_hop_delivery_and_the_send_it_causes_share_one_cid() -> 'None':
     """ One delivery through the hop machinery leaves two rows - the hop's own request-sent
     row and the connection's message-sent row - and one cid ties them together.
     """
-    with smtp_audit_env(tmp_path):
+    with smtp_audit_env():
 
         connections = _ConnectionsStub()
 

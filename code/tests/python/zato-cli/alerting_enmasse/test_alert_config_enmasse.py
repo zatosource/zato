@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from pathlib import Path
 from typing import Generator
 
 # pytest
@@ -40,7 +39,7 @@ from zato.common.rule_engine.sql.document import deserialize_document
 from zato.common.test.config_database import config_database_engine
 from zato.common.test.direct_sql.reset import delete_config_job
 from zato.common.test.direct_sql.seed import seed_config_objects
-from zato.common.test.zato_database import file_database_engine
+from zato.common.test.zato_database import zato_database_engine
 from zato.common.typing_ import cast_
 from zato.common.util.scheduler import ensure_alerting_job_exists
 
@@ -134,10 +133,10 @@ def yaml_config() -> 'stranydict':
 # ################################################################################################################################
 
 @pytest.fixture
-def rule_database_engine(tmp_path:'Path') -> 'engine_generator':
+def rule_database_engine() -> 'engine_generator':
     """ Creates one isolated test-managed rule engine database.
     """
-    with file_database_engine(tmp_path) as engine:
+    with zato_database_engine() as engine:
         yield engine
 
 # ################################################################################################################################
@@ -153,8 +152,8 @@ def backend(rule_database_engine:'Engine') -> 'RuleSQLBackend':
 # ################################################################################################################################
 
 @pytest.fixture
-def odb_session(tmp_path:'Path') -> 'any_':
-    """ A real ODB session over a SQLite database file holding
+def odb_session() -> 'any_':
+    """ A real ODB session over a new PostgreSQL database holding
     the scheduler tables and the alerting sweep job.
     """
     tables = [
@@ -165,7 +164,7 @@ def odb_session(tmp_path:'Path') -> 'any_':
         GenericConn.__table__,
     ]
 
-    with config_database_engine(tmp_path, tables) as engine:
+    with config_database_engine(tables) as engine:
         session_factory = sessionmaker(bind=engine)
         session = session_factory()
 

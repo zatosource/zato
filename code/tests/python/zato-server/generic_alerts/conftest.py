@@ -33,10 +33,8 @@ from generic_stub import Service_Name
 # ################################################################################################################################
 
 if 0:
-    from pathlib import Path
     from zato.common.typing_ import any_
     any_ = any_
-    Path = Path
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,8 +53,8 @@ def without_config_audit(monkeypatch:'any_') -> 'None':
 # ################################################################################################################################
 
 @pytest.fixture
-def session_factory(tmp_path:'Path') -> 'any_':
-    """ A sessionmaker over a fresh SQLite database file with the tables the services touch - the connections
+def session_factory() -> 'any_':
+    """ A sessionmaker over a new PostgreSQL database with the tables the services touch - the connections
     themselves, the rows a deletion cascades to, the scheduler jobs their health checks link to, and the channel
     and the group rows an MCP gateway's create hook looks up.
     """
@@ -71,7 +69,7 @@ def session_factory(tmp_path:'Path') -> 'any_':
         Job.__table__,
     ]
 
-    with config_database_engine(tmp_path, tables) as engine:
+    with config_database_engine(tables) as engine:
         factory = sessionmaker(bind=engine)
 
         session = factory()

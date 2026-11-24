@@ -109,8 +109,7 @@ def _get_raw_counts() -> 'tuple[anydict, anydict, anydict]':
 # ################################################################################################################################
 
 def _get_stored_counts() -> 'tuple[anydict, anydict, anydict]':
-    """ Reads the count tables, adding up the rows of each key - one on SQLite, any number of change rows
-    on PostgreSQL - and leaving out the keys that dropped to zero.
+    """ Reads the count tables, adding up the change rows of each key and leaving out the keys that dropped to zero.
     """
     queue_sums:'anydict' = {}
     topic_sums:'anydict' = {}

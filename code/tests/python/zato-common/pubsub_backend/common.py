@@ -22,7 +22,6 @@ from zato.common.db_env.commit_ticket import CommitTicket
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
     topic_count_table, topic_sub_table, trace_table
-from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.test.direct_sql.fault import interrupt_topic_rename
 from zato.common.test.direct_sql.reset import reset_table_rows
 
@@ -45,23 +44,6 @@ if 0:
     envgen = Iterator[None]
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-@contextmanager
-def pubsub_path_env(db_path:'str') -> 'envgen':
-    """ Points Zato_Database_Path at one SQLite file for the duration of a test.
-    """
-    old_path = os.environ.get(DatabaseEnv.Env_Path)
-    os.environ[DatabaseEnv.Env_Path] = db_path
-
-    try:
-        yield
-    finally:
-        if old_path is None:
-            _ = os.environ.pop(DatabaseEnv.Env_Path, None)
-        else:
-            os.environ[DatabaseEnv.Env_Path] = old_path
-
 # ################################################################################################################################
 
 @contextmanager
@@ -200,16 +182,6 @@ def get_trace_rows(topic_name:'str') -> 'anylist':
     with engine.connect() as connection:
         out = connection.execute(query).fetchall()
 
-    return out
-
-# ################################################################################################################################
-
-def get_dialect_name() -> 'str':
-    """ Returns the name of the dialect of the database that the scenarios run on.
-    """
-    engine = get_database_engine()
-
-    out = engine.dialect.name
     return out
 
 # ################################################################################################################################

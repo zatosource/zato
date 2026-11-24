@@ -7,17 +7,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 from datetime import datetime, timezone
 
 # Zato
-from common import analytics_path_env
 from zato.common.analytics.api import get_analytics_engine, usage_table, Caller_Anonymous, Latency_Bucket_Count
 from zato.common.analytics.csv_export import channel_csv, consumer_csv, overview_csv
 from zato.common.analytics.query import get_channel, get_consumer, get_overview, period_to_ms, Range_Day
 from zato.common.audit_log.api import AuditSource
 from zato.common.json_internal import dumps
 from zato.common.test.direct_sql.seed import seed_rows
+from zato.common.test.zato_database import zato_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -131,13 +130,11 @@ def _seed_store() -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_analytics_views(tmp_path:'os.PathLike') -> 'None':
+def test_analytics_views() -> 'None':
     """ The read side of the analytics store - rankings, trends, the consumer page,
     the anonymous bucket and the CSV renderers, all over one seeded store.
     """
-    db_path = os.path.join(str(tmp_path), 'analytics.db')
-
-    with analytics_path_env(db_path):
+    with zato_database_engine():
 
         _seed_store()
 
@@ -266,13 +263,11 @@ def test_analytics_views(tmp_path:'os.PathLike') -> 'None':
 
 # ################################################################################################################################
 
-def test_analytics_views_empty_store(tmp_path:'os.PathLike') -> 'None':
+def test_analytics_views_empty_store() -> 'None':
     """ A fresh install has an empty store - every screen still answers, with zeros
     and empty tables, never with an error.
     """
-    db_path = os.path.join(str(tmp_path), 'analytics-empty.db')
-
-    with analytics_path_env(db_path):
+    with zato_database_engine():
 
         overview = get_overview(_now, Range_Day)
 

@@ -41,7 +41,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 class EnmasseTestCase(BaseEnmasseTestCase):
-    """ Runs against a throwaway quickstart environment with its own embedded ODB,
+    """ Runs against a throwaway quickstart environment with a PostgreSQL database of its own,
     created in setUpClass and deleted in tearDownClass - no pre-existing environment is ever used.
     """
 

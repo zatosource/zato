@@ -57,6 +57,9 @@ _pg_tables_query = text("""
 _pg_wal_query = text('select coalesce(sum(size), 0) from pg_ls_waldir()')
 _pg_checkpoints_query = text('select checkpoints_timed + checkpoints_req from pg_stat_bgwriter')
 
+# The rows of all the deliveries.
+_delivery_rows_query = text('select count(*) from pubsub_delivery')
+
 # The rows of one topic and of one queue.
 _topic_message_query = text('select count(*) from pubsub_message where topic_name = :topic_name')
 _topic_payload_query = text('select count(*) from pubsub_message where topic_name = :topic_name and payload is not null')

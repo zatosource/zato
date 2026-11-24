@@ -11,18 +11,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # environment that points the audit log at a throwaway database.
 
 # stdlib
-import os
 from base64 import b64encode
 from contextlib import contextmanager
 from io import BytesIO
 
 # Zato
-from live_sql.env import database_env
 from zato.common.audit_log.api import AuditLog
 from zato.common.ext.bunch import Bunch
 from zato.common.ext.imbox.parser import Struct
+from zato.common.test.zato_database import zato_database_engine
 from zato.server.connection.email import GenericIMAPConnection
-from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,17 +56,10 @@ Attachment_Content = b'%PDF-1.4 lab results'
 # ################################################################################################################################
 
 @contextmanager
-def imap_audit_env(tmp_path:'any_') -> 'envgen':
-    """ Points the audit log at a throwaway SQLite database for the duration of a test.
+def imap_audit_env() -> 'envgen':
+    """ Points the audit log at a throwaway PostgreSQL database for the duration of a test.
     """
-    db_path = os.path.join(str(tmp_path), 'zato.db')
-
-    details = {
-        'type': DatabaseEnv.Type_SQLite,
-        'path': db_path,
-    }
-
-    with database_env(details):
+    with zato_database_engine():
         yield
 
 # ################################################################################################################################

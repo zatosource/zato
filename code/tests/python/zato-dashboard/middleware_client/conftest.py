@@ -29,15 +29,10 @@ _work_directory = os.path.join(gettempdir(), _directory_name)
 _repo_directory = os.path.join(_work_directory, 'config', 'repo')
 os.makedirs(_repo_directory)
 
-_database_path = os.path.join(_work_directory, 'web-admin.db')
-
-_default_database = {'NAME': _database_path}
-
 # The settings module receives these values dynamically, the way update_globals injects them.
 _settings:'any_' = cast_('any_', zato_settings)
 
-_settings.db_type               = 'sqlite'
-_settings.DATABASES             = {'default': _default_database}
+_settings.DATABASES             = {'default': {}}
 _settings.config_dir            = _work_directory
 _settings.log_config            = ''
 _settings.ADMIN_INVOKE_NAME     = 'admin.invoke'

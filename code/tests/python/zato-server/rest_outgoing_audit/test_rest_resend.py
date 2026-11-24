@@ -131,10 +131,10 @@ def _resend(wrapper:'any_', details:'stranydict', source:'str'=AuditSource.REST_
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_a_templated_address_is_repeated_as_it_resolved(tmp_path:'os.PathLike') -> 'None':
+def test_a_templated_address_is_repeated_as_it_resolved() -> 'None':
     """ The row keeps the address the call resolved to, so the repeat reaches the same case.
     """
-    with rest_audit_env(tmp_path):
+    with rest_audit_env():
 
         calls:'anylist' = []
 
@@ -158,10 +158,10 @@ def test_a_templated_address_is_repeated_as_it_resolved(tmp_path:'os.PathLike') 
 
 # ################################################################################################################################
 
-def test_the_query_string_goes_out_again_as_it_went_out(tmp_path:'os.PathLike') -> 'None':
+def test_the_query_string_goes_out_again_as_it_went_out() -> 'None':
     """ Parameters that did not fill the path became the query string, and the repeat carries it.
     """
-    with rest_audit_env(tmp_path):
+    with rest_audit_env():
 
         calls:'anylist' = []
 
@@ -183,10 +183,10 @@ def test_the_query_string_goes_out_again_as_it_went_out(tmp_path:'os.PathLike') 
 
 # ################################################################################################################################
 
-def test_a_caller_header_goes_out_again(tmp_path:'os.PathLike') -> 'None':
+def test_a_caller_header_goes_out_again() -> 'None':
     """ A header the caller added is part of the call, so the repeat carries it too.
     """
-    with rest_audit_env(tmp_path):
+    with rest_audit_env():
 
         calls:'anylist' = []
 
@@ -210,11 +210,11 @@ def test_a_caller_header_goes_out_again(tmp_path:'os.PathLike') -> 'None':
 
 # ################################################################################################################################
 
-def test_a_row_from_before_the_address_was_stored_is_refused(tmp_path:'os.PathLike') -> 'None':
+def test_a_row_from_before_the_address_was_stored_is_refused() -> 'None':
     """ A row that stored the body and the method alone leaves a templated address with nothing
     to rebuild the call out of, so the repeat says so and stops.
     """
-    with rest_audit_env(tmp_path):
+    with rest_audit_env():
 
         calls:'anylist' = []
 
@@ -233,11 +233,11 @@ def test_a_row_from_before_the_address_was_stored_is_refused(tmp_path:'os.PathLi
 
 # ################################################################################################################################
 
-def test_a_row_from_before_the_address_was_stored_still_repeats_a_plain_call(tmp_path:'os.PathLike') -> 'None':
+def test_a_row_from_before_the_address_was_stored_still_repeats_a_plain_call() -> 'None':
     """ A connection whose address is no template needs nothing rebuilt, so a row that stored
     neither address nor query string repeats all the same.
     """
-    with rest_audit_env(tmp_path):
+    with rest_audit_env():
 
         calls:'anylist' = []
 
@@ -253,11 +253,11 @@ def test_a_row_from_before_the_address_was_stored_still_repeats_a_plain_call(tmp
 
 # ################################################################################################################################
 
-def test_a_soap_envelope_is_repeated_rather_than_wrapped_again(tmp_path:'os.PathLike') -> 'None':
+def test_a_soap_envelope_is_repeated_rather_than_wrapped_again() -> 'None':
     """ What a SOAP row carries is the envelope as it went on the wire, and the repeat sends it
     as it stands rather than wrapping it again.
     """
-    with rest_audit_env(tmp_path):
+    with rest_audit_env():
 
         calls:'anylist' = []
 

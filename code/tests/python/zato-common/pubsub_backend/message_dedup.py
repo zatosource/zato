@@ -24,10 +24,9 @@ from sqlalchemy import and_, event, select
 from sqlalchemy.exc import DBAPIError
 
 # Zato
-from common import delete_all_rows, env_value, get_delivery_rows, get_dialect_name, get_message_rows
+from common import delete_all_rows, env_value, get_delivery_rows, get_message_rows
 from zato.common.common_db.message_dedup import Kind
 from zato.common.common_db.schema import message_dedup_table
-from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
@@ -179,12 +178,10 @@ def _run_conflict_of_message_insert() -> 'None':
 
 def _run_sweep_against_renewed_record() -> 'None':
     """ A dedup record that a publication renews while the dedup sweep runs remains with the window of the renewal.
-    On SQLite, the renewal commits between the select and the delete of the sweep, whose delete repeats the condition
-    of the select. On PostgreSQL, the sweep holds the lock of the expired dedup record, so the renewal waits for the sweep
-    and writes the dedup record again.
+    The sweep holds the lock of the expired dedup record, so the renewal waits for the sweep and writes the dedup record
+    again.
     """
     backend = _new_backend()
-    is_postgresql = get_dialect_name() == Type_PostgreSQL
 
     # The original dedup record expires the moment it is written ..
     with env_value(ModuleCtx.Env_Dedup_Window_Days, _no_dedup_window_days):
@@ -202,12 +199,8 @@ def _run_sweep_against_renewed_record() -> 'None':
         if renewals or not statement.startswith(_expired_select_prefix):
             return
 
-        if is_postgresql:
-            greenlet = gevent.spawn(backend._writer.publish, renewal.pending)
-            renewals.append(greenlet)
-        else:
-            backend._writer.publish(renewal.pending)
-            renewals.append(None)
+        greenlet = gevent.spawn(backend._writer.publish, renewal.pending)
+        renewals.append(greenlet)
 
     engine = get_database_engine()
     event.listen(engine, 'after_cursor_execute', _on_expired_select)
@@ -217,15 +210,11 @@ def _run_sweep_against_renewed_record() -> 'None':
     finally:
         event.remove(engine, 'after_cursor_execute', _on_expired_select)
 
-    if is_postgresql:
-        _ = gevent.joinall(renewals, raise_error=True)
-        expected_swept = 1
-    else:
-        expected_swept = 0
+    _ = gevent.joinall(renewals, raise_error=True)
 
-    assert counts['dedup'] == expected_swept, counts
+    assert counts['dedup'] == 1, counts
 
-    # Either way, the dedup record remains with the window of the renewal, which repeats the stored message.
+    # The dedup record remains with the window of the renewal, which repeats the stored message.
     records = _get_dedup_records(_msg_id_renewed)
     assert len(records) == 1
 

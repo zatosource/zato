@@ -35,11 +35,8 @@ from zato.common.pubsub.outgoing import audit_disabled_conn_types, build_envelop
     OutgoingType
 from zato.common.sftp import SFTPOutput
 from zato.server.connection.file_transfer_base import spool_file_payload, Key_Remote_Path, Key_Spool_Path
+from zato.common.test.zato_database import zato_database_engine
 from zato.server.connection.outgoing_delivery import publishable_generic_types, register_delivery_handlers
-from zato.common.db_env.database_env import DatabaseEnv
-
-# Test support
-from live_sql.env import database_env
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -82,17 +79,10 @@ _ftp_modify_fact = '20260820103000'
 # ################################################################################################################################
 
 @contextmanager
-def _audit_db_env(tmp_path:'any_') -> 'envgen':
-    """ Points the audit log at a throwaway SQLite database for the duration of a test.
+def _audit_db_env() -> 'envgen':
+    """ Points the audit log at a throwaway PostgreSQL database for the duration of a test.
     """
-    db_path = os.path.join(str(tmp_path), 'zato.db')
-
-    details = {
-        'type': DatabaseEnv.Type_SQLite,
-        'path': db_path,
-    }
-
-    with database_env(details):
+    with zato_database_engine():
         yield
 
 # ################################################################################################################################
@@ -372,11 +362,11 @@ def test_the_file_types_use_the_generic_rename_and_delete_machinery() -> 'None':
 
 # ################################################################################################################################
 
-def test_a_queued_file_reaches_the_sftp_connection_and_the_spool_goes_away(tmp_path:'any_') -> 'None':
+def test_a_queued_file_reaches_the_sftp_connection_and_the_spool_goes_away() -> 'None':
     """ A delivered file was written to the remote path, its spool file is gone
     and the write left its own audit event.
     """
-    with _audit_db_env(tmp_path):
+    with _audit_db_env():
 
         register_delivery_handlers()
 
@@ -415,11 +405,11 @@ def test_a_queued_file_reaches_the_sftp_connection_and_the_spool_goes_away(tmp_p
 
 # ################################################################################################################################
 
-def test_a_failed_sftp_delivery_keeps_the_spool_for_the_retry(tmp_path:'any_') -> 'None':
+def test_a_failed_sftp_delivery_keeps_the_spool_for_the_retry() -> 'None':
     """ A delivery the server refused raises, which keeps the message queued, and the spool
     file stays in place so the retry has the same bytes to send.
     """
-    with _audit_db_env(tmp_path):
+    with _audit_db_env():
 
         register_delivery_handlers()
 
@@ -451,11 +441,11 @@ def test_a_failed_sftp_delivery_keeps_the_spool_for_the_retry(tmp_path:'any_') -
 
 # ################################################################################################################################
 
-def test_an_sftp_retry_overwrites_what_a_partial_upload_left(tmp_path:'any_') -> 'None':
+def test_an_sftp_retry_overwrites_what_a_partial_upload_left() -> 'None':
     """ A remote path already holding a file - e.g. half of an earlier attempt - is deleted
     before the write, so a retry starts clean.
     """
-    with _audit_db_env(tmp_path):
+    with _audit_db_env():
 
         register_delivery_handlers()
 
@@ -482,11 +472,11 @@ def test_an_sftp_retry_overwrites_what_a_partial_upload_left(tmp_path:'any_') ->
 
 # ################################################################################################################################
 
-def test_a_queued_file_reaches_the_smb_connection_and_the_spool_goes_away(tmp_path:'any_') -> 'None':
+def test_a_queued_file_reaches_the_smb_connection_and_the_spool_goes_away() -> 'None':
     """ A delivered file was written to the share, its spool file is gone
     and the write left its own audit event.
     """
-    with _audit_db_env(tmp_path):
+    with _audit_db_env():
 
         register_delivery_handlers()
 
@@ -515,11 +505,11 @@ def test_a_queued_file_reaches_the_smb_connection_and_the_spool_goes_away(tmp_pa
 
 # ################################################################################################################################
 
-def test_a_failed_smb_delivery_keeps_the_spool_for_the_retry(tmp_path:'any_') -> 'None':
+def test_a_failed_smb_delivery_keeps_the_spool_for_the_retry() -> 'None':
     """ A delivery the share refused raises, which keeps the message queued, and the spool
     file stays in place so the retry has the same bytes to send.
     """
-    with _audit_db_env(tmp_path):
+    with _audit_db_env():
 
         register_delivery_handlers()
 
@@ -549,11 +539,11 @@ def test_a_failed_smb_delivery_keeps_the_spool_for_the_retry(tmp_path:'any_') ->
 
 # ################################################################################################################################
 
-def test_a_queued_file_reaches_the_ftp_connection_and_the_spool_goes_away(tmp_path:'any_') -> 'None':
+def test_a_queued_file_reaches_the_ftp_connection_and_the_spool_goes_away() -> 'None':
     """ A delivered file was written to the server, its spool file is gone
     and the write left its own audit event.
     """
-    with _audit_db_env(tmp_path):
+    with _audit_db_env():
 
         register_delivery_handlers()
 
@@ -584,11 +574,11 @@ def test_a_queued_file_reaches_the_ftp_connection_and_the_spool_goes_away(tmp_pa
 
 # ################################################################################################################################
 
-def test_a_failed_ftp_delivery_keeps_the_spool_for_the_retry(tmp_path:'any_') -> 'None':
+def test_a_failed_ftp_delivery_keeps_the_spool_for_the_retry() -> 'None':
     """ A delivery the server refused raises, which keeps the message queued, and the spool
     file stays in place so the retry has the same bytes to send.
     """
-    with _audit_db_env(tmp_path):
+    with _audit_db_env():
 
         register_delivery_handlers()
 
@@ -621,11 +611,11 @@ def test_a_failed_ftp_delivery_keeps_the_spool_for_the_retry(tmp_path:'any_') ->
 
 # ################################################################################################################################
 
-def test_a_connection_that_is_gone_raises(tmp_path:'any_') -> 'None':
+def test_a_connection_that_is_gone_raises() -> 'None':
     """ A connection that was deleted is no longer anywhere to be found, so a message
     naming it is an error rather than something quietly dropped.
     """
-    with _audit_db_env(tmp_path):
+    with _audit_db_env():
 
         register_delivery_handlers()
 

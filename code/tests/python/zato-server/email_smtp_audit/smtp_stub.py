@@ -11,15 +11,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # it and the environment that points the audit log at a throwaway database.
 
 # stdlib
-import os
 from contextlib import contextmanager
 
 # Zato
-from live_sql.env import database_env
 from zato.common.audit_log.api import AuditLog
 from zato.common.ext.bunch import Bunch
+from zato.common.test.zato_database import zato_database_engine
 from zato.server.connection.email import SMTPConnection
-from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,17 +44,10 @@ Raised_Error = 'The SMTP server went away'
 # ################################################################################################################################
 
 @contextmanager
-def smtp_audit_env(tmp_path:'any_') -> 'envgen':
-    """ Points the audit log at a throwaway SQLite database for the duration of a test.
+def smtp_audit_env() -> 'envgen':
+    """ Points the audit log at a throwaway PostgreSQL database for the duration of a test.
     """
-    db_path = os.path.join(str(tmp_path), 'zato.db')
-
-    details = {
-        'type': DatabaseEnv.Type_SQLite,
-        'path': db_path,
-    }
-
-    with database_env(details):
+    with zato_database_engine():
         yield
 
 # ################################################################################################################################

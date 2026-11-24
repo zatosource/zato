@@ -20,7 +20,6 @@ from checks import check_acknowledgements, check_audit_events, check_publication
     check_redelivery, check_traffic, DatabaseReader
 from workload import ModuleCtx as WorkloadCtx, Workload
 from zato.common.crypto.api import CryptoManager
-from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.test.conftest_base_pubsub import find_free_port, render_template
 from zato.common.test.receiver import WebhookReceiver
 from zato.common.test.reliability.power_loss import PowerLossServer
@@ -167,10 +166,7 @@ def run_power_loss(server:'PowerLossServer', power_loss:'PowerLoss', reader:'Dat
         check_acknowledgements(workload, reader)
         check_receipts(workload, reader)
         check_audit_events(workload, reader)
-
-        # SQLite counts the push attempts in memory, so only PostgreSQL stores them
-        if server.database_env[DatabaseEnv.Env_Type] != DatabaseEnv.Type_SQLite:
-            check_push_attempts(receiver, reader)
+        check_push_attempts(receiver, reader)
 
         # .. the queue hands out every publication that was not acknowledged and none that was ..
         workload.drain()

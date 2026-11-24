@@ -94,11 +94,11 @@ def _get_attrs(event_id:'int') -> 'strdict':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_a_good_response_carries_its_status_and_no_outcome(tmp_path:'os.PathLike') -> 'None':
+def test_a_good_response_carries_its_status_and_no_outcome() -> 'None':
     """ A read that went through leaves a pair under one cid, the response row carrying `200 OK`
     and no application outcome, since nothing went wrong to name.
     """
-    with fhir_audit_env(tmp_path), FHIRStandIn(OK, _patient_body) as stand_in:
+    with fhir_audit_env(), FHIRStandIn(OK, _patient_body) as stand_in:
 
         client = new_fhir_client(stand_in.address)
         result = cast_('strdict', client._do_request('get', _patient_path, cid=_cid))
@@ -136,13 +136,13 @@ def test_a_good_response_carries_its_status_and_no_outcome(tmp_path:'os.PathLike
 
 # ################################################################################################################################
 
-def test_an_operation_outcome_on_500_carries_its_status_and_issue_code(tmp_path:'os.PathLike') -> 'None':
+def test_an_operation_outcome_on_500_carries_its_status_and_issue_code() -> 'None':
     """ A 500 answering an OperationOutcome is written with its whole status line and the code of its
     first issue, and the exception fhirpy raises for it is raised as fhirpy raises it.
     """
     body = operation_outcome('exception', 'The database is unavailable')
 
-    with fhir_audit_env(tmp_path), FHIRStandIn(INTERNAL_SERVER_ERROR, body) as stand_in:
+    with fhir_audit_env(), FHIRStandIn(INTERNAL_SERVER_ERROR, body) as stand_in:
 
         client = new_fhir_client(stand_in.address)
 
@@ -161,13 +161,13 @@ def test_an_operation_outcome_on_500_carries_its_status_and_issue_code(tmp_path:
 
 # ################################################################################################################################
 
-def test_a_404_carries_not_found_and_raises_resource_not_found(tmp_path:'os.PathLike') -> 'None':
+def test_a_404_carries_not_found_and_raises_resource_not_found() -> 'None':
     """ A 404 answering an OperationOutcome is written as `404 Not Found` with `not-found`,
     and it is ResourceNotFound that reaches the caller.
     """
     body = operation_outcome('not-found', 'No Patient with id 1')
 
-    with fhir_audit_env(tmp_path), FHIRStandIn(NOT_FOUND, body) as stand_in:
+    with fhir_audit_env(), FHIRStandIn(NOT_FOUND, body) as stand_in:
 
         client = new_fhir_client(stand_in.address)
 
@@ -182,13 +182,13 @@ def test_a_404_carries_not_found_and_raises_resource_not_found(tmp_path:'os.Path
 
 # ################################################################################################################################
 
-def test_a_401_raises_authorization_error(tmp_path:'os.PathLike') -> 'None':
+def test_a_401_raises_authorization_error() -> 'None':
     """ A 401 is written as `401 Unauthorized` and raises AuthorizationError, a body that is not an
     OperationOutcome leaving the application outcome empty.
     """
     body = 'Access denied'
 
-    with fhir_audit_env(tmp_path), FHIRStandIn(UNAUTHORIZED, body) as stand_in:
+    with fhir_audit_env(), FHIRStandIn(UNAUTHORIZED, body) as stand_in:
 
         client = new_fhir_client(stand_in.address)
 
@@ -203,11 +203,11 @@ def test_a_401_raises_authorization_error(tmp_path:'os.PathLike') -> 'None':
 
 # ################################################################################################################################
 
-def test_a_refused_connection_is_written_as_connection_error(tmp_path:'os.PathLike') -> 'None':
+def test_a_refused_connection_is_written_as_connection_error() -> 'None':
     """ A call that nothing answered leaves a response row whose status names the transport failure,
     and the requests exception propagates as it always did.
     """
-    with fhir_audit_env(tmp_path):
+    with fhir_audit_env():
 
         client = new_fhir_client(unreached_address())
 
@@ -226,10 +226,10 @@ def test_a_refused_connection_is_written_as_connection_error(tmp_path:'os.PathLi
 
 # ################################################################################################################################
 
-def test_a_timeout_is_written_as_timeout(tmp_path:'os.PathLike') -> 'None':
+def test_a_timeout_is_written_as_timeout() -> 'None':
     """ A server that outlasts the client's patience leaves a response row whose status is `timeout`.
     """
-    with fhir_audit_env(tmp_path), FHIRStandIn(OK, _patient_body, is_stalling=True) as stand_in:
+    with fhir_audit_env(), FHIRStandIn(OK, _patient_body, is_stalling=True) as stand_in:
 
         client = new_fhir_client(stand_in.address)
 
@@ -243,13 +243,13 @@ def test_a_timeout_is_written_as_timeout(tmp_path:'os.PathLike') -> 'None':
 
 # ################################################################################################################################
 
-def test_a_health_check_lands_under_its_own_source_with_the_audit_log_off(tmp_path:'os.PathLike') -> 'None':
+def test_a_health_check_lands_under_its_own_source_with_the_audit_log_off() -> 'None':
     """ A health check's ping is written under the connection's health source even when the connection's
     own audit log is off, and the response comes back as it is for the check to read.
     """
     body = operation_outcome('exception', 'Not ready')
 
-    with fhir_audit_env(tmp_path), FHIRStandIn(INTERNAL_SERVER_ERROR, body) as stand_in:
+    with fhir_audit_env(), FHIRStandIn(INTERNAL_SERVER_ERROR, body) as stand_in:
 
         client = new_fhir_client(stand_in.address, is_audit_log_active=False)
         response = client.zato_ping(_cid, is_health_check=True)
@@ -274,10 +274,10 @@ def test_a_health_check_lands_under_its_own_source_with_the_audit_log_off(tmp_pa
 
 # ################################################################################################################################
 
-def test_a_dashboard_ping_with_the_audit_log_off_writes_nothing(tmp_path:'os.PathLike') -> 'None':
+def test_a_dashboard_ping_with_the_audit_log_off_writes_nothing() -> 'None':
     """ A ping that is not a health check is the connection's own traffic - with the audit log off it leaves nothing.
     """
-    with fhir_audit_env(tmp_path), FHIRStandIn(OK, '{"resourceType":"CapabilityStatement"}') as stand_in:
+    with fhir_audit_env(), FHIRStandIn(OK, '{"resourceType":"CapabilityStatement"}') as stand_in:
 
         client = new_fhir_client(stand_in.address, is_audit_log_active=False)
         response = client.zato_ping(_cid)
@@ -287,10 +287,10 @@ def test_a_dashboard_ping_with_the_audit_log_off_writes_nothing(tmp_path:'os.Pat
 
 # ################################################################################################################################
 
-def test_needs_audit_off_writes_nothing(tmp_path:'os.PathLike') -> 'None':
+def test_needs_audit_off_writes_nothing() -> 'None':
     """ A resubmit records its own rows, so the call it makes with needs_audit off leaves none of its own.
     """
-    with fhir_audit_env(tmp_path), FHIRStandIn(OK, _patient_body) as stand_in:
+    with fhir_audit_env(), FHIRStandIn(OK, _patient_body) as stand_in:
 
         client = new_fhir_client(stand_in.address)
         result = cast_('strdict', client._do_request('get', _patient_path, needs_audit=False, cid=_cid))

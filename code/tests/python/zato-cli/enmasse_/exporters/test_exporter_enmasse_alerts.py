@@ -128,8 +128,8 @@ def yaml_config() -> 'stranydict':
 # ################################################################################################################################
 
 @pytest.fixture
-def session(tmp_path:'Path') -> 'any_':
-    """ A real ODB session over a SQLite database file holding
+def session() -> 'any_':
+    """ A real ODB session over a new PostgreSQL database holding
     the generic connection tables and the SMTP connection the alerts mappings name.
     """
     tables = [
@@ -142,7 +142,7 @@ def session(tmp_path:'Path') -> 'any_':
         HTTPSOAP.__table__,
     ]
 
-    with config_database_engine(tmp_path, tables) as engine:
+    with config_database_engine(tables) as engine:
         session_factory = sessionmaker(bind=engine)
         session = session_factory()
 

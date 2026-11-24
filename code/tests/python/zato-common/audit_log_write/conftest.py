@@ -26,9 +26,8 @@ from gevent_monitor import pytest_pyfunc_call as pytest_pyfunc_call
 from live_sql.containers import start_postgresql, stop_container
 from live_sql.env import database_env
 from logging_teardown import silence_logging_teardown
-from support import Backend_PostgreSQL, Backend_SQLite, delete_all_rows
+from support import Backend_PostgreSQL, delete_all_rows
 from zato.common.db_env.database import dispose_database_engine
-from zato.common.db_env.database_env import DatabaseEnv
 
 _ = atexit.register(silence_logging_teardown)
 
@@ -59,9 +58,6 @@ class ModuleCtx:
     Password = 'test-audit-log-write-password'
     DB_Name  = 'zato_audit_log_write'
 
-    # The name of the SQLite file in the directory of each test
-    SQLite_File_Name = 'zato.db'
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -84,25 +80,13 @@ def postgresql_server() -> 'servergen':
 
 # ################################################################################################################################
 
-@pytest.fixture(params=[Backend_SQLite, Backend_PostgreSQL])
-def audit_backend(request:'pytest.FixtureRequest', tmp_path:'os.PathLike') -> 'strgen':
-    """ Points the audit log at an empty database of each backend in turn and yields the name of the backend.
+@pytest.fixture
+def audit_backend(postgresql_server:'DatabaseServer') -> 'strgen':
+    """ Points the audit log at the emptied database of the PostgreSQL server and yields the name of the backend.
     """
-    backend = request.param
-
-    if backend == Backend_PostgreSQL:
-        server = request.getfixturevalue('postgresql_server')
-        details = server.details
-    else:
-        db_path = os.path.join(str(tmp_path), ModuleCtx.SQLite_File_Name)
-        details = {
-            'type': DatabaseEnv.Type_SQLite,
-            'path': db_path,
-        }
-
-    with database_env(details):
+    with database_env(postgresql_server.details):
         delete_all_rows()
-        yield backend
+        yield Backend_PostgreSQL
         dispose_database_engine()
 
 # ################################################################################################################################

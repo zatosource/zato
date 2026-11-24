@@ -12,7 +12,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import signal
 import sys
-import threading
 import time
 from multiprocessing import get_context
 
@@ -21,7 +20,6 @@ import gevent
 from gevent.event import Event
 
 # Zato
-from zato.common.db_env.process_queue import ProcessQueue
 from zato.common.worker_slot import ModuleCtx as WorkerSlotCtx
 from zato.server.arbiter import Arbiter
 from zato.server.arbiter_config import ArbiterConfig, ModuleCtx as ArbiterCtx
@@ -63,12 +61,8 @@ if 0:
 _context = get_context('fork')
 
 Region_Config = {
-    'queue_count': 1,
     'lock_capacity': 4,
 }
-
-# The queue through which the processes of a test write
-Queue = 0
 
 # The counts through which the processes of a test report what they did and received
 Writes_Metric  = 0
@@ -303,16 +297,6 @@ class ProcessUnderTest:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _write_behind_holder(region:'SharedRegion', probe:'Probe') -> 'None':
-    """ Takes the place of the config process in the queue once the worker holds its turn, and reports the write.
-    """
-    assert wait_until(region.queue_has_place, (Queue, region.worker_place))
-
-    process_queue = ProcessQueue(region, Queue, region.config_place, Condition_Timeout)
-    _ = process_queue.run(probe.add, (Writes_Metric, 1))
-
-# ################################################################################################################################
-
 def _new_mains(region:'SharedRegion', probe:'Probe', mode:'str') -> 'anytuple':
     """ Returns the main function of the worker of a test and that of its config process, if the mode runs one.
     """
@@ -350,27 +334,6 @@ def _new_mains(region:'SharedRegion', probe:'Probe', mode:'str') -> 'anytuple':
     def exit_at_once(_ctx:'WorkerContext') -> 'None':
         probe.add(Starts_Metric, 1)
         sys.exit(1)
-
-    def hold_turn_worker(ctx:'WorkerContext') -> 'None':
-        process = ProcessUnderTest(region, probe, ctx, True)
-
-        # The first worker holds the turn of the queue until it is terminated
-        if ctx.generation == 1:
-            _ = region.queue_enter(Queue, region.worker_place)
-            assert region.queue_poll(Queue, region.worker_place)
-
-        process.report_ready()
-        process.serve()
-
-    def hold_turn_config(ctx:'WorkerContext') -> 'None':
-        process = ProcessUnderTest(region, probe, ctx, True)
-
-        # The config process waits for the turn in a thread, while it serves the control channel
-        thread = threading.Thread(target=_write_behind_holder, args=(region, probe))
-        thread.start()
-
-        process.report_ready()
-        process.serve()
 
     def publish_worker(ctx:'WorkerContext') -> 'None':
         process = ProcessUnderTest(region, probe, ctx, True)
@@ -452,7 +415,6 @@ def _new_mains(region:'SharedRegion', probe:'Probe', mode:'str') -> 'anytuple':
         'no_heartbeat': (no_heartbeat, None),
         'never_ready': (never_ready, None),
         'exit_at_once': (exit_at_once, None),
-        'hold_turn': (hold_turn_worker, hold_turn_config),
         'publish': (publish_worker, serve),
         'query': (serve, query_config),
         'exit_config_once': (serve, exit_config_once),

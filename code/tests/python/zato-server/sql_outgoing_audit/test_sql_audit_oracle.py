@@ -13,26 +13,24 @@ from common import run_oracle_callproc_audit_scenario, run_sql_audit_scenario, E
 # ################################################################################################################################
 
 if 0:
-    import os
     from live_sql.containers import DatabaseServer
 
-    os = os
     DatabaseServer = DatabaseServer
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_sql_audit_oracle(oracle_server:'DatabaseServer', tmp_path:'os.PathLike') -> 'None':
+def test_sql_audit_oracle(oracle_server:'DatabaseServer') -> 'None':
     """ The complete SQL audit scenario against a live Oracle server.
     """
-    run_sql_audit_scenario(oracle_server.details, Engine_Oracle, tmp_path)
+    run_sql_audit_scenario(oracle_server.details, Engine_Oracle)
 
 # ################################################################################################################################
 
-def test_sql_audit_oracle_callproc(oracle_server:'DatabaseServer', tmp_path:'os.PathLike') -> 'None':
+def test_sql_audit_oracle_callproc(oracle_server:'DatabaseServer') -> 'None':
     """ Stored procedure calls against a live Oracle server are on record like statements are.
     """
-    run_oracle_callproc_audit_scenario(oracle_server.details, tmp_path)
+    run_oracle_callproc_audit_scenario(oracle_server.details)
 
 # ################################################################################################################################
 # ################################################################################################################################

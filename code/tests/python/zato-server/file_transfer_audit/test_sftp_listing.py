@@ -26,12 +26,6 @@ from sftp_stub import new_sftp_connection, ClientRecorder, Ls_Line
 # ################################################################################################################################
 # ################################################################################################################################
 
-if 0:
-    import os
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 # A directory nothing was put in, which an `ls` lists with no output at all
 _empty_directory = '/documents/empty'
 
@@ -133,8 +127,8 @@ def test_an_unrecognized_line_raises() -> 'None':
 
 # ################################################################################################################################
 
-def test_an_empty_directory_lists_as_an_empty_list(tmp_path:'os.PathLike') -> 'None':
-    with audit_db_env(tmp_path):
+def test_an_empty_directory_lists_as_an_empty_list() -> 'None':
+    with audit_db_env():
 
         sftp_client = ClientRecorder()
         conn = new_sftp_connection(sftp_client)
@@ -144,8 +138,8 @@ def test_an_empty_directory_lists_as_an_empty_list(tmp_path:'os.PathLike') -> 'N
 
 # ################################################################################################################################
 
-def test_a_path_with_no_output_has_no_info(tmp_path:'os.PathLike') -> 'None':
-    with audit_db_env(tmp_path):
+def test_a_path_with_no_output_has_no_info() -> 'None':
+    with audit_db_env():
 
         conn = new_sftp_connection(ClientRecorder())
 
@@ -153,8 +147,8 @@ def test_a_path_with_no_output_has_no_info(tmp_path:'os.PathLike') -> 'None':
 
 # ################################################################################################################################
 
-def test_a_directory_is_described_by_its_entry_in_the_parent(tmp_path:'os.PathLike') -> 'None':
-    with audit_db_env(tmp_path):
+def test_a_directory_is_described_by_its_entry_in_the_parent() -> 'None':
+    with audit_db_env():
 
         sftp_client = ClientRecorder()
 
@@ -173,8 +167,8 @@ def test_a_directory_is_described_by_its_entry_in_the_parent(tmp_path:'os.PathLi
 
 # ################################################################################################################################
 
-def test_a_missing_path_has_no_info(tmp_path:'os.PathLike') -> 'None':
-    with audit_db_env(tmp_path):
+def test_a_missing_path_has_no_info() -> 'None':
+    with audit_db_env():
 
         sftp_client = ClientRecorder()
         sftp_client.missing_paths.add(_missing_path)
@@ -190,8 +184,8 @@ def test_a_missing_path_has_no_info(tmp_path:'os.PathLike') -> 'None':
 
 # ################################################################################################################################
 
-def test_a_path_absent_from_its_parent_does_not_exist(tmp_path:'os.PathLike') -> 'None':
-    with audit_db_env(tmp_path):
+def test_a_path_absent_from_its_parent_does_not_exist() -> 'None':
+    with audit_db_env():
 
         conn = new_sftp_connection(ClientRecorder())
 
@@ -200,8 +194,8 @@ def test_a_path_absent_from_its_parent_does_not_exist(tmp_path:'os.PathLike') ->
 
 # ################################################################################################################################
 
-def test_a_move_never_replaces_its_target(tmp_path:'os.PathLike') -> 'None':
-    with audit_db_env(tmp_path):
+def test_a_move_never_replaces_its_target() -> 'None':
+    with audit_db_env():
 
         sftp_client = ClientRecorder()
         conn = new_sftp_connection(sftp_client)
@@ -212,8 +206,8 @@ def test_a_move_never_replaces_its_target(tmp_path:'os.PathLike') -> 'None':
 
 # ################################################################################################################################
 
-def test_a_directory_that_may_exist_is_created_without_failing(tmp_path:'os.PathLike') -> 'None':
-    with audit_db_env(tmp_path):
+def test_a_directory_that_may_exist_is_created_without_failing() -> 'None':
+    with audit_db_env():
 
         sftp_client = ClientRecorder()
         conn = new_sftp_connection(sftp_client)
@@ -225,8 +219,8 @@ def test_a_directory_that_may_exist_is_created_without_failing(tmp_path:'os.Path
 
 # ################################################################################################################################
 
-def test_a_read_is_a_single_get(tmp_path:'os.PathLike') -> 'None':
-    with audit_db_env(tmp_path):
+def test_a_read_is_a_single_get() -> 'None':
+    with audit_db_env():
 
         sftp_client = ClientRecorder()
         sftp_client.content_by_path[_file_path] = _file_content

@@ -13,19 +13,17 @@ from common import run_sql_audit_scenario, Engine_MySQL
 # ################################################################################################################################
 
 if 0:
-    import os
     from live_sql.containers import DatabaseServer
 
-    os = os
     DatabaseServer = DatabaseServer
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_sql_audit_mysql(mysql_server:'DatabaseServer', tmp_path:'os.PathLike') -> 'None':
+def test_sql_audit_mysql(mysql_server:'DatabaseServer') -> 'None':
     """ The complete SQL audit scenario against a live MySQL server.
     """
-    run_sql_audit_scenario(mysql_server.details, Engine_MySQL, tmp_path)
+    run_sql_audit_scenario(mysql_server.details, Engine_MySQL)
 
 # ################################################################################################################################
 # ################################################################################################################################

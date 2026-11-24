@@ -25,6 +25,7 @@ import requests
 # Zato
 from zato.common.test.mcp_ import make_jsonrpc_initialize, wait_for_mcp_gateway
 from zato.common.test.process_util import kill_process_tree
+from zato.common.test.zato_database import isolated_database_env
 from zato.common.util.config import get_config_object, update_config_file
 
 # ################################################################################################################################
@@ -102,6 +103,10 @@ class TestMCPAuth(TestCase):
         # Quickstart ..
         qs_dir = os.path.join(cls._tmpdir, 'qs')
         os.makedirs(qs_dir)
+
+        # The environment has a PostgreSQL database of its own, which the Zato_Database_* variables of this process
+        # select until the class completes, so quickstart, the server and the enmasse calls all read the same database.
+        _ = cls.enterClassContext(isolated_database_env())
 
         qs_env = os.environ.copy()
         qs_env.pop('COVERAGE_PROCESS_START', None)

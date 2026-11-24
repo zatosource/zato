@@ -24,7 +24,7 @@ if 0:
 # ################################################################################################################################
 
 def test_inactive_topic_refuses_publication(in_process_server:'any_') -> 'None':
-    """ A publication to an inactive topic of config.db is refused.
+    """ A publication to an inactive topic of the configuration database is refused.
     """
     server, _push_endpoint = in_process_server
     parallel = server.server

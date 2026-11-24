@@ -71,10 +71,10 @@ def test_filesystem(
     """ Item 15.4 - the writes and the fsync calls of the server, its cleanup process and PostgreSQL
     are delayed, or a percentage of them fails with EIO or ENOSPC.
     """
-    targets:'pathlist' = [(process_environment.server_control, process_environment.server_prefix)]
-
-    if process_environment.database:
-        targets.append((process_environment.database_control, process_environment.database_prefix))
+    targets:'pathlist' = [
+        (process_environment.server_control, process_environment.server_prefix),
+        (process_environment.database_control, process_environment.database_prefix),
+    ]
 
     fault = FilesystemFault(kind, targets)
     label = get_label(fault.name, level)

@@ -12,7 +12,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # and the store hands out the kind of connection the server type names.
 
 # stdlib
-import os
 from base64 import b64decode
 from contextlib import contextmanager
 from json import loads
@@ -30,12 +29,11 @@ from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import get_attachment, list_attachments
 from zato.common.ext.bunch import Bunch
+from zato.common.test.zato_database import zato_database_engine
 from zato.server.connection.email import Microsoft365SMTPConnection, SMTPConnection, SMTPConnStore
-from zato.common.db_env.database_env import DatabaseEnv
 
 # Test support
 from chat_simulators import find_free_port
-from live_sql.env import database_env
 from teams_simulator import start_teams_server, TeamsGraphTestHandler
 
 # ################################################################################################################################
@@ -80,17 +78,10 @@ _cid = 'cid-microsoft-365-smtp-1'
 # ################################################################################################################################
 
 @contextmanager
-def audit_env(tmp_path:'any_') -> 'envgen':
-    """ Points the audit log at a throwaway SQLite database for the duration of a test.
+def audit_env() -> 'envgen':
+    """ Points the audit log at a throwaway PostgreSQL database for the duration of a test.
     """
-    db_path = os.path.join(str(tmp_path), 'zato.db')
-
-    details = {
-        'type': DatabaseEnv.Type_SQLite,
-        'path': db_path,
-    }
-
-    with database_env(details):
+    with zato_database_engine():
         yield
 
 # ################################################################################################################################
@@ -152,13 +143,12 @@ def _get_events() -> 'anylist':
 # ################################################################################################################################
 
 def test_a_send_reaches_the_mailbox_with_recipient_subject_and_body(
-    tmp_path:'os.PathLike',
     graph_server:'str',
     ) -> 'None':
     """ What a send was given is what arrives at the Graph - the mailbox it goes out
     through, the recipient, the subject and the plain-text body.
     """
-    with audit_env(tmp_path):
+    with audit_env():
 
         conn = new_connection(graph_server)
 
@@ -186,13 +176,12 @@ def test_a_send_reaches_the_mailbox_with_recipient_subject_and_body(
 # ################################################################################################################################
 
 def test_a_successful_send_writes_one_message_sent_event(
-    tmp_path:'os.PathLike',
     graph_server:'str',
     ) -> 'None':
     """ A send that went through leaves the same message-sent row the generic
     SMTP connection leaves.
     """
-    with audit_env(tmp_path):
+    with audit_env():
 
         conn = new_connection(graph_server)
 
@@ -222,12 +211,11 @@ def test_a_successful_send_writes_one_message_sent_event(
 # ################################################################################################################################
 
 def test_an_html_message_keeps_its_html_body(
-    tmp_path:'os.PathLike',
     graph_server:'str',
     ) -> 'None':
     """ A message built as HTML arrives at the Graph with an HTML body.
     """
-    with audit_env(tmp_path):
+    with audit_env():
 
         conn = new_connection(graph_server)
 
@@ -247,13 +235,12 @@ def test_an_html_message_keeps_its_html_body(
 # ################################################################################################################################
 
 def test_attachments_travel_inside_the_message_and_into_the_audit_log(
-    tmp_path:'os.PathLike',
     graph_server:'str',
     ) -> 'None':
     """ An attachment goes out inside the Graph message itself and its bytes,
     as they went out, are what the audit log keeps.
     """
-    with audit_env(tmp_path):
+    with audit_env():
 
         conn = new_connection(graph_server)
 
@@ -287,13 +274,12 @@ def test_attachments_travel_inside_the_message_and_into_the_audit_log(
 # ################################################################################################################################
 
 def test_rejected_credentials_write_the_error_and_the_send_returns_false(
-    tmp_path:'os.PathLike',
     graph_server:'str',
     ) -> 'None':
     """ A send the Graph's own token server refused is recorded with what stopped it,
     before the caller learns that nothing was sent.
     """
-    with audit_env(tmp_path):
+    with audit_env():
 
         conn = new_connection(graph_server, secret='secret-that-does-not-match')
 
@@ -314,12 +300,11 @@ def test_rejected_credentials_write_the_error_and_the_send_returns_false(
 # ################################################################################################################################
 
 def test_the_flag_turned_off_writes_nothing(
-    tmp_path:'os.PathLike',
     graph_server:'str',
     ) -> 'None':
     """ A connection whose audit log is off sends and leaves no trace.
     """
-    with audit_env(tmp_path):
+    with audit_env():
 
         conn = new_connection(graph_server, is_audit_log_active=False)
 

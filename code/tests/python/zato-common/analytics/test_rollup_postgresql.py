@@ -6,11 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import os
-
 # Zato
-from common import analytics_test_env, run_rollup_scenario
+from common import run_rollup_scenario
+from live_sql.env import database_env
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -22,16 +20,12 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_rollup_postgresql(postgresql_server:'DatabaseServer', tmp_path:'os.PathLike') -> 'None':
-    """ The complete rollup scenario with the audit log in a live PostgreSQL server
-    and the analytics store in its local SQLite file.
+def test_rollup_postgresql(postgresql_server:'DatabaseServer') -> 'None':
+    """ The complete rollup scenario with the audit log and the analytics store in the Zato database
+    of a live PostgreSQL server.
     """
-    analytics_db_path = os.path.join(str(tmp_path), 'analytics.db')
-
-    with analytics_test_env(postgresql_server.details, analytics_db_path):
+    with database_env(postgresql_server.details):
         run_rollup_scenario()
-
-    assert os.path.exists(analytics_db_path)
 
 # ################################################################################################################################
 # ################################################################################################################################

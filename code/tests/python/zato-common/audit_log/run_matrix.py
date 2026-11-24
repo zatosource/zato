@@ -66,7 +66,7 @@ _cache_dir = os.path.join(_base_dir, 'code', 'tests', '.pytest_cache_audit_log_u
 _certificate_dir_mode = 0o755
 
 # The backends every UI test runs against, in this order
-_backend_names = ('sqlite', 'postgresql', 'postgresql-ssl')
+_backend_names = ('postgresql', 'postgresql-ssl')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -104,8 +104,8 @@ def _run_unit_tests(env:'stranydict') -> 'int':
 
 def main() -> 'None':
     """ Runs every audit log test - the dashboard UI ones and the unit ones that write
-    to the audit log directly - against every backend: sqlite and PostgreSQL,
-    the latter both plain and TLS-required. The UI tests create their own
+    to the audit log directly - against every backend: PostgreSQL, both plain
+    and TLS-required. The UI tests create their own
     server and dashboard which inherit the Zato_Database_* variables set here.
     """
 
@@ -139,7 +139,6 @@ def main() -> 'None':
 
         # The per-backend environments the components are restarted with
         backend_env:'stranydict' = {
-            'sqlite': {},
             'postgresql': build_env(servers['postgresql'].details),
             'postgresql-ssl': build_env(servers['postgresql-ssl'].details),
         }

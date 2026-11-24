@@ -277,8 +277,7 @@ class _EmailAPI:
 
 @contextmanager
 def new_session() -> 'sessionmakergen':
-    """ A sessionmaker over a fresh SQLite database file in a temporary directory
-    with the tables the explain service reads.
+    """ A sessionmaker over a new PostgreSQL database with the tables the explain service reads.
     """
     tables = [
         Service.__table__,
@@ -289,10 +288,9 @@ def new_session() -> 'sessionmakergen':
         HTTPSOAP.__table__,
     ]
 
-    with TemporaryDirectory() as directory:
-        with config_database_engine(directory, tables) as engine:
-            out = sessionmaker(bind=engine)
-            yield out
+    with config_database_engine(tables) as engine:
+        out = sessionmaker(bind=engine)
+        yield out
 
 # ################################################################################################################################
 

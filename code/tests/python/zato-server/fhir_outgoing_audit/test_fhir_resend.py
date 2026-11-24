@@ -109,10 +109,10 @@ def _resend(client:'any_') -> 'any_':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_a_read_goes_out_again_with_no_body(tmp_path:'os.PathLike') -> 'None':
+def test_a_read_goes_out_again_with_no_body() -> 'None':
     """ A GET recorded an empty payload, and repeating it asks the same question again.
     """
-    with fhir_audit_env(tmp_path), FHIRStandIn(OK, _patient_body) as stand_in:
+    with fhir_audit_env(), FHIRStandIn(OK, _patient_body) as stand_in:
 
         client = new_fhir_client(stand_in.address)
         _ = client._do_request('get', _patient_path, cid=_cid)
@@ -134,10 +134,10 @@ def test_a_read_goes_out_again_with_no_body(tmp_path:'os.PathLike') -> 'None':
 
 # ################################################################################################################################
 
-def test_a_delete_goes_out_again_as_a_delete(tmp_path:'os.PathLike') -> 'None':
+def test_a_delete_goes_out_again_as_a_delete() -> 'None':
     """ The method is read back off the row, so a delete repeats as a delete.
     """
-    with fhir_audit_env(tmp_path), FHIRStandIn(OK, _deleted_body) as stand_in:
+    with fhir_audit_env(), FHIRStandIn(OK, _deleted_body) as stand_in:
 
         client = new_fhir_client(stand_in.address)
         _ = client._do_request('delete', _patient_path, cid=_cid)
@@ -156,10 +156,10 @@ def test_a_delete_goes_out_again_as_a_delete(tmp_path:'os.PathLike') -> 'None':
 
 # ################################################################################################################################
 
-def test_a_search_goes_out_again_with_its_parameters(tmp_path:'os.PathLike') -> 'None':
+def test_a_search_goes_out_again_with_its_parameters() -> 'None':
     """ A search is its parameters, so the repeat searches by the same ones.
     """
-    with fhir_audit_env(tmp_path), FHIRStandIn(OK, _search_body) as stand_in:
+    with fhir_audit_env(), FHIRStandIn(OK, _search_body) as stand_in:
 
         client = new_fhir_client(stand_in.address)
         _ = client._do_request('get', _search_path, params=_search_params, cid=_cid)
@@ -182,12 +182,12 @@ def test_a_search_goes_out_again_with_its_parameters(tmp_path:'os.PathLike') -> 
 
 # ################################################################################################################################
 
-def test_a_refused_resend_carries_the_status_it_was_refused_with(tmp_path:'os.PathLike') -> 'None':
+def test_a_refused_resend_carries_the_status_it_was_refused_with() -> 'None':
     """ A resend a server refused comes back rejected, naming the status and what the server said.
     """
     outcome_body = operation_outcome('invalid', 'The patient id is not a number')
 
-    with fhir_audit_env(tmp_path), FHIRStandIn(OK, _patient_body) as stand_in:
+    with fhir_audit_env(), FHIRStandIn(OK, _patient_body) as stand_in:
 
         client = new_fhir_client(stand_in.address)
         _ = client._do_request('get', _patient_path, cid=_cid)

@@ -7,28 +7,26 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The environment every file transfer audit test runs under - the audit log pointed
-# at a throwaway SQLite database for the duration of one test.
+# at a throwaway PostgreSQL database for the duration of one test.
 
 # stdlib
-import os
 from contextlib import contextmanager
 
 # SQLAlchemy
 from sqlalchemy import select
 
 # Zato
-from live_sql.env import database_env
 from zato.common.audit_log.api import event_link_table, event_table
 from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
-from zato.common.db_env.database_env import DatabaseEnv
+from zato.common.test.zato_database import zato_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from collections.abc import Iterator
-    from zato.common.typing_ import any_, anylist, intlist
+    from zato.common.typing_ import anylist, intlist
 
     envgen = Iterator[None]
 
@@ -42,17 +40,10 @@ Server_Name = 'test-file-transfer-audit-server'
 # ################################################################################################################################
 
 @contextmanager
-def audit_db_env(tmp_path:'any_') -> 'envgen':
-    """ Points the audit log at a throwaway SQLite database for the duration of a test.
+def audit_db_env() -> 'envgen':
+    """ Points the audit log at a throwaway PostgreSQL database for the duration of a test.
     """
-    db_path = os.path.join(str(tmp_path), 'zato.db')
-
-    details = {
-        'type': DatabaseEnv.Type_SQLite,
-        'path': db_path,
-    }
-
-    with database_env(details):
+    with zato_database_engine():
         yield
 
 # ################################################################################################################################

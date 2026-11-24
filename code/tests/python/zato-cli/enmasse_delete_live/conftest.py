@@ -20,7 +20,6 @@ import pytest
 
 # Zato
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
-from zato.common.db_env.database_env import DatabaseEnv
 
 # Live environment
 from live_containers.ready import wait_until
@@ -62,11 +61,10 @@ class ModuleCtx:
 # ################################################################################################################################
 
 def server_environment() -> 'strstrdict':
-    """ What the server of the suite runs with - the audit trail in SQLite, so that a configuration change is recorded.
+    """ What the server of the suite runs with - the audit trail enabled, so that a configuration change is recorded.
     """
     out = {
         AuditLogCtx.Env_Enabled: 'True',
-        DatabaseEnv.Env_Type:    DatabaseEnv.Type_SQLite,
     }
     return out
 

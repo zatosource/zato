@@ -11,7 +11,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # at a throwaway database.
 
 # stdlib
-import os
 import threading
 import time
 from contextlib import contextmanager
@@ -19,13 +18,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 # Zato
 from hl7_client.ports import find_free_port
-from live_sql.env import database_env
 from zato.common.api import HL7
 from zato.common.hl7.fhir.fields import Outgoing_Opaque_Defaults
 from zato.common.json_internal import dumps
+from zato.common.test.zato_database import zato_database_engine
 from zato.common.typing_ import cast_
 from zato.server.generic.api.outconn_hl7_fhir import _HL7FHIRConnection
-from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,17 +60,10 @@ _content_type = 'application/fhir+json'
 # ################################################################################################################################
 
 @contextmanager
-def fhir_audit_env(tmp_path:'any_') -> 'envgen':
-    """ Points the audit log at a throwaway SQLite database for the duration of a test.
+def fhir_audit_env() -> 'envgen':
+    """ Points the audit log at a throwaway PostgreSQL database for the duration of a test.
     """
-    db_path = os.path.join(str(tmp_path), 'zato.db')
-
-    details = {
-        'type': DatabaseEnv.Type_SQLite,
-        'path': db_path,
-    }
-
-    with database_env(details):
+    with zato_database_engine():
         yield
 
 # ################################################################################################################################

@@ -10,8 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # their callers receive, and the deliveries that the same commit acknowledged, which receive no attempt.
 
 # Zato
-from common import delete_all_rows, delete_audit_rows, get_delivery_rows, get_dialect_name, write_in_one_commit
-from zato.common.db_env.common import Type_SQLite
+from common import delete_all_rows, delete_audit_rows, get_delivery_rows, write_in_one_commit
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.pending import new_pending_ack, new_pending_attempts
 from zato.common.test.audit_log_ import new_test_audit_log
@@ -91,8 +90,7 @@ def _get_delivery_ids(messages:'anylist') -> 'intlist':
 # ################################################################################################################################
 
 def _run_record_attempts(backend:'SQLPubSubBackend') -> 'None':
-    """ Each attempt is the next number of its delivery, stored in its message, and recorded in its delivery row
-    on PostgreSQL, while SQLite, which only one server uses, counts the attempts in memory and leaves the rows as they are.
+    """ Each attempt is the next number of its delivery, stored in its message and recorded in its delivery row.
     """
     messages = _fetch(backend, 2)
     delivery_ids = _get_delivery_ids(messages)
@@ -112,13 +110,8 @@ def _run_record_attempts(backend:'SQLPubSubBackend') -> 'None':
         for message in messages:
             assert message['delivery_attempt'] == expected_attempt, message
 
-        # .. which the delivery rows hold on PostgreSQL alone.
-        if get_dialect_name() == Type_SQLite:
-            row_attempt = 0
-        else:
-            row_attempt = expected_attempt
-
-        assert _get_attempts() == {delivery_ids[0]: row_attempt, delivery_ids[1]: row_attempt}
+        # .. which the delivery rows hold as well.
+        assert _get_attempts() == {delivery_ids[0]: expected_attempt, delivery_ids[1]: expected_attempt}
 
     # A single message is recorded in the same way.
     is_recorded = backend.record_attempt(messages[0])
@@ -129,12 +122,9 @@ def _run_record_attempts(backend:'SQLPubSubBackend') -> 'None':
 # ################################################################################################################################
 
 def _run_acknowledged_before(backend:'SQLPubSubBackend') -> 'None':
-    """ A delivery acknowledged before its attempt is recorded receives no attempt on PostgreSQL, which records
-    the attempts in the rows, and its caller learns that it left the queue.
+    """ A delivery acknowledged before its attempt is recorded receives no attempt, and its caller learns
+    that it left the queue.
     """
-    if get_dialect_name() == Type_SQLite:
-        return
-
     messages = _fetch(backend, 2)
     delivery_ids = _get_delivery_ids(messages)
 

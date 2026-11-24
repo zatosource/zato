@@ -26,7 +26,7 @@ if 0:
 # ################################################################################################################################
 
 def test_reload_rebuilds_subscription_list(in_process_server:'any_') -> 'None':
-    """ A reload replaces the subscription list from config.db and leaves every pair confirmed.
+    """ A reload replaces the subscription list from the configuration database and leaves every pair confirmed.
     """
     server, _push_endpoint = in_process_server
 
@@ -97,7 +97,7 @@ def test_publication_between_config_read_and_list_replace(in_process_server:'any
 # ################################################################################################################################
 
 def test_startup_removes_rows_of_deleted_subscriptions(in_process_server:'any_') -> 'None':
-    """ A reload that drops a topic from config.db removes its subscription row through reconciliation.
+    """ A reload that drops a topic from the configuration database removes its subscription row through reconciliation.
     """
     server, _push_endpoint = in_process_server
     parallel = server.server
