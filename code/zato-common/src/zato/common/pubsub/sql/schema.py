@@ -7,12 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Boolean, Column, DDL, event, Identity, Index, Integer, MetaData, PrimaryKeyConstraint, \
-    String, Table, Text
+from sqlalchemy import BigInteger, Boolean, Column, DDL, event, Identity, Index, Integer, MetaData, String, Table, Text
 
 # Zato
 from zato.common.api import HTTP_SOAP, PubSub
-from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.pubsub.sql.counts import register_counts
 from zato.common.pubsub.sql.traces import register_traces
 
@@ -36,39 +34,14 @@ _retry = HTTP_SOAP.Retry
 # ################################################################################################################################
 # ################################################################################################################################
 
-# SQLite requires INTEGER for an autoincrementing primary key to alias its built-in rowid,
-# which is 64-bit there, while PostgreSQL needs BIGINT for the same range.
-_id_type = BigInteger().with_variant(Integer(), Type_SQLite)
-
 def _new_id_column() -> 'Column':
-    out = Column('id', _id_type, Identity(), primary_key=True)
-    return out
-
-# ################################################################################################################################
-
-def _key(*names:'str') -> 'PrimaryKeyConstraint':
-    """ The key of a count table. SQLite keeps one row per key, which is the primary key of its count tables,
-    while PostgreSQL inserts many change rows per key, so the key is a plain index there - see counts.py.
-    """
-    out = PrimaryKeyConstraint(*names)
-    out = out.ddl_if(dialect=Type_SQLite)
-
-    return out
-
-# ################################################################################################################################
-
-def _key_index(name:'str', *names:'str') -> 'Index':
-    """ The index by which PostgreSQL reads and compacts the change rows of one key of a count table.
-    """
-    out = Index(name, *names)
-    out = out.ddl_if(dialect=Type_PostgreSQL)
-
+    out = Column('id', BigInteger, Identity(), primary_key=True)
     return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# All pub/sub queue tables in the SQLite store.
+# All pub/sub queue tables.
 metadata = MetaData()
 
 # ################################################################################################################################
@@ -171,7 +144,7 @@ _ = Index(
 # One row per delivered-message trace, which triggers of the database insert and delete along with
 # the message rows - see traces.py.
 trace_table = Table('pubsub_trace', metadata,
-    Column('message_id', _id_type, primary_key=True, autoincrement=False),
+    Column('message_id', BigInteger, primary_key=True, autoincrement=False),
     Column('topic_name', String(_short_column_len), nullable=False),
     Column('pub_time_ms', BigInteger, nullable=False),
 
@@ -196,23 +169,22 @@ topic_sub_table = Table('pubsub_topic_sub', metadata,
 
 # ################################################################################################################################
 
+# The count tables hold many change rows per key, so each key is a plain index by which the change rows
+# of one key are read and compacted - see counts.py.
+
 # The number of delivery rows of each (subscriber, topic) pair.
 queue_count_table = Table('pubsub_queue_count', metadata,
     Column('sub_key', String(_short_column_len), nullable=False),
     Column('topic_name', String(_short_column_len), nullable=False),
     Column('depth', BigInteger, nullable=False),
-    _key('sub_key', 'topic_name'),
-    _key_index('idx_pubsub_queue_count_key', 'sub_key', 'topic_name'),
-    sqlite_with_rowid=False,
+    Index('idx_pubsub_queue_count_key', 'sub_key', 'topic_name'),
 )
 
 # The number of message rows of each topic, delivered traces included.
 topic_count_table = Table('pubsub_topic_count', metadata,
     Column('topic_name', String(_short_column_len), nullable=False),
     Column('total', BigInteger, nullable=False),
-    _key('topic_name'),
-    _key_index('idx_pubsub_topic_count_key', 'topic_name'),
-    sqlite_with_rowid=False,
+    Index('idx_pubsub_topic_count_key', 'topic_name'),
 )
 
 # The number of the message rows of each topic, minute of publication and publisher.
@@ -222,9 +194,7 @@ publish_count_table = Table('pubsub_publish_count', metadata,
     Column('minute_ms', BigInteger, nullable=False, autoincrement=False),
     Column('publisher', String(_short_column_len), nullable=False),
     Column('total', BigInteger, nullable=False),
-    _key('topic_name', 'minute_ms', 'publisher'),
-    _key_index('idx_pubsub_publish_count_key', 'topic_name', 'minute_ms', 'publisher'),
-    sqlite_with_rowid=False,
+    Index('idx_pubsub_publish_count_key', 'topic_name', 'minute_ms', 'publisher'),
 )
 
 # The triggers that keep the counts and the traces in step with the rows are created along with the tables.
@@ -234,7 +204,7 @@ register_traces(metadata)
 # ################################################################################################################################
 
 # The single row with the generation of the active server and the value unique to that server. Each server that starts
-# on PostgreSQL raises the generation and writes its own value, and every pub/sub transaction confirms that both
+# raises the generation and writes its own value, and every pub/sub transaction confirms that both
 # are still those of its server - see generation.py.
 active_table = Table('zato_active', metadata,
     Column('id', Integer, primary_key=True, autoincrement=False),
@@ -247,7 +217,7 @@ event.listen(active_table, 'after_create', DDL('INSERT INTO zato_active (id, gen
 
 # ################################################################################################################################
 
-# The storage of the tables on PostgreSQL. A message row keeps free space in its page, so that dropping its payload
+# The storage parameters of the tables. A message row keeps free space in its page, so that dropping its payload
 # on acknowledgement and recording a delivery attempt are updates within the page that touch no index.
 # Rows of every table are inserted and deleted at the rate of the traffic, so autovacuum runs after a small fraction
 # of each table changed rather than the default fifth of it.
@@ -256,7 +226,7 @@ _high_churn = 'autovacuum_vacuum_scale_factor = 0.01, autovacuum_vacuum_insert_s
 
 _toast_high_churn = 'toast.autovacuum_vacuum_scale_factor = 0.01, toast.autovacuum_vacuum_insert_scale_factor = 0.01'
 
-_postgresql_storage = {
+_storage_statements = {
     message_table: [
         'ALTER TABLE pubsub_message ALTER COLUMN payload SET COMPRESSION lz4',
         f'ALTER TABLE pubsub_message SET (fillfactor = 90, {_high_churn}, {_toast_high_churn})',
@@ -278,10 +248,9 @@ _postgresql_storage = {
     ],
 }
 
-for _table, _statements in _postgresql_storage.items():
+for _table, _statements in _storage_statements.items():
     for _statement in _statements:
         _ddl = DDL(_statement)
-        _ddl = _ddl.execute_if(dialect=Type_PostgreSQL)
         event.listen(_table, 'after_create', _ddl)
 
 # ################################################################################################################################

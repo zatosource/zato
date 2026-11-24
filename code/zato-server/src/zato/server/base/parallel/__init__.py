@@ -2060,11 +2060,11 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         # Messages, queues and delivery state are in the Zato database that the Zato_Database_* variables select.
         audit_log = AuditLog(self.name)
 
-        # The subscriber and topic pairs of config.db, which the first synchronization below builds,
+        # The subscriber and topic pairs of the configuration database, which the first synchronization below builds,
         # and which publications and fetches read from then on.
         self.pubsub_subscription_list = SubscriptionList()
 
-        # The names of the topics of config.db that are inactive, which publications refuse
+        # The names of the topics of the configuration database that are inactive, which publications refuse
         self.pubsub_inactive_topics = set()
 
         self.pubsub_backend = SQLPubSubBackend(

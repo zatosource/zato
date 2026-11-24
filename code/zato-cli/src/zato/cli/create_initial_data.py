@@ -15,7 +15,7 @@ from json import dumps
 from uuid import uuid4
 
 # Zato
-from zato.cli import common_odb_opts, ZatoCommand
+from zato.cli import ZatoCommand
 from zato.common.const import ServiceConst
 
 # ################################################################################################################################
@@ -23,10 +23,10 @@ from zato.common.const import ServiceConst
 class Create(ZatoCommand):
     """ Creates the initial data in the ODB
     """
-    opts = deepcopy(common_odb_opts)
-
-    opts.append({'name':'--secret-key', 'help':'Secret key that the server will use for encryption and decryption'})
-    opts.append({'name':'--admin-invoke-password', 'help':'Password for config API clients to connect to the server with'})
+    opts = [
+        {'name':'--secret-key', 'help':'Secret key that the server will use for encryption and decryption'},
+        {'name':'--admin-invoke-password', 'help':'Password for config API clients to connect to the server with'},
+    ]
 
 # ################################################################################################################################
 
@@ -42,7 +42,7 @@ class Create(ZatoCommand):
         from zato.common.api import IDEDeploy
         from zato.common.odb.model import HTTPBasicAuth, Service
 
-        engine = self._get_engine(args)
+        engine = self._get_engine()
         session = self._get_session(engine)
 
         with session.no_autoflush:

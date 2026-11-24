@@ -6,13 +6,11 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 This file is a proprietary product, not an open-source one.
 """
 
-import os
 import logging
 from sqlalchemy.orm import sessionmaker
 
 # Zato
-from zato.common.db_env.engine import new_zato_engine
-from zato.common.defaults import default_env_base_dir
+from zato.common.db_env.database import new_odb_engine
 from zato.common.odb.model import APIKeySecurity, GenericObject, HTTPBasicAuth, HTTPSOAP
 
 # ################################################################################################################################
@@ -23,20 +21,14 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-_SQLITE_PATH = os.path.join(default_env_base_dir, 'config.db')
-_ENGINE = new_zato_engine(f'sqlite:///{_SQLITE_PATH}')
-Session = sessionmaker(bind=_ENGINE)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 def fetch_all():
-    session = Session()
-    try:
-        # Test connection and print tables for debug
-        logger.info(f'SQLite path: {_SQLITE_PATH}')
-        logger.info(f'File exists: {os.path.exists(_SQLITE_PATH)}')
 
+    # The ODB resides in the Zato database that the Zato_Database_* variables select
+    engine = new_odb_engine()
+    session_class = sessionmaker(bind=engine)
+    session = session_class()
+
+    try:
         # Try with minimal filters first
         all_http = session.query(HTTPSOAP).all()
         logger.info(f'Found {len(all_http)} total HTTP/SOAP objects')
@@ -81,6 +73,7 @@ def fetch_all():
         }
     finally:
         session.close()
+        engine.dispose()
 
 # ################################################################################################################################
 # ################################################################################################################################

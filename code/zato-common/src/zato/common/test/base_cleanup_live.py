@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
-import sqlite3
 import subprocess
 import sys
 import time
@@ -19,8 +18,7 @@ import unittest
 from sqlalchemy import text
 
 # Zato
-from zato.common.db_env.common import Type_PostgreSQL
-from zato.common.db_env.database import get_database_engine, get_database_values
+from zato.common.db_env.database import get_database_engine
 from zato.common.test import pubsub_db
 
 # local
@@ -31,7 +29,6 @@ from zato.common.test.config_pubsub_push import TestConfig
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.engine import Engine
     from zato.common.typing_ import strlist, strstrdict
 
 # ################################################################################################################################
@@ -102,7 +99,7 @@ class BaseCleanupLiveTestCase(unittest.TestCase):
 
     def _run_cleanup_once(self, extra_env:'strstrdict | None'=None) -> 'None':
         """ Runs the cleanup subprocess in --once mode against the shared pub/sub database.
-        Zato_Database_Path is inherited from this test process's environment,
+        The Zato_Database_* variables are inherited from this test process's environment,
         and extra_env adds the settings that one test needs.
         """
         env = dict(os.environ)
@@ -118,48 +115,13 @@ class BaseCleanupLiveTestCase(unittest.TestCase):
 # ################################################################################################################################
 
     def _run_cleanup_while_locked(self, lock_seconds:'float') -> 'str':
-        """ Runs the cleanup subprocess in --once mode while another connection holds the write lock
-        of the Zato database for the given time, and returns what the subprocess logged.
+        """ Runs the cleanup subprocess in --once mode while another connection holds a share lock of the delivery table
+        for the given time, which the deletes of the cleanup process wait for while the reads of the server continue,
+        terminates the connection of the cleanup process while it waits, which postpones its sweep until the lock
+        is released, and returns what the subprocess logged.
         """
         engine = get_database_engine()
 
-        if engine.dialect.name == Type_PostgreSQL:
-            output = self._run_cleanup_while_locked_postgresql(engine, lock_seconds)
-        else:
-            output = self._run_cleanup_while_locked_sqlite(lock_seconds)
-
-        return output
-
-# ################################################################################################################################
-
-    def _run_cleanup_while_locked_sqlite(self, lock_seconds:'float') -> 'str':
-        """ Holds the write lock of the SQLite file for longer than the busy timeout of the cleanup process,
-        which postpones its sweep until the lock is released.
-        """
-        db_path = get_database_values()['name']
-
-        lock_connection = sqlite3.connect(db_path, isolation_level=None)
-        _ = lock_connection.execute('begin immediate')
-
-        process = subprocess.Popen(_cleanup_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-
-        # The lock is held while the cleanup process runs ..
-        time.sleep(lock_seconds)
-
-        # .. and released, after which the sweep may complete.
-        _ = lock_connection.execute('rollback')
-        lock_connection.close()
-
-        output = self._wait_for_cleanup(process)
-        return output
-
-# ################################################################################################################################
-
-    def _run_cleanup_while_locked_postgresql(self, engine:'Engine', lock_seconds:'float') -> 'str':
-        """ Holds a share lock of the delivery table of PostgreSQL, which the deletes of the cleanup process wait for
-        while the reads of the server continue, and terminates the connection of the cleanup process while it waits,
-        which postpones its sweep until the lock is released.
-        """
         with engine.connect() as lock_connection:
 
             lock_transaction = lock_connection.begin()

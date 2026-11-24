@@ -7,11 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Column, Index, JSON, MetaData, PrimaryKeyConstraint, String, Table
+from sqlalchemy import BigInteger, Column, Index, MetaData, PrimaryKeyConstraint, String, Table
 from sqlalchemy.dialects.postgresql import JSONB
 
 # Zato
-from zato.common.db_env.common import Type_PostgreSQL, UTC_DateTime
+from zato.common.db_env.common import UTC_DateTime
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,9 +27,6 @@ _dedup_message_id_len = 200
 # Maximum length of the fingerprint of the message of a dedup record.
 _dedup_fingerprint_len = 400
 
-# The documents of shared objects, binary JSON on PostgreSQL.
-_data_type = JSON().with_variant(JSONB(), Type_PostgreSQL)
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -42,7 +39,7 @@ metadata = MetaData()
 shared_object_table = Table('zato_shared_object', metadata,
     Column('object_type', String(_name_column_len), nullable=False),
     Column('name', String(_name_column_len), nullable=False),
-    Column('data', _data_type, nullable=False),
+    Column('data', JSONB(), nullable=False),
     Column('version', BigInteger, nullable=False),
     Column('last_updated', UTC_DateTime, nullable=False),
     PrimaryKeyConstraint('object_type', 'name'),
@@ -62,7 +59,6 @@ message_dedup_table = Table('zato_message_dedup', metadata,
     Column('expires_ms', BigInteger, nullable=False),
     PrimaryKeyConstraint('kind', 'scope', 'message_id'),
     Index('idx_zato_message_dedup_expires', 'expires_ms'),
-    sqlite_with_rowid=False,
 )
 
 # ################################################################################################################################

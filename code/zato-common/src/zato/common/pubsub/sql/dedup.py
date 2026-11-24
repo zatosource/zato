@@ -17,7 +17,7 @@ from logging import getLogger
 from sqlalchemy import and_, bindparam, cast, exists, literal_column, select, String
 
 # Zato
-from zato.common.common_db.message_dedup import dedup_records_query, dedup_upserts, Kind, new_dedup_record
+from zato.common.common_db.message_dedup import dedup_records_query, dedup_upsert, Kind, new_dedup_record
 from zato.common.common_db.schema import message_dedup_table
 from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID
@@ -158,7 +158,7 @@ def write_dedup_records(connection:'Connection', publications:'pending_publicati
 
     written:'set[str]' = set()
 
-    for row in dedup_upserts[connection.dialect.name].insert_rows(connection, rows):
+    for row in dedup_upsert.insert_rows(connection, rows):
         written.add(row.message_id)
 
     # .. a dedup record that was not written remains from an earlier publication ..

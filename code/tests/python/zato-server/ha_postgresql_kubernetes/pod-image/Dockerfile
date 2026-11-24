@@ -18,5 +18,5 @@ RUN apt-get update && \
         > /etc/apt/sources.list.d/redis.list && \
     apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        python3.12 libpq5 libodbc2 libodbcinst2 libltdl7 libsqlite3-0 libmagic1 tzdata procps redis-server && \
+        python3.12 libpq5 libodbc2 libodbcinst2 libltdl7 libmagic1 tzdata procps redis-server && \
     rm -rf /var/lib/apt/lists/*

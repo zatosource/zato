@@ -8,12 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-import os
-import tempfile
 
 # Zato
 from zato.common.crypto.api import CryptoManager
-from zato.common.test.pubsub_in_process_support import FilesystemFault, ModuleCtx as SupportCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -61,37 +58,6 @@ pubsub_topic:
         exit_code = server.apply_enmasse('failure', bad_yaml)
     finally:
         commands_logger.removeHandler(capture)
-
-    assert exit_code != 0
-
-# ################################################################################################################################
-
-def test_fsfault_eio_on_config_db_fails_import(in_process_server:'any_') -> 'None':
-    """ An EIO on the writes of config.db during an enmasse import returns a non-zero exit code.
-    """
-    server, _push_endpoint = in_process_server
-
-    if SupportCtx.Env_FSFault_Control not in os.environ:
-        control_file = tempfile.NamedTemporaryFile(prefix='fsfault-control-', delete=False)
-        _ = control_file.write(b'prefix=\n')
-        control_file.close()
-        os.environ[SupportCtx.Env_FSFault_Control] = control_file.name
-
-    # The ODB of a quickstart environment is env/config.db, next to server1
-    config_db = os.path.join(os.path.dirname(server.server_dir), 'config.db')
-
-    fault = FilesystemFault(config_db)
-    fault.fail_writes('EIO')
-
-    yaml = f"""
-pubsub_topic:
-  - name: fsfault.topic.{CryptoManager.generate_hex_string(8)}
-"""
-
-    try:
-        exit_code = server.apply_enmasse('fsfault-eio', yaml)
-    finally:
-        fault.clear()
 
     assert exit_code != 0
 

@@ -7,14 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 import subprocess
 from datetime import datetime
 from logging import getLogger
 from time import sleep
 from random import choice, randint
-from shutil import rmtree
-from tempfile import mkdtemp
 from unittest import TestCase
 from uuid import uuid4
 
@@ -26,14 +23,9 @@ from six import string_types
 
 # Zato
 from zato.common.api import CHANNEL, DATA_FORMAT
-from zato.common.db_env.engine import new_zato_engine
 from zato.common.defaults import secret_fields_exact, secret_fields_prefix, secret_fields_suffix
 from zato.common.json_internal import loads
 from zato.common.marshal_.api import MarshalAPI
-from zato.common.odb import model
-from zato.common.odb.model import SMTP
-from zato.common.odb.api import SessionWrapper, SQLConnectionPool
-from zato.common.odb.query import email_smtp_list
 from zato.common.py23_ import maxint
 from zato.common.typing_ import cast_
 from zato.common.util.api import is_port_taken, new_cid
@@ -44,7 +36,6 @@ from zato.input_output import IOProcessor
 
 # Python 2/3 compatibility
 from zato.common.py23_.past.builtins import basestring, cmp, xrange
-from zato.common.test.direct_sql.seed import seed_config_objects
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,18 +43,13 @@ from zato.common.test.direct_sql.seed import seed_config_objects
 if 0:
     from zato.common.odb.api import ODBManager
     from zato.common.typing_ import any_, anydict, anylist, intnone, strnone
-    from zato.common.util.search import SearchResults
     ODBManager = ODBManager
-    SearchResults = SearchResults
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 CID_LENGTH = 24
 test_class_name = '<my-test-class>'
-
-# The name of the file of the database that ODBTestCase creates
-_odb_test_file_name = 'odb.db'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -556,86 +542,6 @@ class ServiceTestCase(TestCase):
 
     def wrap_force_type(self, elem):
         return IOElemWrapper(elem)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ODBTestCase(TestCase):
-
-    def setUp(self):
-
-        # A temporary directory for the database file, removed after each test
-        directory = mkdtemp()
-        self.addCleanup(rmtree, directory)
-
-        sqlite_path = os.path.join(directory, _odb_test_file_name)
-        engine_url = f'sqlite:///{sqlite_path}'
-        pool_name = 'ODBTestCase.pool'
-
-        config = {
-            'engine': 'sqlite',
-            'sqlite_path': sqlite_path,
-            'fs_sql_config': {
-                'engine': {
-                    'ping_query': 'SELECT 1'
-                }
-            }
-        }
-
-        # Create a standalone engine ..
-        self.engine = new_zato_engine(engine_url)
-
-        # .. all ODB objects for that engine..
-        model.Base.metadata.create_all(self.engine)
-
-        # .. an SQL pool too ..
-        self.pool = SQLConnectionPool(pool_name, config, config)
-
-        # .. a session wrapper on top of everything ..
-        self.session_wrapper = SessionWrapper()
-        self.session_wrapper.init_session(pool_name, config, self.pool)
-
-        # .. and all ODB objects for that wrapper's engine too ..
-        model.Base.metadata.create_all(self.session_wrapper.pool.engine)
-
-        # Unrelated to the above, used in individual tests
-        self.ODBTestModelClass = SMTP
-
-    def tearDown(self):
-        model.Base.metadata.drop_all(self.engine)
-        self.engine.dispose()
-        self.ODBTestModelClass = None
-
-    def get_session(self):
-        return self.session_wrapper.session()
-
-    def get_sample_odb_orm_result(self, is_list):
-        # type: (bool) -> object
-
-        item = self.ODBTestModelClass()
-        item.name = test_odb_data.name
-        item.is_active = test_odb_data.is_active
-        item.host = test_odb_data.smtp_host
-        item.port = test_odb_data.smtp_port
-        item.timeout = test_odb_data.smtp_timeout
-        item.is_debug = test_odb_data.smtp_is_debug
-        item.mode = test_odb_data.smtp_mode
-        item.ping_address = test_odb_data.smtp_ping_address
-
-        session = self.session_wrapper._session
-
-        seed_config_objects(session, [item])
-        session.commit()
-
-        session = self.session_wrapper._session
-
-        result = email_smtp_list(session) # type: tuple
-        result = result[0] # type: SearchResults
-
-        # This is a one-element tuple of SMTP ORM objects
-        result = result.result # type: tuple
-
-        return result if is_list else result[0]
 
 # ################################################################################################################################
 # ################################################################################################################################

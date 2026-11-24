@@ -37,7 +37,7 @@ Reconcile_Batch_Size = 500
 Governed_Sub_Key_Pattern = 'sk%'
 Governed_Sub_Key_Length = 34
 
-# How long a pub/sub transaction on PostgreSQL waits for a lock, equal to the busy timeout of SQLite writes, in milliseconds
+# How long a pub/sub transaction waits for a lock, in milliseconds.
 Lock_Timeout_Ms = 5000
 
 # ################################################################################################################################

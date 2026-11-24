@@ -29,13 +29,6 @@ class MS_SQL:
 
 ZATO_INFO_FILE = '.zato-info'
 
-SUPPORTED_DB_TYPES = ('sqlite',)
-
-# ################################################################################################################################
-
-_opts_odb_type = 'Operational database type, must be one of {}'.format(SUPPORTED_DB_TYPES) # noqa
-_opts_odb_path = 'Path to the operational database file'
-
 # ################################################################################################################################
 
 ca_defaults = {
@@ -53,11 +46,6 @@ default_ca_name = 'Sample CA'
 default_common_name = 'localhost'
 
 # ################################################################################################################################
-
-common_odb_opts = [
-    {'name':'--odb-type', 'help':_opts_odb_type, 'choices':SUPPORTED_DB_TYPES, 'default':'sqlite'}, # noqa
-    {'name':'--odb-path', 'help':_opts_odb_path},
-]
 
 common_ca_create_opts = [
     {'name':'--organization', 'help':'Organization name (defaults to {organization})'.format(**ca_defaults)},
@@ -522,18 +510,13 @@ class ZatoCommand:
 
 # ################################################################################################################################
 
-    def _get_engine(self, args):
+    def _get_engine(self):
 
         # Zato
-        from zato.common.db_env.engine import new_zato_engine
-        from zato.common.util.engine_url import get_engine_url
+        from zato.common.db_env.database import new_odb_engine
 
-        if not getattr(args, 'odb_path', None):
-            raise Exception('Option --odb-path is required')
-
-        engine_url = get_engine_url({'engine': args.odb_type, 'sqlite_path': args.odb_path})
-
-        return new_zato_engine(engine_url)
+        out = new_odb_engine()
+        return out
 
 # ################################################################################################################################
 
@@ -709,15 +692,6 @@ class ZatoCommand:
             ('ca_certs_path', 'ca-certs')):
             file_name = os.path.join(repo_dir, 'web-admin-{}.pem'.format(name))
             shutil.copyfile(os.path.abspath(getattr(args, attr)), file_name)
-
-# ################################################################################################################################
-
-    def get_odb_session_from_server_config(self, config, cm):
-
-        # Zato
-        from zato.common.util.api import get_odb_session_from_server_config
-
-        return get_odb_session_from_server_config(config, cm, False)
 
 # ################################################################################################################################
 

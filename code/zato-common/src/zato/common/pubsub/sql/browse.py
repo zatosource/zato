@@ -256,7 +256,7 @@ class SQLBrowseAPI(SQLBackendCore):
         ))
 
         # The delivery rows are ordered by their own message column, which the index of subscriber queues holds in order,
-        # whereas ordering by the joined message identifier makes SQLite sort the whole queue for each page.
+        # whereas ordering by the joined message identifier makes the database sort the whole queue for each page.
         query = self._apply_cursor_and_order(query, delivery_table.c.message_id, cursor, reverse)
         query = query.limit(page_size)
 

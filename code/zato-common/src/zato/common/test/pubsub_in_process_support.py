@@ -9,10 +9,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import errno
 import os
-import sys
 from dataclasses import dataclass
 from http.client import OK
-from subprocess import PIPE, Popen
 
 # gevent
 from gevent.event import Event
@@ -22,7 +20,6 @@ from gevent.pywsgi import WSGIServer
 import greenlet
 
 # Zato
-from zato.common.test.direct_sql.lock import ModuleCtx as LockModuleCtx
 from zato.common.test.reservation import PortInUse, start_on_reserved_port
 
 # ################################################################################################################################
@@ -53,9 +50,6 @@ class ModuleCtx:
     Push_Status = f'{OK} OK'
     Push_Headers = [('Content-Type', 'application/json')]
     Push_Response = b'{}'
-
-    # The module that holds the write lock of an SQLite file in a process of its own
-    Lock_Module = 'zato.common.test.direct_sql.lock'
 
     # The variable with the path to the control file of fsfault.so, which the process loads through LD_PRELOAD
     Env_FSFault_Control = 'ZATO_FSFAULT_CONTROL'
@@ -174,46 +168,6 @@ class RESTPushEndpoint:
 
         out = received >= count
         return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SQLiteWriteLock:
-    """ Holds the write lock of the SQLite file of the Zato database from a process of its own.
-    """
-
-    def __init__(self, db_path:'str') -> 'None':
-        self.db_path = db_path
-        self._process:'Popen[str] | None' = None
-
-# ################################################################################################################################
-
-    def acquire(self) -> 'None':
-        """ Starts the process that holds the lock and returns once it holds it.
-        """
-        command = [sys.executable, '-m', ModuleCtx.Lock_Module, self.db_path]
-        self._process = Popen(command, stdin=PIPE, stdout=PIPE, text=True)
-
-        stdout = self._process.stdout
-        if stdout is None:
-            raise Exception('The process of the write lock has no stdout')
-
-        line = stdout.readline()
-        line = line.strip()
-
-        if line != LockModuleCtx.Lock_Held_Line:
-            raise Exception(f'The process of the write lock did not take the lock, it wrote `{line}`')
-
-# ################################################################################################################################
-
-    def release(self) -> 'None':
-        """ Lets the process release the lock and waits until it exits.
-        """
-        if not self._process:
-            return
-
-        _ = self._process.communicate('\n')
-        self._process = None
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -7,12 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from contextlib import closing
 from importlib import import_module
 
 # Zato
 from zato.cli import ManageCommand
-from zato.common.sqlite_connection import connect_sqlite_file, Type_SQLite
 from zato.common.util.open_ import open_r
 
 # ################################################################################################################################
@@ -20,10 +18,9 @@ from zato.common.util.open_ import open_r
 
 class ModuleCtx:
 
-    # The modules through which a database other than SQLite is reached, imported only for such a database
+    # The modules through which the Zato database is reached, imported only when the ODB is pinged
     SQLAlchemy_Module = 'sqlalchemy'
-    Engine_Module = 'zato.common.db_env.engine'
-    Engine_URL_Module = 'zato.common.util.engine_url'
+    Database_Module = 'zato.common.db_env.database'
 
     # The query that confirms that the ODB accepts connections
     Ping_Query = 'SELECT 1'
@@ -67,55 +64,24 @@ class CheckConfig(ManageCommand):
 
 # ################################################################################################################################
 
-    def _ping_sqlite_odb(self, sqlite_path:'str') -> 'None':
-        """ Opens the ODB file through the sqlite3 module, with the settings of durability of the engine factory,
-        and runs a query against it.
-        """
-        with closing(connect_sqlite_file(sqlite_path)) as connection:
-            _ = connection.execute(ModuleCtx.Ping_Query)
-
-# ################################################################################################################################
-
-    def _ping_engine_odb(self, engine:'str', sqlite_path:'str') -> 'None':
-        """ Opens a connection to the ODB through an engine of the engine factory and runs a query against it.
+    def ping_sql_odb(self) -> 'None':
+        """ Opens a connection to the Zato database, which holds the ODB, and runs a query against it.
         """
         sqlalchemy = import_module(ModuleCtx.SQLAlchemy_Module)
-        engine_module = import_module(ModuleCtx.Engine_Module)
-        engine_url_module = import_module(ModuleCtx.Engine_URL_Module)
+        database_module = import_module(ModuleCtx.Database_Module)
 
-        engine_url = engine_url_module.get_engine_url({'engine': engine, 'sqlite_path': sqlite_path})
-        sql_engine = engine_module.new_zato_engine(engine_url)
+        # Build an engine of the database that the Zato_Database_* variables select ..
+        sql_engine = database_module.new_odb_engine()
 
+        # .. confirm that it accepts connections ..
         with sql_engine.connect() as connection:
             _ = connection.execute(sqlalchemy.text(ModuleCtx.Ping_Query))
 
+        # .. and release its connections.
         sql_engine.dispose()
-
-# ################################################################################################################################
-
-    def ping_sql_odb(self, engine:'str', sqlite_path:'str') -> 'None':
-        """ Opens the ODB file and runs a query against it.
-        """
-        # A SQLite file is opened without SQLAlchemy ..
-        if engine == Type_SQLite:
-            self._ping_sqlite_odb(sqlite_path)
-
-        # .. while any other database is reached through an engine.
-        else:
-            self._ping_engine_odb(engine, sqlite_path)
 
         if self.show_output:
             self.logger.info('SQL ODB connection OK')
-
-# ################################################################################################################################
-
-    def check_sql_odb_server(self, conf):
-        self.ping_sql_odb(conf['odb']['engine'], conf['odb']['db_name'])
-
-# ################################################################################################################################
-
-    def check_sql_odb_web_admin(self, conf):
-        self.ping_sql_odb(conf['db_type'], conf['DATABASE_NAME'])
 
 # ################################################################################################################################
 
@@ -238,7 +204,7 @@ class CheckConfig(ManageCommand):
         secrets_conf_path = ConfigObj(join(repo_dir, 'secrets.conf'), use_zato=False)
         server_conf = ConfigObj(server_conf_path, zato_secrets_conf=secrets_conf_path, zato_crypto_manager=cm, use_zato=True)
 
-        self.check_sql_odb_server(server_conf)
+        self.ping_sql_odb()
 
         if getattr(args, 'ensure_no_pidfile', False):
             self.ensure_no_pidfile('server')
@@ -250,12 +216,7 @@ class CheckConfig(ManageCommand):
 
     def _on_web_admin(self, args, *ignored_args, **ignored_kwargs):
 
-        # stdlib
-        from os.path import join
-
-        repo_dir = join(self.component_dir, 'config', 'repo')
-
-        self.check_sql_odb_web_admin(self.get_json_conf('web-admin.conf', repo_dir))
+        self.ping_sql_odb()
 
         self.ensure_no_pidfile('web-admin')
         self.ensure_json_config_port_free('Web admin', 'web-admin.conf')

@@ -11,15 +11,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # published to a topic in each minute. Triggers of the database update the counts in the transaction
 # that inserts, updates or deletes the rows, whichever code issues the statement.
 #
-# SQLite keeps one row per key and updates it in place. PostgreSQL only ever inserts signed change rows,
-# one per key that a statement changes, so that concurrent transactions never wait on one another for a count row,
-# and compaction replaces the rows of each key with one row holding their sum. Readers add up the rows of a key.
+# The triggers only ever insert signed change rows, one per key that a statement changes, so that concurrent transactions
+# never wait on one another for a count row, and compaction replaces the rows of each key with one row holding their sum.
+# Readers add up the rows of a key.
 
 # SQLAlchemy
 from sqlalchemy import DDL, event, text
-
-# Zato
-from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -27,7 +24,7 @@ from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 if 0:
     from sqlalchemy import MetaData
     from sqlalchemy.engine import Connection
-    from zato.common.typing_ import any_, anylist, anytuple, strlist
+    from zato.common.typing_ import any_, anylist, anytuple
 
     # Dummy assignments to satisfy type checkers
     Connection = Connection
@@ -35,7 +32,6 @@ if 0:
     any_ = any_
     anylist = anylist
     anytuple = anytuple
-    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,109 +70,6 @@ def _publisher(row:'str') -> 'str':
     """ The publisher of a message row as it is counted.
     """
     out = "coalesce({0}.publisher, '{1}')".format(row, No_Publisher)
-    return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _add_to_queue(row:'str') -> 'str':
-    """ The statement that adds one to the depth of the queue of a delivery row.
-    """
-    out = 'INSERT INTO pubsub_queue_count (sub_key, topic_name, depth) ' + \
-        f'VALUES ({row}.sub_key, {row}.topic_name, 1) ' + \
-        'ON CONFLICT (sub_key, topic_name) DO UPDATE SET depth = depth + 1;'
-
-    return out
-
-# ################################################################################################################################
-
-def _remove_from_queue(row:'str') -> 'str':
-    """ The statement that subtracts one from the depth of the queue of a delivery row.
-    """
-    out = 'UPDATE pubsub_queue_count SET depth = depth - 1 ' + \
-        f'WHERE sub_key = {row}.sub_key AND topic_name = {row}.topic_name;'
-
-    return out
-
-# ################################################################################################################################
-
-def _add_to_topic(row:'str') -> 'str':
-    """ The statements that add one to the message count of the topic of a message row
-    and to the publication count of its minute and publisher.
-    """
-    minute = _minute(row)
-    publisher = _publisher(row)
-
-    add_message = 'INSERT INTO pubsub_topic_count (topic_name, total) ' + \
-        f'VALUES ({row}.topic_name, 1) ' + \
-        'ON CONFLICT (topic_name) DO UPDATE SET total = total + 1;'
-
-    add_publication = 'INSERT INTO pubsub_publish_count (topic_name, minute_ms, publisher, total) ' + \
-        f'VALUES ({row}.topic_name, {minute}, {publisher}, 1) ' + \
-        'ON CONFLICT (topic_name, minute_ms, publisher) DO UPDATE SET total = total + 1;'
-
-    out = f'{add_message} {add_publication}'
-    return out
-
-# ################################################################################################################################
-
-def _remove_from_topic(row:'str') -> 'str':
-    """ The statements that subtract one from the message count of the topic of a message row
-    and from the publication count of its minute and publisher.
-    """
-    minute = _minute(row)
-    publisher = _publisher(row)
-
-    remove_message = 'UPDATE pubsub_topic_count SET total = total - 1 ' + \
-        f'WHERE topic_name = {row}.topic_name;'
-
-    remove_publication = 'UPDATE pubsub_publish_count SET total = total - 1 ' + \
-        f'WHERE topic_name = {row}.topic_name AND minute_ms = {minute} AND publisher = {publisher};'
-
-    out = f'{remove_message} {remove_publication}'
-    return out
-
-# ################################################################################################################################
-
-def _sqlite_statements() -> 'strlist':
-    """ The row triggers of SQLite that keep the counts in step with the delivery and message rows.
-    """
-    add_new_delivery = _add_to_queue('new')
-    remove_old_delivery = _remove_from_queue('old')
-
-    add_new_message = _add_to_topic('new')
-    remove_old_message = _remove_from_topic('old')
-
-    # A delivery row is one message waiting in the queue of its subscriber and topic ..
-    delivery_insert = 'CREATE TRIGGER IF NOT EXISTS pubsub_queue_count_insert AFTER INSERT ON pubsub_delivery ' + \
-        f'BEGIN {add_new_delivery} END'
-
-    delivery_delete = 'CREATE TRIGGER IF NOT EXISTS pubsub_queue_count_delete AFTER DELETE ON pubsub_delivery ' + \
-        f'BEGIN {remove_old_delivery} END'
-
-    # .. and an update moves it to another queue only when it changes the subscriber or the topic ..
-    delivery_changed = 'old.sub_key IS NOT new.sub_key OR old.topic_name IS NOT new.topic_name'
-
-    delivery_update = 'CREATE TRIGGER IF NOT EXISTS pubsub_queue_count_update ' + \
-        f'AFTER UPDATE OF sub_key, topic_name ON pubsub_delivery WHEN {delivery_changed} ' + \
-        f'BEGIN {remove_old_delivery} {add_new_delivery} END'
-
-    # .. a message row counts towards its topic, minute and publisher ..
-    message_insert = 'CREATE TRIGGER IF NOT EXISTS pubsub_topic_count_insert AFTER INSERT ON pubsub_message ' + \
-        f'BEGIN {add_new_message} END'
-
-    message_delete = 'CREATE TRIGGER IF NOT EXISTS pubsub_topic_count_delete AFTER DELETE ON pubsub_message ' + \
-        f'BEGIN {remove_old_message} END'
-
-    # .. and an update moves it to other counts only when it changes one of the three.
-    message_changed = 'old.topic_name IS NOT new.topic_name OR old.pub_time_ms IS NOT new.pub_time_ms ' + \
-        'OR old.publisher IS NOT new.publisher'
-
-    message_update = 'CREATE TRIGGER IF NOT EXISTS pubsub_topic_count_update ' + \
-        f'AFTER UPDATE OF topic_name, pub_time_ms, publisher ON pubsub_message WHEN {message_changed} ' + \
-        f'BEGIN {remove_old_message} {add_new_message} END'
-
-    out = [delivery_insert, delivery_delete, delivery_update, message_insert, message_delete, message_update]
     return out
 
 # ################################################################################################################################
@@ -312,8 +205,8 @@ class _TriggerIsMissing:
 
 # ################################################################################################################################
 
-def _listen(metadata:'MetaData', statement:'str', dialect_name:'str', trigger_is_missing:'_TriggerIsMissing | None') -> 'None':
-    """ Runs the given statement on the given dialect alone, after all the tables are created,
+def _listen(metadata:'MetaData', statement:'str', trigger_is_missing:'_TriggerIsMissing | None') -> 'None':
+    """ Runs the given statement after all the tables are created,
     and only when the trigger it creates is missing, if it creates one.
     """
 
@@ -321,37 +214,37 @@ def _listen(metadata:'MetaData', statement:'str', dialect_name:'str', trigger_is
     statement = statement.replace('%', '%%')
 
     ddl = DDL(statement)
-    ddl = ddl.execute_if(dialect=dialect_name, callable_=trigger_is_missing)
+
+    if trigger_is_missing:
+        ddl = ddl.execute_if(callable_=trigger_is_missing)
+
     event.listen(metadata, 'after_create', ddl)
 
 # ################################################################################################################################
 
-def register_triggers(metadata:'MetaData', sqlite_statements:'strlist', postgresql_statements:'anylist') -> 'None':
+def register_triggers(metadata:'MetaData', statements:'anylist') -> 'None':
     """ Attaches the creation of the given triggers to the creation of the schema. The triggers are created
-    after all the tables, each one only if it does not exist yet. Each element of postgresql_statements
+    after all the tables, each one only if it does not exist yet. Each element of statements
     is a pair of the trigger functions and of the triggers that run them.
     """
-    for statement in sqlite_statements:
-        _listen(metadata, statement, Type_SQLite, None)
-
-    for functions, triggers in postgresql_statements:
+    for functions, triggers in statements:
 
         # Replacing a function locks no table, so the functions are always brought to their current bodies ..
         for statement in functions:
-            _listen(metadata, statement, Type_PostgreSQL, None)
+            _listen(metadata, statement, None)
 
         # .. whereas the triggers are only created.
         for trigger_name, table_name, statement in triggers:
             trigger_is_missing = _TriggerIsMissing(trigger_name, table_name)
-            _listen(metadata, statement, Type_PostgreSQL, trigger_is_missing)
+            _listen(metadata, statement, trigger_is_missing)
 
 # ################################################################################################################################
 
 def register_counts(metadata:'MetaData') -> 'None':
     """ Attaches the creation of the triggers of the counts to the creation of the schema.
     """
-    postgresql_statements = [_postgresql_queue_statements(), _postgresql_topic_statements()]
-    register_triggers(metadata, _sqlite_statements(), postgresql_statements)
+    statements = [_postgresql_queue_statements(), _postgresql_topic_statements()]
+    register_triggers(metadata, statements)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -392,7 +285,7 @@ for _table_name, _key_names, _count_name in _count_tables:
 # ################################################################################################################################
 
 def compact_counts(connection:'Connection') -> 'int':
-    """ Compacts the change rows of all the count tables of PostgreSQL in the caller's transaction.
+    """ Compacts the change rows of all the count tables in the caller's transaction.
     A row that a concurrent transaction commits while the statement runs is not part of its snapshot,
     so it is neither removed nor added to the sum, and the sums remain exact. Returns how many rows remain.
     """

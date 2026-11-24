@@ -7,11 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import BAD_REQUEST, CONFLICT, SERVICE_UNAVAILABLE, UNAUTHORIZED
+from http.client import BAD_REQUEST, CONFLICT, UNAUTHORIZED
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.db_env.sqlite_identity import DatabaseFileReplaced
 from zato.common.pubsub.sql.fenced_ack import PubSubAckConflict
 from zato.common.pubsub.sql.publication import build_publication
 from zato.common.pubsub.sql.writes import PubSubDuplicateMsgID
@@ -38,8 +37,6 @@ _status_ok           = PubSub.Status.OK
 _status_bad_request  = PubSub.Status.Bad_Request
 _status_unauthorized = PubSub.Status.Unauthorized
 _status_conflict     = PubSub.Status.Conflict
-
-_status_service_unavailable = PubSub.Status.Service_Unavailable
 
 # The lowest delivery attempt, which the first pull of a message hands it out with
 _min_delivery_attempt = 1
@@ -203,12 +200,6 @@ class AckMessages(PubSubRESTService):
 
         except (PubSubAckConflict, PubSubDuplicateMsgID) as e:
             error = (str(e), _status_conflict, CONFLICT)
-            self.set_error(error)
-            return
-
-        # A database whose SQLite file was removed or replaced accepts no acknowledgement
-        except DatabaseFileReplaced as e:
-            error = (str(e), _status_service_unavailable, SERVICE_UNAVAILABLE)
             self.set_error(error)
             return
 

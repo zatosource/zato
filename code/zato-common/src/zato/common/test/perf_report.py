@@ -22,8 +22,7 @@ from logging import getLogger
 from zato.common.audit_log.api import ModuleCtx as AuditLogCtx
 from zato.common.audit_log.common import Default_Commit_Max_Events, Default_Retention_Days
 from zato.common.db_env.commit_queue import Default_Max_In_Flight
-from zato.common.db_env.common import Type_SQLite
-from zato.common.db_env.connection import Relaxed_Commit_Levels, Setting_On, SQLite_Journal_Mode, SQLite_Synchronous
+from zato.common.db_env.connection import Relaxed_Commit_Levels, Setting_On
 from zato.common.db_env.filesystem import is_memory_filesystem, ModuleCtx as FilesystemCtx
 from zato.common.ha.common import ModuleCtx as HACtx
 from zato.common.pubsub.sql.config import Default_Commit_Max_Messages, Default_Commits_In_Flight, \
@@ -81,7 +80,7 @@ class Measurement:
     # The client that invokes the services of the measured server
     client: 'AdminClient'
 
-    # The PostgreSQL database of the measured server, or None for a server whose Zato database is a SQLite file
+    # The PostgreSQL database of the measured server, or None for a database that the test did not start
     database: 'PubSubDatabase | None'
 
     # The settings in force in the measured server before the measurement
@@ -95,17 +94,6 @@ def _check_value(findings:'strlist', name:'str', value:'object', expected:'objec
     """
     if value != expected:
         findings.append(f'{name} is `{value}`, a production installation runs with `{expected}`')
-
-# ################################################################################################################################
-
-def _check_sqlite(findings:'strlist', database:'stranydict') -> 'None':
-    """ Adds the findings of a SQLite Zato database.
-    """
-    _check_value(findings, 'journal_mode', database['journal_mode'], SQLite_Journal_Mode)
-    _check_value(findings, 'synchronous', database['synchronous'], SQLite_Synchronous)
-
-    if database['is_memory_filesystem']:
-        findings.append(f'the database is on a file system held in memory, `{database["filesystem_type"]}`')
 
 # ################################################################################################################################
 
@@ -168,15 +156,12 @@ def _get_findings(settings:'stranydict', database:'PubSubDatabase | None') -> 's
         out.append('the server runs in the process of the test')
 
     # .. its database is durable and on a file system that is not held in memory ..
-    if settings['database_type'] == Type_SQLite:
-        _check_sqlite(out, settings['database'])
-    else:
-        _check_postgresql(out, settings['database'])
+    _check_postgresql(out, settings['database'])
 
-        if database is None:
-            out.append('the PostgreSQL database of the measured server is not known to the test')
-        else:
-            _check_data_directory(out, database)
+    if database is None:
+        out.append('the PostgreSQL database of the measured server is not known to the test')
+    else:
+        _check_data_directory(out, database)
 
     # .. its audit log, group commits and pull lease are those of a production installation ..
     _check_value(out, 'is_audit_log_enabled', settings['is_audit_log_enabled'], AuditLogCtx.Default_Enabled)
@@ -185,12 +170,10 @@ def _get_findings(settings:'stranydict', database:'PubSubDatabase | None') -> 's
     _check_value(out, 'pubsub_commit_max_messages', settings['pubsub_commit_max_messages'], Default_Commit_Max_Messages)
     _check_value(out, 'pubsub_pull_lease_seconds', settings['pubsub_pull_lease_seconds'], Default_Pull_Lease_Seconds)
 
-    # .. SQLite has a single writer whatever the environment says, while PostgreSQL takes the number of commits
-    # .. in flight from it ..
-    if settings['database_type'] != Type_SQLite:
-        _check_value(out, 'pubsub_commits_in_flight', settings['pubsub_commits_in_flight'], Default_Commits_In_Flight)
-        _check_value(out, 'pubsub_urgent_commits_in_flight', settings['pubsub_urgent_commits_in_flight'],
-            Urgent_Commits_In_Flight)
+    # .. so are the numbers of its commits in flight ..
+    _check_value(out, 'pubsub_commits_in_flight', settings['pubsub_commits_in_flight'], Default_Commits_In_Flight)
+    _check_value(out, 'pubsub_urgent_commits_in_flight', settings['pubsub_urgent_commits_in_flight'],
+        Urgent_Commits_In_Flight)
 
     # .. so are its retention limits ..
     _check_value(out, 'audit_log_retention_days', settings['audit_log_retention_days'], Default_Retention_Days)
@@ -236,7 +219,7 @@ def _get_checked_settings(client:'AdminClient', database:'PubSubDatabase | None'
 
 def start_measurement(client:'AdminClient', database:'PubSubDatabase | None') -> 'Measurement':
     """ Begins a measurement of the server that the client invokes, whose PostgreSQL database is given,
-    or None for a SQLite one, and returns the record of the settings with which report_result records its figures.
+    or None for a database that the test did not start, and returns the record of the settings with which report_result records its figures.
     """
     out = Measurement()
     out.client = client

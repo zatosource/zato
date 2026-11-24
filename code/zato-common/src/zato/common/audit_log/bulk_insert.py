@@ -42,9 +42,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The driver whose connections insert rows with COPY.
-_copy_driver = 'pg8000'
-
 # The fewest rows a COPY statement inserts. COPY takes one round trip more than a multi-row insert,
 # so the few rows of a single event are inserted with a statement of their own.
 _copy_min_rows = 16
@@ -140,12 +137,12 @@ def insert_events(connection:'Connection', rows:'dictlist', payloads:'strstrdict
 # ################################################################################################################################
 
 def insert_rows(connection:'Connection', table:'Table', rows:'dictlist') -> 'None':
-    """ Inserts rows into a table with a single statement - COPY for many rows on pg8000 and a multi-row insert otherwise.
+    """ Inserts rows into a table with a single statement - COPY for many rows and a multi-row insert otherwise.
     All the rows have the same keys.
     """
     row_count = len(rows)
 
-    if connection.dialect.driver == _copy_driver and row_count >= _copy_min_rows:
+    if row_count >= _copy_min_rows:
         copy_rows(connection, table, rows)
     else:
         if not (insert_statement := _insert_statements.get(table.name)):

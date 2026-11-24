@@ -84,7 +84,7 @@ def poll(req:'any_') -> 'HttpResponse':
 
     engine = get_database_engine()
 
-    where_conditions = event_conditions(engine.dialect.name, filters)
+    where_conditions = event_conditions(filters)
 
     rows:'anylist' = []
     updated:'anylist' = []

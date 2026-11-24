@@ -17,7 +17,6 @@ from time import monotonic
 from gevent.monkey import get_original
 
 # SQLAlchemy
-from sqlalchemy.exc import OperationalError
 
 # Zato
 from zato.common.audit_log.attr_rows import build_attr_rows
@@ -35,10 +34,9 @@ from zato.common.audit_log.retention import Env_Archive_Dir, Env_Content_Retenti
     get_retention_interval_seconds, register_prunability, run_retention
 from zato.common.audit_log.retention_runner import request_retention
 from zato.common.audit_log.search_index_merge import get_search_index_merger
-from zato.common.audit_log.sqlite_writes import dispose_stale_sqlite_engine
 from zato.common.config_db import Default_Enabled, Env_Audit_Log_Enabled
 from zato.common.db_env.commit_queue import CommitQueue
-from zato.common.db_env.database import dispose_database_engine, get_database_engine, is_database_lost
+from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.writes import write_audit
 from zato.common.db_env.engine import call_database
 from zato.common.db_env.pg8000_common import deferred_replies
@@ -158,15 +156,6 @@ def is_audit_log_enabled() -> 'bool':
     return out
 
 # ################################################################################################################################
-
-def _log_refused_events(event_count:'int') -> 'None':
-    """ Logs the events that were not written because the SQLite file of the Zato database was removed or replaced.
-    """
-    noun = 'event' if event_count == 1 else 'events'
-    logger.error('Audit log did not write %d %s, the SQLite file of the Zato database was removed or replaced',
-        event_count, noun)
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 class AuditLog:
@@ -247,11 +236,6 @@ class AuditLog:
         # A turned-off audit log records nothing at all - the event is dropped in silence,
         # with no message of its own, so no caller has to know whether the log is in use
         if not is_audit_log_enabled():
-            return None
-
-        # An event for a database whose SQLite file was removed or replaced is not written
-        if is_database_lost():
-            _log_refused_events(1)
             return None
 
         pending = self.new_pending_event(source, event_type, object_name, cid=cid, msg_id=msg_id, correl_id=correl_id,
@@ -385,13 +369,9 @@ class AuditLog:
 
     def write_pending(self, batch:'pending_event_list') -> 'None':
         """ Writes events that one operation collected, in one transaction shared with the synchronous writes
-        of concurrent callers. Nothing is written for a database whose SQLite file was removed or replaced.
+        of concurrent callers.
         """
         batch_size = len(batch)
-
-        if is_database_lost():
-            _log_refused_events(batch_size)
-            return
 
         weight = batch_size * _commit_event_weight
         self._commit_queue.write(batch, weight=weight, is_urgent=False)
@@ -529,21 +509,11 @@ class AuditLog:
     def commit_batch(self, batch:'pending_event_list') -> 'int':
         """ Commits one batch of events in this process and returns the id of the last event written.
         """
-        # A database file made read-only is only visible to a fresh engine
-        dispose_stale_sqlite_engine()
-
-        # The payloads of the batch are prepared before the write lock is taken ..
+        # The payloads of the batch are prepared before the transaction begins ..
         prepare = partial(prepare_payloads, batch)
 
-        try:
-            out = call_database(self.engine, self._insert_batch, batch, prepare=prepare)
-        except OperationalError:
-
-            # .. and a pooled connection that opened the file while it was read-only stays read-only
-            # after the permissions come back, which a fresh engine does not, while the payloads remain prepared.
-            dispose_database_engine()
-            out = call_database(self.engine, self._insert_batch, batch)
-
+        # .. and the events are inserted with them.
+        out = call_database(self.engine, self._insert_batch, batch, prepare=prepare)
         return out
 
 # ################################################################################################################################

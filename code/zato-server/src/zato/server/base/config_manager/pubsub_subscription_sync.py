@@ -201,7 +201,7 @@ def sync_topic_delete(config_manager:'ConfigManager', topic_name:'str') -> 'None
 # ################################################################################################################################
 
 def replace_from_odb(config_manager:'ConfigManager') -> 'pairlist':
-    """ Replaces the subscription list from config.db and the governed rows of the pub/sub database,
+    """ Replaces the subscription list from the configuration database and the governed rows of the pub/sub database,
     writes the difference in one or more transactions, cleans up the deliveries of the removed pairs,
     and returns the pairs that were removed.
     """
@@ -220,12 +220,12 @@ def replace_from_odb(config_manager:'ConfigManager') -> 'pairlist':
 
     subscribers = build_subscribers(rows)
 
-    # The subscriptions of config.db take effect whether or not the pub/sub database can be read. If it cannot,
+    # The subscriptions of the configuration database take effect whether or not the pub/sub database can be read. If it cannot,
     # the list keeps the rows that it considers committed and the reconciler writes the difference once it can.
     try:
         committed = backend.get_governed_pairs()
     except Exception:
-        logger.warning('Pub/sub subscription rows could not be read, the subscription list is replaced from config.db alone',
+        logger.warning('Pub/sub subscription rows could not be read, the subscription list is replaced from the configuration database alone',
             exc_info=True)
         subscription_list.replace_subscribers(subscribers)
         return []

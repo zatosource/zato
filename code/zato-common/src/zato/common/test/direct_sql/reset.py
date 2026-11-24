@@ -13,7 +13,6 @@ from sqlalchemy import inspect
 
 # Zato
 from zato.common.common_db.schema import shared_object_table
-from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.engine import call_database
 from zato.common.db_env.write_path import Mechanism, write_path
 from zato.common.odb.model import GenericConn, IntervalBasedJob, Job
@@ -77,20 +76,12 @@ def reset_tables(engine:'Engine', metadata:'MetaData') -> 'None':
 
 def _truncate_tables(engine:'Engine', tables:'tablelist') -> 'None':
 
-    dialect_name = engine.dialect.name
     table_names = [table.name for table in tables]
+    joined = ', '.join(table_names)
 
+    # The tables are truncated together with the tables that refer to them in one statement.
     with engine.begin() as connection:
-
-        # PostgreSQL truncates a table together with the tables that refer to it in one statement ..
-        if dialect_name == Type_PostgreSQL:
-            joined = ', '.join(table_names)
-            _ = connection.exec_driver_sql(f'truncate table {joined} restart identity')
-
-        # .. and SQLite truncates a table that has no triggers when it deletes all of its rows.
-        else:
-            for table_name in table_names:
-                _ = connection.exec_driver_sql(f'delete from {table_name}')
+        _ = connection.exec_driver_sql(f'truncate table {joined} restart identity')
 
 # ################################################################################################################################
 
@@ -138,7 +129,7 @@ def recreate_public_schema(connection:'any_') -> 'None':
 # ################################################################################################################################
 
 def delete_generic_connections(session:'Session', name_pattern:'str') -> 'None':
-    """ Deletes the generic connections of config.db whose names match a pattern of SQL LIKE and commits.
+    """ Deletes the generic connections of the Zato database whose names match a pattern of SQL LIKE and commits.
     """
     query = session.query(GenericConn).filter(GenericConn.name.like(name_pattern))
     _ = query.delete(synchronize_session=False)
@@ -148,8 +139,8 @@ def delete_generic_connections(session:'Session', name_pattern:'str') -> 'None':
 # ################################################################################################################################
 
 def delete_config_job(session:'Session', job_name:'str') -> 'None':
-    """ Deletes one scheduler job of config.db together with its interval and commits, which leaves config.db
-    as an environment that never started holds it.
+    """ Deletes one scheduler job of the Zato database together with its interval and commits, which leaves
+    the database as an environment that never started holds it.
     """
     job = session.query(Job).filter(Job.name==job_name).one()
 

@@ -197,7 +197,7 @@ class Create(_CreateEdit):
                 if input.security_id:
                     item.security = get_security_by_id(session, input.security_id)
                 else:
-                    input.security_id = None # To ensure that SQLite does not reject ''
+                    input.security_id = None # An empty string is not a valid foreign key
 
                 # Opaque attributes
                 set_instance_opaque_attrs(item, input, skip=skip_opaque)

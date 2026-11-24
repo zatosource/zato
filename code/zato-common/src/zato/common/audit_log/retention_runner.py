@@ -35,7 +35,7 @@ if 0:
 
 logger = getLogger(__name__)
 
-# How many chunks of rows one call of the database of a retention run writes, the write lock being released between the calls
+# How many chunks of rows one call of the database of a retention run writes
 _chunks_per_call = 1
 
 # ################################################################################################################################
@@ -136,7 +136,7 @@ class RetentionRunner:
                 retention_start = monotonic()
                 run = RetentionRun(now, _chunks_per_call)
 
-                # Each call of the run writes one chunk under the write lock, and the run continues until no work remains
+                # Each call of the run writes one chunk, and the run continues until no work remains
                 # or until the runner is stopping.
                 try:
                     while run.has_remaining_work:

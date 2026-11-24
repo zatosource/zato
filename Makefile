@@ -10,7 +10,7 @@
 	help install-deps install-fhir-converter \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-rest-outgoing test-rest-redirects test-rest-perf test-rest-channel test-rest-channel-perf test-scheduler test-scheduler-failover \
 	test-ha test-ha-core test-ha-pubsub-subscription-in-process test-ha-push-delivery test-ha-pubsub-subscription \
-	test-ha-postgresql-local test-ha-database-file test-ha-power-loss test-ha-pubsub-subscription-ui test-ha-postgresql \
+	test-ha-postgresql-local test-ha-power-loss test-ha-pubsub-subscription-ui test-ha-postgresql \
 	test-ha-postgresql-kubernetes test-ha-postgresql-soak \
 	test-soak test-soak-pubsub test-soak-scheduler-failover \
 	test-arbiter \
@@ -255,7 +255,7 @@ Zato_MCP_Demo_Image          ?= ghcr.io/zatosource/zato-4.1:latest
 Zato_MCP_Demo_Port_Dashboard ?= 8283
 Zato_MCP_Demo_Port_Server    ?= 11323
 
-mcp-demo: ## A Zato container with the MCP healthcare demo - the main tutorial, HL7 MLLP and FHIR, the healthcare analytics services, their SQLite databases and the MCP gateway exposing them.
+mcp-demo: ## A Zato container with the MCP healthcare demo - the main tutorial, HL7 MLLP and FHIR, the healthcare analytics services with their databases and the MCP gateway exposing them.
 	echo "Dashboard:   http://localhost:$(Zato_MCP_Demo_Port_Dashboard)/zato/demo-config/"
 	echo "MCP gateway: http://localhost:$(Zato_MCP_Demo_Port_Server)/mcp/healthcare (Authorization: Bearer healthcare-demo)"
 	docker run --rm --name zato-mcp-demo \
@@ -751,13 +751,12 @@ test-scheduler-failover: ## Active-passive scheduler failover tests on PostgreSQ
 # repositories after the suites of this repository and the soak tests last, and the target test-ha is currently on.
 Zato_Test_HA = \
 	test-ha-pubsub-subscription-in-process test-ha-push-delivery test-ha-pubsub-subscription \
-	test-ha-postgresql-local test-ha-core test-ha-database-file test-ha-power-loss test-ha-pubsub-subscription-ui \
+	test-ha-postgresql-local test-ha-core test-ha-power-loss test-ha-pubsub-subscription-ui \
 	test-ha-postgresql test-ha-postgresql-kubernetes $(Zato_HA_Linked_Targets) test-ha-postgresql-soak
 Zato_Test_HA_Resume_File := $(CURDIR)/code/tests/.test-ha-resume
 
 # The directory of each HA suite.
 Zato_Test_HA_Server_Dir                := $(CURDIR)/code/tests/python/zato-server
-Zato_Test_HA_Dir_database-file         := $(CURDIR)/code/tests/python/zato-common/reliability/database_file
 Zato_Test_HA_Dir_power-loss            := $(CURDIR)/code/tests/python/zato-common/reliability/power_loss
 Zato_Test_HA_Dir_postgresql-local      := $(Zato_Test_HA_Server_Dir)/ha_postgresql_local
 Zato_Test_HA_Dir_push-delivery         := $(Zato_Test_HA_Server_Dir)/ha_push_delivery
@@ -767,11 +766,8 @@ Zato_Test_HA_Dir_postgresql-kubernetes := $(Zato_Test_HA_Server_Dir)/ha_postgres
 
 # The modules of each HA suite in the order they run, from the shortest to the longest. Every module of a suite
 # is listed, and a suite with a module that is not listed refuses to run.
-Zato_Test_HA_Modules_database-file := \
-	test_write_contention.py test_engine_guard.py test_audit_commit_failure.py test_live_replacement.py
-
 Zato_Test_HA_Modules_power-loss := \
-	test_harness.py test_audit_archive_sqlite.py test_sqlite_server.py test_postgresql_server.py
+	test_harness.py test_audit_archive_sqlite.py test_postgresql_server.py
 
 Zato_Test_HA_Modules_postgresql-local := \
 	test_server_start.py test_warm_start.py test_takeover_wait.py test_server_liveness.py test_ping_under_load.py
@@ -780,7 +776,7 @@ Zato_Test_HA_Modules_push-delivery := \
 	test_outgoing_audit.py test_publication_commit.py test_batch_commit.py
 
 Zato_Test_HA_Modules_pubsub-subscription := \
-	test_restart_rows.py test_reload_write_failure.py test_worker_kill.py test_disk_faults.py \
+	test_restart_rows.py test_reload_write_failure.py test_worker_kill.py \
 	test_network_faults.py test_lock_timeout_postgresql.py
 
 Zato_Test_HA_Modules_postgresql := \
@@ -843,13 +839,10 @@ test-ha-core: rust-target-prune ## The Rust tests of the active-standby node - t
 test-ha-postgresql-local: ## The takeover of the Zato database and the start of a server under a node's generation, on a local PostgreSQL 19 with a synchronous standby, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(call Zato_Test_HA_Suite,postgresql-local)
 
-test-ha-database-file: ## The removal and the replacement of the SQLite file of the Zato database while a server runs, after which publications, deliveries and audit writes are refused and no new file is created, and the failure of the audit commit of a REST response after its service completed, which leaves the response unchanged, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
-	$(call Zato_Test_HA_Suite,database-file)
-
-test-ha-power-loss: ## Loss of power to a single server on SQLite and on PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+test-ha-power-loss: ## Loss of power to a single server on PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(call Zato_Test_HA_Suite,power-loss)
 
-test-ha-push-delivery: ## The commit of the concluded messages of a push delivery batch and of the audit events of the outgoing calls of its subscriber when the server is killed, the subscription is edited or the server is stopped during the batch, and the publications of its subscriber, stored and logged only with the commit of the batch and refused a message ID of a different message, on SQLite, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+test-ha-push-delivery: ## The commit of the concluded messages of a push delivery batch and of the audit events of the outgoing calls of its subscriber when the server is killed, the subscription is edited or the server is stopped during the batch, and the publications of its subscriber, stored and logged only with the commit of the batch and refused a message ID of a different message, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(call Zato_Test_HA_Suite,push-delivery)
 
 Zato_Test_FSFault_Control := $(Zato_Test_FSFault_Dir)/control
@@ -864,7 +857,7 @@ endef
 # The variables under which a process, and every process it starts, loads fsfault.so and reads its control file.
 Zato_Test_FSFault_Env = LD_PRELOAD=$(Zato_Test_FSFault_Library) ZATO_FSFAULT_CONTROL=$(Zato_Test_FSFault_Control)
 
-test-ha-pubsub-subscription-in-process: ## Governed subscription rows of the configuration database on a server assembled in-process, on SQLite and on PostgreSQL, with fsfault.so loaded, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+test-ha-pubsub-subscription-in-process: ## Governed subscription rows of the configuration database on a server assembled in-process, on PostgreSQL, with fsfault.so loaded, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(Zato_Log_Reset)
 	$(Zato_Test_FSFault_Build)
 	$(MAKE) common-core-build $(Zato_Log)
@@ -874,7 +867,7 @@ test-ha-pubsub-subscription-in-process: ## Governed subscription rows of the con
 		$(CURDIR)/code/tests/python/zato-cli/enmasse_/exporters/test_exporter_enmasse_pubsub_subscription_flags.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ha_pubsub_subscription_enmasse_flags \
 		-W ignore::DeprecationWarning $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	for mode in sqlite postgresql; do \
+	for mode in postgresql; do \
 		$(Zato_Test_FSFault_Env) Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) \
 		$(ZATO_PY) -m gevent.monkey --module pytest \
 			$(Zato_Test_HA_Dir_pubsub-subscription-in-process)/ \
@@ -882,7 +875,7 @@ test-ha-pubsub-subscription-in-process: ## Governed subscription rows of the con
 			-W ignore::DeprecationWarning $(Zato_Test_HA_Stepwise) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
 	done
 
-test-ha-pubsub-subscription: ## Governed subscription rows of the configuration database on a live server, on SQLite and on PostgreSQL, with disk, lock, process and network faults, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+test-ha-pubsub-subscription: ## Governed subscription rows of the configuration database on a live server, on PostgreSQL, with lock, process and network faults, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(Zato_Log_Reset)
 	$(Zato_Test_FSFault_Build)
 	@for module in $(Zato_Test_HA_Dir_pubsub-subscription)/test_*.py; do \
@@ -894,44 +887,15 @@ test-ha-pubsub-subscription: ## Governed subscription rows of the configuration 
 	$(MAKE) common-core-build $(Zato_Log)
 	$(MAKE) ha-node-build $(Zato_Log)
 	$(MAKE) scheduler-build $(Zato_Log)
-	for mode in sqlite postgresql; do \
+	for mode in postgresql; do \
 		$(Zato_Test_FSFault_Env) Zato_Test_PubSub_DB_Mode=$$mode $(call Zato_Test_HA_Pytest,pubsub-subscription-$(subst -,_,$$mode),$(addprefix $(Zato_Test_HA_Dir_pubsub-subscription)/,$(Zato_Test_HA_Modules_pubsub-subscription)) $(Zato_Test_Without_Soak)) || exit $$?; \
 	done
 
-test-tmp-store-reads: ## The reads of the shared object store outside of the writer queue - the store, the run state of the scheduler, the floor of the pub/sub clock, the writer queue and the delay of the syncs during a reload on a live server on SQLite.
-	$(Zato_Log_Reset)
-	$(Zato_Test_FSFault_Build)
-	$(MAKE) ipc-build $(Zato_Log)
-	$(MAKE) ha-node-build $(Zato_Log)
-	$(MAKE) scheduler-build $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-common/process_queue/test_read_database_queue.py \
-		$(CURDIR)/code/tests/python/zato-common/process_queue/test_call_database_wait.py \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_tmp_store_reads_queue -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-common/common_db/test_shared_objects.py \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_tmp_store_reads_common_db -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-server/scheduler_run_state/test_run_state_entries.py \
-		$(CURDIR)/code/tests/python/zato-server/scheduler_run_state/test_run_state_lifecycle.py \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_tmp_store_reads_run_state -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m gevent.monkey --module pytest \
-		$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_store_sqlite.py \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_tmp_store_reads_clock -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-	$(Zato_Test_FSFault_Env) Zato_Test_PubSub_DB_Mode=sqlite ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(Zato_Test_HA_Dir_pubsub-subscription)/test_disk_faults.py \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_tmp_store_reads_disk_faults -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-
-test-ha-pubsub-subscription-ui: ## Governed subscription rows of the configuration database in Dashboard, on SQLite and on PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+test-ha-pubsub-subscription-ui: ## Governed subscription rows of the configuration database in Dashboard, on PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(Zato_Log_Reset)
 	$(Zato_Test_FSFault_Build)
 	$(MAKE) common-core-build $(Zato_Log)
-	for mode in sqlite postgresql; do \
+	for mode in postgresql; do \
 		$(Zato_Test_FSFault_Env) Zato_Test_PubSub_DB_Mode=$$mode ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 			$(Zato_Test_HA_Dir_pubsub-subscription-ui)/ \
 			-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ha_pubsub_subscription_ui_$$mode \
@@ -958,13 +922,7 @@ test-arbiter: ## The arbiter, the config process, the control channel and the re
 	$(MAKE) ipc-build $(Zato_Log)
 	$(LOAD_CARGO_ENV) && cargo test --manifest-path $(ZATO_RUST)/zato_ipc_core/Cargo.toml $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(addprefix $(CURDIR)/code/tests/python/,$(addsuffix /,$(Zato_Test_Arbiter_Unit))) \
-		--ignore=$(CURDIR)/code/tests/python/zato-common/process_queue/two_processes \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_arbiter_unit -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-# The worker and the config process of these tests run under gevent, as those of a server do
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-common/process_queue/two_processes/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_arbiter_two_processes -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 test-rate-limiting: rust-target-prune ## All rate limiting tests.
@@ -976,7 +934,7 @@ test-rate-limiting: rust-target-prune ## All rate limiting tests.
 
 # The managed PostgreSQL profiles and the databases of the stability suites that test-pubsub runs.
 Zato_Test_PubSub_Managed_Modes   := postgresql-rds postgresql-azure
-Zato_Test_PubSub_Stability_Modes := sqlite postgresql
+Zato_Test_PubSub_Stability_Modes := postgresql
 
 # The marker expressions that run a suite without its soak tests and then its soak tests alone, after every other suite
 # of the target.
@@ -1072,9 +1030,6 @@ Zato_Test_Step_Tests_pubsub-config-store  := \
 
 Zato_Test_Step_Runner_pubsub-backend := $(Zato_Test_PubSub_Gevent_Process)
 Zato_Test_Step_Tests_pubsub-backend  := \
-	$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_pubsub_backend_sqlite.py \
-	$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_false_conflicts_sqlite.py \
-	$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_store_sqlite.py \
 	$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_pubsub_backend_postgresql.py \
 	$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_store_postgresql.py \
 	$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_generation_postgresql.py \
@@ -1172,7 +1127,7 @@ test-queue-delivery-mllp: ## Queue delivery of outgoing MLLP connections, live.
 		-W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-queue-delivery-channel-rest: ## The queue of REST channels - enmasse with a SQLite ODB, then live.
+test-queue-delivery-channel-rest: ## The queue of REST channels - enmasse with a PostgreSQL ODB, then live.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_delivery_channel_rest.py \
@@ -1181,7 +1136,7 @@ test-queue-delivery-channel-rest: ## The queue of REST channels - enmasse with a
 		-W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-queue-delivery-channel-soap: ## The queue of SOAP channels - enmasse with a SQLite ODB, then live.
+test-queue-delivery-channel-soap: ## The queue of SOAP channels - enmasse with a PostgreSQL ODB, then live.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_delivery_channel_soap.py \
@@ -1195,7 +1150,7 @@ test-queue-delivery: test-queue-delivery-rest test-queue-delivery-soap test-queu
 # The live performance suite of pub/sub, run against a server on each pub/sub database in turn.
 Zato_Test_PubSub_Perf_Dir         := $(CURDIR)/code/tests/python/zato-server/pubsub_perf
 Zato_Test_PubSub_Perf_Tests       := $(Zato_Test_PubSub_Perf_Dir)/test_capacity.py $(Zato_Test_PubSub_Perf_Dir)/test_concurrency.py
-Zato_Test_PubSub_Perf_Steps       := sqlite postgresql
+Zato_Test_PubSub_Perf_Steps       := postgresql
 Zato_Test_PubSub_Perf_Resume_File := $(CURDIR)/code/tests/.test-pubsub-perf-resume
 Zato_Test_PubSub_Perf_Stepwise     = $(if $(RESTART),--sw-reset,--sw)
 
@@ -1211,7 +1166,7 @@ Zato_Test_PubSub_Perf_Step = \
 			$(Zato_Test_PubSub_Perf_Stepwise) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
 	fi;
 
-test-pubsub-perf: ## Pub/sub performance through a live server - concurrent publishers and subscribers, each subscriber with its own subscription, with exactly-once delivery, worker kills and rising concurrency, on SQLite and PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+test-pubsub-perf: ## Pub/sub performance through a live server - concurrent publishers and subscribers, each subscriber with its own subscription, with exactly-once delivery, worker kills and rising concurrency, on PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	@if [ -n "$(RESTART)" ]; then rm -f $(Zato_Test_PubSub_Perf_Resume_File); fi
 	$(Zato_Log_Reset)
 	@resume=''; \
@@ -1260,9 +1215,9 @@ Zato_Test_Exactly_Once_Runner_traffic  := $(Zato_Test_Exactly_Once_Live)
 # The steps in the order they run, each a group of tests on one pub/sub database, the step that the target is currently on,
 # and the pytest option that resumes each step from the test that failed or was interrupted, or starts it over under RESTART.
 Zato_Test_Exactly_Once_Steps := backend \
-	$(foreach group,relay pull crash,$(foreach mode,sqlite postgresql,$(group):$(mode))) \
+	$(foreach group,relay pull crash,$(foreach mode,postgresql,$(group):$(mode))) \
 	takeover:postgresql \
-	$(foreach mode,sqlite postgresql,traffic:$(mode))
+	$(foreach mode,postgresql,traffic:$(mode))
 Zato_Test_Exactly_Once_Resume_File := $(CURDIR)/code/tests/.test-pubsub-exactly-once-resume
 Zato_Test_Exactly_Once_Stepwise     = $(if $(RESTART),--sw-reset,--sw)
 
@@ -1280,7 +1235,7 @@ Zato_Test_Exactly_Once_Run = \
 
 Zato_Test_Exactly_Once_Step = $(call Zato_Test_Exactly_Once_Run,$(1),$(word 1,$(subst :, ,$(1))),$(word 2,$(subst :, ,$(1))))
 
-test-pubsub-exactly-once: ## Exactly-once delivery of pub/sub - the backend, a single server without and with faults, pull clients, takeovers and steady traffic, on SQLite and PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+test-pubsub-exactly-once: ## Exactly-once delivery of pub/sub - the backend, a single server without and with faults, pull clients, takeovers and steady traffic, on PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	@if [ -n "$(RESTART)" ]; then rm -f $(Zato_Test_Exactly_Once_Resume_File); fi
 	$(Zato_Log_Reset)
 	$(MAKE) ha-node-build $(Zato_Log)
@@ -1405,9 +1360,6 @@ test-enmasse-delete-live: ## Enmasse should_delete against a live server - every
 
 test-cli: ## CLI tests.
 	$(Zato_Log_Reset)
-	$(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-cli/test_odb_sqlite_default.py \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_cli_odb \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	$(MAKE) -C $(CURDIR)/code/zato-cli test $(Zato_Log)
 
 test-mcp: ## Every MCP test - the offline suites, the browser lifecycle, a real LLM and the local container.
@@ -1886,7 +1838,7 @@ test-kafka-live: ## Kafka tests against live Kafka in Docker - one instance plai
 		-W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-audit-log: ## Audit log tests against live SQLite and PostgreSQL, plain and TLS, plus live Redis tests.
+test-audit-log: ## Audit log tests against live PostgreSQL, plain and TLS, plus live Redis tests.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/redis_/ \
@@ -2091,7 +2043,7 @@ test-rule-engine: ## Rule engine tests - grammar, matching, the SQL store, invoc
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_engine_webapi \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-analytics: ## Analytics rollup, view and baseline tests on SQLite, with the rollup reading audit logs held in SQLite and PostgreSQL.
+test-analytics: ## Analytics rollup, view and baseline tests on PostgreSQL, with the rollup reading audit logs held in PostgreSQL.
 	$(Zato_Log_Reset)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/analytics/ \

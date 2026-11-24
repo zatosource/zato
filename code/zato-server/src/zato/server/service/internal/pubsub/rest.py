@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from base64 import b64decode
-from http.client import BAD_REQUEST, CONFLICT, SERVICE_UNAVAILABLE, UNAUTHORIZED
+from http.client import BAD_REQUEST, CONFLICT, UNAUTHORIZED
 from logging import getLogger
 
 # gevent
@@ -16,7 +16,6 @@ from gevent import get_hub
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.db_env.sqlite_identity import DatabaseFileReplaced
 from zato.common.pubsub.sql.writes import PubSubDuplicateMsgID
 from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.auth import check_basic_auth
@@ -49,7 +48,6 @@ _status_ok = PubSub.Status.OK
 _status_bad_request = PubSub.Status.Bad_Request
 _status_unauthorized = PubSub.Status.Unauthorized
 _status_conflict = PubSub.Status.Conflict
-_status_service_unavailable = PubSub.Status.Service_Unavailable
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -204,8 +202,8 @@ class Publish(PubSubRESTService):
 
         topic_name = publication.topic_name
 
-        # .. publish to the pub/sub database, where a message ID of the client's own that stands for another message
-        # .. is a conflict ..
+        # .. and publish to the pub/sub database, where a message ID of the client's own that stands for another message
+        # .. is a conflict.
         try:
             result = self.server.pubsub_backend.publish(
                 topic_name,
@@ -222,12 +220,6 @@ class Publish(PubSubRESTService):
             )
         except PubSubDuplicateMsgID as e:
             error = (str(e), _status_conflict, CONFLICT)
-            self.set_error(error)
-            return
-
-        # .. and a database whose SQLite file was removed or replaced accepts no publication.
-        except DatabaseFileReplaced as e:
-            error = (str(e), _status_service_unavailable, SERVICE_UNAVAILABLE)
             self.set_error(error)
             return
 
@@ -279,18 +271,12 @@ class GetMessages(PubSubRESTService):
         max_messages = min(input.max_messages if input.max_messages else _max_messages_default, _max_messages_limit)
         max_len = min(input.max_len if input.max_len else _max_len_default, _max_len_limit)
 
-        # Lease the messages, which hands each of them to this client alone until it acknowledges them,
-        # unless the SQLite file of the database was removed or replaced ..
-        try:
-            raw_messages = self.server.pubsub_backend.pull_messages(
-                sub_key,
-                max_messages=max_messages,
-                max_len=max_len
-            )
-        except DatabaseFileReplaced as e:
-            error = (str(e), _status_service_unavailable, SERVICE_UNAVAILABLE)
-            self.set_error(error)
-            return
+        # Lease the messages, which hands each of them to this client alone until it acknowledges them ..
+        raw_messages = self.server.pubsub_backend.pull_messages(
+            sub_key,
+            max_messages=max_messages,
+            max_len=max_len
+        )
 
         # .. format them for the REST pull path ..
         messages = self.server.pubsub_backend.format_messages_for_rest(raw_messages, sub_key)

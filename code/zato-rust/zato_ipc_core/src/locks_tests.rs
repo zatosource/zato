@@ -49,10 +49,7 @@ fn a_key_keeps_its_entry_and_two_keys_have_two() -> Result<(), RegionError> {
 
 #[test]
 fn full_table_refuses_a_new_key() -> Result<(), RegionError> {
-    let view = new_view(RegionParams {
-        lock_capacity: 1,
-        ..small_params()
-    })?;
+    let view = new_view(RegionParams { lock_capacity: 1 })?;
 
     let _ = view.lock_entry(CONNECTION)?;
 
@@ -63,10 +60,7 @@ fn full_table_refuses_a_new_key() -> Result<(), RegionError> {
 
 #[test]
 fn table_of_no_entries_refuses_every_key() -> Result<(), RegionError> {
-    let view = new_view(RegionParams {
-        lock_capacity: 0,
-        ..small_params()
-    })?;
+    let view = new_view(RegionParams { lock_capacity: 0 })?;
 
     assert_eq!(view.lock_entry(CONNECTION), Err(RegionError::TableFull));
     assert_eq!(view.lock_queue(0), Err(RegionError::NoSuchLock(0)));

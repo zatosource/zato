@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The per-minute event counts of the audit log. Each row holds a signed count of the events of one minute
-# with one combination of the key columns the listing filters by. Triggers of the database add the rows
+# with one combination of the key columns the listing filters by. Statement triggers add the rows
 # in the transaction that inserts, updates or deletes the events, whichever code issues the statement,
 # and compaction replaces the rows of one minute and key with a single row holding their sum.
 
@@ -16,7 +16,6 @@ from sqlalchemy import DDL, delete, event, func, insert, or_, select
 from sqlalchemy.schema import CreateIndex
 
 # Zato
-from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.write_path import Mechanism, write_path
 
 # ################################################################################################################################
@@ -48,9 +47,6 @@ _period_and_keys = ('period_start',) + count_key_columns
 
 # The columns whose change moves an event from one count to another
 _counted_columns = ('event_time',) + count_key_columns
-
-# The savepoint under which SQLite creates the triggers and fills the counts in one transaction
-_sqlite_savepoint = 'event_count_fill'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,54 +93,10 @@ def _group_by_all() -> 'str':
 
 # ################################################################################################################################
 
-def _sqlite_minute(prefix:'str') -> 'str':
-    """ The minute of an event time under SQLite, in the text form SQLAlchemy stores the time in.
-    """
-    out = "substr({0}.event_time, 1, 16) || ':00.000000'".format(prefix)
-    return out
-
-# ################################################################################################################################
-
 def _postgresql_minute(prefix:'str') -> 'str':
-    """ The minute of an event time under PostgreSQL, truncated in UTC.
+    """ The minute of an event time, truncated in UTC.
     """
     out = "date_trunc('minute', {0}.event_time AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'".format(prefix)
-    return out
-
-# ################################################################################################################################
-
-def _sqlite_statements(event_name:'str', count_name:'str') -> 'strlist':
-    """ The row triggers of SQLite that add one count row per change of an event, and the statement that fills
-    the counts of the events that exist when the table is created.
-    """
-    key_list = ', '.join(count_key_columns)
-    counted_list = ', '.join(_counted_columns)
-    insert_into = f'INSERT INTO {count_name} (period_start, {key_list}, event_count)'
-
-    new_minute = _sqlite_minute('new')
-    old_minute = _sqlite_minute('old')
-    new_keys = _prefixed('new', count_key_columns)
-    old_keys = _prefixed('old', count_key_columns)
-
-    # A new version of a row adds one to its count ..
-    add_new = f'{insert_into} VALUES ({new_minute}, {new_keys}, 1);'
-
-    # .. and an old one subtracts one from the count it was in ..
-    remove_old = f'{insert_into} VALUES ({old_minute}, {old_keys}, -1);'
-
-    # .. while an update moves an event only when it changes a counted column.
-    changed = _any_changed('old', 'new', 'IS NOT')
-
-    after_insert = f'CREATE TRIGGER {count_name}_insert AFTER INSERT ON {event_name} BEGIN {add_new} END'
-    after_delete = f'CREATE TRIGGER {count_name}_delete AFTER DELETE ON {event_name} BEGIN {remove_old} END'
-    after_update = f'CREATE TRIGGER {count_name}_update AFTER UPDATE OF {counted_list} ON {event_name} ' + \
-        f'WHEN {changed} BEGIN {remove_old} {add_new} END'
-
-    event_minute = _sqlite_minute(event_name)
-    group_by = _group_by_all()
-    fill = f'{insert_into} SELECT {event_minute}, {key_list}, count(*) FROM {event_name} {group_by}'
-
-    out = [after_insert, after_delete, after_update, fill]
     return out
 
 # ################################################################################################################################
@@ -158,7 +110,7 @@ def _postgresql_function(name:'str', body:'str') -> 'str':
 # ################################################################################################################################
 
 def _postgresql_statements(event_name:'str', count_name:'str') -> 'strlist':
-    """ The statement triggers of PostgreSQL that add one count row per minute and key a statement changes,
+    """ The statement triggers that add one count row per minute and key a statement changes,
     and the statement that fills the counts of the events that exist when the table is created.
     """
     key_list = ', '.join(count_key_columns)
@@ -205,8 +157,8 @@ def _postgresql_statements(event_name:'str', count_name:'str') -> 'strlist':
 
 # ################################################################################################################################
 
-def listen_after_create(target:'Table', elements:'anylist', dialect_name:'str') -> 'None':
-    """ Runs the given statements or DDL elements on the given dialect alone, after the table is created.
+def listen_after_create(target:'Table', elements:'anylist') -> 'None':
+    """ Runs the given statements or DDL elements after the table is created.
     """
     for element in elements:
 
@@ -215,7 +167,6 @@ def listen_after_create(target:'Table', elements:'anylist', dialect_name:'str') 
         else:
             ddl = element
 
-        ddl = ddl.execute_if(dialect=dialect_name)
         event.listen(target, 'after_create', ddl)
 
 # ################################################################################################################################
@@ -234,26 +185,15 @@ def register_event_count(event_table:'Table', count_table:'Table', ordered_index
         create_index = CreateIndex(index, if_not_exists=True)
         index_elements.append(create_index)
 
-    # SQLite creates the triggers and fills the counts under one savepoint, which holds the write lock
-    # from the first trigger on, so that no event is written between the two ..
-    sqlite_statements = _sqlite_statements(event_name, count_name)
-
-    sqlite_elements:'anylist' = [f'SAVEPOINT {_sqlite_savepoint}']
-    sqlite_elements.extend(index_elements)
-    sqlite_elements.extend(sqlite_statements)
-    sqlite_elements.append(f'RELEASE {_sqlite_savepoint}')
-
-    listen_after_create(count_table, sqlite_elements, Type_SQLite)
-
-    # .. while PostgreSQL creates them in the transaction of the schema, and the lock that creating a trigger takes
+    # The triggers are created in the transaction of the schema, and the lock that creating a trigger takes
     # on the event table makes writers wait until the counts are filled.
-    postgresql_statements = _postgresql_statements(event_name, count_name)
+    trigger_statements = _postgresql_statements(event_name, count_name)
 
-    postgresql_elements:'anylist' = []
-    postgresql_elements.extend(index_elements)
-    postgresql_elements.extend(postgresql_statements)
+    elements:'anylist' = []
+    elements.extend(index_elements)
+    elements.extend(trigger_statements)
 
-    listen_after_create(count_table, postgresql_elements, Type_PostgreSQL)
+    listen_after_create(count_table, elements)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -288,9 +228,9 @@ def _get_key_columns(count_table:'Table') -> 'anylist':
 
 # ################################################################################################################################
 
-def _get_compactable_periods(count_table:'Table', compacted_up_to:'int', *conditions:'any_') -> 'any_':
+def _get_compactable_periods(count_table:'Table', compacted_up_to:'int') -> 'any_':
     """ Returns the query of the minutes that received rows above the given id and that hold more than one row
-    of one key or a key whose rows add up to zero, among the rows that also match the given conditions.
+    of one key or a key whose rows add up to zero.
     """
     id_column = count_table.c.id
     period_column = count_table.c.period_start
@@ -299,14 +239,14 @@ def _get_compactable_periods(count_table:'Table', compacted_up_to:'int', *condit
 
     # The minutes that received rows since the previous compaction ..
     new_periods = select(period_column)
-    new_periods = new_periods.where(id_column > compacted_up_to, *conditions)
+    new_periods = new_periods.where(id_column > compacted_up_to)
 
     # .. and those of them with more than one row of a key or a row of nothing.
     has_duplicates = func.count() > 1
     has_zero = func.sum(count_column) == 0
 
     out = select(period_column)
-    out = out.where(period_column.in_(new_periods), *conditions)
+    out = out.where(period_column.in_(new_periods))
     out = out.group_by(period_column, *key_columns)
     out = out.having(or_(has_duplicates, has_zero))
 
@@ -350,73 +290,17 @@ def _compact_returning(connection:'Connection', count_table:'Table', compacted_u
 
 # ################################################################################################################################
 
-def _compact_in_database(connection:'Connection', count_table:'Table', compacted_up_to:'int') -> 'None':
-    """ Compacts the counts with statements that sum and delete the rows in the database, without reading them,
-    among the rows up to the highest id at the start, which no other transaction changes while the transaction
-    holds the write lock of SQLite.
-    """
-    id_column = count_table.c.id
-    period_column = count_table.c.period_start
-    count_column = count_table.c.event_count
-    key_columns = _get_key_columns(count_table)
-
-    highest_id_query = select(func.max(id_column))
-    highest_id = connection.execute(highest_id_query).scalar()
-
-    # An empty table has nothing to compact ..
-    if highest_id is None:
-        return
-
-    # .. otherwise, the rows that exist at the start are those that the compaction replaces ..
-    is_existing_row = id_column <= highest_id
-    compactable = _get_compactable_periods(count_table, compacted_up_to, is_existing_row)
-    is_compactable_row = period_column.in_(compactable)
-
-    # .. each minute and key of the compactable minutes receives one row of its sum, unless the sum is zero ..
-    total = func.sum(count_column)
-
-    sums = select(period_column, *key_columns, total)
-    sums = sums.where(is_compactable_row, is_existing_row)
-    sums = sums.group_by(period_column, *key_columns)
-    sums = sums.having(total != 0)
-
-    sum_columns:'anylist' = [period_column]
-    sum_columns.extend(key_columns)
-    sum_columns.append(count_column)
-
-    insert_sums = insert(count_table)
-    insert_sums = insert_sums.from_select(sum_columns, sums)
-
-    _ = connection.execute(insert_sums)
-
-    # .. and the rows that the sums replace are deleted.
-    delete_rows = delete(count_table)
-    delete_rows = delete_rows.where(is_compactable_row, is_existing_row)
-
-    _ = connection.execute(delete_rows)
-
-# ################################################################################################################################
-
-# The compaction of each database, by the name of its dialect
-_compact_functions = {
-    Type_SQLite:     _compact_in_database,
-    Type_PostgreSQL: _compact_returning,
-}
-
-# ################################################################################################################################
-
 def compact_event_counts(engine:'Engine', count_table:'Table', compacted_up_to:'int') -> 'int':
     """ Replaces the rows of every minute that holds more than one row of one key, or a row whose count is zero,
     with one row per key holding their sum, looking only at the minutes that received rows above the given id.
     Returns the highest id of the table afterwards, from which the next compaction starts.
     """
     id_column = count_table.c.id
-    compact = _compact_functions[engine.dialect.name]
 
     with write_path(Mechanism.Maintenance), engine.begin() as connection:
 
         # The counts are compacted ..
-        compact(connection, count_table, compacted_up_to)
+        _compact_returning(connection, count_table, compacted_up_to)
 
         # .. and the next compaction starts above everything there is now.
         highest_id = select(func.max(id_column))

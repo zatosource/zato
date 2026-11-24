@@ -204,7 +204,7 @@ class Edit(_CreateEdit):
                 item.is_active = input.is_active
                 item.host = input.host
                 item.url_path = input.url_path
-                item.security_id = input.security_id or None # So that SQLite does not reject ''
+                item.security_id = input.security_id or None # An empty string is not a valid foreign key
                 item.connection = input.connection
                 item.transport = input.transport
                 item.method = input.method

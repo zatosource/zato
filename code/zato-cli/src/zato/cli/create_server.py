@@ -11,8 +11,8 @@ from copy import deepcopy
 from dataclasses import dataclass
 
 # Zato
-from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, \
-    common_scheduler_server_address_opts, sql_conf_contents, ZatoCommand
+from zato.cli import common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, sql_conf_contents, \
+    ZatoCommand
 from zato.common.api import CONTENT_TYPE, Default_Extra_Service_File_Data, Default_Service_File_Data, NotGiven, REDIS, SCHEDULER
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.llm_models import default_models_yaml, models_file_name
@@ -69,11 +69,6 @@ priv_key_location=zato-server-priv-key.pem
 pub_key_location=zato-server-pub-key.pem
 cert_location=zato-server-cert.pem
 ca_certs_location=zato-server-ca-certs.pem
-
-[odb]
-db_name={{odb_path}}
-engine={{odb_engine}}
-extra=echo=False
 
 [scheduler]
 scheduler_host={{scheduler_host}}
@@ -278,7 +273,7 @@ class Create(ZatoCommand):
     """
     needs_empty_dir = True
 
-    opts:'any_' = deepcopy(common_odb_opts)
+    opts:'any_' = []
 
     opts.append({'name':'server_name', 'help':'Server\'s name'})
     opts.append({'name':'--redis-host', 'help':'Redis host', 'default':REDIS.DEFAULT.HOST})
@@ -436,7 +431,7 @@ class Create(ZatoCommand):
 
         default_http_port = default_http_port or http_plain_server_port
 
-        engine = self._get_engine(args)
+        engine = self._get_engine()
         session = self._get_session(engine) # type: ignore
 
         server = Server()
@@ -499,8 +494,6 @@ class Create(ZatoCommand):
             # Substitue the variables ..
             server_conf_data = server_conf_template.format(
                     port=getattr(args, 'http_port', None) or default_http_port,
-                    odb_path=args.odb_path,
-                    odb_engine=args.odb_type,
                     redis_host=self.get_arg('redis_host'),
                     redis_port=self.get_arg('redis_port'),
                     initial_server_name=args.server_name,

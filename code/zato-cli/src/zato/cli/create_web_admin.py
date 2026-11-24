@@ -6,27 +6,20 @@ Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from copy import deepcopy
-
 # Zato
-from zato.cli import common_odb_opts, ZatoCommand
+from zato.cli import ZatoCommand
 from zato.common.const import ServiceConst
 from zato.common.util.open_ import open_r, open_w
 
 config_template = """{{
   "host": "{host}",
   "port": {port},
-  "db_type": "{db_type}",
   "log_config": "./config/repo/{log_config}",
     "zato_secret_key": "{zato_secret_key}",
   "well_known_data": "{well_known_data}",
 
   "DEBUG": 0,
   "ALLOWED_HOSTS": ["*"],
-
-  "DATABASE_NAME": "{DATABASE_NAME}",
-  "DATABASE_OPTIONS": {{"timeout": 30}},
 
   "TIME_ZONE": "America/New_York",
   "LANGUAGE_CODE": "en-us",
@@ -54,13 +47,13 @@ class Create(ZatoCommand):
     """
     needs_empty_dir = True
 
-    opts = deepcopy(common_odb_opts)
-
-    opts.append({'name':'--pub-key-path', 'help':'Path to the web admin\'s public key in PEM'})
-    opts.append({'name':'--priv_key-path', 'help':'Path to the web admin\'s private key in PEM'})
-    opts.append({'name':'--cert-path', 'help':'Path to the web admin\'s certificate in PEM'})
-    opts.append({'name':'--ca-certs-path', 'help':'Path to a bundle of CA certificates to be trusted'})
-    opts.append({'name':'--admin-invoke-password', 'help':'Password for web-admin to connect to servers with'})
+    opts = [
+        {'name':'--pub-key-path', 'help':'Path to the web admin\'s public key in PEM'},
+        {'name':'--priv_key-path', 'help':'Path to the web admin\'s private key in PEM'},
+        {'name':'--cert-path', 'help':'Path to the web admin\'s certificate in PEM'},
+        {'name':'--ca-certs-path', 'help':'Path to a bundle of CA certificates to be trusted'},
+        {'name':'--admin-invoke-password', 'help':'Password for web-admin to connect to servers with'},
+    ]
 
     def __init__(self, args):
 
@@ -139,22 +132,14 @@ class Create(ZatoCommand):
         config = {
             'host': web_admin_host,
             'port': web_admin_port,
-            'db_type': args.odb_type,
             'log_config': 'logging.conf',
             'zato_secret_key':zato_secret_key,
             'well_known_data': cm.encrypt(well_known_data.encode('utf8')),
-            'DATABASE_NAME': args.odb_path,
             'SITE_ID': django_site_id,
             'SECRET_KEY': cm.encrypt(django_secret_key),
             'ADMIN_INVOKE_NAME':ServiceConst.API_Admin_Invoke_Username,
             'ADMIN_INVOKE_PASSWORD':cm.encrypt(admin_invoke_password),
         }
-        import platform
-        system = platform.system()
-        is_windows = 'windows' in system.lower()
-
-        if is_windows:
-            config['DATABASE_NAME'] = config['DATABASE_NAME'].replace('\\', '\\\\')
 
         for name in 'zato_secret_key', 'well_known_data', 'SECRET_KEY', 'ADMIN_INVOKE_PASSWORD':
             config[name] = config[name].decode('utf8')

@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from sqlalchemy import and_, bindparam, exists, select, true
 
 # Zato
-from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.pubsub.sql.config import get_batch_size
 from zato.common.pubsub.sql.schema import delivery_table, message_table
@@ -46,7 +45,7 @@ _drop_payloads_statement = _drop_payloads_statement.where(and_(
 _drop_payloads_statement = _drop_payloads_statement.values(payload=None, payload_encrypted=False)
 _drop_payloads_statement_plain = PlainStatement(_drop_payloads_statement.returning(message_table.c.id))
 
-# Two transactions of PostgreSQL that remove the last two delivery rows of a message would each see the row
+# Two transactions that remove the last two delivery rows of a message would each see the row
 # of the other one and both keep the payload, so the message rows are locked first, and the update that follows
 # sees every removal committed by the time the lock is granted.
 _lock_messages_query = select(message_table.c.id)
@@ -110,36 +109,30 @@ def drop_payloads(connection:'Connection', message_ids:'intlist') -> 'intlist':
     follows after its delivery rows, so concurrent transactions cannot deadlock on them.
     """
     message_ids = sorted(message_ids)
-    is_postgresql = connection.dialect.name == Type_PostgreSQL
 
     out:'intlist' = []
 
     for chunk in get_chunks(message_ids):
 
-        # On PostgreSQL, only the messages without a delivery row that remains are locked and looked at ..
-        if is_postgresql:
+        # Only the messages without a delivery row that remains are locked ..
+        needed:'intset' = set()
 
-            needed:'intset' = set()
+        for row in _needed_messages_query_plain.execute(connection, {'drop_message_ids': chunk}):
+            needed.add(row.id)
 
-            for row in _needed_messages_query_plain.execute(connection, {'drop_message_ids': chunk}):
-                needed.add(row.id)
+        candidates:'intlist' = []
 
-            candidates:'intlist' = []
+        for message_id in chunk:
+            if message_id not in needed:
+                candidates.append(message_id)
 
-            for message_id in chunk:
-                if message_id not in needed:
-                    candidates.append(message_id)
+        if not candidates:
+            continue
 
-            if not candidates:
-                continue
+        parameters = {'drop_message_ids': candidates}
+        _ = _lock_messages_query_plain.execute(connection, parameters).fetchall()
 
-            parameters = {'drop_message_ids': candidates}
-            _ = _lock_messages_query_plain.execute(connection, parameters).fetchall()
-
-        # .. while SQLite, with its single writer, looks at all of them.
-        else:
-            parameters = {'drop_message_ids': chunk}
-
+        # .. and only they lose their payloads.
         for row in _drop_payloads_statement_plain.execute(connection, parameters):
             out.append(row.id)
 

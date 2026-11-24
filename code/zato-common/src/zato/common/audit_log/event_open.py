@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The open exchanges of the audit log - one row for each event that opens an exchange, e.g. a sent HL7 message,
-# while no event that closes it, e.g. its acknowledgment, exists. Triggers of the database keep the rows
+# while no event that closes it, e.g. its acknowledgment, exists. Statement triggers keep the rows
 # in the transaction that inserts, updates or deletes the events, whichever code issues the statement,
 # so the table always equals the anti-join of the opening events against the closing ones.
 
@@ -16,7 +16,6 @@ from dataclasses import dataclass
 
 # Zato
 from zato.common.audit_log.event_count import listen_after_create
-from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -42,7 +41,7 @@ _exchange_columns = ('source', 'event_type', 'msg_id', 'object_name')
 # A string value as an SQL literal - the values are the names of sources and event types, which hold no quotes
 _sql_literal = "'{0}'"
 
-# The transition tables of the statement triggers of PostgreSQL
+# The transition tables of the statement triggers
 _new_rows = 'FROM new_rows n'
 _old_rows = 'FROM old_rows o'
 
@@ -88,8 +87,7 @@ def _prefixed(prefix:'str', names:'tuple') -> 'str':
 
 class _ExchangeStatements:
     """ The SQL that keeps the open exchanges of one pair. Each statement reads the events it reacts to from a FROM clause,
-    the transition table of a PostgreSQL statement trigger, or from none at all, with the row of a SQLite trigger
-    referenced directly as new or old.
+    the transition table of a statement trigger or the event table itself.
     """
 
     def __init__(self, pair:'ExchangePair', event_name:'str', open_name:'str') -> 'None':
@@ -219,42 +217,6 @@ class _ExchangeStatements:
 
 # ################################################################################################################################
 
-    def sqlite_statements(self) -> 'strlist':
-        """ The row triggers of SQLite and the statement that fills the table with the exchanges open when it is created.
-        """
-        prefix = self.object_prefix
-        event_name = self.event_name
-        exchange_list = ', '.join(_exchange_columns)
-
-        # A new event opens its own exchange or closes those of others ..
-        open_new = self.open_rows('', 'new')
-        close_new = self.close_rows('', 'new')
-
-        # .. and a deleted one takes its exchange along or opens again those it closed.
-        drop_old = self.drop_rows('', 'old')
-        reopen_old = self.reopen_rows('', 'old')
-
-        is_new_source = f'new.source = {self.source}'
-        is_old_source = f'old.source = {self.source}'
-        changed = self.any_changed('old', 'new', 'IS NOT')
-
-        after_insert = f'CREATE TRIGGER {prefix}_insert AFTER INSERT ON {event_name} WHEN {is_new_source} ' + \
-            f'BEGIN {open_new}; {close_new}; END'
-
-        after_delete = f'CREATE TRIGGER {prefix}_delete AFTER DELETE ON {event_name} WHEN {is_old_source} ' + \
-            f'BEGIN {drop_old}; {reopen_old}; END'
-
-        after_update = f'CREATE TRIGGER {prefix}_update AFTER UPDATE OF {exchange_list} ON {event_name} ' + \
-            f'WHEN ({is_old_source} OR {is_new_source}) AND {changed} ' + \
-            f'BEGIN {drop_old}; {close_new}; {reopen_old}; {open_new}; END'
-
-        fill = self.open_rows(f'FROM {event_name} e', 'e')
-
-        out = [after_insert, after_delete, after_update, fill]
-        return out
-
-# ################################################################################################################################
-
     def _postgresql_lock(self, rows:'str', row:'str') -> 'str':
         """ Takes the transaction-level advisory locks of the message ids among the given rows, in a fixed order,
         so that two transactions writing the two halves of one exchange see each other's rows.
@@ -283,8 +245,7 @@ class _ExchangeStatements:
 # ################################################################################################################################
 
     def postgresql_statements(self) -> 'strlist':
-        """ The statement triggers of PostgreSQL and the statement that fills the table with the exchanges open
-        when it is created.
+        """ The statement triggers and the statement that fills the table with the exchanges open when it is created.
         """
         prefix = self.object_prefix
         event_name = self.event_name
@@ -346,27 +307,17 @@ def register_event_open(event_table:'Table', open_table:'Table', pairs:'anylist'
     event_name = event_table.name
     open_name = open_table.name
 
-    # SQLite creates the triggers and fills the table under one savepoint, which holds the write lock
-    # from the first trigger on, so that no event is written between the two ..
-    sqlite_elements:'anylist' = [f'SAVEPOINT {open_name}_fill']
-
-    # .. while PostgreSQL does it in the transaction of the schema, in which creating a trigger
+    # The triggers are created and the table is filled in the transaction of the schema, in which creating a trigger
     # makes the writers of the event table wait until the table is filled.
-    postgresql_elements:'anylist' = []
+    elements:'anylist' = []
 
     for pair in pairs:
         statements = _ExchangeStatements(pair, event_name, open_name)
 
-        sqlite_statements = statements.sqlite_statements()
-        sqlite_elements.extend(sqlite_statements)
+        trigger_statements = statements.postgresql_statements()
+        elements.extend(trigger_statements)
 
-        postgresql_statements = statements.postgresql_statements()
-        postgresql_elements.extend(postgresql_statements)
-
-    sqlite_elements.append(f'RELEASE {open_name}_fill')
-
-    listen_after_create(open_table, sqlite_elements, Type_SQLite)
-    listen_after_create(open_table, postgresql_elements, Type_PostgreSQL)
+    listen_after_create(open_table, elements)
 
 # ################################################################################################################################
 # ################################################################################################################################

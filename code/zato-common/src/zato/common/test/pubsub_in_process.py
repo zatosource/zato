@@ -22,8 +22,7 @@ from gevent.event import Event
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.defaults import default_env_base_dir
-from zato.common.test.pubsub_database import get_runtime_dir, is_postgresql_mode, new_sqlite_database, \
-     start_pubsub_database, stop_pubsub_database
+from zato.common.test.pubsub_database import get_runtime_dir, start_pubsub_database, stop_pubsub_database
 from zato.common.util.api import get_zato_command
 from zato.server.main import run as run_server
 
@@ -241,8 +240,8 @@ class _ImportCompletion(logging.Handler):
 # ################################################################################################################################
 
 class InProcessServer:
-    """ A Zato server that runs pub/sub in this process, under gevent, with the files of its configuration and of its
-    pub/sub database in a temporary directory, and without the arbiter, the config process, the scheduler, the HTTP
+    """ A Zato server that runs pub/sub in this process, under gevent, with the files of its configuration
+    in a temporary directory, with its pub/sub database in PostgreSQL, and without the arbiter, the config process, the scheduler, the HTTP
     port or the listeners of the queue bridge, of the API portal and of the rule engine.
     """
 
@@ -285,13 +284,13 @@ class InProcessServer:
         """ Creates the server's directory and database, assembles the server and applies its initial enmasse file.
         """
 
-        # The directory of the server and the files that it deploys during its assembly ..
+        # The pub/sub database, which the creation of the server's directory requires ..
+        self._start_database()
+
+        # .. the directory of the server and the files that it deploys during its assembly ..
         self.work_dir = mkdtemp(prefix=ModuleCtx.Work_Dir_Prefix, dir=get_runtime_dir())
         self._create_server_directory()
         self._write_service_modules()
-
-        # .. its pub/sub database ..
-        self._start_database()
 
         # .. the state of this process that the server changes is kept for the stop ..
         self._process_state = _ProcessState()
@@ -337,6 +336,7 @@ class InProcessServer:
         ]
 
         env = dict(os.environ)
+        env.update(self.db_env)
         _ = env.pop(ModuleCtx.Env_Coverage, None)
 
         result = subprocess_run(command, env=env, capture_output=True, text=True, timeout=ModuleCtx.Quickstart_Timeout)
@@ -362,12 +362,9 @@ class InProcessServer:
 # ################################################################################################################################
 
     def _start_database(self) -> 'None':
-        """ Starts a PostgreSQL container or selects an SQLite file in the temporary directory.
+        """ Starts the PostgreSQL database of the server.
         """
-        if is_postgresql_mode(self.db_mode):
-            database = start_pubsub_database(ModuleCtx.Database_Label, self.db_mode)
-        else:
-            database = new_sqlite_database(self.work_dir)
+        database = start_pubsub_database(ModuleCtx.Database_Label, self.db_mode)
 
         self._database = database
         self.db_env = database.env
@@ -463,8 +460,7 @@ class InProcessServer:
             self._process_state = None
 
         if self._database:
-            if is_postgresql_mode(self.db_mode):
-                stop_pubsub_database(self._database)
+            stop_pubsub_database(self._database)
             self._database = None
 
         if self.work_dir:

@@ -7,21 +7,20 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.cli import common_odb_opts, ZatoCommand
+from zato.cli import ZatoCommand
 from zato.common.odb.model import Base
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Create(ZatoCommand):
-    """ Creates a new Zato ODB (Operational Database)
+    """ Creates the tables of the Zato ODB (Operational Database) in the Zato database
     """
-    opts = common_odb_opts
-    opts.append({
+    opts = [{
         'name':'--skip-if-exists',
         'help':'Return without raising an error if ODB already exists',
         'action':'store_true'
-    })
+    }]
 
 # ################################################################################################################################
 
@@ -32,7 +31,7 @@ class Create(ZatoCommand):
 
     def execute(self, args, show_output=True):
 
-        engine = self._get_engine(args)
+        engine = self._get_engine()
 
         Base.metadata.create_all(engine)
 

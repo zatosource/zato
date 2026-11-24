@@ -17,7 +17,6 @@ from typing import NamedTuple
 from zato.common.audit_log.api import AuditLog, event_table
 from zato.common.audit_log.bulk_insert import insert_pending_events
 from zato.common.audit_log.payload import assign_payload_ids, get_payload_digest, Payload_Digest_Key, store_payloads
-from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.database import get_database_engine
 from zato.common.db_env.engine import call_database
 from zato.common.db_env.pg8000_copy import copy_rows
@@ -215,7 +214,7 @@ def seed_event_row(engine:'Engine', values:'stranydict') -> 'any_':
 # ################################################################################################################################
 
 def seed_config_row(session:'Session', table:'Table', values:'stranydict') -> 'any_':
-    """ Inserts one row into a table of config.db through a session of its own and returns its primary key,
+    """ Inserts one row into a table of the configuration database through a session of its own and returns its primary key,
     for the models whose constructors do not accept every column.
     """
     result = session.execute(table.insert().values(**values))
@@ -227,7 +226,7 @@ def seed_config_row(session:'Session', table:'Table', values:'stranydict') -> 'a
 # ################################################################################################################################
 
 def seed_config_objects(session:'Session', objects:'anylist') -> 'None':
-    """ Adds configuration objects to a session of config.db, which writes them with the rest of its transaction.
+    """ Adds configuration objects to a session of the configuration database, which writes them with the rest of its transaction.
     """
     session.add_all(objects)
 
@@ -299,20 +298,16 @@ def _get_batches(load:'BulkLoad') -> 'Iterator[dictlist]':
 # ################################################################################################################################
 
 def _load_in_bulk(connection:'Connection', loads:'bulk_load_list') -> 'None':
-    is_postgresql = connection.dialect.name == Type_PostgreSQL
 
     for load in loads:
 
-        # PostgreSQL receives each batch as one COPY stream, and the other databases as one executemany ..
+        # Each batch is sent as one COPY stream ..
         for batch in _get_batches(load):
-            if is_postgresql:
-                copy_rows(connection, load.table, batch)
-            else:
-                _ = connection.execute(load.table.insert(), batch)
+            copy_rows(connection, load.table, batch)
 
         # .. and a COPY with the values of an identity column leaves its sequence behind them,
         # which the next row of the system under test would collide with.
-        if is_postgresql and load.has_identity:
+        if load.has_identity:
             table_name = load.table.name
             column_name = load.table.primary_key.columns[0].name
 
@@ -324,9 +319,8 @@ def _load_in_bulk(connection:'Connection', loads:'bulk_load_list') -> 'None':
 # ################################################################################################################################
 
 def seed_bulk(engine:'Engine', loads:'bulk_load_list') -> 'None':
-    """ Inserts the rows of each table over the fastest path of the database - COPY on PostgreSQL and executemany
-    on the other databases - in one transaction, in turn with the other writes to the database. The rows are read
-    from their iterators as they are inserted, so a seed of any size is never held in memory at once.
+    """ Inserts the rows of each table as COPY streams in one transaction, in turn with the other writes to the database.
+    The rows are read from their iterators as they are inserted, so a seed of any size is never held in memory at once.
     """
     _ = run_seed(engine, _load_in_bulk, loads)
 
@@ -334,20 +328,14 @@ def seed_bulk(engine:'Engine', loads:'bulk_load_list') -> 'None':
 
 def _refresh_statistics(engine:'Engine', tables:'tablelist') -> 'None':
 
-    dialect_name = engine.dialect.name
     table_names = [table.name for table in tables]
 
-    # VACUUM runs outside of a transaction only, and it builds the visibility map that index-only scans of PostgreSQL need ..
+    # VACUUM runs outside of a transaction only, and it builds the visibility map that index-only scans of PostgreSQL need.
     with engine.connect() as connection:
         connection = connection.execution_options(isolation_level=ModuleCtx.Autocommit)
 
-        if dialect_name == Type_PostgreSQL:
-            for table_name in table_names:
-                _ = connection.exec_driver_sql(f'vacuum analyze {table_name}')
-
-        # .. and SQLite analyzes the whole database.
-        else:
-            _ = connection.exec_driver_sql('analyze')
+        for table_name in table_names:
+            _ = connection.exec_driver_sql(f'vacuum analyze {table_name}')
 
 # ################################################################################################################################
 

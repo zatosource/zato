@@ -11,7 +11,7 @@ import os
 from copy import deepcopy
 
 # Zato
-from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, ZatoCommand
+from zato.cli import common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, ZatoCommand
 from zato.common.api import REDIS
 from zato.common.typing_ import cast_
 from zato.common.util.config import get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username
@@ -294,7 +294,7 @@ class Create(ZatoCommand):
     """ Quickly creates a working environment.
     """
     needs_empty_dir = True
-    opts:'any_' = deepcopy(common_odb_opts)
+    opts:'any_' = []
     opts.append({'name':'--secret-key', 'help':'Main secret key the server will use'})
     opts.append({'name':'--no-scheduler', 'help':'Create all the components but not a scheduler', 'action':'store_true'})
     opts.append({'name':'--scheduler-only', 'help':'Only create a scheduler, without other components', 'action':'store_true'})
@@ -317,8 +317,6 @@ class Create(ZatoCommand):
         out.verbose = args.verbose
         out.store_log = args.store_log
         out.store_config = args.store_config
-        out.odb_type = args.odb_type
-        out.odb_path = args.odb_path
         out.redis_host = self.get_arg('redis_host')
         out.redis_port = self.get_arg('redis_port')
         out.redis_password = self.get_arg('redis_password')
@@ -396,9 +394,6 @@ class Create(ZatoCommand):
 
         # Make sure we always work with absolute paths
         args_path = os.path.abspath(args.path)
-
-        # The ODB is a file in the environment's directory unless given explicitly
-        args.odb_path = args.odb_path or os.path.join(args_path, 'config.db')
 
         next_step = count(1)
         server_name = 'server1'

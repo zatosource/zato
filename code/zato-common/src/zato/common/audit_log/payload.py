@@ -113,7 +113,7 @@ def get_payload_digest(data:'str') -> 'strnone':
 
 def prepare_payloads(batch:'pending_event_list') -> 'None':
     """ Computes the digest and the search text of the payload of each event of a batch, before the write
-    that stores them, so that the write holds the lock of the database for less time. Each distinct payload
+    that stores them, so that the transaction of the write is shorter. Each distinct payload
     of the batch is processed once, however many events carry it.
     """
 

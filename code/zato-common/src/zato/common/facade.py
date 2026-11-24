@@ -186,7 +186,7 @@ class PubSubFacade:
         """ Subscribes an ad hoc subscriber to a topic. A sub key in the governed format is refused.
         """
         if SubscriptionList.is_governed(sub_key):
-            raise Exception(f'Sub key `{sub_key}` is reserved for subscriptions of config.db')
+            raise Exception(f'Sub key `{sub_key}` is reserved for subscriptions of the configuration database')
 
         self.server.pubsub_backend.subscribe(sub_key, topic_name)
 

@@ -8,19 +8,21 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from contextlib import ExitStack
 from hashlib import sha256
-from tempfile import mkdtemp, NamedTemporaryFile, TemporaryDirectory
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from unittest import main, TestCase
 
 # Bunch
 from zato.common.ext.bunch import Bunch, bunchify
 
 # Zato
-from zato.common.audit_log.api import AuditLog, ModuleCtx as AuditLogCtx
+from zato.common.audit_log.api import AuditLog
 from zato.common.crypto.api import CryptoManager
 from zato.common.file_transfer.api import Default_Verify_How, VerifyHow
 from zato.common.test.file_transfer_harness.large_files import checksum_of_path, get_kept_content, new_large_file
 from zato.common.test.ftp_ import FTPTestServer
+from zato.common.test.zato_database import zato_database_engine
 from zato.common.typing_ import cast_
 from zato.server.connection.ftp import FTPConnection
 from zato.server.generic.api.outconn_ftp import FTPClient
@@ -107,6 +109,9 @@ class OutconnFTPTestCase(TestCase):
 
     server: 'FTPTestServer'
 
+    # The Zato database of the suite, to which the audit log writes
+    database: 'ExitStack'
+
     # Whether the server under test speaks FTPS
     use_ssl = False
 
@@ -115,11 +120,11 @@ class OutconnFTPTestCase(TestCase):
         if not os.environ.get(ModuleCtx.Env_Key_Should_Test):
             return
 
-        # The audit log is pointed at a throwaway SQLite database for the duration of the suite.
-        audit_db_dir = mkdtemp(prefix='zato-test-ftp-audit-')
-        os.environ[AuditLogCtx.Env_Type] = AuditLogCtx.Type_SQLite
-        os.environ[AuditLogCtx.Env_Name] = os.path.join(audit_db_dir, 'audit.db')
+        # The audit log writes to a PostgreSQL database of its own for the duration of the suite ..
+        class_.database = ExitStack()
+        _ = class_.database.enter_context(zato_database_engine())
 
+        # .. and the transfers go to a server started for the suite.
         class_.server = FTPTestServer(use_ssl=class_.use_ssl)
         class_.server.start()
 
@@ -132,9 +137,8 @@ class OutconnFTPTestCase(TestCase):
 
         class_.server.stop()
 
-        # The audit log is no longer pointed at this suite's database.
-        del os.environ[AuditLogCtx.Env_Type]
-        del os.environ[AuditLogCtx.Env_Name]
+        # The database of the suite is dropped.
+        class_.database.close()
 
 # ################################################################################################################################
 

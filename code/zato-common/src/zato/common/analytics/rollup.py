@@ -24,7 +24,7 @@ from zato.common.analytics.api import get_analytics_engine, get_error_source, ge
     ErrorSource, Latency_Bucket_Count, usage_table, watermark_table
 from zato.common.audit_log.api import event_table, AuditEvent, AuditSource
 from zato.common.db_env.database import get_database_engine
-from zato.common.db_env.common import hour_period, Type_PostgreSQL
+from zato.common.db_env.common import hour_period
 from zato.common.db_env.write_path import Mechanism, write_path
 from zato.common.json_internal import dumps, loads
 
@@ -60,6 +60,10 @@ Batch_Size = 100_000
 
 # The channel sources the rollup aggregates
 _channel_sources = (AuditSource.REST_Channel, AuditSource.SOAP_Channel)
+
+# The transaction-level advisory lock under which one rollup runs at a time
+_rollup_lock_key = 7_401_852_208_417
+_rollup_lock_statement = text('select pg_advisory_xact_lock(:key)')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -100,7 +104,7 @@ class _UsageState:
 # ################################################################################################################################
 
 def _get_newest_settled_event_id(engine:'Engine') -> 'int':
-    """ Returns the highest event id of a PostgreSQL audit database, at or below which no insert is still in progress.
+    """ Returns the highest event id of the audit log, at or below which no insert is still in progress.
     """
     table_name = engine.dialect.identifier_preparer.format_table(event_table)
     lock_statement = text(f'LOCK TABLE {table_name} IN SHARE MODE')
@@ -139,13 +143,11 @@ def _load_new_events(last_event_id:'int') -> 'list':
         newer_than_watermark,
     )
 
-    # Concurrent transactions commit in any order on PostgreSQL, so the read stops at the highest id
+    # Concurrent transactions commit in any order, so the read stops at the highest id
     # below which every event is committed, and an event above it is read by a later run.
-    # On SQLite, each insert holds the write lock until its commit, so the events commit in the order of their ids.
-    if engine.dialect.name == Type_PostgreSQL:
-        newest_settled_id = _get_newest_settled_event_id(engine)
-        settled = event_table.c.id <= newest_settled_id
-        conditions = and_(conditions, settled)
+    newest_settled_id = _get_newest_settled_event_id(engine)
+    settled = event_table.c.id <= newest_settled_id
+    conditions = and_(conditions, settled)
 
     statement = select(
         event_table.c.id,
@@ -295,18 +297,14 @@ def _upsert_group(connection:'Connection', key:'anytuple', group:'_UsageState') 
 # ################################################################################################################################
 
 def _get_watermark(connection:'Connection') -> 'int':
-    """ Returns the id of the last audit event already aggregated, creating and locking
-    the watermark row on the way so overlapping runs serialize on it.
+    """ Returns the id of the last audit event already aggregated, creating the watermark row on the way,
+    under the advisory lock that serializes overlapping runs.
     """
-    # The watermark is written back unchanged first, whether or not its row exists yet - the no-op update acquires
-    # the SQLite write lock, so a second rollup started by an overlapping cron run waits here
-    # within the busy timeout until this one commits. The update assigns the column to itself,
-    # because a value read before the lock can be older than the one the other run commits ..
-    update_statement = update(watermark_table)
-    update_statement = update_statement.values(last_event_id=watermark_table.c.last_event_id)
-    _ = connection.execute(update_statement)
+    # The advisory lock is taken first, so a second rollup started by an overlapping cron run waits here
+    # until this one commits ..
+    _ = connection.execute(_rollup_lock_statement, {'key': _rollup_lock_key})
 
-    # .. the watermark is read only under that lock, because a read before the transaction began
+    # .. the watermark is read only under that lock, because a read before the lock is granted
     # returns the watermark as it was before the commit of the other run ..
     locked_statement = select(watermark_table.c.last_event_id)
 

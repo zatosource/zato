@@ -22,14 +22,33 @@ from base64 import b64encode
 from logging import basicConfig, getLogger, WARN
 from unittest import main, TestCase
 
+# The directory with the shared SQL container helpers used by the live database tests
+_live_sql_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'tests', 'python', 'zato-common', 'lib'))
+sys.path.insert(0, _live_sql_dir)
+
 # Zato
-from zato.common.rule_engine.sql.constants import Env_DB_URL
+from live_sql.containers import start_postgresql, stop_container  # noqa: E402
+from live_sql.env import build_env  # noqa: E402
+from zato.common.crypto.api import CryptoManager  # noqa: E402
+from zato.common.test.reservation import reserve_name, reserve_port  # noqa: E402
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 basicConfig(level=WARN, format='%(asctime)s - %(message)s')
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ModuleCtx:
+
+    # The PostgreSQL container that holds the Zato database of the environment under test
+    Database_Purpose          = 'dashboard-enmasse-postgresql'
+    Database_Container_Prefix = 'zato-dashboard-enmasse-postgresql'
+    Database_Username         = 'zato_dashboard_enmasse'
+    Database_Name             = 'zato_dashboard_enmasse'
+    Database_Password         = 'password.' + CryptoManager.generate_hex_string()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -150,10 +169,27 @@ class TestDashboardEnmasse(TestCase):
         broker_port = _find_free_port()
         _tmpdir = tempfile.mkdtemp(prefix='zato_dashboard_enmasse_test_')
 
+        # The Zato database of the environment resides in a PostgreSQL container of its own ..
+        cls.database_port = reserve_port(ModuleCtx.Database_Purpose)
+        cls.database_container = reserve_name(ModuleCtx.Database_Container_Prefix)
+
+        database_server = start_postgresql(
+            container_name=cls.database_container.name,
+            port=cls.database_port.port,
+            username=ModuleCtx.Database_Username,
+            password=ModuleCtx.Database_Password,
+            db_name=ModuleCtx.Database_Name,
+            needs_ssl=False,
+        )
+
+        # .. which quickstart, the server and the CLI select through the same environment variables.
+        cls.database_env = build_env(database_server.details)
+
         qs_dir = os.path.join(_tmpdir, 'qs')
         os.makedirs(qs_dir)
 
         qs_env = os.environ.copy()
+        qs_env.update(cls.database_env)
         qs_env.pop('COVERAGE_PROCESS_START', None)
 
         qs_cmd = [
@@ -166,6 +202,7 @@ class TestDashboardEnmasse(TestCase):
         if result.returncode != 0:
             shutil.rmtree(_tmpdir, ignore_errors=True)
             _tmpdir = None
+            cls._stop_database()
             raise SkipTest(
                 f'ZATO DASHBOARD ENMASSE TESTS SKIPPED - quickstart create failed:\n'
                 f'{result.stdout}\n{result.stderr}')

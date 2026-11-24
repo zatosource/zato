@@ -21,12 +21,11 @@ from zato.common.pubsub.sql.counts import postgresql_function, register_triggers
 
 if 0:
     from sqlalchemy import MetaData
-    from zato.common.typing_ import anytuple, strlist
+    from zato.common.typing_ import anytuple
 
     # Dummy assignments to satisfy type checkers
     MetaData = MetaData
     anytuple = anytuple
-    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,36 +35,8 @@ _insert_into = 'INSERT INTO pubsub_trace (message_id, topic_name, pub_time_ms)'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _sqlite_statements() -> 'strlist':
-    """ The row triggers of SQLite that keep the traces in step with the message rows.
-    """
-    add_new = f'{_insert_into} VALUES (new.id, new.topic_name, new.pub_time_ms);'
-
-    # A message published without a payload is a trace from the start ..
-    message_insert = 'CREATE TRIGGER IF NOT EXISTS pubsub_trace_insert AFTER INSERT ON pubsub_message ' + \
-        f'WHEN new.payload IS NULL BEGIN {add_new} END'
-
-    # .. a message that is or becomes a trace has its entry replaced, and one that receives a payload loses it ..
-    replace_new = 'INSERT OR REPLACE INTO pubsub_trace (message_id, topic_name, pub_time_ms) ' + \
-        'SELECT new.id, new.topic_name, new.pub_time_ms WHERE new.payload IS NULL;'
-
-    remove_revived = 'DELETE FROM pubsub_trace WHERE message_id = new.id AND new.payload IS NOT NULL;'
-
-    message_update = 'CREATE TRIGGER IF NOT EXISTS pubsub_trace_update ' + \
-        'AFTER UPDATE OF payload, topic_name, pub_time_ms ON pubsub_message ' + \
-        f'WHEN old.payload IS NULL OR new.payload IS NULL BEGIN {replace_new} {remove_revived} END'
-
-    # .. and a deleted trace leaves the list.
-    message_delete = 'CREATE TRIGGER IF NOT EXISTS pubsub_trace_delete AFTER DELETE ON pubsub_message ' + \
-        'WHEN old.payload IS NULL BEGIN DELETE FROM pubsub_trace WHERE message_id = old.id; END'
-
-    out = [message_insert, message_update, message_delete]
-    return out
-
-# ################################################################################################################################
-
-def _postgresql_statements() -> 'anytuple':
-    """ The statement triggers of PostgreSQL that keep the traces in step with the message rows.
+def _trace_statements() -> 'anytuple':
+    """ The statement triggers that keep the traces in step with the message rows.
     """
 
     # The messages a statement inserted without a payload are traces from the start ..
@@ -111,7 +82,8 @@ def _postgresql_statements() -> 'anytuple':
 def register_traces(metadata:'MetaData') -> 'None':
     """ Attaches the creation of the triggers of the traces to the creation of the schema.
     """
-    register_triggers(metadata, _sqlite_statements(), [_postgresql_statements()])
+    statements = [_trace_statements()]
+    register_triggers(metadata, statements)
 
 # ################################################################################################################################
 # ################################################################################################################################

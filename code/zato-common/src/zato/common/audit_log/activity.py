@@ -16,15 +16,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import dataclass
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, cast, Float, func, select, union_all
-from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.sql.functions import FunctionElement
+from sqlalchemy import BigInteger, cast, extract, Float, func, select, type_coerce, union_all
 
 # Zato
 from zato.common.audit_log.common import event_count_table, event_table
 from zato.common.audit_log.listing import count_conditions, Count_Period, event_conditions, needs_event_rows, \
     split_window, time_range
-from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,7 +29,6 @@ from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 if 0:
     from datetime import datetime
     from sqlalchemy.engine import Connection
-    from sqlalchemy.sql.compiler import SQLCompiler
     from zato.common.audit_log.listing import MinuteSplit, SearchFilters
     from zato.common.typing_ import any_, anydict, anylist
 
@@ -44,78 +40,19 @@ if 0:
     Connection = Connection
     MinuteSplit = MinuteSplit
     SearchFilters = SearchFilters
-    SQLCompiler = SQLCompiler
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+# How many milliseconds a second has
+_ms_per_second = 1000
 
 # The length of a minute of the event counts in milliseconds ..
-_minute_ms = Count_Period.total_seconds() * 1000
+_minute_ms = Count_Period.total_seconds() * _ms_per_second
 
 # .. and the offset from its start that lies past its last microsecond and before the next minute,
 # with a margin of half a microsecond for the rounding of epoch milliseconds.
 _minute_end_offset_ms = _minute_ms - 0.0005
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class _EpochMs(FunctionElement):
-    """ A moment as milliseconds since the Unix epoch, compiled to the date functions of each database.
-    """
-    type = Float()
-    name = 'epoch_ms'
-    inherit_cache = True
-
-# ################################################################################################################################
-
-@compiles(_EpochMs, Type_SQLite)
-def compile_epoch_ms_sqlite(element:'_EpochMs', compiler:'SQLCompiler', **kwargs:'any_') -> 'str':
-
-    # SQLite keeps the moment as text. Its whole seconds are read from the first 19 characters, without the fraction,
-    # which strftime would round to milliseconds, up to the next second at the end of one, and its microseconds start
-    # at the 21st character.
-    column = compiler.process(element.clauses, **kwargs)
-    out = "(CAST(strftime('%s', substr({0}, 1, 19)) AS INTEGER) * 1000.0 + CAST(substr({0}, 21, 6) AS INTEGER) / 1000.0)"
-    out = out.format(column)
-
-    return out
-
-# ################################################################################################################################
-
-@compiles(_EpochMs, Type_PostgreSQL)
-def compile_epoch_ms_postgresql(element:'_EpochMs', compiler:'SQLCompiler', **kwargs:'any_') -> 'str':
-    column = compiler.process(element.clauses, **kwargs)
-    out = f'(EXTRACT(EPOCH FROM {column}) * 1000)'
-
-    return out
-
-# ################################################################################################################################
-
-class _BucketIndex(FunctionElement):
-    """ A bucket position rounded down to a whole bucket. SQLite truncates it towards zero instead, which differs
-    from rounding down only below zero, and positions below zero are moved to the first bucket by the caller.
-    """
-    type = Float()
-    name = 'bucket_index'
-    inherit_cache = True
-
-# ################################################################################################################################
-
-@compiles(_BucketIndex, Type_SQLite)
-def compile_bucket_index_sqlite(element:'_BucketIndex', compiler:'SQLCompiler', **kwargs:'any_') -> 'str':
-    position = compiler.process(element.clauses, **kwargs)
-    out = f'CAST({position} AS INTEGER)'
-
-    return out
-
-# ################################################################################################################################
-
-@compiles(_BucketIndex, Type_PostgreSQL)
-def compile_bucket_index_postgresql(element:'_BucketIndex', compiler:'SQLCompiler', **kwargs:'any_') -> 'str':
-    position = compiler.process(element.clauses, **kwargs)
-    out = f'floor({position})'
-
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -167,7 +104,6 @@ def _event_time_in_counts(
     """ The moment of the first or the last matching event among the whole minutes of the event counts, read
     from the events of the first or the last minute whose count is not zero, None when every count is zero.
     """
-    dialect_name = connection.dialect.name
     period_start = event_count_table.c.period_start
 
     if is_first:
@@ -176,7 +112,7 @@ def _event_time_in_counts(
         order_by = period_start.desc()
 
     # The minute comes from the event counts ..
-    conditions = count_conditions(dialect_name, filters, split)
+    conditions = count_conditions(filters, split)
     has_events = func.sum(event_count_table.c.event_count) > 0
 
     statement = select(period_start)
@@ -195,7 +131,7 @@ def _event_time_in_counts(
     minute_end = minute_start + Count_Period
     minute_range = time_range(minute_start, minute_end)
 
-    minute_conditions = event_conditions(dialect_name, filters, needs_time=False)
+    minute_conditions = event_conditions(filters, needs_time=False)
     minute_conditions.append(minute_range)
 
     out = _event_time_at_end(connection, minute_conditions, is_first)
@@ -207,8 +143,7 @@ def _find_end(connection:'Connection', filters:'SearchFilters', split:'MinuteSpl
     """ The first or the last matching moment, read from the parts of the time window in the order
     of time - the partial minute at the start, the whole minutes and the partial minute at the end.
     """
-    dialect_name = connection.dialect.name
-    key_conditions = event_conditions(dialect_name, filters, needs_time=False)
+    key_conditions = event_conditions(filters, needs_time=False)
 
     # Each part is an edge range or None, which stands for the whole minutes
     parts:'anylist' = []
@@ -254,12 +189,11 @@ def _find_end(connection:'Connection', filters:'SearchFilters', split:'MinuteSpl
 def get_match_window(connection:'Connection', filters:'SearchFilters') -> 'MatchWindow | None':
     """ The moments of the first and the last event a search matches, None when it matches no event.
     """
-    dialect_name = connection.dialect.name
 
     # A search the event counts cannot answer reads both moments from the events in one statement,
     # which evaluates the free-text query once ..
     if needs_event_rows(filters):
-        conditions = event_conditions(dialect_name, filters)
+        conditions = event_conditions(filters)
 
         event_time = event_table.c.event_time
         first_moment = func.min(event_time)
@@ -308,13 +242,25 @@ def _clamp(index:'any_', bucket_count:'int') -> 'int':
 
 # ################################################################################################################################
 
+def _epoch_ms(moment:'any_') -> 'any_':
+    """ A moment as milliseconds since the Unix epoch, as an SQL expression.
+    """
+    epoch_seconds = extract('epoch', moment)
+    epoch_ms = epoch_seconds * _ms_per_second
+
+    out = type_coerce(epoch_ms, Float)
+    return out
+
+# ################################################################################################################################
+
 def _bucket_position(moment_ms:'any_', scale:'_BucketScale') -> 'any_':
-    """ The bucket a moment in epoch milliseconds falls in, as an SQL expression.
+    """ The bucket a moment in epoch milliseconds falls in, rounded down to a whole bucket, as an SQL expression.
+    Positions below zero are moved to the first bucket by the caller.
     """
     offset_ms = moment_ms - scale.start_ms
     position = offset_ms / scale.bucket_ms
 
-    out = _BucketIndex(position)
+    out = func.floor(position, type_=Float)
     return out
 
 # ################################################################################################################################
@@ -364,7 +310,7 @@ def _add_event_buckets(
     """ Counts the events matching the conditions per bucket and outcome in one statement and adds them to the buckets.
     With time ranges given, only the events within them are counted, each range read through the time index on its own.
     """
-    event_ms = _EpochMs(event_table.c.event_time)
+    event_ms = _epoch_ms(event_table.c.event_time)
     bucket = _bucket_position(event_ms, scale)
     bucket = bucket.label('bucket')
 
@@ -409,11 +355,10 @@ def _add_count_buckets(
     """ Adds the counts of the whole minutes that lie within one bucket to the buckets, and returns the starts
     of the minutes that a bucket edge cuts, which are counted from the events.
     """
-    dialect_name = connection.dialect.name
     period_start = event_count_table.c.period_start
 
     # The bucket of the first and of the last moment of each minute ..
-    minute_start_ms = _EpochMs(period_start)
+    minute_start_ms = _epoch_ms(period_start)
     minute_end_ms = minute_start_ms + _minute_end_offset_ms
 
     first_bucket = _bucket_position(minute_start_ms, scale)
@@ -422,7 +367,7 @@ def _add_count_buckets(
     last_bucket = _bucket_position(minute_end_ms, scale)
     last_bucket = last_bucket.label('last_bucket')
 
-    conditions = count_conditions(dialect_name, filters, split)
+    conditions = count_conditions(filters, split)
 
     positions = select(first_bucket, last_bucket, event_count_table.c.outcome, event_count_table.c.event_count, period_start)
     positions = positions.where(*conditions)
@@ -477,7 +422,6 @@ def count_by_bucket(
     """ The number of matching events of each outcome in each of the buckets, as one dict per bucket,
     where each bucket is bucket_ms long and the first one starts at start_ms.
     """
-    dialect_name = connection.dialect.name
 
     scale = _BucketScale()
     scale.start_ms = start_ms
@@ -493,13 +437,13 @@ def count_by_bucket(
 
     # A search the event counts cannot answer, and buckets shorter than a minute, are counted from the events ..
     if needs_event_rows(filters):
-        conditions = event_conditions(dialect_name, filters)
+        conditions = event_conditions(filters)
         _add_event_buckets(connection, conditions, [], scale, out)
 
         return out
 
     if bucket_ms < _minute_ms:
-        conditions = event_conditions(dialect_name, filters)
+        conditions = event_conditions(filters)
         _add_event_buckets(connection, conditions, [], scale, out)
 
         return out
@@ -517,7 +461,7 @@ def count_by_bucket(
 
     # .. with the minutes the bucket edges cut and the partial minutes at the edges of the window counted from the events.
     if event_ranges:
-        conditions = event_conditions(dialect_name, filters, needs_time=False)
+        conditions = event_conditions(filters, needs_time=False)
         event_ranges = _merge_ranges(event_ranges)
 
         _add_event_buckets(connection, conditions, event_ranges, scale, out)

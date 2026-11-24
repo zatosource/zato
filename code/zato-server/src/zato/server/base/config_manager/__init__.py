@@ -1179,7 +1179,7 @@ class ConfigManager(_ConfigManagerBase):
 # ################################################################################################################################
 
     def init_pubsub(self) -> 'None':
-        """ Replaces the subscription list from config.db, writes the difference to the pub/sub database,
+        """ Replaces the subscription list from the configuration database, writes the difference to the pub/sub database,
         rebuilds push delivery for the push subscriptions with active delivery, and stops push delivery
         for the subscriptions that are no longer among them.
         """
@@ -1263,7 +1263,7 @@ class ConfigManager(_ConfigManagerBase):
 # ################################################################################################################################
 
     def _sync_pubsub_subscriptions(self) -> 'None':
-        """ Replaces the subscription list from config.db at server startup, writes the difference
+        """ Replaces the subscription list from the configuration database at server startup, writes the difference
         to the pub/sub database, and builds the push delivery configs from scratch.
         """
         from contextlib import closing
@@ -1330,7 +1330,7 @@ class ConfigManager(_ConfigManagerBase):
 
     def _sync_pubsub_topics(self) -> 'None':
         """ Registers with the pub/sub backend the topics whose audit log was turned off and the ones whose payloads
-        leave with the audit export, and records which topics of config.db are inactive.
+        leave with the audit export, and records which topics of the configuration database are inactive.
         """
         inactive_topics = set()
 

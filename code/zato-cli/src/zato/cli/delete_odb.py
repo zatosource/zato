@@ -9,20 +9,19 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.cli import ZatoCommand, common_odb_opts
+from zato.cli import ZatoCommand
 
 class Delete(ZatoCommand):
     """ Deletes Zato components
     """
     needs_password_confirm = False
-    opts = common_odb_opts
 
     def execute(self, args):
 
         # Zato
         from zato.common.odb.model import Base
 
-        engine = self._get_engine(args)
+        engine = self._get_engine()
 
         if engine.dialect.has_table(engine.connect(), 'install_state'):
             Base.metadata.drop_all(engine)

@@ -11,12 +11,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import sqlite3
 from contextlib import closing
 from datetime import date, timedelta
 from random import Random
 
 # Zato
-from zato.common.db_env.engine import connect_sqlite_file
 from zato.server.demo_mcp.common import Database_Files, History_Days, SQL_Finance, SQL_Warehouse, SQL_Workforce
 
 # ################################################################################################################################
@@ -255,7 +255,7 @@ def _create_database(path:'str', schema:'anytuple', inserts:'anytuple') -> 'None
     if os.path.exists(path):
         os.remove(path)
 
-    with closing(connect_sqlite_file(path)) as connection:
+    with closing(sqlite3.connect(path)) as connection:
 
         # .. the tables are created ..
         for statement in schema:

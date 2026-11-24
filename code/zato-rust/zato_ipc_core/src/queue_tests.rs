@@ -1,4 +1,4 @@
-//! Unit tests of the writer queues.
+//! Unit tests of the queues of the keyed locks.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -6,7 +6,7 @@ use super::*;
 use crate::layout::{CONFIG_PLACE, WORKER_PLACE};
 use crate::view::test_support::{new_words, small_params};
 
-/// Queue of the database file the tests write.
+/// Queue of the keyed lock the tests take.
 const QUEUE: usize = 1;
 
 fn new_view() -> Result<RegionView<'static>, RegionError> {
@@ -39,7 +39,7 @@ fn places_are_served_in_order_of_entry() -> Result<(), RegionError> {
 }
 
 #[test]
-fn queues_of_two_files_are_independent() -> Result<(), RegionError> {
+fn queues_of_two_locks_are_independent() -> Result<(), RegionError> {
     let view = new_view()?;
 
     view.queue_enter(0, WORKER_PLACE)?;
@@ -58,7 +58,7 @@ fn abandoned_waiter_is_passed_over() -> Result<(), RegionError> {
     view.queue_enter(QUEUE, WORKER_PLACE)?;
     view.queue_enter(QUEUE, CONFIG_PLACE)?;
 
-    // The deadline of the waiter of the config process passes while the worker writes.
+    // The deadline of the waiter of the config process passes while the worker holds the lock.
     assert_eq!(view.queue_abandon(QUEUE, CONFIG_PLACE)?, Some(WORKER_PLACE));
     assert!(!view.queue_has_place(QUEUE, CONFIG_PLACE)?);
 
@@ -146,7 +146,7 @@ fn second_ticket_and_foreign_release_are_refused() -> Result<(), RegionError> {
     assert_eq!(view.queue_enter(QUEUE, WORKER_PLACE), Err(RegionError::AlreadyQueued(WORKER_PLACE)));
     assert_eq!(view.queue_release(QUEUE, CONFIG_PLACE), Err(RegionError::NotHoldingTurn(CONFIG_PLACE)));
 
-    // The queues of the keyed locks follow the writer queues, and no queue follows those
+    // No queue follows that of the last keyed lock
     let past_last = view.layout().queue_total;
     assert_eq!(view.queue_enter(past_last, WORKER_PLACE), Err(RegionError::NoSuchQueue(past_last)));
 
@@ -158,7 +158,7 @@ fn second_ticket_and_foreign_release_are_refused() -> Result<(), RegionError> {
 }
 
 #[test]
-fn concurrent_writers_never_overlap() -> Result<(), RegionError> {
+fn concurrent_holders_never_overlap() -> Result<(), RegionError> {
     let view = new_view()?;
     let places = [WORKER_PLACE, CONFIG_PLACE];
     let rounds = 2000;

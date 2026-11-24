@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
-from time import monotonic
 
 # SQLAlchemy
 from sqlalchemy import and_, BigInteger, cast, func, select
@@ -382,12 +381,9 @@ class SQLAdminAPI(SQLBrowseAPI):
         batch_size = get_batch_size()
         cleared_count = 0
 
-        # Work in bounded batches, each committed in turn with the server's other writes to this file.
-        # Many queues cleared at once then take orderly turns at the single SQLite writer rather than
-        # racing its lock and timing out when a turn waits longer than the busy timeout allows ..
+        # Work in bounded batches, each committed in a transaction of its own, so that no single transaction
+        # holds the locks of a deep queue for the whole duration of the operation ..
         while True:
-
-            batch_started = monotonic()
 
             rows_found, batch_cleared = call_database(self.engine, self._clear_queue_batch, self.engine, sub_key, batch_size)
 
@@ -398,7 +394,7 @@ class SQLAdminAPI(SQLBrowseAPI):
                 break
 
             # .. let the other greenlets run between the batches.
-            self._yield_after_batch(monotonic() - batch_started)
+            self._yield_after_write()
 
         logger.info('clear_queue -> sub_key:%s, cleared_count:%d', sub_key, cleared_count)
 
@@ -592,14 +588,12 @@ class SQLAdminAPI(SQLBrowseAPI):
 # ################################################################################################################################
 
     def _update_topic_name_in_batches(self, table:'any_', old_topic_name:'str', new_topic_name:'str') -> 'None':
-        """ Renames a topic in one table, a bounded batch of rows at a time, each batch committed in turn
-        with the other writes of the server to the same SQLite file.
+        """ Renames a topic in one table, a bounded batch of rows at a time, each batch committed
+        in a transaction of its own.
         """
         batch_size = get_batch_size()
 
         while True:
-
-            batch_started = monotonic()
 
             rows_found = call_database(self.engine, self._update_topic_name_batch, self.engine, table,
                 old_topic_name, new_topic_name, batch_size)
@@ -609,7 +603,7 @@ class SQLAdminAPI(SQLBrowseAPI):
                 break
 
             # .. let the other greenlets run between the batches.
-            self._yield_after_batch(monotonic() - batch_started)
+            self._yield_after_write()
 
 # ################################################################################################################################
 
@@ -667,14 +661,12 @@ class SQLAdminAPI(SQLBrowseAPI):
 # ################################################################################################################################
 
     def _delete_topic_rows_in_batches(self, table:'any_', topic_name:'str') -> 'None':
-        """ Deletes all of one topic's rows from a table, a bounded batch at a time, each batch committed in turn
-        with the other writes of the server to the same SQLite file.
+        """ Deletes all of one topic's rows from a table, a bounded batch at a time, each batch committed
+        in a transaction of its own.
         """
         batch_size = get_batch_size()
 
         while True:
-
-            batch_started = monotonic()
 
             rows_found = call_database(self.engine, self._delete_topic_rows_batch, self.engine, table, topic_name, batch_size)
 
@@ -683,7 +675,7 @@ class SQLAdminAPI(SQLBrowseAPI):
                 break
 
             # .. let the other greenlets run between the batches.
-            self._yield_after_batch(monotonic() - batch_started)
+            self._yield_after_write()
 
 # ################################################################################################################################
 

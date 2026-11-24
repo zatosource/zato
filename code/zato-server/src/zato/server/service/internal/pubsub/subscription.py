@@ -258,7 +258,7 @@ class GetList(AdminService):
             if not topic_exists:
                 topics_by_id[sub_id].append(topic_dict)
 
-        # Pairs pending removal that still belong to a subscription of config.db ..
+        # Pairs pending removal that still belong to a subscription of the configuration database ..
         for (sub_key, topic_name), status in status_by_pair.items():
 
             if status != subscription_list.STATUS_PENDING_REMOVAL:
@@ -322,7 +322,7 @@ class GetList(AdminService):
 
             data.append(sub_dict)
 
-        # Subscriptions deleted from config.db whose pairs are still pending removal
+        # Subscriptions deleted from the configuration database whose pairs are still pending removal
         deleted_topics:'anydict' = {}
 
         for (sub_key, topic_name), status in status_by_pair.items():

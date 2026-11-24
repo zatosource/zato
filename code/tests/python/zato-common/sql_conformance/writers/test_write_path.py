@@ -7,9 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from time import time
 from uuid import uuid4
-from zlib import crc32
 
 # gevent
 import gevent
@@ -25,14 +23,8 @@ from zato.common.audit_log.common import event_dedup_table
 from zato.common.common_db.schema import shared_object_table
 from zato.common.db_env.engine import execute_write
 from zato.common.db_env.write_path import Mechanism, write_path, WritePathViolation
-from zato.common.pubsub.sql.pending import new_pending_publication
-from zato.common.pubsub.sql.schema import message_table
-from zato.common.pubsub.sql.sqlite_write import write_items_sqlite
 from zato.common.test.zato_database import file_database_engine
 from zato.common.util.api import utcnow
-
-# Zato - Rust
-from zato_common_core.zato_common_core import SubscriptionList
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,14 +33,10 @@ if 0:
     from pathlib import Path
     from sqlalchemy.engine import Engine
     from sqlalchemy.sql.dml import Insert
-    from zato.common.pubsub.sql.pending import PendingPublication
-    from zato.common.typing_ import anydict
 
-    anydict = anydict
     Engine = Engine
     Insert = Insert
     Path = Path
-    PendingPublication = PendingPublication
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,17 +48,6 @@ class ModuleCtx:
 
     # The outcome of a dedup row that the tests insert
     Dedup_Outcome = ''
-
-    # The topic of the publications that the tests write, which has no subscribers
-    Topic_Name = 'write-path-test.orders'
-
-    # The priority and the expiration in seconds of those publications, and the time they are stamped with
-    Priority = 5
-    Expiration = 3600
-    Time_ISO = '2026-11-19T10:00:00+00:00'
-
-    # For how long the message IDs of those publications are recognized as repeats, in milliseconds
-    Dedup_Window_Ms = 7 * 24 * 60 * 60 * 1000
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -120,60 +97,6 @@ def _count_shared_objects(engine:'Engine', name:'str') -> 'int':
 def _insert_in_transaction(engine:'Engine', statement:'Insert') -> 'None':
     with engine.begin() as connection:
         _ = connection.execute(statement)
-
-# ################################################################################################################################
-
-def _new_publication(msg_id:'str') -> 'PendingPublication':
-    """ Returns a publication of one message to a topic without subscribers.
-    """
-    payload = 'Order ORD-0042 for Maria Johnson'
-    now_ms = int(time() * 1000)
-
-    message_values:'anydict' = {
-        'msg_id': msg_id,
-        'topic_name': ModuleCtx.Topic_Name,
-        'payload': payload,
-        'payload_encrypted': False,
-        'payload_crc32': crc32(payload.encode('utf8')),
-        'data_class': None,
-        'data_size': len(payload),
-        'data_preview': payload,
-        'priority': ModuleCtx.Priority,
-        'expiration': ModuleCtx.Expiration,
-        'pub_time_iso': ModuleCtx.Time_ISO,
-        'recv_time_iso': ModuleCtx.Time_ISO,
-        'expiration_time_iso': ModuleCtx.Time_ISO,
-        'pub_time_ms': now_ms,
-        'expiration_ms': now_ms + ModuleCtx.Expiration * 1000,
-        'publisher': None,
-        'cid': None,
-        'correl_id': None,
-        'in_reply_to': None,
-        'ext_client_id': None,
-        'max_retries': None,
-        'retry_sleep_time': None,
-        'retry_backoff_threshold': None,
-        'retry_backoff_multiplier': None,
-    }
-
-    out = new_pending_publication(message_values, now_ms, ModuleCtx.Dedup_Window_Ms)
-    return out
-
-# ################################################################################################################################
-
-def _write_publication(engine:'Engine', pending:'PendingPublication') -> 'None':
-    """ Writes one publication through the Rust write path of pub/sub in a transaction of its own.
-    """
-    with engine.begin() as connection:
-        _ = write_items_sqlite(connection, [pending], [], [], [], [], SubscriptionList())
-
-# ################################################################################################################################
-
-def _count_messages(engine:'Engine', msg_id:'str') -> 'int':
-    with engine.connect() as connection:
-        query = select(func.count()).select_from(message_table).where(message_table.c.msg_id == msg_id)
-        out = connection.execute(query).scalar_one()
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -249,35 +172,6 @@ def test_seed_cannot_change_rows(tmp_path:'Path') -> 'None':
                 _ = connection.execute(update)
 
         assert _count_shared_objects(engine, name) == 1
-
-# ################################################################################################################################
-
-def test_pubsub_rust_write_outside_mechanism_refused(tmp_path:'Path') -> 'None':
-    """ A batch of pub/sub written in Rust outside of every mechanism is refused by the guard before Rust runs a statement.
-    """
-    msg_id = uuid4().hex
-
-    with file_database_engine(tmp_path) as engine:
-
-        with pytest.raises(WritePathViolation):
-            _write_publication(engine, _new_publication(msg_id))
-
-        assert _count_messages(engine, msg_id) == 0
-
-# ################################################################################################################################
-
-def test_pubsub_rust_write_in_group_commit_accepted(tmp_path:'Path') -> 'None':
-    """ Every statement of the Rust write path of pub/sub passes the guard within the group commit,
-    and the batch is committed.
-    """
-    msg_id = uuid4().hex
-
-    with file_database_engine(tmp_path) as engine:
-
-        with write_path(Mechanism.Group_Commit):
-            _write_publication(engine, _new_publication(msg_id))
-
-        assert _count_messages(engine, msg_id) == 1
 
 # ################################################################################################################################
 # ################################################################################################################################

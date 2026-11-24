@@ -280,7 +280,7 @@ class ServerFunctionInvoker(AdminService):
             response = func(path, files, is_full)
         elif func_name == 'reload_config':
 
-            # The worker loads config.db whether or not a step of the reload of the config process failed,
+            # The worker loads the configuration database whether or not a step of the reload of the config process failed,
             # and a failed reload of the config process is retried until one succeeds, while the caller receives the error.
             if is_config_process():
                 config_runtime = cast_('ConfigRuntime', self.server.worker)
