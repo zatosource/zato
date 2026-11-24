@@ -280,3 +280,40 @@ fn a_longest_hold_off_below_the_hold_off_is_refused() {
         }
     ));
 }
+
+#[test]
+fn a_database_variable_is_read_under_an_alias() {
+    let mut variables = minimal();
+    variables.0.remove(ENV_DATABASE_HOST);
+    variables.0.insert("Zato_PubSub_DB_Host".to_owned(), "postgresql-pubsub".to_owned());
+    let config = NodeConfig::from_source(&variables).unwrap();
+    assert_eq!(config.database.host, "postgresql-pubsub");
+}
+
+#[test]
+fn a_database_variable_takes_precedence_over_its_aliases() {
+    let mut variables = minimal();
+    variables.0.insert("Zato_PubSub_DB_Host".to_owned(), "postgresql-pubsub".to_owned());
+    let config = NodeConfig::from_source(&variables).unwrap();
+    assert_eq!(config.database.host, "postgresql");
+}
+
+#[test]
+fn the_aliases_of_a_database_variable_are_read_in_their_order() {
+    let mut variables = minimal();
+    variables.0.remove(ENV_DATABASE_HOST);
+    variables.0.insert("Zato_Common_DB_Host".to_owned(), "postgresql-common".to_owned());
+    variables
+        .0
+        .insert("Zato_Audit_Log_DB_Host".to_owned(), "postgresql-audit-log".to_owned());
+    let config = NodeConfig::from_source(&variables).unwrap();
+    assert_eq!(config.database.host, "postgresql-audit-log");
+}
+
+#[test]
+fn a_database_variable_without_a_value_under_any_name_is_missing() {
+    let mut variables = minimal();
+    variables.0.remove(ENV_DATABASE_HOST);
+    let error = NodeConfig::from_source(&variables).unwrap_err();
+    assert!(matches!(error, ConfigError::Missing(ENV_DATABASE_HOST)));
+}

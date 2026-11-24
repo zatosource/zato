@@ -49,6 +49,15 @@ pub const ENV_GENERATION: &str = "Zato_HA_Generation";
 /// which waits for it before it runs any startup hook or opens the Zato database.
 pub const ENV_ACTIVATION_PATH: &str = "Zato_HA_Activation_Path";
 
+/// The prefix of the environment variables of the Zato database.
+pub const ENV_DATABASE_PREFIX: &str = "Zato_Database_";
+
+/// The prefixes of the environment variables that selected the databases of publish/subscribe, of the audit log and of
+/// the shared objects before the Zato database replaced them.
+///
+/// Each `Zato_Database_*` variable that is not set is read under these prefixes, in this order.
+pub const ENV_DATABASE_ALIAS_PREFIXES: [&str; 3] = ["Zato_PubSub_DB_", "Zato_Audit_Log_DB_", "Zato_Common_DB_"];
+
 /// The environment variable with the host of the Zato database on `PostgreSQL`.
 pub const ENV_DATABASE_HOST: &str = "Zato_Database_Host";
 
@@ -380,6 +389,29 @@ impl VariableSource for ProcessEnvironment {
     }
 }
 
+/// The variables of the Zato database, each read under its own name or under the first of its aliases that is set.
+struct DatabaseVariables<'source> {
+    /// The source that both the variables and their aliases are read from.
+    source: &'source dyn VariableSource,
+}
+
+impl VariableSource for DatabaseVariables<'_> {
+    fn variable(&self, name: &str) -> Option<String> {
+        // A variable set under its own name takes precedence over all of its aliases.
+        if let Some(value) = self.source.variable(name) {
+            return Some(value);
+        }
+
+        // Only the variables of the Zato database have aliases.
+        let suffix = name.strip_prefix(ENV_DATABASE_PREFIX)?;
+
+        ENV_DATABASE_ALIAS_PREFIXES.iter().find_map(|prefix| {
+            let alias_name = format!("{prefix}{suffix}");
+            self.source.variable(&alias_name)
+        })
+    }
+}
+
 /// Returns a required variable.
 fn required(source: &dyn VariableSource, name: &'static str) -> Result<String, ConfigError> {
     source.variable(name).ok_or(ConfigError::Missing(name))
@@ -590,13 +622,14 @@ impl NodeConfig {
         };
 
         let timers = timers(source)?;
+        let database_variables = DatabaseVariables { source };
 
         Ok(Self {
             referee: referee(source)?,
             node_name: node_name(source)?,
             role_port: port(source, ENV_ROLE_PORT, DEFAULT_ROLE_PORT)?,
             server_port: port(source, ENV_SERVER_PORT, DEFAULT_SERVER_PORT)?,
-            database: postgresql(source)?,
+            database: postgresql(&database_variables)?,
             server_health: server_health(source, timers.takeover)?,
             timers,
             log_level: source.variable(ENV_LOG_LEVEL).unwrap_or_else(|| DEFAULT_LOG_LEVEL.to_owned()),

@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 
 # Zato
-from zato.common.db_env.common import Type_SQLite
+from zato.common.db_env.common import get_env_value, Type_SQLite
 from zato.common.db_env.database import get_database_type
 
 # ################################################################################################################################
@@ -27,6 +27,9 @@ class ModuleCtx:
 
     # The environment variable overriding how many rows one bulk statement may touch.
     Env_Batch_Size = 'Zato_PubSub_Batch_Size'
+
+    # The names under which the same variable is read, in this order, when it is not set.
+    Env_Batch_Size_Aliases = ('Zato_PubSub_DB_Batch_Size',)
 
     # The environment variable overriding how many messages the publications and acknowledgements
     # of one group commit refer to at most.
@@ -107,7 +110,7 @@ def get_dedup_window_days() -> 'int':
 def get_batch_size() -> 'int':
     """ Returns how many rows one bulk delete or update statement may touch.
     """
-    if value := os.environ.get(ModuleCtx.Env_Batch_Size, ''):
+    if value := get_env_value(ModuleCtx.Env_Batch_Size, ModuleCtx.Env_Batch_Size_Aliases):
         out = int(value)
     else:
         out = _default_batch_size

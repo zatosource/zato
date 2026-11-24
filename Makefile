@@ -2106,6 +2106,9 @@ test-common: ## Common library tests.
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-common/reservation/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_reservation \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-common/database_env/ \
+		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_database_env \
+		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-common/local_postgresql/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_local_postgresql \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)

@@ -23,6 +23,7 @@ from weakref import WeakKeyDictionary
 from sqlalchemy import event
 
 # Zato
+from zato.common.db_env.common import get_env_value
 from zato.common.db_env.pg8000_common import check_rows
 from zato.common.db_env.write_path import get_write_path, Mechanism
 from zato.common.defaults import default_env_base_dir
@@ -53,6 +54,9 @@ class ModuleCtx:
 
     # The environment variable with the path to the file in which the active server records its generation.
     Env_Generation_File = 'Zato_Database_Generation_File'
+
+    # The names under which the same variable is read, in this order, when it is not set.
+    Env_Generation_File_Aliases = ('Zato_PubSub_Generation_File',)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -91,7 +95,7 @@ class ActiveServer(NamedTuple):
 def get_generation_file_path() -> 'str':
     """ Returns the path to the file in which the active server records its generation.
     """
-    if path := os.environ.get(ModuleCtx.Env_Generation_File, ''):
+    if path := get_env_value(ModuleCtx.Env_Generation_File, ModuleCtx.Env_Generation_File_Aliases):
         out = path
     else:
         out = os.path.join(default_env_base_dir, _generation_file_name)

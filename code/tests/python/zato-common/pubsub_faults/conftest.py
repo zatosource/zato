@@ -71,6 +71,10 @@ _server = PubSubServer('pubsub-faults')
 # The name of the control file of the faults of the PostgreSQL container.
 _database_control_name = 'postgresql'
 
+# PostgreSQL exits when its crash recovery fails under a file system fault, and Docker starts it again,
+# as the supervisor of a deployment does, until a start succeeds once the fault is removed.
+_database_restart_policy = ['--restart', 'on-failure']
+
 # The name of the copy of the log of each database container, which outlives the container.
 _container_log_copy_name = 'pubsub-faults-{}.txt'
 
@@ -291,6 +295,7 @@ def process_environment() -> 'environmentgen':
         os.makedirs(control_dir)
 
         docker_args = get_fsfault_docker_args(work_dir, control_dir, _database_control_name)
+        docker_args.extend(_database_restart_policy)
 
         database = start_pubsub_database('process-faults', mode, extra_docker_args=docker_args)
         reserve_wal_segments(database)

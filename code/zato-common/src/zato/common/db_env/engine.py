@@ -351,7 +351,7 @@ def _get_cache_key(config:'EnvDBConfig') -> 'strtuple':
         config.env_ssl_key_file,
         config.env_ssl_verify,
     ):
-        value = os.environ.get(name, '')
+        value = config.get_value(name)
         values.append(value)
 
     out = tuple(values)

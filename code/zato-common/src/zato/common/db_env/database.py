@@ -38,6 +38,11 @@ class ModuleCtx:
     # The prefix of the environment variables selecting the Zato database
     Env_Prefix = 'Zato_Database_'
 
+    # The prefixes of the environment variables that selected the databases of publish/subscribe, of the audit log
+    # and of the shared objects before the Zato database replaced them. Each Zato_Database_* variable that is not set
+    # is read under these prefixes, in this order.
+    Alias_Env_Prefixes = ('Zato_PubSub_DB_', 'Zato_Audit_Log_DB_', 'Zato_Common_DB_')
+
     # The SQLite file of the database in the environment directory
     File_Name = 'zato.db'
 
@@ -46,6 +51,7 @@ class ModuleCtx:
 # The Zato database, as the Zato_Database_* variables select it.
 database_config = EnvDBConfig(
     env_prefix=ModuleCtx.Env_Prefix,
+    alias_env_prefixes=ModuleCtx.Alias_Env_Prefixes,
     sqlite_file_name=ModuleCtx.File_Name,
     metadata_tuple=(pubsub_metadata, audit_metadata, common_metadata, rule_engine_metadata),
     needs_pool=True,
