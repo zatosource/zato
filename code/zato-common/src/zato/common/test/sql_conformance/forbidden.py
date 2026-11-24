@@ -47,12 +47,6 @@ def _new_value(name:'str', values:'strtuple') -> 'ForbiddenValue':
 
 class ModuleCtx:
 
-    # The SQLite pragmas and their values that let a commit return before the write-ahead log is on disk
-    SQLite_Pragmas = (
-        _new_value('synchronous', ('off', 'normal', '0', '1')),
-        _new_value('journal_mode', ('off', 'memory')),
-    )
-
     # The PostgreSQL settings and their values that let a commit return before its record is on disk
     PostgreSQL_Settings = (
         _new_value('synchronous_commit', ('off', 'local', 'remote_write')),
@@ -88,25 +82,6 @@ def _join_values(values:'strtuple') -> 'str':
 
 # ################################################################################################################################
 
-def _get_sqlite_patterns() -> 'strlist':
-    """ Returns the patterns of a pragma statement and of a rusqlite pragma update that set a forbidden value.
-    """
-    out:'strlist' = []
-
-    for item in ModuleCtx.SQLite_Pragmas:
-        values = _join_values(item.values)
-        name = re.escape(item.name)
-
-        statement = rf'\bpragma\s+(?:\w+\.)?{name}\s*=\s*[\'"]?(?:{values})\b'
-        update = rf'\bpragma_update\s*\([^;]*?[\'"]{name}[\'"]\s*,\s*[\'"]?(?:{values})\b'
-
-        out.append(statement)
-        out.append(update)
-
-    return out
-
-# ################################################################################################################################
-
 def _get_postgresql_patterns() -> 'strlist':
     """ Returns the patterns of an assignment of a forbidden value in SQL, in a configuration file or on a command line.
     """
@@ -128,7 +103,7 @@ def _get_postgresql_patterns() -> 'strlist':
 def get_forbidden_patterns() -> 'list[re.Pattern[str]]':
     """ Returns every pattern of a forbidden durability setting, compiled without regard to case.
     """
-    sources = _get_sqlite_patterns() + _get_postgresql_patterns()
+    sources = _get_postgresql_patterns()
 
     out = [re.compile(source, re.IGNORECASE) for source in sources]
     return out

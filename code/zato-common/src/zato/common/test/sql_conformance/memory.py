@@ -38,10 +38,6 @@ class ModuleCtx:
 
     # The name of each pattern and its source
     Patterns = (
-        ('sqlite_memory_url',    r'sqlite(?:\+\w+)?:/{2}(?:/:memory:)?[\'"]'),
-        ('sqlite_memory_file',   r'[\'"]:memory:[\'"]'),
-        ('sqlite_memory_uri',    r'\bmode\s*=\s*memory\b'),
-        ('rust_memory',          r'\bopen_in_memory\b'),
         ('docker_tmpfs_option',  r'-{2}tmpfs\b'),
         ('mount_type_tmpfs',     r'\btype\s*=\s*(?:tmpfs|ramfs)\b'),
         ('mount_command_tmpfs',  r'\bmount\s+-t\s+(?:tmpfs|ramfs)\b'),

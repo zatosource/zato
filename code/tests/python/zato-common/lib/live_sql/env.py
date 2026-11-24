@@ -26,10 +26,8 @@ if 0:
 # ################################################################################################################################
 
 # Maps connection detail keys to the suffix of the corresponding environment variable -
-# the prefix Zato_Database_ turns the suffix Type into Zato_Database_Type.
+# the prefix Zato_Database_ turns the suffix Host into Zato_Database_Host.
 _detail_suffixes = {
-    'type':          'Type',
-    'path':          'Path',
     'host':          'Host',
     'port':          'Port',
     'username':      'Username',
@@ -41,6 +39,9 @@ _detail_suffixes = {
     'ssl_key_file':  'SSL_Key_File',
     'ssl_verify':    'SSL_Verify',
 }
+
+# The connection detail key that names the type of a database server, which no variable of the Zato database holds
+_type_key = 'type'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -67,6 +68,12 @@ def build_env(details:'stranydict') -> 'stranydict':
     out:'stranydict' = {}
 
     for key, value in details.items():
+
+        # The type of the server is not a variable of the Zato database ..
+        if key == _type_key:
+            continue
+
+        # .. while every other detail is.
         suffix = _detail_suffixes[key]
         out[database_config.env_prefix + suffix] = value
 
@@ -76,7 +83,7 @@ def build_env(details:'stranydict') -> 'stranydict':
 
 @contextmanager
 def database_env(details:'stranydict') -> 'envgen':
-    """ Points the Zato database at one database server or SQLite file for the duration of a block.
+    """ Points the Zato database at one database server for the duration of a block.
     """
     env_names = get_env_names()
     values = build_env(details)

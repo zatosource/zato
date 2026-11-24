@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The generation of the active server. One server is active at a time and its standby is a stopped container.
-# A server that starts on PostgreSQL raises the generation in the single row of zato_active and writes a value unique
+# A server that starts raises the generation in the single row of zato_active and writes a value unique
 # to itself, its owner, in the same statement, and each transaction of the pub/sub database first confirms that
 # the generation and the owner are still those of its server. A transaction that writes locks the row for share,
 # so raising the generation waits for the writes of the previous server in progress and every write that begins

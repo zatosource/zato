@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from copy import deepcopy
 from json import dumps
 from uuid import uuid4
 

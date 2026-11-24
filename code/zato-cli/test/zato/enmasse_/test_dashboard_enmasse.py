@@ -216,14 +216,10 @@ class TestDashboardEnmasse(TestCase):
         config['main']['bind'] = f'0.0.0.0:{cls.port}'
         update_config_file(config, repo_location, 'server.conf')
 
-        # The rule store defaults to an SQLite file relative to the current directory, so the server
-        # and the CLI the test spawns would otherwise read two different stores - pin both to one file.
-        cls.rule_store_url = f'sqlite:///{os.path.join(_tmpdir, "zato-rule-store.db")}'
-
         env = os.environ.copy()
+        env.update(cls.database_env)
         env['Zato_Config_Bind_Port'] = str(cls.port)
         env['Zato_Broker_HTTP_Port'] = str(broker_port)
-        env[Env_DB_URL] = cls.rule_store_url
         env.pop('COVERAGE_PROCESS_START', None)
 
         _server_proc = subprocess.Popen(
@@ -248,7 +244,17 @@ class TestDashboardEnmasse(TestCase):
         except Exception:
             cls._dump_debug(repo_location)
             _kill_proc(_server_proc)
+            cls._stop_database()
             raise
+
+    @classmethod
+    def _stop_database(cls) -> 'None':
+        """ Stops the PostgreSQL container of the environment and releases its port and its name.
+        """
+        stop_container(cls.database_container.name)
+
+        cls.database_port.release()
+        cls.database_container.release()
 
     @classmethod
     def _dump_debug(cls, repo_location=None):
@@ -277,13 +283,14 @@ class TestDashboardEnmasse(TestCase):
         if _tmpdir and os.path.isdir(_tmpdir):
             shutil.rmtree(_tmpdir, ignore_errors=True)
         _tmpdir = None
+        cls._stop_database()
 
 # ################################################################################################################################
 
     def _cli_env(self):
-        """The environment for a CLI enmasse run - the same rule store the server reads."""
+        """The environment for a CLI enmasse run - the same Zato database the server reads."""
         env = os.environ.copy()
-        env[Env_DB_URL] = self.rule_store_url
+        env.update(self.database_env)
         env.pop('COVERAGE_PROCESS_START', None)
         return env
 

@@ -246,7 +246,7 @@ class PubSubWriter:
         if not self.audit_log.prepare_commit():
             drop_audit_events(batch)
 
-        # .. with the payloads of those built already prepared before the write lock is taken ..
+        # .. with the payloads of those built already prepared before the transaction begins ..
         prepare = partial(prepare_audit_payloads, batch)
 
         try:

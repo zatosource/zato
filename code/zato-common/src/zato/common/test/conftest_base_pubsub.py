@@ -32,14 +32,11 @@ import yaml
 from zato.common.crypto.api import CryptoManager
 from zato.common.api import PubSub
 from zato.common.db_env.database import database_config
-from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.db_env.fence import ModuleCtx as FenceCtx
-from zato.common.db_env.sqlite_stats import Env_Stats_Dir as SQLite_Env_Stats_Dir
 from zato.common.hl7.mllp.haproxy import Env_Port_Name as MLLP_Env_Port_Name
 from zato.common.test.process_util import get_process_tree_pids
 from zato.common.typing_ import cast_
-from zato.common.test.pubsub_database import get_db_mode, is_postgresql_mode, start_pubsub_database, \
-    stop_pubsub_database
+from zato.common.test.pubsub_database import get_db_mode, start_pubsub_database, stop_pubsub_database
 from zato.common.test.reservation import PortInUse
 
 # ################################################################################################################################
@@ -77,7 +74,7 @@ _worker_poll_interval = 0.2
 # The address that a server of a session listens on
 _server_host = '127.0.0.1'
 
-# The variable that keeps the quickstart directory of a session, with its database, after the session ends
+# The variable that keeps the quickstart directory of a session after the session ends
 Env_Keep_Quickstart = 'Zato_Test_Keep_Quickstart'
 
 # What the arbiter logs the first time that the worker is ready
@@ -100,8 +97,6 @@ _system_env_names = ('HOME', 'LANG', 'LC_ALL', 'LD_LIBRARY_PATH', 'LOGNAME', 'PA
 # sets for the test process and the server alike. The size of the pool is not one of them, it reaches the server
 # only through the explicit variables of the server.
 _database_env_names = (
-    database_config.env_type,
-    database_config.env_path,
     database_config.env_host,
     database_config.env_port,
     database_config.env_username,
@@ -119,9 +114,8 @@ _database_env_names = (
 # The variable with which Python writes the perf map of its functions, so that the stacks that perf records name them
 _python_perf_support_env_name = 'PYTHONPERFSUPPORT'
 
-# The variables that configure the monitoring of the databases and the profiling of a server, which the test process
-# passes on to it
-_monitoring_env_names = (SQLite_Env_Stats_Dir, _python_perf_support_env_name)
+# The variables that configure the profiling of a server, which the test process passes on to it
+_monitoring_env_names = (_python_perf_support_env_name,)
 
 # The logs that are copied out of an environment before it is torn down
 _server_log_file_name        = 'server.log'
@@ -724,7 +718,7 @@ def create_zato_server_fixture(
 
     With uses_environment_database, the server uses the Zato database that the environment of the test process
     already selects, otherwise the fixture starts a database of its own. With quickstart_parent_dir, the environment
-    and its SQLite database are created under that directory. Without log_to_files, the server logs to stdout only.
+    is created under that directory. Without log_to_files, the server logs to stdout only.
     """
 
     logger = logging.getLogger(logger_name)
@@ -764,6 +758,28 @@ def create_zato_server_fixture(
         elif 'enmasse_yaml' in setup_result:
             rendered_yaml = setup_result['enmasse_yaml']
 
+        # .. the server receives the variables of the suite and those of its database explicitly ..
+        server_env = dict(extra_server_env)
+
+        if 'server_env' in setup_result:
+            server_env.update(setup_result['server_env'])
+
+        # .. point the Zato database at a PostgreSQL database of this session, so the quickstart, the server,
+        # .. any subprocesses and the test process itself all share one database that starts empty
+        # .. and disappears together with the environment, unless the environment selects a database already ..
+        if uses_environment_database:
+            pubsub_database = None
+            logger.info('Zato database: %s', os.environ[database_config.env_name])
+
+        else:
+            db_mode = get_db_mode()
+            pubsub_database = start_pubsub_database('live', db_mode)
+            state.pubsub_database = pubsub_database
+            _ = atexit.register(stop_pubsub_database, pubsub_database)
+            os.environ.update(pubsub_database.env)
+            server_env.update(pubsub_database.env)
+            logger.info('Zato database: %s (%s)', pubsub_database.container_name, db_mode)
+
         # .. create quickstart and optionally import enmasse ..
         server_directory = run_quickstart_and_enmasse(
             state=state,
@@ -776,39 +792,9 @@ def create_zato_server_fixture(
             log_to_files=log_to_files,
         )
 
-        # .. point the Zato database at this environment's own file, or at a PostgreSQL container of this session,
-        # .. so the server, any subprocesses and the test process itself all share one database
-        # .. that starts empty and disappears together with the environment ..
-        db_mode = get_db_mode()
-
         # .. the generation of the active server is recorded in this environment too ..
         generation_file_path = os.path.join(server_directory, 'database-generation')
         os.environ['Zato_Database_Generation_File'] = generation_file_path
-
-        # .. the server receives the variables of the suite and those of its database explicitly ..
-        server_env = dict(extra_server_env)
-
-        if 'server_env' in setup_result:
-            server_env.update(setup_result['server_env'])
-
-        # .. a database that the environment selects already is the one that the server uses ..
-        if uses_environment_database:
-            pubsub_database = None
-            logger.info('Zato database: %s', os.environ[DatabaseEnv.Env_Type])
-
-        elif is_postgresql_mode(db_mode):
-            pubsub_database = start_pubsub_database('live', db_mode)
-            state.pubsub_database = pubsub_database
-            _ = atexit.register(stop_pubsub_database, pubsub_database)
-            os.environ.update(pubsub_database.env)
-            server_env.update(pubsub_database.env)
-            logger.info('Zato database: %s (%s)', pubsub_database.container_name, db_mode)
-        else:
-            pubsub_database = None
-            db_path = os.path.join(server_directory, DatabaseEnv.File_Name)
-            os.environ[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
-            os.environ[DatabaseEnv.Env_Path] = db_path
-            logger.info('Zato database: %s', db_path)
 
         # .. let the callback seed the database before the server uses it ..
         if 'pre_server_callback' in setup_result:

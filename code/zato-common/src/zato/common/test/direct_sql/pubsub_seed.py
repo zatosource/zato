@@ -19,10 +19,9 @@ from zlib import crc32
 
 # Zato
 from zato.common.common_db.schema import message_dedup_table
-from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.schema import active_table, delivery_table, message_table, metadata, topic_sub_table
-from zato.common.test.direct_sql.reset import reset_table_rows, truncate_tables
+from zato.common.test.direct_sql.reset import truncate_tables
 from zato.common.test.direct_sql.seed import BulkLoad, ModuleCtx as SeedModuleCtx, refresh_statistics, seed_bulk
 from zato.common.test.pubsub_database import get_db_mode, is_managed_mode
 from zato.common.util.api import sub_key_from_definition
@@ -71,9 +70,8 @@ class ModuleCtx:
     # The prefix of the identifiers of the seeded messages
     Msg_ID_Prefix = 'zpsm.seed'
 
-    # The statements that write the seeded pages to the database in a checkpoint of their own
+    # The statement that writes the seeded pages to the database in a checkpoint of their own
     Checkpoint_PostgreSQL = 'checkpoint'
-    Checkpoint_SQLite     = 'pragma wal_checkpoint(truncate)'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -121,15 +119,10 @@ def _get_seeded_tables() -> 'tablelist':
 # ################################################################################################################################
 
 def _clear_tables(engine:'Engine') -> 'None':
-    """ Empties the pub/sub tables, so that the identifiers of the seeded messages start at one. PostgreSQL truncates
-    the tables and SQLite deletes their rows.
+    """ Empties the pub/sub tables, so that the identifiers of the seeded messages start at one.
     """
     tables = _get_seeded_tables()
-
-    if engine.dialect.name == Type_PostgreSQL:
-        truncate_tables(engine, tables)
-    else:
-        reset_table_rows(engine, tables)
+    truncate_tables(engine, tables)
 
 # ################################################################################################################################
 
@@ -138,20 +131,13 @@ def _write_checkpoint(engine:'Engine') -> 'None':
     run during the measurement that follows it. A managed database runs its own checkpoints and its role holds
     no privilege to request one.
     """
-    is_postgresql = engine.dialect.name == Type_PostgreSQL
-
-    if is_postgresql and is_managed_mode(get_db_mode()):
+    if is_managed_mode(get_db_mode()):
         return
-
-    if is_postgresql:
-        statement = ModuleCtx.Checkpoint_PostgreSQL
-    else:
-        statement = ModuleCtx.Checkpoint_SQLite
 
     # A checkpoint writes no rows, and PostgreSQL runs it outside of a transaction only
     with engine.connect() as connection:
         connection = connection.execution_options(isolation_level=SeedModuleCtx.Autocommit)
-        _ = connection.exec_driver_sql(statement)
+        _ = connection.exec_driver_sql(ModuleCtx.Checkpoint_PostgreSQL)
 
 # ################################################################################################################################
 

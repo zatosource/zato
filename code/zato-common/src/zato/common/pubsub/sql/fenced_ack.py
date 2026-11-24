@@ -31,7 +31,7 @@ if 0:
 # ################################################################################################################################
 
 # The delivery rows of one subscriber for the given messages, with the attempt that each of them was handed out with.
-# On PostgreSQL, the rows are locked until the commit, so a lease of the same rows and a concurrent acknowledgement
+# The rows are locked until the commit, so a lease of the same rows and a concurrent acknowledgement
 # of them wait for this transaction or this transaction waits for them, and each one sees what the other one committed.
 _fenced_rows_query = select(
     delivery_table.c.id,
