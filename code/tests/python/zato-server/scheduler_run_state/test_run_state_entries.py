@@ -6,24 +6,20 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-import os
-
 # pytest
 import pytest
 
 # Zato
-from zato.common.db_env.engine import new_zato_engine
 from zato.common.api import SCHEDULER
-from zato.common.common_db.schema import metadata
 from zato.common.common_db.store import SharedObjectStore
+from zato.common.test.zato_database import zato_database_engine
 from zato.server.scheduler_.run_state import ModuleCtx as RunStateCtx, SchedulerRunState
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from pathlib import Path
+    from typing import Iterator
     from sqlalchemy.engine import Engine
     from zato.common.typing_ import anydict, callable_, callnone, intnone
 
@@ -32,7 +28,8 @@ if 0:
     callnone = callnone
     Engine = Engine
     intnone = intnone
-    Path = Path
+
+    storegen = Iterator['_InterleavedStore']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,14 +70,9 @@ class _InterleavedStore(SharedObjectStore):
 # ################################################################################################################################
 
 @pytest.fixture
-def store(tmp_path:'Path') -> '_InterleavedStore':
-    db_path = os.path.join(tmp_path, 'zato.db')
-
-    engine = new_zato_engine(f'sqlite:///{db_path}')
-    metadata.create_all(engine)
-
-    out = _InterleavedStore(engine)
-    return out
+def store() -> 'storegen':
+    with zato_database_engine() as engine:
+        yield _InterleavedStore(engine)
 
 # ################################################################################################################################
 

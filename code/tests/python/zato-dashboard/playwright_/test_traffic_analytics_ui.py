@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import os
 import subprocess
-import tempfile
 from http.client import OK, UNAUTHORIZED
 from urllib.parse import quote
 
@@ -20,18 +19,6 @@ import pytest
 # Zato
 from zato.common.test import rand_string
 from zato.common.test.playwright_pubsub import create_basic_auth
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# The traffic analytics screens run over their own Zato database and analytics store,
-# in a directory of this session's own, so what the screens show is exactly what
-# this test sent and nothing else. The variables must be set before the session
-# fixture starts the server and the dashboard, both of which inherit them.
-_analytics_state_dir = tempfile.mkdtemp(prefix='zato_analytics_test_')
-
-os.environ['Zato_Database_Path'] = os.path.join(_analytics_state_dir, 'zato.db')
-os.environ['Zato_Analytics_DB_Path'] = os.path.join(_analytics_state_dir, 'analytics.db')
 
 # ################################################################################################################################
 # ################################################################################################################################

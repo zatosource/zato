@@ -17,8 +17,8 @@ import tempfile
 from dataclasses import dataclass
 
 # Zato
-from failover import build_server_env, ContainerServer, create_container, remove_container, run_container, \
-    save_container_logs, wait_until_up
+from failover import build_server_env, ContainerServer, copy_server_environment, create_container, remove_container, \
+    run_container, save_container_logs, wait_until_up
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.conftest_base_pubsub import find_free_port, patch_server_conf, run_quickstart_and_enmasse, \
     SessionState
@@ -31,6 +31,9 @@ from zato_container import build_image
 
 if 0:
     from zato.common.test.pubsub_database import PubSubDatabase
+    from zato.common.typing_ import strlist
+
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -71,21 +74,30 @@ class ServerPair:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _new_server(pair:'ServerPair', name:'str', rendered_yaml:'str', invoke_password:'str',
-    services_source:'str') -> 'ContainerServer':
-    """ Creates the quickstart environment of one server, with the definitions and the services of the relay.
-    """
-    state = SessionState(f'zato.test.pubsub_exactly_once_takeover.{name}', f'server-logs-exactly-once-takeover-{name}.txt')
-    pair.states.append(state)
+def _new_state(pair:'ServerPair', name:'str') -> 'SessionState':
+    out = SessionState(f'zato.test.pubsub_exactly_once_takeover.{name}', f'server-logs-exactly-once-takeover-{name}.txt')
+    pair.states.append(out)
 
-    # The environment is under the work directory, which the container of the server mounts ..
+    return out
+
+# ################################################################################################################################
+
+def _create_environments(pair:'ServerPair', rendered_yaml:'str', invoke_password:'str', services_source:'str') -> 'strlist':
+    """ Creates the quickstart environment of the active server in the shared database, with the definitions
+    and the services of the relay, and a copy of it for the standby, and returns the server directories of both.
+    """
+    state_active = _new_state(pair, 'a')
+    state_standby = _new_state(pair, 'b')
+
+    # The environment is under the work directory, which the containers of the servers mount ..
     server_directory = run_quickstart_and_enmasse(
-        state=state,
+        state=state_active,
         logger=logger,
         zato_bin=ModuleCtx.Zato_Binary,
         invoke_password=invoke_password,
         rendered_yaml=rendered_yaml,
-        quickstart_prefix=f'zato_exactly_once_takeover_{name}_',
+        quickstart_prefix='zato_exactly_once_takeover_a_',
+        extra_env=pair.database.env,
         quickstart_parent_dir=pair.work_dir,
     )
 
@@ -93,6 +105,18 @@ def _new_server(pair:'ServerPair', name:'str', rendered_yaml:'str', invoke_passw
     pickup_dir = os.path.join(server_directory, 'pickup', 'incoming', 'services')
     _ = shutil.copy(services_source, pickup_dir)
 
+    # .. and the standby has a copy of the environment, because both servers share the configuration of the database.
+    standby_directory = copy_server_environment(state_active, state_standby, 'zato_exactly_once_takeover_b_',
+        pair.work_dir)
+
+    out = [server_directory, standby_directory]
+    return out
+
+# ################################################################################################################################
+
+def _new_server(pair:'ServerPair', name:'str', server_directory:'str') -> 'ContainerServer':
+    """ Returns one server of the pair in its quickstart environment.
+    """
     out = ContainerServer(
         name=name,
         container_name=f'zato-exactly-once-takeover-{name}',
@@ -101,7 +125,7 @@ def _new_server(pair:'ServerPair', name:'str', rendered_yaml:'str', invoke_passw
         broker_port=find_free_port(),
     )
 
-    # .. and it reads the control files of the relay from the directory that the test process writes them to.
+    # The server reads the control files of the relay from the directory that the test process writes them to
     patch_server_conf(server_directory, out.port, False)
     build_server_env(out, pair.database)
     out.env[Env_Dir] = pair.control_dir
@@ -126,9 +150,10 @@ def create_server_pair(rendered_yaml:'str', services_source:'str') -> 'ServerPai
     create_control_dir(out.control_dir)
 
     invoke_password = 'test.invoke.' + CryptoManager.generate_hex_string()
+    active_directory, standby_directory = _create_environments(out, rendered_yaml, invoke_password, services_source)
 
-    out.active = _new_server(out, 'a', rendered_yaml, invoke_password, services_source)
-    out.standby = _new_server(out, 'b', rendered_yaml, invoke_password, services_source)
+    out.active = _new_server(out, 'a', active_directory)
+    out.standby = _new_server(out, 'b', standby_directory)
 
     # .. and a pair whose servers do not start is removed here, because no fixture receives it to remove it later.
     try:

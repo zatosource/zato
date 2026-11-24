@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 from base64 import b64encode
 from hashlib import pbkdf2_hmac
 
@@ -19,8 +18,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 
 # Zato
-from zato.common.db_env.engine import new_zato_engine
 from zato.common.crypto.api import CryptoManager
+from zato.common.test.zato_database import zato_database_engine
 from zato.common.webapp.auth.dashboard_users import is_dashboard_admin, verify_django_password
 
 # ################################################################################################################################
@@ -28,11 +27,11 @@ from zato.common.webapp.auth.dashboard_users import is_dashboard_admin, verify_d
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import iterator_
 
     # Add dummy assignments to satisfy type checkers
     Engine = Engine
-    any_ = any_
+    iterator_ = iterator_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -58,7 +57,7 @@ _salt_length = 16
 # The table the Dashboard keeps its users in, with only the columns the check reads.
 _auth_user_create_table = """
 create table auth_user (
-    id integer primary key,
+    id serial primary key,
     username varchar(150) not null unique,
     password varchar(128) not null,
     is_active bool not null
@@ -88,12 +87,9 @@ def _django_hash(password:'str', algorithm:'str'=_hash_algorithm) -> 'str':
 # ################################################################################################################################
 
 @pytest.fixture
-def engine(tmp_path:'any_') -> 'Engine':
-    """ An engine over a database holding the Dashboard's users - one able to sign in, one disabled.
+def engine() -> 'iterator_[Engine]':
+    """ An engine over a new PostgreSQL database holding the Dashboard's users - one able to sign in, one disabled.
     """
-
-    # The database is a file because the check opens a connection of its own.
-    database_path = os.path.join(tmp_path, 'dashboard.db')
 
     # Build the hashes the rows carry ..
     admin_hash    = _django_hash(_admin_password)
@@ -107,16 +103,15 @@ def engine(tmp_path:'any_') -> 'Engine':
     external_row = {'username':_external_username, 'password':_unusable_password_marker, 'is_active':True}
 
     # .. and seed the database with them.
-    engine = new_zato_engine(f'sqlite:///{database_path}')
+    with zato_database_engine() as engine:
 
-    with engine.begin() as connection:
-        _ = connection.execute(text(_auth_user_create_table))
-        _ = connection.execute(insert_statement, admin_row)
-        _ = connection.execute(insert_statement, disabled_row)
-        _ = connection.execute(insert_statement, external_row)
+        with engine.begin() as connection:
+            _ = connection.execute(text(_auth_user_create_table))
+            _ = connection.execute(insert_statement, admin_row)
+            _ = connection.execute(insert_statement, disabled_row)
+            _ = connection.execute(insert_statement, external_row)
 
-    out = engine
-    return out
+        yield engine
 
 # ################################################################################################################################
 # ################################################################################################################################

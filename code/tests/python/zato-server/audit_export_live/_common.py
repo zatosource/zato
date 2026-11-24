@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import sqlite3
 import time
 from http.client import OK
 from json import loads
@@ -17,14 +16,17 @@ from typing import NamedTuple
 # requests
 import requests
 
+# SQLAlchemy
+from sqlalchemy import select
+
 # Zato
 from zato.common.api import MCP
-from zato.common.audit_log.common import AuditSource, get_event_select_list
+from zato.common.audit_log.api import event_attr_table, event_table
+from zato.common.audit_log.common import AuditSource, get_event_column
 from zato.common.audit_log.export.config import ModuleCtx as ExportCtx
-from zato.common.db_env.connection import register_sqlite_functions
-from zato.common.util.time_ import parse_utc
 
 # Test support
+from live_environment.audit import new_database_engine
 from live_otel.containers import OTelCollector
 
 # ################################################################################################################################
@@ -32,7 +34,7 @@ from live_otel.containers import OTelCollector
 
 if 0:
     from live_environment.quickstart import ZatoEnvironment
-    from zato.common.typing_ import anydict, anydictnone, callable_, dictlist, strlist, strnone, strstrdict
+    from zato.common.typing_ import anydict, anydictnone, anylist, callable_, dictlist, strlist, strnone, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -272,7 +274,7 @@ class AuditExportEnvironment(NamedTuple):
     rest_url: 'str'
     rest_payload_url: 'str'
     api_key: 'str'
-    audit_db_path: 'str'
+    database_env: 'strstrdict'
     server_log_path: 'str'
 
 # ################################################################################################################################
@@ -282,9 +284,6 @@ class AuditExportEnvironment(NamedTuple):
 _event_columns = ('id', 'cid', 'cid_sequence', 'source', 'event_type', 'object_name', 'msg_id', 'correl_id', 'ext_client_id',
     'pub_time', 'event_time', 'server_name', 'endpoint', 'sub_key', 'size', 'priority', 'outcome',
     'application_outcome', 'classification', 'status', 'duration_ms', 'data')
-
-# The timestamp columns, which SQLite keeps as text in UTC without an offset
-_time_columns = ('pub_time', 'event_time')
 
 # ################################################################################################################################
 # ################################################################################################################################

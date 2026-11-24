@@ -38,6 +38,7 @@ import pytest  # noqa: E402
 # Zato
 from zato.common.crypto.api import CryptoManager  # noqa: E402
 from zato.common.test import kill_server_process  # noqa: E402
+from zato.common.test.zato_database import create_test_database, drop_test_database  # noqa: E402
 from zato.common.util.config import get_config_object, update_config_file  # noqa: E402
 
 # Test support
@@ -50,7 +51,7 @@ from live_config import Basic_Password, build_config_yaml, Client_Secret, Invoke
 
 if 0:
     from collections.abc import Iterator
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, strstrdict
 
     endpointgen = Iterator[TestEndpoint]
 
@@ -69,21 +70,17 @@ _ping_poll_interval   = 0.5
 # How long the token endpoint says its tokens are valid for, in seconds
 _token_expires_in = 3600
 
-# The variable that points the quickstart, the server and enmasse at the SQLite file of the environment of the suite,
-# which would otherwise be the default database in the home directory, and the name of that file
-_database_path_variable = 'Zato_Database_Path'
-_database_file_name = 'zato.db'
-
 # ################################################################################################################################
 # ################################################################################################################################
 
 class _SessionState:
-    """ The server process and the directory of its environment.
+    """ The server process, the directory of its environment and the Zato database of the environment.
     """
 
     def __init__(self) -> 'None':
         self.server_process:'any_' = None
         self.temp_directory = ''
+        self.database_env:'strstrdict' = {}
 
     def cleanup(self) -> 'None':
         kill_server_process(self.server_process, _process_kill_timeout, server_directory=self.temp_directory)
@@ -95,8 +92,12 @@ class _SessionState:
         self.temp_directory = ''
 
         # The cleanup runs at the end of the session and again at exit
-        if _database_path_variable in os.environ:
-            del os.environ[_database_path_variable]
+        if self.database_env:
+            for name in self.database_env:
+                del os.environ[name]
+
+            drop_test_database(self.database_env)
+            self.database_env = {}
 
 _state = _SessionState()
 _ = atexit.register(_state.cleanup)
@@ -170,8 +171,13 @@ def zato_server(endpoint:'TestEndpoint') -> 'any_':
     port = _find_free_port()
     _state.temp_directory = tempfile.mkdtemp(prefix='zato_rest_outgoing_live_test_')
 
-    # The quickstart, the server and enmasse inherit the database of the environment of the suite
-    os.environ[_database_path_variable] = os.path.join(_state.temp_directory, _database_file_name)
+    # The quickstart, the server and enmasse inherit the Zato database of the environment of the suite ..
+    _state.database_env = create_test_database()
+    os.environ.update(_state.database_env)
+
+    # .. which is dropped at exit before the PostgreSQL server that holds it is removed.
+    atexit.unregister(_state.cleanup)
+    _ = atexit.register(_state.cleanup)
 
     quickstart_command = [
         Zato_Bin, 'quickstart', 'create', _state.temp_directory,

@@ -28,8 +28,7 @@ from urllib.request import Request, urlopen
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.pickup_listener import PickupListener
-from zato.common.test.pubsub_database import new_sqlite_database
-from zato.common.typing_ import cast_
+from zato.common.test.zato_database import create_test_database, drop_test_database
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -419,6 +418,9 @@ class _SessionState:
         self.server_process:'subprocess.Popen[bytes] | None' = None
         self.quickstart_directory:'str | None' = None
 
+        # The Zato_Database_* variables of the database of the environment, empty until the environment is created
+        self.database_env:'strstrdict' = {}
+
         # The listener of the pickup directory, which is not running until the environment is complete
         self.pickup_listener:'PickupListener | None' = None
 
@@ -475,6 +477,14 @@ class _SessionState:
             shutil.rmtree(self.quickstart_directory, ignore_errors=True)
 
         self.quickstart_directory = None
+
+        # The variables that selected the database are removed together with the database
+        if self.database_env:
+            for name in self.database_env:
+                del os.environ[name]
+
+            drop_test_database(self.database_env)
+            self.database_env = {}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -580,18 +590,6 @@ def _wait_for_server(host:'str', port:'int', timeout:'int'=_server_wait_timeout)
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_database_env() -> 'strstrdict':
-    """ Returns the variables that select the Zato database of the suite, a SQLite file in its own environment,
-    which persists across a restart of the server.
-    """
-    quickstart_directory = cast_('str', _state.quickstart_directory)
-    database = new_sqlite_database(quickstart_directory)
-
-    out = database.env
-    return out
-
-# ################################################################################################################################
-
 def _start_server(server_directory:'str', server_port:'int', broker_port:'int') -> 'None':
     """ Starts the Zato server and waits for it to be ready.
     """
@@ -599,7 +597,6 @@ def _start_server(server_directory:'str', server_port:'int', broker_port:'int') 
     server_env['Zato_Config_Bind_Port'] = str(server_port)
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
     _ = server_env.pop('COVERAGE_PROCESS_START', None)
-    server_env.update(_get_database_env())
 
     # The server runs in its own process group so that teardown can terminate the whole tree.
     _state.server_process = subprocess.Popen(
@@ -661,12 +658,20 @@ def zato_server() -> 'any_':
     counting_port = _start_target_server('counting', _CountingHandler)
     glpi_port = _start_target_server('glpi', GLPIHandler)
 
+    # .. the environment receives a Zato database of its own, which persists across a restart of the server
+    # and which the quickstart, the server and every enmasse command that this process runs use ..
+    _state.database_env = create_test_database()
+    os.environ.update(_state.database_env)
+
+    # .. the cleanup at exit runs before the PostgreSQL server that holds the database is removed ..
+    atexit.unregister(_state.cleanup)
+    _ = atexit.register(_state.cleanup)
+
     # .. create a quickstart environment ..
     _state.quickstart_directory = tempfile.mkdtemp(prefix='zato_sdk_live_qs_')
 
     quickstart_env = os.environ.copy()
     _ = quickstart_env.pop('COVERAGE_PROCESS_START', None)
-    quickstart_env.update(_get_database_env())
 
     quickstart_command = [
         _zato_bin, 'quickstart', 'create', _state.quickstart_directory,

@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-import os
 from contextlib import closing
 from datetime import datetime
 
@@ -19,23 +18,23 @@ import pytest
 from sqlalchemy.orm import sessionmaker
 
 # Zato
-from zato.common.db_env.engine import new_zato_engine
 from zato.common.api import SCHEDULER
-from zato.common.common_db.schema import metadata
 from zato.common.common_db.store import SharedObjectStore
+from zato.common.db_env.database import dispose_database_engine, get_database_engine
 from zato.common.ext.bunch import Bunch
 from zato.common.odb.model import Base, Job, Service as ServiceModel
 from zato.common.typing_ import cast_
 from zato.server.scheduler_.client import ModuleCtx as ClientCtx, SchedulerClient
 from zato.server.scheduler_.run_state import ModuleCtx as RunStateCtx, SchedulerRunState
 from zato.server.service.internal.scheduler import _create_edit, _SchedulerAdmin, Delete
+from zato.common.test.config_database import config_database_engine
 from zato.common.test.direct_sql.seed import seed_config_objects
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from pathlib import Path
+    from typing import Iterator
     from redis import Redis
     from sqlalchemy.engine import Engine
     from zato.common.typing_ import any_, anydict, anylist, strlist
@@ -44,9 +43,10 @@ if 0:
     anydict = anydict
     anylist = anylist
     Engine = Engine
-    Path = Path
     Redis = Redis
     strlist = strlist
+
+    environmentgen = Iterator['_Environment']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -145,14 +145,9 @@ class _ServiceCall:
 class _Environment:
     """ The ODB, the Zato database and the recorders of one test.
     """
-    def __init__(self, tmp_path:'Path') -> 'None':
+    def __init__(self, odb_engine:'Engine', database_engine:'Engine') -> 'None':
 
-        odb_engine = new_zato_engine(f'sqlite:///{os.path.join(tmp_path, "config.db")}')
-        Base.metadata.create_all(odb_engine)
         self.odb_session = sessionmaker(bind=odb_engine)
-
-        database_engine = new_zato_engine(f'sqlite:///{os.path.join(tmp_path, "zato.db")}')
-        metadata.create_all(database_engine)
 
         self.events:'anylist' = []
         self.store = _RecordingStore(database_engine, self.odb_session, self.events)
@@ -229,9 +224,13 @@ class _ODBAdapter:
 # ################################################################################################################################
 
 @pytest.fixture
-def env(tmp_path:'Path') -> '_Environment':
-    out = _Environment(tmp_path)
-    return out
+def env() -> 'environmentgen':
+    with config_database_engine(Base.metadata.sorted_tables) as odb_engine:
+        database_engine = get_database_engine()
+        try:
+            yield _Environment(odb_engine, database_engine)
+        finally:
+            dispose_database_engine()
 
 # ################################################################################################################################
 

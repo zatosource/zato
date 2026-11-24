@@ -8,6 +8,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # What the live explain suite's fixtures and tests share.
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import strstrdict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # The password the IMAP server requires - a login with any other one is rejected
 IMAP_Password = 'imap-live-secret-1'
 
@@ -24,6 +33,9 @@ class LiveServer:
     server_port = 0
     invoke_password = ''
     server_directory = ''
+
+    # The Zato_Database_* variables of the PostgreSQL database the server writes its configuration and audit log to
+    database_env:'strstrdict' = {}
 
     # Where the server's MLLP listener accepts the messages of the MLLP channel proof - decided before the server starts
     mllp_port = 0

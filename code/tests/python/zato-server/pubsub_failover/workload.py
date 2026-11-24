@@ -10,14 +10,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # of what they observed against the pub/sub database and the push receiver.
 
 # stdlib
-import sqlite3
 import threading
 import time
 from collections import Counter
 
 # Zato
 from zato.common.test.client import PublishClient, PullClient
-from zato.common.test.pubsub_database import connect, is_postgresql_mode
+from zato.common.test.pubsub_database import connect
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -250,15 +249,9 @@ class Workload:
 # ################################################################################################################################
 
 def read_rows(env:'FailoverEnvironment', query:'str') -> 'list':
-    """ Returns the rows of a query against the pub/sub database of the environment, whichever database it is.
+    """ Returns the rows of a query against the pub/sub database of the environment.
     """
-    database = env.database
-
-    if is_postgresql_mode(database.mode):
-        connection = connect(database)
-    else:
-        path = database.env['Zato_Database_Path']
-        connection = sqlite3.connect(f'file:{path}?mode=ro', uri=True)
+    connection = connect(env.database)
 
     try:
         cursor = connection.cursor()

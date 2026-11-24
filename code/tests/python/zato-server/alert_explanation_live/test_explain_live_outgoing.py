@@ -14,7 +14,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # whose health check, fired by the suite's own scheduler every second, is refused until its streak brings it down.
 
 # stdlib
-import os
 import socket
 from contextlib import closing
 from dataclasses import dataclass
@@ -25,7 +24,6 @@ from sqlalchemy import inspect, select
 from sqlalchemy.orm import sessionmaker
 
 # Zato
-from zato.common.db_env.engine import new_zato_engine
 from zato.common.alerting.explain.evidence import Heading_Object
 from zato.common.alerting.explain.settings_info import Label_Alerts, On
 from zato.common.alerting.explain.store import ExplanationStore
@@ -521,8 +519,7 @@ def _get_stored_explanations(outgoing:'_OutgoingDescription') -> 'anylist':
     """ Every explanation the live server stored for the connection, read off its own ODB - the proofs share
     the server, so this one reads the explanations of its own connections alone.
     """
-    path = os.path.join(os.path.dirname(LiveServer.server_directory), 'config.db')
-    session_maker = sessionmaker(bind=new_zato_engine(f'sqlite:///{path}'))
+    session_maker = sessionmaker(bind=_server_audit_engine())
 
     store = ExplanationStore(session_maker)
 
@@ -631,8 +628,7 @@ def _wait_for_soap_pings(count:'int') -> 'anylist':
 def _get_stored_soap_health_explanations() -> 'anylist':
     """ Every explanation the live server stored for the SOAP connection's health check, read off its own ODB.
     """
-    path = os.path.join(os.path.dirname(LiveServer.server_directory), 'config.db')
-    session_maker = sessionmaker(bind=new_zato_engine(f'sqlite:///{path}'))
+    session_maker = sessionmaker(bind=_server_audit_engine())
 
     store = ExplanationStore(session_maker)
 

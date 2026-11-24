@@ -190,7 +190,7 @@ def audit_export_live() -> 'iterator_':
             rest_url=server_address + ModuleCtx.REST_Channel_Path,
             rest_payload_url=server_address + ModuleCtx.REST_Payload_Channel_Path,
             api_key=api_key,
-            audit_db_path=zato.audit_db_path,
+            database_env=zato.database_env,
             server_log_path=os.path.join(zato.server_directory, 'logs', 'server.log'),
         )
         yield out

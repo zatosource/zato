@@ -13,12 +13,9 @@ import time
 # pg8000
 import pg8000.dbapi
 
-# pytest
-import pytest
-
 # Zato
 from zato.common.test.exactly_once.config import TestConfig
-from zato.common.test.pubsub_database import connect, get_db_mode, is_postgresql_mode
+from zato.common.test.pubsub_database import connect
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -29,12 +26,6 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# Whether the suite runs against PostgreSQL
-_is_postgresql = is_postgresql_mode(get_db_mode())
-
-# The marker of the tests that run against PostgreSQL only
-postgresql_only = pytest.mark.skipif(not _is_postgresql, reason='PostgreSQL only')
 
 # How long the trigger delays the insert of a message, in seconds
 Insert_Delay_Seconds = 30

@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from contextlib import contextmanager
 from datetime import datetime
-from tempfile import TemporaryDirectory
 
 # SQLAlchemy
 from sqlalchemy.orm import sessionmaker
@@ -20,7 +19,7 @@ from zato.common.alerting.object_config import alert_type_channels, alert_type_l
 from zato.common.alerting.object_settings import get_muted_rule_names, get_silence_expected_names, load_object_settings
 from zato.common.api import GENERIC
 from zato.common.json_internal import dumps
-from zato.common.odb.model import GenericConn, HTTPSOAP
+from zato.common.odb.model import GenericConn, GenericConnDef, HTTPSOAP, SecurityBase, Service
 from zato.common.test.config_database import config_database_engine
 from zato.common.typing_ import cast_
 from zato.common.test.direct_sql.seed import seed_config_objects
@@ -60,23 +59,25 @@ _silence_rule_name = 'Gateway_Silent'
 
 @contextmanager
 def _session() -> 'sessiongen':
-    """ A SQLite database file in a temporary directory with the tables the settings are read from.
+    """ A new PostgreSQL database of its own with the tables the settings are read from.
     """
     tables = [
+        SecurityBase.__table__,
+        Service.__table__,
+        GenericConnDef.__table__,
         GenericConn.__table__,
         HTTPSOAP.__table__,
     ]
 
-    with TemporaryDirectory() as directory:
-        with config_database_engine(directory, tables) as engine:
-            session_factory = sessionmaker(bind=engine)
-            session = session_factory()
+    with config_database_engine(tables) as engine:
+        session_factory = sessionmaker(bind=engine)
+        session = session_factory()
 
-            session.commit()
+        session.commit()
 
-            yield session
+        yield session
 
-            session.close()
+        session.close()
 
 # ################################################################################################################################
 

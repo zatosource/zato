@@ -196,7 +196,7 @@ def oauth_live() -> 'iterator_':
             limited_gateway_url=server_address + ModuleCtx.Limited_Gateway_Path,
             key_gateway_url=key_gateway_url,
             api_key=api_key,
-            audit_db_path=zato.audit_db_path,
+            database_env=zato.database_env,
         )
         yield out
 

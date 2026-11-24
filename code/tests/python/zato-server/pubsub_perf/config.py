@@ -109,7 +109,7 @@ class PerfConfig:
     session_state: 'SessionState'
     logger: 'Logger'
 
-    # The client of the services of the server, and its PostgreSQL database, or None for a SQLite one
+    # The client of the services of the server, and its PostgreSQL database, or None for a database that the session did not start
     client: 'AdminClient'
     database: 'PubSubDatabase | None'
 

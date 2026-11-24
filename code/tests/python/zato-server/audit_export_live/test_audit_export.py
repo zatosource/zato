@@ -229,7 +229,7 @@ class TestMCPConversation:
     def test_initialize_tools_list_and_tools_call(self, audit_export_live:'AuditExportEnvironment') -> 'None':
 
         live = audit_export_live
-        min_id = last_event_id(live.audit_db_path, AuditSource.MCP, ModuleCtx.Gateway_Name)
+        min_id = last_event_id(live.database_env, AuditSource.MCP, ModuleCtx.Gateway_Name)
 
         maria = bearer_caller(live.gateway_url, _member_token())
 
@@ -248,7 +248,7 @@ class TestMCPConversation:
 
         for event_type in expected_types:
 
-            row = wait_for_event_of_type(live.audit_db_path, AuditSource.MCP, ModuleCtx.Gateway_Name, min_id, event_type)
+            row = wait_for_event_of_type(live.database_env, AuditSource.MCP, ModuleCtx.Gateway_Name, min_id, event_type)
             record = _wait_for_one_record(live, row)
 
             _assert_record_matches_row(record, row)
@@ -282,7 +282,7 @@ class TestMCPConversation:
                 assert not key.startswith(DataCtx.Payload_Prefix), key
 
         # The tool's name is the endpoint of the call
-        row = wait_for_event_of_type(live.audit_db_path, AuditSource.MCP, ModuleCtx.Gateway_Name, min_id, AuditEvent.MCP_Tools_Call)
+        row = wait_for_event_of_type(live.database_env, AuditSource.MCP, ModuleCtx.Gateway_Name, min_id, AuditEvent.MCP_Tools_Call)
         record = _wait_for_one_record(live, row)
 
         assert record['attributes'][_column('endpoint')] == ModuleCtx.Echo_Service
@@ -298,12 +298,12 @@ class TestRefusals:
     def test_a_person_outside_the_group(self, audit_export_live:'AuditExportEnvironment') -> 'None':
 
         live = audit_export_live
-        min_id = last_event_id(live.audit_db_path, AuditSource.MCP, ModuleCtx.Gateway_Name)
+        min_id = last_event_id(live.database_env, AuditSource.MCP, ModuleCtx.Gateway_Name)
 
         response = bearer_caller(live.gateway_url, _outsider_token()).tools_list_stateless()
         assert response.status_code == UNAUTHORIZED, response.text
 
-        row = wait_for_event_of_type(live.audit_db_path, AuditSource.MCP, ModuleCtx.Gateway_Name, min_id, AuditEvent.Auth_Failed)
+        row = wait_for_event_of_type(live.database_env, AuditSource.MCP, ModuleCtx.Gateway_Name, min_id, AuditEvent.Auth_Failed)
         record = _wait_for_one_record(live, row)
 
         _assert_record_matches_row(record, row)
@@ -327,12 +327,12 @@ class TestRefusals:
     def test_a_malformed_token(self, audit_export_live:'AuditExportEnvironment') -> 'None':
 
         live = audit_export_live
-        min_id = last_event_id(live.audit_db_path, AuditSource.MCP, ModuleCtx.Gateway_Name)
+        min_id = last_event_id(live.database_env, AuditSource.MCP, ModuleCtx.Gateway_Name)
 
         response = bearer_caller(live.gateway_url, 'not-a-token').tools_list_stateless()
         assert response.status_code == UNAUTHORIZED, response.text
 
-        row = wait_for_event_of_type(live.audit_db_path, AuditSource.MCP, ModuleCtx.Gateway_Name, min_id, AuditEvent.Auth_Failed)
+        row = wait_for_event_of_type(live.database_env, AuditSource.MCP, ModuleCtx.Gateway_Name, min_id, AuditEvent.Auth_Failed)
         record = _wait_for_one_record(live, row)
 
         _assert_record_matches_row(record, row)
@@ -359,7 +359,7 @@ class TestRateLimited:
 
         live = audit_export_live
         url = live.limited_gateway_url
-        min_id = last_event_id(live.audit_db_path, AuditSource.MCP, ModuleCtx.Limited_Gateway_Name)
+        min_id = last_event_id(live.database_env, AuditSource.MCP, ModuleCtx.Limited_Gateway_Name)
 
         maria = bearer_caller(url, _member_token())
 
@@ -372,7 +372,7 @@ class TestRateLimited:
         assert response.headers[Header_Retry_After]
 
         row = wait_for_event_of_type(
-            live.audit_db_path, AuditSource.MCP, ModuleCtx.Limited_Gateway_Name, min_id, AuditEvent.Rate_Limited)
+            live.database_env, AuditSource.MCP, ModuleCtx.Limited_Gateway_Name, min_id, AuditEvent.Rate_Limited)
         record = _wait_for_one_record(live, row)
 
         _assert_record_matches_row(record, row)
@@ -402,7 +402,7 @@ class TestRESTChannel:
     def test_without_the_payload_flag(self, audit_export_live:'AuditExportEnvironment') -> 'None':
 
         live = audit_export_live
-        min_id = last_event_id(live.audit_db_path, AuditSource.REST_Channel, ModuleCtx.REST_Channel_Name)
+        min_id = last_event_id(live.database_env, AuditSource.REST_Channel, ModuleCtx.REST_Channel_Name)
 
         body = dumps({'invoice_id': 'INV-2026-0042', 'amount': 100})
         response = requests.post(live.rest_url, data=body, headers={'Content-Type': 'application/json'},
@@ -410,9 +410,9 @@ class TestRESTChannel:
         assert response.status_code == OK, response.text
 
         request_row = wait_for_event_of_type(
-            live.audit_db_path, AuditSource.REST_Channel, ModuleCtx.REST_Channel_Name, min_id, AuditEvent.Request_Received)
+            live.database_env, AuditSource.REST_Channel, ModuleCtx.REST_Channel_Name, min_id, AuditEvent.Request_Received)
         response_row = wait_for_event_of_type(
-            live.audit_db_path, AuditSource.REST_Channel, ModuleCtx.REST_Channel_Name, min_id, AuditEvent.Response_Sent)
+            live.database_env, AuditSource.REST_Channel, ModuleCtx.REST_Channel_Name, min_id, AuditEvent.Response_Sent)
 
         # The rows hold the payloads ..
         assert request_row['data'] == body
@@ -437,7 +437,7 @@ class TestRESTChannel:
     def test_with_the_payload_flag(self, audit_export_live:'AuditExportEnvironment') -> 'None':
 
         live = audit_export_live
-        min_id = last_event_id(live.audit_db_path, AuditSource.REST_Channel, ModuleCtx.REST_Payload_Channel_Name)
+        min_id = last_event_id(live.database_env, AuditSource.REST_Channel, ModuleCtx.REST_Payload_Channel_Name)
 
         body = dumps({'invoice_id': 'INV-2026-0043', 'amount': 250})
         response = requests.post(live.rest_payload_url, data=body, headers={'Content-Type': 'application/json'},
@@ -445,9 +445,9 @@ class TestRESTChannel:
         assert response.status_code == OK, response.text
 
         request_row = wait_for_event_of_type(
-            live.audit_db_path, AuditSource.REST_Channel, ModuleCtx.REST_Payload_Channel_Name, min_id, AuditEvent.Request_Received)
+            live.database_env, AuditSource.REST_Channel, ModuleCtx.REST_Payload_Channel_Name, min_id, AuditEvent.Request_Received)
         response_row = wait_for_event_of_type(
-            live.audit_db_path, AuditSource.REST_Channel, ModuleCtx.REST_Payload_Channel_Name, min_id, AuditEvent.Response_Sent)
+            live.database_env, AuditSource.REST_Channel, ModuleCtx.REST_Payload_Channel_Name, min_id, AuditEvent.Response_Sent)
 
         request_record = _wait_for_one_record(live, request_row)
         response_record = _wait_for_one_record(live, response_row)
@@ -483,7 +483,7 @@ class TestSourceSelection:
         live = audit_export_live
 
         # A quota tier created through the API writes a config event ..
-        config_min_id = last_event_id(live.audit_db_path, AuditSource.Config, ModuleCtx.Tier_Name)
+        config_min_id = last_event_id(live.database_env, AuditSource.Config, ModuleCtx.Tier_Name)
 
         _ = live.zato.client().invoke('zato.security.tier.create', {
             'name': ModuleCtx.Tier_Name,
@@ -491,17 +491,17 @@ class TestSourceSelection:
         })
 
         config_row = wait_for_event_of_type(
-            live.audit_db_path, AuditSource.Config, ModuleCtx.Tier_Name, config_min_id, AuditEvent.Config_Created)
+            live.database_env, AuditSource.Config, ModuleCtx.Tier_Name, config_min_id, AuditEvent.Config_Created)
 
         # .. a REST call made after it is exported, so the export has moved past the config event ..
-        rest_min_id = last_event_id(live.audit_db_path, AuditSource.REST_Channel, ModuleCtx.REST_Channel_Name)
+        rest_min_id = last_event_id(live.database_env, AuditSource.REST_Channel, ModuleCtx.REST_Channel_Name)
 
         response = requests.post(live.rest_url, data=dumps({'invoice_id': 'INV-2026-0044'}),
             headers={'Content-Type': 'application/json'}, timeout=ModuleCtx.HTTP_Timeout)
         assert response.status_code == OK, response.text
 
         rest_row = wait_for_event_of_type(
-            live.audit_db_path, AuditSource.REST_Channel, ModuleCtx.REST_Channel_Name, rest_min_id, AuditEvent.Response_Sent)
+            live.database_env, AuditSource.REST_Channel, ModuleCtx.REST_Channel_Name, rest_min_id, AuditEvent.Response_Sent)
         _ = _wait_for_one_record(live, rest_row)
 
         # .. and the config event is not among what arrived.
@@ -530,7 +530,7 @@ class TestOutage:
         paused_before = count_lines(log_path, _paused_marker)
         resumed_before = count_lines(log_path, _resumed_marker)
 
-        min_id = last_event_id(live.audit_db_path, AuditSource.MCP, ModuleCtx.Gateway_Name)
+        min_id = last_event_id(live.database_env, AuditSource.MCP, ModuleCtx.Gateway_Name)
         maria = bearer_caller(live.gateway_url, _member_token())
 
         stop_container(live.collector.container_name)
@@ -539,7 +539,7 @@ class TestOutage:
             response = maria.tools_call_stateless(ModuleCtx.Echo_Service, _echo_arguments)
             assert response.status_code == OK, response.text
 
-            row = wait_for_event_of_type(live.audit_db_path, AuditSource.MCP, ModuleCtx.Gateway_Name, min_id, AuditEvent.MCP_Tools_Call)
+            row = wait_for_event_of_type(live.database_env, AuditSource.MCP, ModuleCtx.Gateway_Name, min_id, AuditEvent.MCP_Tools_Call)
 
             # The export pauses with one line naming the collector ..
             wait_for_line(log_path, _paused_marker, ModuleCtx.Audit_Timeout)
@@ -589,13 +589,13 @@ class TestGRPC:
         # The server says it exports over gRPC ..
         wait_for_line(live.server_log_path, f'Audit export to {live.collector.grpc_endpoint} is on', ModuleCtx.Audit_Timeout)
 
-        min_id = last_event_id(live.audit_db_path, AuditSource.MCP, ModuleCtx.Gateway_Name)
+        min_id = last_event_id(live.database_env, AuditSource.MCP, ModuleCtx.Gateway_Name)
         maria = bearer_caller(live.gateway_url, _member_token())
 
         response = maria.tools_call_stateless(ModuleCtx.Echo_Service, _echo_arguments)
         assert response.status_code == OK, response.text
 
-        row = wait_for_event_of_type(live.audit_db_path, AuditSource.MCP, ModuleCtx.Gateway_Name, min_id, AuditEvent.MCP_Tools_Call)
+        row = wait_for_event_of_type(live.database_env, AuditSource.MCP, ModuleCtx.Gateway_Name, min_id, AuditEvent.MCP_Tools_Call)
         record = _wait_for_one_record(live, row)
 
         # .. and the record is the same as over HTTP.

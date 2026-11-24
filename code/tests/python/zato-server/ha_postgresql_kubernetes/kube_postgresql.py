@@ -267,7 +267,6 @@ def _start_postgresql(session:'KubeSession') -> 'KubePostgreSQL':
     host = f'{ModuleCtx.StatefulSet_Name}.{namespace}.svc.cluster.local'
 
     create_secret(EnvCtx.PubSub_DB_Secret, {}, {
-        'Zato_Database_Type': 'postgresql',
         'Zato_Database_Host': host,
         'Zato_Database_Port': str(ModuleCtx.Port),
         'Zato_Database_Username': DatabaseCtx.Username,

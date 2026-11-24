@@ -16,7 +16,7 @@ from collections import Counter
 from failover import docker, read_audit_rows, read_audit_takeovers, read_generation, wait_until_up
 from workload import describe_copies, get_attempts_by_msg_id, get_count_mismatches, get_repeats_not_in_flight, Push_Batch_Size, \
     Topic_Name, wait_for_deliveries, Workload
-from zato.common.test.pubsub_database import get_db_mode, get_runtime_dir, is_postgresql_mode
+from zato.common.test.pubsub_database import get_db_mode, get_runtime_dir
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -120,12 +120,7 @@ def test_crash_during_bursts(crash_env:'FailoverEnvironment') -> 'None':
     receiver = env.receivers[Topic_Name]
     receiver.clear_output()
 
-    is_postgresql = is_postgresql_mode(env.database.mode)
-
-    if is_postgresql:
-        start_generation = read_generation(env.database)
-    else:
-        start_generation = 0
+    start_generation = read_generation(env.database)
 
     workload = Workload(env, [server])
     workload.start()
@@ -168,11 +163,10 @@ def test_crash_during_bursts(crash_env:'FailoverEnvironment') -> 'None':
     logger.info('Pushed %d, repeated %d', len(delivered), len(repeated))
     assert len(repeated) <= _kill_count * Push_Batch_Size, len(repeated)
 
-    # .. on PostgreSQL, a repeated copy carries a higher attempt number, as the attempts are recorded in the database ..
-    if is_postgresql:
-        for msg_id in repeated:
-            attempts = copies_by_msg_id[msg_id]
-            assert len(attempts) == len(set(attempts)), (msg_id, attempts)
+    # .. a repeated copy has a higher attempt number, as the attempts are recorded in the database ..
+    for msg_id in repeated:
+        attempts = copies_by_msg_id[msg_id]
+        assert len(attempts) == len(set(attempts)), (msg_id, attempts)
 
     # .. each repeated copy follows a first copy that was received before a kill, which the kill kept
     # .. from being acknowledged, and is itself received after that kill ..
@@ -180,17 +174,15 @@ def test_crash_during_bursts(crash_env:'FailoverEnvironment') -> 'None':
     not_in_flight = get_repeats_not_in_flight(records, workload.fault_windows)
     assert not not_in_flight, describe_copies(records, not_in_flight[:10], workload.fault_windows)
 
-    # .. on PostgreSQL, the audit log records each restart as a takeover from the generation before it ..
-    if is_postgresql:
+    # .. the audit log records each restart as a takeover from the generation before it ..
+    takeovers = read_audit_takeovers(env.database, start_generation)
+    expected_takeovers:'list[tuple[int, int]]' = []
 
-        takeovers = read_audit_takeovers(env.database, start_generation)
-        expected_takeovers:'list[tuple[int, int]]' = []
+    for kill_index in range(1, _kill_count + 1):
+        expected_generation = start_generation + kill_index
+        expected_takeovers.append((expected_generation - 1, expected_generation))
 
-        for kill_index in range(1, _kill_count + 1):
-            expected_generation = start_generation + kill_index
-            expected_takeovers.append((expected_generation - 1, expected_generation))
-
-        assert takeovers == expected_takeovers, takeovers
+    assert takeovers == expected_takeovers, takeovers
 
     # .. the audit log records each push that the receiver accepted as a delivery event of its own, a repeated one included,
     # .. except for those still in flight at a kill, whose number the report states ..

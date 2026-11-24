@@ -11,7 +11,7 @@ from http.client import OK
 from threading import Thread
 
 # Zato
-from pubsub_exactly_once.database import add_insert_delay, postgresql_only, remove_insert_delay, restart_database, \
+from pubsub_exactly_once.database import add_insert_delay, remove_insert_delay, restart_database, \
     terminate_session, wait_for_delayed_session
 from pubsub_exactly_once.harness import get_engine, Hold_Timeout, import_enmasse, new_keys, publish_input, publish_inputs, \
     Settle_Timeout, stage_batch, verify
@@ -100,7 +100,6 @@ def test_server_killed_during_processing(zato_server:'any_') -> 'None':
 
 # ################################################################################################################################
 
-@postgresql_only
 def test_session_terminated_during_commit(zato_server:'any_') -> 'None':
     """ A batch whose database session is terminated while it inserts its publications relays each key once.
     """
@@ -124,7 +123,6 @@ def test_session_terminated_during_commit(zato_server:'any_') -> 'None':
 
 # ################################################################################################################################
 
-@postgresql_only
 def test_database_restarted_during_batch(zato_server:'any_') -> 'None':
     """ A batch whose database is killed and started again while its last key is held relays each key once.
     """
@@ -140,7 +138,6 @@ def test_database_restarted_during_batch(zato_server:'any_') -> 'None':
 
 # ################################################################################################################################
 
-@postgresql_only
 def test_server_killed_during_pull_ack(zato_server:'any_') -> 'None':
     """ An acknowledgement whose server is killed while it inserts its publication is repeated once the server
     started again, and the order is acknowledged with its publication stored once.
@@ -222,7 +219,6 @@ def test_server_killed_during_pull_ack(zato_server:'any_') -> 'None':
 
 # ################################################################################################################################
 
-@postgresql_only
 def test_subscription_edit_during_batch_commit(zato_server:'any_') -> 'None':
     """ A batch whose commit waits in its transaction while its delivery is stopped and started again,
     and whose new delivery processes it again, relays each key once.

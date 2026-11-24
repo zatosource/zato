@@ -13,7 +13,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 from contextlib import contextmanager
-from tempfile import TemporaryDirectory
 
 # SQLAlchemy
 from sqlalchemy.orm import sessionmaker
@@ -22,7 +21,7 @@ from sqlalchemy.orm import sessionmaker
 from zato.common.alerting.explain.fhir_info import describe_outgoing_fhir
 from zato.common.alerting.explain.mllp_outgoing_info import describe_mllp_outgoing
 from zato.common.api import GENERIC, HTTP_SOAP
-from zato.common.odb.model import GenericConn, SecurityBase
+from zato.common.odb.model import GenericConn, GenericConnDef, SecurityBase
 from zato.common.test.config_database import config_database_engine
 from zato.common.typing_ import cast_
 from zato.common.test.direct_sql.seed import seed_config_objects
@@ -56,22 +55,22 @@ _describers = {
 
 @contextmanager
 def _new_session() -> 'sessionmakergen':
-    """ A sessionmaker over a fresh SQLite database file in a temporary directory with the tables the describers read.
+    """ A sessionmaker over a new PostgreSQL database of its own with the tables the describers read.
     """
     tables = [
         SecurityBase.__table__,
+        GenericConnDef.__table__,
         GenericConn.__table__,
     ]
 
-    with TemporaryDirectory() as directory:
-        with config_database_engine(directory, tables) as engine:
-            out = sessionmaker(bind=engine)
+    with config_database_engine(tables) as engine:
+        out = sessionmaker(bind=engine)
 
-            session = out()
-            session.commit()
-            session.close()
+        session = out()
+        session.commit()
+        session.close()
 
-            yield out
+        yield out
 
 # ################################################################################################################################
 

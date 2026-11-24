@@ -8,14 +8,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import contextmanager
-from tempfile import TemporaryDirectory
 
 # SQLAlchemy
 from sqlalchemy.orm import sessionmaker
 
 # Zato
 from zato.common.alerting.explain.store import ExplanationStore
-from zato.common.odb.model import GenericObject
+from zato.common.odb.model import GenericConn, GenericConnClient, GenericConnDef, GenericConnDefSec, GenericConnSec, \
+    GenericObject, SecurityBase, Server
 from zato.common.test.config_database import config_database_engine
 
 # ################################################################################################################################
@@ -34,16 +34,24 @@ if 0:
 
 @contextmanager
 def _new_store() -> 'storegen':
-    """ A store over a fresh SQLite database file in a temporary directory with only the generic_object table.
+    """ A store over a new PostgreSQL database of its own with the generic_object table and the tables it refers to.
     """
-    tables = [GenericObject.__table__]
+    tables = [
+        SecurityBase.__table__,
+        Server.__table__,
+        GenericConnDef.__table__,
+        GenericConnDefSec.__table__,
+        GenericConn.__table__,
+        GenericConnSec.__table__,
+        GenericConnClient.__table__,
+        GenericObject.__table__,
+    ]
 
-    with TemporaryDirectory() as directory:
-        with config_database_engine(directory, tables) as engine:
-            session = sessionmaker(bind=engine)
+    with config_database_engine(tables) as engine:
+        session = sessionmaker(bind=engine)
 
-            out = ExplanationStore(session)
-            yield out
+        out = ExplanationStore(session)
+        yield out
 
 # ################################################################################################################################
 

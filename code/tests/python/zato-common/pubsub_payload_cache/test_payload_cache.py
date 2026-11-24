@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 from multiprocessing import get_context
 
 # gevent
@@ -19,6 +18,7 @@ from sqlalchemy import event
 # Zato
 from zato.common.pubsub.sql.payload_cache import PayloadCache, PayloadEpoch
 from zato.common.pubsub.sql.pull import payload_query
+from zato.common.test.zato_database import isolated_database_env
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,9 +70,8 @@ def _fetch_payload(backend:'any_', msg_id:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _new_backend(db_path:'str') -> 'any_':
+def _new_backend() -> 'any_':
     gevent.reinit()
-    os.environ['Zato_Database_Path'] = db_path
 
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
     from zato.common.test.audit_log_ import new_test_audit_log
@@ -146,8 +145,8 @@ def test_a_payload_read_before_an_edit_is_not_kept() -> 'None':
 
 # ################################################################################################################################
 
-def _edit_during_a_delivery(db_path:'str') -> 'None':
-    backend = _new_backend(db_path)
+def _edit_during_a_delivery() -> 'None':
+    backend = _new_backend()
 
     backend.subscribe(_sub_key, _topic_name)
     msg_id = backend.publish(_topic_name, _payload_before).msg_id
@@ -174,10 +173,11 @@ def _edit_during_a_delivery(db_path:'str') -> 'None':
 
 # ################################################################################################################################
 
-def test_a_payload_read_before_an_edit_is_not_sent_after_it(tmp_path:'any_') -> 'None':
-    db_path = os.path.join(tmp_path, 'zato.db')
+def test_a_payload_read_before_an_edit_is_not_sent_after_it() -> 'None':
 
-    _run_forked(_edit_during_a_delivery, db_path)
+    # The forked process inherits the variables that select the new database
+    with isolated_database_env():
+        _run_forked(_edit_during_a_delivery)
 
 # ################################################################################################################################
 # ################################################################################################################################

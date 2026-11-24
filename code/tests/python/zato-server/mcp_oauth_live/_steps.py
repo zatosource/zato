@@ -22,7 +22,7 @@ import jwt as pyjwt
 import requests
 
 # Zato
-from zato.common.db_env.engine import new_zato_engine
+from live_environment.audit import new_database_engine
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.common import MCPAttr
 from zato.common.audit_log.search import search_events
@@ -123,7 +123,7 @@ def build_unpublished_key_token() -> 'str':
 # ################################################################################################################################
 
 def audit_engine(oauth_live:'OAuthLiveEnvironment') -> 'any_':
-    out = new_zato_engine(f'sqlite:///{oauth_live.audit_db_path}')
+    out = new_database_engine(oauth_live.database_env)
     return out
 
 # ################################################################################################################################
@@ -196,7 +196,7 @@ class ClientSuite:
         the auth-failed event with the reason, and returns the event. A refused token that could be read leaves the
         person and the client in the record, one that could not leaves neither.
         """
-        min_id = last_event_id(oauth_live.audit_db_path, ModuleCtx.Gateway_Name)
+        min_id = last_event_id(oauth_live.database_env, ModuleCtx.Gateway_Name)
 
         caller = bearer_caller(oauth_live.gateway_url, token)
         response = caller.tools_list_stateless()
@@ -207,7 +207,7 @@ class ClientSuite:
         expected = expected_challenge(oauth_live, ModuleCtx.Gateway_Path, has_token=True)
         assert challenge == expected, f'Expected `{expected}`, got `{challenge}`'
 
-        event = wait_for_event_of_type(oauth_live.audit_db_path, ModuleCtx.Gateway_Name, min_id, AuditEvent.Auth_Failed)
+        event = wait_for_event_of_type(oauth_live.database_env, ModuleCtx.Gateway_Name, min_id, AuditEvent.Auth_Failed)
         auth = event['data']['auth']
 
         assert event['outcome'] == AuditOutcome.Error
@@ -281,7 +281,7 @@ class ClientSuite:
         claims = read_claims(token)
         caller = bearer_caller(oauth_live.gateway_url, token)
 
-        min_id = last_event_id(oauth_live.audit_db_path, ModuleCtx.Gateway_Name)
+        min_id = last_event_id(oauth_live.database_env, ModuleCtx.Gateway_Name)
         time_from = utcnow()
 
         # The conversation of the revision with sessions ..
@@ -312,7 +312,7 @@ class ClientSuite:
         time_to = utcnow()
 
         # .. the record of the tool call says who called and through what ..
-        event = wait_for_event_of_type(oauth_live.audit_db_path, ModuleCtx.Gateway_Name, min_id, AuditEvent.MCP_Tools_Call)
+        event = wait_for_event_of_type(oauth_live.database_env, ModuleCtx.Gateway_Name, min_id, AuditEvent.MCP_Tools_Call)
 
         identity = expected_identity(ModuleCtx.Definition_Name, keycloak_oauth.User_Member)
 
@@ -349,7 +349,7 @@ class ClientSuite:
 
         # .. and the person's other requests of the conversation name them the same way.
         for other in (AuditEvent.MCP_Initialize, AuditEvent.MCP_Tools_List):
-            other_event = wait_for_event_of_type(oauth_live.audit_db_path, ModuleCtx.Gateway_Name, min_id, other)
+            other_event = wait_for_event_of_type(oauth_live.database_env, ModuleCtx.Gateway_Name, min_id, other)
             assert other_event['ext_client_id'] == identity
 
 # ################################################################################################################################
@@ -412,7 +412,7 @@ class ClientSuite:
 
     def test_search_finds_the_grant_and_the_refusal_by_person_and_by_client(self, oauth_live:'OAuthLiveEnvironment') -> 'None':
 
-        min_id = last_event_id(oauth_live.audit_db_path, ModuleCtx.Gateway_Name)
+        min_id = last_event_id(oauth_live.database_env, ModuleCtx.Gateway_Name)
 
         # One accepted call and one refused one ..
         member_token = self._member_token(oauth_live)
@@ -423,8 +423,8 @@ class ClientSuite:
         response = bearer_caller(oauth_live.gateway_url, outsider_token).tools_list_stateless()
         assert response.status_code == UNAUTHORIZED, response.text
 
-        grant = wait_for_event_of_type(oauth_live.audit_db_path, ModuleCtx.Gateway_Name, min_id, AuditEvent.MCP_Tools_Call)
-        refusal = wait_for_event_of_type(oauth_live.audit_db_path, ModuleCtx.Gateway_Name, min_id, AuditEvent.Auth_Failed)
+        grant = wait_for_event_of_type(oauth_live.database_env, ModuleCtx.Gateway_Name, min_id, AuditEvent.MCP_Tools_Call)
+        refusal = wait_for_event_of_type(oauth_live.database_env, ModuleCtx.Gateway_Name, min_id, AuditEvent.Auth_Failed)
 
         engine = audit_engine(oauth_live)
 

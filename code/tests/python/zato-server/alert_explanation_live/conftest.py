@@ -43,10 +43,10 @@ import pytest
 # Zato
 from zato.common.alerting.explain.skill import get_default_skills_dir, Skills_Dir_Name
 from zato.common.alerting.rendering import get_default_template_dir, Template_Dir_Name
-from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.hl7.mllp.haproxy import Env_Port_Name as MLLP_Port_Env_Name
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
 from zato.common.test.sftp_ import SFTPTestServer
+from zato.common.test.zato_database import zato_database_engine
 from zato.common.typing_ import cast_
 
 # Test helpers
@@ -66,10 +66,12 @@ if 0:
     from collections.abc import Iterator
     from pathlib import Path
     from zato.common.test.conftest_base_pubsub import SessionState
+    from zato.common.test.pubsub_database import PubSubDatabase
     from zato.common.typing_ import any_, anydict
 
     anydictgen = Iterator[anydict]
     Path = Path
+    PubSubDatabase = PubSubDatabase
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -111,7 +113,6 @@ from json import dumps
 
 # Zato
 from zato.server.service import Service
-from zato.common.db_env.database_env import DatabaseEnv
 
 class AlwaysRaise(Service):
     """ Fails on purpose, so that the channel in front of it answers with a 500.
@@ -215,6 +216,9 @@ def _build_live_server_config(
         LiveServer.server_port = server_port
         LiveServer.invoke_password = invoke_password
         LiveServer.server_directory = server_directory
+
+        pubsub_database = cast_('PubSubDatabase', state.pubsub_database)
+        LiveServer.database_env = dict(pubsub_database.env)
 
     out:'anydict' = {
         'placeholders': {
@@ -345,18 +349,12 @@ def quiet_when_traced() -> 'None':
 # ################################################################################################################################
 
 @pytest.fixture(autouse=True)
-def audit_db_env(tmp_path:'Path') -> 'any_':
-    """ Points the Zato database at a per-test SQLite file so every test runs on its own.
+def audit_db_env() -> 'any_':
+    """ Points the Zato database of this process at a new PostgreSQL database so every test runs on its own,
+    while the server keeps the database of the session that LiveServer.database_env selects.
     """
-    database_path = os.path.join(str(tmp_path), 'zato.db')
-
-    os.environ[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
-    os.environ[DatabaseEnv.Env_Path] = database_path
-
-    yield database_path
-
-    del os.environ[DatabaseEnv.Env_Type]
-    del os.environ[DatabaseEnv.Env_Path]
+    with zato_database_engine():
+        yield
 
 # ################################################################################################################################
 

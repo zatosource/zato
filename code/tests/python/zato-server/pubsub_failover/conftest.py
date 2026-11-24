@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
-import shutil
 import sys
 import tempfile
 from contextlib import contextmanager
@@ -21,13 +20,12 @@ import pytest
 sys.path.insert(0, os.path.dirname(__file__))
 
 # Zato
-from failover import build_server_env, ContainerServer, create_container, get_failover_dir, remove_container, \
-    run_container, save_container_logs, wait_until_up
+from failover import build_server_env, ContainerServer, copy_server_environment, create_container, get_failover_dir, \
+    remove_container, run_container, save_container_logs, wait_until_up
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.conftest_base_pubsub import find_free_port, patch_server_conf, render_template, \
     run_quickstart_and_enmasse, SessionState
-from zato.common.test.pubsub_database import get_db_mode, get_runtime_dir, is_postgresql_mode, PubSubDBMode, \
-    start_pubsub_database, stop_pubsub_database
+from zato.common.test.pubsub_database import get_db_mode, get_runtime_dir, start_pubsub_database, stop_pubsub_database
 from zato.common.test.receiver import WebhookReceiver
 
 # ################################################################################################################################
@@ -87,21 +85,9 @@ def _topic_to_key(topic_name:'str') -> 'str':
 
 # ################################################################################################################################
 
-def _new_server(name:'str', state:'SessionState', rendered_yaml:'str', invoke_password:'str',
-    database:'PubSubDatabase') -> 'ContainerServer':
-    """ Creates the quickstart environment of one server of the pair from the shared enmasse file,
-    in the runtime directory, which is the only temporary directory the container of the server mounts.
+def _new_server(name:'str', server_directory:'str', database:'PubSubDatabase') -> 'ContainerServer':
+    """ Returns one server of the pair in its quickstart environment, on the shared database.
     """
-    server_directory = run_quickstart_and_enmasse(
-        state=state,
-        logger=logger,
-        zato_bin=_zato_bin,
-        invoke_password=invoke_password,
-        rendered_yaml=rendered_yaml,
-        quickstart_prefix=f'zato_pubsub_failover_{name}_',
-        quickstart_parent_dir=get_runtime_dir(),
-    )
-
     out = ContainerServer(
         name=name,
         container_name=f'zato-pubsub-test-failover-{name}',
@@ -122,39 +108,25 @@ def _new_server(name:'str', state:'SessionState', rendered_yaml:'str', invoke_pa
 def failover_env() -> 'any_':
     """ Server A runs as the active server, server B is a stopped container that the controller may start.
     """
-    mode = get_db_mode()
-
-    if not is_postgresql_mode(mode):
-        mode = PubSubDBMode.PostgreSQL
-
-    with _environment(mode) as environment:
+    with _environment() as environment:
         yield environment
 
 # ################################################################################################################################
 
 @pytest.fixture(scope='module')
 def crash_env() -> 'any_':
-    """ The same pair of servers on the pub/sub database of the mode that Zato_Test_PubSub_DB_Mode selects,
-    which is a SQLite file in the runtime directory when the mode is SQLite.
+    """ The same pair of servers, on a database of their own.
     """
-    mode = get_db_mode()
-
-    with _environment(mode) as environment:
+    with _environment() as environment:
         yield environment
 
 # ################################################################################################################################
 
 @contextmanager
-def _environment(mode:'str') -> 'any_':
-    """ Builds the pair of servers on a pub/sub database of the given mode and removes everything afterwards.
+def _environment() -> 'any_':
+    """ Builds the pair of servers on a database of the mode of the session and removes everything afterwards.
     """
-    database = start_pubsub_database('failover', mode)
-
-    # A SQLite file is in the runtime directory, which the containers of the servers mount.
-    sqlite_dir = tempfile.mkdtemp(prefix='zato_pubsub_failover_sqlite_', dir=get_runtime_dir())
-
-    if not is_postgresql_mode(mode):
-        database.env = {'Zato_Database_Path': os.path.join(sqlite_dir, 'zato.db')}
+    database = start_pubsub_database('failover', get_db_mode())
 
     state_a = SessionState('zato.test.pubsub_failover.a', 'server-logs-failover-a.txt')
     state_b = SessionState('zato.test.pubsub_failover.b', 'server-logs-failover-b.txt')
@@ -187,9 +159,24 @@ def _environment(mode:'str') -> 'any_':
     rendered_yaml = render_template(_template_path, placeholders)
     invoke_password = 'test.invoke.' + CryptoManager.generate_hex_string()
 
-    # .. each server has a quickstart environment of its own, created from the same enmasse file ..
-    server_a = _new_server('a', state_a, rendered_yaml, invoke_password, database)
-    server_b = _new_server('b', state_b, rendered_yaml, invoke_password, database)
+    # .. quickstart creates the environment of server A in the shared database, in the runtime directory,
+    # which is the only temporary directory that the containers of the servers mount ..
+    server_directory_a = run_quickstart_and_enmasse(
+        state=state_a,
+        logger=logger,
+        zato_bin=_zato_bin,
+        invoke_password=invoke_password,
+        rendered_yaml=rendered_yaml,
+        quickstart_prefix='zato_pubsub_failover_a_',
+        extra_env=database.env,
+        quickstart_parent_dir=get_runtime_dir(),
+    )
+
+    # .. server B has a copy of that environment, because both servers share the configuration of that database ..
+    server_directory_b = copy_server_environment(state_a, state_b, 'zato_pubsub_failover_b_', get_runtime_dir())
+
+    server_a = _new_server('a', server_directory_a, database)
+    server_b = _new_server('b', server_directory_b, database)
 
     environment = FailoverEnvironment(
         database=database,
@@ -216,7 +203,6 @@ def _environment(mode:'str') -> 'any_':
         state_a.cleanup()
         state_b.cleanup()
         stop_pubsub_database(database)
-        shutil.rmtree(sqlite_dir, ignore_errors=True)
 
 # ################################################################################################################################
 # ################################################################################################################################

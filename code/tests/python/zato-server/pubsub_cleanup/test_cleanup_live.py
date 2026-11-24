@@ -231,9 +231,8 @@ class TestCleanupEmptyCounts(BaseCleanupLiveTestCase):
 # ################################################################################################################################
 
 class TestCleanupLockedDatabase(BaseCleanupLiveTestCase):
-    """ Another connection holds the write lock while the cleanup runs, for longer than the busy timeout of SQLite,
-    or until the connection of the cleanup process is terminated on PostgreSQL - the cleanup postpones its sweep
-    instead of ending, and completes it once the lock is released.
+    """ Another connection holds the write lock while the cleanup runs, until the connection of the cleanup process
+    is terminated - the cleanup postpones its sweep instead of ending, and completes it once the lock is released.
     """
 
     def test_cleanup_outlasts_locked_database(self) -> 'None':

@@ -14,7 +14,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # the completions named in its message. The explanation itself keeps going through the suite's Ollama connection.
 
 # stdlib
-import os
 from http.client import OK, TOO_MANY_REQUESTS
 from time import sleep, time
 
@@ -23,7 +22,6 @@ from sqlalchemy import inspect, select
 from sqlalchemy.orm import sessionmaker
 
 # Zato
-from zato.common.db_env.engine import new_zato_engine
 from zato.common.alerting.explain.evidence import Heading_Object
 from zato.common.alerting.explain.settings_info import Label_Alerts, On
 from zato.common.alerting.explain.store import ExplanationStore
@@ -414,8 +412,7 @@ def _get_stored_llm_explanations(name:'str') -> 'anylist':
     """ Every explanation the live server stored for the connection, read off its own ODB - the proofs share the
     server, so each one reads the explanations of its own connection alone.
     """
-    path = os.path.join(os.path.dirname(LiveServer.server_directory), 'config.db')
-    session_maker = sessionmaker(bind=new_zato_engine(f'sqlite:///{path}'))
+    session_maker = sessionmaker(bind=_server_audit_engine())
 
     store = ExplanationStore(session_maker)
 

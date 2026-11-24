@@ -154,7 +154,6 @@ class PostgreSQLCluster(Backend):
 
         # .. and the nodes reach it under the name of the endpoint.
         self.node_env = {
-            'Zato_Database_Type': 'postgresql',
             'Zato_Database_Host': ModuleCtx.Endpoint_Name,
             'Zato_Database_Port': str(ModuleCtx.Port),
             'Zato_Database_Username': DatabaseCtx.Username,

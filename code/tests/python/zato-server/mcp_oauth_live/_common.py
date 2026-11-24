@@ -7,8 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
-import sqlite3
 import time
 from json import loads
 from typing import NamedTuple
@@ -16,19 +14,21 @@ from typing import NamedTuple
 # requests
 import requests
 
+# SQLAlchemy
+from sqlalchemy import select
+
 # Zato
+from live_environment.audit import new_database_engine
 from zato.common.api import MCP
-from zato.common.audit_log.api import AuditSource
-from zato.common.audit_log.common import get_event_select_list
-from zato.common.db_env.connection import register_sqlite_functions
-from zato.common.util.time_ import parse_utc
+from zato.common.audit_log.api import event_attr_table, event_table, AuditSource
+from zato.common.audit_log.common import get_event_column
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from live_environment.quickstart import ZatoEnvironment
-    from zato.common.typing_ import any_, anydict, anydictnone, callable_, dictlist, strnone
+    from zato.common.typing_ import any_, anydict, anydictnone, anylist, callable_, dictlist, strnone, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -105,7 +105,7 @@ class OAuthLiveEnvironment(NamedTuple):
     limited_gateway_url: 'str'
     key_gateway_url: 'str'
     api_key: 'str'
-    audit_db_path: 'str'
+    database_env: 'strstrdict'
 
 # ################################################################################################################################
 
@@ -262,51 +262,55 @@ def tool_names(response:'requests.Response') -> 'list[str]':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def read_events(audit_db_path:'str', gateway_name:'str', min_id:'int'=0) -> 'dictlist':
-    """ Reads the MCP audit events of one gateway out of the live server's audit database, newer than the given
+def read_events(database_env:'strstrdict', gateway_name:'str', min_id:'int'=0) -> 'dictlist':
+    """ Reads the MCP audit events of one gateway out of the live server's Zato database, newer than the given
     row ID, oldest first, each with its data document parsed and its attributes attached.
     """
+    columns:'anylist' = []
 
-    # An empty result before the server ever wrote an event - the file does not exist yet
-    if not os.path.isfile(audit_db_path):
-        return []
+    for name in _event_columns:
+        column = get_event_column(name)
+        columns.append(column)
 
-    column_list = get_event_select_list(_event_columns)
-    query = f'select {column_list} from event where source = ? and object_name = ? and id > ? order by id'
-    attr_query = 'select name, value from event_attr where event_id = ?'
+    query = select(*columns)
+    query = query.where(event_table.c.source == AuditSource.MCP)
+    query = query.where(event_table.c.object_name == gateway_name)
+    query = query.where(event_table.c.id > min_id)
+    query = query.order_by(event_table.c.id)
 
-    connection = sqlite3.connect(audit_db_path)
-    register_sqlite_functions(connection)
+    engine = new_database_engine(database_env)
+
+    out = []
 
     try:
-        cursor = connection.execute(query, (AuditSource.MCP, gateway_name, min_id))
-        db_rows = cursor.fetchall()
+        with engine.connect() as connection:
+            db_rows = connection.execute(query).fetchall()
 
-        out = []
+            for db_row in db_rows:
+                row:'anydict' = dict(db_row._mapping)
+                row['data'] = loads(row['data'])
 
-        for db_row in db_rows:
-            row:'anydict' = dict(zip(_event_columns, db_row))
-            row['event_time'] = parse_utc(row['event_time'])
-            row['data'] = loads(row['data'])
+                attr_query = select(event_attr_table.c.name, event_attr_table.c.value)
+                attr_query = attr_query.where(event_attr_table.c.event_id == row['id'])
 
-            attrs:'anydict' = {}
-            for name, value in connection.execute(attr_query, (row['id'],)).fetchall():
-                attrs[name] = value
+                attrs:'anydict' = {}
+                for name, value in connection.execute(attr_query).fetchall():
+                    attrs[name] = value
 
-            row['attrs'] = attrs
-            out.append(row)
+                row['attrs'] = attrs
+                out.append(row)
 
     finally:
-        connection.close()
+        engine.dispose()
 
     return out
 
 # ################################################################################################################################
 
-def last_event_id(audit_db_path:'str', gateway_name:'str') -> 'int':
+def last_event_id(database_env:'strstrdict', gateway_name:'str') -> 'int':
     """ The ID of the newest event of a gateway, zero before any was written - what a test reads events after.
     """
-    events = read_events(audit_db_path, gateway_name)
+    events = read_events(database_env, gateway_name)
 
     if events:
         last = events[-1]
@@ -318,31 +322,31 @@ def last_event_id(audit_db_path:'str', gateway_name:'str') -> 'int':
 
 # ################################################################################################################################
 
-def wait_for_event(audit_db_path:'str', gateway_name:'str', min_id:'int', is_wanted:'callable_') -> 'anydict':
+def wait_for_event(database_env:'strstrdict', gateway_name:'str', min_id:'int', is_wanted:'callable_') -> 'anydict':
     """ Waits for the first event newer than the given ID that the predicate accepts and returns it.
     """
     deadline = time.monotonic() + ModuleCtx.Audit_Timeout
 
     while time.monotonic() < deadline:
 
-        for event in read_events(audit_db_path, gateway_name, min_id):
+        for event in read_events(database_env, gateway_name, min_id):
             if is_wanted(event):
                 return event
 
         time.sleep(ModuleCtx.Audit_Poll_Interval)
 
-    events = read_events(audit_db_path, gateway_name, min_id)
+    events = read_events(database_env, gateway_name, min_id)
     raise Exception(f'No matching audit event of `{gateway_name}` within {ModuleCtx.Audit_Timeout}s, got: {events}')
 
 # ################################################################################################################################
 
-def wait_for_event_of_type(audit_db_path:'str', gateway_name:'str', min_id:'int', event_type:'str') -> 'anydict':
+def wait_for_event_of_type(database_env:'strstrdict', gateway_name:'str', min_id:'int', event_type:'str') -> 'anydict':
 
     def _is_wanted(event:'any_') -> 'bool':
         out = event['event_type'] == event_type
         return out
 
-    out = wait_for_event(audit_db_path, gateway_name, min_id, _is_wanted)
+    out = wait_for_event(database_env, gateway_name, min_id, _is_wanted)
     return out
 
 # ################################################################################################################################

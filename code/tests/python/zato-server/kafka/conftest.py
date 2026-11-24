@@ -71,9 +71,6 @@ def kafka_suite() -> 'iterator_':
 
         zato.start(environment)
 
-        # The tests read the audit log the server writes
-        os.environ[ModuleCtx.Database_Path_Variable] = zato.audit_db_path
-
         # .. the services the tests drive ..
         zato.deploy(ModuleCtx.Shared_Services_File.name, ModuleCtx.Shared_Services_File.read_text())
         zato.deploy(ModuleCtx.Services_File.name, ModuleCtx.Services_File.read_text())

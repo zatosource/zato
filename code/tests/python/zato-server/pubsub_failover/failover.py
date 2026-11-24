@@ -13,9 +13,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 import logging
 import os
-import sqlite3
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from dataclasses import dataclass, field
 from http.client import OK
@@ -24,7 +25,8 @@ from urllib.request import Request, urlopen
 
 # Zato
 from zato.common.test.conftest_base_pubsub import find_free_port
-from zato.common.test.pubsub_database import connect, get_runtime_dir, is_postgresql_mode
+from zato.common.test.pubsub_database import connect, get_runtime_dir
+from zato.common.typing_ import cast_
 from zato_links.finder import get_link_directories
 
 # ################################################################################################################################
@@ -32,6 +34,7 @@ from zato_links.finder import get_link_directories
 
 if 0:
     from conftest import FailoverEnvironment
+    from zato.common.test.conftest_base_pubsub import SessionState
     from zato.common.test.pubsub_database import PubSubDatabase
     from zato.common.typing_ import dictlist, strlist, strstrdict
 
@@ -46,6 +49,9 @@ logger = logging.getLogger('zato.test.pubsub_failover')
 # The image the servers run in and the tree that is mounted into it under its own path.
 _runtime_image = 'zato-test-runtime:latest'
 _repository_dir = os.environ['ZATO_TEST_BASE_DIR']
+
+# The name of the server of a quickstart environment.
+_server_name = 'server1'
 
 # The home directory of the zato user of the image.
 _container_home = '/opt/zato'
@@ -176,6 +182,38 @@ def build_server_env(server:'ContainerServer', database:'PubSubDatabase') -> 'No
 
 # ################################################################################################################################
 
+def copy_server_environment(
+    source:'SessionState',
+    target:'SessionState',
+    quickstart_prefix:'str',
+    parent_dir:'str',
+    ) -> 'str':
+    """ Copies the quickstart environment of a server into a new directory for another server of the same configuration
+    database, which has the secret key and the identity of the server that quickstart created in that database,
+    and returns the server directory of the copy.
+    """
+    source_directory = cast_('str', source.quickstart_directory)
+
+    target.quickstart_directory = tempfile.mkdtemp(prefix=quickstart_prefix, dir=parent_dir)
+    _ = shutil.copytree(source_directory, target.quickstart_directory, symlinks=True, dirs_exist_ok=True)
+
+    out = os.path.join(target.quickstart_directory, _server_name)
+
+    # The logging configuration refers to the log directory of its server by an absolute path
+    logging_conf_path = os.path.join(out, 'config', 'repo', 'logging.conf')
+
+    with open(logging_conf_path) as logging_conf_file:
+        logging_conf = logging_conf_file.read()
+
+    logging_conf = logging_conf.replace(source_directory, target.quickstart_directory)
+
+    with open(logging_conf_path, 'w') as logging_conf_file:
+        _ = logging_conf_file.write(logging_conf)
+
+    return out
+
+# ################################################################################################################################
+
 def run_container(server:'ContainerServer') -> 'None':
     """ Starts a server in a new container.
     """
@@ -292,10 +330,7 @@ def wait_for_generation(database:'PubSubDatabase', generation:'int', timeout_sec
 def read_audit_rows(database:'PubSubDatabase', query:'str') -> 'list':
     """ Returns the rows of a query against the audit log in the shared Zato database of the pair.
     """
-    if is_postgresql_mode(database.mode):
-        connection = connect(database)
-    else:
-        connection = sqlite3.connect(database.env['Zato_Database_Path'])
+    connection = connect(database)
 
     try:
         cursor = connection.cursor()

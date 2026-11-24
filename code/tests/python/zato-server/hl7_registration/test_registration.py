@@ -208,7 +208,7 @@ def _wait_for_any_task(registration:'RegistrationEnvironment', receiver:'str', s
 
 def _received_rows(registration:'RegistrationEnvironment', channel:'str', control_id:'str') -> 'anylist':
     out = events(
-        registration.zato.audit_db_path,
+        registration.zato.database_env,
         event_type=AuditEvent.Message_Received,
         object_name=channel,
         msg_id=control_id,
@@ -220,13 +220,13 @@ def _received_rows(registration:'RegistrationEnvironment', channel:'str', contro
 def _sent_rows(registration:'RegistrationEnvironment', received:'anydict') -> 'anylist':
     """ The deliveries of one received message - they share its correlation id rather than its control id.
     """
-    out = events(registration.zato.audit_db_path, event_type=AuditEvent.Request_Sent, cid=received['cid'])
+    out = events(registration.zato.database_env, event_type=AuditEvent.Request_Sent, cid=received['cid'])
     return out
 
 # ################################################################################################################################
 
 def _ack_sent_rows(registration:'RegistrationEnvironment', control_id:'str') -> 'anylist':
-    out = events(registration.zato.audit_db_path, event_type=AuditEvent.Ack_Sent, msg_id=control_id)
+    out = events(registration.zato.database_env, event_type=AuditEvent.Ack_Sent, msg_id=control_id)
     return out
 
 # ################################################################################################################################

@@ -174,7 +174,7 @@ class TestRejectedCallersAlert:
     def test_the_refusals_of_one_person_are_counted_apart_from_another_s(self, oauth_live:'OAuthLiveEnvironment') -> 'None':
 
         url = oauth_live.gateway_url
-        min_id = last_event_id(oauth_live.audit_db_path, ModuleCtx.Gateway_Name)
+        min_id = last_event_id(oauth_live.database_env, ModuleCtx.Gateway_Name)
 
         # John, outside the group, is refused twice ..
         john = bearer_caller(url, _outsider_token())
@@ -193,7 +193,7 @@ class TestRejectedCallersAlert:
         response = bearer_caller(url, maria_token).tools_list_stateless()
         assert response.status_code == UNAUTHORIZED, response.text
 
-        _ = wait_for_event_of_type(oauth_live.audit_db_path, ModuleCtx.Gateway_Name, min_id, AuditEvent.Auth_Failed)
+        _ = wait_for_event_of_type(oauth_live.database_env, ModuleCtx.Gateway_Name, min_id, AuditEvent.Auth_Failed)
 
         john_identity = expected_identity(ModuleCtx.Definition_Name, keycloak_oauth.User_Outsider)
         maria_identity = expected_identity(ModuleCtx.Definition_Name, keycloak_oauth.User_Member)

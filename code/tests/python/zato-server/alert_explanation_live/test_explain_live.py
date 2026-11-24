@@ -462,48 +462,48 @@ class TestExplainLive:
 
         _produce_imap_failures(imap_server)
 
-        session = _new_session()
-        wrapper = _new_llm_wrapper(ollama, redis_server, repo_dir)
+        with _new_session() as session:
+            wrapper = _new_llm_wrapper(ollama, redis_server, repo_dir)
 
-        payload = _new_payload(AlertAction.Email_Digest, {}, AuditSource.Email_IMAP,
-            email_to=_email_to, object_name=_imap_conn_name, measures=['auth_failure_count'])
+            payload = _new_payload(AlertAction.Email_Digest, {}, AuditSource.Email_IMAP,
+                email_to=_email_to, object_name=_imap_conn_name, measures=['auth_failure_count'])
 
-        payload['rule'] = 'Auth_Failures'
-        payload['kind'] = 'Auth_Failures'
-        payload['message'] = f'{_failure_count} authentication failures on `{_imap_conn_name}`'
-        payload['fact']['auth_failure_count'] = _failure_count
-        payload['thresholds'] = {'auth_failure_threshold': _failure_count}
+            payload['rule'] = 'Auth_Failures'
+            payload['kind'] = 'Auth_Failures'
+            payload['message'] = f'{_failure_count} authentication failures on `{_imap_conn_name}`'
+            payload['fact']['auth_failure_count'] = _failure_count
+            payload['thresholds'] = {'auth_failure_threshold': _failure_count}
 
-        service = _new_service(payload, session, repo_dir, llm=_LiveLLMFacade(wrapper),
-            email=_EmailAPI(smtp_receiver.port))
+            service = _new_service(payload, session, repo_dir, llm=_LiveLLMFacade(wrapper),
+                email=_EmailAPI(smtp_receiver.port))
 
-        service.handle()
+            service.handle()
 
-        # The evidence the model saw came from the real rejected logins ..
-        stored = _stored_explanation(session)
-        evidence = stored['evidence']
+            # The evidence the model saw came from the real rejected logins ..
+            stored = _stored_explanation(session)
+            evidence = stored['evidence']
 
-        assert Heading_Object in evidence
-        assert Heading_Failures in evidence
-        assert 'AUTHENTICATIONFAILED' in evidence
+            assert Heading_Object in evidence
+            assert Heading_Failures in evidence
+            assert 'AUTHENTICATIONFAILED' in evidence
 
-        # .. the model explained them in the shape the skill asks for ..
-        _assert_sound_explanation(stored, _imap_explanation_words)
+            # .. the model explained them in the shape the skill asks for ..
+            _assert_sound_explanation(stored, _imap_explanation_words)
 
-        # .. the explanation is on record ..
-        explained = _get_explained_events()
-        assert len(explained) == 1
-        assert explained[0]['object_name'] == _imap_conn_name
-        assert explained[0]['outcome'] == AuditOutcome.OK
+            # .. the explanation is on record ..
+            explained = _get_explained_events()
+            assert len(explained) == 1
+            assert explained[0]['object_name'] == _imap_conn_name
+            assert explained[0]['outcome'] == AuditOutcome.OK
 
-        # .. and the explained alert reached the mailbox.
-        _trace_delivery(smtp_receiver)
-        assert len(smtp_receiver.messages) == 1
+            # .. and the explained alert reached the mailbox.
+            _trace_delivery(smtp_receiver)
+            assert len(smtp_receiver.messages) == 1
 
-        received = smtp_receiver.messages[0]
-        assert received.sender == _email_from
-        assert received.recipients == _email_to
-        assert stored['explanation'] in received.body
+            received = smtp_receiver.messages[0]
+            assert received.sender == _email_from
+            assert received.recipients == _email_to
+            assert stored['explanation'] in received.body
 
 # ################################################################################################################################
 
@@ -516,47 +516,47 @@ class TestExplainLive:
         repo_dir:'str',
         ) -> 'None':
 
-        session = _new_session()
-        wrapper = _new_llm_wrapper(ollama, redis_server, repo_dir)
+        with _new_session() as session:
+            wrapper = _new_llm_wrapper(ollama, redis_server, repo_dir)
 
-        _seed_sftp_connection(session, sftp_server)
-        server = cast_('any_', wrapper.server)
-        _produce_sftp_failures(sftp_server, server)
+            _seed_sftp_connection(session, sftp_server)
+            server = cast_('any_', wrapper.server)
+            _produce_sftp_failures(sftp_server, server)
 
-        payload = _new_payload(AlertAction.Email_Digest, {}, Probe_Source_Test_Transfer,
-            email_to=_email_to, object_name=_sftp_conn_name, measures=['test_transfer_failed'])
+            payload = _new_payload(AlertAction.Email_Digest, {}, Probe_Source_Test_Transfer,
+                email_to=_email_to, object_name=_sftp_conn_name, measures=['test_transfer_failed'])
 
-        payload['rule'] = 'Test_Transfer_Failing'
-        payload['kind'] = 'Test_Transfer_Failing'
-        payload['message'] = f'test transfer failing on `{_sftp_conn_name}`'
-        payload['fact']['test_transfer_failed'] = 1
-        payload['thresholds'] = {}
+            payload['rule'] = 'Test_Transfer_Failing'
+            payload['kind'] = 'Test_Transfer_Failing'
+            payload['message'] = f'test transfer failing on `{_sftp_conn_name}`'
+            payload['fact']['test_transfer_failed'] = 1
+            payload['thresholds'] = {}
 
-        service = _new_service(payload, session, repo_dir, llm=_LiveLLMFacade(wrapper),
-            email=_EmailAPI(smtp_receiver.port))
+            service = _new_service(payload, session, repo_dir, llm=_LiveLLMFacade(wrapper),
+                email=_EmailAPI(smtp_receiver.port))
 
-        service.handle()
+            service.handle()
 
-        # The evidence the model saw came from the real sftp round trips ..
-        stored = _stored_explanation(session)
-        evidence = stored['evidence']
+            # The evidence the model saw came from the real sftp round trips ..
+            stored = _stored_explanation(session)
+            evidence = stored['evidence']
 
-        assert Heading_Object in evidence
-        assert Heading_Failures in evidence
-        assert _sftp_error_text in evidence
-        assert sftp_server.username in evidence
+            assert Heading_Object in evidence
+            assert Heading_Failures in evidence
+            assert _sftp_error_text in evidence
+            assert sftp_server.username in evidence
 
-        # .. the model explained them in the shape the skill asks for ..
-        _assert_sound_explanation(stored, _sftp_explanation_words)
+            # .. the model explained them in the shape the skill asks for ..
+            _assert_sound_explanation(stored, _sftp_explanation_words)
 
-        # .. and the explained alert reached the mailbox.
-        explained = _get_explained_events()
-        assert len(explained) == 1
-        assert explained[0]['object_name'] == _sftp_conn_name
+            # .. and the explained alert reached the mailbox.
+            explained = _get_explained_events()
+            assert len(explained) == 1
+            assert explained[0]['object_name'] == _sftp_conn_name
 
-        _trace_delivery(smtp_receiver)
-        assert len(smtp_receiver.messages) == 1
-        assert stored['explanation'] in smtp_receiver.messages[0].body
+            _trace_delivery(smtp_receiver)
+            assert len(smtp_receiver.messages) == 1
+            assert stored['explanation'] in smtp_receiver.messages[0].body
 
 # ################################################################################################################################
 # ################################################################################################################################

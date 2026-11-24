@@ -31,14 +31,11 @@ _pubsub_failover_dir = os.path.abspath(_pubsub_failover_dir)
 sys.path.insert(0, _pubsub_failover_dir)
 
 # Zato
-from failover import build_server_env, ContainerServer, create_container, docker, get_failover_dir, LinkProxy, \
-    remove_container, run_container, save_container_logs, wait_until_up
+from failover import build_server_env, ContainerServer, copy_server_environment, create_container, docker, \
+    get_failover_dir, LinkProxy, remove_container, run_container, save_container_logs, wait_until_up
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.conftest_base_pubsub import find_free_port, patch_server_conf, render_template, \
     run_quickstart_and_enmasse, SessionState
-from zato.common.db_env.database import get_database_engine
-from zato.common.test.direct_sql.reset import delete_shared_objects
-from zato.common.test.pubsub_database import is_postgresql_mode, pubsub_db_env
 from zato.common.test.receiver import WebhookReceiver
 
 # ################################################################################################################################
@@ -46,9 +43,10 @@ from zato.common.test.receiver import WebhookReceiver
 
 if 0:
     from zato.common.test.pubsub_database import PubSubDatabase
-    from zato.common.typing_ import strstrdict
+    from zato.common.typing_ import strlist, strstrdict
 
     PubSubDatabase = PubSubDatabase
+    strlist = strlist
     strstrdict = strstrdict
 
 # ################################################################################################################################
@@ -127,8 +125,8 @@ _date_format = '%Y-%m-%dT%H:%M:%S'
 
 @dataclass
 class SchedulerServer:
-    """ One server with its container, its own Redis, its run log and, on PostgreSQL, the proxies
-    in front of its link to the database and of its HTTP port.
+    """ One server with its container, its own Redis, its run log and the proxies in front of its link
+    to the database and of its HTTP port.
     """
     label: 'str'
     server: 'ContainerServer'
@@ -136,8 +134,8 @@ class SchedulerServer:
     redis_port: 'int'
     run_log_path: 'str'
     scheduler_log_path: 'str'
-    database_proxy: 'LinkProxy | None' = None
-    http_proxy: 'LinkProxy | None' = None
+    database_proxy: 'LinkProxy'
+    http_proxy: 'LinkProxy'
 
 # ################################################################################################################################
 
@@ -264,34 +262,53 @@ def import_jobs(quickstart_directory:'str', server_directory:'str', rendered_yam
 
 # ################################################################################################################################
 
-def _new_server(
-    label:'str',
-    rendered_yaml:'str',
-    invoke_password:'str',
-    database:'PubSubDatabase',
-    work_dir:'str',
-    state:'SessionState',
-) -> 'SchedulerServer':
-    """ Creates the environment of one server, with the service of the jobs, the jobs, its own Redis and its scheduler.
+def _create_environments(labels:'strlist', pair:'SchedulerPair', invoke_password:'str') -> 'strlist':
+    """ Creates the quickstart environment of the first server in the shared database, with the service of the jobs
+    in its pickup directory, and a copy of it for each other server, and returns their server directories.
     """
-    server_directory = run_quickstart_and_enmasse(
-        state=state,
-        logger=logger,
-        zato_bin=_zato_bin,
-        invoke_password=invoke_password,
-        rendered_yaml='',
-        quickstart_prefix=f'zato_scheduler_failover_{label}_',
-        log_to_files=False,
-    )
+    out:'strlist' = []
+    first_state:'SessionState | None' = None
 
-    quickstart_directory = os.path.dirname(server_directory)
+    for label in labels:
+        state = SessionState(f'zato.test.scheduler_failover.{label}', f'server-logs-scheduler-{label}.txt')
+        pair.states.append(state)
 
-    # The service of the jobs is deployed from the pickup directory as the server starts ..
-    pickup_dir = os.path.join(server_directory, 'pickup', 'incoming', 'services')
-    service_path = os.path.join(os.path.dirname(__file__), ModuleCtx.Service_File_Name)
-    _ = shutil.copy(service_path, pickup_dir)
+        quickstart_prefix = f'zato_scheduler_failover_{label}_'
 
-    # .. the server has its own Redis ..
+        # The first server has the environment that quickstart creates in the database ..
+        if first_state is None:
+            server_directory = run_quickstart_and_enmasse(
+                state=state,
+                logger=logger,
+                zato_bin=_zato_bin,
+                invoke_password=invoke_password,
+                rendered_yaml='',
+                quickstart_prefix=quickstart_prefix,
+                extra_env=pair.database.env,
+                log_to_files=False,
+            )
+
+            # .. with the service of the jobs, which a server deploys from its pickup directory as it starts ..
+            pickup_dir = os.path.join(server_directory, 'pickup', 'incoming', 'services')
+            service_path = os.path.join(os.path.dirname(__file__), ModuleCtx.Service_File_Name)
+            _ = shutil.copy(service_path, pickup_dir)
+
+            first_state = state
+
+        # .. and each other server has a copy of it, because the servers share the configuration of the database.
+        else:
+            server_directory = copy_server_environment(first_state, state, quickstart_prefix, tempfile.gettempdir())
+
+        out.append(server_directory)
+
+    return out
+
+# ################################################################################################################################
+
+def _new_server(label:'str', server_directory:'str', database:'PubSubDatabase', work_dir:'str') -> 'SchedulerServer':
+    """ Returns one server in its environment, with its own Redis and its own scheduler.
+    """
+    # The server has its own Redis ..
     redis_port = find_free_port()
     redis_container = f'zato-scheduler-test-redis-{label}'
     _start_redis(redis_container, redis_port)
@@ -309,6 +326,19 @@ def _new_server(
     _patch_redis_port(server_directory, redis_port)
     build_server_env(server, database)
 
+    # .. its link to the database and its HTTP port are each behind a proxy, which a test may cut ..
+    env = server.env
+
+    database_proxy = LinkProxy(find_free_port(), database.port, os.path.join(work_dir, f'proxy-database-{label}.log'))
+    env['Zato_Database_Port'] = str(database_proxy.listen_port)
+
+    internal_port = find_free_port()
+    env['Zato_Config_Bind_Port'] = str(internal_port)
+    http_proxy = LinkProxy(server.port, internal_port, os.path.join(work_dir, f'proxy-http-{label}.log'))
+
+    database_proxy.start()
+    http_proxy.start()
+
     out = SchedulerServer(
         label=label,
         server=server,
@@ -316,10 +346,11 @@ def _new_server(
         redis_port=redis_port,
         run_log_path=os.path.join(work_dir, f'run-log-{label}.jsonl'),
         scheduler_log_path=os.path.join(work_dir, f'scheduler-{label}.log'),
+        database_proxy=database_proxy,
+        http_proxy=http_proxy,
     )
 
-    # .. and its own scheduler, which the launcher starts in the container ..
-    env = server.env
+    # .. and its own scheduler, which the launcher starts in the container.
     env['Zato_Scheduler_Redis_Host'] = '127.0.0.1'
     env['Zato_Scheduler_Redis_Port'] = str(redis_port)
     env['Zato_Scheduler_HTTP_Port'] = str(find_free_port())
@@ -330,36 +361,7 @@ def _new_server(
     env['Zato_Test_Scheduler_Run_Log'] = out.run_log_path
     env['Zato_Test_Scheduler_Server_Label'] = label
 
-    # .. and on PostgreSQL, its link to the database and its HTTP port are each behind a proxy, which a test may cut.
-    if is_postgresql_mode(database.mode):
-
-        database_proxy = LinkProxy(find_free_port(), database.port, os.path.join(work_dir, f'proxy-database-{label}.log'))
-        env['Zato_Database_Port'] = str(database_proxy.listen_port)
-
-        internal_port = find_free_port()
-        env['Zato_Config_Bind_Port'] = str(internal_port)
-        http_proxy = LinkProxy(server.port, internal_port, os.path.join(work_dir, f'proxy-http-{label}.log'))
-
-        database_proxy.start()
-        http_proxy.start()
-
-        out.database_proxy = database_proxy
-        out.http_proxy = http_proxy
-
-    # .. the server starts once to deploy the service, and the jobs that invoke it are imported after that.
-    _deploy_services(out)
-    import_jobs(quickstart_directory, server_directory, rendered_yaml, {})
-
     return out
-
-# ################################################################################################################################
-
-def _clear_run_state(database:'PubSubDatabase') -> 'None':
-    """ Deletes the run state that an earlier pair in the same database left behind.
-    """
-    with pubsub_db_env(database.env):
-        engine = get_database_engine()
-        delete_shared_objects(engine, ModuleCtx.Run_State_Object_Type)
 
 # ################################################################################################################################
 
@@ -416,15 +418,12 @@ def render_job_file(placeholders:'strstrdict') -> 'tuple[str, datetime]':
 
 # ################################################################################################################################
 
-def build_pair(database:'PubSubDatabase', server_count:'int', needs_workload:'bool') -> 'SchedulerPair':
+def build_pair(database:'PubSubDatabase', needs_workload:'bool') -> 'SchedulerPair':
     """ Builds the servers on the database, of which the first one runs and the others wait as stopped containers.
     """
-    if is_postgresql_mode(database.mode):
-        _clear_run_state(database)
-
     work_dir = tempfile.mkdtemp(prefix='scheduler_', dir=get_failover_dir())
 
-    # The dates of the jobs are the same in each server, so both of them follow one grid ..
+    # The servers share the jobs of the database, so both of them follow one grid of dates ..
     placeholders:'strstrdict' = {}
     rendered_yaml, gap_start = render_job_file(placeholders)
 
@@ -439,15 +438,21 @@ def build_pair(database:'PubSubDatabase', server_count:'int', needs_workload:'bo
     invoke_password = 'test.invoke.' + CryptoManager.generate_hex_string()
     pair.invoke_password = invoke_password
 
-    labels = ['a', 'b'][:server_count]
+    labels = ['a', 'b']
 
     try:
-        for label in labels:
-            state = SessionState(f'zato.test.scheduler_failover.{label}', f'server-logs-scheduler-{label}.txt')
-            pair.states.append(state)
+        server_directories = _create_environments(labels, pair, invoke_password)
 
-            server = _new_server(label, rendered_yaml, invoke_password, database, work_dir, state)
+        for label, server_directory in zip(labels, server_directories):
+            server = _new_server(label, server_directory, database, work_dir)
             pair.servers.append(server)
+
+        # .. the first server starts once to deploy the service, and the jobs that invoke it are imported
+        # .. into the shared database after that ..
+        first_directory = server_directories[0]
+
+        _deploy_services(pair.a)
+        import_jobs(os.path.dirname(first_directory), first_directory, rendered_yaml, database.env)
 
         # .. the first server becomes active and the others wait.
         run_container(pair.a.server)
@@ -473,11 +478,8 @@ def remove_pair(pair:'SchedulerPair') -> 'None':
 
         _ = docker('rm', '-f', '-v', server.redis_container, check=False)
 
-        if server.database_proxy:
-            server.database_proxy.stop()
-
-        if server.http_proxy:
-            server.http_proxy.stop()
+        server.database_proxy.stop()
+        server.http_proxy.stop()
 
     for receiver in pair.receivers.values():
         receiver.stop()
@@ -518,12 +520,6 @@ def unpause_server(server:'SchedulerServer') -> 'None':
 def cut_off_server(server:'SchedulerServer', command:'str') -> 'None':
     """ Cuts or restores the links of a server to the database and to its clients, with its process running throughout.
     """
-    if not server.database_proxy:
-        raise Exception(f'Server {server.label} has no proxies')
-
-    if not server.http_proxy:
-        raise Exception(f'Server {server.label} has no proxies')
-
     _ = server.database_proxy.command(command)
     _ = server.http_proxy.command(command)
 

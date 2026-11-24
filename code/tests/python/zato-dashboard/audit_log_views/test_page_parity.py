@@ -30,7 +30,6 @@ from zato.common.typing_ import cast_
 
 if 0:
     from collections.abc import Iterator
-    from zato.common.typing_ import any_
 
     envgen = Iterator[None]
 

@@ -45,8 +45,8 @@ _server_name = 'test-demo-seed-server'
 _now = datetime(2026, 7, 15, 12, 30, 0, tzinfo=timezone.utc)
 
 # How much CPU time of this process one default-size run may use - a week of 1200 messages
-# per day is about 8,500 messages and their events. The SQLite database runs in this process,
-# so the budget covers content generation and the bulk transaction alike.
+# per day is about 8,500 messages and their events. The budget covers content generation
+# and the client side of the bulk transaction.
 _max_seed_cpu_seconds = 15.0
 
 # How many transactions one run commits

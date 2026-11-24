@@ -20,7 +20,7 @@ from failover import Controller, docker, get_container_state, is_server_up, Link
     read_generation, reset_pair, run_container, wait_for_generation, wait_until_up
 from zato.common.test.client import PublishClient, PullClient
 from zato.common.test.conftest_base_pubsub import find_free_port
-from zato.common.test.pubsub_database import connect, is_postgresql_mode
+from zato.common.test.pubsub_database import connect
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -423,11 +423,6 @@ def test_takeover_during_database_outage(failover_env:'FailoverEnvironment') -> 
     which waits for the database, takes over once it returns, and serves every message published before the outage.
     """
     env = failover_env
-
-    # A SQLite file has no outage of its own and no standby server that could take it over.
-    if not is_postgresql_mode(env.database.mode):
-        return
-
     generation = reset_pair(env)
 
     receiver = env.receivers[_topic_name]

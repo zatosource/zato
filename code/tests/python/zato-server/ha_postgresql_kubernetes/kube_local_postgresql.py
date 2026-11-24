@@ -190,7 +190,6 @@ def start_local_backend() -> 'KubeLocalPostgreSQL':
     host = f'{ModuleCtx.Service_Name}.{namespace}.svc.cluster.local'
 
     create_secret(ModuleCtx.Secret_Name, {}, {
-        'Zato_Database_Type': 'postgresql',
         'Zato_Database_Host': host,
         'Zato_Database_Port': str(ModuleCtx.Service_Port),
         'Zato_Database_Username': DatabaseCtx.Username,

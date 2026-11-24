@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from contextlib import contextmanager
 from datetime import datetime
-from tempfile import TemporaryDirectory
 
 # SQLAlchemy
 from sqlalchemy.orm import sessionmaker
@@ -28,7 +27,7 @@ from zato.common.alerting.object_settings import build_rule_values, build_window
 from zato.common.api import CONNECTION, FileTransfer, GENERIC, URL_TYPE
 from zato.common.audit_log.api import AuditSource
 from zato.common.json_internal import dumps
-from zato.common.odb.model import GenericConn, HTTPSOAP
+from zato.common.odb.model import GenericConn, GenericConnDef, HTTPSOAP, SecurityBase, Service
 from zato.common.test.config_database import config_database_engine
 from zato.common.typing_ import cast_
 from zato.common.test.direct_sql.seed import seed_config_objects
@@ -88,21 +87,23 @@ _soap_outgoing_name = 'crm.soap'
 
 @contextmanager
 def _session() -> 'sessiongen':
-    """ A SQLite database file in a temporary directory with the generic connection and HTTP channel tables.
+    """ A new PostgreSQL database of its own with the generic connection and HTTP channel tables and the tables they refer to.
     """
     tables = [
+        SecurityBase.__table__,
+        Service.__table__,
+        GenericConnDef.__table__,
         GenericConn.__table__,
         HTTPSOAP.__table__,
     ]
 
-    with TemporaryDirectory() as directory:
-        with config_database_engine(directory, tables) as engine:
-            session_factory = sessionmaker(bind=engine)
-            session = session_factory()
+    with config_database_engine(tables) as engine:
+        session_factory = sessionmaker(bind=engine)
+        session = session_factory()
 
-            yield session
+        yield session
 
-            session.close()
+        session.close()
 
 # ################################################################################################################################
 

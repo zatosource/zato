@@ -33,10 +33,10 @@ from zato.common.test import kill_server_process
 from zato.common.test.client import AdminClient
 from zato.common.test.conftest_base_pubsub import find_free_port, run_quickstart_and_enmasse, SessionState, wait_for_server
 from zato.common.test.process_util import kill_process_tree
+from zato.common.test.zato_database import create_test_database, drop_test_database
 from zato.common.util.local_server import read_pid_file, stop_pid
 from zato.common.util.tcp import get_free_port
 from zato.server.demo_file_transfer.common import get_paths, Root_Env_Name
-from zato.common.db_env.database_env import DatabaseEnv
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -234,6 +234,11 @@ def zato_server() -> 'any_':
     # because it stops every Zato server on the machine rather than only this suite's one.
     state = SessionState(logger.name, 'server-logs-demo-file-transfer.txt')
 
+    # The environment receives a Zato database of its own, which the quickstart, enmasse, the server,
+    # the listener and the scheduler that this process starts use, and which the tests read the transfers from.
+    database_env = create_test_database()
+    os.environ.update(database_env)
+
     server_directory = run_quickstart_and_enmasse(
         state=state,
         logger=logger,
@@ -246,12 +251,9 @@ def zato_server() -> 'any_':
     quickstart_directory = state.quickstart_directory
     assert quickstart_directory is not None
 
-    # Everything of the demo lives under this suite's directory, which the tests too need to know ..
+    # Everything of the demo lives under this suite's directory, which the tests too need to know.
     demo_root = os.path.join(quickstart_directory, 'demo-file-transfer')
     os.environ[Root_Env_Name] = demo_root
-
-    # .. and so does the Zato database the tests read the transfers from.
-    audit_db_path = os.path.join(quickstart_directory, 'zato.db')
 
     _patch_server_conf(server_directory, server_port)
 
@@ -262,8 +264,6 @@ def zato_server() -> 'any_':
     environment['Zato_Broker_HTTP_Port'] = str(find_free_port())
     environment['Zato_Scheduler_Stream_Prefix'] = _scheduler_stream_prefix
     environment['Zato_Scheduler_HTTP_Port'] = str(_scheduler_http_port)
-    environment[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
-    environment[DatabaseEnv.Env_Path] = audit_db_path
 
     server_process = _start_server(zato_bin, server_directory, server_port, environment)
     listener_process = None
@@ -281,7 +281,7 @@ def zato_server() -> 'any_':
             'client': client,
             'server_directory': server_directory,
             'demo_root': demo_root,
-            'audit_db_path': audit_db_path,
+            'database_env': database_env,
         }
 
     finally:
@@ -299,6 +299,12 @@ def zato_server() -> 'any_':
 
         shutil.rmtree(quickstart_directory, ignore_errors=True)
         _ = os.environ.pop(Root_Env_Name, None)
+
+        # The variables that selected the database are removed together with the database
+        for name in database_env:
+            del os.environ[name]
+
+        drop_test_database(database_env)
 
 # ################################################################################################################################
 # ################################################################################################################################

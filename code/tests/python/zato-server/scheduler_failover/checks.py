@@ -13,7 +13,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import os
-import sqlite3
 import time
 from collections import Counter
 from datetime import datetime
@@ -22,7 +21,7 @@ from datetime import datetime
 from failover import read_audit_rows
 from pair import ModuleCtx as PairCtx
 from zato.common.api import SCHEDULER
-from zato.common.test.pubsub_database import connect, is_postgresql_mode
+from zato.common.test.pubsub_database import connect
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -162,37 +161,20 @@ def wait_for_starts(pair:'SchedulerPair', job:'str', server_label:'str', count:'
 def read_run_states(pair:'SchedulerPair') -> 'anydict':
     """ Returns the run state of each job, as the servers stored it in the shared database.
     """
-    database = pair.database
     query = 'select name, data from zato_shared_object where object_type = '
 
     out:'anydict' = {}
 
-    if is_postgresql_mode(database.mode):
-        connection = connect(database)
+    connection = connect(pair.database)
 
-        try:
-            cursor = connection.cursor()
-            cursor.execute(query + '%s', (PairCtx.Run_State_Object_Type,))
-            rows = cursor.fetchall()
-        finally:
-            connection.close()
-
-    else:
-        connection = sqlite3.connect(database.env['Zato_Database_Path'])
-
-        try:
-            cursor = connection.cursor()
-            _ = cursor.execute(query + '?', (PairCtx.Run_State_Object_Type,))
-            rows = cursor.fetchall()
-        finally:
-            connection.close()
+    try:
+        cursor = connection.cursor()
+        cursor.execute(query + '%s', (PairCtx.Run_State_Object_Type,))
+        rows = cursor.fetchall()
+    finally:
+        connection.close()
 
     for name, data in rows:
-
-        # SQLite returns the JSON document as text.
-        if isinstance(data, str):
-            data = json.loads(data)
-
         out[name] = data
 
     return out

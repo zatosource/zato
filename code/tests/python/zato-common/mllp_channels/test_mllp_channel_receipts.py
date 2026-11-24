@@ -8,10 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # What a listener leaves behind for every frame it is handed - an acknowledgment on the wire and,
 # where the channel audits, a receipt with that acknowledgment filed next to it. The listener is driven
-# in-process over a fake socket, so no transport runs and the audit log is a SQLite file of the test's own.
-
-# stdlib
-import os
+# in-process over a fake socket, so no transport runs and the audit log is a PostgreSQL database of the test's own.
 
 # pytest
 import pytest
@@ -22,13 +19,13 @@ from sqlalchemy import select
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditLog, event_table
 from zato.common.audit_log.common import event_data
-from zato.common.db_env.database import get_database_engine
+from zato.common.db_env.database import dispose_database_engine, get_database_engine
 from zato.common.hl7.mllp.reply import Unmatched_Object_Name
 from zato.common.hl7.mllp.router import HL7MessageRouter
 from zato.common.hl7.mllp.server import ConnectionContext, HL7MLLPServer
 from zato.common.hl7.mllp.settings import ListenerConfig, RouteSettings
+from zato.common.test.zato_database import isolated_database_env
 from zato.common.typing_ import cast_
-from zato.common.db_env.database_env import DatabaseEnv
 
 from mllp_live_util import sample_adt_a01
 
@@ -68,17 +65,14 @@ _no_message_error_text = 'Batch contains no MSH segment'
 # ################################################################################################################################
 
 @pytest.fixture(autouse=True)
-def audit_db_env(tmp_path:'os.PathLike') -> 'any_':
-    """ Points the audit database at a SQLite file of this test's own.
+def audit_db_env() -> 'any_':
+    """ Points the Zato database at a new PostgreSQL database of this test's own.
     """
-    database_path = os.path.join(str(tmp_path), 'zato.db')
-    os.environ[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
-    os.environ[DatabaseEnv.Env_Path] = database_path
-
-    yield database_path
-
-    del os.environ[DatabaseEnv.Env_Type]
-    del os.environ[DatabaseEnv.Env_Path]
+    with isolated_database_env() as env:
+        try:
+            yield env
+        finally:
+            dispose_database_engine()
 
 # ################################################################################################################################
 # ################################################################################################################################

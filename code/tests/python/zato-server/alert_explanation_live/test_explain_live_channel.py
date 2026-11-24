@@ -14,7 +14,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # to the steps through one object.
 
 # stdlib
-import os
 from dataclasses import dataclass
 
 # requests
@@ -25,7 +24,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 # Zato
-from zato.common.db_env.engine import new_zato_engine
 from zato.common.alerting.explain.evidence import Heading_Object
 from zato.common.alerting.explain.store import ExplanationStore
 from zato.common.alerting.names import get_notification_conn_name
@@ -36,6 +34,7 @@ from zato.common.test.client import AdminClient
 
 # Test helpers
 from live_config import LiveServer
+from live_environment.audit import new_database_engine
 from live_enmasse import deactivate_document, import_document
 from live_trace import Channel_Channel, Channel_Explain, Channel_SMTP, Received, Sent, separator, trace
 from test_explain_live import _assert_sound_explanation, _email_to, _trace_delivery
@@ -418,10 +417,9 @@ def _produce_channel_failures(channel:'_ChannelDescription') -> 'None':
 # ################################################################################################################################
 
 def _server_audit_engine() -> 'any_':
-    """ The audit database of the live server - the one file the server writes and this process reads.
+    """ The Zato database of the live server - the configuration and the audit log the server writes and this process reads.
     """
-    path = os.path.join(LiveServer.server_directory, 'zato.db')
-    out = new_zato_engine(f'sqlite:///{path}')
+    out = new_database_engine(LiveServer.database_env)
     return out
 
 # ################################################################################################################################
@@ -453,8 +451,7 @@ def _get_stored_explanations(channel:'_ChannelDescription') -> 'anylist':
     """ Every explanation the live server stored for the channel's source, read off its own ODB - the two proofs
     share the server, so each reads the explanations of its own channel kind alone.
     """
-    path = os.path.join(os.path.dirname(LiveServer.server_directory), 'config.db')
-    session_maker = sessionmaker(bind=new_zato_engine(f'sqlite:///{path}'))
+    session_maker = sessionmaker(bind=_server_audit_engine())
 
     store = ExplanationStore(session_maker)
 

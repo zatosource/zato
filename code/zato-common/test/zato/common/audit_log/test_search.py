@@ -8,15 +8,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime, timezone
-from shutil import rmtree
-from tempfile import mkdtemp
 from unittest import main, TestCase
 
 # Zato
 from zato.common.audit_log.common import event_attr_table, AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.search import last_seen, search_events
 from zato.common.test.direct_sql.seed import seed_event_row, seed_rows
-from zato.common.test.zato_database import file_database_engine
+from zato.common.test.zato_database import zato_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,12 +45,8 @@ class SearchEventsTestCase(TestCase):
 
     def setUp(self) -> 'None':
 
-        # A temporary directory for the database file, removed after each test ..
-        directory = mkdtemp()
-        self.addCleanup(rmtree, directory)
-
-        # .. and the Zato database in it, with all of its schemas, disposed of after each test.
-        self.engine = self.enterContext(file_database_engine(directory))
+        # A new Zato database with all of its schemas, dropped after each test.
+        self.engine = self.enterContext(zato_database_engine())
 
 # ################################################################################################################################
 

@@ -24,7 +24,6 @@ from resources import get_resource_growth, ResourceMonitor
 from workload import get_count_mismatches, get_repeats_not_in_flight, Topic_Name, Workload
 from zato.common.test.client import AdminClient
 from zato.common.test.perf_report import report_result, start_measurement
-from zato.common.test.pubsub_database import is_postgresql_mode
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,13 +52,8 @@ def test_soak(workload_pair:'SchedulerPair') -> 'None':
     pair = workload_pair
 
     # The server measured is the active one, on the database that the servers share
-    if is_postgresql_mode(pair.database.mode):
-        database = pair.database
-    else:
-        database = None
-
     client = AdminClient(pair.a.server.base_url, pair.invoke_password)
-    measurement = start_measurement(client, database)
+    measurement = start_measurement(client, pair.database)
 
     workload = Workload(cast('any_', pair), [pair.a.server])
 

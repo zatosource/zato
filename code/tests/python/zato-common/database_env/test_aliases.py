@@ -15,7 +15,7 @@ from subprocess import run
 import pytest
 
 # Zato
-from zato.common.db_env.common import get_env_values, Type_PostgreSQL
+from zato.common.db_env.common import get_env_values
 from zato.common.db_env.database import database_config
 from zato.common.db_env.fence import get_generation_file_path
 from zato.common.pubsub.sql.config import get_batch_size
@@ -84,14 +84,12 @@ def _read_once() -> 'CompletedProcess[str]':
 
 def test_database_variables_are_read_under_an_alias(monkeypatch:'pytest.MonkeyPatch') -> 'None':
 
-    monkeypatch.setenv('Zato_PubSub_DB_Type', Type_PostgreSQL)
     monkeypatch.setenv('Zato_PubSub_DB_Host', 'postgresql.example.com')
     monkeypatch.setenv('Zato_PubSub_DB_Port', '5432')
     monkeypatch.setenv('Zato_PubSub_DB_Name', 'zato')
 
     values = get_env_values(database_config)
 
-    assert values['type'] == Type_PostgreSQL
     assert values['host'] == 'postgresql.example.com'
     assert values['port'] == '5432'
     assert values['name'] == 'zato'
