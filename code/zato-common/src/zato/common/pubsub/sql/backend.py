@@ -19,7 +19,9 @@ from sqlalchemy import and_, select
 from zato.common.api import PubSub
 from zato.common.audit_log.api import is_audit_log_enabled
 from zato.common.db_env.common import Type_SQLite
+from zato.common.db_env.database import is_database_lost
 from zato.common.db_env.engine import call_database, execute_write
+from zato.common.db_env.sqlite_identity import DatabaseFileReplaced
 from zato.common.pubsub.delivery_scope import get_delivery_scope
 from zato.common.pubsub.sql.admin import SQLAdminAPI
 from zato.common.pubsub.sql.config import get_batch_size, get_pull_lease_seconds
@@ -126,6 +128,10 @@ class SQLPubSubBackend(SQLAdminAPI):
         # A topic of config.db that is inactive is refused here, before any message is built
         if topic_name in self.inactive_topics:
             raise Exception(f'Topic `{topic_name}` is inactive')
+
+        # A database whose SQLite file was removed or replaced accepts no publication
+        if is_database_lost():
+            raise DatabaseFileReplaced(f'Publication to `{topic_name}` refused, the database file was removed or replaced')
 
         built = build_publication(
             self,

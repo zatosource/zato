@@ -30,6 +30,7 @@ from zato.common.db_env.database import database_config, get_database_sqlite_pat
     new_unshared_database_engine
 from zato.common.db_env.engine import create_schemas, get_cached_engine_count, get_queue_by_path
 from zato.common.db_env.outage import call_until_available
+from zato.common.db_env.sqlite_identity import record_identity
 from zato.common.odb.model import Server
 from zato.common.pubsub.sql.generation import take_over_before_fork
 from zato.common.util.api import find_internal_modules, get_odb_session_from_server_config
@@ -108,12 +109,17 @@ def get_server_name(server_config:'Bunch') -> 'str':
 # ################################################################################################################################
 
 def _create_database_schemas() -> 'None':
-    """ Creates the schemas of the Zato database through an engine of its own, which is disposed whether or not they were created.
+    """ Creates the schemas of the Zato database through an engine of its own, which is disposed whether or not they were created,
+    and records the identity of its SQLite file, which the config process and the worker inherit.
     """
     engine = new_unshared_database_engine()
 
     try:
         create_schemas(engine, database_config.metadata_tuple)
+
+        if db_path := get_database_sqlite_path():
+            record_identity(db_path)
+
     finally:
         engine.dispose()
 

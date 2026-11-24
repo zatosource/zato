@@ -10,7 +10,7 @@
 	help install-deps install-fhir-converter \
 	test-server test-server-fuzz test-rest test-rest-fuzz test-rest-outgoing test-rest-redirects test-rest-perf test-rest-channel test-rest-channel-perf test-scheduler test-scheduler-failover \
 	test-ha test-ha-core test-ha-pubsub-subscription-in-process test-ha-push-delivery test-ha-pubsub-subscription \
-	test-ha-postgresql-local test-ha-power-loss test-ha-pubsub-subscription-ui test-ha-postgresql \
+	test-ha-postgresql-local test-ha-database-file test-ha-power-loss test-ha-pubsub-subscription-ui test-ha-postgresql \
 	test-ha-postgresql-kubernetes test-ha-postgresql-soak \
 	test-soak test-soak-pubsub test-soak-scheduler-failover \
 	test-arbiter \
@@ -751,12 +751,13 @@ test-scheduler-failover: ## Active-passive scheduler failover tests on PostgreSQ
 # repositories after the suites of this repository and the soak tests last, and the target test-ha is currently on.
 Zato_Test_HA = \
 	test-ha-pubsub-subscription-in-process test-ha-push-delivery test-ha-pubsub-subscription \
-	test-ha-postgresql-local test-ha-core test-ha-power-loss test-ha-pubsub-subscription-ui test-ha-postgresql \
-	test-ha-postgresql-kubernetes $(Zato_HA_Linked_Targets) test-ha-postgresql-soak
+	test-ha-postgresql-local test-ha-core test-ha-database-file test-ha-power-loss test-ha-pubsub-subscription-ui \
+	test-ha-postgresql test-ha-postgresql-kubernetes $(Zato_HA_Linked_Targets) test-ha-postgresql-soak
 Zato_Test_HA_Resume_File := $(CURDIR)/code/tests/.test-ha-resume
 
 # The directory of each HA suite.
 Zato_Test_HA_Server_Dir                := $(CURDIR)/code/tests/python/zato-server
+Zato_Test_HA_Dir_database-file         := $(CURDIR)/code/tests/python/zato-common/reliability/database_file
 Zato_Test_HA_Dir_power-loss            := $(CURDIR)/code/tests/python/zato-common/reliability/power_loss
 Zato_Test_HA_Dir_postgresql-local      := $(Zato_Test_HA_Server_Dir)/ha_postgresql_local
 Zato_Test_HA_Dir_push-delivery         := $(Zato_Test_HA_Server_Dir)/ha_push_delivery
@@ -766,6 +767,9 @@ Zato_Test_HA_Dir_postgresql-kubernetes := $(Zato_Test_HA_Server_Dir)/ha_postgres
 
 # The modules of each HA suite in the order they run, from the shortest to the longest. Every module of a suite
 # is listed, and a suite with a module that is not listed refuses to run.
+Zato_Test_HA_Modules_database-file := \
+	test_engine_guard.py test_live_replacement.py
+
 Zato_Test_HA_Modules_power-loss := \
 	test_harness.py test_sqlite_server.py test_postgresql_server.py
 
@@ -838,6 +842,9 @@ test-ha-core: rust-target-prune ## The Rust tests of the active-standby node - t
 
 test-ha-postgresql-local: ## The takeover of the Zato database and the start of a server under a node's generation, on a local PostgreSQL 19 with a synchronous standby, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(call Zato_Test_HA_Suite,postgresql-local)
+
+test-ha-database-file: ## The removal and the replacement of the SQLite file of the Zato database while a server runs, after which publications, deliveries and audit writes are refused and no new file is created, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+	$(call Zato_Test_HA_Suite,database-file)
 
 test-ha-power-loss: ## Loss of power to a single server on SQLite and on PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(call Zato_Test_HA_Suite,power-loss)

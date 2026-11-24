@@ -34,11 +34,12 @@ if 0:
 
 # The status codes and the reason phrases of HTTP, the same objects that http.client exposes under these names,
 # taken from the package http, whose import does not load the email parser that http.client imports.
-BAD_REQUEST  = HTTPStatus.BAD_REQUEST
-CONFLICT     = HTTPStatus.CONFLICT
-FORBIDDEN    = HTTPStatus.FORBIDDEN
-OK           = HTTPStatus.OK
-UNAUTHORIZED = HTTPStatus.UNAUTHORIZED
+BAD_REQUEST         = HTTPStatus.BAD_REQUEST
+CONFLICT            = HTTPStatus.CONFLICT
+FORBIDDEN           = HTTPStatus.FORBIDDEN
+OK                  = HTTPStatus.OK
+SERVICE_UNAVAILABLE = HTTPStatus.SERVICE_UNAVAILABLE
+UNAUTHORIZED        = HTTPStatus.UNAUTHORIZED
 
 http_responses:'dict[HTTPStatus, str]' = {}
 
@@ -2840,6 +2841,8 @@ class PubSub:
         Unauthorized = f'{UNAUTHORIZED} {http_responses[UNAUTHORIZED]}'
         Forbidden    = f'{FORBIDDEN} {http_responses[FORBIDDEN]}'
         Conflict     = f'{CONFLICT} {http_responses[CONFLICT]}'
+
+        Service_Unavailable = f'{SERVICE_UNAVAILABLE} {http_responses[SERVICE_UNAVAILABLE]}'
 
     class Exchange_Name:
         Pubsub_Push = 'pubsub.push.1'

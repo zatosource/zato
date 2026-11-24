@@ -1,0 +1,49 @@
+security:
+
+  - name: test.reliability.database-file.publisher
+    type: basic_auth
+    username: test.reliability.database-file.publisher
+    password: "{{publisher_password}}"
+
+  - name: test.reliability.database-file.pusher
+    type: basic_auth
+    username: test.reliability.database-file.pusher
+    password: "{{pusher_password}}"
+
+outgoing_rest:
+
+  - name: test.reliability.database-file.out.push
+    host: "http://127.0.0.1:{{push_port}}"
+    url_path: /webhook/database-file
+    data_format: json
+    timeout: 30
+
+pubsub_topic:
+
+  - name: reliability.database-file
+
+pubsub_permission:
+
+  - security: test.reliability.database-file.publisher
+    pub:
+      - reliability.database-file
+
+  - security: test.reliability.database-file.pusher
+    sub:
+      - reliability.database-file
+
+pubsub_subscription:
+
+  - security: test.reliability.database-file.pusher
+    delivery_type: push
+    push_rest_endpoint: test.reliability.database-file.out.push
+    topic_list:
+      - reliability.database-file
+
+channel_rest:
+
+  - name: test.reliability.database-file.audited
+    service: test.reliability.database-file.echo
+    url_path: /test/reliability/database-file/audited
+    data_format: json
+    is_audit_log_active: true

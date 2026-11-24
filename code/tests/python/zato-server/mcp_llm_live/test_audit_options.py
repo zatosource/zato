@@ -35,6 +35,9 @@ _toggle_call_count = 3
 # What the server logs when an audit write fails and the event is dropped
 _dropped_log_marker = 'Audit event dropped'
 
+# What the server logs once a process finds the database file removed or replaced
+_removed_log_marker = 'was removed or replaced while the process was running'
+
 # The file mode that takes the write permissions away from the audit database
 _read_only_mode = 0o444
 
@@ -208,7 +211,7 @@ class TestAuditStorageFailure:
     """ The audit database failing underneath the gateway - a lock another writer holds,
     write permissions gone from the file and the file deleted outright - while every
     conversation keeps answering. A write the database refuses drops that one event
-    with a logged warning, and a deleted database recreates on the next write.
+    with a logged warning, and a deleted database is not created again until the server restarts.
     """
 
 # ################################################################################################################################
@@ -321,9 +324,10 @@ class TestAuditStorageFailure:
 
 # ################################################################################################################################
 
-    def test_the_audit_database_recreates_after_deletion(self, zato_server:'anydict') -> 'None':
+    def test_the_audit_database_is_not_recreated_after_deletion(self, zato_server:'anydict') -> 'None':
 
         audit_db_path = zato_server['audit_db_path']
+        server_log_path = zato_server['server_log_path']
 
         # A probe proves the writing works before the deletion ..
         probe_min_id = _audit.last_event_id(audit_db_path)
@@ -336,6 +340,8 @@ class TestAuditStorageFailure:
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=probe_min_id)
 
+        log_offset = os.path.getsize(server_log_path)
+
         # .. the whole database disappears from disk while the server runs ..
         os.remove(audit_db_path)
 
@@ -347,23 +353,25 @@ class TestAuditStorageFailure:
             if os.path.exists(companion_path):
                 os.remove(companion_path)
 
-        # .. the very next call answers as always ..
-        body = _call_order_status(zato_server, _constants.Path_Main)
+        try:
+            # .. the next calls answer as always ..
+            for _call_index in range(_unwritable_call_count):
 
-        data = _helpers.get_result_data(body)
-        assert data['status'] == _constants.Order_Status, body
+                body = _call_order_status(zato_server, _constants.Path_Main)
 
-        # .. and it is that call's own write that recreated the file, schema included,
-        # with the call's events as the first thing written into the fresh database.
-        assert os.path.isfile(audit_db_path), audit_db_path
+                data = _helpers.get_result_data(body)
+                assert data['status'] == _constants.Order_Status, body
 
-        events = _audit.wait_for_events(
-            audit_db_path, 1,
-            object_name=_constants.Gateway_Main,
-            event_type=AuditEvent.MCP_Tools_Call,
-            min_id=0)
+            # .. their audit events are refused, so no new file is created in place of the deleted one ..
+            assert not os.path.exists(audit_db_path), audit_db_path
 
-        assert len(events) >= 1, events
+            # .. and the server logged the removal of the file.
+            new_log_text = self._read_new_log_text(server_log_path, log_offset)
+            assert _removed_log_marker in new_log_text, new_log_text
+
+        # Only a restart of the server opens the database again, as a new file, for the other tests of the session.
+        finally:
+            zato_server['restart']()
 
 # ################################################################################################################################
 # ################################################################################################################################

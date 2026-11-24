@@ -15,6 +15,7 @@ from zato.common.audit_log.common import metadata as audit_metadata
 from zato.common.common_db.schema import metadata as common_metadata
 from zato.common.db_env.common import EnvDBConfig, get_env_sqlite_path, get_env_values
 from zato.common.db_env.engine import dispose_env_engine, get_env_engine, new_unshared_env_engine
+from zato.common.db_env.sqlite_identity import is_file_lost
 from zato.common.pubsub.sql.schema import metadata as pubsub_metadata
 from zato.common.rule_engine.sql.schema import metadata as rule_engine_metadata
 
@@ -101,6 +102,19 @@ def new_unshared_database_engine() -> 'Engine':
     e.g. the arbiter before it forks the worker and the config process.
     """
     out = new_unshared_env_engine(database_config)
+    return out
+
+# ################################################################################################################################
+
+def is_database_lost() -> 'bool':
+    """ Whether the SQLite file of the Zato database was removed or replaced after this process opened it,
+    which a PostgreSQL database never is.
+    """
+    if db_path := get_database_sqlite_path():
+        out = is_file_lost(db_path)
+    else:
+        out = False
+
     return out
 
 # ################################################################################################################################

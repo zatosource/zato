@@ -13,7 +13,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.audit_log.common import get_commit_max_events
 from zato.common.db_env.commit_queue import CommitQueue
-from zato.common.db_env.engine import call_database
+from zato.common.db_env.engine import call_database, check_engine_identity
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -82,8 +82,11 @@ _commit_queue = CommitQueue(write_batch=_write_batch, max_weight=get_commit_max_
 
 def write_audit(engine:'Engine', func:'callable_', *args:'any_') -> 'any_':
     """ Runs a function that writes to the tables of the audit log with the connection of a transaction shared
-    with concurrent callers, and returns what it returned once the transaction is committed.
+    with concurrent callers, and returns what it returned once the transaction is committed. A write to a SQLite file
+    that was removed or replaced is refused with DatabaseFileReplaced before it is queued.
     """
+    check_engine_identity(engine)
+
     write = _AuditWrite(engine, func, args)
     _commit_queue.write(write, weight=_write_weight, is_urgent=False)
 

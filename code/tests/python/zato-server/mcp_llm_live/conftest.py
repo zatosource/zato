@@ -116,6 +116,9 @@ _quickstart_timeout     = 180
 _ping_poll_interval     = 0.5
 _listener_settle_seconds = 2
 
+# The thread that streams the output of the server keeps this name across restarts of the server
+_server_output_thread_name = 'zato-test-server-output'
+
 # How long the boot-time hot deploy of the fixture services plus the enmasse-created
 # gateways may need before the tool registries answer with the CRM tools
 _gateway_ready_timeout = 60
@@ -310,7 +313,7 @@ def _spawn_server(server_directory:'str', server_env:'any_', log_mode:'str') -> 
             _ = server_log_file.write(f'[SERVER {elapsed:6.1f}s] {text}\n')
             server_log_file.flush()
 
-    stdout_thread = threading.Thread(target=_stream_server_output, daemon=True)
+    stdout_thread = threading.Thread(target=_stream_server_output, name=_server_output_thread_name, daemon=True)
     stdout_thread.start()
 
 # ################################################################################################################################

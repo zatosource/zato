@@ -20,6 +20,9 @@ from threading import Event, Thread
 from gevent import get_hub
 from gevent.monkey import is_module_patched
 
+# Zato
+from zato.common.db_env.sqlite_identity import DatabaseFileReplaced
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -130,6 +133,13 @@ class WALCheckpointer:
         while not self._stop_event.wait(self.interval_seconds):
             try:
                 self._checkpoint_off_loop()
+
+            # A file that was removed or replaced is not checkpointed again by this process ..
+            except DatabaseFileReplaced:
+                logger.warning('SQLite WAL checkpoints of `%s` stopped, the file was removed or replaced', self.db_path)
+                break
+
+            # .. while any other failure leaves the next interval to try again.
             except Exception:
                 logger.exception('SQLite WAL checkpoint failed')
 

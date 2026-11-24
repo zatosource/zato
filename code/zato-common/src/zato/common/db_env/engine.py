@@ -27,7 +27,7 @@ from sqlalchemy.engine import Dialect, make_url
 from sqlalchemy.pool import QueuePool
 
 # Zato
-from zato.common.db_env.common import get_env_values, Type_PostgreSQL, Type_SQLite
+from zato.common.db_env.common import get_env_sqlite_path, get_env_values, Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.connection import build_connect_args_from_values, build_engine_url_from_values, \
     DatabaseDurabilityError, PostgreSQL_Connect_Timeout_Seconds, set_postgresql_keepalive, set_postgresql_no_delay, \
     set_postgresql_read_timeout, set_postgresql_session, set_sqlite_pragmas, verify_postgresql_server
@@ -35,6 +35,7 @@ from zato.common.db_env.fence import install_fence
 from zato.common.db_env.pg8000_common import Driver_Name as PG8000_Driver_Name
 from zato.common.db_env.process_queue import ProcessQueue
 from zato.common.db_env.sqlite_checkpoint import set_background_checkpoint_limit, WALCheckpointer
+from zato.common.db_env.sqlite_identity import check_identity, IdentityGuard, record_identity
 from zato.common.db_env.sqlite_stats import collect_sqlite_stats, Env_Stats_Dir
 from zato.common.db_env.write_path import check_write_path, get_write_path, Mechanism, run_in_write_path, write_path
 from zato.common.sqlite_connection import connect_sqlite_file as connect_sqlite_file
@@ -448,13 +449,23 @@ def get_env_engine(config:'EnvDBConfig') -> 'Engine':
         out = engine
         return out
 
+    # .. a SQLite file that the process opened before is opened again only if it is still the same file ..
+    if db_path := get_env_sqlite_path(config):
+        check_identity(db_path)
+
     # .. build the engine ..
     env_engine = _new_env_engine(config)
     out = env_engine.engine
 
-    # .. make sure the schemas exist ..
+    # .. make sure the schemas exist, and a SQLite file is used only for as long as it is the file
+    # .. whose identity the process recorded ..
     if env_engine.db_path:
+        identity_guard = IdentityGuard(env_engine.db_path)
+        sa_event.listen(out, 'do_connect', identity_guard.on_connect)
+        sa_event.listen(out, 'checkout', identity_guard.on_checkout)
+
         _create_sqlite_schema(env_engine.db_path, out, config.metadata_tuple)
+        record_identity(env_engine.db_path)
     else:
         create_schemas(out, config.metadata_tuple)
 
@@ -542,6 +553,26 @@ def needs_thread_pool(engine:'Engine') -> 'bool':
 def _call_under_lock(lock:'any_', func:'callable_', args:'anytuple') -> 'any_':
     with lock:
         out = func(*args)
+    return out
+
+# ################################################################################################################################
+
+def check_engine_identity(engine:'Engine') -> 'None':
+    """ Raises DatabaseFileReplaced if the SQLite file of an engine was removed or replaced after the process opened it.
+    """
+    if engine.dialect.name == Type_SQLite:
+        if db_path := engine.url.database:
+            check_identity(db_path)
+
+# ################################################################################################################################
+
+def _run_and_check_identity(db_path:'str', mechanism:'any_', func:'callable_', args:'anytuple') -> 'any_':
+    """ Runs a database call on a SQLite file and raises DatabaseFileReplaced if the file was removed or replaced
+    in the meantime, in which case its commit is not acknowledged to the caller.
+    """
+    out = run_in_write_path(mechanism, func, args)
+    check_identity(db_path)
+
     return out
 
 # ################################################################################################################################
@@ -651,7 +682,15 @@ def call_database(engine:'Engine', func:'callable_', *args:'any_', prepare:'call
     if mechanism is None:
         mechanism = Mechanism.Serialized_Write
 
-    call_args = (mechanism, func, args)
+    run_call:'callable_' = run_in_write_path
+    call_args:'anytuple' = (mechanism, func, args)
+
+    # A call on a SQLite file returns only while the file is the one that the process opened,
+    # checked before the write lock is released.
+    if engine.dialect.name == Type_SQLite:
+        if db_path := engine.url.database:
+            run_call = _run_and_check_identity
+            call_args = (db_path, mechanism, func, args)
 
     if needs_thread_pool(engine):
 
@@ -668,10 +707,10 @@ def call_database(engine:'Engine', func:'callable_', *args:'any_', prepare:'call
         # The thread that waits for the turn of this process blocks in the pool, while the greenlet of the caller is suspended ..
         if process_queue := _get_process_queue(write_key):
             run = process_queue.run_under_lock
-            run_args = (write_lock, run_in_write_path, call_args)
+            run_args = (write_lock, run_call, call_args)
         else:
             run = _call_under_lock
-            run_args = (write_lock, run_in_write_path, call_args)
+            run_args = (write_lock, run_call, call_args)
 
         # .. and the preparation runs in that thread before it waits for the lock.
         if prepare:
@@ -686,7 +725,7 @@ def call_database(engine:'Engine', func:'callable_', *args:'any_', prepare:'call
             hub = get_hub()
             _ = hub.threadpool.apply(prepare)
 
-        out = run_in_write_path(*call_args)
+        out = run_call(*call_args)
 
     return out
 

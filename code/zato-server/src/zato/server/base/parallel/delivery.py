@@ -22,8 +22,9 @@ from sqlalchemy.exc import DBAPIError
 # Zato
 from zato.common.api import PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
-from zato.common.db_env.database import get_database_values
+from zato.common.db_env.database import get_database_values, is_database_lost
 from zato.common.db_env.outage import OutageTracker
+from zato.common.db_env.sqlite_identity import DatabaseFileReplaced
 from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryInterrupted, Interrupt_Database, \
     Interrupt_Expired, Interrupt_Paused, Interrupt_Replaced, Interrupt_Withdrawn, wait_between_rounds
 from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID
@@ -75,6 +76,16 @@ _outgoing_sub_key_prefix = PubSub.Outgoing.Sub_Key_Prefix
 
 sub_key_greenlet_dict = dict[str, 'Greenlet']
 greenletlist = list['Greenlet']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _check_database(sub_key:'str', msg_id:'str') -> 'None':
+    """ Raises DatabaseFileReplaced if the SQLite file of the database was removed or replaced after this process opened it.
+    """
+    if is_database_lost():
+        raise DatabaseFileReplaced(f'Delivery of `{msg_id}` to sub_key `{sub_key}` stopped, ' +
+            'the database file was removed or replaced')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -214,6 +225,11 @@ class PushDelivery:
             logger.warning('PubSub delivery greenlet ended for sub_key `%s`: %s', sub_key, e)
             return
 
+        # The SQLite file of the database was removed or replaced, so this process delivers nothing anymore.
+        except DatabaseFileReplaced as e:
+            logger.error('PubSub delivery greenlet ended for sub_key `%s`: %s', sub_key, e)
+            return
+
         logger.info('PubSub delivery greenlet stopped for sub_key `%s`', sub_key)
 
 # ################################################################################################################################
@@ -238,7 +254,7 @@ class PushDelivery:
                     break
                 self._deliver_batch(pending, sub_key, read_epoch)
 
-            except PubSubReplaced:
+            except (PubSubReplaced, DatabaseFileReplaced):
                 raise
 
             except PubSubAckConflict as e:
@@ -265,7 +281,7 @@ class PushDelivery:
                 if messages:
                     self._deliver_batch(messages, sub_key, read_epoch)
 
-            except PubSubReplaced:
+            except (PubSubReplaced, DatabaseFileReplaced):
                 raise
 
             except PubSubAckConflict as e:
@@ -365,6 +381,9 @@ class PushDelivery:
         msg_id = message['msg_id']
         is_outgoing = sub_key.startswith(_outgoing_sub_key_prefix)
 
+        # A message read before the SQLite file of the database was removed or replaced is not sent.
+        _check_database(sub_key, msg_id)
+
         expiration_time_iso = message['expiration_time_iso']
         normalized_expiration_iso = expiration_time_iso.replace('Z', '+00:00')
         expiration_time = datetime.fromisoformat(normalized_expiration_iso)
@@ -378,6 +397,9 @@ class PushDelivery:
             return True
 
         def should_continue() -> 'str':
+
+            # .. a message is not attempted again once the database file was removed or replaced ..
+            _check_database(sub_key, msg_id)
 
             # .. a queue asked to pause gives up between two attempts rather than in the middle of one,
             # .. leaving the message where it is so that it goes out again once the queue resumes ..
@@ -395,6 +417,10 @@ class PushDelivery:
 
         # A commit before a wait that failed is not a failure of the delivery ..
         except BatchCommitFailed:
+            raise
+
+        # .. neither is a database file that was removed or replaced, after which nothing is delivered ..
+        except DatabaseFileReplaced:
             raise
 
         except DeliveryInterrupted as e:
