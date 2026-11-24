@@ -31,6 +31,7 @@ from pubsub_rest.capture import limit_captured_logs
 from pubsub_rest.server import PubSubServer
 from tools import get_fsfault_docker_args
 from toxiproxy import Database_Proxy, Toxiproxy, Toxiproxy_Host
+from wal import reserve_wal_segments
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
 from zato.common.db_env.database import get_database_engine
 from zato.common.db_env.database_env import DatabaseEnv
@@ -106,6 +107,7 @@ def fault_database() -> 'databasegen':
 
     work_dir = tempfile.mkdtemp(prefix='zato-pubsub-faults-', dir=get_runtime_dir())
     database = start_pubsub_database('faults', mode)
+    reserve_wal_segments(database)
 
     env = {
         FenceCtx.Env_Generation_File: os.path.join(work_dir, 'database-generation'),
@@ -211,6 +213,7 @@ def endpoint_work_dir() -> 'strgen':
 
     if is_postgresql_mode(mode):
         database = start_pubsub_database('endpoints', mode)
+        reserve_wal_segments(database)
         env.update(database.env)
     else:
         env[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
@@ -236,6 +239,7 @@ def stream_database() -> 'streamgen':
 
     work_dir = tempfile.mkdtemp(prefix='zato-pubsub-stream-faults-', dir=get_runtime_dir())
     database = start_pubsub_database('stream-faults', mode)
+    reserve_wal_segments(database)
 
     toxiproxy = Toxiproxy('database')
     toxiproxy.start()
@@ -289,6 +293,7 @@ def process_environment() -> 'environmentgen':
         docker_args = get_fsfault_docker_args(work_dir, control_dir, _database_control_name)
 
         database = start_pubsub_database('process-faults', mode, extra_docker_args=docker_args)
+        reserve_wal_segments(database)
         env.update(database.env)
 
     else:

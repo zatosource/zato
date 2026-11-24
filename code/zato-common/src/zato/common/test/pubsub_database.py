@@ -114,6 +114,9 @@ class ModuleCtx:
 _ready_timeout = 120
 _ready_poll_interval = 0.5
 
+# How long a connection waits for each response of the database, in seconds.
+_connection_timeout = 10
+
 # The directories that the database server in the container reads, which runs under the same user as the tests.
 _directory_mode = 0o755
 
@@ -330,7 +333,13 @@ def build_ssl_context(database:'PubSubDatabase') -> 'ssl.SSLContext':
 
 # ################################################################################################################################
 
-def connect(database:'PubSubDatabase', host:'str'='', port:'int'=0, is_admin:'bool'=False) -> 'pg8000.dbapi.Connection':
+def connect(
+    database:'PubSubDatabase',
+    host:'str'='',
+    port:'int'=0,
+    is_admin:'bool'=False,
+    timeout:'int'=_connection_timeout,
+    ) -> 'pg8000.dbapi.Connection':
     """ Opens a pg8000 connection to the database of a session, outside of any engine, under the pub/sub role
     or under the superuser of the container.
     """
@@ -353,7 +362,7 @@ def connect(database:'PubSubDatabase', host:'str'='', port:'int'=0, is_admin:'bo
         password = database.password
 
     out = pg8000.dbapi.connect(user=username, password=password, host=host, port=port, database=ModuleCtx.DB_Name,
-        ssl_context=ssl_context, timeout=10)
+        ssl_context=ssl_context, timeout=timeout)
 
     return out
 
