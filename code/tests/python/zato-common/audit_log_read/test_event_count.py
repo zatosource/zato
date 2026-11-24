@@ -31,17 +31,16 @@ from zato.common.db_env.engine import call_database
 # ################################################################################################################################
 
 if 0:
-    from pathlib import Path
-    from pytest import FixtureRequest, MonkeyPatch
+    from live_sql.containers import DatabaseServer
+    from pytest import MonkeyPatch
     from sqlalchemy.engine import Engine
     from zato.common.typing_ import any_, intlist
 
     any_ = any_
+    DatabaseServer = DatabaseServer
     Engine = Engine
-    FixtureRequest = FixtureRequest
     intlist = intlist
     MonkeyPatch = MonkeyPatch
-    Path = Path
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -282,13 +281,12 @@ def _count_matching_searches() -> 'None':
     engine = get_database_engine()
 
     with engine.connect() as connection:
-        dialect_name = connection.dialect.name
 
         for window in search_windows():
             for filter_set in count_filter_sets():
 
                 filters = new_filters(window, filter_set)
-                conditions = event_conditions(dialect_name, filters)
+                conditions = event_conditions(filters)
 
                 statement = select(func.count())
                 statement = statement.select_from(event_table)
@@ -368,13 +366,13 @@ def test_counts_after_compaction(audit_backend:'str') -> 'None':
 
 # ################################################################################################################################
 
-def test_counts_after_rebuild(audit_backend:'str', request:'FixtureRequest', tmp_path:'Path') -> 'None':
+def test_counts_after_rebuild(audit_backend:'str', postgresql_server:'DatabaseServer') -> 'None':
     """ A database created before the event counts and the open exchanges existed has them created and filled
     from its events when it is opened, and kept from then on.
     """
     rng = Random(20261104)
 
-    with previous_version_database(request, audit_backend, str(tmp_path)) as engine:
+    with previous_version_database(postgresql_server) as engine:
 
         _write_before_reopen(engine, rng)
 

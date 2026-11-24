@@ -17,7 +17,7 @@ from gevent.event import Event
 from sqlalchemy import text
 
 # Zato
-from support import Backend_PostgreSQL, Object_Name, read_rows, record_statements, Server_Name
+from support import Object_Name, read_rows, record_statements, Server_Name
 from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource, ModuleCtx
 from zato.common.audit_log.retention_runner import stop_retention_runner
 from zato.common.db_env.database import get_database_engine
@@ -304,20 +304,13 @@ def test_failing_commit_raises_in_each_caller(audit_backend:'str') -> 'None':
 
 def test_search_indexes_are_merged(audit_backend:'str') -> 'None':
     """ A process that writes events to PostgreSQL merges the event and attribute indexes, along with the indexes
-    of other tables registered with the merger, the pending lists of the audit log indexes have the same limit,
-    and no merger runs on SQLite.
+    of other tables registered with the merger, and the pending lists of the audit log indexes have the same limit.
     """
     audit_log = AuditLog(Server_Name)
     _ = _insert(audit_log, 0)
 
     engine = get_database_engine()
     merger = get_search_index_merger(engine)
-
-    if audit_backend != Backend_PostgreSQL:
-        assert merger is None
-        return
-
-    assert merger is not None
 
     # The indexes of the audit log come first, followed by the indexes of other tables registered with the merger.
     audit_index_count = len(_index_names)

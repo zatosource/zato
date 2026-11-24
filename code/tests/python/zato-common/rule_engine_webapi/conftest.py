@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from pathlib import Path
 from typing import Generator
 
 # pytest
@@ -21,7 +20,7 @@ from typing_extensions import TypeAlias
 
 # Zato
 from zato.common.rule_engine.sql import RuleSQLBackend
-from zato.common.test.zato_database import file_database_engine
+from zato.common.test.zato_database import zato_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,10 +31,10 @@ engine_generator:TypeAlias = Generator[Engine, None, None]
 # ################################################################################################################################
 
 @pytest.fixture
-def database_engine(tmp_path:'Path') -> 'engine_generator':
-    """ Creates one isolated test-managed SQL database.
+def database_engine() -> 'engine_generator':
+    """ Creates one isolated PostgreSQL database for the test and yields its engine.
     """
-    with file_database_engine(tmp_path) as engine:
+    with zato_database_engine() as engine:
         yield engine
 
 # ################################################################################################################################

@@ -24,7 +24,6 @@ from datetime import timedelta
 from email.mime.text import MIMEText
 from http.client import OK
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
 from typing import Generator
 from urllib.parse import quote
 
@@ -55,7 +54,7 @@ from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOu
 from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
 from zato.common.rule_engine.sql import RuleSQLBackend
-from zato.common.test.zato_database import file_database_engine
+from zato.common.test.zato_database import zato_database_engine
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key
 from zato.common.util.api import utcnow
 from zato.common.test.direct_sql.seed import seed_event
@@ -252,10 +251,10 @@ def build_transports(smtp_port:'int', recorder:'_ServiceRecorder') -> 'AlertTran
 # ################################################################################################################################
 
 @pytest.fixture
-def rule_database_engine(tmp_path:'Path') -> 'engine_generator':
+def rule_database_engine() -> 'engine_generator':
     """ Creates one isolated test-managed rule engine database.
     """
-    with file_database_engine(tmp_path) as engine:
+    with zato_database_engine() as engine:
         yield engine
 
 # ################################################################################################################################

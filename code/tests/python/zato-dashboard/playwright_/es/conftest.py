@@ -30,6 +30,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
 
 # Zato
 from zato.common.test.process_util import kill_process_tree
+from zato.common.test.zato_database import isolated_database_env
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -126,6 +127,16 @@ def zato_dashboard() -> 'any_':
     """ Session-scoped fixture with a self-contained quickstart environment - server and dashboard only,
     no Redis and no scheduler, the way the SQL live suites do it. This overrides the fixture
     of the same name from the parent directory's conftest for the tests in this directory.
+    """
+    # The Zato database of the environment is a new PostgreSQL database, which every process of the environment
+    # selects through the Zato_Database_* variables of this process.
+    with isolated_database_env():
+        yield from _run_zato_dashboard()
+
+# ################################################################################################################################
+
+def _run_zato_dashboard() -> 'any_':
+    """ Creates and starts the environment of zato_dashboard, yields its details and stops it afterwards.
     """
     time_start = time.monotonic()
 

@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from pathlib import Path
 from typing import Generator
 
 # pytest
@@ -29,7 +28,7 @@ from zato.common.rule_engine.sql import RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
 from zato.common.test.config_database import config_database_engine
-from zato.common.test.zato_database import file_database_engine
+from zato.common.test.zato_database import zato_database_engine
 from zato.common.util.scheduler import ensure_test_transfer_job_exists, set_job_active
 
 # ################################################################################################################################
@@ -57,8 +56,8 @@ _test_transfer_full_name = 'alerts_file_transfer_Test_Transfer_Failing'
 # ################################################################################################################################
 
 @pytest.fixture
-def odb_session(tmp_path:'Path') -> 'any_':
-    """ A real ODB session over a SQLite database file holding
+def odb_session() -> 'any_':
+    """ A real ODB session over a PostgreSQL database of its own holding
     the scheduler tables.
     """
     tables = [
@@ -67,7 +66,7 @@ def odb_session(tmp_path:'Path') -> 'any_':
         IntervalBasedJob.__table__,
     ]
 
-    with config_database_engine(tmp_path, tables) as engine:
+    with config_database_engine(tables) as engine:
         session_factory = sessionmaker(bind=engine)
         session = session_factory()
 
@@ -80,11 +79,11 @@ def odb_session(tmp_path:'Path') -> 'any_':
 # ################################################################################################################################
 
 @pytest.fixture
-def backend(tmp_path:'Path') -> 'any_':
+def backend() -> 'any_':
     """ Returns the complete rule backend over an isolated test database, with
     the default alerting definitions already seeded and live.
     """
-    with file_database_engine(tmp_path) as engine:
+    with zato_database_engine() as engine:
         out = RuleSQLBackend.from_engine(engine)
         ensure_alerting_definitions(out)
 

@@ -32,6 +32,7 @@ import pytest  # noqa: E402
 
 # Zato
 from zato.common.test import kill_server_process, rand_string  # noqa: E402
+from zato.common.test.zato_database import create_test_database, drop_test_database  # noqa: E402
 from zato.common.util.config import get_config_object, update_config_file  # noqa: E402
 
 # Zato - test helpers
@@ -449,7 +450,12 @@ def zato_server(request:'any_') -> 'any_':
     port = _find_free_port()
     _temp_directory = tempfile.mkdtemp(prefix='zato_mcp_live_test_')
 
-    # Create a quickstart environment with a clean env,
+    # The environment receives a Zato database of its own, which the quickstart, the server
+    # and every enmasse command that this process runs use ..
+    database_env = create_test_database()
+    os.environ.update(database_env)
+
+    # .. create a quickstart environment with a clean env,
     # removing stale COVERAGE_PROCESS_START interference ..
     quickstart_env = os.environ.copy()
     _ = quickstart_env.pop('COVERAGE_PROCESS_START', None)
@@ -499,11 +505,6 @@ def zato_server(request:'any_') -> 'any_':
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
     server_env['Zato_MCP_Check_Origin'] = 'true'
     _ = server_env.pop('COVERAGE_PROCESS_START', None)
-
-    # Point the audit log at a file inside the temp directory so the live server
-    # never writes into the real environment's audit database.
-    audit_db_path = os.path.join(_temp_directory, 'zato.db')
-    server_env['Zato_Database_Path'] = audit_db_path
 
     if use_coverage:
         server_env['COVERAGE_PROCESS_START'] = coveragerc_path # pyright: ignore[reportArgumentType]
@@ -624,7 +625,7 @@ def zato_server(request:'any_') -> 'any_':
         'bearer_static_token': _mcp_bearer_static_token,
         'server_directory': server_directory,
         'temp_directory': _temp_directory,
-        'audit_db_path': audit_db_path,
+        'database_env': database_env,
         'mcp_sec_def_name': _mcp_sec_def_name,
     }
 
@@ -642,6 +643,12 @@ def zato_server(request:'any_') -> 'any_':
             shutil.rmtree(_temp_directory, ignore_errors=True)
 
     _temp_directory = None
+
+    # .. and remove the variables that selected the database together with the database.
+    for name in database_env:
+        del os.environ[name]
+
+    drop_test_database(database_env)
 
 # ################################################################################################################################
 # ################################################################################################################################

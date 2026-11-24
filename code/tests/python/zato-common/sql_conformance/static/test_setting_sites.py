@@ -150,8 +150,8 @@ def _get_setting_matches(source:'SourceFile', text:'str') -> 'list[re.Match[str]
 # ################################################################################################################################
 
 def test_settings_only_in_their_module() -> 'None':
-    """ The settings of durability are set only in the module of the settings and in the Rust functions that open
-    the SQLite file of the active-standby node, so that each database of Zato receives them from one place.
+    """ The settings of durability are set only in the module of the settings, so that each database of Zato
+    receives them from one place.
     """
     findings:'strlist' = []
 

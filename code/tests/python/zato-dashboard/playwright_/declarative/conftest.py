@@ -30,12 +30,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
 
 # Zato
 from zato.common.test.process_util import kill_process_tree
+from zato.common.test.zato_database import isolated_database_env
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -145,6 +146,16 @@ def zato_dashboard() -> 'any_':
     a dedicated Redis and the Rust scheduler binary, so scheduled jobs really fire during tests.
     This overrides the fixture of the same name from the parent directory's conftest
     for the tests in this directory.
+    """
+    # The Zato database of the environment is a new PostgreSQL database, which every process of the environment
+    # selects through the Zato_Database_* variables of this process.
+    with isolated_database_env() as database_env:
+        yield from _run_zato_dashboard(database_env)
+
+# ################################################################################################################################
+
+def _run_zato_dashboard(database_env:'strstrdict') -> 'any_':
+    """ Creates and starts the environment of zato_dashboard, yields its details and stops it afterwards.
     """
     time_start = time.monotonic()
 
@@ -261,12 +272,6 @@ def zato_dashboard() -> 'any_':
     server_env.update(scheduler_env_config)
     _ = server_env.pop('COVERAGE_PROCESS_START', None)
 
-    # The pub/sub database lives inside this test server's own directory, so that the server does not
-    # share a file, and a schema from an earlier checkout, with any other environment on this machine.
-    # Tests that read the database directly find it through the fixture below.
-    pubsub_db_path = os.path.join(server_dir, 'zato.db')
-    server_env['Zato_Database_Path'] = pubsub_db_path
-
     server_process = subprocess.Popen(
         [_Zato_Bin, 'start', server_dir, '--fg'],
         env=server_env,
@@ -355,7 +360,7 @@ def zato_dashboard() -> 'any_':
         'dashboard_url': f'http://{host}:{dashboard_port}',
         'password': _Password,
         'server_dir': server_dir,
-        'pubsub_db_path': pubsub_db_path,
+        'database_env': database_env,
         'dashboard_dir': dashboard_dir,
         'temporary_dir': temporary_dir,
         'server_process': server_process,

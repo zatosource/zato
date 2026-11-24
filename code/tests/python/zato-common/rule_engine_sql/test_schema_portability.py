@@ -8,8 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # SQLAlchemy
 from sqlalchemy import Text
-from sqlalchemy.dialects import postgresql, sqlite
-from sqlalchemy.engine import Dialect
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.schema import CreateIndex, CreateTable
 
 # typing-extensions
@@ -22,22 +21,7 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 # ################################################################################################################################
 
-dialect_list:TypeAlias = list[Dialect]
 table_name_set:TypeAlias = set[str]
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _dialects() -> 'dialect_list':
-    """ Returns every database dialect required from the first release.
-    """
-    # Instantiate each required SQL compiler ..
-    sqlite_dialect = sqlite.dialect()
-    postgresql_dialect = postgresql.dialect()
-
-    # .. and return them in the stable test order.
-    out:'dialect_list' = [sqlite_dialect, postgresql_dialect]
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,28 +54,27 @@ def test_documents_are_text_not_database_json() -> 'None':
 
 # ################################################################################################################################
 
-def test_every_table_and_index_compiles_for_required_dialects() -> 'None':
-    """ The same SQLAlchemy schema compiles for every initially supported database.
+def test_every_table_and_index_compiles_for_postgresql() -> 'None':
+    """ The SQLAlchemy schema compiles for PostgreSQL.
     """
-    # Compile every table and index with every required dialect ..
-    dialects = _dialects()
+    dialect = postgresql.dialect()
 
-    for dialect in dialects:
-        for table in metadata.sorted_tables:
-            create_table = CreateTable(table)
-            compiled_table = create_table.compile(dialect=dialect)
-            table_sql = str(compiled_table)
+    # Compile every table and index ..
+    for table in metadata.sorted_tables:
+        create_table = CreateTable(table)
+        compiled_table = create_table.compile(dialect=dialect)
+        table_sql = str(compiled_table)
 
-            # .. verify that the emitted statement names the intended table ..
-            assert table.name in table_sql
+        # .. verify that the emitted statement names the intended table ..
+        assert table.name in table_sql
 
-            # .. and verify every index has a portable emitted statement.
-            for index in table.indexes:
-                create_index = CreateIndex(index)
-                compiled_index = create_index.compile(dialect=dialect)
-                index_sql = str(compiled_index)
-                index_name = cast_('str', index.name)
-                assert index_name in index_sql
+        # .. and verify that every index has an emitted statement.
+        for index in table.indexes:
+            create_index = CreateIndex(index)
+            compiled_index = create_index.compile(dialect=dialect)
+            index_sql = str(compiled_index)
+            index_name = cast_('str', index.name)
+            assert index_name in index_sql
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -16,16 +16,18 @@ import time
 from sqlalchemy import select
 
 # Zato
-from zato.common.db_env.engine import get_sqlite_file_engine
-from zato.common.pubsub.sql.schema import message_table, metadata
+from zato.common.pubsub.sql.schema import message_table
 from zato.common.typing_ import cast_
+
+# Live environment
+from live_environment.audit import new_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from playwright.sync_api import Page
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.common.typing_ import any_, anydict, anylist, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -108,7 +110,7 @@ def wait_for_callback_entry(marker:'str', timeout:'float'=Delivery_Timeout) -> '
 # ################################################################################################################################
 
 def wait_for_topic_message(
-    pubsub_db_path:'str',
+    database_env:'strstrdict',
     topic_name:'str',
     marker:'str',
     timeout:'float'=Delivery_Timeout,
@@ -116,8 +118,8 @@ def wait_for_topic_message(
     """ Waits until the SQL pub/sub store receives a message published to the given topic
     whose data preview contains the marker and returns that message's row as a dict.
     """
-    # The store the server publishes to - the file the server was started with through Zato_Database_Path
-    engine = get_sqlite_file_engine(pubsub_db_path, metadata, needs_pool=False, needs_background_checkpoint=False)
+    # The store the server publishes to - the Zato database that the Zato_Database_* variables of the server select
+    engine = new_database_engine(database_env)
 
     # Topic names are lowercased on publish
     topic_name = topic_name.lower()
@@ -126,23 +128,27 @@ def wait_for_topic_message(
 
     deadline = time.monotonic() + timeout
 
-    while time.monotonic() < deadline:
+    try:
+        while time.monotonic() < deadline:
 
-        # Read all the messages the topic has so far ..
-        with engine.connect() as connection:
-            rows = connection.execute(query).mappings().all()
+            # Read all the messages the topic has so far ..
+            with engine.connect() as connection:
+                rows = connection.execute(query).mappings().all()
 
-        # .. and look for the marker in each one's preview, which is NULL until the payload is stored.
-        for row in rows:
-            data_preview = row['data_preview']
-            if data_preview is None:
-                continue
-            if marker in data_preview:
-                out = dict(row)
-                logger.info('[wait_for_topic_message] found: %s', out)
-                return out
+            # .. and look for the marker in each one's preview, which is NULL until the payload is stored.
+            for row in rows:
+                data_preview = row['data_preview']
+                if data_preview is None:
+                    continue
+                if marker in data_preview:
+                    out = dict(row)
+                    logger.info('[wait_for_topic_message] found: %s', out)
+                    return out
 
-        time.sleep(_Poll_Interval)
+            time.sleep(_Poll_Interval)
+
+    finally:
+        engine.dispose()
 
     raise Exception(f'No message with marker `{marker}` arrived on topic `{topic_name}` within {timeout}s')
 

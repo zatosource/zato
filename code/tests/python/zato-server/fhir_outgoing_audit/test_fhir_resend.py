@@ -32,9 +32,7 @@ from fhir_stub import fhir_audit_env, new_fhir_client, operation_outcome, Connec
 # ################################################################################################################################
 
 if 0:
-    import os
     from zato.common.typing_ import any_, stranydict
-    os = os
     any_ = any_
     stranydict = stranydict
 

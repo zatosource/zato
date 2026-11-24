@@ -64,6 +64,7 @@ from login import login as login_to_dashboard
 
 # Zato
 from zato.common.test.process_util import kill_process_tree
+from zato.common.test.zato_database import isolated_database_env
 from zato.common.typing_ import cast_
 
 logger = logging.getLogger('zato.test.playwright')
@@ -251,6 +252,17 @@ def _stream_output(
 def zato_dashboard() -> 'any_':
     """ Session-scoped fixture that creates a quickstart environment with server and dashboard.
     """
+    # The Zato database of the environment is a new PostgreSQL database, which every process of the environment
+    # selects through the Zato_Database_* variables of this process.
+    with isolated_database_env():
+        yield from run_zato_dashboard()
+
+# ################################################################################################################################
+
+def run_zato_dashboard() -> 'any_':
+    """ Creates and starts the environment of zato_dashboard on the Zato database that the Zato_Database_* variables
+    of this process select, yields its details and stops it afterwards.
+    """
     time_start = time.monotonic()
 
     # Allocate dynamic ports ..
@@ -361,11 +373,6 @@ def zato_dashboard() -> 'any_':
     server_env['Zato_HL7_MLLP_Port'] = str(mllp_port)
     _ = server_env.pop('COVERAGE_PROCESS_START', None)
 
-    # The pub/sub database lives inside this test server's own directory,
-    # which is also where tests that read it directly find it.
-    pubsub_db_path = os.path.join(server_dir, 'zato.db')
-    server_env['Zato_Database_Path'] = pubsub_db_path
-
     # SFTP tests copy a private key to this path and point their connections at it
     sftp_key_path = os.path.join(temporary_dir, 'sftp-test-key')
 
@@ -395,9 +402,6 @@ def zato_dashboard() -> 'any_':
     dashboard_env = os.environ.copy()
     _ = dashboard_env.pop('COVERAGE_PROCESS_START', None)
     dashboard_env['Zato_Server_Address'] = f'http://127.0.0.1:{server_port}'
-
-    # The audit log views read the database of this test server, not the one of the default environment directory.
-    dashboard_env['Zato_Database_Path'] = pubsub_db_path
 
     # The OpenAPI import runs enmasse against this server directory ..
     dashboard_env['Zato_Server_Dir'] = server_dir
@@ -487,7 +491,6 @@ def zato_dashboard() -> 'any_':
         'dashboard_url': f'http://{host}:{dashboard_port}',
         'password': _Password,
         'server_dir': server_dir,
-        'pubsub_db_path': pubsub_db_path,
         'dashboard_dir': dashboard_dir,
         'temporary_dir': temporary_dir,
         'server_process': server_process,

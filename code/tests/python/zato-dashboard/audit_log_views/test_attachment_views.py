@@ -11,7 +11,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # headers, and an id nothing was stored under answers with a 404.
 
 # stdlib
-import os
 from contextlib import contextmanager
 from json import dumps, loads
 
@@ -22,11 +21,8 @@ from django.http import QueryDict
 from zato.admin.web.views.audit_log import attachment_download, attachments
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.audit_log.attachment import build_attachment
-from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.ext.bunch import Bunch
-
-# Test support
-from live_sql.env import database_env
+from zato.common.test.zato_database import zato_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,18 +56,11 @@ _username = 'dashboard.reader'
 # ################################################################################################################################
 
 @contextmanager
-def _event_with_attachments(tmp_path:'any_') -> 'envgen':
-    """ Points the audit log at a throwaway SQLite database holding one event with two
+def _event_with_attachments() -> 'envgen':
+    """ Points the audit log at a new PostgreSQL database holding one event with two
     attachments and hands the event's id to the block.
     """
-    db_path = os.path.join(str(tmp_path), 'zato.db')
-
-    details = {
-        'type': DatabaseEnv.Type_SQLite,
-        'path': db_path,
-    }
-
-    with database_env(details):
+    with zato_database_engine():
 
         audit_log = AuditLog(_server_name)
 
@@ -127,10 +116,10 @@ def _new_get_request(attachment_id:'any_') -> 'Bunch':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_the_metadata_list_carries_each_file_without_its_bytes(tmp_path:'os.PathLike') -> 'None':
+def test_the_metadata_list_carries_each_file_without_its_bytes() -> 'None':
     """ The strip is drawn out of names, types, sizes and kept-flags - never the bytes.
     """
-    with _event_with_attachments(tmp_path) as event_id:
+    with _event_with_attachments() as event_id:
 
         response = attachments(_new_post_request({'id': event_id}))
         assert response.status_code == 200
@@ -150,11 +139,11 @@ def test_the_metadata_list_carries_each_file_without_its_bytes(tmp_path:'os.Path
 
 # ################################################################################################################################
 
-def test_the_download_streams_the_bytes_under_the_stored_name(tmp_path:'os.PathLike') -> 'None':
+def test_the_download_streams_the_bytes_under_the_stored_name() -> 'None':
     """ A badge's click gets the very bytes that were stored, under the stored filename
     and content type.
     """
-    with _event_with_attachments(tmp_path) as event_id:
+    with _event_with_attachments() as event_id:
 
         metadata_response = attachments(_new_post_request({'id': event_id}))
         items = loads(metadata_response.content)['attachments']
@@ -168,20 +157,20 @@ def test_the_download_streams_the_bytes_under_the_stored_name(tmp_path:'os.PathL
 
 # ################################################################################################################################
 
-def test_an_unknown_id_answers_with_a_404(tmp_path:'os.PathLike') -> 'None':
+def test_an_unknown_id_answers_with_a_404() -> 'None':
     """ An id nothing was stored under is a 404, not an empty file.
     """
-    with _event_with_attachments(tmp_path):
+    with _event_with_attachments():
 
         response = attachment_download(_new_get_request(987654321))
         assert response.status_code == 404
 
 # ################################################################################################################################
 
-def test_an_event_with_no_attachments_answers_with_an_empty_list(tmp_path:'os.PathLike') -> 'None':
+def test_an_event_with_no_attachments_answers_with_an_empty_list() -> 'None':
     """ An event that carried no files draws no strip - the list is simply empty.
     """
-    with _event_with_attachments(tmp_path):
+    with _event_with_attachments():
 
         response = attachments(_new_post_request({'id': 987654321}))
         assert response.status_code == 200

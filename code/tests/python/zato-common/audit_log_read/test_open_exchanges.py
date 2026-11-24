@@ -73,14 +73,12 @@ def _outstanding_ids() -> 'intset':
 
     out:'intset' = set()
 
+    conditions = event_conditions(filters)
+
+    statement = select(event_table.c.id)
+    statement = statement.where(*conditions)
+
     with engine.connect() as connection:
-
-        dialect_name = connection.dialect.name
-        conditions = event_conditions(dialect_name, filters)
-
-        statement = select(event_table.c.id)
-        statement = statement.where(*conditions)
-
         for event_id in connection.execute(statement).scalars():
             out.add(event_id)
 

@@ -23,20 +23,18 @@ from zato.common.audit_log.common import event_dedup_table
 from zato.common.common_db.schema import shared_object_table
 from zato.common.db_env.engine import execute_write
 from zato.common.db_env.write_path import Mechanism, write_path, WritePathViolation
-from zato.common.test.zato_database import file_database_engine
+from zato.common.test.zato_database import zato_database_engine
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from pathlib import Path
     from sqlalchemy.engine import Engine
     from sqlalchemy.sql.dml import Insert
 
     Engine = Engine
     Insert = Insert
-    Path = Path
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -101,12 +99,12 @@ def _insert_in_transaction(engine:'Engine', statement:'Insert') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_write_outside_mechanism_refused(tmp_path:'Path') -> 'None':
+def test_write_outside_mechanism_refused() -> 'None':
     """ An insert on an engine of the Zato database outside of every mechanism is refused before it reaches the database.
     """
     name = uuid4().hex
 
-    with file_database_engine(tmp_path) as engine:
+    with zato_database_engine() as engine:
 
         with pytest.raises(WritePathViolation):
             _insert_in_transaction(engine, _new_shared_object_insert(name))
@@ -115,35 +113,35 @@ def test_write_outside_mechanism_refused(tmp_path:'Path') -> 'None':
 
 # ################################################################################################################################
 
-def test_serialized_write_accepted(tmp_path:'Path') -> 'None':
+def test_serialized_write_accepted() -> 'None':
     """ The same insert through a serialized write is committed.
     """
     name = uuid4().hex
 
-    with file_database_engine(tmp_path) as engine:
+    with zato_database_engine() as engine:
         _ = execute_write(engine, _new_shared_object_insert(name))
 
         assert _count_shared_objects(engine, name) == 1
 
 # ################################################################################################################################
 
-def test_audit_table_refused_to_serialized_write(tmp_path:'Path') -> 'None':
+def test_audit_table_refused_to_serialized_write() -> 'None':
     """ A serialized write cannot insert into a table of the audit log, which only its group commit,
     maintenance, schema creation, a takeover and a seed write.
     """
-    with file_database_engine(tmp_path) as engine:
+    with zato_database_engine() as engine:
         with pytest.raises(WritePathViolation):
             _ = execute_write(engine, _new_dedup_insert(uuid4().hex))
 
 # ################################################################################################################################
 
-def test_write_deferred_to_greenlet_refused(tmp_path:'Path') -> 'None':
+def test_write_deferred_to_greenlet_refused() -> 'None':
     """ A greenlet that a mechanism starts begins without the mark of the mechanism, so a write handed over to it
     is refused rather than committed after the mechanism ended.
     """
     name = uuid4().hex
 
-    with file_database_engine(tmp_path) as engine:
+    with zato_database_engine() as engine:
 
         with write_path(Mechanism.Serialized_Write):
             greenlet = gevent.spawn(_insert_in_transaction, engine, _new_shared_object_insert(name))
@@ -155,12 +153,12 @@ def test_write_deferred_to_greenlet_refused(tmp_path:'Path') -> 'None':
 
 # ################################################################################################################################
 
-def test_seed_cannot_change_rows(tmp_path:'Path') -> 'None':
+def test_seed_cannot_change_rows() -> 'None':
     """ A seed inserts and removes rows, a table of the audit log included, and is refused when it changes one.
     """
     name = uuid4().hex
 
-    with file_database_engine(tmp_path) as engine:
+    with zato_database_engine() as engine:
 
         with write_path(Mechanism.Seed):
             _insert_in_transaction(engine, _new_shared_object_insert(name))

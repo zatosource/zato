@@ -28,6 +28,7 @@ import pytest
 from zato.common.crypto.api import CryptoManager
 from zato.common.json_internal import dumps, loads
 from zato.common.test.process_util import kill_process_tree
+from zato.common.test.zato_database import isolated_database_env
 
 # The parent directory's helpers - the same lib the main Playwright conftest uses
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
@@ -226,6 +227,16 @@ def zato_dashboard() -> 'any_':
     a dedicated Redis and the API portal process, with the suite's channels imported through enmasse.
     This overrides the fixture of the same name from the parent directory's conftest
     for the tests in this directory.
+    """
+    # The Zato database of the environment is a new PostgreSQL database, which every process of the environment
+    # selects through the Zato_Database_* variables of this process.
+    with isolated_database_env():
+        yield from _run_zato_dashboard()
+
+# ################################################################################################################################
+
+def _run_zato_dashboard() -> 'any_':
+    """ Creates and starts the environment of zato_dashboard, yields its details and stops it afterwards.
     """
     time_start = time.monotonic()
 

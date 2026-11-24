@@ -6,12 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# pytest
-import pytest
-
 # Local
 from _support import ModuleCtx, RowLock, change_topics, create_client, create_pull_subscription_to, create_topics, \
-    is_postgresql, new_prefix, sub_key_of, subscription_item_id, wait_for_statuses
+    new_prefix, sub_key_of, subscription_item_id, wait_for_statuses
 
 # Zato
 from zato.common.pubsub.subscription_list import Lock_Timeout_Ms
@@ -29,11 +26,6 @@ if 0:
     anylist = anylist
     Page = Page
     PubSubDatabase = PubSubDatabase
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-pytestmark = pytest.mark.skipif(not is_postgresql(), reason='The lock timeout applies to PostgreSQL')
 
 # ################################################################################################################################
 # ################################################################################################################################

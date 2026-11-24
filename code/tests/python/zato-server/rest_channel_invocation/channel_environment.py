@@ -27,6 +27,7 @@ import psutil
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.test import kill_server_process
+from zato.common.test.zato_database import create_test_database, drop_test_database
 from zato.common.typing_ import cast_
 from zato.common.util.config import get_config_object, update_config_file
 
@@ -34,7 +35,7 @@ from zato.common.util.config import get_config_object, update_config_file
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strdict, strlist
+    from zato.common.typing_ import any_, strdict, strlist, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,13 +51,6 @@ _redis_environment_keys = (
     'Zato_Queue_Bridge_Redis',
     'Zato_Rule_Engine_Redis',
     'Zato_Scheduler_Redis',
-)
-
-# The variables naming the databases and sockets that otherwise default to the shared quickstart directory,
-# each with the name of the file it points to in the temporary directory of the environment
-_isolated_file_variables = (
-    ('Zato_Database_Path', 'zato.db'),
-    ('Zato_Analytics_DB_Path', 'analytics.db'),
 )
 
 # The metrics channel of a new environment is secured with this user and the password of this variable
@@ -166,6 +160,10 @@ class ChannelEnvironment:
 
         self.temp_directory = ''
         self.server_directory = ''
+
+        # The Zato_Database_* variables of the database of this environment, which holds its configuration and its audit log
+        self.database_env:'strstrdict' = {}
+
         self.port = 0
         self.redis_port = 0
         self.base_url = ''
@@ -203,6 +201,7 @@ class ChannelEnvironment:
         """ Starts Redis, creates the quickstart environment, deploys the services and starts the server.
         """
         self.temp_directory = tempfile.mkdtemp(prefix=self.name_prefix)
+        self.database_env = create_test_database()
 
         self._start_redis()
         self._create_quickstart()
@@ -277,13 +276,11 @@ class ChannelEnvironment:
 # ################################################################################################################################
 
     def _get_isolated_environment(self) -> 'strdict':
-        """ Returns the environment variables of every command of this environment, which point each database
-        and socket that defaults to a location under the home directory at a file in the temporary directory.
+        """ Returns the environment variables of every command of this environment, which select the database
+        of this environment.
         """
         out = os.environ.copy()
-
-        for variable, file_name in _isolated_file_variables:
-            out[variable] = os.path.join(self.temp_directory, file_name)
+        out.update(self.database_env)
 
         out[_metrics_password_variable] = self.metrics_password
 
@@ -391,7 +388,7 @@ class ChannelEnvironment:
 # ################################################################################################################################
 
     def stop(self) -> 'None':
-        """ Stops the server and Redis and removes the environment.
+        """ Stops the server and Redis and removes the environment together with its database.
         """
         if self.server_process:
             kill_server_process(self.server_process, _process_kill_timeout, server_directory=self.server_directory)
@@ -401,6 +398,11 @@ class ChannelEnvironment:
             self.redis_process.terminate()
             _ = self.redis_process.wait(_process_kill_timeout)
             self.redis_process = None
+
+        # An environment that was never started has no database
+        if self.database_env:
+            drop_test_database(self.database_env)
+            self.database_env = {}
 
         if self.temp_directory:
             shutil.rmtree(self.temp_directory, ignore_errors=True)

@@ -27,13 +27,11 @@ sys.path.insert(0, _here)
 import pytest
 
 # Zato
-from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.db_env.fence import ModuleCtx as FenceCtx
 from zato.common.test.pubsub_database import get_db_mode, pubsub_db_env, start_pubsub_database, stop_pubsub_database
-from zato.common.test.pubsub_in_process_support import FilesystemFault, SQLiteWriteLock
 
 # Local
-from _support import TableWriteLock, is_postgresql
+from _support import TableWriteLock
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,7 +52,6 @@ class SuiteCtx:
     Work_Directory_Prefix = 'zato_playwright_pubsub_subscription_work_'
     Database_Label = 'playwright-pubsub-subscription'
     Generation_File_Name = 'database-generation'
-    Config_DB_Name = 'config.db'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -71,7 +68,7 @@ _parent_conftest = importlib.util.module_from_spec(_spec)
 sys.modules['playwright_parent_conftest'] = _parent_conftest
 _spec.loader.exec_module(_parent_conftest)
 
-_parent_zato_dashboard = _parent_conftest.zato_dashboard._get_wrapped_function()
+_parent_zato_dashboard = _parent_conftest.run_zato_dashboard
 
 playwright_browser = _parent_conftest.playwright_browser
 playwright_context = _parent_conftest.playwright_context
@@ -85,13 +82,9 @@ pytest_sessionfinish = _parent_conftest.pytest_sessionfinish
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def pubsub_database() -> 'Generator[PubSubDatabase | None, None, None]':
-    """ The PostgreSQL container of the session on PostgreSQL, and nothing on SQLite.
+def pubsub_database() -> 'Generator[PubSubDatabase, None, None]':
+    """ The PostgreSQL server of the session, in the mode of the session.
     """
-    if not is_postgresql():
-        yield None
-        return
-
     mode = get_db_mode()
     out = start_pubsub_database(SuiteCtx.Database_Label, mode)
 
@@ -103,8 +96,8 @@ def pubsub_database() -> 'Generator[PubSubDatabase | None, None, None]':
 # ################################################################################################################################
 
 @pytest.fixture(scope='session')
-def zato_dashboard(pubsub_database:'PubSubDatabase | None') -> 'Generator[anydict, None, None]':
-    """ The server and Dashboard of playwright_/conftest.py, with the Zato database of the mode of the session.
+def zato_dashboard(pubsub_database:'PubSubDatabase') -> 'Generator[anydict, None, None]':
+    """ The server and Dashboard of playwright_/conftest.py, with the Zato database on the session's PostgreSQL server.
     """
     work_dir = tempfile.mkdtemp(prefix=SuiteCtx.Work_Directory_Prefix)
     generation_file = os.path.join(work_dir, SuiteCtx.Generation_File_Name)
@@ -113,10 +106,7 @@ def zato_dashboard(pubsub_database:'PubSubDatabase | None') -> 'Generator[anydic
         FenceCtx.Env_Generation_File: generation_file,
     }
 
-    if pubsub_database is None:
-        env[DatabaseEnv.Env_Type] = DatabaseEnv.Type_SQLite
-    else:
-        env.update(pubsub_database.env)
+    env.update(pubsub_database.env)
 
     try:
         with pubsub_db_env(env):
@@ -127,35 +117,15 @@ def zato_dashboard(pubsub_database:'PubSubDatabase | None') -> 'Generator[anydic
 # ################################################################################################################################
 
 @pytest.fixture
-def write_lock(zato_dashboard:'anydict', pubsub_database:'PubSubDatabase | None') -> 'Generator[any_, None, None]':
-    """ A lock that makes the writes of the server to the table of pairs wait, released on teardown.
-    It is the write lock of the SQLite file on SQLite and a lock of the table on PostgreSQL.
+def write_lock(zato_dashboard:'anydict', pubsub_database:'PubSubDatabase') -> 'Generator[any_, None, None]':
+    """ A lock of the table of pairs that makes the writes of the server to it wait, released on teardown.
     """
-    if pubsub_database is None:
-        lock = SQLiteWriteLock(zato_dashboard['pubsub_db_path'])
-    else:
-        lock = TableWriteLock(pubsub_database)
+    lock = TableWriteLock(pubsub_database)
 
     try:
         yield lock
     finally:
         lock.release()
-
-# ################################################################################################################################
-
-@pytest.fixture
-def filesystem_fault(zato_dashboard:'anydict') -> 'Generator[FilesystemFault, None, None]':
-    """ Controls fsfault.so against config.db of the server, cleared on teardown.
-    """
-    config_db_path = os.path.join(zato_dashboard['temporary_dir'], SuiteCtx.Config_DB_Name)
-    config_db_path = os.path.realpath(config_db_path)
-
-    fault = FilesystemFault(config_db_path)
-
-    try:
-        yield fault
-    finally:
-        fault.clear()
 
 # ################################################################################################################################
 # ################################################################################################################################

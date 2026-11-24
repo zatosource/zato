@@ -7,11 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from random import Random
-from uuid import uuid4
 
 # SQLAlchemy
 from sqlalchemy import MetaData, select
@@ -21,9 +19,9 @@ from live_sql.containers import create_postgresql_database, drop_postgresql_data
 from live_sql.env import database_env
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, AuditEvent, \
     AuditOutcome, AuditSource, metadata as audit_metadata
+from zato.common.crypto.api import CryptoManager
 from zato.common.db_env.database import database_config, dispose_database_engine, get_database_engine, \
     new_unshared_database_engine
-from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.audit_log.common import event_count_table, event_dedup_table, event_open_table, event_payload_table, \
     Status_Outstanding
 from zato.common.audit_log.event_count import compact_event_counts, count_key_columns
@@ -39,14 +37,14 @@ from zato.common.test.direct_sql.seed import seed_event_rows
 
 if 0:
     from collections.abc import Iterator
-    from pytest import FixtureRequest
+    from live_sql.containers import DatabaseServer
     from sqlalchemy.engine import Connection, Engine
     from zato.common.audit_log.listing import SearchFilters
     from zato.common.typing_ import any_, anydict, anylist, anyset, anytuple, callable_, intlist, intset, stranydict
 
     Connection = Connection
+    DatabaseServer = DatabaseServer
     Engine = Engine
-    FixtureRequest = FixtureRequest
     Iterator = Iterator
     SearchFilters = SearchFilters
     any_ = any_
@@ -62,8 +60,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The backends every test of this directory runs against
-Backend_SQLite     = 'sqlite'
+# The backend every test of this directory runs against
 Backend_PostgreSQL = 'postgresql'
 
 # The server all the test events are written under
@@ -102,17 +99,16 @@ _rows_per_statement = 500
 _read_tables = ('event_count', 'event_open')
 _ordered_indexes = ('idx_event_time', 'idx_event_source_time', 'idx_event_outcome_time')
 
-# The SQLite file of a database of the previous version and the prefix of the name of a PostgreSQL one
-_previous_sqlite_file = 'previous-version.db'
+# The prefix of the name of a database of the previous version
 _previous_postgresql_prefix = 'zato_previous_'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def run_blocking(func:'callable_', *args:'any_') -> 'any_':
-    """ Runs a function that makes blocking database calls, in the thread pool of the gevent hub when the database needs it,
-    so that a long run of statements does not block the event loop. The function makes its calls on connections
-    of its own and never through call_database, whose lock of the SQLite file admits one call at a time.
+    """ Runs a function that makes blocking database calls through call_database, so that a long run of statements
+    does not block the event loop. The function makes its calls on connections of its own and never through
+    call_database itself.
     """
     engine = get_database_engine()
 
@@ -433,18 +429,17 @@ def _previous_metadata() -> 'MetaData':
 # ################################################################################################################################
 
 @contextmanager
-def previous_version_database(request:'FixtureRequest', backend:'str', directory:'str') -> 'Iterator[Engine]':
+def previous_version_database(server:'DatabaseServer') -> 'Iterator[Engine]':
     """ Points the Zato database at an empty database of its own, creates in it the audit log of the version
     that preceded the event counts and the open exchanges, through the schema creation of the product, and yields
     an engine of it that creates no schema of its own.
     """
-    if backend == Backend_PostgreSQL:
-        server = request.getfixturevalue('postgresql_server')
-        details = dict(server.details)
-        details['name'] = _previous_postgresql_prefix + uuid4().hex
-        create_postgresql_database(server, details['name'])
-    else:
-        details = {'type': DatabaseEnv.Type_SQLite, 'path': os.path.join(directory, _previous_sqlite_file)}
+    db_name = _previous_postgresql_prefix + CryptoManager.generate_hex_string()
+
+    details = dict(server.details)
+    details['name'] = db_name
+
+    create_postgresql_database(server, db_name)
 
     with database_env(details):
 
@@ -458,16 +453,13 @@ def previous_version_database(request:'FixtureRequest', backend:'str', directory
             engine.dispose()
             dispose_database_engine()
 
-    if backend == Backend_PostgreSQL:
-        server = request.getfixturevalue('postgresql_server')
-        drop_postgresql_database(server, details['name'])
+    drop_postgresql_database(server, db_name)
 
 # ################################################################################################################################
 
 def reopen_database() -> 'None':
     """ Opens the database anew, the way a server starting up does, which creates what the schema lacks.
-    The schema is created through an engine that runs no background checkpoints, because this runs in the thread pool
-    and a checkpointer runs on the hub of the thread that starts it, and the caller of the next blocking call
+    The schema is created through an engine of its own, and the caller of the next blocking call
     opens the shared engine again in the main thread.
     """
     dispose_database_engine()

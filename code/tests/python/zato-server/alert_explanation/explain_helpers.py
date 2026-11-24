@@ -19,7 +19,6 @@ from contextlib import contextmanager
 from email.mime.text import MIMEText
 from http.client import OK
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 
 # requests

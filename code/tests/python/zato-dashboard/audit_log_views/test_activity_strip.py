@@ -11,7 +11,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # so the strip always shows what the listing shows.
 
 # stdlib
-import os
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from json import dumps, loads
@@ -21,12 +20,9 @@ from zato.admin.web.views.audit_log import strip
 from zato.admin.web.views.audit_log.poll import _strip_max_buckets, _strip_min_buckets
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
-from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.ext.bunch import Bunch
 from zato.common.test.direct_sql.seed import seed_event_rows
-
-# Test support
-from live_sql.env import database_env
+from zato.common.test.zato_database import zato_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -86,18 +82,11 @@ def _new_event_row(object_name:'str', event_time:'datetime', outcome:'str') -> '
 # ################################################################################################################################
 
 @contextmanager
-def _strip_events(tmp_path:'any_') -> 'envgen':
-    """ Points the audit log at a throwaway SQLite database holding three events of one channel
+def _strip_events() -> 'envgen':
+    """ Points the audit log at a new PostgreSQL database holding three events of one channel
     spread over two hours, and one more event of another channel.
     """
-    db_path = os.path.join(str(tmp_path), 'zato.db')
-
-    details_config = {
-        'type': DatabaseEnv.Type_SQLite,
-        'path': db_path,
-    }
-
-    with database_env(details_config):
+    with zato_database_engine():
 
         # Creating the log creates the schema that the events are seeded into, with their exact times,
         # so that the buckets are known.
@@ -128,7 +117,7 @@ def _new_request(body:'anydict') -> 'Bunch':
 
 # ################################################################################################################################
 
-def _get_buckets(tmp_path:'any_', **overrides:'any_') -> 'anylist':
+def _get_buckets(**overrides:'any_') -> 'anylist':
     """ Calls the strip view with the standard filter keys, any of them overridden,
     and returns the buckets it answered with.
     """
@@ -149,7 +138,7 @@ def _get_buckets(tmp_path:'any_', **overrides:'any_') -> 'anylist':
 
     body.update(overrides)
 
-    with _strip_events(tmp_path):
+    with _strip_events():
         response = strip(_new_request(body))
 
     parsed = loads(response.content)
@@ -188,8 +177,8 @@ def _totals(buckets:'anylist') -> 'anydict':
 
 class TestBuckets:
 
-    def test_the_window_is_what_the_events_cover(self, tmp_path:'os.PathLike'):
-        buckets = _get_buckets(tmp_path)
+    def test_the_window_is_what_the_events_cover(self):
+        buckets = _get_buckets()
 
         assert len(buckets) == _strip_min_buckets
 
@@ -198,8 +187,8 @@ class TestBuckets:
 
 # ################################################################################################################################
 
-    def test_each_event_lands_in_the_bucket_its_time_says(self, tmp_path:'os.PathLike'):
-        buckets = _get_buckets(tmp_path)
+    def test_each_event_lands_in_the_bucket_its_time_says(self):
+        buckets = _get_buckets()
 
         # The first event opens the window, the error stands halfway through it,
         # and the window's very last moment belongs to the last bucket
@@ -211,31 +200,31 @@ class TestBuckets:
 
 # ################################################################################################################################
 
-    def test_the_filters_narrow_what_is_counted(self, tmp_path:'os.PathLike'):
-        buckets = _get_buckets(tmp_path, outcomes=[AuditOutcome.Error])
+    def test_the_filters_narrow_what_is_counted(self):
+        buckets = _get_buckets(outcomes=[AuditOutcome.Error])
 
         assert _totals(buckets) == {AuditOutcome.Error: 1}
 
 # ################################################################################################################################
 
-    def test_nothing_matching_is_no_buckets_at_all(self, tmp_path:'os.PathLike'):
-        buckets = _get_buckets(tmp_path, object_names=['no.such.channel'])
+    def test_nothing_matching_is_no_buckets_at_all(self):
+        buckets = _get_buckets(object_names=['no.such.channel'])
 
         assert buckets == []
 
 # ################################################################################################################################
 
-    def test_the_bucket_count_stays_within_its_bounds(self, tmp_path:'os.PathLike'):
-        too_many = _get_buckets(tmp_path, bucket_count=100000)
-        too_few = _get_buckets(tmp_path, bucket_count=1)
+    def test_the_bucket_count_stays_within_its_bounds(self):
+        too_many = _get_buckets(bucket_count=100000)
+        too_few = _get_buckets(bucket_count=1)
 
         assert len(too_many) == _strip_max_buckets
         assert len(too_few) == _strip_min_buckets
 
 # ################################################################################################################################
 
-    def test_one_event_still_spreads_over_the_least_window(self, tmp_path:'os.PathLike'):
-        buckets = _get_buckets(tmp_path, outcomes=[AuditOutcome.Error])
+    def test_one_event_still_spreads_over_the_least_window(self):
+        buckets = _get_buckets(outcomes=[AuditOutcome.Error])
 
         # A single event is an instant, so the window is the least one - an hour
         # ending at that event - rather than a window of no width at all

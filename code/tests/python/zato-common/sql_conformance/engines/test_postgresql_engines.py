@@ -21,12 +21,10 @@ from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
 # Zato
-from zato.common.db_env.common import Type_PostgreSQL
-from zato.common.db_env.connection import build_connect_args_from_values, build_engine_url_from_values, \
-    DatabaseDurabilityError, Durability_Level_Relaxed, Durability_Level_Setting, PostgreSQL_Connect_Timeout_Seconds, \
-    PostgreSQL_Read_Timeout_Seconds, PostgreSQL_Statement_Timeout_Ms, Provider_Failover_Roles
-from zato.common.db_env.database import dispose_database_engine, get_database_engine, get_database_values
-from zato.common.db_env.engine import new_zato_engine
+from zato.common.db_env.connection import DatabaseDurabilityError, Durability_Level_Relaxed, Durability_Level_Setting, \
+    PostgreSQL_Connect_Timeout_Seconds, PostgreSQL_Read_Timeout_Seconds, PostgreSQL_Statement_Timeout_Ms, \
+    Provider_Failover_Roles
+from zato.common.db_env.database import dispose_database_engine, get_database_engine, new_odb_engine
 from zato.common.test.pubsub_database import connect, get_database_address, pubsub_db_env, PubSubDBMode, \
     start_pubsub_database, stop_pubsub_database
 from zato.common.test.pubsub_replication import start_replicated_database, stop_replicated_database
@@ -126,14 +124,9 @@ def _set_server_level(database:'PubSubDatabase', level:'str') -> 'None':
 # ################################################################################################################################
 
 def _new_configuration_engine() -> 'Engine':
-    """ Returns an engine of a database of Zato that the environment does not configure, on the same server.
+    """ Returns an engine of the tables of the configuration database, as the ODB pool of a server builds it.
     """
-    values = get_database_values()
-
-    engine_url = build_engine_url_from_values(values, Type_PostgreSQL)
-    connect_args = build_connect_args_from_values(values, Type_PostgreSQL)
-
-    out = new_zato_engine(engine_url, connect_args=connect_args)
+    out = new_odb_engine()
     return out
 
 # ################################################################################################################################

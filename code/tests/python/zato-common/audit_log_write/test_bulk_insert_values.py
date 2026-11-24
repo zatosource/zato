@@ -7,22 +7,20 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The values that the bulk insert of audit events writes to each table, column by column, for batches of every size
-# that the insert paths of SQLite and PostgreSQL tell apart.
+# that the insert paths of PostgreSQL tell apart.
 
 # stdlib
-import zlib
 from typing import NamedTuple
 
 # pytest
 import pytest
 
 # SQLAlchemy
-from sqlalchemy import LargeBinary, select, String, Text, type_coerce
+from sqlalchemy import select, Text, type_coerce
 
 # Zato
-from support import Attachment_Content, Backend_SQLite, Event_Minute, Event_Time, get_event_specs, insert_seed_event, \
-    Long_Note, MLLP_Object_Name, new_value_batch, Payload_Non_ASCII, Pub_Time, read_rows, read_value_events, Server_Name, \
-    Stored_Attr_Value_Length
+from support import Attachment_Content, Event_Minute, Event_Time, get_event_specs, insert_seed_event, Long_Note, \
+    MLLP_Object_Name, new_value_batch, Payload_Non_ASCII, read_rows, read_value_events, Server_Name, Stored_Attr_Value_Length
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, AuditBody, \
     AuditEvent, AuditLink, AuditLog, AuditSource
 from zato.common.audit_log.common import event_count_table, event_open_table, event_payload_table
@@ -60,10 +58,6 @@ _event_count = 16
 
 # The text of the body row of the attachment of an event
 _attachment_data = '{"filename": "invoice.pdf", "content_type": "application/pdf", "size": 34, "is_content_kept": true}'
-
-# The text form in which SQLite stores Event_Time and Pub_Time
-_sqlite_event_time = '2026-10-29 12:00:00.123456'
-_sqlite_pub_time   = '2026-10-29 11:59:30.654321'
 
 # ################################################################################################################################
 # ################################################################################################################################

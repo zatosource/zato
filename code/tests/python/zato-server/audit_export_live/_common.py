@@ -335,61 +335,62 @@ def wait_for_tools(gateway_url:'str', api_key:'str') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def read_events(audit_db_path:'str', source:'str', object_name:'str', min_id:'int'=0) -> 'dictlist':
-    """ Reads the audit events of one object out of the live server's audit database, newer than the given
+def read_events(database_env:'strstrdict', source:'str', object_name:'str', min_id:'int'=0) -> 'dictlist':
+    """ Reads the audit events of one object out of the live server's Zato database, newer than the given
     row id, oldest first, each with its attributes attached and, when it is JSON, its data document parsed.
     """
+    columns:'anylist' = []
 
-    # An empty result before the server ever wrote an event - the file does not exist yet
-    if not os.path.isfile(audit_db_path):
-        return []
+    for name in _event_columns:
+        column = get_event_column(name)
+        columns.append(column)
 
-    column_list = get_event_select_list(_event_columns)
-    query = f'select {column_list} from event where source = ? and object_name = ? and id > ? order by id'
-    attr_query = 'select name, value, value_number from event_attr where event_id = ?'
+    query = select(*columns)
+    query = query.where(event_table.c.source == source)
+    query = query.where(event_table.c.object_name == object_name)
+    query = query.where(event_table.c.id > min_id)
+    query = query.order_by(event_table.c.id)
 
-    connection = sqlite3.connect(audit_db_path)
-    register_sqlite_functions(connection)
+    engine = new_database_engine(database_env)
+
+    out = []
 
     try:
-        cursor = connection.execute(query, (source, object_name, min_id))
-        db_rows = cursor.fetchall()
+        with engine.connect() as connection:
+            db_rows = connection.execute(query).fetchall()
 
-        out = []
+            for db_row in db_rows:
+                row:'anydict' = dict(db_row._mapping)
 
-        for db_row in db_rows:
-            row:'anydict' = dict(zip(_event_columns, db_row))
+                try:
+                    row['document'] = loads(row['data'])
+                except ValueError:
+                    row['document'] = None
 
-            for name in _time_columns:
-                if (value := row[name]) is not None:
-                    row[name] = parse_utc(value)
+                attr_query = select(event_attr_table.c.name, event_attr_table.c.value, event_attr_table.c.value_number)
+                attr_query = attr_query.where(event_attr_table.c.event_id == row['id'])
 
-            try:
-                row['document'] = loads(row['data'])
-            except ValueError:
-                row['document'] = None
+                attrs:'anydict' = {}
+                for name, value, value_number in connection.execute(attr_query).fetchall():
+                    if value_number is not None:
+                        attrs[name] = value_number
+                    else:
+                        attrs[name] = value
 
-            attrs:'anydict' = {}
-            for name, value, value_number in connection.execute(attr_query, (row['id'],)).fetchall():
-                if value_number is not None:
-                    attrs[name] = value_number
-                else:
-                    attrs[name] = value
-
-            row['attrs'] = attrs
-            out.append(row)
+                row['attrs'] = attrs
+                out.append(row)
 
     finally:
-        connection.close()
+        engine.dispose()
 
     return out
 
 # ################################################################################################################################
 
-def last_event_id(audit_db_path:'str', source:'str', object_name:'str') -> 'int':
+def last_event_id(database_env:'strstrdict', source:'str', object_name:'str') -> 'int':
     """ The id of the newest event of an object, zero before any was written - what a test reads events after.
     """
-    events = read_events(audit_db_path, source, object_name)
+    events = read_events(database_env, source, object_name)
 
     if events:
         last = events[-1]
@@ -401,31 +402,43 @@ def last_event_id(audit_db_path:'str', source:'str', object_name:'str') -> 'int'
 
 # ################################################################################################################################
 
-def wait_for_event(audit_db_path:'str', source:'str', object_name:'str', min_id:'int', is_wanted:'callable_') -> 'anydict':
+def wait_for_event(
+    database_env:'strstrdict',
+    source:'str',
+    object_name:'str',
+    min_id:'int',
+    is_wanted:'callable_',
+    ) -> 'anydict':
     """ Waits for the first event newer than the given id that the predicate accepts and returns it.
     """
     deadline = time.monotonic() + ModuleCtx.Audit_Timeout
 
     while time.monotonic() < deadline:
 
-        for event in read_events(audit_db_path, source, object_name, min_id):
+        for event in read_events(database_env, source, object_name, min_id):
             if is_wanted(event):
                 return event
 
         time.sleep(ModuleCtx.Audit_Poll_Interval)
 
-    events = read_events(audit_db_path, source, object_name, min_id)
+    events = read_events(database_env, source, object_name, min_id)
     raise Exception(f'No matching audit event of `{object_name}` within {ModuleCtx.Audit_Timeout}s, got: {events}')
 
 # ################################################################################################################################
 
-def wait_for_event_of_type(audit_db_path:'str', source:'str', object_name:'str', min_id:'int', event_type:'str') -> 'anydict':
+def wait_for_event_of_type(
+    database_env:'strstrdict',
+    source:'str',
+    object_name:'str',
+    min_id:'int',
+    event_type:'str',
+    ) -> 'anydict':
 
     def _is_wanted(event:'anydict') -> 'bool':
         out = event['event_type'] == event_type
         return out
 
-    out = wait_for_event(audit_db_path, source, object_name, min_id, _is_wanted)
+    out = wait_for_event(database_env, source, object_name, min_id, _is_wanted)
     return out
 
 # ################################################################################################################################

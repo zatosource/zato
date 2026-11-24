@@ -8,12 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import signal
 import time
 from urllib.parse import parse_qs, urlparse
-
-# psutil
-import psutil
 
 # PyYAML
 import yaml
@@ -25,8 +21,7 @@ from zato.common.test.playwright_pubsub import create_basic_auth, create_permiss
     navigate_to_page, open_edit_dialog, open_publish_overlay, open_subscription_create_dialog, pick_subscription_topic, \
     select_subscription_create_option, subscription_create_field_selector, submit_edit_form, \
     submit_subscription_create_dialog
-from zato.common.test.pubsub_database import connect, get_db_mode, is_postgresql_mode
-from zato.server.arbiter_config_process import ConfigProcessCtx
+from zato.common.test.pubsub_database import connect
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -189,16 +184,6 @@ def wait_for(check:'callable_', what:'str', timeout:'float'=ModuleCtx.Wait_Timeo
         if time.monotonic() > deadline:
             raise Exception(f'{what} did not happen within {timeout}s')
         time.sleep(ModuleCtx.Poll_Interval)
-
-# ################################################################################################################################
-
-def is_postgresql() -> 'bool':
-    """ Whether the suite runs on PostgreSQL.
-    """
-    mode = get_db_mode()
-
-    out = is_postgresql_mode(mode)
-    return out
 
 # ################################################################################################################################
 
@@ -684,22 +669,6 @@ def client_pull(base_url:'str', client:'anydict') -> 'strlist':
         out.append(data)
 
     return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def kill_config_process(server_pid:'int') -> 'None':
-    """ Kills the config process of the server with SIGKILL.
-    """
-    server_process = psutil.Process(server_pid)
-    descendants = server_process.children(recursive=True)
-
-    for process in descendants:
-        if process.name() == ConfigProcessCtx.Process_Name:
-            os.kill(process.pid, signal.SIGKILL)
-            break
-    else:
-        raise Exception(f'The server {server_pid} has no config process')
 
 # ################################################################################################################################
 # ################################################################################################################################

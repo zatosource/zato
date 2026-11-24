@@ -10,12 +10,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # the database that the environment configures, and the rows are read back through a connection of their own.
 
 # stdlib
-import sqlite3
 from datetime import datetime, timezone
 from typing import NamedTuple
 
 # SQLAlchemy
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 # Zato
 from zato.common.alerting.model import new_finding, new_rule
@@ -24,13 +23,23 @@ from zato.common.audit_log.api import AuditLog, AuditSource
 from zato.common.audit_log.common import alert_table, event_table
 from zato.common.common_db.schema import shared_object_table
 from zato.common.common_db.store import SharedObjectStore
-from zato.common.db_env.database import get_database_engine
+from zato.common.db_env.database import get_database_engine, new_unshared_database_engine
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.pending import new_pending_attempts
 from zato.common.pubsub.sql.schema import delivery_table, message_table
 from zato.common.rule_engine.sql import RuleSQLBackend
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset
 from zato.common.rule_engine.sql.schema import rule_version_table
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from sqlalchemy import Column
+    from zato.common.typing_ import any_
+
+    any_ = any_
+    Column = Column
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -46,8 +55,8 @@ class ModuleCtx:
     # The payload of each publication
     Data = 'Durability of the write'
 
-    # The attempt of a delivery row after its first lease or its first push attempt, as the check of a row compares it
-    Attempt_Recorded = '1'
+    # The attempt of a delivery row after its first lease or its first push attempt
+    Attempt_Recorded = 1
 
     # The type of the shared objects
     Shared_Object_Type = 'durability-writers'
@@ -72,33 +81,34 @@ class WriteCheck(NamedTuple):
     """ The rows that a write leaves behind - the rows of a table whose column has a value,
     which the write creates or, if is_present is False, removes.
     """
-    table_name: 'str'
-    column_name: 'str'
-    value: 'str'
+    column: 'Column'
+    value: 'any_'
     is_present: 'bool'
 
 # ################################################################################################################################
 
-def count_rows(db_path:'str', check:'WriteCheck') -> 'int':
-    """ Returns how many rows of a write's check a new connection to a SQLite file finds.
+def count_rows(check:'WriteCheck') -> 'int':
+    """ Returns how many rows of a write's check a connection of an engine of its own finds.
     """
-    connection = sqlite3.connect(db_path)
+    column = check.column
+    query = select(func.count()).select_from(column.table).where(column == check.value)
+
+    engine = new_unshared_database_engine()
 
     try:
-        query = f'select count(*) from {check.table_name} where {check.column_name} = ?'
-        row = connection.execute(query, (check.value,)).fetchone()
+        with engine.connect() as connection:
+            out = connection.execute(query).scalar_one()
     finally:
-        connection.close()
+        engine.dispose()
 
-    out = row[0]
     return out
 
 # ################################################################################################################################
 
-def is_written(db_path:'str', check:'WriteCheck') -> 'bool':
-    """ Returns whether a new connection to a SQLite file finds what a write leaves behind.
+def is_written(check:'WriteCheck') -> 'bool':
+    """ Returns whether a connection of an engine of its own finds what a write leaves behind.
     """
-    count = count_rows(db_path, check)
+    count = count_rows(check)
 
     if check.is_present:
         out = count > 0
@@ -163,7 +173,7 @@ class PublishAPI(_PubSubAPI):
         self.publish()
 
     def get_check(self) -> 'WriteCheck':
-        out = WriteCheck(message_table.name, message_table.c.msg_id.name, self.msg_id, True)
+        out = WriteCheck(message_table.c.msg_id, self.msg_id, True)
         return out
 
 # ################################################################################################################################
@@ -179,7 +189,7 @@ class AckAPI(_PubSubAPI):
         _ = self.backend.ack_messages(self.sub_key, [self.msg_id])
 
     def get_check(self) -> 'WriteCheck':
-        out = WriteCheck(delivery_table.name, delivery_table.c.sub_key.name, self.sub_key, False)
+        out = WriteCheck(delivery_table.c.sub_key, self.sub_key, False)
         return out
 
 # ################################################################################################################################
@@ -197,14 +207,13 @@ class LeaseAPI(AckAPI):
         _ = self.backend.pull_messages(self.sub_key)
 
     def get_check(self) -> 'WriteCheck':
-        out = WriteCheck(delivery_table.name, delivery_table.c.attempt.name, ModuleCtx.Attempt_Recorded, True)
+        out = WriteCheck(delivery_table.c.attempt, ModuleCtx.Attempt_Recorded, True)
         return out
 
 # ################################################################################################################################
 
 class RecordAttemptsAPI(AckAPI):
-    """ The push attempts of a batch, written through the writer, which SQLite does not use for them otherwise,
-    since a single server counts them in memory.
+    """ The push attempts of a batch, written through the writer.
     """
 
     def prepare(self) -> 'None':
@@ -220,7 +229,7 @@ class RecordAttemptsAPI(AckAPI):
         self.backend._writer.record_attempts(pending)
 
     def get_check(self) -> 'WriteCheck':
-        out = WriteCheck(delivery_table.name, delivery_table.c.attempt.name, ModuleCtx.Attempt_Recorded, True)
+        out = WriteCheck(delivery_table.c.attempt, ModuleCtx.Attempt_Recorded, True)
         return out
 
 # ################################################################################################################################
@@ -232,7 +241,7 @@ class AuditInsertAPI(WriteAPI):
         _ = audit_log.insert(AuditSource.PubSub, ModuleCtx.Audit_Event_Type, ModuleCtx.Audit_Object, cid=self.token)
 
     def get_check(self) -> 'WriteCheck':
-        out = WriteCheck(event_table.name, event_table.c.cid.name, self.token, True)
+        out = WriteCheck(event_table.c.cid, self.token, True)
         return out
 
 # ################################################################################################################################
@@ -244,7 +253,7 @@ class SharedObjectAPI(WriteAPI):
         _ = store.compare_and_set(ModuleCtx.Shared_Object_Type, self.token, {'token': self.token}, None)
 
     def get_check(self) -> 'WriteCheck':
-        out = WriteCheck(shared_object_table.name, shared_object_table.c.name.name, self.token, True)
+        out = WriteCheck(shared_object_table.c.name, self.token, True)
         return out
 
 # ################################################################################################################################
@@ -263,7 +272,7 @@ class AlertAPI(WriteAPI):
         _ = raise_alert(get_database_engine(), rule, finding, now)
 
     def get_check(self) -> 'WriteCheck':
-        out = WriteCheck(alert_table.name, alert_table.c.rule_name.name, self.rule_name, True)
+        out = WriteCheck(alert_table.c.rule_name, self.rule_name, True)
         return out
 
 # ################################################################################################################################
@@ -297,7 +306,7 @@ class RuleVersionAPI(WriteAPI):
         )
 
     def get_check(self) -> 'WriteCheck':
-        out = WriteCheck(rule_version_table.name, rule_version_table.c.comment.name, self.token, True)
+        out = WriteCheck(rule_version_table.c.comment, self.token, True)
         return out
 
 # ################################################################################################################################

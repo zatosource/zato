@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# A Zato server for the tests of push delivery batches, on a SQLite database of its own and on reserved ports.
+# A Zato server for the tests of push delivery batches, on a PostgreSQL database of its own and on reserved ports.
 # The server is started with `zato start`, stopped with `zato stop` or killed with SIGKILL, and started again
 # on the same data. The endpoint that its outgoing REST connection calls runs in the test process on a reserved port.
 
@@ -16,16 +16,19 @@ import logging
 import os
 import shutil
 import subprocess
+from contextlib import ExitStack
 from functools import partial
 
 # Zato
 from zato.common.crypto.api import CryptoManager
-from zato.common.db_env.database_env import DatabaseEnv
+from zato.common.db_env.database import dispose_database_engine
 from zato.common.db_env.fence import ModuleCtx as FenceCtx
 from zato.common.test.conftest_base_pubsub import run_quickstart_and_enmasse, SessionState, start_server_process
 from zato.common.test.process_util import kill_process_tree_at_once
+from zato.common.test.pubsub_database import pubsub_db_env
 from zato.common.test.receiver import WebhookReceiver
 from zato.common.test.reservation import PortInUse, reserve_port, start_on_reserved_port
+from zato.common.test.zato_database import create_test_database, drop_test_database, ModuleCtx as ZatoDatabaseCtx
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -92,12 +95,20 @@ class PushDeliveryServer:
 
         self.server_directory = ''
 
+        # The Zato_Database_* variables of the database of the server,
+        # and what restores the environment of the test process.
+        self.database_env:'strstrdict' = {}
+        self.exit_stack = ExitStack()
+
 # ################################################################################################################################
 
     def create(self, rendered_yaml:'str', services_path:'str') -> 'None':
-        """ Creates the quickstart environment of the server, imports its enmasse file, places its services
-        in the pickup directory and selects its SQLite database, which the test process reads too.
+        """ Creates the database of the server, which the test process selects too, then the quickstart environment
+        of the server in it, imports its enmasse file and places its services in the pickup directory.
         """
+        self.database_env = create_test_database()
+        _ = self.exit_stack.enter_context(pubsub_db_env(self.database_env))
+
         self.server_directory = run_quickstart_and_enmasse(
             state=self.state,
             logger=logger,
@@ -111,21 +122,13 @@ class PushDeliveryServer:
         pickup_dir = os.path.join(self.server_directory, 'pickup', 'incoming', 'services')
         _ = shutil.copy2(services_path, pickup_dir)
 
-        # .. and the server and the test process use one database ..
-        database_path = os.path.join(self.server_directory, DatabaseEnv.File_Name)
+        # .. and the server uses the database that the test process reads.
         generation_path = os.path.join(self.server_directory, ModuleCtx.Generation_File_Name)
 
-        database_env = {
-            DatabaseEnv.Env_Type: DatabaseEnv.Type_SQLite,
-            DatabaseEnv.Env_Path: database_path,
-            FenceCtx.Env_Generation_File: generation_path,
-        }
+        self.server_env.update(self.database_env)
+        self.server_env[FenceCtx.Env_Generation_File] = generation_path
 
-        # .. which the test process selects as well.
-        os.environ.update(database_env)
-        self.server_env.update(database_env)
-
-        logger.info('Zato database: %s', database_path)
+        logger.info('Zato database: %s', self.database_env[ZatoDatabaseCtx.Env_Name])
 
 # ################################################################################################################################
 
@@ -189,12 +192,19 @@ class PushDeliveryServer:
 # ################################################################################################################################
 
     def remove(self) -> 'None':
-        """ Kills the server if it runs, removes its environment and releases its ports.
+        """ Kills the server if it runs, removes its environment and its database and releases its ports.
         """
         if self.state.server_process:
             self.kill()
 
         self.state.cleanup()
+
+        # The engine of the test process is closed before its database is dropped
+        dispose_database_engine()
+        self.exit_stack.close()
+
+        if self.database_env:
+            drop_test_database(self.database_env)
 
         if self.server_port:
             self.server_port.release()

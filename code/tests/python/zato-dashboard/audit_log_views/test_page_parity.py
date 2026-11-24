@@ -11,7 +11,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # only the columns follow the source the address names.
 
 # stdlib
-import os
 from contextlib import contextmanager
 from json import loads
 
@@ -23,11 +22,8 @@ from zato.admin.web.views.audit_log import object_index
 from zato.admin.web.views.audit_log.sources import get_resubmit_labels, _source_resubmit
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.ext.bunch import Bunch
+from zato.common.test.zato_database import zato_database_engine
 from zato.common.typing_ import cast_
-from zato.common.db_env.database_env import DatabaseEnv
-
-# Test support
-from live_sql.env import database_env
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,17 +45,10 @@ _channel_name = 'test.page.parity.channel'
 # ################################################################################################################################
 
 @contextmanager
-def _one_mllp_event(tmp_path:'any_') -> 'envgen':
-    """ Points the audit log at a throwaway SQLite database holding one MLLP channel event.
+def _one_mllp_event() -> 'envgen':
+    """ Points the audit log at a new PostgreSQL database holding one MLLP channel event.
     """
-    db_path = os.path.join(str(tmp_path), 'zato.db')
-
-    details_config = {
-        'type': DatabaseEnv.Type_SQLite,
-        'path': db_path,
-    }
-
-    with database_env(details_config):
+    with zato_database_engine():
 
         audit_log = AuditLog(_server_name)
 
@@ -91,8 +80,8 @@ def _new_request(source:'str', object_name:'str') -> 'Bunch':
 
 # ################################################################################################################################
 
-def _get_context(tmp_path:'any_', source:'str', object_name:'str') -> 'dict':
-    with _one_mllp_event(tmp_path):
+def _get_context(source:'str', object_name:'str') -> 'dict':
+    with _one_mllp_event():
         response = object_index(_new_request(source, object_name))
 
     out = cast_('dict', response.context_data)
@@ -131,8 +120,8 @@ class TestResubmitLabels:
 
 class TestPageContext:
 
-    def test_a_per_source_page_offers_the_filter_selects_too(self, tmp_path:'os.PathLike'):
-        context = _get_context(tmp_path, AuditSource.MLLP_Channel, _channel_name)
+    def test_a_per_source_page_offers_the_filter_selects_too(self):
+        context = _get_context(AuditSource.MLLP_Channel, _channel_name)
         filter_options = loads(context['filter_options_json'])
 
         assert filter_options
@@ -142,8 +131,8 @@ class TestPageContext:
 
 # ################################################################################################################################
 
-    def test_the_menu_page_offers_the_same_filter_selects(self, tmp_path:'os.PathLike'):
-        context = _get_context(tmp_path, '', '')
+    def test_the_menu_page_offers_the_same_filter_selects(self):
+        context = _get_context('', '')
         filter_options = loads(context['filter_options_json'])
 
         by_source = {option['source']: option for option in filter_options}
@@ -151,9 +140,9 @@ class TestPageContext:
 
 # ################################################################################################################################
 
-    def test_both_renderings_serve_the_same_source_keyed_resubmit_labels(self, tmp_path:'os.PathLike'):
-        per_source_context = _get_context(tmp_path, AuditSource.MLLP_Channel, _channel_name)
-        menu_context = _get_context(tmp_path, '', '')
+    def test_both_renderings_serve_the_same_source_keyed_resubmit_labels(self):
+        per_source_context = _get_context(AuditSource.MLLP_Channel, _channel_name)
+        menu_context = _get_context('', '')
 
         per_source_labels = loads(per_source_context['resubmit_labels_json'])
         menu_labels = loads(menu_context['resubmit_labels_json'])

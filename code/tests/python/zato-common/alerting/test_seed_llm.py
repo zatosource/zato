@@ -11,7 +11,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # seeded with the four rules of the release before gaining the five new ones on upgrade.
 
 # stdlib
-from pathlib import Path
 from typing import Generator
 
 # pytest
@@ -30,7 +29,7 @@ from zato.common.alerting.seed.rules_llm import llm_rules
 from zato.common.alerting.sweep import load_alert_rules, Fact_Entity
 from zato.common.audit_log.api import AuditSource
 from zato.common.rule_engine.sql import RuleSQLBackend
-from zato.common.test.zato_database import file_database_engine
+from zato.common.test.zato_database import zato_database_engine
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
 
@@ -149,10 +148,10 @@ then
 # ################################################################################################################################
 
 @pytest.fixture
-def rule_database_engine(tmp_path:'Path') -> 'engine_generator':
+def rule_database_engine() -> 'engine_generator':
     """ Creates one isolated test-managed rule engine database.
     """
-    with file_database_engine(tmp_path) as engine:
+    with zato_database_engine() as engine:
         yield engine
 
 # ################################################################################################################################

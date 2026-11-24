@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from pathlib import Path
 from typing import Generator
 
 # pytest
@@ -25,7 +24,7 @@ from zato.common.alerting.collectors.common import Measure_Connection_Failures, 
     Measure_SOAP_Faults, Measure_Status_Codes
 from zato.common.alerting.seed import ensure_alerting_definitions
 from zato.common.rule_engine.sql import RuleSQLBackend
-from zato.common.test.zato_database import file_database_engine
+from zato.common.test.zato_database import zato_database_engine
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
 
@@ -58,10 +57,10 @@ _microsoft_ruleset = 'alerts_microsoft'
 # ################################################################################################################################
 
 @pytest.fixture
-def rule_database_engine(tmp_path:'Path') -> 'engine_generator':
+def rule_database_engine() -> 'engine_generator':
     """ Creates one isolated test-managed rule engine database.
     """
-    with file_database_engine(tmp_path) as engine:
+    with zato_database_engine() as engine:
         yield engine
 
 # ################################################################################################################################

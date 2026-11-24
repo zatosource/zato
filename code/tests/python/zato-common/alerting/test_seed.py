@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from pathlib import Path
 from typing import Generator
 
 # pytest
@@ -32,7 +31,7 @@ from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.rule_engine.sql import RuleSQLBackend
-from zato.common.test.zato_database import file_database_engine
+from zato.common.test.zato_database import zato_database_engine
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Definition_Type_Vocabulary, Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
 from zato.common.util.api import utcnow
@@ -72,10 +71,10 @@ _test_transfer_full_name = 'alerts_file_transfer_Test_Transfer_Failing'
 # ################################################################################################################################
 
 @pytest.fixture
-def rule_database_engine(tmp_path:'Path') -> 'engine_generator':
+def rule_database_engine() -> 'engine_generator':
     """ Creates one isolated test-managed rule engine database.
     """
-    with file_database_engine(tmp_path) as engine:
+    with zato_database_engine() as engine:
         yield engine
 
 # ################################################################################################################################

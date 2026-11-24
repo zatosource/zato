@@ -7,29 +7,30 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
-import sqlite3
 import time
 from base64 import b64encode
 from json import dumps, loads
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
+# SQLAlchemy
+from sqlalchemy import select
+
 # local
 from _client import MCPClient
 
 # Zato
+from live_environment.audit import new_database_engine
 from zato.common.api import GENERIC
-from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
-from zato.common.audit_log.common import get_event_select_list
-from zato.common.db_env.connection import register_sqlite_functions
+from zato.common.audit_log.api import event_table, AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.common import get_event_column
 from zato.common.util.gateway import mcp_gateway_name
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, dictlist
+    from zato.common.typing_ import any_, anydict, anylist, dictlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -115,32 +116,34 @@ def _set_audit_log_active(zato_server:'anydict', gateway:'anydict', is_active:'b
 # ################################################################################################################################
 
 def _read_events(zato_server:'anydict', min_id:'int' = 0) -> 'dictlist':
-    """ Reads the MCP audit events of the default gateway out of the live server's audit database,
+    """ Reads the MCP audit events of the default gateway out of the live server's Zato database,
     newer than the given row ID, oldest first.
     """
 
-    audit_db_path = zato_server['audit_db_path']
+    columns:'anylist' = []
 
-    # An empty result before the server ever wrote an event - the file does not exist yet
-    if not os.path.isfile(audit_db_path):
-        return []
+    for name in _event_columns:
+        column = get_event_column(name)
+        columns.append(column)
 
-    column_list = get_event_select_list(_event_columns)
-    query = f'select {column_list} from event where source = ? and object_name = ? and id > ? order by id'
+    query = select(*columns)
+    query = query.where(event_table.c.source == AuditSource.MCP)
+    query = query.where(event_table.c.object_name == mcp_gateway_name)
+    query = query.where(event_table.c.id > min_id)
+    query = query.order_by(event_table.c.id)
 
-    connection = sqlite3.connect(audit_db_path)
-    register_sqlite_functions(connection)
+    engine = new_database_engine(zato_server['database_env'])
 
     try:
-        cursor = connection.execute(query, (AuditSource.MCP, mcp_gateway_name, min_id))
-        db_rows = cursor.fetchall()
+        with engine.connect() as connection:
+            db_rows = connection.execute(query).fetchall()
     finally:
-        connection.close()
+        engine.dispose()
 
     out = []
 
     for db_row in db_rows:
-        row = dict(zip(_event_columns, db_row))
+        row = dict(db_row._mapping)
         out.append(row)
 
     return out

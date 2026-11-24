@@ -12,7 +12,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # delivery queue is read the same way, its row naming the message rather than an event.
 
 # stdlib
-import os
 from contextlib import contextmanager
 from json import dumps
 
@@ -32,10 +31,7 @@ from zato.common.audit_log.attachment import build_attachment, list_attachments
 from zato.common.audit_log.common import event_data
 from zato.common.ext.bunch import Bunch, bunchify
 from zato.common.pubsub.outgoing import Body_Mode_HL7, Key_CID, Key_Conn_Name, Key_Data, Key_Msg_ID, Key_Request
-from zato.common.db_env.database_env import DatabaseEnv
-
-# Test support
-from live_sql.env import database_env
+from zato.common.test.zato_database import zato_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -72,18 +68,11 @@ _queue_message = 'MSH|^~\\&|HIS|HOSP|LAB|LAB|20260101||ADT^A01|MSG0001|P|2.5\rPI
 # ################################################################################################################################
 
 @contextmanager
-def _event_to_view(tmp_path:'any_') -> 'envgen':
-    """ Points the audit log at a throwaway SQLite database holding one event with a body
+def _event_to_view() -> 'envgen':
+    """ Points the audit log at a new PostgreSQL database holding one event with a body
     and an attachment and hands the event's id to the block.
     """
-    db_path = os.path.join(str(tmp_path), 'zato.db')
-
-    details_config = {
-        'type': DatabaseEnv.Type_SQLite,
-        'path': db_path,
-    }
-
-    with database_env(details_config):
+    with zato_database_engine():
 
         audit_log = AuditLog(_server_name)
 
@@ -217,10 +206,10 @@ def _new_queue_request(what:'str') -> 'Bunch':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_a_body_read_writes_one_content_viewed_row_with_the_actor(tmp_path:'os.PathLike') -> 'None':
+def test_a_body_read_writes_one_content_viewed_row_with_the_actor() -> 'None':
     """ Opening a message body is recorded - who, which event, and whose channel it was.
     """
-    with _event_to_view(tmp_path) as event_id:
+    with _event_to_view() as event_id:
 
         response = details(_new_details_request(event_id))
         assert response.status_code == 200
@@ -238,10 +227,10 @@ def test_a_body_read_writes_one_content_viewed_row_with_the_actor(tmp_path:'os.P
 
 # ################################################################################################################################
 
-def test_an_attachment_download_writes_one_content_viewed_row_too(tmp_path:'os.PathLike') -> 'None':
+def test_an_attachment_download_writes_one_content_viewed_row_too() -> 'None':
     """ Downloading a file is recorded against the event the file arrived with.
     """
-    with _event_to_view(tmp_path) as event_id:
+    with _event_to_view() as event_id:
 
         engine = get_database_engine()
         items = list_attachments(engine, event_id)
@@ -261,10 +250,10 @@ def test_an_attachment_download_writes_one_content_viewed_row_too(tmp_path:'os.P
 
 # ################################################################################################################################
 
-def test_a_missing_attachment_writes_nothing(tmp_path:'os.PathLike') -> 'None':
+def test_a_missing_attachment_writes_nothing() -> 'None':
     """ A download that found nothing showed nothing, so there is nothing to record.
     """
-    with _event_to_view(tmp_path):
+    with _event_to_view():
 
         response = attachment_download(_new_download_request(987654321))
         assert response.status_code == 404
@@ -276,11 +265,11 @@ def test_a_missing_attachment_writes_nothing(tmp_path:'os.PathLike') -> 'None':
 
 # ################################################################################################################################
 
-def test_a_queued_message_read_or_downloaded_writes_one_content_viewed_row_each(tmp_path:'os.PathLike') -> 'None':
+def test_a_queued_message_read_or_downloaded_writes_one_content_viewed_row_each() -> 'None':
     """ A message waiting in a delivery queue is patient data too - its details window and each of its
     downloads is recorded, the row naming the message and its connection rather than an audit event.
     """
-    with _event_to_view(tmp_path):
+    with _event_to_view():
 
         response = delivery.message(_new_queue_request(''))
         assert response.status_code == 200

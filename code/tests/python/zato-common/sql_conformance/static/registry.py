@@ -9,30 +9,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # The registries of the static scans of SQL conformance for the code of this installation. The repositories linked
 # to the installation add their own entries of the same shapes through their registry modules.
 
-# stdlib
-from dataclasses import dataclass
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import strtuple
-
-    strtuple = strtuple
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class ModuleCtx:
 
-    # The modules that build every engine and every connection of a database of Zato, the second one
-    # for the connections of the sqlite3 module that a process opens without SQLAlchemy
-    Engine_Factory_Modules = ('zato.common.db_env.engine', 'zato.common.sqlite_connection')
+    # The modules that build every engine and every connection of a database of Zato
+    Engine_Factory_Modules = ('zato.common.db_env.engine',)
 
-    # The modules in which SQLite pragmas and PostgreSQL session settings that concern durability are set
+    # The modules in which PostgreSQL session settings that concern durability are set
     Setting_Module_Paths = (
         'code/zato-common/src/zato/common/db_env/connection.py',
-        'code/zato-common/src/zato/common/sqlite_connection.py',
     )
 
 # ################################################################################################################################
@@ -94,7 +78,6 @@ Environment_Variables = (
 Mechanism_Functions = (
     ('zato.common.db_env.commit_queue',     'CommitQueue._commit',          'Group_Commit'),
     ('zato.common.db_env.engine',           'call_database',                ''),
-    ('zato.common.db_env.engine',           '_create_sqlite_schema',        'Schema'),
     ('zato.common.db_env.engine',           'create_schemas',               'Schema'),
     ('zato.common.pubsub.sql.cleanup',      'PubSubCleanup.sweep_once',     'Maintenance'),
     ('zato.common.audit_log.retention',     'run_retention',                'Maintenance'),
@@ -133,68 +116,6 @@ Audit_Log_Schema_Path = 'code/zato-common/src/zato/common/audit_log/common.py'
 Write_Path_Path = 'code/zato-common/src/zato/common/db_env/write_path.py'
 Audit_Tables_Name = 'Audit_Tables'
 Audit_Tables_Not_Guarded = ('alert',)
-
-@dataclass(frozen=True)
-class RustWriter:
-    """ A writer on SQLite that writes in Rust through the handle of the connection of the driver, outside the guard
-    of the write path that SQLAlchemy runs. The module that defines it alone builds it, under the name of its instance,
-    and the entry function of that module alone calls its method that writes, after the entry function checks
-    each statement of the list of statements against the guard. The keys are those under which the writer receives
-    its statements, the Rust sources are the files whose code runs them, and the handle function is the one through
-    which the writer opens its connection over the handle of the driver.
-    """
-    name:            'str'
-    class_name:      'str'
-    path:            'str'
-    instance:        'str'
-    entry:           'str'
-    method:          'str'
-    statements_name: 'str'
-    statement_keys:  'strtuple'
-    sources:         'strtuple'
-    handle_function: 'strtuple'
-
-# The guard of the write path that each Rust writer runs its statements through
-Rust_Writer_Guard = 'zato.common.db_env.write_path.check_write_path'
-
-# The function through which the Rust writers open their connections over the handle of the driver
-_rust_handle_function = ('code/zato-rust/zato_common_core/src/audit_insert.rs', 'open_handle')
-
-# The Rust writers - the writer of the audit log and the writer of the items of pub/sub batches.
-Rust_Writers = (
-    RustWriter(
-        name='audit-log',
-        class_name='zato_common_core.zato_common_core.SQLiteAuditWriter',
-        path='code/zato-common/src/zato/common/audit_log/sqlite_insert.py',
-        instance='zato.common.audit_log.sqlite_insert._writer',
-        entry='insert_pending_events_sqlite',
-        method='insert_events',
-        statements_name='_write_statements',
-        statement_keys=('insert_event', 'select_payload', 'insert_payload', 'insert_attr', 'insert_body', 'insert_link'),
-        sources=('code/zato-rust/zato_common_core/src/audit_insert.rs',),
-        handle_function=_rust_handle_function,
-    ),
-    RustWriter(
-        name='pubsub',
-        class_name='zato_common_core.zato_common_core.SQLitePubSubWriter',
-        path='code/zato-common/src/zato/common/pubsub/sql/sqlite_write.py',
-        instance='zato.common.pubsub.sql.sqlite_write._writer',
-        entry='write_items_sqlite',
-        method='write_items',
-        statements_name='_write_statements',
-        statement_keys=(
-            'begin', 'select_subscribers', 'insert_topic_sub', 'upsert_dedup_record', 'select_dedup_record', 'update_dedup_fingerprint',
-            'insert_message', 'select_existing_message', 'insert_delivery', 'select_message_id', 'select_ack_delivery',
-            'delete_delivery', 'record_attempt', 'select_lease_candidates', 'lease_delivery', 'select_leased_message',
-            'select_fenced_delivery', 'drop_payload',
-        ),
-        sources=(
-            'code/zato-rust/zato_common_core/src/pubsub_write.rs',
-            'code/zato-rust/zato_common_core/src/pubsub_write_sql.rs',
-        ),
-        handle_function=_rust_handle_function,
-    ),
-)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -236,8 +157,6 @@ Takeover_Faults = (
 # The tests of the write path itself, which run its mechanisms and write outside of them on purpose.
 Write_Path_Tests = (
     ('code/tests/python/zato-common/sql_conformance/writers/test_write_path.py',  'The refusal of writes outside a mechanism'),
-    ('code/tests/python/zato-common/process_queue/test_call_database_queue.py',   'The queue of serialized writes'),
-    ('code/tests/python/zato-common/process_queue/test_call_database_wait.py',    'The wait of serialized writes'),
     ('code/tests/python/zato-common/audit_log/storage_types.py',                  'The search index under updates and deletes of events'),
     ('code/tests/python/zato-common/audit_log_read/support.py',                   'The counts of events under updates and deletes of events'),
     ('code/tests/python/zato-common/audit_log_read/test_event_count.py',          'The counts of events under updates and deletes of events'),

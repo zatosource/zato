@@ -65,7 +65,7 @@ def _events_of(events:'anylist', source:'str') -> 'anylist':
 def _wait_for_events(suite:'Suite', cid:'str', source:'str', count:'int') -> 'anylist':
 
     def _condition() -> 'anylist':
-        events = read_audit_events(suite.audit_db_path, cid)
+        events = read_audit_events(suite.database_env, cid)
         selected = _events_of(events, source)
         if len(selected) >= count:
             return selected
@@ -110,7 +110,7 @@ def test_audit_log_inactive(suite:'Suite') -> 'None':
 
     # .. but the channel writes none.
     time.sleep(_absence_wait)
-    events = read_audit_events(suite.audit_db_path, cid)
+    events = read_audit_events(suite.database_env, cid)
 
     assert _events_of(events, _source_channel) == []
 

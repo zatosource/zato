@@ -12,7 +12,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # name, and the channel exports back with its data format.
 
 # stdlib
-import sqlite3
 import time
 from base64 import b64encode
 from http.client import BAD_REQUEST, INTERNAL_SERVER_ERROR, OK
@@ -23,10 +22,14 @@ import requests
 # PyYAML
 import yaml
 
+# SQLAlchemy
+from sqlalchemy import select
+
 # Zato
+from live_environment.audit import new_database_engine
 from zato.common.api import HL7
-from zato.common.audit_log.common import AuditOutcome, AuditSource, get_event_select_list
-from zato.common.db_env.connection import register_sqlite_functions
+from zato.common.audit_log.api import event_attr_table, event_table
+from zato.common.audit_log.common import AuditOutcome, AuditSource, get_event_column
 
 from conftest import CCDA_Channel_Name, CCDA_Channel_Path, Convert_Service_Name, Plain_Channel_Name, Plain_Channel_Path, \
     read_sample, Receive_Service_Name, run_enmasse, run_enmasse_export
@@ -72,30 +75,43 @@ def _audit_events(zato_server:'stranydict', object_name:'str', outcome:'str') ->
     """
     out = []
 
-    connection = sqlite3.connect(zato_server['audit_db_path'])
-    register_sqlite_functions(connection)
-    connection.row_factory = sqlite3.Row
+    columns:'anylist' = []
+
+    for name in _event_columns:
+        column = get_event_column(name)
+        columns.append(column)
+
+    query = select(*columns)
+    query = query.where(event_table.c.source == AuditSource.CCDA)
+    query = query.where(event_table.c.object_name == object_name)
+    query = query.where(event_table.c.outcome == outcome)
+    query = query.order_by(event_table.c.id)
+
+    engine = new_database_engine(zato_server['database_env'])
 
     try:
-        column_list = get_event_select_list(_event_columns)
-        query = f'select {column_list} from event where source = ? and object_name = ? and outcome = ? order by id'
+        with engine.connect() as connection:
+            events = connection.execute(query).fetchall()
 
-        events = connection.execute(query, (AuditSource.CCDA, object_name, outcome)).fetchall()
+            for row in events:
+                event = row._mapping
 
-        for event in events:
-            attrs = {}
-            for row in connection.execute('select name, value from event_attr where event_id = ?', (event['id'],)):
-                attrs[row['name']] = row['value']
+                attrs_query = select(event_attr_table.c.name, event_attr_table.c.value)
+                attrs_query = attrs_query.where(event_attr_table.c.event_id == event['id'])
 
-            out.append({
-                'cid': event['cid'],
-                'duration_ms': event['duration_ms'],
-                'data': event['data'],
-                'attrs': attrs,
-            })
+                attrs = {}
+                for attr_row in connection.execute(attrs_query):
+                    attrs[attr_row.name] = attr_row.value
+
+                out.append({
+                    'cid': event['cid'],
+                    'duration_ms': event['duration_ms'],
+                    'data': event['data'],
+                    'attrs': attrs,
+                })
 
     finally:
-        connection.close()
+        engine.dispose()
 
     return out
 

@@ -10,17 +10,20 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import sqlite3
 import time
 
 # lxml
 import lxml.etree as etree
 
+# SQLAlchemy
+from sqlalchemy import select
+
 # Zato
 from channel_client import ChannelClient
 from channel_definitions import build_yaml
-from zato.common.audit_log.common import get_event_select_list
-from zato.common.db_env.connection import register_sqlite_functions
+from live_environment.audit import new_database_engine
+from zato.common.audit_log.api import event_table
+from zato.common.audit_log.common import get_event_column
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,7 +32,7 @@ if 0:
     from channel_client import HTTPResponse
     from channel_environment import ChannelEnvironment
     from channel_tokens import IdentityProvider
-    from zato.common.typing_ import any_, anydict, anylist, callable_, strlist
+    from zato.common.typing_ import any_, anydict, anylist, callable_, strlist, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,8 +82,8 @@ class Suite:
         self.import_yaml()
 
     @property
-    def audit_db_path(self) -> 'str':
-        out = os.path.join(self.environment.temp_directory, 'zato.db')
+    def database_env(self) -> 'strstrdict':
+        out = self.environment.database_env
         return out
 
 # ################################################################################################################################
@@ -161,28 +164,30 @@ def wait_for_log_lines(path:'str', marker:'str', count:'int' = 1) -> 'strlist':
 
 # ################################################################################################################################
 
-def read_audit_events(db_path:'str', cid:'str') -> 'anylist':
+def read_audit_events(database_env:'strstrdict', cid:'str') -> 'anylist':
     """ Returns the audit log events of a request, each as a dict of the columns the tests read.
     """
     out:'anylist' = []
 
-    if not os.path.exists(db_path):
-        return out
+    columns:'anylist' = []
 
-    column_list = get_event_select_list(_audit_columns)
-    query = f'select {column_list} from event where cid = ? order by id'
+    for name in _audit_columns:
+        column = get_event_column(name)
+        columns.append(column)
 
-    connection = sqlite3.connect(f'file:{db_path}?mode=ro', uri=True)
-    register_sqlite_functions(connection)
+    query = select(*columns)
+    query = query.where(event_table.c.cid == cid)
+    query = query.order_by(event_table.c.id)
+
+    engine = new_database_engine(database_env)
 
     try:
-        rows = connection.execute(query, (cid,)).fetchall()
+        with engine.connect() as connection:
+            for row in connection.execute(query):
+                event = dict(row._mapping)
+                out.append(event)
     finally:
-        connection.close()
-
-    for row in rows:
-        event = dict(zip(_audit_columns, row))
-        out.append(event)
+        engine.dispose()
 
     return out
 

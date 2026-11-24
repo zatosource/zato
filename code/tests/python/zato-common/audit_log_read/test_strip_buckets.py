@@ -67,8 +67,7 @@ def _epoch_us(moment:'datetime') -> 'int':
 def _matching_rows(connection:'Connection', filters:'SearchFilters') -> 'anylist':
     """ The moment and the outcome of each event a search matches, read from the events alone.
     """
-    dialect_name = connection.dialect.name
-    conditions = event_conditions(dialect_name, filters)
+    conditions = event_conditions(filters)
 
     statement = select(event_table.c.event_time, event_table.c.outcome)
     statement = statement.where(*conditions)

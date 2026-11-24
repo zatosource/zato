@@ -29,10 +29,8 @@ from zato.common.test.direct_sql.seed import seed_config_objects
 # ################################################################################################################################
 
 if 0:
-    from pathlib import Path
     from zato.common.typing_ import any_
     any_ = any_
-    Path = Path
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,8 +51,8 @@ _values = {
 # ################################################################################################################################
 
 @pytest.fixture
-def odb_session(tmp_path:'Path') -> 'any_':
-    """ A real ODB session over a SQLite database file holding
+def odb_session() -> 'any_':
+    """ A real ODB session over a PostgreSQL database of its own holding
     the scheduler tables and the alerting sweep job.
     """
     tables = [
@@ -63,7 +61,7 @@ def odb_session(tmp_path:'Path') -> 'any_':
         IntervalBasedJob.__table__,
     ]
 
-    with config_database_engine(tmp_path, tables) as engine:
+    with config_database_engine(tables) as engine:
         session_factory = sessionmaker(bind=engine)
         session = session_factory()
 

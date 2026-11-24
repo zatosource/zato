@@ -32,7 +32,7 @@ if 0:
 
 class ModuleCtx:
 
-    # The package of the tests in which alone they write to the Zato database and to config.db directly
+    # The package of the tests in which alone they write to the Zato database directly
     Direct_SQL_Marker = '/zato/common/test/direct_sql/'
 
     # The entry points of the write path, which the tests reach only through the package of direct writes
@@ -75,7 +75,6 @@ class ModuleCtx:
         'sqlalchemy.sql.expression.delete',
         'sqlalchemy.dialects.mysql.insert',
         'sqlalchemy.dialects.postgresql.insert',
-        'sqlalchemy.dialects.sqlite.insert',
     })
 
     # The methods that run a statement
@@ -92,12 +91,6 @@ class ModuleCtx:
 
     # A literal statement that writes the table of the active server
     Active_Statement = re.compile(r'\b(insert\s+into|update|delete\s+from)\s+["`]?zato_active\b', re.IGNORECASE)
-
-    # The function of the standard library that opens a connection to an SQLite file
-    SQLite_Connect = 'sqlite3.connect'
-
-    # What names the file of config.db in the expression of its path
-    Config_DB_Path = re.compile(r'config\.db|config_db|\bodb', re.IGNORECASE)
 
     # The functions that turn a literal into a statement
     Text_Functions = frozenset({'text', 'sqlalchemy.text', 'sqlalchemy.sql.text', 'sqlalchemy.sql.expression.text'})
@@ -151,7 +144,7 @@ def _is_write_statement(node:'ast.expr', aliases:'strdict') -> 'bool':
 # ################################################################################################################################
 
 def _is_session(node:'ast.expr') -> 'bool':
-    """ Whether an expression names an ORM session, as a session of config.db or of the Zato database is named in the tests.
+    """ Whether an expression names an ORM session, as a session of the Zato database is named in the tests.
     """
     if isinstance(node, ast.Name):
         out = node.id == 'session' or node.id.endswith('_session')
@@ -224,7 +217,7 @@ def _get_exempt_paths(entries:'tuple[tuple[str, str], ...]') -> 'set[str]':
 # ################################################################################################################################
 
 def test_direct_writes_only_in_direct_sql() -> 'None':
-    """ Test code writes to the Zato database and to config.db directly only in the package of direct writes,
+    """ Test code writes to the Zato database directly only in the package of direct writes,
     and reaches the mechanisms of the write path only from there, so that every other test proves the path
     that a production system takes. The tests of external databases and the tests of the write path itself are listed.
     """
@@ -314,69 +307,6 @@ def test_no_takeover_writes_in_tests() -> 'None':
 
             if (source.relative_path, function_name) not in exempt:
                 findings.append(f'{source.path}:{line} -> write to zato_active')
-
-    assert not findings, '\n'.join(findings)
-
-# ################################################################################################################################
-
-def _get_assigned_values(tree:'ast.Module') -> 'dict[str, list[str]]':
-    """ Returns the source of each value that a module assigns to each plain name.
-    """
-    out:'dict[str, list[str]]' = {}
-
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Assign):
-            for target in node.targets:
-                if isinstance(target, ast.Name):
-                    values = out.setdefault(target.id, [])
-                    values.append(ast.unparse(node.value))
-
-    return out
-
-# ################################################################################################################################
-
-def _get_config_db_connections(tree:'ast.Module', aliases:'strdict') -> 'list[int]':
-    """ Returns the line of each connection of the standard library to config.db that a module opens.
-    """
-    assigned = _get_assigned_values(tree)
-    out:'list[int]' = []
-
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call) or not node.args:
-            continue
-
-        if get_dotted_name(node.func, aliases) != ModuleCtx.SQLite_Connect:
-            continue
-
-        # The path is either given in place or through a name that the module assigns it to
-        path = node.args[0]
-        texts = [ast.unparse(path)]
-
-        if isinstance(path, ast.Name) and path.id in assigned:
-            texts.extend(assigned[path.id])
-
-        if any(ModuleCtx.Config_DB_Path.search(text) for text in texts):
-            out.append(node.lineno)
-
-    return out
-
-# ################################################################################################################################
-
-def test_no_sqlite_connections_to_config_db() -> 'None':
-    """ Test code reaches config.db only through the engine factory and the deployment of the product,
-    never through a connection of the standard library.
-    """
-    findings:'strlist' = []
-
-    for source in get_python_files(is_production=False):
-        if source.is_linked:
-            continue
-
-        tree = parse(source)
-        aliases = get_import_aliases(tree, '')
-
-        for line in _get_config_db_connections(tree, aliases):
-            findings.append(f'{source.path}:{line} -> sqlite3.connect to config.db')
 
     assert not findings, '\n'.join(findings)
 

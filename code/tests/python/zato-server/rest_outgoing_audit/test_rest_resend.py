@@ -32,9 +32,7 @@ from rest_stub import new_rest_wrapper, new_soap_wrapper, rest_audit_env, Addres
 # ################################################################################################################################
 
 if 0:
-    import os
     from zato.common.typing_ import any_, anylist, stranydict
-    os = os
     any_ = any_
     anylist = anylist
     stranydict = stranydict

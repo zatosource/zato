@@ -11,7 +11,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # nor an MLLP channel reached by the HTTP channel rules.
 
 # stdlib
-from pathlib import Path
 from typing import Generator
 
 # pytest
@@ -29,7 +28,7 @@ from zato.common.alerting.seed import ensure_alerting_definitions
 from zato.common.alerting.sweep import load_alert_rules, Fact_Entity
 from zato.common.audit_log.api import AuditSource
 from zato.common.rule_engine.sql import RuleSQLBackend
-from zato.common.test.zato_database import file_database_engine
+from zato.common.test.zato_database import zato_database_engine
 from zato.common.rule_engine.sql.constants import Definition_Type_Ruleset, Documents_Key
 from zato.common.rule_engine.sql.document import deserialize_document
 
@@ -87,10 +86,10 @@ _channel_rule_measures = {
 # ################################################################################################################################
 
 @pytest.fixture
-def rule_database_engine(tmp_path:'Path') -> 'engine_generator':
+def rule_database_engine() -> 'engine_generator':
     """ Creates one isolated test-managed rule engine database.
     """
-    with file_database_engine(tmp_path) as engine:
+    with zato_database_engine() as engine:
         yield engine
 
 # ################################################################################################################################

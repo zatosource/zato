@@ -30,6 +30,7 @@ import pytest  # noqa: E402
 from zato.common.api import HL7  # noqa: E402
 from zato.common.crypto.api import CryptoManager  # noqa: E402
 from zato.common.test import kill_server_process  # noqa: E402
+from zato.common.test.zato_database import create_test_database, drop_test_database  # noqa: E402
 from zato.common.util.config import get_config_object, update_config_file  # noqa: E402
 
 # ################################################################################################################################
@@ -239,14 +240,17 @@ channel_rest:
 @pytest.fixture(scope='session')
 def zato_server() -> 'any_':
     """ Session-scoped fixture - spins up a Zato quickstart environment with the test services deployed from pickup
-    and its audit log under the temporary directory, creates the channels through enmasse and yields connection details.
+    and a Zato database of its own, creates the channels through enmasse and yields connection details.
     """
     global _server_process, _temp_directory
 
     port = _find_free_port()
     _temp_directory = tempfile.mkdtemp(prefix='zato_ccda_live_test_')
 
-    audit_db_path = os.path.join(_temp_directory, 'zato.db')
+    # The environment receives a Zato database of its own, which the quickstart, the server
+    # and every enmasse command that this process runs use.
+    database_env = create_test_database()
+    os.environ.update(database_env)
 
     quickstart_command = [
         _zato_bin, 'quickstart', 'create', _temp_directory,
@@ -274,13 +278,12 @@ def zato_server() -> 'any_':
     os.makedirs(pickup_directory, exist_ok=True)
     _ = shutil.copy2(_services_path, os.path.join(pickup_directory, 'ccda_test_services.py'))
 
-    # .. start the server in foreground mode, with its audit log under our directory ..
+    # .. start the server in foreground mode ..
     broker_port = _find_free_port()
 
     server_env = os.environ.copy()
     server_env['Zato_Config_Bind_Port'] = str(port)
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
-    server_env['Zato_Database_Path'] = audit_db_path
 
     _server_process = subprocess.Popen(
         [_zato_bin, 'start', server_directory, '--fg'],
@@ -338,11 +341,11 @@ def zato_server() -> 'any_':
         'base_url': f'http://{host}:{port}',
         'invoke_password': _password,
         'server_directory': server_directory,
-        'audit_db_path': audit_db_path,
+        'database_env': database_env,
         'server_log_path': server_log_path,
     }
 
-    # Teardown - stop the server and remove the temporary directory
+    # Teardown - stop the server and remove the temporary directory ..
     _kill_server()
 
     if _temp_directory:
@@ -350,6 +353,12 @@ def zato_server() -> 'any_':
             shutil.rmtree(_temp_directory, ignore_errors=True)
 
     _temp_directory = None
+
+    # .. and remove the variables that selected the database together with the database.
+    for name in database_env:
+        del os.environ[name]
+
+    drop_test_database(database_env)
 
 # ################################################################################################################################
 # ################################################################################################################################

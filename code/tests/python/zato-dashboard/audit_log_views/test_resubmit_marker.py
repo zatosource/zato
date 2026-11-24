@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # and whether it carries anything to send again at all.
 
 # stdlib
-import os
 from contextlib import contextmanager
 
 # Zato
@@ -21,10 +20,7 @@ from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.request_context import Key_Payload, Key_Payload_Kind, Key_Redacted, Payload_Kind_Described
 from zato.common.ext.bunch import Bunch
 from zato.common.json_internal import dumps, loads
-from zato.common.db_env.database_env import DatabaseEnv
-
-# Test support
-from live_sql.env import database_env
+from zato.common.test.zato_database import zato_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,17 +48,10 @@ _stored_call = dumps({Key_Payload: '{"order": 1}', 'method': 'POST', 'address': 
 # ################################################################################################################################
 
 @contextmanager
-def _audit_log(tmp_path:'any_') -> 'envgen':
-    """ Points the audit log at a throwaway SQLite database and hands back a log writing to it.
+def _audit_log() -> 'envgen':
+    """ Points the audit log at a new PostgreSQL database and hands back a log writing to it.
     """
-    db_path = os.path.join(str(tmp_path), 'zato.db')
-
-    details_config = {
-        'type': DatabaseEnv.Type_SQLite,
-        'path': db_path,
-    }
-
-    with database_env(details_config):
+    with zato_database_engine():
         yield AuditLog(_server_name)
 
 # ################################################################################################################################
@@ -94,8 +83,8 @@ def _mark(rows:'anylist') -> 'None':
 
 class TestResubmittedMarker:
 
-    def test_a_successful_attempt_badges_the_row_it_repeated(self, tmp_path:'any_') -> 'None':
-        with _audit_log(tmp_path) as audit_log:
+    def test_a_successful_attempt_badges_the_row_it_repeated(self) -> 'None':
+        with _audit_log() as audit_log:
 
             original_id = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Request_Sent, _connection_name,
                 cid='marker-ok', outcome=AuditOutcome.Error, data=_stored_call)
@@ -110,8 +99,8 @@ class TestResubmittedMarker:
 
 # ################################################################################################################################
 
-    def test_a_failed_attempt_leaves_the_row_unbadged(self, tmp_path:'any_') -> 'None':
-        with _audit_log(tmp_path) as audit_log:
+    def test_a_failed_attempt_leaves_the_row_unbadged(self) -> 'None':
+        with _audit_log() as audit_log:
 
             original_id = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Request_Sent, _connection_name,
                 cid='marker-error', outcome=AuditOutcome.Error, data=_stored_call)
@@ -128,8 +117,8 @@ class TestResubmittedMarker:
 
 # ################################################################################################################################
 
-    def test_a_row_nothing_repeated_is_unbadged(self, tmp_path:'any_') -> 'None':
-        with _audit_log(tmp_path) as audit_log:
+    def test_a_row_nothing_repeated_is_unbadged(self) -> 'None':
+        with _audit_log() as audit_log:
 
             original_id = audit_log.insert(AuditSource.REST_Outgoing, AuditEvent.Request_Sent, _connection_name,
                 cid='marker-alone', outcome=AuditOutcome.Error, data=_stored_call)
@@ -144,8 +133,8 @@ class TestResubmittedMarker:
 
 class TestMissingRow:
 
-    def test_a_row_that_is_gone_answers_that_it_was_not_found(self, tmp_path:'any_') -> 'None':
-        with _audit_log(tmp_path):
+    def test_a_row_that_is_gone_answers_that_it_was_not_found(self) -> 'None':
+        with _audit_log():
 
             request = Bunch()
             request.method = 'POST'
