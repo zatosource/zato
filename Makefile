@@ -55,9 +55,12 @@ LOAD_CARGO_ENV := if [ -f $(CARGO_ENV) ]; then . $(CARGO_ENV); fi
 
 ZATO_RUST := $(CURDIR)/code/zato-rust
 
+# The target directory that all the crates share. It must match build.target-dir in .cargo/config.toml.
+ZATO_RUST_TARGET := $(ZATO_RUST)/target
+
 # Cargo retains the artifacts of every earlier feature set, dependency version and toolchain,
 # so a target directory above this size in megabytes is removed before the next build.
-ZATO_RUST_TARGET_MAX_MB ?= 3072
+ZATO_RUST_TARGET_MAX_MB ?= 6144
 
 # IBM MQ redistributable client, needed by the queue bridge at runtime
 MQ_CLIENT_DIR := $(CURDIR)/lib/mqm
@@ -141,14 +144,14 @@ scheduler-build: rust-target-prune
 	$(LOAD_CARGO_ENV) && \
 	cargo build --release --manifest-path $(ZATO_RUST)/zato_scheduler_core/Cargo.toml --bin _zato_scheduler && \
 	rm -f $(CURDIR)/code/bin/_zato_scheduler && \
-	cp $(ZATO_RUST)/zato_scheduler_core/target/release/_zato_scheduler $(CURDIR)/code/bin/_zato_scheduler
+	cp $(ZATO_RUST_TARGET)/release/_zato_scheduler $(CURDIR)/code/bin/_zato_scheduler
 
 ha-node-build: rust-target-prune
 	@echo ">>> Building the active-standby node"
 	$(LOAD_CARGO_ENV) && \
 	cargo build --release --manifest-path $(ZATO_RUST)/zato_ha_core/Cargo.toml --bin _zato_ha_node && \
 	rm -f $(CURDIR)/code/bin/_zato_ha_node && \
-	cp $(ZATO_RUST)/zato_ha_core/target/release/_zato_ha_node $(CURDIR)/code/bin/_zato_ha_node
+	cp $(ZATO_RUST_TARGET)/release/_zato_ha_node $(CURDIR)/code/bin/_zato_ha_node
 
 io-build: rust-target-prune
 	@echo ">>> Building I/O"
@@ -189,7 +192,7 @@ queue-bridge-build: rust-target-prune mq-client
 	MQ_HOME=$(MQ_CLIENT_DIR) \
 	cargo build --release --manifest-path $(ZATO_RUST)/zato_queue_bridge/Cargo.toml --bin _zato_queue_bridge && \
 	rm -f $(CURDIR)/code/bin/_zato_queue_bridge && \
-	cp $(ZATO_RUST)/zato_queue_bridge/target/release/_zato_queue_bridge $(CURDIR)/code/bin/_zato_queue_bridge
+	cp $(ZATO_RUST_TARGET)/release/_zato_queue_bridge $(CURDIR)/code/bin/_zato_queue_bridge
 
 fhir-rust-build:
 	@echo ">>> Building FHIR Rust extension"
@@ -395,28 +398,28 @@ clean:
 	$(CURDIR)/code/clean.sh
 
 server-clean:
-	rm -rf $(ZATO_RUST)/zato_server_core/target
+	$(LOAD_CARGO_ENV) && cargo clean --manifest-path $(ZATO_RUST)/zato_server_core/Cargo.toml -p zato_server_core
 
 ipc-clean:
-	rm -rf $(ZATO_RUST)/zato_ipc_core/target
+	$(LOAD_CARGO_ENV) && cargo clean --manifest-path $(ZATO_RUST)/zato_ipc_core/Cargo.toml -p zato_ipc_core
 
 scheduler-clean:
-	rm -rf $(ZATO_RUST)/zato_scheduler_core/target
+	$(LOAD_CARGO_ENV) && cargo clean --manifest-path $(ZATO_RUST)/zato_scheduler_core/Cargo.toml -p zato_scheduler_core
 
 io-clean:
-	rm -rf $(ZATO_RUST)/zato_input_output/target
+	$(LOAD_CARGO_ENV) && cargo clean --manifest-path $(ZATO_RUST)/zato_input_output/Cargo.toml -p zato_input_output
 
 common-core-clean:
-	rm -rf $(ZATO_RUST)/zato_common_core/target
+	$(LOAD_CARGO_ENV) && cargo clean --manifest-path $(ZATO_RUST)/zato_common_core/Cargo.toml -p zato_common_core
 
 pg-wire-clean:
-	rm -rf $(ZATO_RUST)/zato_pg_wire/target
+	$(LOAD_CARGO_ENV) && cargo clean --manifest-path $(ZATO_RUST)/zato_pg_wire/Cargo.toml -p zato_pg_wire
 
 queue-bridge-clean:
-	rm -rf $(ZATO_RUST)/zato_queue_bridge/target
+	$(LOAD_CARGO_ENV) && cargo clean --manifest-path $(ZATO_RUST)/zato_queue_bridge/Cargo.toml -p zato_queue_bridge
 
-rust-target-prune: ## Remove every Rust target directory larger than ZATO_RUST_TARGET_MAX_MB.
-	for target_dir in $(wildcard $(ZATO_RUST)/*/target $(ZATO_RUST)/*/fuzz/target); do \
+rust-target-prune: ## Remove the shared Rust target directory when it is larger than ZATO_RUST_TARGET_MAX_MB.
+	for target_dir in $(wildcard $(ZATO_RUST_TARGET)); do \
 		size_mb=$$(du -sm $$target_dir | cut -f1); \
 		if [ $$size_mb -gt $(ZATO_RUST_TARGET_MAX_MB) ]; then \
 			echo ">>> Removing $$target_dir ($$size_mb MB, limit $(ZATO_RUST_TARGET_MAX_MB) MB)"; \

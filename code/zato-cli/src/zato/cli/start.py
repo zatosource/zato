@@ -568,8 +568,8 @@ Examples:
 
         candidates = [
             os.path.join(bin_dir, '_zato_scheduler'),
-            os.path.join(zato_code_dir, 'zato-rust', 'zato_scheduler_core', 'target', 'release', '_zato_scheduler'),
-            os.path.join(zato_code_dir, 'zato-rust', 'zato_scheduler_core', 'target', 'debug', '_zato_scheduler'),
+            os.path.join(zato_code_dir, 'zato-rust', 'target', 'release', '_zato_scheduler'),
+            os.path.join(zato_code_dir, 'zato-rust', 'target', 'debug', '_zato_scheduler'),
         ]
 
         for path in candidates:
