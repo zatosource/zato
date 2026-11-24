@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # and one slow channel leaving another alone.
 
 # stdlib
-from time import monotonic, sleep
+from time import sleep
 from typing import NamedTuple
 
 # pytest
@@ -25,6 +25,7 @@ from zato.common.api import KAFKA, PubSub
 
 if 0:
     from conftest import KafkaSuite
+    from zato.common.typing_ import anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,6 +45,16 @@ Sleep_Time = 1
 
 # How much a measured gap may exceed the configured sleep
 Gap_Slack = 1.5
+
+# How long the receiver of the slow channel waits at most for the test to release it, in seconds
+Hold_Time = 120
+
+# How long a test waits for a message to reach its receiver, in seconds
+Delivery_Timeout = 60
+
+# The outcomes a receiver records for a message it is held on and for one it accepted
+Outcome_Held = 'held'
+Outcome_OK = 'ok'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -209,25 +220,45 @@ def test_a_repeat_of_a_delivered_message_is_not_delivered_again(kafka_suite:'Kaf
 # ################################################################################################################################
 
 def test_a_slow_channel_does_not_delay_another(kafka_suite:'KafkaSuite', names:'Names') -> 'None':
-    """ While one channel's service is busy, a message on another channel goes through at once.
+    """ While one channel's service is busy, a message on another channel goes through.
     """
-    slow_time = 4
-    kafka_suite.set_behaviour(Receiver_Two, sleep=slow_time)
+    kafka_suite.set_behaviour(Receiver_Two, hold=Hold_Time)
 
     slow_payload = kafka_suite.new_name('payload.slow')
     fast_payload = kafka_suite.new_name('payload.fast')
 
-    start = monotonic()
+    def is_slow_held(item:'anydict') -> 'bool':
+        if item['data'] == slow_payload:
+            out = item['outcome'] == Outcome_Held
+        else:
+            out = False
+        return out
+
+    def is_slow_delivered(item:'anydict') -> 'bool':
+        if item['data'] == slow_payload:
+            out = item['outcome'] == Outcome_OK
+        else:
+            out = False
+        return out
+
+    # The service of the slow channel is busy with its message ..
     _ = produce(kafka_suite.address, names.topic_slow, slow_payload)
+    _ = kafka_suite.wait_for_received(is_slow_held, timeout=Delivery_Timeout)
+
+    # .. a message on the other channel goes through in the meantime ..
     _ = produce(kafka_suite.address, names.topic_fast, fast_payload)
+    _ = kafka_suite.wait_for_payload(fast_payload, timeout=Delivery_Timeout)
 
-    _ = kafka_suite.wait_for_payload(fast_payload, timeout=slow_time - 1)
-    elapsed = monotonic() - start
-    assert elapsed < slow_time - 1, elapsed
+    slow_outcomes = []
+    for item in kafka_suite.received(Receiver_Two):
+        if item['data'] == slow_payload:
+            slow_outcomes.append(item['outcome'])
 
-    assert not [elem for elem in kafka_suite.received() if elem['data'] == slow_payload]
+    assert slow_outcomes == [Outcome_Held], slow_outcomes
 
-    _ = kafka_suite.wait_for_payload(slow_payload, timeout=slow_time + 10)
+    # .. and the busy service completes once released.
+    kafka_suite.set_behaviour(Receiver_Two)
+    _ = kafka_suite.wait_for_received(is_slow_delivered, timeout=Delivery_Timeout)
 
 # ################################################################################################################################
 # ################################################################################################################################

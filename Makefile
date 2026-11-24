@@ -768,7 +768,7 @@ Zato_Test_HA_Dir_postgresql-kubernetes := $(Zato_Test_HA_Server_Dir)/ha_postgres
 # The modules of each HA suite in the order they run, from the shortest to the longest. Every module of a suite
 # is listed, and a suite with a module that is not listed refuses to run.
 Zato_Test_HA_Modules_database-file := \
-	test_write_contention.py test_engine_guard.py test_live_replacement.py
+	test_write_contention.py test_engine_guard.py test_audit_commit_failure.py test_live_replacement.py
 
 Zato_Test_HA_Modules_power-loss := \
 	test_harness.py test_audit_archive_sqlite.py test_sqlite_server.py test_postgresql_server.py
@@ -843,7 +843,7 @@ test-ha-core: rust-target-prune ## The Rust tests of the active-standby node - t
 test-ha-postgresql-local: ## The takeover of the Zato database and the start of a server under a node's generation, on a local PostgreSQL 19 with a synchronous standby, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(call Zato_Test_HA_Suite,postgresql-local)
 
-test-ha-database-file: ## The removal and the replacement of the SQLite file of the Zato database while a server runs, after which publications, deliveries and audit writes are refused and no new file is created, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+test-ha-database-file: ## The removal and the replacement of the SQLite file of the Zato database while a server runs, after which publications, deliveries and audit writes are refused and no new file is created, and the failure of the audit commit of a REST response after its service completed, which leaves the response unchanged, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(call Zato_Test_HA_Suite,database-file)
 
 test-ha-power-loss: ## Loss of power to a single server on SQLite and on PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.

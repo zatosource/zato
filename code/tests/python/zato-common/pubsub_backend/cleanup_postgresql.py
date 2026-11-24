@@ -44,8 +44,9 @@ _sub_key = 'zpsk.test.cleanup.postgresql'
 _expired_count = 20
 _locked_count = 5
 
-# How long a sweep that skips the locked rows may take at most, in seconds.
-_skip_deadline_seconds = 10
+# How long a sweep is allowed to run while other rows are locked, in seconds - a sweep that waited for the locks
+# would wait for as long as the flow holds them, so only a sweep that skipped them returns within this time.
+_skip_deadline_seconds = 60
 
 # How long the sweep may take to start waiting for the locked delivery row, and to complete once it is released.
 _wait_deadline_seconds = 30
@@ -107,12 +108,11 @@ def _run_locked_rows_flow(backend:'SQLPubSubBackend') -> 'None':
             locked_rows = lock_connection.execute(lock_query).fetchall()
             assert len(locked_rows) == _locked_count
 
-            start = monotonic()
-            counts = cleanup.sweep_once()
-            elapsed = monotonic() - start
+            # The sweep returns while the locks are still held, so it did not wait for them ..
+            timeout_error = Exception('The sweep waited for the locked rows')
 
-            # The sweep did not wait for the locks ..
-            assert elapsed < _skip_deadline_seconds, elapsed
+            with gevent.Timeout(_skip_deadline_seconds, timeout_error):
+                counts = cleanup.sweep_once()
 
             # .. and deleted every message that was not locked.
             assert counts['expired'] == _expired_count - _locked_count, counts

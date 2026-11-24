@@ -32,8 +32,11 @@ if 0:
 _received:'anylist' = []
 
 # How each receiver behaves right now, by service name - how many more invocations fail, whether every one does,
-# and how long each one sleeps before answering
+# how long each one sleeps before answering and how long each one waits at most for a test to release it
 _behaviour:'anydict' = {}
+
+# How often a held receiver checks whether a test released it, in seconds
+_hold_poll_interval = 0.1
 
 # The columns of a generic connection an edit sends back as they are
 _own_fields = ('id', 'name', 'type_', 'address', 'pool_size', 'is_active', 'is_internal', 'is_channel', 'is_outconn')
@@ -78,6 +81,18 @@ def _behave(service:'Service') -> 'None':
     """
     settings = _behaviour.get(service.name) or {}
 
+    # A held receiver records that it is busy and waits until a test sets its behaviour again,
+    # for no longer than the time it was given ..
+    if hold_time := settings.get('hold'):
+        _record(service, 'held')
+        deadline = monotonic() + hold_time
+
+        while _behaviour[service.name] is settings:
+            if monotonic() >= deadline:
+                break
+            sleep(_hold_poll_interval)
+
+    # .. and a slow one sleeps before answering.
     if sleep_time := settings.get('sleep'):
         sleep(sleep_time)
 
@@ -267,6 +282,7 @@ class Invoker(Service):
             'fail_times': request.get('fail_times', 0),
             'fail_always': request.get('fail_always', False),
             'sleep': request.get('sleep', 0),
+            'hold': request.get('hold', 0),
             'parse_json': request.get('parse_json', False),
         }
         _behaviour[service_name] = settings

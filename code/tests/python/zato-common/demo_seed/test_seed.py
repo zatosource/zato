@@ -12,7 +12,7 @@ from json import loads
 from time import process_time
 
 # SQLAlchemy
-from sqlalchemy import event, select
+from sqlalchemy import event as sqlalchemy_event, select
 
 # Zato
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, AuditBody, AuditEvent, \
@@ -542,7 +542,7 @@ class TestSeedBehaviour:
         def on_commit(connection:'any_') -> 'None':
             commits.append(connection)
 
-        event.listen(engine, 'commit', on_commit)
+        sqlalchemy_event.listen(engine, 'commit', on_commit)
 
         # .. the CPU time of the process is measured, which a stall of the host does not add to ..
         try:
@@ -550,7 +550,7 @@ class TestSeedBehaviour:
             result = seed_demo_data(engine, server_name=_server_name, now=_now)
             cpu_seconds = process_time() - start
         finally:
-            event.remove(engine, 'commit', on_commit)
+            sqlalchemy_event.remove(engine, 'commit', on_commit)
 
         commit_count = len(commits)
 

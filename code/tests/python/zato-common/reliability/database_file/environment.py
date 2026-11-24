@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The environment of the tests of the database file. A server on SQLite with a push subscription to an endpoint
-# of the test, a topic published to through REST and an audited REST channel, and the clients of the test.
+# of the test, a topic published to through REST, audited REST channels, and the clients of the test.
 
 # stdlib
 import hashlib
@@ -21,18 +21,24 @@ from typing import NamedTuple
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
+# SQLAlchemy
+from sqlalchemy import func, select
+
 # Zato
+from zato.common.audit_log.api import event_table
 from zato.common.crypto.api import CryptoManager
 from zato.common.db_env.database_env import DatabaseEnv
+from zato.common.pubsub.sql.schema import message_table
 from zato.common.test.conftest_base_pubsub import find_free_port, render_template
 from zato.common.test.receiver import wait_until_receivers_quiet, WebhookReceiver
 from zato.common.test.reliability.power_loss import PowerLossServer
+from zato.common.test.zato_database import file_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict
+    from zato.common.typing_ import any_, anydict, anylist, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -90,6 +96,12 @@ class ModuleCtx:
     # The correlation ID of the publications made while the test waits for the definitions
     Readiness_Correl_ID = 'readiness'
 
+    # The variable with the path of the control file of the fault library
+    Env_FSFault_Control = 'ZATO_FSFAULT_CONTROL'
+
+    # How long the fault library may take to read a changed control file, in seconds
+    Control_Reload_Wait = 0.3
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -102,18 +114,28 @@ class HTTPResult(NamedTuple):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class HTTPTextResult(NamedTuple):
+    """ The status code and the body of one HTTP response, as text.
+    """
+    status_code: 'int'
+    text: 'str'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class DatabaseFileEnvironment:
     """ A server on SQLite, the endpoint that it pushes to and the path of the file of its database.
     """
 
-    def __init__(self, name:'str', parent_dir:'str') -> 'None':
+    def __init__(self, name:'str', parent_dir:'str', *, extra_server_env:'strstrdict') -> 'None':
 
         self.parent_dir = parent_dir
+        self.extra_server_env = extra_server_env
 
-        database_dir = os.path.join(parent_dir, ModuleCtx.Database_Dir_Name)
-        os.makedirs(database_dir)
+        self.database_dir = os.path.join(parent_dir, ModuleCtx.Database_Dir_Name)
+        os.makedirs(self.database_dir)
 
-        self.db_path = os.path.join(database_dir, DatabaseEnv.File_Name)
+        self.db_path = os.path.join(self.database_dir, DatabaseEnv.File_Name)
 
         self.placeholders = {
             ModuleCtx.Publisher_Password_Key: 'test.publisher.' + CryptoManager.generate_hex_string(),
@@ -132,6 +154,8 @@ class DatabaseFileEnvironment:
             DatabaseEnv.Env_Path: self.db_path,
             ModuleCtx.Env_Deploy_From: deploy_dir,
         }
+
+        server_env.update(extra_server_env)
 
         # The server imports no definitions before it starts, it imports them from its deployment directory.
         self.server = PowerLossServer(
@@ -229,6 +253,64 @@ class DatabaseFileEnvironment:
 
 # ################################################################################################################################
 
+    def call_channel(self, path:'str') -> 'HTTPTextResult':
+        """ Invokes a REST channel and returns the response of the server, with its body as text.
+        """
+        url = self.server.base_url + path
+
+        out = post_text(url, self.publisher_auth, {})
+        return out
+
+# ################################################################################################################################
+
+    def disarm_fault(self) -> 'None':
+        """ Empties the control file of the fault library and waits until the library reads it,
+        after which the commits of the server succeed again.
+        """
+        control_path = self.extra_server_env[ModuleCtx.Env_FSFault_Control]
+
+        with open(control_path, 'w'):
+            pass
+
+        time.sleep(ModuleCtx.Control_Reload_Wait)
+
+# ################################################################################################################################
+
+    def count_topic_messages(self, topic_name:'str', cid:'str') -> 'int':
+        """ Returns how many messages of a topic the database holds for the correlation ID of one invocation.
+        """
+        query = select(func.count()).select_from(message_table)
+        query = query.where(message_table.c.topic_name == topic_name)
+        query = query.where(message_table.c.cid == cid)
+
+        with file_database_engine(self.database_dir) as engine:
+            with engine.connect() as connection:
+                result = connection.execute(query)
+                out = result.scalar_one()
+
+        return out
+
+# ################################################################################################################################
+
+    def get_audit_events(self, cid:'str') -> 'anylist':
+        """ Returns the audit events of the correlation ID of one invocation, oldest first.
+        """
+        query = select(event_table)
+        query = query.where(event_table.c.cid == cid)
+        query = query.order_by(event_table.c.id)
+
+        out:'anylist' = []
+
+        with file_database_engine(self.database_dir) as engine:
+            with engine.connect() as connection:
+                for row in connection.execute(query):
+                    event = dict(row._mapping)
+                    out.append(event)
+
+        return out
+
+# ################################################################################################################################
+
     def remove_database(self) -> 'None':
         """ Removes the file of the database together with the files that SQLite keeps next to it,
         as a restore script or a remount of a volume does.
@@ -295,8 +377,8 @@ def build_auth(username:'str', password:'str') -> 'str':
 
 # ################################################################################################################################
 
-def post_json(url:'str', auth:'str', payload:'any_') -> 'HTTPResult':
-    """ Sends one request with Basic Auth and returns its status code and its parsed body.
+def post_text(url:'str', auth:'str', payload:'any_') -> 'HTTPTextResult':
+    """ Sends one request with Basic Auth and returns its status code and its body as text.
     """
     serialized = json.dumps(payload)
     body = serialized.encode()
@@ -314,13 +396,26 @@ def post_json(url:'str', auth:'str', payload:'any_') -> 'HTTPResult':
         response_data = error.read()
         status_code = error.code
 
-    # .. and an empty body parses to an empty dict.
-    if response_data:
-        response_body = json.loads(response_data)
+    # .. and the body is decoded in both cases.
+    text = response_data.decode()
+
+    out = HTTPTextResult(status_code, text)
+    return out
+
+# ################################################################################################################################
+
+def post_json(url:'str', auth:'str', payload:'any_') -> 'HTTPResult':
+    """ Sends one request with Basic Auth and returns its status code and its parsed body.
+    """
+    result = post_text(url, auth, payload)
+
+    # An empty body parses to an empty dict
+    if result.text:
+        response_body = json.loads(result.text)
     else:
         response_body = {}
 
-    out = HTTPResult(status_code, response_body)
+    out = HTTPResult(result.status_code, response_body)
     return out
 
 # ################################################################################################################################

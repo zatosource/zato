@@ -22,6 +22,8 @@ pubsub_topic:
 
   - name: reliability.database-file
 
+  - name: reliability.database-file.audit-failure
+
 pubsub_permission:
 
   - security: test.reliability.database-file.publisher
@@ -45,5 +47,17 @@ channel_rest:
   - name: test.reliability.database-file.audited
     service: test.reliability.database-file.echo
     url_path: /test/reliability/database-file/audited
+    data_format: json
+    is_audit_log_active: true
+
+  - name: test.reliability.database-file.audit-failure.ok
+    service: test.reliability.database-file.audit-failure.ok
+    url_path: /test/reliability/database-file/audit-failure/ok
+    data_format: json
+    is_audit_log_active: true
+
+  - name: test.reliability.database-file.audit-failure.error
+    service: test.reliability.database-file.audit-failure.error
+    url_path: /test/reliability/database-file/audit-failure/error
     data_format: json
     is_audit_log_active: true

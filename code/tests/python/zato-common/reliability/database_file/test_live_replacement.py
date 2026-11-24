@@ -147,7 +147,7 @@ def environment() -> 'any_':
     shutil.rmtree(base_dir)
     os.makedirs(base_dir)
 
-    out = DatabaseFileEnvironment(ModuleCtx.Server_Name, base_dir)
+    out = DatabaseFileEnvironment(ModuleCtx.Server_Name, base_dir, extra_server_env={})
 
     try:
         out.start()

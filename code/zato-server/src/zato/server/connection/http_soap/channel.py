@@ -243,6 +243,9 @@ response_404_log = 'URL not found `%s` (Method:%s; Accept:%s; CID:%s)'
 response_405     = 'Method not allowed (CID:{})'
 response_405_log = 'Method not allowed `%s` (Method:%s; Allow:%s; CID:%s)'
 
+# Logged when the audit event of a response cannot be written, after which the response is returned unchanged.
+_response_audit_error_log = 'Audit event of the response could not be written, cid:`%s`, channel:`%s` -> %s'
+
 # The header a 405 names the methods of the channels at that path in.
 _header_allow = 'Allow'
 
@@ -1157,6 +1160,8 @@ class RequestDispatcher:
             if needs_audit:
                 self.insert_audit_event(cid, channel_item, AuditEvent.Request_Received, AuditOutcome.OK, payload, request_ctx)
 
+            # .. only the invocation is in the try block - a failure of the audit write of its response
+            # .. is not an error of the invocation, whose side effects are already committed ..
             try:
 
                 # .. this will raise an exception on auth error ..
@@ -1165,31 +1170,22 @@ class RequestDispatcher:
                     payload, config_manager, zato_response_headers_container,
                     remote_addr, now_us,
                 )
-
-                # .. record the successful response in the audit log ..
-                if needs_audit:
-                    duration_ms = self._get_duration_ms(now_us)
-                    self.insert_audit_event(
-                        cid, channel_item, AuditEvent.Response_Sent, AuditOutcome.OK, out, request_ctx,
-                        duration_ms=duration_ms)
-
-                return out
+                outcome = AuditOutcome.OK
 
             except Exception as e:
                 out = self._handle_dispatch_error(cid, e, channel_item, request_ctx)
-
-                # .. record the error response in the audit log ..
-                if needs_audit:
-                    duration_ms = self._get_duration_ms(now_us)
-                    self.insert_audit_event(
-                        cid, channel_item, AuditEvent.Response_Sent, AuditOutcome.Error, out, request_ctx,
-                        duration_ms=duration_ms)
-
-                return out
+                outcome = AuditOutcome.Error
 
             finally:
                 if zato_response_headers_container:
                     request_ctx['zato.http.response.headers'].update(zato_response_headers_container)
+
+            # .. record the response in the audit log ..
+            if needs_audit:
+                self._insert_response_audit_event(cid, channel_item, outcome, out, request_ctx, now_us)
+
+            # .. and return it to the caller.
+            return out
 
         # No channel matched, which is either a path no channel is at or a method none of the
         # channels at that path accepts.
@@ -1235,6 +1231,28 @@ class RequestDispatcher:
 
         out = elapsed_us // 1000
         return out
+
+# ################################################################################################################################
+
+    def _insert_response_audit_event(
+        self,
+        cid:'str',
+        channel_item:'anydict',
+        outcome:'str',
+        data:'any_',
+        request_ctx:'stranydict',
+        start_us:'int',
+        ) -> 'None':
+        """ Writes the audit event of a response. A failure of the write is logged, and the response
+        is returned to the caller unchanged.
+        """
+        duration_ms = self._get_duration_ms(start_us)
+
+        try:
+            self.insert_audit_event(
+                cid, channel_item, AuditEvent.Response_Sent, outcome, data, request_ctx, duration_ms=duration_ms)
+        except Exception:
+            logger.error(_response_audit_error_log, cid, channel_item['name'], format_exc())
 
 # ################################################################################################################################
 
