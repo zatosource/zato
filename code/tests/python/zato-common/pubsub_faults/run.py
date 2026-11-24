@@ -19,6 +19,7 @@ from typing import NamedTuple
 from gevent import sleep, spawn
 
 # Zato
+from fault_server import get_inherited_env
 from pubsub_rest.monitor import Limits, Monitor
 from pubsub_rest.runner import get_duration, run_for, start_cleanup_process, stop_cleanup_process
 
@@ -227,9 +228,15 @@ class FaultRun:
 # ################################################################################################################################
 
     def _start_cleanup(self) -> 'process':
-        """ Starts the cleanup process, in the scope of the server if the server runs in one.
+        """ Starts the cleanup process, in the scope of the server if the server runs in one, with the preloaded
+        libraries and the DNS server that the server inherits, so that both resolve the endpoint of a managed database.
         """
-        out = start_cleanup_process(self.cleanup_env)
+        cleanup_env = get_inherited_env()
+
+        if self.cleanup_env:
+            cleanup_env.update(self.cleanup_env)
+
+        out = start_cleanup_process(cleanup_env)
 
         if self.scope:
             self.scope.add_pid(out.pid)

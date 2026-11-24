@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # for a few seconds at a time, when another process flushes to the same drive or takes the processors, and each
 # operation that begins in such a second is slow regardless of the server. The seconds of a measured interval
 # in which an operation exceeded its limit, or in which the paced traffic began no operation at all, are stalled
-# seconds. Up to a share of the seconds of the interval are excluded as stalled, the slowest first, and the
+# seconds. Up to a share of the seconds of a full interval are excluded as stalled, the slowest first, and the
 # percentile is checked over the operations of the remaining seconds. A server that degrades for longer than
 # the share, or that stays slow, still fails the check.
 
@@ -46,6 +46,7 @@ class SteadyLatency:
     percentile: 'float'
     sample_count: 'int'
     stalled_seconds: 'int'
+    stalled_sample_count: 'int'
     slowest_stalled: 'float'
 
 # ################################################################################################################################
@@ -80,15 +81,15 @@ def find_stalled_seconds(
     second_count:'int',
     limit:'float',
     counts_empty:'bool',
-    max_share:'float'=Max_Stalled_Share,
+    max_stalled:'int',
     ) -> 'int_set':
     """ The seconds of a measured interval excluded as stalled. Each sample is the moment an operation began
     and the seconds it took. A second is stalled when an operation that began in it took longer than the limit,
-    or, when counts_empty is set because the traffic is paced, when no operation began in it. At most max_share
-    of the full seconds of the interval are excluded, the seconds without any operation first, then the slowest.
+    or, when counts_empty is set because the traffic is paced, when no operation began in one of the second_count
+    full seconds of the interval. At most max_stalled seconds are excluded, the seconds without any operation first,
+    then the slowest. The budget does not shrink with the interval, because a stall of the host lasts as long
+    in the last, shorter interval of a run as in any other.
     """
-    max_stalled = int(second_count * max_share)
-
     # The slowest operation that began in each second ..
     slowest:'dict[int, float]' = {}
 
@@ -133,10 +134,12 @@ def get_steady_latency(
     """ The percentile of the latencies of the operations that began outside the stalled seconds.
     """
     kept:'floatlist' = []
+    stalled_sample_count = 0
     slowest_stalled = 0.0
 
     for started, seconds in samples:
         if get_second(started, start) in stalled:
+            stalled_sample_count += 1
             slowest_stalled = max(slowest_stalled, seconds)
         else:
             kept.append(seconds)
@@ -145,6 +148,7 @@ def get_steady_latency(
     out.percentile = get_percentile(kept, percentile)
     out.sample_count = len(kept)
     out.stalled_seconds = len(stalled)
+    out.stalled_sample_count = stalled_sample_count
     out.slowest_stalled = slowest_stalled
 
     return out
@@ -163,7 +167,8 @@ def get_run_latency(samples:'latency_list', limit:'float') -> 'SteadyLatency':
         last = max(last, started)
 
     second_count = get_second(last, first) + 1
-    stalled = find_stalled_seconds(samples, first, second_count, limit, counts_empty=False)
+    max_stalled = int(second_count * Max_Stalled_Share)
+    stalled = find_stalled_seconds(samples, first, second_count, limit, False, max_stalled)
 
     out = get_steady_latency(samples, first, stalled)
     return out

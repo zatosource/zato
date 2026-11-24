@@ -68,7 +68,7 @@ Server_Config = FaultServerConfig()
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_inherited_env() -> 'strstrdict':
+def get_inherited_env() -> 'strstrdict':
     out:'strstrdict' = {}
 
     for name in _inherited_env_names:
@@ -93,7 +93,7 @@ def get_fault_fixture_arguments(server:'PubSubServer', config:'FaultServerConfig
         probe.define(server, definition)
 
         server.server_env[ModuleCtx.Env_Delivered_Max_Messages] = _delivered_max_messages
-        server.server_env.update(_get_inherited_env())
+        server.server_env.update(get_inherited_env())
         server.server_env.update(config.server_env)
 
         server.command_prefix = config.command_prefix

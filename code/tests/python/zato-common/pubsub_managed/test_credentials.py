@@ -25,7 +25,10 @@ from zato.common.test.pubsub_database import get_runtime_dir
 
 if 0:
     from pubsub_rest.server import PubSubServer
+    from collections.abc import Generator
     from zato.common.typing_ import callable_
+
+    strgen = Generator[str, None, None]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,35 +42,43 @@ _min_rotations = 2
 # ################################################################################################################################
 # ################################################################################################################################
 
-def test_credential_rotation(start_managed:'callable_', request:'pytest.FixtureRequest') -> 'None':
+@pytest.fixture
+def password_path() -> 'strgen':
+    """ The path to the file that holds the password of pub/sub. The file is removed only after the database
+    of the test, whose teardown connects with the password from this file, has been stopped.
+    """
+    token = secrets.token_hex(4)
+    out = os.path.join(get_runtime_dir(), f'pubsub-password-{token}')
+
+    try:
+        yield out
+    finally:
+        if os.path.exists(out):
+            os.remove(out)
+
+# ################################################################################################################################
+
+def test_credential_rotation(password_path:'str', start_managed:'callable_', request:'pytest.FixtureRequest') -> 'None':
     """ The password of pub/sub changes during the traffic, the existing connections continue,
     and the new connections of the server and of the cleanup process authenticate with the current password
     without a restart.
     """
     limits = get_profile_limits()
 
-    token = secrets.token_hex(4)
-    password_path = os.path.join(get_runtime_dir(), f'pubsub-password-{token}')
+    managed = start_managed('credentials', env={_env_password_file: password_path})
+    database = managed.database
 
-    try:
-        managed = start_managed('credentials', env={_env_password_file: password_path})
-        database = managed.database
+    with open(password_path, 'w') as password_file:
+        _ = password_file.write(database.password)
 
-        with open(password_path, 'w') as password_file:
-            _ = password_file.write(database.password)
+    fault = CredentialRotationFault(database, password_path, limits.rotation_seconds)
+    server:'PubSubServer' = request.getfixturevalue('server')
 
-        fault = CredentialRotationFault(database, password_path, limits.rotation_seconds)
-        server:'PubSubServer' = request.getfixturevalue('server')
+    run = FaultRun(server, fault.name)
+    run.run(fault, Total_Loss)
+    run.check()
 
-        run = FaultRun(server, fault.name)
-        run.run(fault, Total_Loss)
-        run.check()
-
-        assert fault.rotations >= _min_rotations, fault.rotations
-
-    finally:
-        if os.path.exists(password_path):
-            os.remove(password_path)
+    assert fault.rotations >= _min_rotations, fault.rotations
 
 # ################################################################################################################################
 # ################################################################################################################################

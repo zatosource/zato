@@ -304,9 +304,9 @@ class Monitor:
         """
         steady = get_steady_latency(samples, minute_start, stalled)
 
-        if steady.stalled_seconds:
-            report.details.append(f'{name} slowest {steady.slowest_stalled:.3f}s in {steady.stalled_seconds} ' +
-                'stalled second(s), excluded')
+        if steady.stalled_sample_count:
+            report.details.append(f'{name} {steady.stalled_sample_count} sample(s), slowest {steady.slowest_stalled:.3f}s, ' +
+                f'in {steady.stalled_seconds} stalled second(s), excluded')
 
         if steady.sample_count < _min_percentile_samples:
             report.details.append(f'{name} p99 {steady.percentile:.3f}s of {steady.sample_count} sample(s) not checked, ' +
@@ -328,7 +328,21 @@ class Monitor:
             if get_second(started, minute_start) not in stalled:
                 published += 1
 
-        rate = published / (interval_seconds - len(stalled))
+        # Only the stalled seconds of this interval shorten it, not those of the publications still in flight
+        # from the previous one ..
+        kept_seconds = interval_seconds
+
+        for second in stalled:
+            if second >= 0:
+                kept_seconds -= 1
+
+        # .. and an interval shorter than its stalls has no rate of its own to check.
+        if kept_seconds < _min_final_interval_seconds:
+            report.details.append(f'publish rate not checked, {len(stalled)} stalled second(s) ' +
+                f'in an interval of {interval_seconds:.1f}s')
+            return
+
+        rate = published / kept_seconds
         min_rate = self.traffic.rate * self.limits.min_rate_ratio
 
         if rate < min_rate:
@@ -343,12 +357,14 @@ class Monitor:
         """
         limits = self.limits
 
-        # The seconds in which the host stalled the publications are found once and excluded from each check ..
+        # The seconds in which the host stalled the publications are found once and excluded from each check,
+        # within a budget of the configured interval, which the last and shorter interval of a run has as well ..
         stalled:'int_set' = set()
 
         if not report.is_exempt:
+            max_stalled = int(self.interval_seconds * limits.max_stalled_share)
             stalled = find_stalled_seconds(counters.publish_seconds, minute_start, int(interval_seconds),
-                limits.publish_p99_seconds, self.checks_rate, limits.max_stalled_share)
+                limits.publish_p99_seconds, self.checks_rate, max_stalled)
             report.stalled_seconds = len(stalled)
 
         # .. and the rest of the minute is checked against the limits.
