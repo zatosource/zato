@@ -23,8 +23,8 @@ from sqlalchemy.exc import DBAPIError
 # Zato
 from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.connection import build_connect_args_from_values, build_engine_url_from_values, \
-    DatabaseDurabilityError, PostgreSQL_Connect_Timeout_Seconds, PostgreSQL_Read_Timeout_Seconds, \
-    PostgreSQL_Statement_Timeout_Ms, Provider_Failover_Roles
+    DatabaseDurabilityError, Durability_Level_Relaxed, Durability_Level_Setting, PostgreSQL_Connect_Timeout_Seconds, \
+    PostgreSQL_Read_Timeout_Seconds, PostgreSQL_Statement_Timeout_Ms, Provider_Failover_Roles
 from zato.common.db_env.database import dispose_database_engine, get_database_engine, get_database_values
 from zato.common.db_env.engine import new_zato_engine
 from zato.common.test.pubsub_database import connect, get_database_address, pubsub_db_env, PubSubDBMode, \
@@ -308,6 +308,33 @@ def test_server_refused(setting:'str') -> 'None':
                     _ = _get_session_level(configuration_engine)
             finally:
                 configuration_engine.dispose()
+    finally:
+        dispose_database_engine()
+        stop_pubsub_database(database)
+
+# ################################################################################################################################
+
+def test_relaxed_durability_level_accepted() -> 'None':
+    """ A server with the relaxed level of durability is accepted at the first connection of an engine of Zato
+    with each of its durability settings turned off, and each session of Zato keeps the commit level of the server.
+    """
+    relaxed_levels = _get_relaxed_levels()
+    relaxed_level = relaxed_levels[0]
+
+    # The server turns off each durability setting and declares the relaxed level of durability ..
+    commit_setting = f'{ModuleCtx.Commit_Setting}={relaxed_level}'
+    durability_setting = f'{Durability_Level_Setting}={Durability_Level_Relaxed}'
+
+    extra_settings = get_server_refusal_arguments()
+    extra_settings.append(commit_setting)
+    extra_settings.append(durability_setting)
+
+    database = start_pubsub_database('durability-relaxed', PubSubDBMode.PostgreSQL, extra_settings=extra_settings)
+
+    # .. and both engines connect to it, with sessions that keep its commit level.
+    try:
+        with pubsub_db_env(database.env):
+            assert _get_levels() == (relaxed_level, relaxed_level)
     finally:
         dispose_database_engine()
         stop_pubsub_database(database)
