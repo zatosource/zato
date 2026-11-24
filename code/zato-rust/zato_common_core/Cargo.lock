@@ -781,6 +781,7 @@ dependencies = [
  "flate2",
  "foldhash",
  "jiff",
+ "libc",
  "parking_lot",
  "proptest",
  "pyo3",

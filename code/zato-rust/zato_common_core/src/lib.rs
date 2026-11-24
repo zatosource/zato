@@ -21,6 +21,9 @@ mod pubsub_write_sql;
 /// Extraction of the words of audit log payloads that the free-text search indexes.
 pub mod search_text;
 
+/// The identity of the `SQLite` library that the Python driver and the writers share.
+mod sqlite_library;
+
 /// Time-related helpers (UTC clock, datetime conversions).
 pub mod time;
 

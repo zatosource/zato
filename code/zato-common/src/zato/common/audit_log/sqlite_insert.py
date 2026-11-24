@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # through the handle of the driver's connection and in the transaction that the connection holds open.
 
 # stdlib
-from sqlite3 import Error as SQLiteError, sqlite_version
+from sqlite3 import Error as SQLiteError
 
 # SQLAlchemy
 from sqlalchemy.exc import DBAPIError
@@ -122,7 +122,6 @@ _insert_link = _insert_statement(event_link_table, _get_column_names(event_link_
 _write_statements = [_insert_event, _select_payload, _insert_payload, _insert_attr, _insert_body, _insert_link]
 
 _writer = SQLiteAuditWriter({
-    'sqlite_version': sqlite_version,
     'event_columns': _event_columns,
     'event_time_column': _event_time_column,
     'insert_event': _insert_event,

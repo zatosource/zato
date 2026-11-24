@@ -11,7 +11,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
-from sqlite3 import Error as SQLiteError, sqlite_version
+from sqlite3 import Error as SQLiteError
 from typing import NamedTuple
 
 # SQLAlchemy
@@ -270,7 +270,6 @@ _write_statements = [
 ]
 
 _writer = SQLitePubSubWriter({
-    'sqlite_version': sqlite_version,
     'statements': {
         'begin': _begin_statement,
         'select_subscribers': _select_subscribers,

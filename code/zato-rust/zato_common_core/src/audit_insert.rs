@@ -21,6 +21,7 @@ use rusqlite::types::{ToSqlOutput, Value, ValueRef};
 use rusqlite::{Connection, ErrorCode, Statement, ToSql, ffi};
 
 use crate::search_text::search_text_of;
+use crate::sqlite_library::check_library_identity;
 
 /// The zlib compression level of the compressed text columns, the level that Python compresses them with.
 const COMPRESSION_LEVEL: u32 = 1;
@@ -316,8 +317,7 @@ impl SqliteAuditWriter {
         let config = config.as_any();
 
         // The handle is shared with the Python driver, so both must use the same SQLite library ..
-        let python_version: String = config.get_item("sqlite_version")?.extract()?;
-        check_library_version(&python_version, rusqlite::version()).map_err(PyRuntimeError::new_err)?;
+        check_library_identity(py)?;
 
         // .. and the columns arrive in the order of the parameters of the insert of an event row.
         let column_specs: Vec<(Bound<'_, PyString>, bool)> = config.get_item("event_columns")?.extract()?;
@@ -458,18 +458,6 @@ impl SqliteAuditWriter {
 // ################################################################################################################################
 // ################################################################################################################################
 
-/// Confirms that the `SQLite` library of the Python driver is the library linked to Rust,
-/// which a handle shared between the two requires.
-pub(crate) fn check_library_version(python_version: &str, library_version: &str) -> Result<(), String> {
-    if python_version != library_version {
-        return Err(format!(
-            "SQLite of the driver `{python_version}` differs from SQLite of the writer `{library_version}`"
-        ));
-    }
-
-    Ok(())
-}
-
 /// Returns a connection over the handle of a connection of the `SQLite` driver of Python, which never closes the handle.
 ///
 /// The connection type is `sqlite3.Connection`, whose instances alone hold the handle.
@@ -506,7 +494,8 @@ pub(crate) fn open_handle(connection: &Bound<'_, PyAny>, connection_type: &Bound
     )]
     // SAFETY: the handle is open and stays open while the rows are written, because the caller holds a reference
     // to the Python connection that owns it for the whole call, and only the thread of the call uses it meanwhile.
-    // The returned connection does not close the handle when it is dropped.
+    // The handle was opened by the SQLite library that rusqlite calls, which the writers confirm with
+    // `check_library_identity` before they are built. The returned connection does not close the handle when it is dropped.
     let out = unsafe { Connection::from_handle(handle) }.map_err(|error| sqlite_py_err(py, error))?;
 
     Ok(out)

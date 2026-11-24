@@ -9,12 +9,13 @@ use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyBytes, PyDict, PyFloat, PyList, PyString, PyTuple};
 use rusqlite::types::Value;
 
-use crate::audit_insert::{bound_value, check_library_version, open_handle, sqlite_py_err};
+use crate::audit_insert::{bound_value, open_handle, sqlite_py_err};
 use crate::pubsub_subscription_list::{Pair, SubscriptionList};
 use crate::pubsub_write_sql::{
     AckInput, AckResult, AtomicInput, AtomicResult, BatchContext, BatchInput, BatchResults, DedupKey, FencedEntry, ItemError, Layout,
     LeaseInput, LeaseResult, PublicationInput, PublicationResult, Statements, write_batch,
 };
+use crate::sqlite_library::check_library_identity;
 
 /// The module of the `SQLite` driver of Python.
 const SQLITE_MODULE: &str = "sqlite3";
@@ -58,8 +59,7 @@ impl SqlitePubSubWriter {
         let config = config.as_any();
 
         // The handle is shared with the Python driver, so both must use the same SQLite library
-        let python_version: String = config.get_item("sqlite_version")?.extract()?;
-        check_library_version(&python_version, rusqlite::version()).map_err(PyRuntimeError::new_err)?;
+        check_library_identity(py)?;
 
         let statements = config.get_item("statements")?;
         let statement = |key: &str| -> PyResult<String> { statements.get_item(key)?.extract() };
