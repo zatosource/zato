@@ -30,10 +30,11 @@ from pubsub_rest.transport import RESTClient
 
 if 0:
     from pubsub_rest.definition import Definition
+    from pubsub_rest.latency import latency_list
     from pubsub_rest.receiver import Push
     from pubsub_rest.server import PubSubServer
     from pubsub_rest.transport import credentials_list
-    from zato.common.typing_ import anydict, anylist, floatlist, strlist, strset
+    from zato.common.typing_ import anydict, anylist, strlist, strset
 
     strcounter = Counter[str]
     rest_client_list = list[RESTClient]
@@ -103,9 +104,12 @@ class MinuteCounters:
     pulled: 'int' = 0
     pushed: 'int' = 0
     errors: 'int' = 0
-    publish_seconds: 'floatlist' = field(default_factory=list)
-    pull_seconds: 'floatlist' = field(default_factory=list)
-    push_seconds: 'floatlist' = field(default_factory=list)
+
+    # Each latency is the moment its publication began, by the monotonic clock, and the seconds it took
+    # to be published, pulled or pushed.
+    publish_seconds: 'latency_list' = field(default_factory=list)
+    pull_seconds: 'latency_list' = field(default_factory=list)
+    push_seconds: 'latency_list' = field(default_factory=list)
     error_messages: 'strlist' = field(default_factory=list)
 
 # ################################################################################################################################
@@ -293,7 +297,7 @@ class Traffic:
             # A push that repeats a delivery after each subscriber already received the broadcast is not measured again ..
             if key in self.broadcast_times:
                 started = self.broadcast_times[key]
-                self.minute.push_seconds.append(now - started)
+                self.minute.push_seconds.append((started, now - started))
 
                 # .. and the broadcast stops being tracked once its last subscriber received it.
                 self.broadcast_pending[key] -= 1
@@ -385,7 +389,7 @@ class Traffic:
                 with self.lock:
                     self.minute.published += 1
                     self.minute.published_bytes += len(document)
-                    self.minute.publish_seconds.append(elapsed)
+                    self.minute.publish_seconds.append((started, elapsed))
                     self.total_published += 1
 
                     if is_broadcast:
@@ -424,7 +428,7 @@ class Traffic:
                 if msg_id in self.publish_times:
                     started = self.publish_times.pop(msg_id)
                     if is_measured:
-                        self.minute.pull_seconds.append(now - started)
+                        self.minute.pull_seconds.append((started, now - started))
 
             self.minute.pulled += len(msg_ids)
             self.total_pulled += len(msg_ids)

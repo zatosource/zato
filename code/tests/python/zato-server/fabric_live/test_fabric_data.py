@@ -6,9 +6,6 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from time import monotonic
-
 # pytest
 import pytest
 
@@ -46,8 +43,8 @@ class ModuleCtx:
     Occupancy_Date = '2026-08-31'
     Occupied_Beds  = {'Maple Grove': 37, 'Oak Hill': 60, 'Riverside': 96}
 
-    # A query on a pooled connection must complete within this many seconds.
-    Pooled_Query_Seconds = 2.0
+    # Returns the endpoint's ID of the session the query runs in
+    Session_ID_SQL = 'select @@spid as session_id'
 
     # Tables the tests write are named with this prefix.
     Test_Table_Prefix = 'zato_test_'
@@ -191,20 +188,17 @@ class TestFabricQuery:
     def test_query_reuses_connection(self, fabric_live:'FabricLiveEnvironment') -> 'None':
         """ Once a connection to the endpoint is open, a query does not log in again.
         """
-        sql = 'select count(*) as admission_count from admissions'
-
         # The first query may have to open the connection ..
-        _ = _query(fabric_live, sql)
+        first_rows = _query(fabric_live, ModuleCtx.Session_ID_SQL)
 
-        # .. the second one runs on the connection already open.
-        start = monotonic()
-        rows = _query(fabric_live, sql)
-        elapsed = monotonic() - start
+        # .. the second one runs on the connection already open ..
+        second_rows = _query(fabric_live, ModuleCtx.Session_ID_SQL)
 
-        first_row = rows[0]
+        first_row = first_rows[0]
+        second_row = second_rows[0]
 
-        assert first_row['admission_count'] > 0
-        assert elapsed < ModuleCtx.Pooled_Query_Seconds
+        # .. which the endpoint reports as the same session, since a new login opens a new session.
+        assert second_row['session_id'] == first_row['session_id']
 
 # ################################################################################################################################
 

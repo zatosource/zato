@@ -55,8 +55,9 @@ _payload_id_column = event_table.c.payload_id.name
 # The column of the time of an event, which the body rows of the event are stamped with
 _event_time_column = event_table.c.event_time.name
 
-# The statement that opens the transaction the driver opens itself before a statement that changes rows
-_begin_statement = 'BEGIN'
+# The statement that opens the transaction with the write lock, which the writer holds before it looks up the payloads,
+# so that the busy timeout applies to the wait and no commit of another process precedes the first write
+_begin_statement = 'BEGIN IMMEDIATE'
 
 # ################################################################################################################################
 # ################################################################################################################################

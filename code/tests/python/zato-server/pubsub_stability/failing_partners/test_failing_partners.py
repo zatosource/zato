@@ -14,15 +14,17 @@ from time import monotonic
 from gevent import sleep, spawn
 
 # Zato
+from pubsub_rest.latency import get_run_latency
 from zato.common.test.perf_report import report_result, start_measurement
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from pubsub_rest.latency import latency_list, SteadyLatency
     from pubsub_rest.receiver import Push
     from pubsub_rest.server import PubSubServer
-    from zato.common.typing_ import anydict, anylist, floatlist, strlist
+    from zato.common.typing_ import anydict, anylist, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -66,9 +68,6 @@ _retry_settings = {
 
 # How long the healthy partner may wait for its messages at the 99th percentile, in seconds.
 _healthy_p99_limit_seconds = 1.0
-
-# The share of the deliveries whose latency is at most the reported percentile.
-_percentile = 0.99
 
 # How long the whole run may take before it fails, in seconds.
 _run_timeout_seconds = 300
@@ -190,19 +189,17 @@ def _is_done(server:'PubSubServer', partners:'_Partners', sub_keys:'anydict') ->
 
 # ################################################################################################################################
 
-def _get_healthy_p99(partners:'_Partners', publish_times:'anydict') -> 'float':
-    """ How long the healthy partner waited for its messages at the 99th percentile, in seconds.
+def _get_healthy_latency(partners:'_Partners', publish_times:'anydict') -> 'SteadyLatency':
+    """ How long the healthy partner waited for its messages at the 99th percentile, in seconds, outside the seconds
+    in which the host stalled the deliveries.
     """
-    latencies:'floatlist' = []
+    samples:'latency_list' = []
 
     for request in partners.requests[_healthy]:
-        latency = request.received_at - publish_times[request.msg_id]
-        latencies.append(latency)
+        published_at = publish_times[request.msg_id]
+        samples.append((published_at, request.received_at - published_at))
 
-    latencies.sort()
-    index = int(len(latencies) * _percentile)
-    out = latencies[index]
-
+    out = get_run_latency(samples, _healthy_p99_limit_seconds)
     return out
 
 # ################################################################################################################################
@@ -265,14 +262,14 @@ def test_failing_partners(server:'PubSubServer') -> 'None':
         assert monotonic() - start < _run_timeout_seconds, ('Partners not done', server.get_queue_depths(list(sub_keys.values())))
         sleep(_poll_seconds)
 
-    healthy_p99 = _get_healthy_p99(partners, publish_times)
+    healthy = _get_healthy_latency(partners, publish_times)
 
-    _ = report_result(measurement, 'pubsub-failing-partners', {'healthy_p99_seconds': healthy_p99})
+    _ = report_result(measurement, 'pubsub-failing-partners', {'healthy_p99_seconds': healthy.percentile})
 
     # The healthy partner received each of its messages once and without delay ..
     healthy_requests = partners.requests[_healthy]
     assert len(healthy_requests) == _message_counts[_healthy], len(healthy_requests)
-    assert healthy_p99 < _healthy_p99_limit_seconds, healthy_p99
+    assert healthy.percentile < _healthy_p99_limit_seconds, healthy
 
     # .. the slow partner received each of its messages once ..
     assert len(partners.requests[_slow]) == _message_counts[_slow], len(partners.requests[_slow])

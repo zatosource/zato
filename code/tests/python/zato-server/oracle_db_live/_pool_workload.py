@@ -49,6 +49,9 @@ _workload_duration = 30.0
 # How long the heartbeat greenlet sleeps between wake-ups, in seconds
 _heartbeat_sleep = 0.05
 
+# How long the single long-running statement keeps its connection busy on the database side, in seconds
+_long_query_sleep = 20
+
 # The rows the workload table is filled with
 _bulk_row_count = 5000
 _clob_row_id    = 0
@@ -66,6 +69,7 @@ _clob_query     = 'select payload from pool_workload where id = :id'
 _missing_query  = 'select id from pool_workload where id = :id'
 _insert_query   = 'insert into pool_workload (id) values (:id)'
 _delete_query   = 'delete from pool_workload where id = :id'
+_long_query     = f'begin dbms_session.sleep({_long_query_sleep}); end;'
 
 # How many statements one iteration of the worker loop runs
 _queries_per_iteration = 6
@@ -81,7 +85,9 @@ class _WorkloadState:
         self.query_count = 0
         self.session_ids:'set[str]' = set()
         self.errors:'strlist' = []
-        self.max_heartbeat_gap_ms = 0.0
+        self.is_long_query_running = False
+        self.long_query_tick_count = 0
+        self.long_query_seconds = 0.0
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -171,22 +177,46 @@ def _run_worker(state:'_WorkloadState', session_factory:'any_', deadline:'float'
 
 # ################################################################################################################################
 
-def _run_heartbeat(state:'_WorkloadState', stop_event:'Event') -> 'None':
-    """ Sleeps in short intervals and records the largest gap between wake-ups -
-    a call that blocks every greenlet shows up as a gap of seconds.
+def _run_long_query(state:'_WorkloadState', session_factory:'any_') -> 'None':
+    """ Runs one statement that sleeps on the database side while holding its connection -
+    a driver call that blocks the event loop leaves the heartbeat without a single tick during it.
     """
-    previous = time.monotonic()
+    session = session_factory()
 
+    try:
+        # Check out the connection first so that only the long statement runs while the flag is set ..
+        sid_row = session.execute(text(_sid_query)).one()
+        state.session_ids.add(sid_row[0])
+
+        # .. run the long statement with the flag set for its whole duration ..
+        start = time.monotonic()
+        state.is_long_query_running = True
+
+        _ = session.execute(text(_long_query))
+
+        state.is_long_query_running = False
+        state.long_query_seconds = time.monotonic() - start
+
+        # .. and leave nothing open in the transaction.
+        session.rollback()
+
+    except Exception as e:
+        state.is_long_query_running = False
+        state.errors.append(repr(e))
+
+    finally:
+        session.close()
+
+# ################################################################################################################################
+
+def _run_heartbeat(state:'_WorkloadState', stop_event:'Event') -> 'None':
+    """ Sleeps in short intervals and counts the wake-ups that occur while the long statement runs.
+    """
     while not stop_event.is_set():
         gevent.sleep(_heartbeat_sleep)
 
-        now = time.monotonic()
-        gap_ms = (now - previous) * 1000
-
-        if gap_ms > state.max_heartbeat_gap_ms:
-            state.max_heartbeat_gap_ms = gap_ms
-
-        previous = now
+        if state.is_long_query_running:
+            state.long_query_tick_count += 1
 
 # ################################################################################################################################
 
@@ -236,10 +266,12 @@ def main() -> 'None':
     stop_event = Event()
     deadline = time.monotonic() + _workload_duration
 
-    # Run the workload with the heartbeat alongside it ..
+    # Run the workload with the heartbeat alongside it - the long statement is spawned first
+    # so that it receives a connection before the workers contend for the pool ..
     heartbeat = gevent.spawn(_run_heartbeat, state, stop_event)
+    long_query = gevent.spawn(_run_long_query, state, session_factory)
 
-    workers = []
+    workers = [long_query]
 
     for _ in range(_worker_count):
         worker = gevent.spawn(_run_worker, state, session_factory, deadline)
@@ -254,7 +286,8 @@ def main() -> 'None':
     result = {
         'query_count':            state.query_count,
         'distinct_session_count': len(state.session_ids),
-        'max_heartbeat_gap_ms':   round(state.max_heartbeat_gap_ms, 2),
+        'long_query_tick_count':  state.long_query_tick_count,
+        'long_query_seconds':     round(state.long_query_seconds, 2),
         'checked_out':            engine.pool.checkedout(),
         'checked_in':             engine.pool.checkedin(),
         'is_thin_mode':           oracledb.is_thin_mode(),

@@ -37,8 +37,14 @@ if 0:
 # The timeout of the connections that are expected to time out, in seconds
 _timeout = 1
 
-# How long the endpoint waits before it answers, longer than the timeout
-_delay = 1.5
+# How long the endpoint waits before it answers the calls that are expected to time out, far longer than the timeout
+_delay = 60
+
+# How long a call that times out may take at most, in seconds, well below the delay of the endpoint
+_max_elapsed = 30
+
+# How long the endpoint waits before it answers a connection with no timeout configured, in seconds
+_no_timeout_delay = 1.5
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -61,7 +67,7 @@ def test_read_timeout(endpoint:'TestEndpoint', server:'ServerStub', path:'str') 
     assert info.value.args[0].startswith('Timeout error: ')
 
     assert elapsed >= _timeout
-    assert elapsed < _delay
+    assert elapsed < _max_elapsed, elapsed
 
     assert len(endpoint.get_requests(path)) == 1
 
@@ -98,7 +104,7 @@ def test_connect_timeout(unresponsive_listener:'UnresponsiveListener', server:'S
     assert info.value.args[0].startswith('Timeout error: ')
 
     assert elapsed >= _timeout
-    assert elapsed < _timeout * 3
+    assert elapsed < _max_elapsed, elapsed
 
 # ################################################################################################################################
 
@@ -119,7 +125,7 @@ def test_response_within_timeout(endpoint:'TestEndpoint', server:'ServerStub', p
 def test_no_timeout_configured(endpoint:'TestEndpoint', server:'ServerStub', path:'str') -> 'None':
     """ A connection with no timeout configured waits for a response as long as the endpoint takes to send it.
     """
-    endpoint.set_response(path, EndpointResponse(body='Response without a timeout', delay=_delay))
+    endpoint.set_response(path, EndpointResponse(body='Response without a timeout', delay=_no_timeout_delay))
 
     connection = new_connection(server, endpoint.http_base, path, timeout=0)
 

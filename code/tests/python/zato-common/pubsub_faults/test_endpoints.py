@@ -23,6 +23,7 @@ import pytest
 from endpoints import Behavior_Late_OK, Behavior_Mid_Close, Behavior_Normal, Behavior_Redirect, Behavior_Redirect_Found, \
     Behavior_Redirect_Loop, Behavior_Redirect_Permanent, Behavior_Silent, Behavior_Slow_Reader, Behavior_TLS_Stall, Endpoint
 from fault_server import Server_Config
+from pubsub_rest.latency import get_run_latency
 from toxiproxy import Stream_Upstream, Toxiproxy
 from zato.server.base.parallel.delivery_rest import Max_Push_Redirects
 
@@ -32,8 +33,9 @@ from zato.server.base.parallel.delivery_rest import Max_Push_Redirects
 if 0:
     from collections.abc import Generator
     from pubsub_rest.definition import Definition
+    from pubsub_rest.latency import latency_list, SteadyLatency
     from pubsub_rest.server import PubSubServer
-    from zato.common.typing_ import any_, anydict, anylist, floatlist, intlist, strintdict, strlist, strstrdict
+    from zato.common.typing_ import any_, anydict, anylist, intlist, strintdict, strlist, strstrdict
 
     strfloatdict    = dict[str, float]
     strintlistdict  = dict[str, intlist]
@@ -268,17 +270,17 @@ def _get_attempts(endpoint:'Endpoint') -> 'strintlistdict':
 
 # ################################################################################################################################
 
-def _get_healthy_p99(run:'_Run') -> 'float':
-    latencies:'floatlist' = []
+def _get_healthy_latency(run:'_Run') -> 'SteadyLatency':
+    """ How long the healthy endpoint waited for its messages at the 99th percentile, outside the seconds
+    in which the host stalled the deliveries.
+    """
+    samples:'latency_list' = []
 
     for request in run.endpoints[_healthy].requests:
         published_at = run.publish_times[request.msg_id]
-        latencies.append(request.received_at - published_at)
+        samples.append((published_at, request.received_at - published_at))
 
-    latencies.sort()
-    index = int(len(latencies) * 0.99)
-
-    out = latencies[index]
+    out = get_run_latency(samples, _healthy_p99_limit_seconds)
     return out
 
 # ################################################################################################################################
@@ -290,8 +292,8 @@ def _check(run:'_Run') -> 'None':
     message_counts = run.message_counts
 
     # The healthy endpoint received its messages without delay ..
-    healthy_p99 = _get_healthy_p99(run)
-    assert healthy_p99 < _healthy_p99_limit_seconds, healthy_p99
+    healthy = _get_healthy_latency(run)
+    assert healthy.percentile < _healthy_p99_limit_seconds, healthy
 
     # .. each endpoint that accepts at once received each message once ..
     for name in _accepted_at_once:

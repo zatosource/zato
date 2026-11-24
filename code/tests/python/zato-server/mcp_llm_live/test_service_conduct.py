@@ -34,8 +34,8 @@ _generic_error_text = 'Bad request'
 # How many milliseconds one second has
 _ms_per_second = 1000
 
-# How long the archive build would run if nothing cut it off, in seconds
-_archive_build_seconds = 10
+# How long the archive build would run if nothing cut it off, in seconds, the same as in its service
+_archive_build_seconds = 120
 
 # ################################################################################################################################
 # ################################################################################################################################

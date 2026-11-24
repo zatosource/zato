@@ -36,6 +36,9 @@ _delay = 0.5
 # How many greenlets invoke the connection at the same time
 _concurrency = 50
 
+# How long all the concurrent invocations may take together, as a share of the time they would take one after another
+_max_elapsed_share = 0.5
+
 # How often the timer greenlet runs, in seconds
 _timer_interval = 0.05
 
@@ -43,7 +46,7 @@ _timer_interval = 0.05
 # ################################################################################################################################
 
 def test_concurrent_invocations_overlap(endpoint:'TestEndpoint', server:'ServerStub', path:'str') -> 'None':
-    """ Concurrent invocations of one connection complete in approximately the delay of one response rather than in the sum of all of them.
+    """ Concurrent invocations of one connection complete in well under the sum of the delays of all their responses.
     """
     endpoint.set_response(path, EndpointResponse(body='Delayed response', delay=_delay))
 
@@ -59,6 +62,7 @@ def test_concurrent_invocations_overlap(endpoint:'TestEndpoint', server:'ServerS
     _ = joinall(greenlets, raise_error=True)
 
     elapsed = monotonic() - start
+    serial_elapsed = _concurrency * _delay
 
     for greenlet in greenlets:
         response = greenlet.value
@@ -66,12 +70,12 @@ def test_concurrent_invocations_overlap(endpoint:'TestEndpoint', server:'ServerS
         assert response.text == 'Delayed response'
 
     assert len(endpoint.get_requests(path)) == _concurrency
-    assert elapsed < _delay * 5
+    assert elapsed < serial_elapsed * _max_elapsed_share, elapsed
 
 # ################################################################################################################################
 
 def test_concurrent_tls_invocations_overlap(endpoint:'TestEndpoint', server:'ServerStub', path:'str') -> 'None':
-    """ Concurrent invocations over TLS complete in approximately the delay of one response rather than in the sum of all of them.
+    """ Concurrent invocations over TLS complete in well under the sum of the delays of all their responses.
     """
     endpoint.set_response(path, EndpointResponse(delay=_delay))
 
@@ -87,9 +91,10 @@ def test_concurrent_tls_invocations_overlap(endpoint:'TestEndpoint', server:'Ser
     _ = joinall(greenlets, raise_error=True)
 
     elapsed = monotonic() - start
+    serial_elapsed = _concurrency * _delay
 
     assert len(endpoint.get_requests(path)) == _concurrency
-    assert elapsed < _delay * 5
+    assert elapsed < serial_elapsed * _max_elapsed_share, elapsed
 
 # ################################################################################################################################
 

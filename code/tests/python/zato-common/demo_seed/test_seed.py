@@ -9,10 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from datetime import datetime, timedelta, timezone
 from json import loads
-from time import monotonic
+from time import process_time
 
 # SQLAlchemy
-from sqlalchemy import select
+from sqlalchemy import event, select
 
 # Zato
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, AuditBody, AuditEvent, \
@@ -44,11 +44,13 @@ _server_name = 'test-demo-seed-server'
 # A fixed moment the assertions hinge on - a midday, so the day's curve has hours behind it
 _now = datetime(2026, 7, 15, 12, 30, 0, tzinfo=timezone.utc)
 
-# How long one default-size run may take end to end - a week of 1200 messages
-# per day is about 8,500 messages and their events. The writes land in one bulk
-# transaction, so nearly all of this budget covers content generation, with ample
-# headroom for slow CI machines
-_max_seed_seconds = 15.0
+# How much CPU time of this process one default-size run may use - a week of 1200 messages
+# per day is about 8,500 messages and their events. The SQLite database runs in this process,
+# so the budget covers content generation and the bulk transaction alike.
+_max_seed_cpu_seconds = 15.0
+
+# How many transactions one run commits
+_seed_commit_count = 1
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -534,14 +536,33 @@ class TestSeedBehaviour:
         """
         engine = get_database_engine()
 
-        start = monotonic()
-        result = seed_demo_data(engine, server_name=_server_name, now=_now)
-        elapsed = monotonic() - start
+        # Every commit on the engine during the run is recorded ..
+        commits:'anylist' = []
 
-        # The run really was the full-size one
+        def on_commit(connection:'any_') -> 'None':
+            commits.append(connection)
+
+        event.listen(engine, 'commit', on_commit)
+
+        # .. the CPU time of the process is measured, which a stall of the host does not add to ..
+        try:
+            start = process_time()
+            result = seed_demo_data(engine, server_name=_server_name, now=_now)
+            cpu_seconds = process_time() - start
+        finally:
+            event.remove(engine, 'commit', on_commit)
+
+        commit_count = len(commits)
+
+        # .. the run really was the full-size one ..
         assert result.event_count > result.message_count * 2
 
-        assert elapsed < _max_seed_seconds, f'Seed took {elapsed:.2f}s, expected under {_max_seed_seconds}s'
+        # .. all of it landed in a single transaction ..
+        assert commit_count == _seed_commit_count, f'Seed committed {commit_count} times, expected {_seed_commit_count}'
+
+        # .. and generating and writing it stayed within the CPU budget.
+        assert cpu_seconds < _max_seed_cpu_seconds, \
+            f'Seed used {cpu_seconds:.2f}s of CPU time, expected under {_max_seed_cpu_seconds}s'
 
 # ################################################################################################################################
 # ################################################################################################################################

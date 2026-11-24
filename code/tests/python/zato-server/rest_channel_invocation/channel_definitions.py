@@ -164,6 +164,7 @@ class Paths:
     Not_Accepted = '/test/channel/not-accepted'
     Verbs = '/test/channel/verbs'
     Sleep = '/test/channel/sleep'
+    Sleep_Release = '/test/channel/sleep-release'
 
     # Channel state
     Inactive = '/test/channel/state/inactive'
@@ -491,6 +492,7 @@ def build_channel_yaml(
     out += _channel('test.channel.not-accepted', 'test.channel.not-accepted', Paths.Not_Accepted)
     out += _channel('test.channel.verbs', 'test.channel.verbs', Paths.Verbs)
     out += _channel('test.channel.sleep', 'test.channel.sleep', Paths.Sleep)
+    out += _channel('test.channel.sleep-release', 'test.channel.sleep-release', Paths.Sleep_Release)
 
     # Channel state
     out += _channel('test.channel.state.inactive', Services.Echo, Paths.Inactive, extra="""

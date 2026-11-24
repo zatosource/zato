@@ -15,6 +15,7 @@ from time import perf_counter_ns
 
 # gevent
 from gevent import sleep as gevent_sleep
+from gevent.event import Event
 
 # Zato
 from zato.common import SOAPMessage
@@ -28,6 +29,8 @@ from zato.server.service import Int, Model, Service
 
 if 0:
     from zato.common.typing_ import any_, anydict, anylist, strdict
+
+streventdict = dict[str, Event]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,6 +53,9 @@ _plain_types = (str, int, float, bool, type(None))
 
 # How many times the cost service invokes a handle method
 _cost_iterations = 100_000
+
+# The events that the requests of the sleep service with a hold key wait for, by their hold keys
+_held_requests:'streventdict' = {}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -421,14 +427,42 @@ class Verbs(Service):
 # ################################################################################################################################
 
 class Sleep(Service):
-    """ Sleeps cooperatively for the number of seconds the query string names.
+    """ Sleeps cooperatively for the number of seconds the query string names. A request with a hold key
+    stops sleeping earlier when the sleep release service is invoked with the same key.
     """
     name = 'test.channel.sleep'
 
     def handle(self) -> 'None':
-        seconds = float(self.request.http.GET['seconds'])
-        gevent_sleep(seconds)
+        query = self.request.http.GET
+        seconds = float(query['seconds'])
+
+        # A request with a hold key waits for its release, for no longer than the number of seconds given ..
+        if hold_key := query.get('hold'):
+            event = _held_requests.setdefault(hold_key, Event())
+            _ = event.wait(seconds)
+            del _held_requests[hold_key]
+
+        # .. and any other request sleeps for the whole number of seconds.
+        else:
+            gevent_sleep(seconds)
+
         self.response.payload = {'slept': seconds}
+
+# ################################################################################################################################
+
+class SleepRelease(Service):
+    """ Ends the sleep of the request whose hold key the query string names.
+    """
+    name = 'test.channel.sleep-release'
+
+    def handle(self) -> 'None':
+
+        # The release may arrive before the held request starts to wait, which then does not wait at all.
+        hold_key = self.request.http.GET['hold']
+        event = _held_requests.setdefault(hold_key, Event())
+        event.set()
+
+        self.response.payload = {'released': hold_key}
 
 # ################################################################################################################################
 

@@ -28,11 +28,17 @@ if 0:
 _concurrent_requests = 50
 _sleep_seconds = 1.0
 
-# How long all the concurrent requests may take together, as a multiple of the time one of them sleeps
-_max_elapsed_factor = 3
+# How long all the concurrent requests may take together, as a share of the time they would take one after another
+_max_elapsed_share = 0.5
 
-# How often requests to another service are sent while the sleeping ones are pending, in seconds
-_probe_interval = 0.1
+# How long the pending request waits for its release at most, in seconds, below the socket timeout of the client
+_held_seconds = 20
+
+# The hold key of the pending request
+_hold_key = 'cooperative-scheduling'
+
+# How many requests to another service are sent while the pending one waits
+_probe_count = 10
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,32 +58,34 @@ def test_concurrent_sleeping_requests(client:'ChannelClient') -> 'None':
             statuses.append(future.result().status)
 
     elapsed = time.monotonic() - start
+    serial_elapsed = _concurrent_requests * _sleep_seconds
 
     assert statuses == [OK] * _concurrent_requests
-    assert elapsed < _sleep_seconds * _max_elapsed_factor, elapsed
+    assert elapsed < serial_elapsed * _max_elapsed_share, elapsed
 
 # ################################################################################################################################
 
 def test_other_requests_served_during_pending_one(client:'ChannelClient') -> 'None':
-    path = f'{Paths.Sleep}?seconds={_sleep_seconds * 2}'
+
+    # The pending request waits until it is released ..
+    path = f'{Paths.Sleep}?seconds={_held_seconds}&hold={_hold_key}'
+    release_path = f'{Paths.Sleep_Release}?hold={_hold_key}'
 
     with ThreadPoolExecutor(max_workers=1) as executor:
         future = executor.submit(client.get, path)
-        time.sleep(_probe_interval)
 
-        latencies = []
-        while not future.done():
-            start = time.monotonic()
+        # .. each of the other requests is served while it is still pending ..
+        for _ in range(_probe_count):
             response = client.get(Paths.Items_Special)
-            latencies.append(time.monotonic() - start)
 
             assert response.status == OK
-            time.sleep(_probe_interval)
+            assert not future.done()
 
+        # .. and it completes once released.
+        response = client.get(release_path)
+
+        assert response.status == OK
         assert future.result().status == OK
-
-    assert len(latencies) > 5
-    assert max(latencies) < _sleep_seconds
 
 # ################################################################################################################################
 # ################################################################################################################################

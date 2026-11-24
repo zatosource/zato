@@ -15,8 +15,8 @@ from zato.server.service import Service
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How long the archive build runs for, in seconds - longer than its gateway's invoke timeout
-_archive_build_seconds = 10
+# How long the archive build runs for, in seconds - far longer than its gateway's invoke timeout
+_archive_build_seconds = 120
 
 # The bytes of the badge image - a PNG header, which is not valid UTF-8
 _badge_bytes = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR'

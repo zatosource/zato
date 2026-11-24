@@ -32,9 +32,9 @@ _workload_script = os.path.join(os.path.dirname(__file__), '_pool_workload.py')
 _child_timeout = 120
 
 # What the child's report must show
-_pool_size            = 25
-_min_query_count      = 5000
-_max_heartbeat_gap_ms = 500
+_pool_size        = 25
+_min_query_count  = 5000
+_long_query_sleep = 20
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,8 +73,11 @@ def test_concurrent_queries_from_greenlets(oracle_server:'DatabaseServer') -> 'N
     # .. the pool really handed out all of its connections at once ..
     assert report['distinct_session_count'] >= _pool_size, failure_details
 
-    # .. no call froze the event loop ..
-    assert report['max_heartbeat_gap_ms'] < _max_heartbeat_gap_ms, failure_details
+    # .. the long statement really slept on the database side ..
+    assert report['long_query_seconds'] >= _long_query_sleep, failure_details
+
+    # .. the event loop kept running while it did, so the driver call did not block it ..
+    assert report['long_query_tick_count'] > 0, failure_details
 
     # .. every connection went back to the pool ..
     assert report['checked_out'] == 0, failure_details

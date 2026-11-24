@@ -69,7 +69,7 @@ def test_batch_opens_its_transaction_with_the_write_lock(sqlite_db_path:'str') -
     engine = get_database_engine()
 
     with record_statements(engine) as recorder:
-        _ = audit_log.commit_batch(batch)
+        audit_log.write_pending(batch)
 
     assert recorder.begin_statements == _expected_begin_statements
     assert recorder.commit_count == 1
