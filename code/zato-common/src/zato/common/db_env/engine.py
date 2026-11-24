@@ -199,6 +199,10 @@ def _new_engine(values:'stranydict', engine_kwargs:'stranydict') -> 'Engine':
     # .. a new connection is established within a bounded time ..
     connect_args['timeout'] = PostgreSQL_Connect_Timeout_Seconds
 
+    # .. with the connection arguments of the caller, if it gives any ..
+    if caller_connect_args := engine_kwargs.pop('connect_args', None):
+        connect_args.update(caller_connect_args)
+
     engine = create_engine(engine_url, connect_args=connect_args, **engine_kwargs)
 
     # .. each connection receives the limits and the settings of durability ..
@@ -279,7 +283,7 @@ def new_unshared_env_engine(config:'EnvDBConfig') -> 'Engine':
 
 # ################################################################################################################################
 
-def new_odb_engine(config:'EnvDBConfig', **engine_kwargs:'any_') -> 'Engine':
+def new_env_odb_engine(config:'EnvDBConfig', **engine_kwargs:'any_') -> 'Engine':
     """ Returns an engine of the tables of the configuration database and of Dashboard, which reside in the database
     of an environment-configured store, with the same settings of durability on each of its connections
     as the engines of that store. Its writes are not subject to the mechanisms of the Zato database.
@@ -328,14 +332,6 @@ def call_database(engine:'Engine', func:'callable_', *args:'any_', prepare:'call
         _ = hub.threadpool.apply(prepare)
 
     out = run_in_write_path(mechanism, func, args)
-    return out
-
-# ################################################################################################################################
-
-def read_database(engine:'Engine', func:'callable_', *args:'any_') -> 'any_':
-    """ Runs one blocking read.
-    """
-    out = func(*args)
     return out
 
 # ################################################################################################################################

@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The parts of the extensions of pg8000 that the users of the Zato database call, none of which imports pg8000,
-# so that a process whose databases are all SQLite never loads the driver.
+# so that the driver is loaded only by the first connection that uses it.
 
 # stdlib
 from contextlib import contextmanager
@@ -41,18 +41,12 @@ def check_rows(connection:'Connection', cursor:'any_', check:'callable_') -> 'No
     The reply to a statement of pg8000 deferred within deferred_replies is read with that of a later statement,
     and always before a statement whose reply is read at once is sent.
     """
-    if connection.dialect.driver == Driver_Name:
-        context = cursor._context
+    context = cursor._context
 
-        if context.zato_is_pending:
-            context.zato_check = check
-        else:
-            row_count = len(context.rows)
-            check(row_count)
-
+    if context.zato_is_pending:
+        context.zato_check = check
     else:
-        rows = cursor.fetchall()
-        row_count = len(rows)
+        row_count = len(context.rows)
         check(row_count)
 
 # ################################################################################################################################
@@ -62,20 +56,16 @@ def deferred_replies(connection:'Connection') -> 'noneiter':
     """ Within the block, each statement of the connection is sent without its reply being read, and its reply is read
     when its rows are needed, or with that of the next statement whose reply is read at once, e.g. the commit.
     An error of such a statement is raised by that later read. The row count of a statement that returns no rows
-    is not known within the block. A connection of a driver other than pg8000 reads each reply as usual.
+    is not known within the block.
     """
-    if connection.dialect.driver == Driver_Name:
-        dbapi_connection = connection.connection.dbapi_connection
-        defers_replies = dbapi_connection._zato_defers_replies
-        dbapi_connection._zato_defers_replies = True
+    dbapi_connection = connection.connection.dbapi_connection
+    defers_replies = dbapi_connection._zato_defers_replies
+    dbapi_connection._zato_defers_replies = True
 
-        try:
-            yield
-        finally:
-            dbapi_connection._zato_defers_replies = defers_replies
-
-    else:
+    try:
         yield
+    finally:
+        dbapi_connection._zato_defers_replies = defers_replies
 
 # ################################################################################################################################
 # ################################################################################################################################

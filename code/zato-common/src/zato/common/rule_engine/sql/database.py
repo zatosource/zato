@@ -31,7 +31,7 @@ callable_:TypeAlias = Callable[..., Any]
 
 class SessionFactory:
     """ Opens the sessions of the rule engine, whose loaded values remain readable after a transaction commits,
-    and runs each write transaction in turn with the other writes of the server to the same SQLite file.
+    and runs each write transaction as a serialized write of the Zato database.
     """
 
     def __init__(self, engine:'Engine') -> 'None':

@@ -13,13 +13,11 @@ from logging import getLogger
 # SQLAlchemy
 from sqlalchemy import and_, bindparam, select
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import DBAPIError
 
 # Zato
 from zato.common.audit_log.bulk_insert import insert_pending_events
 from zato.common.db_env.commit_queue import CommitQueue
-from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.engine import call_database
 from zato.common.db_env.errors import is_conflict, is_lock_timeout, is_value_error
 from zato.common.db_env.outage import OutageTracker
@@ -27,7 +25,7 @@ from zato.common.db_env.pg8000_copy import copy_rows
 from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.audit_events import collect_audit_events, drop_audit_events, prepare_audit_payloads
-from zato.common.pubsub.sql.config import get_commit_max_messages, get_commits_in_flight, get_urgent_commits_in_flight
+from zato.common.pubsub.sql.config import get_commit_max_messages, get_commits_in_flight, Urgent_Commits_In_Flight
 from zato.common.pubsub.sql.dedup import get_existing_fingerprints, rewrite_fingerprints, write_dedup_records
 from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID
 from zato.common.pubsub.sql.fenced_ack import check_fenced, delete_fenced, PubSubAckConflict
@@ -36,7 +34,6 @@ from zato.common.pubsub.sql.pending import PendingAck, PendingAtomic, PendingAtt
     new_pending_sync, reset_item
 from zato.common.pubsub.sql.pull import lease_messages
 from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
-from zato.common.pubsub.sql.sqlite_write import write_items_sqlite
 from zato.common.pubsub.sql.subscription_sync import apply_syncs, set_lock_timeout
 
 # ################################################################################################################################
@@ -81,7 +78,7 @@ _publication_weight = 1
 # How many times a group commit is run again after PostgreSQL rolled it back on a conflict with concurrent transactions.
 _max_conflict_retries = 5
 
-# From how many delivery rows on, a commit writes them with COPY rather than with multi-row inserts on PostgreSQL.
+# From how many delivery rows on, a commit writes them with COPY rather than with multi-row inserts.
 _copy_min_delivery_rows = 200
 
 # ################################################################################################################################
@@ -92,7 +89,7 @@ _subscribers_query = select(topic_sub_table.c.topic_name, topic_sub_table.c.sub_
 _subscribers_query = _subscribers_query.where(
     topic_sub_table.c.topic_name.in_(bindparam('write_topic_names', expanding=True)))
 
-# On PostgreSQL, an unsubscription deletes the subscription row and only then the pending deliveries,
+# An unsubscription deletes the subscription row and only then the pending deliveries,
 # so its delete must wait until each publication that read the row has committed its deliveries.
 _subscribers_query_plain = PlainStatement(_subscribers_query.with_for_update(read=True, key_share=True))
 
@@ -102,12 +99,9 @@ _topic_sub_insert = postgresql_insert(topic_sub_table).on_conflict_do_nothing()
 _topic_sub_insert_plain = PlainStatement(_topic_sub_insert)
 
 # A message whose identifier exists already is not inserted, and the statement returns the messages it inserted ..
-_message_inserts:'anydict' = {}
-
-for _dialect_name, _insert in ((Type_SQLite, sqlite_insert), (Type_PostgreSQL, postgresql_insert)):
-    _message_insert = _insert(message_table).on_conflict_do_nothing(index_elements=[message_table.c.msg_id])
-    _message_insert = _message_insert.returning(message_table.c.id, message_table.c.msg_id)
-    _message_inserts[_dialect_name] = PlainStatement(_message_insert)
+_message_insert = postgresql_insert(message_table).on_conflict_do_nothing(index_elements=[message_table.c.msg_id])
+_message_insert = _message_insert.returning(message_table.c.id, message_table.c.msg_id)
+_message_insert_plain = PlainStatement(_message_insert)
 
 # .. and what a message that exists already was published with tells a repeated publication from a different message.
 _existing_messages_query = select(message_table.c.msg_id, message_table.c.topic_name, message_table.c.payload_crc32)
@@ -116,7 +110,7 @@ _existing_messages_query = _existing_messages_query.where(
 
 _delivery_insert = PlainStatement(delivery_table.insert())
 
-# The subscriber column is concatenated with an empty string, which keeps SQLite from looking the rows up
+# The subscriber column is concatenated with an empty string, which keeps the query planner from looking the rows up
 # through an index of subscribers, whose queues may be deep, rather than through the index of messages.
 _unindexed_sub_key = delivery_table.c.sub_key.concat('')
 
@@ -126,7 +120,7 @@ _ack_deliveries_query_plain = PlainStatement(_ack_deliveries_query.where(and_(
     _unindexed_sub_key.in_(bindparam('ack_sub_keys', expanding=True)),
 )))
 
-# A concurrent commit on PostgreSQL may have removed some of the rows first, so the statement returns those it removed.
+# A concurrent commit may have removed some of the rows first, so the statement returns those it removed.
 _delivery_delete = delivery_table.delete().where(delivery_table.c.id.in_(bindparam('ack_delivery_ids', expanding=True)))
 _delivery_delete_plain = PlainStatement(_delivery_delete.returning(delivery_table.c.id))
 
@@ -142,10 +136,10 @@ _record_attempts_statement_plain = PlainStatement(_record_attempts_statement)
 # ################################################################################################################################
 
 class PubSubWriter:
-    """ Writes the publications, acknowledgements and pulls of concurrent callers in shared transactions,
-    in the thread pool of the gevent hub on SQLite. Each caller waits until the transaction with its item is committed.
+    """ Writes the publications, acknowledgements and pulls of concurrent callers in shared transactions.
+    Each caller waits until the transaction with its item is committed.
     A transaction writes publications first, acknowledgements next and pulls last, and its size is limited
-    by the number of messages it refers to. On PostgreSQL, publications also have a commit reserved for them,
+    by the number of messages it refers to. Publications also have a commit reserved for them,
     so that a publisher does not wait for the acknowledgements of deep queues being committed.
     The audit events of the items commit in the transaction of the items.
     """
@@ -155,18 +149,17 @@ class PubSubWriter:
         # The audit log whose events commit in the transactions of the items
         self.audit_log = audit_log
 
-        # The subscriber and topic pairs of config.db, which publications read once they hold the lock on the rows of their topics
+        # The subscriber and topic pairs of the configuration database, which publications read once they hold the lock on the rows of their topics
         self.subscription_list = subscription_list
 
         commit_max_messages = get_commit_max_messages()
         commits_in_flight = get_commits_in_flight()
-        urgent_commits_in_flight = get_urgent_commits_in_flight()
 
         self._commit_queue = CommitQueue(
             write_batch=self._write_batch,
             max_weight=commit_max_messages,
             max_in_flight=commits_in_flight,
-            max_urgent_in_flight=urgent_commits_in_flight,
+            max_urgent_in_flight=Urgent_Commits_In_Flight,
         )
 
         self._outage = OutageTracker('Pub/sub commit writer')
@@ -245,7 +238,7 @@ class PubSubWriter:
 # ################################################################################################################################
 
     def _write_batch(self, batch:'anylist') -> 'None':
-        """ Writes all the items of one batch, in a thread of the pool under gevent with SQLite.
+        """ Writes all the items of one batch.
         """
         engine = get_database_engine()
 

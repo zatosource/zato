@@ -34,7 +34,7 @@ class Mechanism:
     # A batch that CommitQueue commits for its concurrent callers
     Group_Commit = 'group_commit'
 
-    # A function that call_database runs, in turn with the other writes of the server to the same SQLite file
+    # A function that call_database runs as a transaction of its own
     Serialized_Write = 'serialized_write'
 
     # Cleanup, retention, index merge and rollup, started by their runners

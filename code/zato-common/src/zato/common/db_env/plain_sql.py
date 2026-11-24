@@ -26,7 +26,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The most bind parameters that one multi-row insert carries, below the limit of SQLite, which is the lower of the two
+# The most bind parameters that one multi-row insert carries, below the limit of the PostgreSQL protocol
 _max_insert_parameters = 30_000
 
 # What precedes the expression of the values of an insert in its compiled SQL

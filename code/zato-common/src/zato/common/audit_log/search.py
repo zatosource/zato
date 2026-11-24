@@ -16,9 +16,7 @@ from sqlalchemy import func, or_, select, union
 from zato.common.audit_log.common import event_attr_table, event_payload_table, event_table, get_event_column, \
     source_attr_names, Status_Outstanding
 from zato.common.audit_log.query import outstanding_conditions, source_outstanding
-from zato.common.audit_log.search_index import match_event_search, narrow_attr_search, payload_search_columns, \
-    search_columns
-from zato.common.db_env.common import Type_PostgreSQL
+from zato.common.audit_log.search_index import match_event_search, payload_search_columns, search_columns
 
 # Zato - Rust
 from zato_common_core.zato_common_core import extract_search_text

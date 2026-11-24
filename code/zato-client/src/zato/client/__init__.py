@@ -299,7 +299,7 @@ def get_client_from_server_conf(
     # To avoid circular references
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.ext.configobj_ import ConfigObj
-    from zato.common.util.api import get_odb_session_from_server_config, get_repo_dir_from_component_dir
+    from zato.common.util.api import get_odb_session, get_repo_dir_from_component_dir
     from zato.common.util.cli import read_stdin_data
 
     repo_location = get_repo_dir_from_component_dir(server_dir)
@@ -334,7 +334,7 @@ def get_client_from_server_conf(
 
     client = ZatoClient(address, ServiceConst.API_Invoke_Url_Path,
         client_auth, max_response_repr=15000)
-    session = get_odb_session_from_server_config(config)
+    session = get_odb_session()
 
     client.odb_session = session
 

@@ -33,7 +33,7 @@ from zato.common.db_env.outage import call_until_available
 from zato.common.db_env.sqlite_identity import record_identity
 from zato.common.odb.model import Server
 from zato.common.pubsub.sql.generation import take_over_before_fork
-from zato.common.util.api import find_internal_modules, get_odb_session_from_server_config
+from zato.common.util.api import find_internal_modules, get_odb_session
 from zato.common.version import get_version
 from zato.server.arbiter import Arbiter
 from zato.server.arbiter_config import ArbiterConfig, ArbiterError
@@ -92,7 +92,7 @@ def get_server_name(server_config:'Bunch') -> 'str':
     """
     token = server_config.main.token.decode('utf8')
 
-    session = get_odb_session_from_server_config(server_config)
+    session = get_odb_session()
     engine = session.get_bind()
 
     try:

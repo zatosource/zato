@@ -13,13 +13,11 @@ from typing import NamedTuple
 # SQLAlchemy
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 # Zato
 from zato.common.common_db.schema import shared_object_table
-from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.database import get_database_engine
-from zato.common.db_env.engine import call_database, read_database
+from zato.common.db_env.engine import call_database
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,15 +32,6 @@ if 0:
     intnone = intnone
 
 sharedobjectlist = list['SharedObject']
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# The statement that inserts a row unless its key exists, by the dialect of the database.
-_insert_by_dialect = {
-    Type_PostgreSQL: postgresql_insert,
-    Type_SQLite:     sqlite_insert,
-}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -114,10 +103,7 @@ def _delete(engine:'Engine', object_type:'str', name:'str') -> 'bool':
 
 def _create(engine:'Engine', object_type:'str', name:'str', data:'anydict') -> 'bool':
 
-    dialect_name = engine.dialect.name
-    insert = _insert_by_dialect[dialect_name]
-
-    query = insert(shared_object_table)
+    query = postgresql_insert(shared_object_table)
     now = datetime.now(timezone.utc)
 
     query = query.values(object_type=object_type, name=name, data=data, version=1, last_updated=now)
@@ -154,8 +140,7 @@ def _update(engine:'Engine', object_type:'str', name:'str', data:'anydict', vers
 class SharedObjectStore:
     """ JSON documents in the Zato database, each under a type and a name. Every write is a compare-and-set
     against the version that the writer read, so of two concurrent writers of one object, only one succeeds.
-    The reads run outside of the writer queue of the server, and a read that precedes a concurrent commit
-    is followed by a compare-and-set that fails, after which its caller reads again.
+    A read that precedes a concurrent commit is followed by a compare-and-set that fails, after which its caller reads again.
     """
 
     def __init__(self, engine:'Engine | None'=None) -> 'None':
@@ -184,7 +169,7 @@ class SharedObjectStore:
         """
         engine = self.engine
 
-        out = read_database(engine, _get, engine, object_type, name)
+        out = _get(engine, object_type, name)
         return out
 
 # ################################################################################################################################
@@ -194,7 +179,7 @@ class SharedObjectStore:
         """
         engine = self.engine
 
-        out = read_database(engine, _list, engine, object_type)
+        out = _list(engine, object_type)
         return out
 
 # ################################################################################################################################

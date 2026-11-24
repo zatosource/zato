@@ -261,7 +261,6 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.host = ''
         self.port = -1
         self.use_tls = False
-        self.odb_data = Bunch()
         self.repo_location = ''
         self.user_conf_location:'strlist' = []
         self.user_conf_location_extra:'strset' = set()

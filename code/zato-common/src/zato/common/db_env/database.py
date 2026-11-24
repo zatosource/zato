@@ -14,7 +14,8 @@ from zato.common.analytics.schema import metadata as analytics_metadata
 from zato.common.audit_log.common import metadata as audit_metadata
 from zato.common.common_db.schema import metadata as common_metadata
 from zato.common.db_env.common import EnvDBConfig, get_env_values
-from zato.common.db_env.engine import dispose_env_engine, get_env_engine, new_unshared_env_engine
+from zato.common.db_env.connection import build_django_database_from_values
+from zato.common.db_env.engine import dispose_env_engine, get_env_engine, new_env_odb_engine, new_unshared_env_engine
 from zato.common.pubsub.sql.schema import metadata as pubsub_metadata
 from zato.common.rule_engine.sql.schema import metadata as rule_engine_metadata
 
@@ -23,9 +24,10 @@ from zato.common.rule_engine.sql.schema import metadata as rule_engine_metadata
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import stranydict
+    from zato.common.typing_ import any_, stranydict
 
     # Dummy assignments to satisfy type checkers
+    any_ = any_
     Engine = Engine
     stranydict = stranydict
 
@@ -76,6 +78,25 @@ def new_unshared_database_engine() -> 'Engine':
     e.g. the arbiter before it forks the worker and the config process.
     """
     out = new_unshared_env_engine(database_config)
+    return out
+
+# ################################################################################################################################
+
+def new_odb_engine(**engine_kwargs:'any_') -> 'Engine':
+    """ Returns a new engine of the tables of the configuration database and of Dashboard in the Zato database,
+    which its caller owns and disposes.
+    """
+    out = new_env_odb_engine(database_config, **engine_kwargs)
+    return out
+
+# ################################################################################################################################
+
+def get_django_database() -> 'stranydict':
+    """ Returns the entry of Django's DATABASES setting for the Zato database.
+    """
+    values = get_database_values()
+
+    out = build_django_database_from_values(values)
     return out
 
 # ################################################################################################################################

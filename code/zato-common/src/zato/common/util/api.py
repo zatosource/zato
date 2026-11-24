@@ -90,7 +90,6 @@ from zato.common.ext.validate_ import is_boolean, is_integer, VdtTypeError
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import HTTPBasicAuth
 from zato.common.util.config import enrich_config_from_environment
-from zato.common.util.engine_url import get_engine_url
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
 from zato.common.util.eval_ import as_bool, as_list
 from zato.common.util.file_system import fs_safe_name, fs_safe_now
@@ -1157,18 +1156,6 @@ class StaticConfig(Bunch):
 
 # ################################################################################################################################
 
-def get_engine(args:'any_') -> 'any_':
-
-    # Zato
-    from zato.common.db_env.engine import new_zato_engine
-
-    engine_url = get_engine_url(args)
-
-    out = new_zato_engine(engine_url)
-    return out
-
-# ################################################################################################################################
-
 def get_session(engine:'any_') -> 'any_':
     session = orm.sessionmaker() # noqa
     session.configure(bind=engine)
@@ -1176,33 +1163,18 @@ def get_session(engine:'any_') -> 'any_':
 
 # ################################################################################################################################
 
-def get_odb_session_from_server_config(config:'any_') -> 'any_':
-
-    engine_args = Bunch()
-    engine_args.engine = config.odb.engine
-    engine_args.sqlite_path = config.odb.db_name
-
-    return get_session(get_engine(engine_args))
-
-# ################################################################################################################################
-
-def get_odb_session_from_component_dir(component_dir:'str', config_file:'str', CryptoManagerClass:'any_') -> 'any_':
-
-    repo_dir = get_repo_dir_from_component_dir(component_dir)
-    cm = CryptoManagerClass.from_repo_dir(None, repo_dir, None)
-    secrets_conf = get_config(repo_dir, 'secrets.conf', needs_user_config=False)
-    config = get_config(repo_dir, config_file, crypto_manager=cm, secrets_conf=secrets_conf)
-
-    return get_odb_session_from_server_config(config)
-
-# ################################################################################################################################
-
-def get_odb_session_from_server_dir(server_dir:'str') -> 'any_':
+def get_odb_session() -> 'any_':
+    """ Returns a session of the configuration database, which resides in the Zato database
+    that the Zato_Database_* variables select.
+    """
 
     # Zato
-    from zato.common.crypto.api import ServerCryptoManager
+    from zato.common.db_env.database import new_odb_engine
 
-    return get_odb_session_from_component_dir(server_dir, 'server.conf', ServerCryptoManager)
+    engine = new_odb_engine()
+
+    out = get_session(engine)
+    return out
 
 # ################################################################################################################################
 
@@ -1215,7 +1187,7 @@ def get_server_client_auth(
     ) -> 'any_':
     """ Returns credentials to authenticate with against Zato's own invocation channels.
     """
-    session = get_odb_session_from_server_config(config)
+    session = get_odb_session()
 
     with closing(session) as session:
 

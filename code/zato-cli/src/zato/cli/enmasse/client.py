@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-import os
 import time
 from traceback import format_exc
 
@@ -22,10 +21,9 @@ from zato.common.typing_ import cast_
 from zato.cli.enmasse.util.secrets import Session_Key_Crypto_Manager, Session_Key_Server_Dir
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.defaults import default_server_base_dir
-from zato.common.ext.configobj_ import ConfigObj
 from zato.common.odb.model import to_json
 from zato.common.odb.query import service_list
-from zato.common.util.api import get_client_from_server_conf, get_config, get_odb_session_from_server_config, \
+from zato.common.util.api import get_client_from_server_conf, get_odb_session, \
     get_repo_dir_from_component_dir, utcnow
 from zato.common.util.cli import read_stdin_data
 
@@ -64,26 +62,8 @@ def get_session_from_server_dir(server_dir:'str', stdin_data:'strnone'=None) -> 
     # Initialize crypto manager for decrypting configuration
     crypto_manager = ServerCryptoManager.from_repo_dir(None, repo_location, stdin_data=stdin_data)
 
-    # Read and parse secrets configuration
-    secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
-    secrets_conf = get_config(
-        repo_location,
-        'secrets.conf',
-        needs_user_config=False,
-        crypto_manager=crypto_manager,
-        secrets_conf=secrets_config
-    )
-
-    # Parse the server configuration file with crypto manager and secrets
-    config = get_config(
-        repo_location,
-        'server.conf',
-        crypto_manager=crypto_manager,
-        secrets_conf=secrets_conf,
-    )
-
-    # Create an ODB session from server configuration ..
-    session = get_odb_session_from_server_config(config)
+    # Create a session of the configuration database ..
+    session = get_odb_session()
 
     # .. the importers encrypt and decrypt secrets through the session they receive,
     # .. and the custom connector importer asks the server of this directory about its connector types.

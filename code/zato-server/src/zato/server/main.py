@@ -566,7 +566,6 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     server.env_variables_from_files[:] = initial_env_variables
     server.deploy_auto_from = options.get('deploy_auto_from') or ''
     server.crypto_manager = crypto_manager
-    server.odb_data = server_config.odb
     server.host = zato_app.zato_host
     server.port = zato_app.zato_port
     server.use_tls = server_config.crypto.use_tls

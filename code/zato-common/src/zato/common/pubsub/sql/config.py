@@ -10,8 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 
 # Zato
-from zato.common.db_env.common import get_env_value, Type_SQLite
-from zato.common.db_env.database import get_database_type
+from zato.common.db_env.common import get_env_value
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,7 +34,7 @@ class ModuleCtx:
     # of one group commit refer to at most.
     Env_Commit_Max_Messages = 'Zato_PubSub_Commit_Max_Messages'
 
-    # The environment variable overriding how many group commits may be in progress at once on PostgreSQL.
+    # The environment variable overriding how many group commits may be in progress at once.
     Env_Commits_In_Flight = 'Zato_PubSub_Commits_In_Flight'
 
     # The environment variable with how long the messages of a pull wait for their acknowledgement, in seconds,
@@ -62,10 +61,11 @@ _default_batch_size = 5_000
 # How many messages the publications and acknowledgements of one group commit refer to at most.
 Default_Commit_Max_Messages = 500
 
-# How many group commits may be in progress at once on PostgreSQL. SQLite has a single writer.
+# How many group commits may be in progress at once.
 Default_Commits_In_Flight = 2
 
-# How many group commits of publications may be in progress on PostgreSQL in addition to the ones above.
+# How many group commits of publications may be in progress in addition to the ones above,
+# so that a publication does not wait for a commit of acknowledgements.
 Urgent_Commits_In_Flight = 1
 
 # ################################################################################################################################
@@ -144,31 +144,12 @@ def get_pull_lease_seconds() -> 'int':
 # ################################################################################################################################
 
 def get_commits_in_flight() -> 'int':
-    """ Returns how many group commits may be in progress at once - one on SQLite, which has a single writer.
+    """ Returns how many group commits may be in progress at once.
     """
-    db_type = get_database_type()
-
-    if db_type == Type_SQLite:
-        out = 1
-    elif value := os.environ.get(ModuleCtx.Env_Commits_In_Flight, ''):
+    if value := os.environ.get(ModuleCtx.Env_Commits_In_Flight, ''):
         out = int(value)
     else:
         out = Default_Commits_In_Flight
-
-    return out
-
-# ################################################################################################################################
-
-def get_urgent_commits_in_flight() -> 'int':
-    """ Returns how many group commits of publications may be in progress in addition to those that get_commits_in_flight
-    allows, so that a publication does not wait for a commit of acknowledgements - none on SQLite, which has a single writer.
-    """
-    db_type = get_database_type()
-
-    if db_type == Type_SQLite:
-        out = 0
-    else:
-        out = Urgent_Commits_In_Flight
 
     return out
 

@@ -32,8 +32,7 @@ make_class_dictable(Base)
 # ################################################################################################################################
 
 class _JSON(TypeDecorator):
-    """ Python 2.7 ships with SQLite 3.8 whereas it was 3.9 that introduced the JSON datatype.
-    Because of it, we need our own wrapper around JSON data.
+    """ JSON data stored as text in the configuration database.
     """
     cache_ok = True  # This type is safe to use in a cache key
 

@@ -13,7 +13,7 @@ from contextlib import closing
 # Zato
 from zato.cli import ManageCommand
 from zato.common.const import SECRETS
-from zato.common.util.api import get_odb_session_from_server_dir
+from zato.common.util.api import get_odb_session
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,7 +60,7 @@ class SetIDEPassword(ManageCommand):
         security_id = None
 
         # Obtain an SQL session to the configuration database ..
-        with closing(get_odb_session_from_server_dir(args.path)) as session:
+        with closing(get_odb_session()) as session:
 
             # .. get our IDE invoker's security definition ..
             security = session.query(HTTPBasicAuth).\

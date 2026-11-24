@@ -37,7 +37,7 @@ from zato.common.audit_log.calls import record_remote_call
 from zato.common.audit_log.common import Export_Payload_Flag
 from zato.common.audit_log.sql import all_levels as all_sql_audit_levels, record_sql_execution, Config_Audit_Log, \
      Level_Off as SQL_Audit_Off
-from zato.common.db_env.engine import new_zato_engine
+from zato.common.db_env.database import new_odb_engine
 from zato.common.exception import Inactive
 from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
 from zato.common.odb import query
@@ -49,8 +49,8 @@ from zato.common.oracledb import RowsOut
 from zato.common.odb.testing import UnittestEngine
 from zato.common.odb.query import generic as query_generic
 from zato.common.typing_ import cast_
-from zato.common.util.api import asbool, get_component_name, get_engine_url, new_cid, new_cid_server, \
-     parse_extra_into_dict, spawn_greenlet
+from zato.common.util.api import asbool, get_component_name, new_cid, new_cid_server, parse_extra_into_dict, spawn_greenlet
+from zato.common.util.engine_url import get_engine_url
 from zato.common.util.sql import ElemsWithOpaqueMaker, elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
 
@@ -176,7 +176,6 @@ class SessionWrapper:
         self.session_initialized = False
         self.pool = None      # type: SQLConnectionPool
         self.config = {}    # type: dict
-        self.is_sqlite = False # type: bool
         self.is_oracle_db = False # type: bool
         self.is_ms_sql_direct = False # type: bool
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -226,7 +225,6 @@ class SessionWrapper:
             self._session = self._Session() # type: ignore
 
         self.session_initialized = True
-        self.is_sqlite = self.pool.engine and self.pool.engine.name == 'sqlite'
         self.is_oracle_db = self.pool.engine and self.pool.engine.name.startswith('oracle')
 
     def _record_failure(self, statement:'str', cid:'str', params:'any_', duration_ms:'int') -> 'None':
@@ -707,9 +705,9 @@ class SQLConnectionPool:
         if self._is_unittest_engine(engine_url):
             return self._create_unittest_engine(engine_url, config)
 
-        # The configuration database is a database of Zato, with the settings of durability of the engine factory ..
+        # The configuration database resides in the Zato database, with the settings of durability of the engine factory ..
         elif self.name == ZATO_ODB_POOL_NAME:
-            return new_zato_engine(engine_url, **extra)
+            return new_odb_engine(**extra)
 
         # .. whereas an outgoing connection reaches a database of a customer, which is configured by its owner.
         elif self._is_sa_engine(engine_url):

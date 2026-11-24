@@ -14,6 +14,8 @@ from logging import getLogger
 from zato.common.api import HTTP_SOAP
 from zato.common.ext.bunch import Bunch
 from zato.common.const import SECRETS
+from zato.common.db_env.connection import Dialect_Name, get_port_from_values
+from zato.common.db_env.database import get_database_values
 from zato.common.json_internal import loads
 from zato.common.pubsub.outgoing import http_soap_inbound_types
 from zato.common.util.config import resolve_name
@@ -343,10 +345,17 @@ class ConfigLoader:
     def get_config_odb_data(self, parallel_server:'ParallelServer') -> 'Bunch':
         """ Returns configuration with regards to ODB data.
         """
+        values = get_database_values()
+        port   = get_port_from_values(values)
+
         odb_data = Bunch()
-        odb_data.db_name = parallel_server.odb_data['db_name']
-        odb_data.extra = parallel_server.odb_data['extra']
-        odb_data.engine = parallel_server.odb_data['engine']
+        odb_data.engine = Dialect_Name
+        odb_data.host = values['host']
+        odb_data.port = port
+        odb_data.username = values['username']
+        odb_data.password = values['password']
+        odb_data.db_name = values['name']
+        odb_data.extra = ''
         odb_data.token = parallel_server.fs_server_config.main.token
 
         odb_data.is_odb = True
