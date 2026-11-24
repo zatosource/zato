@@ -82,6 +82,17 @@ Relaxed_Commit_Levels = ('off', 'local', 'remote_write')
 # How PostgreSQL shows a setting that is turned on.
 Setting_On = 'on'
 
+# The custom setting of a PostgreSQL server that declares the level of durability that Zato requires of it.
+Durability_Level_Setting = 'zato.durability_level'
+
+# The level of durability of a server whose data is not retained, which Zato uses with the durability settings
+# that the server configures.
+Durability_Level_Relaxed = 'relaxed'
+
+_durability_level_query = """
+select current_setting('{}', true)
+""".strip().format(Durability_Level_Setting)
+
 # The journal mode and the level of synchronization that every SQLite connection of Zato runs with.
 SQLite_Journal_Mode = 'wal'
 SQLite_Synchronous = 'full'
@@ -155,17 +166,22 @@ def set_postgresql_session(dbapi_connection:'any_', connection_record:'any_') ->
     """ Ends a session that holds a transaction open without activity, so that a client which stopped
     responding in the middle of a transaction does not keep its row locks indefinitely. Each commit of the session
     returns only once its write-ahead log record is flushed to disk. A level that the server configures and that waits
-    for more than the local flush, such as remote_apply, is kept as it is.
+    for more than the local flush, such as remote_apply, is kept as it is. A server with the relaxed level of durability
+    keeps the commit level that it configures.
     """
     cursor = dbapi_connection.cursor()
 
-    _ = cursor.execute('show synchronous_commit')
-    row = cursor.fetchone()
-    configured_level = row[0]
+    # A server with the relaxed level of durability keeps its own commit level ..
+    durability_level = _show(cursor, _durability_level_query)
 
-    if configured_level in Relaxed_Commit_Levels:
-        _ = cursor.execute('set synchronous_commit = on')
+    # .. while on any other server each commit is flushed to disk before it returns ..
+    if durability_level != Durability_Level_Relaxed:
+        configured_level = _show(cursor, 'show synchronous_commit')
 
+        if configured_level in Relaxed_Commit_Levels:
+            _ = cursor.execute('set synchronous_commit = on')
+
+    # .. and every session ends idle transactions and long statements.
     _ = cursor.execute(f"set idle_in_transaction_session_timeout = '{_idle_in_transaction_timeout_ms}ms'")
     _ = cursor.execute(f"set statement_timeout = '{PostgreSQL_Statement_Timeout_Ms}ms'")
     cursor.close()
@@ -186,10 +202,12 @@ def verify_postgresql_server(dbapi_connection:'any_', connection_record:'any_') 
     """ Refuses a PostgreSQL server on which a commit could be acknowledged before it is durable - one that does not
     flush its write-ahead log, one that does not write full pages after a checkpoint, and a primary with streaming
     standbys none of which is synchronous, unless the provider of the server performs the failover. The check runs
-    on each new connection, so the primary that a failover of the database promotes is checked as well.
+    on each new connection, so the primary that a failover of the database promotes is checked as well. A server
+    with the relaxed level of durability is accepted with the settings that it configures.
     """
     cursor = dbapi_connection.cursor()
 
+    durability_level = _show(cursor, _durability_level_query)
     fsync = _show(cursor, 'show fsync')
     full_page_writes = _show(cursor, 'show full_page_writes')
     synchronous_standby_names = _show(cursor, 'show synchronous_standby_names')
@@ -199,6 +217,11 @@ def verify_postgresql_server(dbapi_connection:'any_', connection_record:'any_') 
     cursor.close()
     dbapi_connection.commit()
 
+    # A server with the relaxed level of durability is accepted as it is ..
+    if durability_level == Durability_Level_Relaxed:
+        return
+
+    # .. while any other server needs each of the durability settings.
     if fsync != Setting_On:
         raise DatabaseDurabilityError(f'PostgreSQL server has fsync `{fsync}`, it must be `{Setting_On}`')
 
