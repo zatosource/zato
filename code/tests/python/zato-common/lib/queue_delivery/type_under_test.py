@@ -188,8 +188,8 @@ class TestConfig:
     server_port = 0
     zato_bin = ''
 
-    # The SQLite file of the server's pub/sub database
-    db_path = ''
+    # The Zato_Database_* variables of the server's Zato database
+    database_env:'strstrdict' = {}
 
     # The file-transfer listener of the pickup directory of the server
     pickup_listener:'PickupListener' = cast_('PickupListener', None)

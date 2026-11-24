@@ -59,7 +59,7 @@ def _browse(service:'Service', topic_name:'str', sub_key:'str', document_key:'st
 # ################################################################################################################################
 
 class GetPubSubBackend(Service):
-    """ Answers with the SQLite file the server's own pub/sub backend runs on.
+    """ Answers with the type and the name of the database the server's own pub/sub backend runs on.
     """
 
     name = 'test.queue-delivery.get-pubsub-backend'
@@ -70,7 +70,7 @@ class GetPubSubBackend(Service):
 
         self.response.payload = {
             'type': url.get_backend_name(),
-            'path': url.database,
+            'name': url.database,
         }
 
 # ################################################################################################################################

@@ -21,10 +21,10 @@ from sqlalchemy import select
 from yaml import safe_load as yaml_load
 
 # Zato
+from live_environment.audit import new_database_engine
 from live_environment.quickstart import Host
 from live_kafka.containers import create_topic, KafkaCluster
 from zato.common.audit_log.api import event_table
-from zato.common.db_env.database import get_database_engine
 from zato.common.crypto.api import CryptoManager
 
 # ################################################################################################################################
@@ -68,9 +68,6 @@ class ModuleCtx:
 
     # The consumer group the server reads a recv stream as
     Recv_Group = 'server-recv'
-
-    # The Zato database of the server, for the tests to read its audit log from the same file
-    Database_Path_Variable = 'Zato_Database_Path'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -443,7 +440,7 @@ class KafkaSuite:
     def audit_events(self, cid:'str', event_type:'str'='') -> 'anylist':
         """ The events the server's audit log holds under one cid, oldest first.
         """
-        engine = get_database_engine()
+        engine = new_database_engine(self.zato.database_env)
 
         query = select(event_table).where(event_table.c.cid == cid)
 
@@ -457,6 +454,8 @@ class KafkaSuite:
         with engine.connect() as connection:
             for row in connection.execute(query):
                 out.append(dict(row._mapping))
+
+        engine.dispose()
 
         return out
 

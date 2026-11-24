@@ -10,21 +10,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # what the server keeps in its database, and publish with the retry settings of a message.
 
 # stdlib
-import os
 import time
 from contextlib import closing
-
-# gevent
-from gevent import get_hub
 
 # SQLAlchemy
 from sqlalchemy import bindparam, text
 
 # Zato
 from zato.common.audit_log.common import AuditEvent
-from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.database import get_database_engine
-from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.odb.model import PubSubSubscription, SecurityBase
 from zato.common.pubsub.sql.counts import No_Publisher
 from zato.server.service import Service
@@ -63,10 +57,6 @@ _pg_tables_query = text("""
 _pg_wal_query = text('select coalesce(sum(size), 0) from pg_ls_waldir()')
 _pg_checkpoints_query = text('select checkpoints_timed + checkpoints_req from pg_stat_bgwriter')
 
-# The sizes of the tables of SQLite.
-_message_rows_query = text('select count(*) from pubsub_message')
-_delivery_rows_query = text('select count(*) from pubsub_delivery')
-
 # The rows of one topic and of one queue.
 _topic_message_query = text('select count(*) from pubsub_message where topic_name = :topic_name')
 _topic_payload_query = text('select count(*) from pubsub_message where topic_name = :topic_name and payload is not null')
@@ -81,14 +71,10 @@ _failed_events_query = text('select msg_id from event where event_type = :event_
 _expiration_query = text('select msg_id, expiration_ms from pubsub_message where msg_id in :msg_ids')
 _expiration_query = _expiration_query.bindparams(bindparam('msg_ids', expanding=True))
 
-# The locks that a cleanup sweep meets - the oldest messages of a topic on PostgreSQL and the database on SQLite.
+# The locks that a cleanup sweep meets - the oldest messages of a topic.
 _lock_rows_query = text("""
     select id from pubsub_message where topic_name = :topic_name order by id limit :row_count for update
 """)
-_lock_database_query = text('begin immediate')
-
-# The suffix of the WAL file of a SQLite database.
-_sqlite_wal_suffix = '-wal'
 
 # The table of the messages, whose statistics PostgreSQL reports by its name.
 _message_table = 'pubsub_message'
@@ -128,16 +114,14 @@ def _hold_locks(engine:'Engine', query:'any_', params:'anydict', hold_seconds:'f
 
 class GetCountMismatches(Service):
     """ Returns each key whose stored count differs from the number of its rows - queues, topics and publications.
-    On PostgreSQL, all of them are read in one repeatable read transaction, which is consistent during traffic.
+    All of them are read in one repeatable read transaction, which is consistent during traffic.
     """
     name = 'test.pubsub-rest.get-count-mismatches'
 
     def handle(self) -> 'None':
 
         engine = get_database_engine()
-
-        if engine.dialect.name == Type_PostgreSQL:
-            engine = engine.execution_options(isolation_level=_snapshot_isolation_level)
+        engine = engine.execution_options(isolation_level=_snapshot_isolation_level)
 
         pairs = [
             ('queue', _raw_queue_query, _stored_queue_query),
@@ -175,18 +159,16 @@ class GetCountMismatches(Service):
 # ################################################################################################################################
 
 class GetDatabaseStatistics(Service):
-    """ Returns the sizes of the tables of messages and deliveries, the size of the WAL and, on PostgreSQL,
-    the dead rows of the two tables, the number of autovacuum runs and the number of checkpoints so far.
+    """ Returns the sizes of the tables of messages and deliveries, the size of the WAL, the dead rows
+    of the two tables, the number of autovacuum runs and the number of checkpoints so far.
     """
     name = 'test.pubsub-rest.get-database-statistics'
 
     def handle(self) -> 'None':
 
         engine = get_database_engine()
-        is_postgresql = engine.dialect.name == Type_PostgreSQL
 
         out:'anydict' = {
-            'is_postgresql': is_postgresql,
             'message_rows': 0,
             'delivery_rows': 0,
             'wal_bytes': 0,
@@ -197,29 +179,17 @@ class GetDatabaseStatistics(Service):
 
         with engine.connect() as connection:
 
-            if is_postgresql:
-                for row in connection.execute(_pg_tables_query):
-                    if row.relname == _message_table:
-                        out['message_rows'] = row.n_live_tup
-                    else:
-                        out['delivery_rows'] = row.n_live_tup
+            for row in connection.execute(_pg_tables_query):
+                if row.relname == _message_table:
+                    out['message_rows'] = row.n_live_tup
+                else:
+                    out['delivery_rows'] = row.n_live_tup
 
-                    out['autovacuums'] += row.autovacuum_count
-                    out['dead_tuples'][row.relname] = [row.n_live_tup, row.n_dead_tup]
+                out['autovacuums'] += row.autovacuum_count
+                out['dead_tuples'][row.relname] = [row.n_live_tup, row.n_dead_tup]
 
-                out['wal_bytes'] = int(connection.execute(_pg_wal_query).scalar_one())
-                out['checkpoints'] = connection.execute(_pg_checkpoints_query).scalar_one()
-
-            else:
-                out['message_rows'] = connection.execute(_message_rows_query).scalar_one()
-                out['delivery_rows'] = connection.execute(_delivery_rows_query).scalar_one()
-
-        # The WAL of SQLite is a file next to the database.
-        if not is_postgresql:
-            wal_path = os.environ[DatabaseEnv.Env_Path] + _sqlite_wal_suffix
-
-            if os.path.exists(wal_path):
-                out['wal_bytes'] = os.path.getsize(wal_path)
+            out['wal_bytes'] = int(connection.execute(_pg_wal_query).scalar_one())
+            out['checkpoints'] = connection.execute(_pg_checkpoints_query).scalar_one()
 
         self.response.payload = out
 
@@ -353,8 +323,8 @@ class GetServerState(Service):
 # ################################################################################################################################
 
 class HoldLocks(Service):
-    """ Holds, for the given time, the locks that a cleanup sweep meets - on PostgreSQL, row locks on the oldest messages
-    of a topic, and on SQLite, the write lock of the database, which the publications wait for as well.
+    """ Holds, for the given time, the locks that a cleanup sweep meets - row locks on the oldest messages of a topic.
+    The database driver waits in the hub of this thread.
     """
     name = 'test.pubsub-rest.hold-locks'
 
@@ -364,14 +334,8 @@ class HoldLocks(Service):
         hold_seconds = payload['hold_seconds']
         engine = get_database_engine()
 
-        # The PostgreSQL driver waits in the hub of this thread ..
-        if engine.dialect.name == Type_PostgreSQL:
-            params = {'topic_name': payload['topic_name'], 'row_count': payload['row_count']}
-            _hold_locks(engine, _lock_rows_query, params, hold_seconds)
-
-        # .. while the SQLite driver blocks its thread, which therefore is a thread of the pool and not the hub.
-        else:
-            _ = get_hub().threadpool.apply(_hold_locks, (engine, _lock_database_query, {}, hold_seconds))
+        params = {'topic_name': payload['topic_name'], 'row_count': payload['row_count']}
+        _hold_locks(engine, _lock_rows_query, params, hold_seconds)
 
         self.response.payload = {'is_held': True}
 

@@ -29,6 +29,7 @@ from yaml import safe_dump
 
 # Zato
 from zato.common.test import kill_server_process
+from zato.common.test.zato_database import create_test_database, drop_test_database
 from zato.common.typing_ import cast_
 from zato.common.util.config import get_config_object, update_config_file
 
@@ -36,7 +37,7 @@ from zato.common.util.config import get_config_object, update_config_file
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist, stranydict, strlist, strnone, tupnone
+    from zato.common.typing_ import any_, anydict, anylist, stranydict, strlist, strnone, strstrdict, tupnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -112,6 +113,7 @@ class LiveEnvironment:
     temp_directory: 'str'
     server_log_path: 'str'
     server_process: 'any_'
+    database_env: 'strstrdict'
 
     def mcp_url(self, url_path:'str') -> 'str':
         """ The full address of one MCP gateway of this environment.
@@ -160,7 +162,12 @@ def start_environment(prefix:'str', extra_environ:'anydict | None' = None) -> 'L
     port = find_free_port()
     temp_directory = tempfile.mkdtemp(prefix=f'zato_{prefix}_test_')
 
-    # Create the quickstart environment with a clean environment,
+    # The environment receives a Zato database of its own, which the quickstart, the server
+    # and every enmasse command that this process runs use ..
+    database_env = create_test_database()
+    os.environ.update(database_env)
+
+    # .. create the quickstart environment with a clean environment,
     # removing stale COVERAGE_PROCESS_START interference ..
     quickstart_environ = os.environ.copy()
     _ = quickstart_environ.pop('COVERAGE_PROCESS_START', None)
@@ -187,15 +194,12 @@ def start_environment(prefix:'str', extra_environ:'anydict | None' = None) -> 'L
     config['main']['bind'] = f'127.0.0.1:{port}'
     update_config_file(config, repo_location, 'server.conf')
 
-    # .. the server's environment carries the port, its own broker port
-    # and an audit database inside the temp directory ..
+    # .. the server's environment has the port, its own broker port and the Zato database ..
     broker_port = find_free_port()
-    audit_db_path = os.path.join(temp_directory, 'zato.db')
 
     server_environ = os.environ.copy()
     server_environ['Zato_Config_Bind_Port'] = str(port)
     server_environ['Zato_Broker_HTTP_Port'] = str(broker_port)
-    server_environ['Zato_Database_Path'] = audit_db_path
     _ = server_environ.pop('COVERAGE_PROCESS_START', None)
 
     if extra_environ:
@@ -244,6 +248,7 @@ def start_environment(prefix:'str', extra_environ:'anydict | None' = None) -> 'L
     out.temp_directory = temp_directory
     out.server_log_path = server_log_path
     out.server_process = server_process
+    out.database_env = database_env
 
     try:
         _wait_for_server(host, port)
@@ -272,7 +277,7 @@ def start_environment(prefix:'str', extra_environ:'anydict | None' = None) -> 'L
 # ################################################################################################################################
 
 def stop_environment(environment:'LiveEnvironment') -> 'None':
-    """ Stops the environment's server and removes its temporary directory.
+    """ Stops the environment's server and removes its temporary directory and its Zato database.
     """
 
     kill_server_process(
@@ -280,6 +285,12 @@ def stop_environment(environment:'LiveEnvironment') -> 'None':
 
     if os.path.isdir(environment.temp_directory):
         shutil.rmtree(environment.temp_directory, ignore_errors=True)
+
+    # The variables that selected the database are removed together with the database
+    for name in environment.database_env:
+        del os.environ[name]
+
+    drop_test_database(environment.database_env)
 
 # ################################################################################################################################
 # ################################################################################################################################

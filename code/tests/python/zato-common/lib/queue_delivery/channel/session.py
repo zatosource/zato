@@ -25,9 +25,9 @@ from zato.common.typing_ import cast_
 from zato.common.test.conftest_base_pubsub import find_free_port, render_template, run_quickstart_and_enmasse, \
     SessionState, start_server_process, wait_for_worker_reload
 from zato.common.test.pickup_listener import PickupListener
+from zato.common.test.zato_database import isolated_database_env
 
 # Test support
-from queue_delivery.backends import get_db_path, pubsub_path_env
 from queue_delivery.channel.client import Counting_Pickup_Name
 from queue_delivery.type_under_test import TestConfig
 
@@ -147,15 +147,13 @@ class ChannelSession:
         test_data_directory = mkdtemp(prefix=f'zato_queue_delivery_{self.suite_name}_')
         self.state.test_data_directory = test_data_directory
 
-        db_path = get_db_path(test_data_directory)
-
         zato_base = os.environ['ZATO_TEST_BASE_DIR']
         zato_bin = os.path.join(zato_base, 'code', 'bin', 'zato')
 
         invoke_password = 'test.invoke.' + CryptoManager.generate_hex_string()
 
-        # Every process started from here on inherits the SQLite file as its database
-        self._exit_stack.enter_context(pubsub_path_env(db_path))
+        # Every process started from here on inherits the Zato database of the session
+        database_env = self._exit_stack.enter_context(isolated_database_env())
 
         # The channels are imported once the server runs, as their services are deployed only then
         server_directory = run_quickstart_and_enmasse(
@@ -204,7 +202,7 @@ class ChannelSession:
         TestConfig.server_directory = server_directory
         TestConfig.server_port = server_port
         TestConfig.zato_bin = zato_bin
-        TestConfig.db_path = db_path
+        TestConfig.database_env = database_env
         TestConfig.pickup_listener = self.pickup_listener
         TestConfig.state = self.state
         TestConfig.receivers = {}

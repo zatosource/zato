@@ -21,6 +21,7 @@ from urllib.request import Request, urlopen
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.client import AdminClient
 from zato.common.test.process_util import kill_process_tree
+from zato.common.test.zato_database import create_test_database, drop_test_database
 from zato.common.typing_ import cast_
 from zato.common.util.config import get_config_object, update_config_file
 
@@ -49,9 +50,6 @@ _listener_path = os.path.join(
 
 # Every environment binds its server here
 Host = '127.0.0.1'
-
-# The variable the server reads the path of its Zato database from
-_Database_Path_Variable = 'Zato_Database_Path'
 
 _server_ready_timeout    = 60
 _hot_deploy_timeout      = 30
@@ -142,8 +140,9 @@ class ZatoEnvironment:
         self.server_directory = os.path.join(self.environment_directory, 'server1')
         self.pickup_directory = os.path.join(self.server_directory, 'pickup', 'incoming', 'services')
 
-        # Where the server writes its audit trail, which a test reads back what was received and delivered from
-        self.audit_db_path = os.path.join(directory, 'zato.db')
+        # The Zato_Database_* variables of the environment's own database, which holds its configuration
+        # and the audit trail that a test reads back what was received and delivered from
+        self.database_env:'strstrdict' = {}
 
         self.password = password_prefix + '.' + CryptoManager.generate_hex_string()
 
@@ -171,6 +170,13 @@ class ZatoEnvironment:
         """
         os.makedirs(self.environment_directory)
 
+        # The environment receives a database of its own ..
+        self.database_env = create_test_database()
+
+        # .. and the environments are ended before the PostgreSQL server that holds their databases is removed at exit ..
+        atexit.unregister(_stop_all)
+        _ = atexit.register(_stop_all)
+
         command = [
             _zato_bin, 'quickstart', 'create', self.environment_directory,
             '--password', self.password,
@@ -183,8 +189,11 @@ class ZatoEnvironment:
         if redis_port:
             command.extend(['--redis-host', Host, '--redis-port', str(redis_port)])
 
-        result = subprocess.run(
-            command, capture_output=True, text=True, timeout=_quickstart_timeout, env=_subprocess_environment())
+        # .. which quickstart creates the configuration in.
+        environment = _subprocess_environment()
+        environment.update(self.database_env)
+
+        result = subprocess.run(command, capture_output=True, text=True, timeout=_quickstart_timeout, env=environment)
 
         if result.returncode != 0:
             raise Exception(f'quickstart create failed:\nstdout: {result.stdout}\nstderr: {result.stderr}')
@@ -258,7 +267,7 @@ class ZatoEnvironment:
         environment['Zato_Config_Bind_Port'] = str(self.server_port)
         environment['Zato_Broker_HTTP_Port'] = str(find_free_port())
         environment['Zato_HL7_MLLP_Port'] = str(self.mllp_internal_port)
-        environment[_Database_Path_Variable] = self.audit_db_path
+        environment.update(self.database_env)
         environment.update(extra_environment)
 
         self._server_process = self._start_process(
@@ -335,7 +344,10 @@ class ZatoEnvironment:
             '--missing-wait-time', _missing_wait_time,
         ]
 
-        result = subprocess.run(command, capture_output=True, text=True, timeout=_import_timeout)
+        environment = _subprocess_environment()
+        environment.update(self.database_env)
+
+        result = subprocess.run(command, capture_output=True, text=True, timeout=_import_timeout, env=environment)
 
         if result.returncode != 0:
             raise Exception(f'enmasse import failed:\nstdout: {result.stdout}\nstderr: {result.stderr}')
@@ -378,12 +390,17 @@ class ZatoEnvironment:
 # ################################################################################################################################
 
     def stop(self) -> 'None':
-        """ Ends the processes and removes the directory.
+        """ Ends the processes and removes the directory and the database.
         """
         if self in _environments:
             _environments.remove(self)
 
         self._stop_processes()
+
+        # An environment that was never created has no database
+        if self.database_env:
+            drop_test_database(self.database_env)
+            self.database_env = {}
 
         if os.path.isdir(self.directory):
             shutil.rmtree(self.directory, ignore_errors=True)

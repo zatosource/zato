@@ -263,9 +263,6 @@ class Monitor:
         report.delivery_rows = statistics['delivery_rows']
         report.wal_mb = statistics['wal_bytes'] / _bytes_per_mb
 
-        if not statistics['is_postgresql']:
-            return
-
         checkpoints = statistics['checkpoints']
         autovacuums = statistics['autovacuums']
 

@@ -130,7 +130,7 @@ class PubSubServer:
 # ################################################################################################################################
 
     def get_database(self) -> 'PubSubDatabase | None':
-        """ The PostgreSQL database that the fixture started for the server, or None for SQLite or a database
+        """ The PostgreSQL database that the fixture started for the server, or None for a database
         that the environment of the test selects.
         """
         state = self.get_state()

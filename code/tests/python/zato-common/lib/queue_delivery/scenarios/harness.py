@@ -14,6 +14,8 @@ from sqlalchemy import func, select
 
 # Zato
 from zato.common.api import HTTP_SOAP
+from zato.common.db_env.common import Type_PostgreSQL
+from zato.common.db_env.database import database_config
 from zato.common.pubsub.sql.schema import message_table
 
 # Test support
@@ -30,9 +32,6 @@ _retry = HTTP_SOAP.Retry
 _queue = HTTP_SOAP.Queue
 _dlq = HTTP_SOAP.DLQ
 
-# The SQLAlchemy backend name of the pub/sub database
-_sqlite_backend_name = 'sqlite'
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -44,14 +43,15 @@ class HarnessScenarios(ScenarioBase):
         client = get_client()
 
         server_side = get_pubsub_backend(client)
+        database_name = TestConfig.database_env[database_config.env_name]
 
-        assert server_side['type'] == _sqlite_backend_name
-        assert server_side['path'] == TestConfig.db_path
+        assert server_side['type'] == Type_PostgreSQL
+        assert server_side['name'] == database_name
 
         engine = get_pubsub_db_engine()
 
-        assert engine.url.get_backend_name() == _sqlite_backend_name
-        assert engine.url.database == TestConfig.db_path
+        assert engine.url.get_backend_name() == Type_PostgreSQL
+        assert engine.url.database == database_name
 
         with engine.connect() as connection:
             _ = connection.execute(select(func.count()).select_from(message_table)).scalar()

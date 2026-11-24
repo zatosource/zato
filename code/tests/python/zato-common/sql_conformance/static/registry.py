@@ -204,7 +204,6 @@ Direct_SQL_Purposes = (
     ('code/zato-common/src/zato/common/test/direct_sql/fault.py', 'interrupt_topic_rename',      'Fault injection'),
     ('code/zato-common/src/zato/common/test/direct_sql/fault.py', 'remove_topic_subscriptions',  'Fault injection'),
     ('code/zato-common/src/zato/common/test/direct_sql/fault.py', 'restore_previous_generation', 'Fault injection'),
-    ('code/zato-common/src/zato/common/test/direct_sql/lock.py',  'hold_sqlite_write_lock',      'Fault injection'),
     ('code/zato-common/src/zato/common/test/direct_sql/reset.py', 'reset_tables',                'Resetting tables between tests'),
     ('code/zato-common/src/zato/common/test/direct_sql/reset.py', 'reset_table_rows',            'Resetting tables between tests'),
     ('code/zato-common/src/zato/common/test/direct_sql/reset.py', 'truncate_tables',             'Resetting tables between tests'),

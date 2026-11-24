@@ -155,7 +155,7 @@ def read(client:'AdminClient', conn_name:'str') -> 'anydict':
 # ################################################################################################################################
 
 def get_pubsub_backend(client:'AdminClient') -> 'anydict':
-    """ The type and path of the database the server's own pub/sub backend runs on.
+    """ The type and the name of the database the server's own pub/sub backend runs on.
     """
     response = client.invoke(_get_pubsub_backend_service, {})
 
