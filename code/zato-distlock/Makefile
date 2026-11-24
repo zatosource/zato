@@ -9,7 +9,8 @@ include $(CURDIR)/../tests/check.mk
 
 test:
 	echo "Running tests in $(Zato_Package_Name)"
-	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/distlock/test_*.py -s
+	$(Zato_Test_Failure_Reports_Env) $(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/distlock/test_*.py -s \
+		$(Zato_Test_Failure_Reports)
 
 ruff:
 	echo "Running ruff in $(Zato_Package_Name)"

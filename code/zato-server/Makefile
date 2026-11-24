@@ -33,12 +33,15 @@ MUTANT_EXCLUDES = \
 
 test:
 	echo "Running tests in $(Zato_Package_Name)"
-	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/test_io_*.py -s
-	$(Zato_Python_Dir)/py     $(CURDIR)/test/zato/commands_/test_*.py
+	$(Zato_Test_Failure_Reports_Env) $(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/test_io_*.py -s \
+		$(Zato_Test_Failure_Reports)
+	$(Zato_Test_Failure_Reports_Env) $(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/commands_/ -s \
+		$(Zato_Test_Failure_Reports)
 
 test-response-cache:
 	echo "Running response cache tests in $(Zato_Package_Name)"
-	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/connection/http_soap/test_response_cache*.py -v
+	$(Zato_Test_Failure_Reports_Env) $(Zato_Python_Dir)/pytest \
+		$(CURDIR)/test/zato/connection/http_soap/test_response_cache*.py -v $(Zato_Test_Failure_Reports)
 
 # fuzz_disabled
 fuzz:

@@ -626,10 +626,10 @@ test-server: ## Server unit and integration tests.
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_server -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 # The CLI is driven through sh, which forks, so these tests need a process that gevent has not patched
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(Zato_Test_Failure_Reports_Env) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/zato-server/test/zato/commands_/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_server_commands -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+		$(Zato_Test_Failure_Reports) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 # The TLS material listener reads inotify events in an OS thread, which a gevent-patched process blocks
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/file_transfer/test_tls_material_listener.py \
@@ -1344,6 +1344,9 @@ test-perf-rules: ## The settings gate of performance figures and the scan of eve
 		-v -s --tb=short -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_perf_rules -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
+# The directory of the enmasse suites of zato-cli, which their modules import env_helper from
+Zato_Test_Enmasse_Dir := $(CURDIR)/code/zato-cli/test/zato/enmasse_
+
 # discord_disabled - these enmasse suites run in test-discord only
 Zato_Test_Enmasse_Disabled := \
 	test_importer_enmasse_discord.py test_exporter_enmasse_discord.py
@@ -1353,8 +1356,10 @@ Zato_Test_Enmasse_Disabled := \
 # of their own, discovery below already covers them and running them twice proves nothing.
 test-enmasse: ## Enmasse tests - every importer, every exporter, the file writer, is_active and should_delete on a PostgreSQL ODB, the round trips and secret rotation against live services.
 	$(Zato_Log_Reset)
-	cd $(CURDIR)/code/zato-cli/test/zato/enmasse_ && $(ZATO_PY) -m unittest -v --failfast \
-		$$(find . -name 'test_*.py' $(foreach name,$(Zato_Test_Enmasse_Disabled),! -name $(name)) | sort) $(Zato_Log)
+	cd $(Zato_Test_Enmasse_Dir) && $(Zato_Test_Failure_Reports_Env) $(ZATO_PY) -m pytest \
+		$$(find . -name 'test_*.py' $(foreach name,$(Zato_Test_Enmasse_Disabled),! -name $(name)) | sort) \
+		-v -s -x -o pythonpath=$(Zato_Test_Enmasse_Dir) -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_enmasse_cli \
+		-W ignore::DeprecationWarning $(Zato_Test_Failure_Reports) $(PYTEST_ARGS) $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_file_writer.py \
 		$(CURDIR)/code/tests/python/zato-cli/enmasse_/test_enmasse_is_active.py \
@@ -1364,7 +1369,9 @@ test-enmasse: ## Enmasse tests - every importer, every exporter, the file writer
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 # Secret rotation needs the live services switched on, which the discovery above leaves off
 	Zato_Test_Live_SQL=1 Zato_Test_FTP=1 Zato_Test_SFTP=1 Zato_Test_SMB=1 Zato_Test_MongoDB=1 \
-		$(ZATO_PY) -m unittest discover -s $(CURDIR)/code/zato-cli/test/zato/enmasse_ -p 'test_secret_rotation_live.py' -v --failfast $(Zato_Log)
+		$(Zato_Test_Failure_Reports_Env) $(ZATO_PY) -m pytest $(Zato_Test_Enmasse_Dir)/test_secret_rotation_live.py \
+		-v -s -x -o pythonpath=$(Zato_Test_Enmasse_Dir) -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_enmasse_secret \
+		-W ignore::DeprecationWarning $(Zato_Test_Failure_Reports) $(PYTEST_ARGS) $(Zato_Log)
 
 test-enmasse-delete-live: ## Enmasse should_delete against a live server - every object created and deleted through the pickup directory.
 	$(Zato_Log_Reset)
@@ -1717,21 +1724,21 @@ test-mssql-db: ## Outgoing MS SQL connection tests against a live MS SQL Develop
 
 test-discord: ## Discord connection tests - the client against a simulated Discord, a live Zato server, the enmasse importer and exporter, and the Dashboard lifecycle.
 	$(Zato_Log_Reset)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(Zato_Test_Failure_Reports_Env) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/zato-server/test/zato/connection/chat/discord/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_discord_client -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Test_Failure_Reports) $(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/discord/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_discord_live -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(Zato_Test_Failure_Reports_Env) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/zato-cli/test/zato/enmasse_/importers/test_importer_enmasse_discord.py \
 		$(CURDIR)/code/zato-cli/test/zato/enmasse_/exporters/test_exporter_enmasse_discord.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_discord_enmasse -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) \
+		$(Zato_Test_Failure_Reports) $(FAIL_FAST) $(PYTEST_ARGS) \
 		$(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_chat_discord_lifecycle.py \
@@ -1967,10 +1974,10 @@ test-lets-encrypt: ## Let's Encrypt tests - lego obtains and renews certificates
 
 test-ftp: ## FTP and FTPS tests - the outconn, enmasse and scheduler suites against live FTP servers, plus the audit and delivery suites against stubs.
 	$(Zato_Log_Reset)
-	Zato_Test_FTP=1 ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+	Zato_Test_FTP=1 ZATO_TEST_BASE_DIR=$(CURDIR) $(Zato_Test_Failure_Reports_Env) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/zato-server/test/zato/connection/test_outconn_ftp.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_ftp -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+		$(Zato_Test_Failure_Reports) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_ftp_audit.py \
 		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_streamed_transfers.py \
@@ -1985,10 +1992,10 @@ test-ftp: ## FTP and FTPS tests - the outconn, enmasse and scheduler suites agai
 
 test-sftp: ## SFTP tests - the outconn and scheduler suites against live OpenSSH servers, plus the audit, listing and schedule suites against stubs.
 	$(Zato_Log_Reset)
-	Zato_Test_SFTP=1 ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+	Zato_Test_SFTP=1 ZATO_TEST_BASE_DIR=$(CURDIR) $(Zato_Test_Failure_Reports_Env) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/zato-server/test/zato/connection/test_outconn_sftp.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_sftp -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+		$(Zato_Test_Failure_Reports) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_sftp_audit.py \
 		$(CURDIR)/code/tests/python/zato-server/file_transfer_audit/test_sftp_listing.py \
@@ -2112,10 +2119,10 @@ test-es: ## Elasticsearch connection tests against a live server, plain and TLS.
 
 test-rule-engine: ## Rule engine tests - grammar, matching, the SQL store, invocation and the API portal.
 	$(Zato_Log_Reset)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
+	ZATO_TEST_BASE_DIR=$(CURDIR) $(Zato_Test_Failure_Reports_Env) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/zato-common/test/zato/common/rule_engine/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_engine \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
+		$(Zato_Test_Failure_Reports) $(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/rule_engine_sql/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_rule_engine_sql \
