@@ -768,7 +768,7 @@ Zato_Test_HA_Dir_postgresql-kubernetes := $(Zato_Test_HA_Server_Dir)/ha_postgres
 # The modules of each HA suite in the order they run, from the shortest to the longest. Every module of a suite
 # is listed, and a suite with a module that is not listed refuses to run.
 Zato_Test_HA_Modules_database-file := \
-	test_engine_guard.py test_live_replacement.py
+	test_engine_guard.py test_write_contention.py test_live_replacement.py
 
 Zato_Test_HA_Modules_power-loss := \
 	test_harness.py test_audit_archive_sqlite.py test_sqlite_server.py test_postgresql_server.py

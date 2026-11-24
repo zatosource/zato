@@ -66,6 +66,9 @@ Event_Time = datetime(2026, 10, 29, 12, 0, 0, 123456, tzinfo=timezone.utc)
 # The verbs of the statements that write or read rows
 _row_verbs = ('INSERT', 'SELECT', 'COPY')
 
+# The verb of the statements that open a transaction
+_begin_verb = 'BEGIN'
+
 # The outgoing MLLP connection that a part of the value events belong to, whose sent messages open exchanges
 MLLP_Object_Name = 'audit.test.write-mllp-outgoing'
 
@@ -155,11 +158,13 @@ event_spec_list = list[EventSpec]
 class StatementRecorder:
     """ The statements that write or read rows and the commits of an engine, each statement as its verb and its table.
     On SQLite, the statements are those that the database runs, including the ones the bulk insert runs in Rust,
-    and the consecutive runs of one statement with the rows of one table are recorded once.
+    and the consecutive runs of one statement with the rows of one table are recorded once. On SQLite, the statements
+    that open a transaction are recorded in full in a list of their own.
     """
 
     def __init__(self) -> 'None':
         self.statements:'anylist' = []
+        self.begin_statements:'strlist' = []
         self.commit_count = 0
 
     def on_execute(
@@ -175,7 +180,12 @@ class StatementRecorder:
 
     def on_trace(self, statement:'str') -> 'None':
 
-        # The runs of one statement with the rows of one table follow each other, and they are recorded once
+        # A statement that opens a transaction is recorded as it was run ..
+        if statement.startswith(_begin_verb):
+            self.begin_statements.append(statement)
+            return
+
+        # .. while the runs of one statement with the rows of one table follow each other and are recorded once.
         if self.statements and self.statements[-1] == get_statement_verb_table(statement):
             return
 

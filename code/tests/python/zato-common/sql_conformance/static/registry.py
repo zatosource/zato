@@ -83,6 +83,7 @@ Environment_Variables = (
     ('Zato_Audit_Log_Export_Flush_Interval_Ms', 'How often committed events are exported over OTLP'),
     ('Zato_HL7_MLLP_Read_Buffer_Size',          'The size of the socket read buffer of an MLLP listener'),
     ('Zato_PubSub_Batch_Size',                  'How many rows one bulk statement of pub/sub touches'),
+    ('Zato_PubSub_DB_Batch_Size',               'The alias under which Zato_PubSub_Batch_Size is read when it is not set'),
 )
 
 # ################################################################################################################################

@@ -566,11 +566,11 @@ def check_engine_identity(engine:'Engine') -> 'None':
 
 # ################################################################################################################################
 
-def _run_and_check_identity(db_path:'str', mechanism:'any_', func:'callable_', args:'anytuple') -> 'any_':
+def _call_and_check_identity(db_path:'str', func:'callable_', args:'anytuple') -> 'any_':
     """ Runs a database call on a SQLite file and raises DatabaseFileReplaced if the file was removed or replaced
     in the meantime, in which case its commit is not acknowledged to the caller.
     """
-    out = run_in_write_path(mechanism, func, args)
+    out = func(*args)
     check_identity(db_path)
 
     return out
@@ -682,15 +682,14 @@ def call_database(engine:'Engine', func:'callable_', *args:'any_', prepare:'call
     if mechanism is None:
         mechanism = Mechanism.Serialized_Write
 
-    run_call:'callable_' = run_in_write_path
     call_args:'anytuple' = (mechanism, func, args)
 
     # A call on a SQLite file returns only while the file is the one that the process opened,
     # checked before the write lock is released.
     if engine.dialect.name == Type_SQLite:
         if db_path := engine.url.database:
-            run_call = _run_and_check_identity
-            call_args = (db_path, mechanism, func, args)
+            identity_args = (db_path, func, args)
+            call_args = (mechanism, _call_and_check_identity, identity_args)
 
     if needs_thread_pool(engine):
 
@@ -707,10 +706,10 @@ def call_database(engine:'Engine', func:'callable_', *args:'any_', prepare:'call
         # The thread that waits for the turn of this process blocks in the pool, while the greenlet of the caller is suspended ..
         if process_queue := _get_process_queue(write_key):
             run = process_queue.run_under_lock
-            run_args = (write_lock, run_call, call_args)
+            run_args = (write_lock, run_in_write_path, call_args)
         else:
             run = _call_under_lock
-            run_args = (write_lock, run_call, call_args)
+            run_args = (write_lock, run_in_write_path, call_args)
 
         # .. and the preparation runs in that thread before it waits for the lock.
         if prepare:
@@ -725,7 +724,7 @@ def call_database(engine:'Engine', func:'callable_', *args:'any_', prepare:'call
             hub = get_hub()
             _ = hub.threadpool.apply(prepare)
 
-        out = run_call(*call_args)
+        out = run_in_write_path(*call_args)
 
     return out
 
