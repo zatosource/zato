@@ -54,6 +54,9 @@ _release   = ('RELEASE', '')
 # The read of the subscribers of a publication, which runs under the write lock on SQLite
 _select_subscribers = ('SELECT', 'pubsub_topic_sub')
 
+# The first check of a fenced acknowledgement, which runs under the write lock on SQLite
+_select_atomic_dedup = ('SELECT', 'zato_message_dedup')
+
 # The verbs that are recorded, with the position of the table among the words of a statement or None for no table
 _verb_table_position:'anydict' = {
     'INSERT': 2,
@@ -282,10 +285,30 @@ def record_transactions(engine:'Engine') -> 'recordergen':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _opens_transaction(verb_table:'anytuple', part:'anylist') -> 'bool':
+    """ Says whether a statement of a part opens the transaction on SQLite - a statement that writes, the read
+    of the subscribers, the first check of a fenced acknowledgement or a statement of a lease.
+    """
+    if verb_table[0] != 'SELECT':
+        out = True
+
+    elif verb_table == _select_subscribers:
+        out = True
+
+    elif verb_table == _select_atomic_dedup:
+        out = True
+
+    else:
+        out = part is statements_lease
+
+    return out
+
+# ################################################################################################################################
+
 def get_expected(dialect_name:'str', parts:'anylist') -> 'anylist':
     """ Returns the statements of a transaction of the given parts, opened and committed. On SQLite, the driver opens
-    the transaction before the first statement that writes, reads the subscribers or reads the candidates of a lease,
-    so the other selects that precede it run before it.
+    the transaction before the first statement that writes, reads the subscribers, checks a fenced acknowledgement
+    or reads the candidates of a lease, so the other selects that precede it run before it.
     """
     out:'anylist' = []
     needs_begin = dialect_name == 'sqlite'
@@ -293,10 +316,11 @@ def get_expected(dialect_name:'str', parts:'anylist') -> 'anylist':
     for part in parts:
         for verb_table in part:
 
-            # The first statement that writes, reads the subscribers or belongs to a lease opens the transaction on SQLite ..
-            if needs_begin and (verb_table[0] != 'SELECT' or verb_table == _select_subscribers or part is statements_lease):
-                out.append(_begin)
-                needs_begin = False
+            # The first statement that opens the transaction on SQLite is preceded by its BEGIN ..
+            if needs_begin:
+                if _opens_transaction(verb_table, part):
+                    out.append(_begin)
+                    needs_begin = False
 
             out.append(verb_table)
 

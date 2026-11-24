@@ -356,28 +356,6 @@ impl BatchResults {
     }
 }
 
-/// Why the transaction of a batch failed as a whole.
-pub enum BatchError {
-    /// `SQLite` refused a statement.
-    Sqlite(rusqlite::Error),
-
-    /// A publication of a strict fenced acknowledgement belongs to a different message after the item was partly written,
-    /// which only the rollback of the whole transaction undoes.
-    StrictDuplicate {
-        /// The position of the fenced acknowledgement among those of the batch.
-        atomic_index: usize,
-
-        /// The position of the publication among those of the fenced acknowledgement.
-        publication_index: usize,
-    },
-}
-
-impl From<rusqlite::Error> for BatchError {
-    fn from(error: rusqlite::Error) -> Self {
-        Self::Sqlite(error)
-    }
-}
-
 /// The acknowledgement that the full delivery of a message counts towards.
 #[derive(Clone, Copy)]
 enum AckRef {
@@ -410,7 +388,7 @@ fn default_results<Item: Default>(count: usize) -> Vec<Item> {
 /// Writes the items of a batch in the transaction of the connection, storing in the results what became of each item.
 ///
 /// The results of the items written before an error remain stored.
-pub fn write_batch(context: &BatchContext<'_>, batch: &BatchInput, results: &mut BatchResults) -> Result<(), BatchError> {
+pub fn write_batch(context: &BatchContext<'_>, batch: &BatchInput, results: &mut BatchResults) -> rusqlite::Result<()> {
     let writer = Writer {
         sqlite: context.sqlite,
         statements: context.statements,
@@ -470,7 +448,7 @@ impl Writer<'_> {
 
     /// Writes the publications first, the acknowledgements next, the fenced acknowledgements with their publications,
     /// the push attempts and the pulls after them, and drops the payloads that no subscriber needs anymore last.
-    fn write(&self, batch: &BatchInput, results: &mut BatchResults) -> Result<(), BatchError> {
+    fn write(&self, batch: &BatchInput, results: &mut BatchResults) -> rusqlite::Result<()> {
         let mut ack_by_message_id = BTreeMap::new();
 
         if !batch.publications.is_empty() {
@@ -764,15 +742,19 @@ impl Writer<'_> {
     }
 
     /// Writes a fenced acknowledgement with its publications, each reason for which the item fails
-    /// checked before anything of it is written.
+    /// checked under the write lock before anything of it is written.
     fn write_atomic(
         &self,
         atomic_index: usize,
         atomic: &AtomicInput,
         result: &mut AtomicResult,
         ack_by_message_id: &mut BTreeMap<i64, AckRef>,
-    ) -> Result<(), BatchError> {
-        // The checks write nothing, so an item that fails them is only marked as failed ..
+    ) -> rusqlite::Result<()> {
+        // The write lock is taken before the checks, so that no other connection commits a message between them
+        // and the writes, and the writes find exactly what the checks found ..
+        self.begin()?;
+
+        // .. the checks write nothing, so an item that fails them is only marked as failed ..
         let has_new_message = match self.check_atomic_publications(atomic)? {
             Ok(has_new_message) => has_new_message,
             Err(error) => {
@@ -789,19 +771,9 @@ impl Writer<'_> {
             }
         };
 
-        // .. whereas after the first write of an item, without a savepoint, only the rollback of the transaction undoes it.
+        // .. and an item that passed them is written in full.
         if !atomic.publications.is_empty() {
             self.insert_publications(&atomic.publications, &mut result.publications)?;
-        }
-
-        if atomic.is_strict {
-            let duplicate = result.publications.iter().position(|publication| publication.duplicate.is_some());
-            if let Some(publication_index) = duplicate {
-                return Err(BatchError::StrictDuplicate {
-                    atomic_index,
-                    publication_index,
-                });
-            }
         }
 
         self.delete_fenced(&fenced_rows, &mut result.ack)?;
@@ -816,6 +788,9 @@ impl Writer<'_> {
 
     /// Fails a strict item if the identifier of a publication stands for a different message, either one that exists
     /// already or one published earlier in the same item. Returns whether any publication inserts a new message.
+    ///
+    /// The check runs under the write lock and decides as the insert of the publications does, so a publication
+    /// that it passes is never found to belong to a different message by the insert.
     fn check_atomic_publications(&self, atomic: &AtomicInput) -> rusqlite::Result<Result<bool, ItemError>> {
         let dedup_key = &self.statements.dedup_key;
         let mut select = self.sqlite.prepare_cached(&self.statements.select_existing_message)?;

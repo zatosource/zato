@@ -269,10 +269,12 @@ fn driver_error(py: Python<'_>, class_name: &str, message: String) -> PyErr {
     }
 }
 
-/// Returns the name of the exception class of the Python driver that the error of `SQLite` maps to.
+/// Returns the name of the exception class of the Python driver that the error of `SQLite` maps to,
+/// the same class that the driver raises for the same code.
 fn sqlite_error_class(error: &rusqlite::Error) -> &'static str {
     match error.sqlite_error_code() {
-        Some(ErrorCode::ConstraintViolation) => "IntegrityError",
+        Some(ErrorCode::ConstraintViolation | ErrorCode::TypeMismatch) => "IntegrityError",
+        Some(ErrorCode::TooBig) => "DataError",
         Some(ErrorCode::DatabaseCorrupt | ErrorCode::NotADatabase) => "DatabaseError",
         _ => "OperationalError",
     }

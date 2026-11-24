@@ -12,8 +12,8 @@ use rusqlite::types::Value;
 use crate::audit_insert::{bound_value, check_library_version, open_handle, sqlite_py_err};
 use crate::pubsub_subscription_list::{Pair, SubscriptionList};
 use crate::pubsub_write_sql::{
-    AckInput, AckResult, AtomicInput, AtomicResult, BatchContext, BatchError, BatchInput, BatchResults, DedupKey, FencedEntry, ItemError,
-    Layout, LeaseInput, LeaseResult, PublicationInput, PublicationResult, Statements, write_batch,
+    AckInput, AckResult, AtomicInput, AtomicResult, BatchContext, BatchInput, BatchResults, DedupKey, FencedEntry, ItemError, Layout,
+    LeaseInput, LeaseResult, PublicationInput, PublicationResult, Statements, write_batch,
 };
 
 /// The module of the `SQLite` driver of Python.
@@ -173,7 +173,7 @@ impl SqlitePubSubWriter {
         });
 
         // A batch that SQLite refused is rolled back as a whole, so nothing of it is stored on the items
-        if let Err(BatchError::Sqlite(error)) = written {
+        if let Err(error) = written {
             return Err(sqlite_py_err(py, error));
         }
 
@@ -200,20 +200,6 @@ impl SqlitePubSubWriter {
 
         for (pending, result) in leases.iter().zip(results.leases) {
             self.apply_lease(&pending, result)?;
-        }
-
-        // A strict fenced acknowledgement with a publication that belongs to a different message fails the whole batch
-        if let Err(BatchError::StrictDuplicate {
-            atomic_index,
-            publication_index,
-        }) = written
-        {
-            let publication = atomics
-                .get_item(atomic_index)?
-                .getattr(intern!(py, "publications"))?
-                .get_item(publication_index)?;
-            let exception = publication.getattr(intern!(py, "exception"))?;
-            return Err(PyErr::from_value(exception));
         }
 
         Ok((out, results.added_pairs))

@@ -7,7 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The conditions of PostgreSQL after which a transaction may be run again as it was - SQLSTATE codes
-# that pg8000 reports in the first argument of its exceptions, and connections that were lost.
+# that pg8000 reports in the first argument of its exceptions, and connections that were lost -
+# and the errors of PostgreSQL and SQLite caused by the values of one statement.
+
+# stdlib
+from sqlite3 import DataError as SQLiteDataError, Error as SQLiteError, IntegrityError as SQLiteIntegrityError
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,6 +58,10 @@ _transient_states = {
 # and integrity constraint violations.
 _value_error_classes = {'22', '23'}
 
+# The exceptions of the SQLite driver for the errors caused by the values of one statement - a value too big,
+# a constraint violation and a type mismatch.
+_sqlite_value_errors = (SQLiteDataError, SQLiteIntegrityError)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -82,12 +90,19 @@ def is_conflict(error:'DBAPIError') -> 'bool':
 # ################################################################################################################################
 
 def is_value_error(error:'DBAPIError') -> 'bool':
-    """ Whether PostgreSQL rejected a value that a statement was to write, which fails again however often it is run.
+    """ Whether PostgreSQL or SQLite rejected a value that a statement was to write, which fails again however often it is run.
     """
-    sqlstate = get_sqlstate(error)
-    sqlstate_class = sqlstate[:2]
+    # SQLite reports the cause of an error by the class of its exception ..
+    if isinstance(error.orig, SQLiteError):
+        out = isinstance(error.orig, _sqlite_value_errors)
 
-    out = sqlstate_class in _value_error_classes
+    # .. and PostgreSQL by its SQLSTATE code.
+    else:
+        sqlstate = get_sqlstate(error)
+        sqlstate_class = sqlstate[:2]
+
+        out = sqlstate_class in _value_error_classes
+
     return out
 
 # ################################################################################################################################

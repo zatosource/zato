@@ -1,14 +1,19 @@
 //! The conversions of the audit writer against the values that the Python path stores.
 //!
 //! The tests cover the text of a time column, the compressed form of a payload,
-//! the digest of a payload, the capped text of an attribute value and the comparison of the versions of `SQLite`.
+//! the digest of a payload, the capped text of an attribute value, the comparison of the versions of `SQLite`
+//! and the exception classes of the Python driver that the errors of `SQLite` are raised as.
 
 use std::fmt::Write as _;
 
 use blake2::digest::consts::U16;
 use blake2::{Blake2b, Digest};
+use rusqlite::ffi;
 
-use super::{ATTR_FALSE, ATTR_TRUE, ATTR_VALUE_MAX_LEN, UtcTime, capped_attr_text, check_library_version, compress_text, payload_digest};
+use super::{
+    ATTR_FALSE, ATTR_TRUE, ATTR_VALUE_MAX_LEN, UtcTime, capped_attr_text, check_library_version, compress_text, payload_digest,
+    sqlite_error_class,
+};
 
 /// A text with characters outside of ASCII, whose length in characters differs from its length in bytes.
 const TEXT_NON_ASCII: &str = "Zamówienie dla Marii Johnson – 5,50 € Jürgen";
@@ -168,4 +173,37 @@ fn refuses_a_different_version_of_sqlite() {
 #[test]
 fn refuses_a_version_of_sqlite_that_differs_in_the_patch_level_alone() {
     assert!(check_library_version("3.45.1", "3.45.10").is_err());
+}
+
+/// Returns the error of `SQLite` with a result code, as a statement that failed with it returns it.
+fn sqlite_failure(code: i32) -> rusqlite::Error {
+    rusqlite::Error::SqliteFailure(ffi::Error::new(code), None)
+}
+
+#[test]
+fn raises_a_constraint_violation_as_an_integrity_error() {
+    assert_eq!(
+        sqlite_error_class(&sqlite_failure(ffi::SQLITE_CONSTRAINT_NOTNULL)),
+        "IntegrityError"
+    );
+}
+
+#[test]
+fn raises_a_type_mismatch_as_an_integrity_error() {
+    assert_eq!(sqlite_error_class(&sqlite_failure(ffi::SQLITE_MISMATCH)), "IntegrityError");
+}
+
+#[test]
+fn raises_a_value_too_big_as_a_data_error() {
+    assert_eq!(sqlite_error_class(&sqlite_failure(ffi::SQLITE_TOOBIG)), "DataError");
+}
+
+#[test]
+fn raises_a_corrupt_database_as_a_database_error() {
+    assert_eq!(sqlite_error_class(&sqlite_failure(ffi::SQLITE_CORRUPT)), "DatabaseError");
+}
+
+#[test]
+fn raises_a_locked_database_as_an_operational_error() {
+    assert_eq!(sqlite_error_class(&sqlite_failure(ffi::SQLITE_BUSY)), "OperationalError");
 }

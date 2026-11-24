@@ -284,7 +284,7 @@ class PubSubWriter:
 
             except DBAPIError as e:
 
-                # A value of one item that PostgreSQL rejects, or a lock that one item waits for past the timeout,
+                # A value of one item that the database rejects, or a lock that one item waits for past the timeout,
                 # fails the whole commit, so each item of the batch is written again in a transaction of its own
                 # and only the caller of the item at fault receives the error ..
                 if len(batch) > 1:
@@ -311,7 +311,7 @@ class PubSubWriter:
 
     def _write_items_one_by_one(self, engine:'Engine', batch:'anylist') -> 'anylist':
         """ Writes each item of a batch in a transaction of its own, storing in an item the error
-        of a value that PostgreSQL rejected in it. Returns the audit events that were committed.
+        of a value that the database rejected in it. Returns the audit events that were committed.
         """
         out:'anylist' = []
 

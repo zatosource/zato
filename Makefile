@@ -1073,6 +1073,7 @@ Zato_Test_Step_Tests_pubsub-config-store  := \
 Zato_Test_Step_Runner_pubsub-backend := $(Zato_Test_PubSub_Gevent_Process)
 Zato_Test_Step_Tests_pubsub-backend  := \
 	$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_pubsub_backend_sqlite.py \
+	$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_false_conflicts_sqlite.py \
 	$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_store_sqlite.py \
 	$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_pubsub_backend_postgresql.py \
 	$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_store_postgresql.py \
