@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from dataclasses import dataclass
 from logging import getLogger
-from time import monotonic
 from typing import NamedTuple
 
 # SQLAlchemy
@@ -18,10 +17,7 @@ from sqlalchemy import and_, select
 # Zato
 from zato.common.api import PubSub
 from zato.common.audit_log.api import is_audit_log_enabled
-from zato.common.db_env.common import Type_SQLite
-from zato.common.db_env.database import is_database_lost
 from zato.common.db_env.engine import call_database, execute_write
-from zato.common.db_env.sqlite_identity import DatabaseFileReplaced
 from zato.common.pubsub.delivery_scope import get_delivery_scope
 from zato.common.pubsub.sql.admin import SQLAdminAPI
 from zato.common.pubsub.sql.config import get_batch_size, get_pull_lease_seconds
@@ -125,13 +121,9 @@ class SQLPubSubBackend(SQLAdminAPI):
         """
         topic_name = topic_name.lower()
 
-        # A topic of config.db that is inactive is refused here, before any message is built
+        # A topic of the configuration database that is inactive is refused here, before any message is built
         if topic_name in self.inactive_topics:
             raise Exception(f'Topic `{topic_name}` is inactive')
-
-        # A database whose SQLite file was removed or replaced accepts no publication
-        if is_database_lost():
-            raise DatabaseFileReplaced(f'Publication to `{topic_name}` refused, the database file was removed or replaced')
 
         built = build_publication(
             self,
@@ -220,15 +212,11 @@ class SQLPubSubBackend(SQLAdminAPI):
 
     def ack_delivered(self, sub_key:'str', msg_id:'str', delivery_attempt:'int') -> 'int':
         """ Acknowledges one pushed message of an outgoing connection's queue under the fence, with the delivery attempt
-        that this server recorded for it. On PostgreSQL, a message that another server has handed out again since
-        raises PubSubAckConflict and stays in the queue, while on SQLite, which only one server uses and which counts
-        the attempts in memory, any attempt is accepted. A message concluded already is removed by nothing.
+        that this server recorded for it. A message that another server has handed out again since
+        raises PubSubAckConflict and stays in the queue. A message concluded already is removed by nothing.
         Returns how many messages became fully delivered.
         """
-        if self.engine.dialect.name == Type_SQLite:
-            expected_attempts = None
-        else:
-            expected_attempts = [delivery_attempt]
+        expected_attempts = [delivery_attempt]
 
         ack = new_fenced_ack(sub_key, [msg_id], expected_attempts)
         atomic = new_pending_atomic([], ack, False)
@@ -341,15 +329,13 @@ class SQLPubSubBackend(SQLAdminAPI):
 
         while True:
 
-            batch_started = monotonic()
-
             batch_count = call_database(self.engine, self._unsubscribe_batch, self.engine, sub_key, topic_name, batch_size)
 
             if not batch_count:
                 break
 
             cleaned_up_count += batch_count
-            self._yield_after_batch(monotonic() - batch_started)
+            self._yield_after_write()
 
         if cleaned_up_count:
             logger.info('Cleaned up deliveries of a removed pair -> sub_key:%s, topic_name:%s, cleaned_up_count:%d',
@@ -411,14 +397,11 @@ class SQLPubSubBackend(SQLAdminAPI):
 
         _ = execute_write(self.engine, delete_statement)
 
-        # .. then clean up the pending deliveries in bounded batches, each committed in turn
-        # .. with the other writes of the server to the same SQLite file.
+        # .. then clean up the pending deliveries in bounded batches, each committed in a transaction of its own.
         batch_size = get_batch_size()
         cleaned_up_count = 0
 
         while True:
-
-            batch_started = monotonic()
 
             batch_count = call_database(self.engine, self._unsubscribe_batch, self.engine, sub_key, topic_name, batch_size)
 
@@ -429,7 +412,7 @@ class SQLPubSubBackend(SQLAdminAPI):
             cleaned_up_count += batch_count
 
             # .. let the other greenlets run between the batches.
-            self._yield_after_batch(monotonic() - batch_started)
+            self._yield_after_write()
 
         logger.info('Unsubscribed -> sub_key:%s, topic_name:%s, cleaned_up_count:%d',
             sub_key, topic_name, cleaned_up_count)

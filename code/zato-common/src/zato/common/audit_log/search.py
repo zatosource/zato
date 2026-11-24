@@ -83,7 +83,6 @@ def as_list(value:'strorlist') -> 'anylist':
 # ################################################################################################################################
 
 def build_search_conditions(
-    dialect_name:'str',
     sources:'anylist' = [],
     object_names:'anylist' = [],
     outcomes:'anylist' = [],
@@ -149,7 +148,7 @@ def build_search_conditions(
         search_words = extract_search_text(query).split()
 
         if search_words:
-            any_column_match = match_event_search(dialect_name, event_table, event_payload_table, search_words)
+            any_column_match = match_event_search(event_table, event_payload_table, search_words)
 
         # .. and a query without a word of three characters is matched by LIKE, in any case, with wildcards matched literally,
         # in the searched columns of the event or in the words of its payload.
@@ -190,7 +189,6 @@ def build_search_conditions(
 
             is_wanted_attr = event_attr_table.c.name.in_(attr_names)
             is_matching_attr = event_attr_table.c.value.like(pattern, escape='\\')
-            is_matching_attr = narrow_attr_search(dialect_name, event_attr_table, query, is_matching_attr)
 
             attr_event_ids = select(event_attr_table.c.event_id)
             attr_event_ids = attr_event_ids.where(is_wanted_attr)
@@ -202,22 +200,18 @@ def build_search_conditions(
             is_matching_cid = event_table.c.cid.in_(matching_cids)
             matching_parts.append(is_matching_cid)
 
-        # PostgreSQL reads an OR of the two parts with a scan of the whole table, so there each part
+        # PostgreSQL reads an OR of the two parts with a scan of the whole table, so each part
         # selects its ids through its own index and the event matches when its id is in their union.
         if len(matching_parts) > 1:
-            if dialect_name == Type_PostgreSQL:
-                matching_ids:'anylist' = []
+            matching_ids:'anylist' = []
 
-                for part in matching_parts:
-                    part_ids = select(event_table.c.id)
-                    part_ids = part_ids.where(part)
-                    matching_ids.append(part_ids)
+            for part in matching_parts:
+                part_ids = select(event_table.c.id)
+                part_ids = part_ids.where(part)
+                matching_ids.append(part_ids)
 
-                all_matching_ids = union(*matching_ids)
-                any_matching_part = event_table.c.id.in_(all_matching_ids)
-
-            else:
-                any_matching_part = or_(*matching_parts)
+            all_matching_ids = union(*matching_ids)
+            any_matching_part = event_table.c.id.in_(all_matching_ids)
 
         else:
             any_matching_part = any_column_match
@@ -289,7 +283,6 @@ def search_events(
 
     # .. so everything the filters narrow the log down to ..
     conditions = build_search_conditions(
-        engine.dialect.name,
         sources=sources,
         object_names=object_names,
         outcomes=outcomes,

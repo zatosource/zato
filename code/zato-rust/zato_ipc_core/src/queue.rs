@@ -1,9 +1,8 @@
-//! First-in first-out queues of the `SQLite` writers of the worker and the config process.
+//! First-in first-out queues of the keyed locks of the worker and the config process.
 //!
-//! There is one queue per database file, followed by the queue of each keyed lock,
-//! which the two processes take turns through in the same way.
+//! There is one queue per entry of the table of keyed locks, through which the two processes take turns.
 //!
-//! A place takes a ticket and writes when the queue serves its ticket. A place never holds
+//! A place takes a ticket and holds the lock when the queue serves its ticket. A place never holds
 //! more than one ticket of one queue, so a process orders its own greenlets before it enters.
 //!
 //! Each place records its ticket in a block of its own. Before it takes a ticket, the place marks

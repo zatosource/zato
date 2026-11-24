@@ -23,17 +23,13 @@ jiff = { version = "1.0.1", default-features = false, features = ["std"] }
 foldhash = "0.2.0"
 serde = "1.0.228"
 serde_json = { version = "1.0.149", features = ["raw_value"] }
-blake2 = "0.11.0"
-rusqlite = "0.41.1"
-libc = "0.2.186"
-flate2 = { version = "1.1.11", default-features = false, features = ["zlib"] }
 parking_lot = "0.12"
 
 [dev-dependencies]
 proptest = "1.11.0"
 
 [lints.rust]
-unsafe_code = "deny"
+unsafe_code = "forbid"
 
 [profile.dev]
 incremental = false

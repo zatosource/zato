@@ -118,9 +118,6 @@ pub mod test_support {
     /// Returns the sizes of a small region used by most tests.
     #[must_use]
     pub const fn small_params() -> RegionParams {
-        RegionParams {
-            queue_count: 2,
-            lock_capacity: 4,
-        }
+        RegionParams { lock_capacity: 4 }
     }
 }

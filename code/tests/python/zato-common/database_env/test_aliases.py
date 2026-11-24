@@ -120,16 +120,6 @@ def test_aliases_are_read_in_their_order(monkeypatch:'pytest.MonkeyPatch') -> 'N
 
 # ################################################################################################################################
 
-def test_sqlite_path_is_read_under_an_alias(monkeypatch:'pytest.MonkeyPatch') -> 'None':
-
-    monkeypatch.setenv('Zato_Common_DB_Path', '/opt/zato/env/common.db')
-
-    values = get_env_values(database_config)
-
-    assert values['name'] == '/opt/zato/env/common.db'
-
-# ################################################################################################################################
-
 def test_alias_with_a_different_value_is_reported(monkeypatch:'pytest.MonkeyPatch') -> 'None':
 
     monkeypatch.setenv('Zato_PubSub_DB_Host', 'postgresql-pubsub.example.com')

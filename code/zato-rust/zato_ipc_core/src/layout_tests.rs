@@ -44,7 +44,7 @@ fn layout_runs(layout: &Layout) -> Vec<BlockRun> {
     push_items(&mut out, 1, &item(0, HEADER_BLOCKS, HEADER_LOCK_CAPACITY + 1));
     push_items(&mut out, 1, &item(layout.heartbeat_start, HEARTBEAT_BLOCKS, 1));
 
-    // .. the head block and the block of each place of every writer queue and of the queue of every keyed lock ..
+    // .. the head block and the block of each place of the queue of every keyed lock ..
     let queue_blocks = layout.queue_total * layout.blocks_per_queue;
     push_items(&mut out, queue_blocks, &item(layout.queues_start, 1, 1));
 
@@ -59,14 +59,8 @@ proptest! {
     /// Every run starts at a block boundary and covers the words it holds, and the runs follow one another
     /// without a gap or an overlap up to the end of the region, so no two of them share a block.
     #[test]
-    fn every_entry_occupies_whole_blocks_of_its_own(
-        queue_count in 0_usize..6,
-        lock_capacity in 0_usize..12,
-    ) {
-        let params = RegionParams {
-            queue_count,
-            lock_capacity,
-        };
+    fn every_entry_occupies_whole_blocks_of_its_own(lock_capacity in 0_usize..12) {
+        let params = RegionParams { lock_capacity };
 
         let layout = Layout::new(params).map_err(|error| TestCaseError::fail(error.to_string()))?;
         let mut next_start = 0;

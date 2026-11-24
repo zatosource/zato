@@ -179,11 +179,7 @@ class ConfigSupervisor:
         region = arbiter.region
         config_place = region.config_place
 
-        # The places of the config process in the queues of the SQLite writes and in the queues of the keyed locks
-        # are withdrawn before its replacement starts ..
-        for queue in range(region.queue_count):
-            region.queue_abandon(queue, config_place)
-
+        # The places of the config process in the queues of the keyed locks are withdrawn before its replacement starts ..
         for entry in range(region.lock_capacity):
             region.lock_abandon(entry, config_place)
 

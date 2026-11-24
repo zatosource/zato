@@ -358,50 +358,42 @@ class PubSubWriter:
 
         with engine.begin() as connection:
 
-            # Every pub/sub transaction on PostgreSQL waits for a lock only as long as a SQLite write does
+            # Every pub/sub transaction waits for a lock only up to the lock timeout of pub/sub ..
             set_lock_timeout(connection)
 
-            # The pairs of the subscription list are written first so that the publications of the same commit see their rows ..
+            # .. the pairs of the subscription list are written first so that the publications of the same commit see their rows ..
             if syncs:
                 apply_syncs(connection, syncs)
 
-            # On SQLite, the remaining items are written in Rust with the GIL released, in the same order as below ..
-            if connection.dialect.name == Type_SQLite:
-                if publications or acks or atomics or attempts_list or leases:
-                    added_pairs = write_items_sqlite(
-                        connection, publications, acks, atomics, attempts_list, leases, self.subscription_list)
+            if publications:
+                self._insert_publications(connection, publications, added_pairs)
 
-            else:
+            if acks:
+                self._delete_acks(connection, acks, ack_by_message_id)
 
-                if publications:
-                    self._insert_publications(connection, publications, added_pairs)
+            # .. each fenced acknowledgement commits with its publications or not at all, without failing the others ..
+            for atomic in atomics:
+                self._write_atomic(connection, atomic, ack_by_message_id, added_pairs)
 
-                if acks:
-                    self._delete_acks(connection, acks, ack_by_message_id)
+            # .. a push attempt is recorded only for a delivery that this transaction has not acknowledged ..
+            for attempts in attempts_list:
+                parameters = {'attempt_delivery_ids': attempts.delivery_ids}
+                for row in _record_attempts_statement_plain.execute(connection, parameters):
+                    attempts.attempts[row.id] = row.attempt
 
-                # Each fenced acknowledgement commits with its publications or not at all, without failing the others ..
-                for atomic in atomics:
-                    self._write_atomic(connection, atomic, ack_by_message_id, added_pairs)
+            # .. a pull leases nothing that this transaction has acknowledged already ..
+            for lease in leases:
+                rows, attempts = lease_messages(
+                    connection, self.subscription_list, lease.sub_key, lease.max_messages, lease.max_len, lease.now_ms, lease.leased_until_ms)
+                lease.rows = rows
+                lease.attempts = attempts
+                lease.on_leased(lease)
 
-                # .. a push attempt is recorded only for a delivery that this transaction has not acknowledged ..
-                for attempts in attempts_list:
-                    parameters = {'attempt_delivery_ids': attempts.delivery_ids}
-                    for row in _record_attempts_statement_plain.execute(connection, parameters):
-                        attempts.attempts[row.id] = row.attempt
-
-                # .. a pull leases nothing that this transaction has acknowledged already ..
-                for lease in leases:
-                    rows, attempts = lease_messages(
-                        connection, self.subscription_list, lease.sub_key, lease.max_messages, lease.max_len, lease.now_ms, lease.leased_until_ms)
-                    lease.rows = rows
-                    lease.attempts = attempts
-                    lease.on_leased(lease)
-
-                # .. the payloads are dropped after all the writes of delivery rows. Dropping one holds the delivery rows
-                # of the other subscribers of its message until the commit, so a transaction that locked a delivery row
-                # after a drop could wait for one that waits for it in turn ..
-                if ack_by_message_id:
-                    self._drop_payloads(connection, ack_by_message_id)
+            # .. the payloads are dropped after all the writes of delivery rows. Dropping one holds the delivery rows
+            # of the other subscribers of its message until the commit, so a transaction that locked a delivery row
+            # after a drop could wait for one that waits for it in turn ..
+            if ack_by_message_id:
+                self._drop_payloads(connection, ack_by_message_id)
 
             # .. and the audit events of what was written commit with it.
             out = collect_audit_events(publications, atomics, leases)
@@ -430,15 +422,10 @@ class PubSubWriter:
         ) -> 'None':
         """ Writes a fenced acknowledgement with its publications in the caller's transaction. Each reason for which
         the item fails is checked before anything of it is written, so that an item that fails writes nothing,
-        and on PostgreSQL the item is also enclosed in a savepoint, against a concurrent commit that changes
+        and the item is also enclosed in a savepoint, against a concurrent commit that changes
         what the checks read before the item is written.
         """
-        is_postgresql = connection.dialect.name == Type_PostgreSQL
-
-        if is_postgresql:
-            savepoint = connection.begin_nested()
-        else:
-            savepoint = None
+        savepoint = connection.begin_nested()
 
         # The checks write nothing, so an item that fails them is only marked as failed ..
         try:
@@ -446,8 +433,7 @@ class PubSubWriter:
             fenced_rows = check_fenced(connection, atomic.ack, has_new_message)
 
         except (PubSubAckConflict, PubSubDuplicateMsgID) as e:
-            if savepoint:
-                savepoint.rollback()
+            savepoint.rollback()
             atomic.exception = e
             return
 
@@ -464,16 +450,12 @@ class PubSubWriter:
             delete_fenced(connection, atomic.ack, fenced_rows)
 
         except (PubSubAckConflict, PubSubDuplicateMsgID) as e:
-            if not savepoint:
-                raise
-
             savepoint.rollback()
             reset_item(atomic)
             atomic.exception = e
             return
 
-        if savepoint:
-            savepoint.commit()
+        savepoint.commit()
 
         # The full delivery of a message counts towards the last acknowledgement that removed one of its rows
         for message_id in fenced_rows.message_ids:
@@ -603,11 +585,11 @@ class PubSubWriter:
 # ################################################################################################################################
 
     def _insert_deliveries(self, connection:'Connection', delivery_rows:'anylist') -> 'None':
-        """ Inserts delivery rows with multi-row inserts or, when there are many of them on PostgreSQL, with COPY.
+        """ Inserts delivery rows with multi-row inserts or, when there are many of them, with COPY.
         """
-        dialect_name = connection.dialect.name
+        delivery_row_count = len(delivery_rows)
 
-        if dialect_name == Type_PostgreSQL and len(delivery_rows) >= _copy_min_delivery_rows:
+        if delivery_row_count >= _copy_min_delivery_rows:
             copy_rows(connection, delivery_table, delivery_rows)
         else:
             _ = _delivery_insert.insert_rows(connection, delivery_rows)
@@ -651,11 +633,9 @@ class PubSubWriter:
             message_rows.append(message_values)
 
         # .. all the messages go in one statement, which returns the primary keys of those it inserted ..
-        message_insert = _message_inserts[connection.dialect.name]
-
         inserted:'anydict' = {}
 
-        for row in message_insert.insert_rows(connection, message_rows):
+        for row in _message_insert_plain.insert_rows(connection, message_rows):
             inserted[row.msg_id] = row.id
 
         # .. a message that was not inserted has an identifier that exists already ..

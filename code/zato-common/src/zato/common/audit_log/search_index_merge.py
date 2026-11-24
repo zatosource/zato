@@ -16,7 +16,6 @@ from sqlalchemy import text
 # Zato
 from zato.common.audit_log.common import event_attr_table
 from zato.common.audit_log.search_index import get_postgresql_index_names
-from zato.common.db_env.common import Type_PostgreSQL
 from zato.common.db_env.engine import call_database
 
 # ################################################################################################################################
@@ -58,7 +57,7 @@ def register_merged_index(index_name:'str') -> 'None':
 # ################################################################################################################################
 
 class SearchIndexMerger:
-    """ Merges the pending lists of the trigram GIN indexes of PostgreSQL into the indexes every ten seconds, in a thread
+    """ Merges the pending lists of the trigram GIN indexes into the indexes every ten seconds, in a thread
     of its own. An insert that finds a pending list over its limit merges the whole list within its own statement,
     which delays the transaction of that insert and writes the WAL of the merge at once. Merged every ten seconds,
     each pending list stays well below its limit, so that no insert merges it.
@@ -109,55 +108,60 @@ class SearchIndexMerger:
 # ################################################################################################################################
 
 class _MergerCtx:
-    """ The merger of the audit engine the process writes to, if that engine is a PostgreSQL one.
+    """ The merger of the audit engine the process writes to.
     """
 
     # Guards the replacement of the merger
     lock = Lock()
 
-    # The engine the merger was chosen for, or None before the first write
-    engine:'Engine | None' = None
-
-    # The merger of that engine, or None on SQLite
+    # The merger of the engine the process writes to, or None before the first write
     merger:'SearchIndexMerger | None' = None
 
 # ################################################################################################################################
 
-def get_search_index_merger(engine:'Engine') -> 'SearchIndexMerger | None':
-    """ Returns the started merger of the trigram indexes of the event and attribute tables for a PostgreSQL engine,
-    starting it with the first call. The merger of a previous engine is stopped once another engine takes its place,
-    and no merger runs on SQLite.
+def _get_started_merger(engine:'Engine') -> 'SearchIndexMerger | None':
+    """ Returns the merger of the given engine if it has been started already, or None otherwise.
+    """
+    out = None
+
+    if merger := _MergerCtx.merger:
+        if merger.engine is engine:
+            out = merger
+
+    return out
+
+# ################################################################################################################################
+
+def get_search_index_merger(engine:'Engine') -> 'SearchIndexMerger':
+    """ Returns the started merger of the trigram indexes of the event and attribute tables for an engine,
+    starting it with the first call. The merger of a previous engine is stopped once another engine takes its place.
     """
 
-    # The merger of this engine has been chosen already ..
-    if _MergerCtx.engine is engine:
-        return _MergerCtx.merger
+    # The merger of this engine has been started already ..
+    if out := _get_started_merger(engine):
+        return out
 
     with _MergerCtx.lock:
 
-        # .. it was chosen while this caller waited for the lock ..
-        if _MergerCtx.engine is engine:
-            return _MergerCtx.merger
+        # .. it was started while this caller waited for the lock ..
+        if out := _get_started_merger(engine):
+            return out
 
         # .. the merger of the previous engine stops ..
         if previous := _MergerCtx.merger:
             previous.stop()
 
-        # .. and a PostgreSQL engine receives one of its own.
-        if engine.dialect.name == Type_PostgreSQL:
-            audit_index_names = get_postgresql_index_names(event_attr_table.name)
+        # .. and the engine receives one of its own.
+        audit_index_names = get_postgresql_index_names(event_attr_table.name)
 
-            index_name_list = list(audit_index_names)
-            index_name_list.extend(_registered_index_names)
-            index_names = tuple(index_name_list)
+        index_name_list = list(audit_index_names)
+        index_name_list.extend(_registered_index_names)
+        index_names = tuple(index_name_list)
 
-            out = SearchIndexMerger(engine, index_names)
-            out.start()
-        else:
-            out = None
+        out = SearchIndexMerger(engine, index_names)
+        out.start()
 
         _MergerCtx.merger = out
-        _MergerCtx.engine = engine
 
     return out
 
@@ -174,7 +178,6 @@ def stop_search_index_merger() -> 'None':
             merger._thread.join()
 
         _MergerCtx.merger = None
-        _MergerCtx.engine = None
 
 # ################################################################################################################################
 # ################################################################################################################################

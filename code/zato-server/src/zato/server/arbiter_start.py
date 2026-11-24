@@ -8,9 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The start of a server as an arbiter with the config process and the worker. The arbiter reads the name of the server
 # from the configuration database, creates the schemas of the Zato database, removes the MCP sessions of the previous start,
-# takes over the Zato database on PostgreSQL, creates the shared region with the queue of the SQLite file
-# of the Zato database, imports the modules of the internal services, which both forked processes inherit,
-# confirms that nothing that a fork would duplicate is open, and forks the config process and the worker.
+# takes over the Zato database, creates the shared region, imports the modules of the internal services,
+# which both forked processes inherit, confirms that nothing that a fork would duplicate is open,
+# and forks the config process and the worker.
 
 # stdlib
 import os
@@ -25,12 +25,9 @@ from gevent import get_hub, sleep
 from sqlalchemy.util.langhelpers import save_generated_code
 
 # Zato
-from zato.common.db_env.common import Type_PostgreSQL
-from zato.common.db_env.database import database_config, get_database_sqlite_path, get_database_type, \
-    new_unshared_database_engine
-from zato.common.db_env.engine import create_schemas, get_cached_engine_count, get_queue_by_path
+from zato.common.db_env.database import database_config, new_unshared_database_engine
+from zato.common.db_env.engine import create_schemas, get_cached_engine_count
 from zato.common.db_env.outage import call_until_available
-from zato.common.db_env.sqlite_identity import record_identity
 from zato.common.odb.model import Server
 from zato.common.pubsub.sql.generation import take_over_before_fork
 from zato.common.util.api import find_internal_modules, get_odb_session
@@ -47,12 +44,11 @@ from zato.server.worker_runtime import WorkerRuntime
 
 if 0:
     from zato.common.ext.bunch import Bunch
-    from zato.common.typing_ import strintdict, strlist
+    from zato.common.typing_ import strlist
     from zato.server.arbiter_config import WorkerContext
     from zato.server.main import ZatoApplication
     from zato_ipc_core.zato_ipc_core import SharedRegion
 
-    strintdict = strintdict
     strlist = strlist
 
 # ################################################################################################################################
@@ -71,19 +67,6 @@ class ModuleCtx:
     Thread_Stop_Interval = 0.01
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def get_sqlite_paths() -> 'strlist':
-    """ Returns the paths of the SQLite files to which both the worker and the config process write,
-    which is the file of the Zato database, or none on PostgreSQL.
-    """
-    out:'strlist' = []
-
-    if db_path := get_database_sqlite_path():
-        out.append(db_path)
-
-    return out
-
 # ################################################################################################################################
 
 def get_server_name(server_config:'Bunch') -> 'str':
@@ -109,31 +92,24 @@ def get_server_name(server_config:'Bunch') -> 'str':
 # ################################################################################################################################
 
 def _create_database_schemas() -> 'None':
-    """ Creates the schemas of the Zato database through an engine of its own, which is disposed whether or not they were created,
-    and records the identity of its SQLite file, which the config process and the worker inherit.
+    """ Creates the schemas of the Zato database through an engine of its own, which is disposed whether or not they were created.
     """
     engine = new_unshared_database_engine()
 
     try:
         create_schemas(engine, database_config.metadata_tuple)
-
-        if db_path := get_database_sqlite_path():
-            record_identity(db_path)
-
     finally:
         engine.dispose()
 
 # ################################################################################################################################
 
 def prepare_databases(server_name:'str') -> 'None':
-    """ Creates the schemas of the Zato database and, on PostgreSQL, makes the server the active one,
+    """ Creates the schemas of the Zato database and makes the server the active one,
     each waiting for the database to become available if it is not, all through engines that are disposed before the fork,
     so that neither the worker nor the config process runs DDL concurrently with the other or raises the generation itself.
     """
     _ = call_until_available('Zato database schemas', _create_database_schemas)
-
-    if get_database_type() == Type_PostgreSQL:
-        _ = take_over_before_fork(new_unshared_database_engine, server_name)
+    _ = take_over_before_fork(new_unshared_database_engine, server_name)
 
 # ################################################################################################################################
 
@@ -206,17 +182,16 @@ class ServerProcesses:
     """ The main functions of the worker and of the config process of one server.
     """
 
-    def __init__(self, zato_app:'ZatoApplication', region:'SharedRegion', queue_by_path:'strintdict') -> 'None':
+    def __init__(self, zato_app:'ZatoApplication', region:'SharedRegion') -> 'None':
         self.zato_app = zato_app
         self.region = region
-        self.queue_by_path = queue_by_path
 
     def worker_main(self, ctx:'WorkerContext') -> 'None':
-        worker = WorkerRuntime(self.region, ctx, self.queue_by_path)
+        worker = WorkerRuntime(self.region, ctx)
         self.zato_app.run_worker(worker)
 
     def config_main(self, ctx:'WorkerContext') -> 'None':
-        runtime = ConfigRuntime(self.region, ctx, self.queue_by_path)
+        runtime = ConfigRuntime(self.region, ctx)
         self.zato_app.run_config_process(runtime)
 
 # ################################################################################################################################
@@ -231,13 +206,9 @@ def run_arbiter(zato_app:'ZatoApplication') -> 'int':
     server_name = get_server_name(server.fs_server_config)
     prepare_databases(server_name)
 
-    # .. each SQLite file receives one queue of the region ..
-    sqlite_paths = get_sqlite_paths()
-    queue_by_path = get_queue_by_path(sqlite_paths)
-    queue_count = len(queue_by_path)
-
-    region = new_server_region(queue_count)
-    processes = ServerProcesses(zato_app, region, queue_by_path)
+    # .. the region is shared by the config process and the worker ..
+    region = new_server_region()
+    processes = ServerProcesses(zato_app, region)
 
     # .. the arbiter rotates the files of zato_server_core that the worker appends to ..
     config = ArbiterConfig.from_defaults(gettempdir())

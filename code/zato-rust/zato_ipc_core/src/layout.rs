@@ -19,7 +19,7 @@ pub const BLOCK_WORDS: usize = 16;
 pub const REGION_MAGIC: u64 = 0x5A41_544F_5348_4D31;
 
 /// Version of the layout described in this module.
-pub const LAYOUT_VERSION: u64 = 7;
+pub const LAYOUT_VERSION: u64 = 8;
 
 /// Position of the magic word within the header block.
 pub const HEADER_MAGIC: usize = 0;
@@ -27,11 +27,8 @@ pub const HEADER_MAGIC: usize = 0;
 /// Position of the layout version within the header block.
 pub const HEADER_VERSION: usize = 1;
 
-/// Position of the number of writer queues within the header block.
-pub const HEADER_QUEUE_COUNT: usize = 2;
-
 /// Position of the number of entries of the table of keyed locks within the header block.
-pub const HEADER_LOCK_CAPACITY: usize = 3;
+pub const HEADER_LOCK_CAPACITY: usize = 2;
 
 /// Number of header blocks.
 const HEADER_BLOCKS: usize = 1;
@@ -39,10 +36,10 @@ const HEADER_BLOCKS: usize = 1;
 /// Number of blocks of the heartbeat of the worker.
 const HEARTBEAT_BLOCKS: usize = 1;
 
-/// Place of the worker in every writer queue and in the queue of every keyed lock.
+/// Place of the worker in the queue of every keyed lock.
 pub const WORKER_PLACE: usize = 0;
 
-/// Place of the config process in every writer queue and in the queue of every keyed lock.
+/// Place of the config process in the queue of every keyed lock.
 pub const CONFIG_PLACE: usize = 1;
 
 /// Number of places of every queue - the worker and the config process.
@@ -51,9 +48,6 @@ pub const PLACE_COUNT: usize = 2;
 /// Sizes of the tables of one region, fixed when the arbiter creates it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RegionParams {
-
-    /// Number of first-in first-out queues of `SQLite` writers, one per database file.
-    pub queue_count: usize,
 
     /// Number of entries of the table of keyed locks, each with a counter and a first-in first-out queue.
     pub lock_capacity: usize,
@@ -69,7 +63,7 @@ pub struct Layout {
     /// Offset of the first word of the block of the heartbeat of the worker.
     pub heartbeat_start: usize,
 
-    /// Offset of the first word of the writer queues.
+    /// Offset of the first word of the queues of the keyed locks.
     pub queues_start: usize,
 
     /// Offset of the first word of the table of keyed locks.
@@ -78,7 +72,7 @@ pub struct Layout {
     /// Number of blocks of one queue - its head block and one block per place.
     pub blocks_per_queue: usize,
 
-    /// Number of queues - the writer queues, followed by the queue of each keyed lock.
+    /// Number of queues, one per entry of the table of keyed locks, in the order of the entries.
     pub queue_total: usize,
 
     /// Number of words of the whole region.
@@ -112,8 +106,8 @@ impl Layout {
         // A queue has its head block followed by one ticket block per place ..
         let blocks_per_queue = PLACE_COUNT.checked_add(1).ok_or(RegionError::LayoutTooLarge)?;
 
-        // .. and the queue of each keyed lock has the same blocks as a writer queue and follows the writer queues.
-        let queue_total = params.queue_count.checked_add(params.lock_capacity).ok_or(RegionError::LayoutTooLarge)?;
+        // .. and each keyed lock has a queue of its own.
+        let queue_total = params.lock_capacity;
 
         let heartbeat_start = blocks_to_words(HEADER_BLOCKS)?;
         let queues_start = advance(heartbeat_start, HEARTBEAT_BLOCKS, 1)?;
@@ -148,7 +142,6 @@ impl Layout {
         let header = [
             (HEADER_MAGIC, REGION_MAGIC),
             (HEADER_VERSION, LAYOUT_VERSION),
-            (HEADER_QUEUE_COUNT, to_header_word(params.queue_count)),
             (HEADER_LOCK_CAPACITY, to_header_word(params.lock_capacity)),
         ];
 
@@ -167,7 +160,6 @@ impl Layout {
         let expected = [
             (HEADER_MAGIC, REGION_MAGIC, "magic"),
             (HEADER_VERSION, LAYOUT_VERSION, "layout version"),
-            (HEADER_QUEUE_COUNT, to_header_word(params.queue_count), "queue count"),
             (HEADER_LOCK_CAPACITY, to_header_word(params.lock_capacity), "lock capacity"),
         ];
 

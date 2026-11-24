@@ -24,9 +24,6 @@ from gevent.event import Event
 
 # Zato
 from zato.common.config_dispatcher import handle_config_event
-from zato.common.db_env.connection import SQLite_Busy_Timeout_Ms
-from zato.common.db_env.engine import bind_process_queues
-from zato.common.db_env.process_queue import get_deadline_seconds
 from zato.common.pubsub.sql.replaced import set_on_replaced
 from zato.common.typing_ import cast_
 from zato.server.arbiter_config import ModuleCtx as ArbiterCtx
@@ -42,7 +39,7 @@ from zato.server.worker_liveness import reopen_worker_logs, write_heartbeat
 
 if 0:
     from gevent import Greenlet
-    from zato.common.typing_ import any_, anydict, strintdict
+    from zato.common.typing_ import any_, anydict
     from zato.server.arbiter_config import WorkerContext
     from zato.server.base.parallel import ParallelServer
     from zato.server.control.envelope import Message
@@ -58,7 +55,6 @@ if 0:
     ParallelServer = ParallelServer
     Service = Service
     SharedRegion = SharedRegion
-    strintdict = strintdict
     WorkerContext = WorkerContext
 
 # ################################################################################################################################
@@ -81,12 +77,9 @@ class WorkerRuntime:
     """ The binding of the worker process to its arbiter, to the shared region of its server and to its server object.
     """
 
-    def __init__(self, region:'SharedRegion', ctx:'WorkerContext', queue_by_path:'strintdict') -> 'None':
-
-        # The queue of the shared region of each SQLite file of the server, by the real path of the file
+    def __init__(self, region:'SharedRegion', ctx:'WorkerContext') -> 'None':
         self.region = region
         self.ctx = ctx
-        self.queue_by_path = queue_by_path
 
         self.slot = ctx.slot
         self.generation = ctx.generation
@@ -133,11 +126,7 @@ class WorkerRuntime:
         self._server = server
         server.worker = self
 
-        # The writes of the worker to each SQLite file take turns with those of the config process ..
-        deadline_seconds = get_deadline_seconds(SQLite_Busy_Timeout_Ms)
-        bind_process_queues(self.region, self.region.worker_place, deadline_seconds, self.queue_by_path)
-
-        # .. the control channel is read from now on, and the worker exits once the arbiter closes it ..
+        # The control channel is read from now on, and the worker exits once the arbiter closes it ..
         reader = self.client.start()
         reader.link(self.on_control_closed)
         self.reader = reader

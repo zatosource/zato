@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # however many events have it. An event references its payload by the id of the payload's row, and a payload
 # is deleted when the last event referencing it is deleted or pruned.
 #
-# On PostgreSQL, a writer locks the payload rows it references before it inserts the missing ones,
+# A writer locks the payload rows it references before it inserts the missing ones,
 # and a deletion locks them for update before it checks for references in a statement of its own,
 # so that a payload is never deleted while a transaction that has not committed yet references it.
 
@@ -22,11 +22,9 @@ from hashlib import blake2b
 # SQLAlchemy
 from sqlalchemy import bindparam, select
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 # Zato
 from zato.common.audit_log.common import event_payload_table, event_table
-from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.plain_sql import PlainStatement
 
 # Zato - Rust
@@ -64,16 +62,13 @@ _digest_size = 16
 # replaces with the id of the payload's row.
 Payload_Digest_Key = 'payload_digest'
 
-# The insert of each database, which skips a payload that is stored already and returns the id and the digest
-# of each row it inserted
-_payload_inserts:'anydict' = {}
+# The insert that skips a payload that is stored already and returns the id and the digest of each row it inserted
+_payload_insert = postgresql_insert(event_payload_table)
+_payload_insert = _payload_insert.on_conflict_do_nothing(index_elements=[event_payload_table.c.digest])
+_payload_insert = _payload_insert.returning(event_payload_table.c.id, event_payload_table.c.digest)
+_payload_insert_statement = PlainStatement(_payload_insert)
 
-for _dialect_name, _insert in ((Type_SQLite, sqlite_insert), (Type_PostgreSQL, postgresql_insert)):
-    _payload_insert = _insert(event_payload_table).on_conflict_do_nothing(index_elements=[event_payload_table.c.digest])
-    _payload_insert = _payload_insert.returning(event_payload_table.c.id, event_payload_table.c.digest)
-    _payload_inserts[_dialect_name] = PlainStatement(_payload_insert)
-
-# The ids and the digests of the payloads of the given digests that are stored already, locked on PostgreSQL
+# The ids and the digests of the payloads of the given digests that are stored already, locked
 # against a concurrent deletion. Every transaction locks payloads in the order of their digests,
 # so that no two of them wait for each other.
 _stored_payloads_query = select(event_payload_table.c.id, event_payload_table.c.digest)
@@ -217,7 +212,7 @@ def store_payloads(connection:'Connection', payloads:'strstrdict', search_texts:
 # ################################################################################################################################
 
 def find_stored_payloads(connection:'Connection', payloads:'strstrdict') -> 'CursorResult[any_]':
-    """ Finds which of the given payloads, keyed by their digests, are stored already, and on PostgreSQL locks them,
+    """ Finds which of the given payloads, keyed by their digests, are stored already, and locks them,
     so that no deletion removes them before this transaction commits the events that reference them.
     The rows of the result are read by insert_new_payloads.
     """
@@ -265,10 +260,9 @@ def insert_new_payloads(
             })
 
     # .. they are inserted with multi-row statements, which return their ids, unless a concurrent transaction
-    # on PostgreSQL inserted one of them first ..
+    # inserted one of them first ..
     if rows:
-        insert_statement = _payload_inserts[connection.dialect.name]
-        inserted = insert_statement.insert_rows(connection, rows)
+        inserted = _payload_insert_statement.insert_rows(connection, rows)
 
         for row in inserted:
             out[row.digest] = row.id
@@ -312,10 +306,9 @@ def delete_unreferenced_payloads(connection:'Connection', payload_ids:'intlist')
 
     parameters = {'payload_ids': payload_ids}
 
-    # On PostgreSQL, the payloads are locked first, which waits for the writers that reference them to commit,
+    # The payloads are locked first, which waits for the writers that reference them to commit,
     # and the references are checked in a statement of its own, which sees what those writers committed ..
-    if connection.dialect.name == Type_PostgreSQL:
-        _ = connection.execute(_deleted_payloads_query, parameters)
+    _ = connection.execute(_deleted_payloads_query, parameters)
 
     # .. and the payloads that are referenced by no event are deleted.
     _ = connection.execute(_unreferenced_payloads_delete, parameters)

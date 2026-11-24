@@ -16,7 +16,6 @@ from sqlalchemy.exc import SQLAlchemyError
 
 # Zato
 from zato.common.api import SCHEDULER
-from zato.common.db_env.process_queue import ProcessQueueTimeout
 from zato.common.pubsub.sql.replaced import PubSubReplaced
 
 # ################################################################################################################################
@@ -48,7 +47,7 @@ class ModuleCtx:
     Key_Claimed_By = 'claimed_by'
 
 # The errors after which this server cannot confirm that it is still the active one
-_not_active_errors = (PubSubReplaced, SQLAlchemyError, OSError, ProcessQueueTimeout)
+_not_active_errors = (PubSubReplaced, SQLAlchemyError, OSError)
 
 # ################################################################################################################################
 # ################################################################################################################################

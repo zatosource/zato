@@ -16,8 +16,6 @@ from zato.common.audit_log.attachment import build_attachment_rows
 from zato.common.audit_log.attr_rows import build_attr_rows
 from zato.common.audit_log.common import event_attr_table, event_body_table, event_link_table, event_table
 from zato.common.audit_log.payload import assign_payload_ids, find_stored_payloads, get_event_rows, insert_new_payloads
-from zato.common.audit_log.sqlite_insert import insert_pending_events_sqlite
-from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.db_env.pg8000_copy import copy_rows
 from zato.common.db_env.plain_sql import PlainStatement
 
@@ -25,7 +23,7 @@ from zato.common.db_env.plain_sql import PlainStatement
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.engine import Connection, CursorResult, Dialect
+    from sqlalchemy.engine import Connection, CursorResult
     from sqlalchemy.sql.schema import Table
     from zato.common.audit_log.pending import pending_event_list
     from zato.common.typing_ import any_, anydict, anylist, dictlist, intlist, strstrdict
@@ -36,7 +34,6 @@ if 0:
     CursorResult = CursorResult
     strstrdict = strstrdict
     Connection = Connection
-    Dialect = Dialect
     dictlist = dictlist
     intlist = intlist
     pending_event_list = pending_event_list
@@ -55,14 +52,11 @@ _copy_min_rows = 16
 # The insert of a single event, which returns its id
 _insert_event_statement = PlainStatement(event_table.insert().returning(event_table.c.id))
 
-# The given number of new ids from the sequence of the event table on PostgreSQL
+# The given number of new ids from the sequence of the event table
 _event_id_sequence = func.pg_get_serial_sequence(event_table.name, event_table.c.id.name)
 _reserve_event_ids = select(func.nextval(_event_id_sequence))
 _reserve_event_ids = _reserve_event_ids.select_from(func.generate_series(1, bindparam('row_count')))
 _reserve_event_ids_statement = PlainStatement(_reserve_event_ids)
-
-# The rowid of the last row that the connection inserted on SQLite, outside of the triggers of that row
-_last_rowid_query = 'SELECT last_insert_rowid()'
 
 # The multi-row insert of each table, by the name of the table
 _insert_statements:'anydict' = {}
@@ -70,19 +64,11 @@ _insert_statements:'anydict' = {}
 # ################################################################################################################################
 # ################################################################################################################################
 
-def reserves_ids(dialect:'Dialect') -> 'bool':
-    """ Whether this database reserves the ids of the event rows from the sequence of the table before they are inserted.
-    """
-    out = dialect.name == Type_PostgreSQL
-    return out
-
-# ################################################################################################################################
-
 def _reserve_ids(connection:'Connection', row_count:'int') -> 'CursorResult[any_] | None':
-    """ Reserves the ids of a batch of more than one event from the sequence of the event table, on a database
-    that reserves them, and returns the result whose rows are the ids, which _insert_with_reserved_ids reads.
+    """ Reserves the ids of a batch of more than one event from the sequence of the event table
+    and returns the result whose rows are the ids, which _insert_with_reserved_ids reads.
     """
-    if row_count > 1 and reserves_ids(connection.dialect):
+    if row_count > 1:
         out = _reserve_event_ids_statement.execute(connection, {'row_count': row_count})
     else:
         out = None
@@ -110,37 +96,18 @@ def _insert_with_reserved_ids(connection:'Connection', rows:'dictlist', reserved
 
 # ################################################################################################################################
 
-def _insert_by_rowid(connection:'Connection', rows:'dictlist') -> 'intlist':
-    """ Inserts the event rows with multi-row statements and returns their ids in insertion order, computed from
-    the rowid of the last row. The transaction holds the write lock of SQLite and the id of the event table is an alias
-    of the rowid, so each row of the batch receives the rowid that follows the one of the row before it.
-    """
-    insert_rows(connection, event_table, rows)
-
-    last_id = connection.exec_driver_sql(_last_rowid_query).scalar_one()
-    first_id = last_id - len(rows) + 1
-
-    out = list(range(first_id, last_id + 1))
-    return out
-
-# ################################################################################################################################
-
 def _insert_events(connection:'Connection', rows:'dictlist', reserved:'CursorResult[any_] | None') -> 'intlist':
     """ Inserts the event rows of one batch and returns their ids in the order of the rows.
     """
 
-    # A database with sequences inserts the rows of a batch with the ids it reserved ..
+    # A batch of more than one event is inserted with the ids it reserved ..
     if reserved is not None:
         out = _insert_with_reserved_ids(connection, rows, reserved)
 
-    # .. a single event receives its id from the insert itself ..
-    elif len(rows) == 1:
+    # .. and a single event receives its id from the insert itself.
+    else:
         inserted = _insert_event_statement.insert_rows(connection, rows)
         out = [inserted[0].id]
-
-    # .. and more events receive the ids that follow from the rowid of the last one.
-    else:
-        out = _insert_by_rowid(connection, rows)
 
     return out
 
@@ -192,12 +159,7 @@ def insert_rows(connection:'Connection', table:'Table', rows:'dictlist') -> 'Non
 def insert_pending_events(connection:'Connection', batch:'pending_event_list') -> 'intlist':
     """ Inserts the events of one batch with their attributes, bodies and lineage links in the transaction
     of the connection, with one statement per table, and returns the ids of the events in the order of the batch.
-    On SQLite, the rows are written in Rust with the GIL released.
     """
-    if connection.dialect.name == Type_SQLite:
-        out = insert_pending_events_sqlite(connection, batch)
-        return out
-
     # The payloads of the batch, each once, are stored before the events that reference them ..
     payloads:'strstrdict' = {}
     search_texts:'strstrdict' = {}

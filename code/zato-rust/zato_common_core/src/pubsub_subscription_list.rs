@@ -2,11 +2,9 @@
 //!
 //! The list governs the rows of `pubsub_topic_sub` of the sub keys that `new_sub_key` produces. It holds the pairs
 //! that `config.db` configures and the pairs whose rows are committed in the pub/sub database, and the status
-//! of each pair follows from the two. The Rust and the Python write paths of pub/sub read it under the write lock
-//! of their transactions.
+//! of each pair follows from the two. The write path of pub/sub reads it under the write lock of its transactions.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
-use std::sync::Arc;
 
 use parking_lot::RwLock;
 use pyo3::prelude::*;
@@ -29,9 +27,6 @@ pub const STATUS_PENDING_REMOVAL: &str = "pending-removal";
 
 /// A subscriber and topic pair, the sub key first.
 pub type Pair = (String, String);
-
-/// The subscription list shared between the Python object and the write paths that run without the GIL.
-pub type SharedList = Arc<RwLock<ListState>>;
 
 // ################################################################################################################################
 // ################################################################################################################################
@@ -487,22 +482,14 @@ pub struct PairStatus {
 // ################################################################################################################################
 // ################################################################################################################################
 
-/// The subscription list of a worker, shared by the Python and the Rust write paths of pub/sub.
+/// The subscription list of a worker, which the write path of pub/sub consults for each publication.
 ///
 /// Every change replaces or updates the state in one step under the write lock, with no input or output,
 /// so a reader sees the state either before or after a change, never in between.
 #[pyclass(frozen, name = "SubscriptionList")]
 pub struct SubscriptionList {
-    /// The state, which the write paths that run without the GIL read through their own reference.
-    state: SharedList,
-}
-
-impl SubscriptionList {
-    /// Returns a reference to the state for the write paths that run without the GIL.
-    #[must_use]
-    pub fn shared(&self) -> SharedList {
-        Arc::clone(&self.state)
-    }
+    /// The configured and the committed pairs with the subscribers of `config.db`.
+    state: RwLock<ListState>,
 }
 
 #[pymethods]
@@ -523,7 +510,7 @@ impl SubscriptionList {
     #[new]
     fn new() -> Self {
         Self {
-            state: Arc::new(RwLock::new(ListState::default())),
+            state: RwLock::new(ListState::default()),
         }
     }
 

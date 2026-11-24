@@ -20,12 +20,10 @@ from hashlib import sha256
 # SQLAlchemy
 from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 # Zato
 from zato.common.audit_log.common import event_dedup_table
 from zato.common.audit_log.writes import execute_audit_write, write_audit
-from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.util.api import utcnow
 
 # ################################################################################################################################
@@ -42,11 +40,9 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The insert of each database, which skips a row whose key exists already
-_dialect_inserts = {
-    Type_SQLite: sqlite_insert,
-    Type_PostgreSQL: postgresql_insert,
-}
+# The insert that skips a row whose key exists already
+_claim_key_insert = postgresql_insert(event_dedup_table)
+_claim_key_insert = _claim_key_insert.on_conflict_do_nothing(index_elements=[event_dedup_table.c.dedup_key])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -93,11 +89,7 @@ def _claim_key(connection:'Connection', values:'stranydict') -> 'bool':
     The unique index makes the claim atomic - a concurrent duplicate inserts nothing, without failing the transaction
     that it shares with other writes.
     """
-    insert = _dialect_inserts[connection.dialect.name]
-
-    insert_statement = insert(event_dedup_table)
-    insert_statement = insert_statement.values(**values)
-    insert_statement = insert_statement.on_conflict_do_nothing(index_elements=[event_dedup_table.c.dedup_key])
+    insert_statement = _claim_key_insert.values(**values)
 
     result = connection.execute(insert_statement)
 

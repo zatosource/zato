@@ -23,11 +23,10 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def new_server_region(queue_count:'int') -> 'SharedRegion':
-    """ Returns the region of a server with the given number of queues of its SQLite files.
+def new_server_region() -> 'SharedRegion':
+    """ Returns the region of a server.
     """
     out = SharedRegion({
-        'queue_count': queue_count,
         'lock_capacity': ModuleCtx.Lock_Capacity,
     })
 

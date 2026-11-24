@@ -1,11 +1,11 @@
 //! Shared memory region of a Zato server.
 //!
 //! The arbiter of a Zato server creates one region before it forks the worker and the config process,
-//! and both inherit it. The region holds the heartbeat of the worker, the first-in first-out queues
-//! through which the two processes take turns writing to each `SQLite` database file, and the keyed locks
-//! of outgoing connections with their counters. Every field is an atomic word, and each queue records
-//! the ticket of each place, so the turn of a process terminated at any instruction is taken over.
-//! Each place of each queue also has a wake-up descriptor that makes the gevent hub of its process return from waiting.
+//! and both inherit it. The region holds the heartbeat of the worker and the keyed locks of outgoing connections,
+//! each with a counter and a first-in first-out queue through which the two processes take turns. Every field
+//! is an atomic word, and each queue records the ticket of each place, so the turn of a process terminated
+//! at any instruction is taken over. Each place also has a wake-up descriptor that makes the gevent hub
+//! of its process return from waiting.
 
 pub mod error;
 pub mod heartbeat;

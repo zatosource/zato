@@ -68,12 +68,6 @@ def _set_variables(monkeypatch:'pytest.MonkeyPatch', env:'strstrdict') -> 'None'
 
 # ################################################################################################################################
 
-def _new_sqlite_path(work_dir:'pathlib.Path', file_name:'str') -> 'str':
-    out = os.path.join(work_dir, file_name)
-    return out
-
-# ################################################################################################################################
-
 def _check_compare_and_set(store:'SharedObjectStore') -> 'None':
     """ Runs one object through its creation, updates, a stale update, listing and deletion.
     """
@@ -114,27 +108,6 @@ def _check_compare_and_set(store:'SharedObjectStore') -> 'None':
     assert store.get(_object_type, name) is None
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def test_sqlite_file(monkeypatch:'pytest.MonkeyPatch', tmp_path:'pathlib.Path') -> 'None':
-    """ The shared objects are in the SQLite file of the Zato database, on the engine of the Zato database.
-    """
-    _clear_database_variables(monkeypatch)
-
-    db_path = _new_sqlite_path(tmp_path, 'zato.db')
-    monkeypatch.setenv('Zato_Database_Path', db_path)
-
-    store = SharedObjectStore()
-
-    try:
-        _check_compare_and_set(store)
-
-        assert store.engine is get_database_engine()
-        assert str(store.engine.url) == f'sqlite:///{db_path}'
-
-    finally:
-        dispose_database_engine()
-
 # ################################################################################################################################
 # ################################################################################################################################
 

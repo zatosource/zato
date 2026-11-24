@@ -138,7 +138,7 @@ def needs_event_rows(filters:'SearchFilters') -> 'bool':
 
 # ################################################################################################################################
 
-def event_conditions(dialect_name:'str', filters:'SearchFilters', *, needs_time:'bool' = True) -> 'anylist':
+def event_conditions(filters:'SearchFilters', *, needs_time:'bool' = True) -> 'anylist':
     """ The conditions of a search over the event table, with or without its time window.
     """
     if needs_time:
@@ -149,7 +149,6 @@ def event_conditions(dialect_name:'str', filters:'SearchFilters', *, needs_time:
         time_to = None
 
     out = build_search_conditions(
-        dialect_name,
         filters.sources,
         filters.object_names,
         filters.outcomes,
@@ -167,11 +166,10 @@ def event_conditions(dialect_name:'str', filters:'SearchFilters', *, needs_time:
 
 # ################################################################################################################################
 
-def count_conditions(dialect_name:'str', filters:'SearchFilters', split:'MinuteSplit') -> 'anylist':
+def count_conditions(filters:'SearchFilters', split:'MinuteSplit') -> 'anylist':
     """ The conditions of a search over the event counts, limited to the whole minutes of its time window.
     """
     out = build_search_conditions(
-        dialect_name,
         filters.sources,
         filters.object_names,
         filters.outcomes,
@@ -274,11 +272,9 @@ def time_range(start:'datetime', end:'datetime') -> 'any_':
 def count_matching(connection:'Connection', filters:'SearchFilters') -> 'int':
     """ The number of events a search matches.
     """
-    dialect_name = connection.dialect.name
-
     # A search the event counts cannot answer counts the events themselves ..
     if needs_event_rows(filters):
-        conditions = event_conditions(dialect_name, filters)
+        conditions = event_conditions(filters)
 
         statement = select(func.count())
         statement = statement.select_from(event_table)
@@ -292,7 +288,7 @@ def count_matching(connection:'Connection', filters:'SearchFilters') -> 'int':
     parts:'anylist' = []
 
     if split.has_whole_minutes:
-        conditions = count_conditions(dialect_name, filters, split)
+        conditions = count_conditions(filters, split)
 
         count_sum = func.sum(event_count_table.c.event_count)
         count_sum = cast(count_sum, BigInteger)
@@ -304,7 +300,7 @@ def count_matching(connection:'Connection', filters:'SearchFilters') -> 'int':
         parts.append(whole_minutes)
 
     # .. and counts the events of each of its partial minutes, through the time index ..
-    conditions = event_conditions(dialect_name, filters, needs_time=False)
+    conditions = event_conditions(filters, needs_time=False)
 
     for start, end in split.edges:
         in_edge = time_range(start, end)

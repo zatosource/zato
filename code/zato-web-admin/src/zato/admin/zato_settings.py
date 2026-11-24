@@ -38,19 +38,11 @@ def update_globals(config, base_dir='.', needs_crypto=True):
         config['zato_secret_key'], config['well_known_data'], stdin_data=read_stdin_data())
 
     for k, v in config.items():
-        if k.startswith('DATABASE_'):
-            default = globals()['DATABASES']['default']
-            k = k.replace('DATABASE_', '', 1)
-
-            v = str(v) if k != 'OPTIONS' else v
-            default[k] = v
-
-        else:
-            if k == 'ADMIN_INVOKE_PASSWORD' and needs_crypto:
-                v = cm.decrypt(v)
-            elif k == 'log_config':
-                v = os.path.join(base_dir, v)
-            globals()[k] = v
+        if k == 'ADMIN_INVOKE_PASSWORD' and needs_crypto:
+            v = cm.decrypt(v)
+        elif k == 'log_config':
+            v = os.path.join(base_dir, v)
+        globals()[k] = v
 
 # ################################################################################################################################
 

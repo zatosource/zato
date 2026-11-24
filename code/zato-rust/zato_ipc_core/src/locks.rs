@@ -2,7 +2,7 @@
 //! and a first-in first-out queue.
 //!
 //! A key claims one entry of the lock table, whose block holds the hash of the key and the counter. The queue
-//! of the entry follows the writer queues of the region and is taken in turns the way a writer queue is,
+//! of the entry has the same number as the entry and is taken in turns by the worker and the config process,
 //! so the lock of a process terminated at any instruction passes on once the arbiter abandons its tickets.
 //! The counter starts at zero.
 
@@ -65,15 +65,15 @@ impl RegionView<'_> {
         Err(RegionError::TableFull)
     }
 
-    /// Returns the queue of the lock of an entry, which follows the writer queues of the region.
-    pub fn lock_queue(&self, entry: usize) -> Result<usize, RegionError> {
-        let params = self.layout().params;
+    /// Returns the queue of the lock of an entry, the queues of the region following the order of the entries.
+    pub const fn lock_queue(&self, entry: usize) -> Result<usize, RegionError> {
 
-        if entry >= params.lock_capacity {
+        // An entry past the table has no queue
+        if entry >= self.layout().params.lock_capacity {
             return Err(RegionError::NoSuchLock(entry));
         }
 
-        params.queue_count.checked_add(entry).ok_or(RegionError::OutOfBounds)
+        Ok(entry)
     }
 
     /// Returns the counter word of the lock of an entry.

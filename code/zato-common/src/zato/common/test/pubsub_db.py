@@ -189,8 +189,7 @@ def count_messages_with_payload(msg_ids:'strlist') -> 'int':
 # ################################################################################################################################
 
 def _count_zero_keys_query(key_columns:'anylist', count_column:'any_') -> 'any_':
-    """ Builds the query counting the keys of one count table whose rows add up to zero - a single row each on SQLite,
-    any number of change rows each on PostgreSQL.
+    """ Builds the query counting the keys of one count table whose change rows add up to zero.
     """
     zero_keys = select(*key_columns)
     zero_keys = zero_keys.group_by(*key_columns)

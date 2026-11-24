@@ -18,7 +18,7 @@ from zato.common.ext.bunch import Bunch
 from django.urls import resolve
 
 # Zato
-from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, SASession, settings_db
+from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, SASession
 from zato.admin.web.forms import SearchForm
 from zato.admin.web.models import EnvironmentColorMarker
 from zato.admin.web.util import get_user_profile
@@ -177,11 +177,10 @@ class ZatoMiddleware:
         # this process reads its audit log database configuration from when it changed.
         self._refresh_env_file()
 
-        # Makes each Django view have an access to 'zato.odb' and 'zato.setttings_db' attributes
-        # of the request object. The attributes are SQLAlchemy sessions tied databases defined in app's settings.py
+        # Makes each Django view have an access to the 'zato.odb' attribute of the request object,
+        # which is an SQLAlchemy session of the configuration database defined in app's settings.py
         req.zato = Bunch()
         req.zato.odb = SASession()
-        req.zato.settings_db = settings_db
         req.zato.args = Bunch() # Arguments read from URL
 
         # Auth-related paths do not need the invoke client

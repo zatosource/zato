@@ -18,9 +18,8 @@ from gevent.event import Event
 # Zato
 from zato.common.api import HTTP_SOAP
 from zato.common.audit_log.export.state import get_audit_export
-from zato.common.db_env.common import Type_PostgreSQL, Type_SQLite
 from zato.common.pubsub.sql.clock import get_engine_clock
-from zato.common.db_env.database import get_database_engine, get_database_type
+from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.generation import follow_takeover, get_fork_takeover, take_over
 from zato.common.pubsub.sql.payload_cache import Max_Payload_Cache_Size, PayloadCache, PayloadEpoch
 from zato.common.pubsub.sql.payloads import drop_payloads
@@ -67,7 +66,7 @@ logger = getLogger(__name__)
 
 _retry = HTTP_SOAP.Retry
 
-# How long back-to-back SQLite calls may hold the event loop before the backend
+# How long back-to-back database calls may hold the event loop before the backend
 # yields it, in seconds - see _yield_after_write.
 _yield_interval_seconds = 0.005
 # ################################################################################################################################
@@ -92,14 +91,15 @@ class SQLBackendCore:
         # The audit log that records the operations of the backend in their transactions
         self.audit_log = audit_log
 
-        # The subscriber and topic pairs of config.db, which publications and fetches read. A backend outside of a server
+        # The subscriber and topic pairs of the configuration database, which publications and fetches read. A backend outside of a server
         # has a list that startup never builds, so its publications use the rows of the pub/sub database as they are.
         if subscription_list is None:
             subscription_list = SubscriptionList()
 
         self.subscription_list:'SubscriptionList' = subscription_list
 
-        # The names of the topics of config.db that are inactive. Topics outside config.db are never among them.
+        # The names of the topics of the configuration database that are inactive.
+        # Topics outside the configuration database are never among them.
         if inactive_topics is None:
             inactive_topics = set()
 
@@ -128,7 +128,7 @@ class SQLBackendCore:
         # Publications and acknowledgements of concurrent callers share their commits, with their audit events.
         self._writer = PubSubWriter(audit_log, subscription_list)
 
-        # The generation that this server raised on PostgreSQL, if it took over the database.
+        # The generation that this server raised when it took over the database.
         self.generation_guard:'GenerationGuard | None' = None
 
         # The engine of the pub/sub database, resolved on first access.
@@ -169,25 +169,24 @@ class SQLBackendCore:
 # ################################################################################################################################
 
     def take_over(self) -> 'None':
-        """ Makes this server the active one on PostgreSQL, whose database a standby server may take over,
+        """ Makes this server the active one of its database, which a standby server may take over,
         and guards each subsequent transaction with the generation raised. A process that an arbiter started follows
         the takeover that its arbiter ran before the fork. The takeover is recorded in the audit log once per server start,
         in the transaction that raises the generation.
         """
-        if get_database_type() == Type_PostgreSQL:
+        # A worker guards its engine with the generation of its arbiter and never raises it itself ..
+        if fork_guard := get_fork_takeover():
+            generation_guard = follow_takeover(self.engine, fork_guard)
 
-            # A worker guards its engine with the generation of its arbiter and never raises it itself ..
-            if fork_guard := get_fork_takeover():
-                generation_guard = follow_takeover(self.engine, fork_guard)
+        # .. while a server with no arbiter raises it, recording the takeover in its audit log.
+        else:
+            generation_guard = take_over(get_database_engine, self.audit_log.server_name)
 
-            # .. while a server with no arbiter raises it, recording the takeover in its audit log.
-            else:
-                generation_guard = take_over(get_database_engine, self.audit_log.server_name)
+        self.generation_guard = generation_guard
 
-            self.generation_guard = generation_guard
-
-            # The recorded takeover leaves with the audit export once per server start.
-            if is_first_start() and (takeover_event_id := generation_guard.takeover_event_id):
+        # The recorded takeover leaves with the audit export once per server start.
+        if is_first_start():
+            if takeover_event_id := generation_guard.takeover_event_id:
                 if export := get_audit_export():
                     export.emit_row(self.engine, takeover_event_id)
 
@@ -273,25 +272,14 @@ class SQLBackendCore:
 # ################################################################################################################################
 
     def _yield_after_write(self) -> 'None':
-        """ Lets other greenlets run after a write transaction. SQLite calls block
-        the calling thread, so the backend yields once per interval.
+        """ Lets other greenlets run after a write transaction or after one batch of an administrative operation,
+        once per interval.
         """
         now = monotonic()
 
         if now - self._last_yield >= _yield_interval_seconds:
             self._last_yield = now
             sleep(0)
-
-# ################################################################################################################################
-
-    def _yield_after_batch(self, batch_seconds:'float') -> 'None':
-        """ Lets other greenlets run after one batch of an administrative operation. SQLite has a single writer,
-        so on SQLite the pause lasts as long as the batch did and publications obtain at least half of the write time.
-        """
-        if self.engine.dialect.name == Type_SQLite:
-            sleep(batch_seconds)
-        else:
-            self._yield_after_write()
 
 # ################################################################################################################################
 
@@ -453,10 +441,9 @@ class SQLBackendCore:
 
     def record_attempt(self, message:'anydict') -> 'bool':
         """ Records the next push attempt of a fetched message before its request is sent and stores its number
-        in the message. On PostgreSQL, the attempt is committed through the writer, in a commit that confirms
-        the generation of this server first, so a server that was replaced sends nothing. On SQLite, which only
-        one server uses, the attempts are counted in memory. Returns False when the message has left
-        the subscriber's queue in the meantime.
+        in the message. The attempt is committed through the writer, in a commit that confirms
+        the generation of this server first, so a server that was replaced sends nothing. Returns False when the message
+        has left the subscriber's queue in the meantime.
         """
         delivery_ids = self.record_attempts([message])
 
@@ -466,17 +453,10 @@ class SQLBackendCore:
 # ################################################################################################################################
 
     def record_attempts(self, messages:'anylist') -> 'intset':
-        """ Records the next push attempt of each message of a batch, in one commit of the writer on PostgreSQL,
+        """ Records the next push attempt of each message of a batch, in one commit of the writer,
         under the same terms as record_attempt. Returns the delivery IDs of the messages still in the subscriber's queue.
         """
-        engine = self.engine
         out:'intset' = set()
-
-        if engine.dialect.name == Type_SQLite:
-            for message in messages:
-                message['delivery_attempt'] += 1
-                out.add(message['delivery_id'])
-            return out
 
         message_by_delivery_id:'anydict' = {}
 

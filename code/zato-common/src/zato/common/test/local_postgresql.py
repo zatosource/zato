@@ -500,7 +500,6 @@ def get_cluster_env(cluster:'LocalCluster') -> 'strstrdict':
     """ Returns the variables that point the Zato database of a server or of a test at the primary of the cluster.
     """
     out = {
-        'Zato_Database_Type': 'postgresql',
         'Zato_Database_Host': ModuleCtx.Host,
         'Zato_Database_Port': f'{cluster.primary.port}',
         'Zato_Database_Username': cluster.username,

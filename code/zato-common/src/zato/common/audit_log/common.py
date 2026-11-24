@@ -20,19 +20,17 @@ from sqlalchemy import BigInteger, Column, func, Index, Integer, literal, MetaDa
 from zato.common.audit_log.event_count import register_event_count
 from zato.common.audit_log.event_open import new_exchange_pair, register_event_open
 from zato.common.audit_log.search_index import register_search_indexes
-from zato.common.db_env.common import Binary_Type, CompressedText, SQLite_Decompress_Function, UTC_DateTime
+from zato.common.db_env.common import Binary_Type, UTC_DateTime
 from zato.common.exception import BackendInvocationError
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strlist, strtuple
+    from zato.common.typing_ import any_
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
-    strlist = strlist
-    strtuple = strtuple
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -474,14 +472,11 @@ class AuditLink:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The one table holding all audit events, portable across SQLite and PostgreSQL.
+# The metadata of all the tables of the audit log
 metadata = MetaData()
 
-# Event identifiers are 64-bit, except under SQLite where the autoincrement
-# primary key must be a plain INTEGER to become an alias of the built-in rowid.
-_big_id_column = BigInteger()
-_sqlite_id_column = Integer()
-_id_column_type = _big_id_column.with_variant(_sqlite_id_column, 'sqlite')
+# Event identifiers are 64-bit
+_id_column_type = BigInteger()
 
 def _new_id_column() -> 'Column':
     """ Returns the autoincrement primary key of one table.
@@ -495,7 +490,7 @@ _short_column = String(_short_column_len)
 _endpoint_column = String(_endpoint_column_len)
 _attr_number_column = Numeric(20, 6, asdecimal=False)
 _time_column = UTC_DateTime()
-_compressed_text_column = CompressedText()
+_payload_text_column = Text()
 
 # The condition of the index of numeric attribute values
 _has_number = text('value_number IS NOT NULL')
@@ -574,7 +569,7 @@ event_table = Table('event', metadata, *_event_columns)
 _event_payload_columns = [
     _new_id_column(),
     Column('digest', _short_column),
-    Column('data', _compressed_text_column),
+    Column('data', _payload_text_column),
 
     # The words, integers and decimal numbers of the payload, each once and in lower case,
     # which the free-text search covers in place of the payload itself.
@@ -593,30 +588,9 @@ _event_payload_data = select(event_payload_table.c.data)
 _event_payload_data = _event_payload_data.where(event_payload_table.c.id == event_table.c.payload_id)
 
 # The empty payload has the type of the stored ones, so that the type of the result reads both alike.
-_empty_event_data = literal('', _compressed_text_column)
+_empty_event_data = literal('', _payload_text_column)
 
 event_data = func.coalesce(_event_payload_data.scalar_subquery(), _empty_event_data).label(_event_data_name)
-
-# The payload of an event in plain SQL over the event table of SQLite, whose connection
-# has the functions of register_sqlite_functions
-_event_data_sql = f"coalesce((select {SQLite_Decompress_Function}(event_payload.data) from event_payload " + \
-    "where event_payload.id = event.payload_id), '')"
-
-def get_event_select_list(names:'strtuple') -> 'str':
-    """ Returns the select list of plain SQL over the event table of SQLite that reads the given names in their order -
-    the payload of the event under data and a column of the event table under any other name.
-    The connection that runs it has the functions of register_sqlite_functions.
-    """
-    items:'strlist' = []
-
-    for name in names:
-        if name == _event_data_name:
-            items.append(f'{_event_data_sql} as {_event_data_name}')
-        else:
-            items.append(name)
-
-    out = ', '.join(items)
-    return out
 
 # ################################################################################################################################
 
@@ -692,7 +666,7 @@ _event_attr_columns = [
     Index('idx_event_attr_name_value', 'name', 'value'),
 
     # Only numeric values are indexed by number, which every comparison with a number implies.
-    Index('idx_event_attr_name_number', 'name', 'value_number', sqlite_where=_has_number, postgresql_where=_has_number),
+    Index('idx_event_attr_name_number', 'name', 'value_number', postgresql_where=_has_number),
 ]
 
 event_attr_table = Table('event_attr', metadata, *_event_attr_columns)
@@ -710,7 +684,7 @@ _event_body_columns = [
     Column('event_id', BigInteger),
     Column('kind', _short_column),
     Column('event_time', _time_column),
-    Column('data', _compressed_text_column),
+    Column('data', _payload_text_column),
     Column('content', Binary_Type),
     Index('idx_event_body_event', 'event_id'),
 ]

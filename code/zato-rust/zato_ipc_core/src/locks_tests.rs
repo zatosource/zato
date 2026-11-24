@@ -149,20 +149,20 @@ fn one_of_concurrent_replacements_of_a_value_succeeds() -> Result<(), RegionErro
 }
 
 #[test]
-fn queue_of_a_lock_follows_the_writer_queues_and_serves_in_order() -> Result<(), RegionError> {
-    let params = small_params();
-    let view = new_view(params)?;
+fn queue_of_a_lock_is_its_own_and_serves_in_order() -> Result<(), RegionError> {
+    let view = new_view(small_params())?;
     let entry = view.lock_entry(CONNECTION)?;
     let queue = view.lock_queue(entry)?;
+    let other_queue = view.lock_queue(view.lock_entry("outconn-rest.2")?)?;
 
-    assert_eq!(queue, params.queue_count + entry);
+    assert_eq!(queue, entry);
 
     let _ = view.queue_enter(queue, CONFIG_PLACE)?;
     let _ = view.queue_enter(queue, WORKER_PLACE)?;
 
-    // A writer queue is not affected by the lock
-    let _ = view.queue_enter(0, WORKER_PLACE)?;
-    assert!(view.queue_poll(0, WORKER_PLACE)?.0);
+    // The queue of another lock is not affected by this one
+    let _ = view.queue_enter(other_queue, WORKER_PLACE)?;
+    assert!(view.queue_poll(other_queue, WORKER_PLACE)?.0);
 
     assert_eq!(view.queue_poll(queue, WORKER_PLACE)?, (false, Some(CONFIG_PLACE)));
     assert!(view.queue_poll(queue, CONFIG_PLACE)?.0);

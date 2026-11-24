@@ -316,11 +316,7 @@ class Arbiter:
         worker = self.worker
         worker_place = self.region.worker_place
 
-        # The places of the worker in the queues of the SQLite writes and in the queues of the keyed locks
-        # are withdrawn before its replacement starts ..
-        for queue in range(self.region.queue_count):
-            self.region.queue_abandon(queue, worker_place)
-
+        # The places of the worker in the queues of the keyed locks are withdrawn before its replacement starts ..
         for entry in range(self.region.lock_capacity):
             self.region.lock_abandon(entry, worker_place)
 

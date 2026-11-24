@@ -34,8 +34,7 @@ class Rollup(ZatoCommand):
         from zato.common.util.env import populate_environment_from_file
 
         # The rollup runs as its own process, e.g. out of cron, so the audit log database variables
-        # saved by the Config DB screen, along with an optional Zato_Analytics_DB_Path,
-        # are loaded from the same env file the server uses.
+        # saved by the Config DB screen are loaded from the same env file the server uses.
         if args.env_file:
             _ = populate_environment_from_file(args.env_file)
 

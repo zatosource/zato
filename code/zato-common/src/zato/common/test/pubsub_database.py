@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The pub/sub database of a test session - the SQLite file of its environment, or a PostgreSQL container started
-# for the session, with or without TLS, whose data directory is under the runtime directory of the tests.
+# The pub/sub database of a test session - a PostgreSQL container started for the session, with or without TLS,
+# whose data directory is under the runtime directory of the tests.
 # The managed modes run the container under the profile of Amazon RDS or of Azure Database for PostgreSQL.
 # The local mode runs a primary and its synchronous standby from the local build of PostgreSQL, outside of any container.
 
@@ -26,7 +26,6 @@ import pg8000.dbapi
 
 # Zato
 from zato.common.crypto.api import CryptoManager
-from zato.common.db_env.database_env import DatabaseEnv
 from zato.common.test.pubsub_bouncer import Bouncer_Port, start_bouncer
 from zato.common.test.local_postgresql import get_cluster_env, LocalCluster, start_local_cluster, stop_local_cluster
 from zato.common.test.pubsub_certs import Chain_Plain, generate_certificates
@@ -46,7 +45,6 @@ if 0:
 # ################################################################################################################################
 
 class PubSubDBMode:
-    SQLite           = 'sqlite'
     PostgreSQL       = 'postgresql'
     PostgreSQL_TLS   = 'postgresql-tls'
     PostgreSQL_MTLS  = 'postgresql-mtls'
@@ -60,16 +58,7 @@ _managed_modes = {
     PubSubDBMode.PostgreSQL_Azure: 'azure',
 }
 
-# The modes with a PostgreSQL container and those of them that require TLS.
-_postgresql_modes = {
-    PubSubDBMode.PostgreSQL,
-    PubSubDBMode.PostgreSQL_TLS,
-    PubSubDBMode.PostgreSQL_MTLS,
-    PubSubDBMode.PostgreSQL_RDS,
-    PubSubDBMode.PostgreSQL_Azure,
-    PubSubDBMode.PostgreSQL_Local,
-}
-
+# The modes that require TLS.
 _tls_modes = {
     PubSubDBMode.PostgreSQL_TLS,
     PubSubDBMode.PostgreSQL_MTLS,
@@ -192,14 +181,8 @@ def get_db_mode() -> 'str':
     if mode := os.environ.get(ModuleCtx.Env_Mode, ''):
         out = mode
     else:
-        out = PubSubDBMode.SQLite
+        out = PubSubDBMode.PostgreSQL
 
-    return out
-
-# ################################################################################################################################
-
-def is_postgresql_mode(mode:'str') -> 'bool':
-    out = mode in _postgresql_modes
     return out
 
 # ################################################################################################################################
@@ -235,19 +218,6 @@ def get_runtime_dir() -> 'str':
         verify_disk_dir(out)
     else:
         out = get_disk_dir(ModuleCtx.Runtime_Dir_Name)
-
-    return out
-
-# ################################################################################################################################
-
-def new_sqlite_database(directory:'str') -> 'PubSubDatabase':
-    """ Returns a SQLite Zato database whose file is in the given directory, with the variables that select it.
-    """
-    out = PubSubDatabase(mode=PubSubDBMode.SQLite)
-    out.env = {
-        DatabaseEnv.Env_Type: DatabaseEnv.Type_SQLite,
-        DatabaseEnv.Env_Path: os.path.join(directory, DatabaseEnv.File_Name),
-    }
 
     return out
 
@@ -488,12 +458,9 @@ def _register_names(database:'PubSubDatabase') -> 'None':
 
 def start_pubsub_database(label:'str', mode:'str', extra_settings:'strlist | None'=None,
     extra_docker_args:'strlist | None'=None, image:'str'='') -> 'PubSubDatabase':
-    """ Starts the pub/sub database of a session in the given mode. SQLite needs nothing started.
+    """ Starts the pub/sub database of a session in the given mode.
     """
     out = PubSubDatabase(mode=mode)
-
-    if not is_postgresql_mode(mode):
-        return out
 
     if mode == PubSubDBMode.PostgreSQL_Local:
         _start_local_database(out, extra_settings)
@@ -576,7 +543,6 @@ def start_pubsub_database(label:'str', mode:'str', extra_settings:'strlist | Non
 
     # .. the environment of the server and of the test process point at the container ..
     out.env = {
-        'Zato_Database_Type': 'postgresql',
         'Zato_Database_Host': host,
         'Zato_Database_Port': f'{out.port}',
         'Zato_Database_Username': ModuleCtx.Username,
@@ -765,9 +731,6 @@ def stop_pubsub_database(database:'PubSubDatabase') -> 'None':
     """
     if database.local_cluster:
         stop_local_cluster(database.local_cluster)
-        return
-
-    if not database.container_name:
         return
 
     if database.bouncer_container:
