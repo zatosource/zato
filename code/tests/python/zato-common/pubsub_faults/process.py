@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The environment of the server of one fault of a single server - the transient systemd scope of the user that
-# the server runs in and the libraries preloaded into its processes, which change nothing until a fault is applied.
+# The environment of the server of one fault of a single server - the cgroup that the server runs in
+# and the libraries preloaded into its processes, which change nothing until a fault is applied.
 
 # stdlib
 import os
@@ -63,6 +63,8 @@ def new_scope() -> 'Scope':
     pid = os.getpid()
 
     out = Scope(f'zato-pubsub-fault-{pid}-{number}')
+    out.create()
+
     return out
 
 # ################################################################################################################################

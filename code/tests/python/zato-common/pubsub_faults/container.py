@@ -33,8 +33,14 @@ _helper_cgroup_root = '/host-cgroup/system.slice'
 # The image of the helper that gives the cgroup files to the user of the tests.
 _helper_image = 'alpine:latest'
 
+# The command that runs a shell script as root in the helper, which sees the cgroup tree of the host under /host-cgroup
+# and the processes of the host under their own PIDs, in the cgroup namespace of the host, without which
+# the kernel refuses to move a process of the host into a cgroup.
+Helper_Command = ['docker', 'run', '--rm', '--privileged', '--pid', 'host', '--cgroupns', 'host',
+    '-v', '/sys/fs/cgroup:/host-cgroup', _helper_image, 'sh', '-c']
+
 # The files of the cgroup of a container that the faults write.
-_fault_cgroup_files = ('io.max', 'cpu.max', 'memory.max', 'memory.high')
+_fault_cgroup_files = ('io.max', 'cpu.max', 'memory.max', 'memory.high', 'memory.swap.max')
 
 # The image of the helper that runs tc in the network namespace of a container, built when first needed.
 _tc_image = 'zato-pubsub-test-tc:1'
@@ -55,6 +61,14 @@ def run_command(command:'strlist') -> 'str':
         raise Exception(f'Command {command} failed with {result.returncode}: {result.stderr.strip()}')
 
     out = result.stdout
+    return out
+
+# ################################################################################################################################
+
+def run_helper(script:'str') -> 'str':
+    """ Runs a shell script as root in the helper container and returns what it printed.
+    """
+    out = run_command([*Helper_Command, script])
     return out
 
 # ################################################################################################################################
@@ -120,9 +134,7 @@ class Container:
             paths.append(os.path.join(self.helper_cgroup_dir, file_name))
 
         script = f'chown {os.getuid()}:{os.getgid()} ' + ' '.join(paths)
-
-        _ = run_command(['docker', 'run', '--rm', '--privileged', '-v', '/sys/fs/cgroup:/host-cgroup',
-            _helper_image, 'sh', '-c', script])
+        _ = run_helper(script)
 
 # ################################################################################################################################
 

@@ -286,7 +286,11 @@ class MemoryFault(Fault):
 
     def apply(self, level:'int') -> 'None':
 
-        # The OOM killer ends a backend and never the postmaster, which would take the container with it ..
+        # The reclaim takes only the page cache, since memory moved to the swap file of the host is read back
+        # one page at a time for minutes after the fault ends ..
+        self.container.write_cgroup('memory.swap.max', '0')
+
+        # .. the OOM killer ends a backend and never the postmaster, which would take the container with it ..
         if level == Total_Loss:
             self.container.protect_from_oom_killer()
             kills_before = self.container.read_oom_kills()
@@ -315,6 +319,7 @@ class MemoryFault(Fault):
     def remove(self) -> 'None':
         self.container.write_cgroup('memory.high', 'max')
         self.container.write_cgroup('memory.max', 'max')
+        self.container.write_cgroup('memory.swap.max', 'max')
 
 # ################################################################################################################################
 # ################################################################################################################################

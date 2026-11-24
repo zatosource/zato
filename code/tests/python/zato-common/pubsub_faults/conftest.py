@@ -307,7 +307,7 @@ def process_environment() -> 'environmentgen':
 
 @pytest.fixture
 def server_scope(process_environment:'ProcessEnvironment') -> 'scopegen':
-    """ The transient scope that the server of one test of a single server runs in, together with its cleanup process,
+    """ The cgroup that the server of one test of a single server runs in, together with its cleanup process,
     both of them with the libraries of the faults preloaded.
     """
     scope = new_scope()

@@ -6,21 +6,25 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The faults of a single server - one Zato server with its cleanup process in a transient systemd scope
-# of the user, whose CPU, memory, processes and file descriptors are limited, which is frozen in a duty cycle,
-# whose file system calls are delayed and failed, and whose clock is skewed.
+# The faults of a single server - one Zato server with its cleanup process in a cgroup of its own, whose CPU, memory,
+# processes and file descriptors are limited, which is frozen in a duty cycle, whose file system calls are delayed
+# and failed, and whose clock is skewed. The cgroup is under the root of the hierarchy, outside of the systemd manager
+# of the user, since systemd-oomd ends the processes of the session of the user, the desktop and the editor included,
+# once the memory pressure of that manager stays above its limit, which a memory fault of the server causes.
+# The cgroup tree is owned by root, so the helper container creates the cgroup, moves processes into it
+# and removes it, while the faults write the files that the helper gives to the user of the tests.
 
 # stdlib
 import os
 import resource
 import signal
-import subprocess
 from time import monotonic
 
 # gevent
 from gevent import sleep, spawn
 
 # Zato
+from container import Helper_Command, run_helper
 from faults import Fault, Total_Loss
 
 # ################################################################################################################################
@@ -37,8 +41,18 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The root of the cgroup hierarchy.
-_cgroup_root = '/sys/fs/cgroup'
+# The cgroup that the cgroups of the servers are created in, on the host and inside the helper container,
+# and the controllers that it enables for them.
+_scopes_cgroup_dir        = '/sys/fs/cgroup/zato-pubsub-faults'
+_helper_scopes_cgroup_dir = '/host-cgroup/zato-pubsub-faults'
+_scope_controllers        = '+cpu +memory +pids'
+
+# The files of the cgroup of a server that the faults write.
+_scope_fault_files = ('cgroup.freeze', 'cgroup.kill', 'cpu.max', 'memory.high', 'memory.swap.max', 'pids.max')
+
+# How long the processes of a cgroup that was killed may take to end, and how often that is checked, in seconds.
+_scope_stop_timeout = 30.0
+_scope_poll_seconds = 0.1
 
 # The period of cpu.max and the smallest share of one CPU that a scope is limited to, in microseconds.
 _cpu_period_usec = 100_000
@@ -106,36 +120,45 @@ def _remaining(level:'int') -> 'float':
 # ################################################################################################################################
 
 class Scope:
-    """ The transient systemd scope of the user that one Zato server runs in, with its cgroup.
+    """ The cgroup that one Zato server runs in, together with its cleanup process.
     """
 
     def __init__(self, unit:'str') -> 'None':
         self.unit = unit
-        self.unit_name = f'{unit}.scope'
-        self._cgroup_dir = ''
+        self.cgroup_dir = os.path.join(_scopes_cgroup_dir, unit)
+        self.helper_cgroup_dir = os.path.join(_helper_scopes_cgroup_dir, unit)
 
 # ################################################################################################################################
 
-    @property
-    def cgroup_dir(self) -> 'str':
-        if not self._cgroup_dir:
-            command = ['systemctl', '--user', 'show', '--property=ControlGroup', '--value', self.unit_name]
-            result = subprocess.run(command, check=True, capture_output=True, text=True)
-            control_group = result.stdout.strip()
-            self._cgroup_dir = _cgroup_root + control_group
+    def create(self) -> 'None':
+        """ Creates the cgroup with the controllers of the faults and gives the files that the faults write
+        to the user of the tests.
+        """
+        paths:'strlist' = []
 
-        return self._cgroup_dir
+        for file_name in _scope_fault_files:
+            paths.append(os.path.join(self.helper_cgroup_dir, file_name))
+
+        # The parent cgroup enables the controllers for its children ..
+        script = f'mkdir -p {_helper_scopes_cgroup_dir}'
+        script += f' && echo "{_scope_controllers}" > {_helper_scopes_cgroup_dir}/cgroup.subtree_control'
+
+        # .. and the cgroup of this server is a new one.
+        script += f' && mkdir {self.helper_cgroup_dir}'
+        script += f' && chown {os.getuid()}:{os.getgid()} ' + ' '.join(paths)
+
+        _ = run_helper(script)
 
 # ################################################################################################################################
 
     def get_command_prefix(self) -> 'strlist':
-        """ What starts a process in the scope - the CPU weight enables the cpu controller, whose cpu.max
-        the faults write to, and the other two properties account for the memory and the processes of the scope.
+        """ What starts a process in the cgroup - a shell that has the helper move the shell into the cgroup
+        and then replaces itself with the command, whose processes the cgroup holds from their start on.
         """
-        out = [
-            'systemd-run', '--user', '--scope', '--quiet', '--collect', f'--unit={self.unit}',
-            '--property=CPUWeight=100', '--property=MemoryAccounting=yes', '--property=TasksAccounting=yes',
-        ]
+        helper = ' '.join(Helper_Command)
+        move = f'{helper} "echo $$ > {self.helper_cgroup_dir}/cgroup.procs" > /dev/null'
+
+        out = ['sh', '-c', f'{move} && exec "$@"', 'sh']
         return out
 
 # ################################################################################################################################
@@ -185,24 +208,48 @@ class Scope:
 # ################################################################################################################################
 
     def add_pid(self, pid:'int') -> 'None':
-        """ Moves a process that was started outside of the scope into it.
+        """ Moves a process that was started outside of the cgroup into it.
         """
-        self.write('cgroup.procs', f'{pid}')
+        _ = run_helper(f'echo {pid} > {self.helper_cgroup_dir}/cgroup.procs')
 
 # ################################################################################################################################
 
     def is_active(self) -> 'bool':
-        command = ['systemctl', '--user', 'is-active', '--quiet', self.unit_name]
-        result = subprocess.run(command, check=False)
+        out = os.path.isdir(self.cgroup_dir)
+        return out
 
-        out = result.returncode == 0
+# ################################################################################################################################
+
+    def is_populated(self) -> 'bool':
+        """ Whether any process is still in the cgroup.
+        """
+        for line in self.read('cgroup.events').splitlines():
+            name, value = line.split()
+            if name == 'populated':
+                out = value == '1'
+                break
+        else:
+            raise Exception(f'No populated in cgroup.events of {self.unit}')
+
         return out
 
 # ################################################################################################################################
 
     def stop(self) -> 'None':
-        if self.is_active():
-            _ = subprocess.run(['systemctl', '--user', 'stop', self.unit_name], check=False)
+        """ Kills every process of the cgroup and removes the cgroup once the processes have ended.
+        """
+        if not self.is_active():
+            return
+
+        self.write('cgroup.kill', '1')
+
+        deadline = monotonic() + _scope_stop_timeout
+
+        while self.is_populated():
+            assert monotonic() < deadline, f'Processes still in {self.cgroup_dir} after {_scope_stop_timeout}s'
+            sleep(_scope_poll_seconds)
+
+        _ = run_helper(f'rmdir {self.helper_cgroup_dir}')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -331,6 +378,12 @@ class ScopeMemoryFault(Fault):
 # ################################################################################################################################
 
     def apply(self, level:'int') -> 'None':
+
+        # The reclaim takes only the page cache, since memory moved to the swap file of the host is read back
+        # one page at a time for minutes after the fault ends ..
+        self.scope.write('memory.swap.max', '0')
+
+        # .. and the server is held below its memory for the whole duration of the fault.
         limit = int(self.baseline_bytes * _remaining(level))
         self.scope.write('memory.high', f'{limit}')
 
@@ -339,6 +392,7 @@ class ScopeMemoryFault(Fault):
     def remove(self) -> 'None':
         if self.scope.is_active():
             self.scope.write('memory.high', 'max')
+            self.scope.write('memory.swap.max', 'max')
 
 # ################################################################################################################################
 # ################################################################################################################################
