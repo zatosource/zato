@@ -18,7 +18,8 @@ from zato.common.ext.future.utils import iteritems
 # Zato
 from zato.common.ext.bunch import Bunch
 from zato.common.api import CONNECTION, HTTP_SOAP, MISC, SEC_DEF_TYPE, ZATO_NONE
-from zato.common.bearer_token_verifier import BearerTokenVerifier, build_verify_config, extract_bearer_token
+from zato.common.bearer_token import extract_bearer_token
+from zato.common.bearer_token_verifier import BearerTokenVerifier, build_verify_config
 from zato.common.broker_message import code_to_name, SECURITY
 from zato.common.crypto.api import is_string_equal
 from zato.common.destination.constants import Channel_Fan_Out_Fields

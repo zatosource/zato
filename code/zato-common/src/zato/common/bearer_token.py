@@ -18,6 +18,10 @@ from traceback import format_exc
 # dateutil
 from dateutil.parser import parse as dt_parse
 
+# PyJWT
+from jwt import decode as jwt_decode
+from jwt.exceptions import InvalidTokenError
+
 # Requests
 from requests import post as requests_post
 
@@ -59,6 +63,47 @@ Private_Key_JWT_Fields = {
     'assertion_audience': '',
     'certificate': '',
 }
+
+# The case-insensitive prefix inbound Authorization headers carry
+Bearer_Prefix = 'bearer '
+
+# How jwt_decode reads the claims of a token without verifying its signature
+_claims_options:'any_' = {'verify_signature': False}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def extract_bearer_token(auth_header:'str') -> 'str':
+    """ Returns the token from an Authorization header carrying a case-insensitive Bearer prefix,
+    or an empty string if the header does not carry one.
+    """
+    # No header means no token at all ..
+    if not auth_header:
+        return ''
+
+    # .. the prefix comparison is case-insensitive, per RFC 6750 ..
+    prefix_length = len(Bearer_Prefix)
+    prefix = auth_header[:prefix_length]
+
+    if prefix.lower() != Bearer_Prefix:
+        return ''
+
+    # .. and whatever follows the prefix is the token itself.
+    out = auth_header[prefix_length:].strip()
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_claims(token:'str') -> 'stranydict':
+    """ Returns the claims of a JWT without verifying its signature, or an empty dict if the token is not a JWT.
+    """
+    try:
+        out = jwt_decode(token, options=_claims_options)
+    except InvalidTokenError:
+        out = {}
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

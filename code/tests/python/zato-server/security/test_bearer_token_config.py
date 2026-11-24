@@ -10,7 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import main, TestCase
 
 # Zato
-from zato.common.bearer_token_verifier import build_verify_config, extract_bearer_token, parse_claims
+from zato.common.bearer_token import extract_bearer_token
+from zato.common.bearer_token_verifier import build_verify_config, parse_claims
 
 # ################################################################################################################################
 # ################################################################################################################################

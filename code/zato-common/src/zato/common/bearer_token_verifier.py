@@ -19,6 +19,7 @@ from jwt.exceptions import ExpiredSignatureError, InvalidAudienceError, InvalidI
 from requests import get as requests_get
 
 # Zato
+from zato.common.bearer_token import get_claims
 from zato.common.crypto.api import is_string_equal
 from zato.common.model.security import BearerRefusalReason, BearerTokenVerifyConfig, BearerTokenVerifyResult
 from zato.common.util.api import parse_extra_into_dict
@@ -50,9 +51,6 @@ JWKS_Cache_TTL = 3600
 # this many seconds, which is why it is far shorter than JWKS_Cache_TTL.
 JWKS_Fetch_Interval = 60
 
-# The case-insensitive prefix inbound Authorization headers carry
-Bearer_Prefix = 'bearer '
-
 # Where an issuer publishes its discovery document
 Well_Known_Path = '/.well-known/openid-configuration'
 
@@ -67,31 +65,6 @@ _jwks_fetch_key_prefix = 'zato.sec.bearer-token.jwks-fetch.'
 
 # What jwt_decode must always validate
 _decode_options:'any_' = {'require': ['exp', 'iss', 'aud']}
-
-# How jwt_decode reads a token it is not asked to trust
-_unverified_options:'any_' = {'verify_signature': False}
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def extract_bearer_token(auth_header:'str') -> 'str':
-    """ Returns the token from an Authorization header carrying a case-insensitive Bearer prefix,
-    or an empty string if the header does not carry one.
-    """
-    # No header means no token at all ..
-    if not auth_header:
-        return ''
-
-    # .. the prefix comparison is case-insensitive, per RFC 6750 ..
-    prefix_length = len(Bearer_Prefix)
-    prefix = auth_header[:prefix_length]
-
-    if prefix.lower() != Bearer_Prefix:
-        return ''
-
-    # .. and whatever follows the prefix is the token itself.
-    out = auth_header[prefix_length:].strip()
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -173,19 +146,6 @@ def build_verify_config(sec_def:'stranydict') -> 'BearerTokenVerifyConfig':
     return out
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def read_unverified_claims(token:'str') -> 'stranydict':
-    """ Returns the claims of a JWT without checking its signature, or an empty dict
-    if the token cannot be parsed at all. Nothing in the result is to be trusted.
-    """
-    try:
-        out = jwt_decode(token, options=_unverified_options)
-    except InvalidTokenError:
-        out = {}
-
-    return out
-
 # ################################################################################################################################
 
 def _refused(reason:'str', claims:'stranydict', claim:'str'='') -> 'BearerTokenVerifyResult':
@@ -296,7 +256,7 @@ class BearerTokenVerifier:
 
         # .. anything refused from here on can still say who the token was for, which is what
         # .. the unverified claims are kept for ..
-        unverified = read_unverified_claims(token)
+        unverified = get_claims(token)
 
         # .. only the pinned algorithm is ever accepted ..
         algorithm = header.get('alg')

@@ -12,7 +12,8 @@ from operator import attrgetter
 
 # Zato
 from zato.common.bearer_token_identity import resolve_identity
-from zato.common.bearer_token_verifier import BearerTokenVerifier, build_verify_config, read_unverified_claims
+from zato.common.bearer_token import get_claims
+from zato.common.bearer_token_verifier import BearerTokenVerifier, build_verify_config
 from zato.common.crypto.api import is_string_equal
 from zato.common.model.security import BearerAuthInfo, BearerRefusalReason
 
@@ -187,7 +188,7 @@ class BearerTokenCtx:
 
         # With no JWT definitions at all, the token's own claims are still worth recording
         if not jwt_items:
-            out.claims = read_unverified_claims(token)
+            out.claims = get_claims(token)
 
         return out
 

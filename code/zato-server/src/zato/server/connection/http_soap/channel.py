@@ -25,7 +25,7 @@ from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditS
 from zato.common.hl7.audit import get_wire_attrs, get_wire_msa_control_id
 from zato.common.hl7.mllp.dedup import extract_control_id
 from zato.common.bearer_token_identity import Auth_Info_Key, Identity_Key
-from zato.common.bearer_token_verifier import extract_bearer_token
+from zato.common.bearer_token import extract_bearer_token
 from zato.common.const import ServiceConst
 from zato.common.model.security import BearerAuthInfo, BearerRefusalReason
 from zato.common.exception import HTTP_RESPONSES, BackendInvocationError, ServiceMissingException
