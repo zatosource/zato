@@ -112,7 +112,7 @@ class TestBasicAuth:
     def test_rejected_credentials_never_reach_a_tool(self, zato_server:'anydict') -> 'None':
 
         marker_path = zato_server['marker_path']
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         username, password = zato_server['basic_auth']
 
@@ -124,7 +124,7 @@ class TestBasicAuth:
         ]
 
         invocations_before = len(_markers.read_invocations(marker_path))
-        min_id = _audit.last_event_id(audit_db_path)
+        min_id = _audit.last_event_id(database_env)
 
         for client in rejected_clients:
 
@@ -137,7 +137,7 @@ class TestBasicAuth:
 
         # .. and each rejection is audited with an error outcome and an empty caller identity.
         events = _audit.wait_for_events(
-            audit_db_path, len(rejected_clients),
+            database_env, len(rejected_clients),
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.Auth_Failed,
             min_id=min_id)
@@ -150,10 +150,10 @@ class TestBasicAuth:
 
     def test_a_rejected_username_renders_on_one_log_line(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
         server_log_path = zato_server['server_log_path']
 
-        min_id = _audit.last_event_id(audit_db_path)
+        min_id = _audit.last_event_id(database_env)
         log_offset = os.path.getsize(server_log_path)
 
         # The username of the failing credentials carries line breaks and a distinctive trailer ..
@@ -167,7 +167,7 @@ class TestBasicAuth:
 
         # .. the rejection is audited ..
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.Auth_Failed,
             min_id=min_id)
@@ -334,10 +334,10 @@ class TestMalformedAuthorizationHeaders:
 
     def test_each_malformed_header_is_refused_cleanly(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
         marker_path = zato_server['marker_path']
 
-        min_id = _audit.last_event_id(audit_db_path)
+        min_id = _audit.last_event_id(database_env)
         invocations_before = len(_markers.read_invocations(marker_path))
 
         client = _helpers.make_client(zato_server, _constants.Path_Main, auth=None)
@@ -356,7 +356,7 @@ class TestMalformedAuthorizationHeaders:
 
         # .. and each refusal is audited as an auth failure with an empty caller identity.
         events = _audit.wait_for_events(
-            audit_db_path, len(_malformed_authorization_headers),
+            database_env, len(_malformed_authorization_headers),
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.Auth_Failed,
             min_id=min_id)
@@ -394,17 +394,17 @@ class TestCredentialSecrecy:
         not in the server log, not in any audit row, not in the recorded service payload.
         """
 
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         # Both calls are audited - the successful tools/call and the rejected authentication ..
         _ = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
 
         _ = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.Auth_Failed,
             min_id=min_id)
@@ -414,7 +414,7 @@ class TestCredentialSecrecy:
         assert secret not in new_log_text, new_log_text
 
         # .. neither does any audit row, including each row's data document ..
-        events = _audit.read_events(audit_db_path, min_id=min_id)
+        events = _audit.read_events(database_env, min_id=min_id)
         events_text = repr(events)
         assert secret not in events_text, events_text
 
@@ -429,7 +429,7 @@ class TestCredentialSecrecy:
 
         username, password = zato_server['basic_auth']
 
-        min_id = _audit.last_event_id(zato_server['audit_db_path'])
+        min_id = _audit.last_event_id(zato_server['database_env'])
         log_offset = os.path.getsize(zato_server['server_log_path'])
         payload_offset = self._payload_offset(zato_server['payload_path'])
 
@@ -452,7 +452,7 @@ class TestCredentialSecrecy:
 
         apikey_value = zato_server['apikey_value']
 
-        min_id = _audit.last_event_id(zato_server['audit_db_path'])
+        min_id = _audit.last_event_id(zato_server['database_env'])
         log_offset = os.path.getsize(zato_server['server_log_path'])
         payload_offset = self._payload_offset(zato_server['payload_path'])
 
@@ -478,7 +478,7 @@ class TestCredentialSecrecy:
 
         token = zato_server['bearer_static_token']
 
-        min_id = _audit.last_event_id(zato_server['audit_db_path'])
+        min_id = _audit.last_event_id(zato_server['database_env'])
         log_offset = os.path.getsize(zato_server['server_log_path'])
         payload_offset = self._payload_offset(zato_server['payload_path'])
 
@@ -504,7 +504,7 @@ class TestCredentialSecrecy:
 
         token = keycloak_.get_token(keycloak_.Client_Accounting, keycloak_.Secret_Accounting)
 
-        min_id = _audit.last_event_id(zato_server['audit_db_path'])
+        min_id = _audit.last_event_id(zato_server['database_env'])
         log_offset = os.path.getsize(zato_server['server_log_path'])
         payload_offset = self._payload_offset(zato_server['payload_path'])
 
@@ -576,8 +576,8 @@ class TestCallerIdentityInAuditEvents:
 
     def test_events_name_the_definition_of_each_credential_type(self, zato_server:'anydict', keycloak:'None') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         arguments = {'order_id': _constants.Order_ID}
 
@@ -610,7 +610,7 @@ class TestCallerIdentityInAuditEvents:
 
         # Four calls, four events, each carrying its own caller identity and tool name
         events = _audit.wait_for_events(
-            audit_db_path, 4,
+            database_env, 4,
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)

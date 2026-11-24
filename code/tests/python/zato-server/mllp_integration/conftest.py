@@ -27,6 +27,7 @@ import pytest
 # Zato
 from zato.common.test.client import AdminClient as ZatoClient
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
+from zato.common.typing_ import cast_
 
 # Zato - test services deployed to the server under test
 from _services import accept_service_source, alert_rule_service_source, audit_counts_service_source, \
@@ -39,7 +40,10 @@ from _services import accept_service_source, alert_rule_service_source, audit_co
 if 0:
     import logging
     from zato.common.test.conftest_base_pubsub import SessionState
+    from zato.common.test.pubsub_database import PubSubDatabase
     from zato.common.typing_ import anydict
+
+    PubSubDatabase = PubSubDatabase
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -179,8 +183,10 @@ def _build_config(
         _server_info['password'] = invoke_password
         _server_info['server_directory'] = server_directory
         _server_info['temp_directory'] = _data_dir
-        _server_info['audit_db_path'] = os.environ['Zato_Database_Path']
-        _server_info['database'] = state.pubsub_database
+        pubsub_database = cast_('PubSubDatabase', state.pubsub_database)
+
+        _server_info['database_env'] = dict(pubsub_database.env)
+        _server_info['database'] = pubsub_database
 
     out:'anydict' = {
         'placeholders': {},

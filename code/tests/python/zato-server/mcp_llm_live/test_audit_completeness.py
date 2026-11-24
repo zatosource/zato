@@ -42,8 +42,8 @@ class TestAuditCompleteness:
 
     def test_one_conversation_produces_the_complete_event_set(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Skills)
 
@@ -65,9 +65,9 @@ class TestAuditCompleteness:
         expected_count = 4 + len(result.tool_calls)
 
         _ = _audit.wait_for_events(
-            audit_db_path, expected_count, object_name=_constants.Gateway_Skills, min_id=min_id)
+            database_env, expected_count, object_name=_constants.Gateway_Skills, min_id=min_id)
 
-        all_events = _audit.read_events(audit_db_path, object_name=_constants.Gateway_Skills, min_id=min_id)
+        all_events = _audit.read_events(database_env, object_name=_constants.Gateway_Skills, min_id=min_id)
 
         # Only this conversation's session matters - other tests may run around this one
         events = []
@@ -114,10 +114,10 @@ class TestAuditCompleteness:
 
     def test_every_kind_of_failure_lands_with_an_error_outcome(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         # Bad credentials on the main gateway ..
-        min_id = _audit.last_event_id(audit_db_path)
+        min_id = _audit.last_event_id(database_env)
 
         username, password = zato_server['basic_auth']
         wrong_auth = (username, 'wrong-' + password)
@@ -127,7 +127,7 @@ class TestAuditCompleteness:
         assert response.status_code == FORBIDDEN, response.text
 
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.Auth_Failed,
             min_id=min_id)
@@ -135,7 +135,7 @@ class TestAuditCompleteness:
         assert events[-1]['outcome'] == AuditOutcome.Error, events
 
         # .. invalid params on the validating gateway ..
-        min_id = _audit.last_event_id(audit_db_path)
+        min_id = _audit.last_event_id(database_env)
 
         validate_client = _helpers.make_client(zato_server, _constants.Path_Validate)
         validate_session = _helpers.open_session(validate_client)
@@ -144,7 +144,7 @@ class TestAuditCompleteness:
         assert body['error']['code'] == _constants.Error_Invalid_Params, body
 
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Validate,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -152,7 +152,7 @@ class TestAuditCompleteness:
         assert events[-1]['outcome'] == AuditOutcome.Error, events
 
         # .. a service exception on the main gateway ..
-        min_id = _audit.last_event_id(audit_db_path)
+        min_id = _audit.last_event_id(database_env)
 
         main_client = _helpers.make_client(zato_server, _constants.Path_Main)
         main_session = _helpers.open_session(main_client)
@@ -162,7 +162,7 @@ class TestAuditCompleteness:
         assert body['result']['isError'] is True, body
 
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -170,7 +170,7 @@ class TestAuditCompleteness:
         assert events[-1]['outcome'] == AuditOutcome.Error, events
 
         # .. and a blocked response on the block-mode gateway.
-        min_id = _audit.last_event_id(audit_db_path)
+        min_id = _audit.last_event_id(database_env)
 
         block_client = _helpers.make_client(zato_server, _constants.Path_Shaping_Block)
         block_session = _helpers.open_session(block_client)
@@ -180,7 +180,7 @@ class TestAuditCompleteness:
         assert body['result']['isError'] is True, body
 
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Shaping_Block,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)

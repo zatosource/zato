@@ -31,8 +31,7 @@ _long_ttl_seconds = 3600
 # How far in the past an aged trace was published - past the default retention of seven days.
 _aged_days = 30
 
-# How long the write lock is held, in seconds - longer than the busy timeout of 5 seconds,
-# so the first attempt of the sweep cannot obtain the lock.
+# How long the write lock is held, in seconds, so that the first attempt of the sweep cannot obtain the lock.
 _lock_hold_seconds = 7
 
 # What the cleanup process logs each time it postpones a sweep.

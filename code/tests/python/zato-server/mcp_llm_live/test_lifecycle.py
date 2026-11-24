@@ -134,8 +134,8 @@ class TestGatewayLifecycle:
 
     def test_parallel_tool_calls_all_succeed_and_are_all_audited(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Main)
         session_id = _helpers.open_session(client)
@@ -164,7 +164,7 @@ class TestGatewayLifecycle:
 
         # .. and every one of them is audited.
         events = _audit.wait_for_events(
-            audit_db_path, _parallel_call_count,
+            database_env, _parallel_call_count,
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)

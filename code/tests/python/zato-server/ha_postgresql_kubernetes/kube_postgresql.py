@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The session of the Kubernetes suites of a pair on PostgreSQL. The session creates the cluster, the receivers,
-# the quickstart environment and the referee, and one PostgreSQL instance in the zone without Zato pods
+# The session of the Kubernetes suites of a pair on PostgreSQL. The session creates the cluster, the receivers
+# and the referee, and one PostgreSQL instance in the zone without Zato pods
 # is the Zato database of both pods. With Zato_Test_Kube_PostgreSQL_Backend=local, the local build
 # of PostgreSQL on the host is the Zato database instead.
 
@@ -105,7 +105,15 @@ class KubePostgreSQL(KubeBackend):
             work_dir=self.directory,
         )
 
-        self.database.env['Zato_Database_SSL_CA_File'] = session.authority.cert_path
+        self.database.env = {
+            'Zato_Database_Host': self.ip,
+            'Zato_Database_Port': str(ModuleCtx.Node_Port),
+            'Zato_Database_Username': DatabaseCtx.Username,
+            'Zato_Database_Password': self.password,
+            'Zato_Database_Name': DatabaseCtx.DB_Name,
+            'Zato_Database_SSL': 'true',
+            'Zato_Database_SSL_CA_File': session.authority.cert_path,
+        }
 
 # ################################################################################################################################
 
@@ -283,7 +291,7 @@ def _start_postgresql(session:'KubeSession') -> 'KubePostgreSQL':
 # ################################################################################################################################
 
 def create_postgresql_session() -> 'KubeSession':
-    """ Creates the cluster, the receivers, the quickstart environment of the pods and the Zato database of the pods,
+    """ Creates the cluster, the receivers, the referee and the Zato database of the pods,
     which is the PostgreSQL instance in the cluster or, with the local backend, the local build on the host.
     """
     # The local build runs on the host, so the nodes of the cluster receive no image of the database ..

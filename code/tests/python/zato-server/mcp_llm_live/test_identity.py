@@ -141,8 +141,8 @@ class TestIdentityOverTime:
 
     def test_rejection_and_acceptance_audit_separately(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         # The wrong password is rejected first ..
         wrong_auth = (_constants.Username_Basic, 'test.llm.wrong.' + rand_string())
@@ -158,7 +158,7 @@ class TestIdentityOverTime:
 
         # .. the rejection audits with an empty identity ..
         rejection_events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.Auth_Failed,
             min_id=min_id)
@@ -169,7 +169,7 @@ class TestIdentityOverTime:
 
         # .. and the acceptance audits with the definition that admitted the caller.
         initialize_events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.MCP_Initialize,
             min_id=min_id)

@@ -78,7 +78,7 @@ class TestConfigAuditLive:
         """ Creating a generic connection writes a config-created event -
         the summary carries the new state and the before side is empty.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         response = zato_client.create(
             f'{_generic_service_name}.create',
@@ -96,14 +96,14 @@ class TestConfigAuditLive:
         assert 'id' in response
         self.__class__.channel_id = response['id']
 
-        events = _wait_for_events(audit_db_path, _channel_name, 1, AuditEvent.Config_Created)
+        events = _wait_for_events(database_env, _channel_name, 1, AuditEvent.Config_Created)
         assert len(events) == 1, events
 
         event = events[0]
         assert event['source'] == AuditSource.Config, event
 
         # The identity and scope are searchable attributes
-        attrs = _get_attr_map(audit_db_path, event['id'])
+        attrs = _get_attr_map(database_env, event['id'])
 
         assert attrs['actor'] == _admin_actor, attrs
         assert attrs['effective_actor'] == _admin_actor, attrs
@@ -126,7 +126,7 @@ class TestConfigAuditLive:
         """ Editing the connection writes a config-edited event whose summary
         carries only the fields whose values changed.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         _ = zato_client.edit(
             f'{_generic_service_name}.edit',
@@ -142,7 +142,7 @@ class TestConfigAuditLive:
             pool_size=5,
         )
 
-        events = _wait_for_events(audit_db_path, _channel_name, 1, AuditEvent.Config_Edited)
+        events = _wait_for_events(database_env, _channel_name, 1, AuditEvent.Config_Edited)
         assert len(events) == 1, events
 
         event = events[0]
@@ -162,12 +162,12 @@ class TestConfigAuditLive:
         """ Deleting the connection writes a config-deleted event - the summary
         carries what the connection looked like and the after side is empty.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         _ = zato_client.delete(f'{_generic_service_name}.delete', id=self.__class__.channel_id)
         self.__class__.channel_id = 0
 
-        events = _wait_for_events(audit_db_path, _channel_name, 1, AuditEvent.Config_Deleted)
+        events = _wait_for_events(database_env, _channel_name, 1, AuditEvent.Config_Deleted)
         assert len(events) == 1, events
 
         event = events[0]
@@ -176,7 +176,7 @@ class TestConfigAuditLive:
         assert summary['before']['name'] == _channel_name, summary
         assert summary['after'] == {}, summary
 
-        attrs = _get_attr_map(audit_db_path, event['id'])
+        attrs = _get_attr_map(database_env, event['id'])
         assert attrs['actor'] == _admin_actor, attrs
 
 # ################################################################################################################################
@@ -185,7 +185,7 @@ class TestConfigAuditLive:
         """ Quota tiers live as generic objects - their create, edit and delete
         land in the config-audit stream the same way connections do.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         # Create ..
         response = zato_client.create(
@@ -198,10 +198,10 @@ class TestConfigAuditLive:
         assert 'id' in response
         self.__class__.tier_id = response['id']
 
-        events = _wait_for_events(audit_db_path, _tier_name, 1, AuditEvent.Config_Created)
+        events = _wait_for_events(database_env, _tier_name, 1, AuditEvent.Config_Created)
         assert len(events) == 1, events
 
-        attrs = _get_attr_map(audit_db_path, events[0]['id'])
+        attrs = _get_attr_map(database_env, events[0]['id'])
         assert attrs['object_type'] == Audit_Config.Object_Type.Quota_Tier, attrs
         assert attrs['actor'] == _admin_actor, attrs
 
@@ -214,7 +214,7 @@ class TestConfigAuditLive:
             rules_json=_make_tier_rules(50),
         )
 
-        events = _wait_for_events(audit_db_path, _tier_name, 1, AuditEvent.Config_Edited)
+        events = _wait_for_events(database_env, _tier_name, 1, AuditEvent.Config_Edited)
         assert len(events) == 1, events
 
         summary = json.loads(events[0]['data'])
@@ -230,7 +230,7 @@ class TestConfigAuditLive:
         _ = zato_client.delete(f'{_tier_service_name}.delete', id=self.__class__.tier_id)
         self.__class__.tier_id = 0
 
-        events = _wait_for_events(audit_db_path, _tier_name, 1, AuditEvent.Config_Deleted)
+        events = _wait_for_events(database_env, _tier_name, 1, AuditEvent.Config_Deleted)
         assert len(events) == 1, events
 
         summary = json.loads(events[0]['data'])

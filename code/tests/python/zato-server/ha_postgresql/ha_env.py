@@ -6,10 +6,10 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The environment of the active-standby suites. One session creates the network, the kind cluster of the referee,
-# the receivers of push deliveries and the quickstart environments of both nodes, and every test receives a referee
-# without leases, both nodes started from a copy of those environments and HAProxy in front of them. The suite
-# that builds the pair provides its Zato database.
+# The environment of the active-standby suites. One session creates the network, the kind cluster of the referee
+# and the receivers of push deliveries, and every test receives a referee without leases, a Zato database without data,
+# the quickstart environment of the first node in that database, a copy of it for the other node, both nodes started
+# from those environments and HAProxy in front of them. The suite that builds the pair provides its Zato database.
 
 # stdlib
 import errno
@@ -39,7 +39,8 @@ from zato.common.test.reservation import PortInUse, start_on_reserved_port
 if 0:
     from zato.common.test.pubsub_database import PubSubDatabase
     from zato.common.test.reservation import PortReservation
-    from zato.common.typing_ import any_, anydict, strstrdict
+    from zato.common.typing_ import any_, anydict, callable_, strstrdict
+    callable_ = callable_
     PubSubDatabase = PubSubDatabase
 
 # ################################################################################################################################
@@ -110,18 +111,19 @@ class ModuleCtx:
 
 @dataclass(init=False)
 class HASession:
-    """ What one session creates once for every test - the referee, the receivers, the credentials
-    and the quickstart environments.
+    """ What one session creates once for every test - the referee, the receivers, the credentials,
+    the enmasse file with the objects of pub/sub and the functions that complete the quickstart environment
+    of the first node of each test, each with the node, its server directory and the settings of the Zato database.
     """
     run_dir: 'str'
     lease: 'Lease'
-    template_dir: 'str'
     publisher_password: 'str'
     puller_password: 'str'
     invoke_password: 'str'
+    rendered_yaml: 'str'
     receivers: 'anydict'
     receiver_ports: 'reservation_list'
-    server_directories: 'strstrdict'
+    environment_hooks: 'list[callable_]'
     deploy_dir: 'str'
 
 # ################################################################################################################################
@@ -244,13 +246,15 @@ def create_quickstart_environment(
     home_dir:'str',
     rendered_yaml:'str',
     invoke_password:'str',
+    database_env:'strstrdict',
 ) -> 'str':
     """ Creates a quickstart environment in a directory, with the given home directory and the objects of pub/sub,
-    and returns its server directory.
+    in the Zato database of the given settings, and returns its server directory.
     """
     os.makedirs(os.path.join(home_dir, 'env', 'qs-1'), exist_ok=True)
 
     extra_env = {'HOME': home_dir}
+    extra_env.update(database_env)
     state = SessionState(f'zato.test.ha_postgresql.{label}', f'server-logs-ha-{label}.txt')
 
     out = run_quickstart_and_enmasse(
@@ -332,7 +336,6 @@ def start_receivers(session:'HASession', host:'str') -> 'tuple[str, str]':
     session.puller_password = 'test.pull.' + CryptoManager.generate_hex_string()
     session.receivers = {}
     session.receiver_ports = []
-    session.server_directories = {}
 
     placeholders:'strstrdict' = {}
     placeholders['publisher_password'] = session.publisher_password
@@ -369,15 +372,14 @@ def start_receivers(session:'HASession', host:'str') -> 'tuple[str, str]':
 # ################################################################################################################################
 
 def create_session() -> 'HASession':
-    """ Creates the network, the referee, the receivers and the quickstart environments of both nodes,
-    which every test copies.
+    """ Creates the network, the referee and the receivers, which every test shares.
     """
     run_dir = prepare_runtime_dir()
     create_network()
 
     session = HASession()
     session.run_dir = run_dir
-    session.template_dir = os.path.join(run_dir, 'templates')
+    session.environment_hooks = []
 
     # The API server of the referee serves every test of the session, each of which begins without leases ..
     node_names:'list[str]' = []
@@ -389,20 +391,10 @@ def create_session() -> 'HASession':
     session.lease = Lease(run_dir)
     session.lease.create_cluster(node_names)
 
-    # .. the receivers listen on the gateway of the network, which is the address of the host on it ..
+    # .. and the receivers listen on the gateway of the network, which is the address of the host on it.
     rendered_yaml, invoke_password = start_receivers(session, TopologyCtx.Gateway)
+    session.rendered_yaml = rendered_yaml
     session.invoke_password = invoke_password
-
-    # .. and the environment of each node is kept as it was created, so that each test begins from it.
-    for short_name in ModuleCtx.Node_Names:
-        node = Node(short_name=short_name, run_dir=run_dir)
-
-        server_directory = create_quickstart_environment(short_name, node.directory, node.home_dir, rendered_yaml,
-            invoke_password)
-        session.server_directories[short_name] = server_directory
-
-        template_path = os.path.join(session.template_dir, os.path.basename(node.directory))
-        _ = shutil.copytree(node.directory, template_path, symlinks=True)
 
     return session
 
@@ -416,27 +408,53 @@ def remove_session(session:'HASession') -> 'None':
 
 # ################################################################################################################################
 
-def _restore_node_directory(session:'HASession', node:'Node') -> 'None':
-    """ Replaces the directory of a node with the copy that the session created, at the same path.
+def _copy_node_environment(source:'Node', target:'Node', server_directory:'str') -> 'str':
+    """ Copies the quickstart environment of a node into the directory of another node of the same Zato database,
+    which has the secret key and the identity of the server that quickstart created in that database,
+    and returns the server directory of the copy.
     """
-    shutil.rmtree(node.directory, ignore_errors=True)
+    _ = shutil.copytree(source.directory, target.directory, symlinks=True)
 
-    template_path = os.path.join(session.template_dir, os.path.basename(node.directory))
-    _ = shutil.copytree(template_path, node.directory, symlinks=True)
+    out = server_directory.replace(source.directory, target.directory, 1)
+
+    # The logging configuration refers to the log directory of its server by an absolute path
+    logging_conf_path = os.path.join(out, 'config', 'repo', 'logging.conf')
+
+    with open(logging_conf_path) as logging_conf_file:
+        logging_conf = logging_conf_file.read()
+
+    logging_conf = logging_conf.replace(source.directory, target.directory)
+
+    with open(logging_conf_path, 'w') as logging_conf_file:
+        _ = logging_conf_file.write(logging_conf)
+
+    return out
 
 # ################################################################################################################################
 
-def new_nodes(session:'HASession') -> 'list[Node]':
-    """ Returns both nodes, each with its directory restored from the copy that the session created.
+def new_nodes(session:'HASession', database_env:'strstrdict') -> 'list[Node]':
+    """ Returns both nodes - the first with a new quickstart environment in the Zato database of the given settings,
+    completed by the environment hooks of the session, and the other with a copy of that environment.
     """
     out:'list[Node]' = []
 
     for short_name in ModuleCtx.Node_Names:
         node = Node(short_name=short_name, run_dir=session.run_dir)
-        _restore_node_directory(session, node)
-
-        node.server_directory = session.server_directories[short_name]
+        shutil.rmtree(node.directory, ignore_errors=True)
         out.append(node)
+
+    first_node = out[0]
+
+    server_directory = create_quickstart_environment(first_node.short_name, first_node.directory, first_node.home_dir,
+        session.rendered_yaml, session.invoke_password, database_env)
+
+    for hook in session.environment_hooks:
+        hook(first_node, server_directory, database_env)
+
+    first_node.server_directory = server_directory
+
+    for node in out[1:]:
+        node.server_directory = _copy_node_environment(first_node, node, server_directory)
 
     return out
 

@@ -27,7 +27,6 @@ import pytest
 from sqlalchemy import select
 
 # Zato
-from zato.common.db_env.engine import new_zato_engine
 from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.common import event_data
 from zato.common.destination.constants import DeliveryMode, DestinationType, Respond_From_Service
@@ -35,6 +34,7 @@ from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
 
 # Zato - test helpers
 from conftest import wait_for_port_open
+from live_environment.audit import new_database_engine
 from rest_echo_server import HTTPEchoHandler
 
 # ################################################################################################################################
@@ -42,10 +42,11 @@ from rest_echo_server import HTTPEchoHandler
 
 if 0:
     from collections.abc import Generator
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.common.typing_ import any_, anydict, anylist, strstrdict
     any_ = any_
     anydict = anydict
     anylist = anylist
+    strstrdict = strstrdict
 
     echo_server_gen = Generator['_TrackingTCPServer', None, None]
 
@@ -209,10 +210,10 @@ def _as_stored(destinations:'anylist') -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_events(audit_db_path:'str', object_name:'str', event_type:'str', msg_id:'str'='') -> 'anylist':
+def _get_events(database_env:'strstrdict', object_name:'str', event_type:'str', msg_id:'str'='') -> 'anylist':
     """ Returns the audit events one object recorded, oldest first, each as a dict.
     """
-    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
+    engine = new_database_engine(database_env)
 
     query = select(event_table, event_data)
     query = query.where(event_table.c.object_name == object_name)
@@ -234,10 +235,10 @@ def _get_events(audit_db_path:'str', object_name:'str', event_type:'str', msg_id
 
 # ################################################################################################################################
 
-def _get_attr_map(audit_db_path:'str', event_id:'int') -> 'anydict':
+def _get_attr_map(database_env:'strstrdict', event_id:'int') -> 'anydict':
     """ Returns the attributes of one event as a dict of name to value.
     """
-    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
+    engine = new_database_engine(database_env)
 
     query = select(event_attr_table)
     query = query.where(event_attr_table.c.event_id == event_id)
@@ -254,7 +255,7 @@ def _get_attr_map(audit_db_path:'str', event_id:'int') -> 'anydict':
 
 # ################################################################################################################################
 
-def _get_message_cid(audit_db_path:'str', channel_name:'str', control_id:'str') -> 'str':
+def _get_message_cid(database_env:'strstrdict', channel_name:'str', control_id:'str') -> 'str':
     """ Returns the correlation id one message was received under, which is what every delivery
     it fanned out to is recorded under as well.
     """
@@ -262,7 +263,7 @@ def _get_message_cid(audit_db_path:'str', channel_name:'str', control_id:'str') 
 
     while time.monotonic() < deadline:
 
-        events = _get_events(audit_db_path, channel_name, AuditEvent.Message_Received, control_id)
+        events = _get_events(database_env, channel_name, AuditEvent.Message_Received, control_id)
 
         if events:
             out = events[-1]['cid']
@@ -274,10 +275,10 @@ def _get_message_cid(audit_db_path:'str', channel_name:'str', control_id:'str') 
 
 # ################################################################################################################################
 
-def _get_hops(audit_db_path:'str', cid:'str') -> 'anylist':
+def _get_hops(database_env:'strstrdict', cid:'str') -> 'anylist':
     """ Returns every delivery recorded under one correlation id, oldest first.
     """
-    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
+    engine = new_database_engine(database_env)
 
     query = select(event_table, event_data)
     query = query.where(event_table.c.event_type == AuditEvent.Request_Sent)
@@ -295,7 +296,7 @@ def _get_hops(audit_db_path:'str', cid:'str') -> 'anylist':
 
 # ################################################################################################################################
 
-def _wait_for_hops(audit_db_path:'str', cid:'str', expected_count:'int') -> 'anylist':
+def _wait_for_hops(database_env:'strstrdict', cid:'str', expected_count:'int') -> 'anylist':
     """ Polls until one message has as many deliveries recorded as it is expected to have -
     the ones its sender did not wait for land after the acknowledgment already went out.
     """
@@ -303,14 +304,14 @@ def _wait_for_hops(audit_db_path:'str', cid:'str', expected_count:'int') -> 'any
 
     while time.monotonic() < deadline:
 
-        out = _get_hops(audit_db_path, cid)
+        out = _get_hops(database_env, cid)
 
         if len(out) >= expected_count:
             return out
 
         time.sleep(0.1)
 
-    out = _get_hops(audit_db_path, cid)
+    out = _get_hops(database_env, cid)
     return out
 
 # ################################################################################################################################
@@ -324,11 +325,11 @@ def _get_details(row:'anydict') -> 'anydict':
 
 # ################################################################################################################################
 
-def _get_hop_by_destination(rows:'anylist', audit_db_path:'str', destination_name:'str') -> 'anydict':
+def _get_hop_by_destination(rows:'anylist', database_env:'strstrdict', destination_name:'str') -> 'anydict':
     """ Returns the delivery to one destination out of the deliveries of one message.
     """
     for row in rows:
-        attrs = _get_attr_map(audit_db_path, row['id'])
+        attrs = _get_attr_map(database_env, row['id'])
         if attrs['destination_name'] == destination_name:
             out = row
             return out
@@ -686,20 +687,20 @@ class TestChannelDestinations:
         """ One message fans out to all three destinations, each recorded as its own delivery
         under the correlation id the message arrived under.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         control_id = 'DEST-FANOUT-001'
         acknowledgment = _send_and_receive(mllp_port, _build_adt_a01(control_id, _fanout_sender))
 
         assert b'MSA|AA|' + control_id.encode() in acknowledgment
 
-        cid = _get_message_cid(audit_db_path, _fanout_channel, control_id)
-        hops = _wait_for_hops(audit_db_path, cid, 3)
+        cid = _get_message_cid(database_env, _fanout_channel, control_id)
+        hops = _wait_for_hops(database_env, cid, 3)
 
         assert len(hops) == 3
 
         # The MLLP destination was sent the message as it arrived ..
-        forward_hop = _get_hop_by_destination(hops, audit_db_path, _forward_destination)
+        forward_hop = _get_hop_by_destination(hops, database_env, _forward_destination)
 
         assert forward_hop['source'] == AuditSource.MLLP_Outgoing
         assert forward_hop['object_name'] == _forward_outconn
@@ -708,7 +709,7 @@ class TestChannelDestinations:
 
         # .. the FHIR destination was sent the resource the service built for it, at the path
         # the destination names ..
-        fhir_hop = _get_hop_by_destination(hops, audit_db_path, _fhir_destination)
+        fhir_hop = _get_hop_by_destination(hops, database_env, _fhir_destination)
 
         assert fhir_hop['source'] == AuditSource.FHIR
         assert fhir_hop['object_name'] == _fhir_outconn
@@ -721,7 +722,7 @@ class TestChannelDestinations:
         assert fhir_details['path'] == '/Patient'
 
         # .. the REST destination was posted the message as it arrived ..
-        rest_hop = _get_hop_by_destination(hops, audit_db_path, _rest_destination)
+        rest_hop = _get_hop_by_destination(hops, database_env, _rest_destination)
 
         assert rest_hop['source'] == AuditSource.REST_Outgoing
         assert rest_hop['object_name'] == _rest_outconn
@@ -730,7 +731,7 @@ class TestChannelDestinations:
 
         # .. each delivery says which destination of which channel it was, and that it took
         # one attempt ..
-        forward_attrs = _get_attr_map(audit_db_path, forward_hop['id'])
+        forward_attrs = _get_attr_map(database_env, forward_hop['id'])
 
         assert forward_attrs['channel_name'] == _fanout_channel
         assert forward_attrs['destination_type'] == DestinationType.MLLP
@@ -753,26 +754,26 @@ class TestChannelDestinations:
         """ A service that sets one payload for all of its channel's destinations has it delivered
         to each of them, except where it named one of them separately.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         control_id = 'DEST-FANOUT-002'
         _ = _send_and_receive(mllp_port, _build_adt_a01(control_id, _fanout_sender, note='BROADCAST'))
 
-        cid = _get_message_cid(audit_db_path, _fanout_channel, control_id)
-        hops = _wait_for_hops(audit_db_path, cid, 3)
+        cid = _get_message_cid(database_env, _fanout_channel, control_id)
+        hops = _wait_for_hops(database_env, cid, 3)
 
         # What the service made of the message is what went out ..
-        forward_hop = _get_hop_by_destination(hops, audit_db_path, _forward_destination)
+        forward_hop = _get_hop_by_destination(hops, database_env, _forward_destination)
 
         assert 'Seen by the service' in _get_details(forward_hop)['payload']
 
         # .. the REST destination received the same broadcast ..
-        rest_hop = _get_hop_by_destination(hops, audit_db_path, _rest_destination)
+        rest_hop = _get_hop_by_destination(hops, database_env, _rest_destination)
 
         assert 'Seen by the service' in _get_details(rest_hop)['payload']
 
         # .. and the destination the service named separately still received what it was named with.
-        fhir_hop = _get_hop_by_destination(hops, audit_db_path, _fhir_destination)
+        fhir_hop = _get_hop_by_destination(hops, database_env, _fhir_destination)
 
         assert _fhir_resource_id in _get_details(fhir_hop)['payload']
         assert 'Seen by the service' not in _get_details(fhir_hop)['payload']
@@ -787,20 +788,20 @@ class TestChannelDestinations:
         """ A service naming one destination has that destination alone receive what it was
         named with, the others receiving the message as it arrived.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         control_id = 'DEST-FANOUT-003'
         _ = _send_and_receive(mllp_port, _build_adt_a01(control_id, _fanout_sender, note='PER_NAME'))
 
-        cid = _get_message_cid(audit_db_path, _fanout_channel, control_id)
-        hops = _wait_for_hops(audit_db_path, cid, 3)
+        cid = _get_message_cid(database_env, _fanout_channel, control_id)
+        hops = _wait_for_hops(database_env, cid, 3)
 
-        forward_hop = _get_hop_by_destination(hops, audit_db_path, _forward_destination)
+        forward_hop = _get_hop_by_destination(hops, database_env, _forward_destination)
 
         assert 'For the EHR alone' in _get_details(forward_hop)['payload']
 
         # The destination named separately was the only one to receive that payload
-        rest_hop = _get_hop_by_destination(hops, audit_db_path, _rest_destination)
+        rest_hop = _get_hop_by_destination(hops, database_env, _rest_destination)
 
         assert 'For the EHR alone' not in _get_details(rest_hop)['payload']
 
@@ -814,25 +815,25 @@ class TestChannelDestinations:
         """ A destination the service dropped for one message is not delivered to at all,
         and leaves no row behind for that message.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         control_id = 'DEST-FANOUT-004'
         _ = _send_and_receive(mllp_port, _build_adt_a01(control_id, _fanout_sender, note='DROPPED'))
 
-        cid = _get_message_cid(audit_db_path, _fanout_channel, control_id)
-        hops = _wait_for_hops(audit_db_path, cid, 2)
+        cid = _get_message_cid(database_env, _fanout_channel, control_id)
+        hops = _wait_for_hops(database_env, cid, 2)
 
         # Give the delivery that must not happen the same chance to land as the ones that must
         time.sleep(1)
 
-        hops = _get_hops(audit_db_path, cid)
+        hops = _get_hops(database_env, cid)
 
         assert len(hops) == 2
 
         names = set()
 
         for row in hops:
-            attrs = _get_attr_map(audit_db_path, row['id'])
+            attrs = _get_attr_map(database_env, row['id'])
             names.add(attrs['destination_name'])
 
         assert names == {_fhir_destination, _rest_destination}
@@ -847,7 +848,7 @@ class TestChannelDestinations:
         """ A channel that replies from one of its destinations answers its sender with the
         acknowledgment that destination answered the delivery with.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         control_id = 'DEST-REPLY-001'
         acknowledgment = _send_and_receive(mllp_port, _build_adt_a01(control_id, _reply_sender))
@@ -858,8 +859,8 @@ class TestChannelDestinations:
         assert _reply_sending_application.encode() in acknowledgment
         assert b'MSA|AA|' + control_id.encode() in acknowledgment
 
-        cid = _get_message_cid(audit_db_path, _reply_channel, control_id)
-        hops = _wait_for_hops(audit_db_path, cid, 1)
+        cid = _get_message_cid(database_env, _reply_channel, control_id)
+        hops = _wait_for_hops(database_env, cid, 1)
 
         assert len(hops) == 1
         assert hops[0]['object_name'] == _reply_outconn
@@ -875,15 +876,15 @@ class TestChannelDestinations:
         """ A destination the channel replies from failing is the channel's own failure - the
         sender is told so, and every attempt at that destination is a row of its own.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         control_id = 'DEST-DEAD-001'
         acknowledgment = _send_and_receive(mllp_port, _build_adt_a01(control_id, _dead_sender))
 
         assert b'MSA|AR|' + control_id.encode() in acknowledgment
 
-        cid = _get_message_cid(audit_db_path, _dead_channel, control_id)
-        hops = _wait_for_hops(audit_db_path, cid, 3)
+        cid = _get_message_cid(database_env, _dead_channel, control_id)
+        hops = _wait_for_hops(database_env, cid, 3)
 
         # The first attempt and the two it is allowed after it are all recorded, so a delivery
         # that never got through is a row somebody can act on
@@ -894,7 +895,7 @@ class TestChannelDestinations:
         for row in hops:
             assert row['outcome'] == AuditOutcome.Error
             assert row['status']
-            attempts.append(_get_attr_map(audit_db_path, row['id'])['attempt'])
+            attempts.append(_get_attr_map(database_env, row['id'])['attempt'])
 
         assert attempts == ['1', '2', '3']
 
@@ -908,7 +909,7 @@ class TestChannelDestinations:
         """ A channel that names no service delivers what it accepts to its destinations itself,
         the message going out as it arrived.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         control_id = 'DEST-PLAIN-001'
         message_bytes = _build_adt_a01(control_id, _plain_sender)
@@ -916,8 +917,8 @@ class TestChannelDestinations:
 
         assert b'MSA|AA|' + control_id.encode() in acknowledgment
 
-        cid = _get_message_cid(audit_db_path, _plain_channel, control_id)
-        hops = _wait_for_hops(audit_db_path, cid, 1)
+        cid = _get_message_cid(database_env, _plain_channel, control_id)
+        hops = _wait_for_hops(database_env, cid, 1)
 
         assert len(hops) == 1
         assert hops[0]['outcome'] == AuditOutcome.OK
@@ -936,20 +937,20 @@ class TestChannelDestinations:
         """ A channel delivering one after another reaches its destinations in the order it
         declares them, and a paused destination is not delivered to at all.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         control_id = 'DEST-ORDER-001'
         acknowledgment = _send_and_receive(mllp_port, _build_adt_a01(control_id, _order_sender))
 
         assert b'MSA|AA|' + control_id.encode() in acknowledgment
 
-        cid = _get_message_cid(audit_db_path, _order_channel, control_id)
-        hops = _wait_for_hops(audit_db_path, cid, 2)
+        cid = _get_message_cid(database_env, _order_channel, control_id)
+        hops = _wait_for_hops(database_env, cid, 2)
 
         # Give the paused destination the same chance to be delivered to as the other two
         time.sleep(1)
 
-        hops = _get_hops(audit_db_path, cid)
+        hops = _get_hops(database_env, cid)
 
         assert len(hops) == 2
 
@@ -957,7 +958,7 @@ class TestChannelDestinations:
         sequences = []
 
         for row in hops:
-            attrs = _get_attr_map(audit_db_path, row['id'])
+            attrs = _get_attr_map(database_env, row['id'])
             names.append(attrs['destination_name'])
             sequences.append(attrs['delivery_sequence'])
 
@@ -975,15 +976,15 @@ class TestChannelDestinations:
         """ A channel that parses each message on input hands its service the parsed object,
         yet its destination receives the ER7 text of the message.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         control_id = 'DEST-PARSED-001'
         acknowledgment = _send_and_receive(mllp_port, _build_adt_a01(control_id, _parsed_sender))
 
         assert b'MSA|AA|' + control_id.encode() in acknowledgment
 
-        cid = _get_message_cid(audit_db_path, _parsed_channel, control_id)
-        hops = _wait_for_hops(audit_db_path, cid, 1)
+        cid = _get_message_cid(database_env, _parsed_channel, control_id)
+        hops = _wait_for_hops(database_env, cid, 1)
 
         assert len(hops) == 1
         assert hops[0]['outcome'] == AuditOutcome.OK
@@ -1009,14 +1010,14 @@ class TestChannelDestinations:
         the same as a live message fans out under the cid it arrived under, so the new row and every
         delivery it led to read as one trail - through a service and without one alike.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         # The fan-out channel runs a service, the plain one has none - each path has a cid to pass on
         for channel_name, control_id, hop_count in (
             (_fanout_channel, 'DEST-FANOUT-001', 3),
             (_plain_channel, 'DEST-PLAIN-001', 1),
         ):
-            events = _get_events(audit_db_path, channel_name, AuditEvent.Message_Received, control_id)
+            events = _get_events(database_env, channel_name, AuditEvent.Message_Received, control_id)
             original = events[0]
 
             response = zato_client.invoke('zato.audit-log.hl7.reprocess', {'event_id': original['id']})
@@ -1026,17 +1027,17 @@ class TestChannelDestinations:
             assert report['control_id'] == control_id, report
 
             # Every delivery the reprocess led to is recorded under the cid the report names ..
-            hops = _wait_for_hops(audit_db_path, report['cid'], hop_count)
+            hops = _wait_for_hops(database_env, report['cid'], hop_count)
 
             assert len(hops) == hop_count, (channel_name, hops)
 
             # .. each of them a delivery of this channel that went through ..
             for row in hops:
                 assert row['outcome'] == AuditOutcome.OK, row
-                assert _get_attr_map(audit_db_path, row['id'])['channel_name'] == channel_name
+                assert _get_attr_map(database_env, row['id'])['channel_name'] == channel_name
 
             # .. and none of them landed under the cid of the message's first arrival.
-            assert len(_get_hops(audit_db_path, original['cid'])) == hop_count
+            assert len(_get_hops(database_env, original['cid'])) == hop_count
 
 # ################################################################################################################################
 

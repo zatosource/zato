@@ -90,8 +90,8 @@ class TestStatelessLLM:
 
     def test_stateless_and_session_callers_share_a_gateway(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         stateless_client = _make_stateless_client(zato_server)
         session_client = _helpers.make_client(zato_server, _constants.Path_Main)
@@ -114,7 +114,7 @@ class TestStatelessLLM:
         expected_count = len(stateless_result.tool_calls) + len(session_result.tool_calls)
 
         events = _audit.wait_for_events(
-            audit_db_path, expected_count,
+            database_env, expected_count,
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)

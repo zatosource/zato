@@ -15,7 +15,6 @@ import time
 from sqlalchemy import select
 
 # Zato
-from zato.common.db_env.engine import new_zato_engine
 from zato.common.api import Alerting
 from zato.common.alerting.names import get_notification_conn_name
 from zato.common.audit_log.api import AuditEvent
@@ -23,16 +22,18 @@ from zato.common.audit_log.common import alert_table
 
 # Zato - test helpers
 from conftest import wait_for_port_open
+from live_environment.audit import new_database_engine
 from test_mllp_audit import _build_adt_a01, _send_and_receive, _wait_for_events
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, strlist
+    from zato.common.typing_ import any_, anylist, strlist, strstrdict
     any_ = any_
     anylist = anylist
     strlist = strlist
+    strstrdict = strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -147,11 +148,11 @@ def _start_smtp_capture() -> 'tuple':
 
 # ################################################################################################################################
 
-def _get_alerts(audit_db_path:'str', rule_name:'str') -> 'anylist':
+def _get_alerts(database_env:'strstrdict', rule_name:'str') -> 'anylist':
     """ Returns the alert rows one rule raised, oldest first, each as a dict.
     """
 
-    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
+    engine = new_database_engine(database_env)
 
     query = select(alert_table)
     query = query.where(alert_table.c.rule_name == rule_name)
@@ -258,7 +259,7 @@ class TestAlertingLive:
         real MLLP traffic through both - the error channel accumulates the error
         outcomes the error-rate collector will notice.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         # The audited default route - healthy traffic
         response = zato_client.create(
@@ -313,7 +314,7 @@ class TestAlertingLive:
             assert b'MSA|AR|' in ack_bytes
 
         # The error outcomes are in the audit trail for the collector to find
-        ack_events = _wait_for_events(audit_db_path, _error_channel_name, 2, AuditEvent.Ack_Sent)
+        ack_events = _wait_for_events(database_env, _error_channel_name, 2, AuditEvent.Ack_Sent)
         assert len(ack_events) == 2, ack_events
 
 # ################################################################################################################################
@@ -327,7 +328,7 @@ class TestAlertingLive:
         error rate, raises an alert, sends the email through the configured SMTP
         connection, and a second sweep only increments the count.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         smtp_port, smtp_server, messages = _start_smtp_capture()
 
@@ -353,7 +354,7 @@ class TestAlertingLive:
             })
 
             # The alert was raised and dispatched ..
-            alerts = _get_alerts(audit_db_path, _rule_name)
+            alerts = _get_alerts(database_env, _rule_name)
 
             assert len(alerts) == 1, alerts
             alert = alerts[0]
@@ -364,7 +365,7 @@ class TestAlertingLive:
             assert 'error rate' in alert['message'], alert
 
             # .. every occurrence is an alert-raised audit event ..
-            raised_events = _wait_for_events(audit_db_path, _error_channel_name, 1, AuditEvent.Alert_Raised)
+            raised_events = _wait_for_events(database_env, _error_channel_name, 1, AuditEvent.Alert_Raised)
             assert len(raised_events) == 1, raised_events
 
             # .. and the email went out through the captured SMTP connection.
@@ -383,13 +384,13 @@ class TestAlertingLive:
                 Alerting.Extra_From: _alert_from,
             })
 
-            alerts = _get_alerts(audit_db_path, _rule_name)
+            alerts = _get_alerts(database_env, _rule_name)
 
             assert len(alerts) == 1, alerts
             assert alerts[0]['count'] == 2, alerts
 
             # Every occurrence lands in the audit trail, deduplicated or not
-            raised_events = _wait_for_events(audit_db_path, _error_channel_name, 2, AuditEvent.Alert_Raised)
+            raised_events = _wait_for_events(database_env, _error_channel_name, 2, AuditEvent.Alert_Raised)
             assert len(raised_events) == 2, raised_events
 
             # The dispatch itself was suppressed

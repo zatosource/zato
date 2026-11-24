@@ -7,8 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The environment of the PostgreSQL suites. The session holds the lease of the referee,
-# and every test receives a new PostgreSQL cluster, which both nodes share as the Zato database, both nodes started
-# from a copy of the environments of the session and HAProxy in front of them.
+# and every test receives a new PostgreSQL cluster, which both nodes share as the Zato database, the quickstart
+# environment of the first node in that database, a copy of it for the other node, both nodes started from those
+# environments and HAProxy in front of them.
 
 # stdlib
 from contextlib import contextmanager
@@ -64,7 +65,7 @@ def build_environment(
     lazyfs_names:'strlist',
 ) -> 'HAEnvironment':
     """ Starts a new PostgreSQL cluster, synchronous or not and with the instances of the given names on LazyFS,
-    both nodes from the environments of the session and HAProxy, under a referee without leases,
+    both nodes from a new quickstart environment in its database and HAProxy, under a referee without leases,
     without waiting for the pair.
     """
     # Each test begins with no lease of the pair ..
@@ -74,14 +75,14 @@ def build_environment(
     # .. and with a database without data.
     cluster = PostgreSQLCluster(session.run_dir)
 
-    # A cluster that does not start is removed at once, because no environment owns it yet.
+    # A cluster that does not start, or in which the environments of the nodes are not created, is removed at once,
+    # because no environment owns it yet.
     try:
         cluster.start(is_synchronous, lazyfs_names)
+        node_list = new_nodes(session, cluster.database.env)
     except BaseException:
         cluster.remove()
         raise
-
-    node_list = new_nodes(session)
 
     for node in node_list:
         prepare_node(node, lease, cluster, timers)

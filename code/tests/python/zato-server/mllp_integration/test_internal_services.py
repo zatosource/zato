@@ -176,14 +176,14 @@ class TestInternalServices:
         """ A stored inbound message flows through the channel's service again -
         the new attempt lands linked to the original by the correlation id.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         # One message through the channel produces the event the reprocess loads back ..
         message_bytes = _build_adt_a01('REPROCESS-SEED-001')
         ack_bytes = _send_and_receive('127.0.0.1', mllp_port, message_bytes)
         assert b'MSA|AA|REPROCESS-SEED-001' in ack_bytes
 
-        received_events = _wait_for_events(audit_db_path, _channel_name, 1, AuditEvent.Message_Received)
+        received_events = _wait_for_events(database_env, _channel_name, 1, AuditEvent.Message_Received)
         original = received_events[-1]
 
         # .. the reprocess re-routes the stored payload to the channel's service ..
@@ -194,7 +194,7 @@ class TestInternalServices:
         assert report['service_name'] == _channel_service_name, report
 
         # .. and the new attempt is its own received event, linked to the original.
-        received_events = _wait_for_events(audit_db_path, _channel_name, 2, AuditEvent.Message_Received)
+        received_events = _wait_for_events(database_env, _channel_name, 2, AuditEvent.Message_Received)
         reprocessed = received_events[-1]
 
         assert reprocessed['id'] == report['event_id'], (reprocessed, report)
@@ -208,14 +208,14 @@ class TestInternalServices:
         """ A stored outbound message goes out again through the same outconn -
         the new attempt and its acknowledgment land linked to the original.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         # One message through the forward channel produces the sent event the resend loads back ..
         message_bytes = _build_adt_a01('RESEND-SEED-001', sender_application=_forward_sender_application)
         ack_bytes = _send_and_receive('127.0.0.1', mllp_port, message_bytes)
         assert b'MSA|AA|RESEND-SEED-001' in ack_bytes
 
-        sent_events = _wait_for_events(audit_db_path, _outconn_name, 1, AuditEvent.Message_Sent)
+        sent_events = _wait_for_events(database_env, _outconn_name, 1, AuditEvent.Message_Sent)
         original = sent_events[-1]
 
         # .. the resend delivers the stored payload through the same outconn ..
@@ -227,7 +227,7 @@ class TestInternalServices:
         assert report['ack_outcome'] == AuditOutcome.OK, report
 
         # .. the new attempt is its own sent event, linked to the original ..
-        sent_events = _wait_for_events(audit_db_path, _outconn_name, 2, AuditEvent.Message_Sent)
+        sent_events = _wait_for_events(database_env, _outconn_name, 2, AuditEvent.Message_Sent)
         resent = sent_events[-1]
 
         assert resent['id'] == report['event_id'], (resent, report)
@@ -235,7 +235,7 @@ class TestInternalServices:
         assert resent['msg_id'] == 'RESEND-SEED-001'
 
         # .. and the backend's acknowledgment landed on the resend's own cid.
-        ack_events = _wait_for_events(audit_db_path, _outconn_name, 2, AuditEvent.Ack_Received)
+        ack_events = _wait_for_events(database_env, _outconn_name, 2, AuditEvent.Ack_Received)
         ack = ack_events[-1]
 
         assert ack['cid'] == resent['cid'], (ack, resent)
@@ -247,10 +247,10 @@ class TestInternalServices:
         """ An edited payload replaces the stored one on a resend - the new event
         is searchable by what the message says now.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         # The event test_03 seeded goes out again, this time with an edited control id ..
-        sent_events = _wait_for_events(audit_db_path, _outconn_name, 1, AuditEvent.Message_Sent)
+        sent_events = _wait_for_events(database_env, _outconn_name, 1, AuditEvent.Message_Sent)
         original = sent_events[0]
 
         edited_payload = _build_adt_a01('RESEND-EDITED-001').decode('utf-8')
@@ -263,7 +263,7 @@ class TestInternalServices:
         assert report['control_id'] == 'RESEND-EDITED-001', report
 
         # .. and the new event carries the edited message's identity, not the original's.
-        sent_events = _wait_for_events(audit_db_path, _outconn_name, 3, AuditEvent.Message_Sent)
+        sent_events = _wait_for_events(database_env, _outconn_name, 3, AuditEvent.Message_Sent)
         resent = sent_events[-1]
 
         assert resent['msg_id'] == 'RESEND-EDITED-001', resent
@@ -363,7 +363,7 @@ class TestInternalServices:
         """ A recorded FHIR delivery is repeated through the same outconn -
         the per-hop resend of one hop to one destination.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         # A minimal FHIR server for the outconn to write to ..
         fhir_server = HTTPServer(('127.0.0.1', 0), _FHIRPostHandler)
@@ -398,7 +398,7 @@ class TestInternalServices:
             _ = zato_client.invoke('test.hl7.fhir.save')
 
             request_events = _wait_for_events(
-                audit_db_path, _fhir_outconn_name, 1, AuditEvent.Request_Sent)
+                database_env, _fhir_outconn_name, 1, AuditEvent.Request_Sent)
 
             original = request_events[-1]
             assert original['source'] == AuditSource.FHIR
@@ -410,7 +410,7 @@ class TestInternalServices:
 
             # .. and the new attempt is its own request event, linked to the original.
             request_events = _wait_for_events(
-                audit_db_path, _fhir_outconn_name, 2, AuditEvent.Request_Sent)
+                database_env, _fhir_outconn_name, 2, AuditEvent.Request_Sent)
 
             resent = request_events[-1]
             assert resent['id'] == report['event_id'], (resent, report)

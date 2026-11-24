@@ -143,8 +143,8 @@ class TestResourceGrowth:
 
     def test_the_audit_database_under_sustained_traffic(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Main)
 
@@ -176,13 +176,13 @@ class TestResourceGrowth:
         total_calls = _sustained_threads * _sustained_calls_per_thread
 
         _ = _audit.wait_for_events(
-            audit_db_path, total_calls,
+            database_env, total_calls,
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
 
         events = _audit.read_events(
-            audit_db_path, object_name=_constants.Gateway_Main, event_type=AuditEvent.MCP_Tools_Call, min_id=min_id)
+            database_env, object_name=_constants.Gateway_Main, event_type=AuditEvent.MCP_Tools_Call, min_id=min_id)
 
         assert len(events) == total_calls, len(events)
 
@@ -197,7 +197,7 @@ class TestResourceGrowth:
         # at every offset - the pages tile with no overlap and no gap, in strictly
         # falling id order. The pages carry every event type, the way listings do,
         # so the expected set is read without the tools-call filter.
-        gateway_events = _audit.read_events(audit_db_path, object_name=_constants.Gateway_Main, min_id=min_id)
+        gateway_events = _audit.read_events(database_env, object_name=_constants.Gateway_Main, min_id=min_id)
 
         gateway_ids = []
 
@@ -210,7 +210,7 @@ class TestResourceGrowth:
         while True:
 
             page = _audit.read_events_page(
-                audit_db_path, _constants.Gateway_Main, _audit_page_size, offset, min_id=min_id)
+                database_env, _constants.Gateway_Main, _audit_page_size, offset, min_id=min_id)
 
             if not page:
                 break
@@ -345,7 +345,7 @@ class CatalogItem{item_index:04d}(Service):
 
     def test_dozens_of_gateways_on_one_server(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
         server_directory = zato_server['server_directory']
 
         # Each fleet gateway serves exactly one service, rotating through the CRM set
@@ -386,7 +386,7 @@ class CatalogItem{item_index:04d}(Service):
 
             _helpers.wait_until(fleet_serves, 'the whole fleet serves')
 
-            min_id = _audit.last_event_id(audit_db_path)
+            min_id = _audit.last_event_id(database_env)
 
             # .. every gateway serves only its own tool and every call routes to its own path ..
             for entry in fleet:
@@ -407,7 +407,7 @@ class CatalogItem{item_index:04d}(Service):
             for entry in fleet:
 
                 events = _audit.wait_for_events(
-                    audit_db_path, 1,
+                    database_env, 1,
                     object_name=entry['name'],
                     event_type=AuditEvent.MCP_Tools_Call,
                     min_id=min_id)

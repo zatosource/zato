@@ -11,9 +11,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import shutil
+from functools import partial
 
 # Zato
-from ha_env import create_session as create_ha_session, ModuleCtx as EnvCtx
+from ha_env import create_session as create_ha_session
 from nodes import Node, NodeHook
 from pair import import_jobs
 from zato.common.test.exactly_once.control import create_control_dir, Env_Dir
@@ -60,12 +61,21 @@ def get_control_dir(session:'HASession') -> 'str':
 
 # ################################################################################################################################
 
-def _add_relay(node:'Node', server_directory:'str', rendered_yaml:'str', services_source:'str') -> 'None':
-    """ Imports the definitions of the relay, offline, into the configuration of a node, and places the services
-    of the relay in its pickup directory, from which the server deploys them as it starts.
+def _add_relay(
+    node:'Node',
+    server_directory:'str',
+    database_env:'strstrdict',
+    *,
+    rendered_yaml:'str',
+    services_source:'str',
+    ) -> 'None':
+    """ Imports the definitions of the relay, offline, into the Zato database of the given settings, and places
+    the services of the relay in the pickup directory of a node, from which the server deploys them as it starts.
     """
     quickstart_directory = os.path.dirname(server_directory)
+
     extra_env = {'HOME': node.home_dir}
+    extra_env.update(database_env)
 
     import_jobs(quickstart_directory, server_directory, rendered_yaml, extra_env)
 
@@ -75,20 +85,13 @@ def _add_relay(node:'Node', server_directory:'str', rendered_yaml:'str', service
 # ################################################################################################################################
 
 def create_session(rendered_yaml:'str', services_source:'str') -> 'HASession':
-    """ Creates the session of the HA suites, adds the relay to the environment of both nodes, and replaces
-    the copy of each environment, from which every test starts its node, with the result.
+    """ Creates the session of the HA suites, which adds the relay to the quickstart environment of the first node
+    of each test, and thereby to the copy of that environment that the other node starts from.
     """
     out = create_ha_session()
 
-    for short_name in EnvCtx.Node_Names:
-        node = Node(short_name=short_name, run_dir=out.run_dir)
-        server_directory = out.server_directories[short_name]
-
-        _add_relay(node, server_directory, rendered_yaml, services_source)
-
-        template_path = os.path.join(out.template_dir, os.path.basename(node.directory))
-        shutil.rmtree(template_path)
-        _ = shutil.copytree(node.directory, template_path, symlinks=True)
+    add_relay = partial(_add_relay, rendered_yaml=rendered_yaml, services_source=services_source)
+    out.environment_hooks.append(add_relay)
 
     control_dir = get_control_dir(out)
     create_control_dir(control_dir)
@@ -102,9 +105,7 @@ def get_cluster_env(cluster:'PostgreSQLCluster') -> 'strstrdict':
     """ Returns the settings under which the test process reads the instance of a cluster that accepts writes,
     at its own address rather than under the name of the endpoint that only the nodes resolve.
     """
-    out = dict(cluster.node_env)
-    out['Zato_Database_Host'] = cluster.ip
-
+    out = dict(cluster.database.env)
     return out
 
 # ################################################################################################################################

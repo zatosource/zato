@@ -43,7 +43,7 @@ if 0:
 
 @pytest.fixture(scope='session')
 def ha_session() -> 'any_':
-    """ The network, the receivers and the quickstart environments of both nodes, which every test copies.
+    """ The network, the referee and the receivers, which every test shares.
     """
     session = create_session()
 

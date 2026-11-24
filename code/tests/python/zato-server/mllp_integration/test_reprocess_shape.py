@@ -144,14 +144,14 @@ class TestAReprocessDeliversTheShapeTheChannelDeliversLive:
         zato_server:'dict',
         mllp_port:'int',
         ) -> 'None':
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         # The message arrives live and the service records what it received - with the toggle off,
         # OBX-2 is empty, as it was sent ..
         ack_bytes = _send_and_receive('127.0.0.1', mllp_port, _build_oru_r01(_control_id))
         assert f'MSA|AA|{_control_id}'.encode('utf-8') in ack_bytes
 
-        received_events = _wait_for_events(audit_db_path, _channel_name, 1, AuditEvent.Message_Received)
+        received_events = _wait_for_events(database_env, _channel_name, 1, AuditEvent.Message_Received)
         original = received_events[-1]
 
         live_messages = _messages_with_control_id(_recorded_messages(zato_client))
@@ -163,7 +163,7 @@ class TestAReprocessDeliversTheShapeTheChannelDeliversLive:
         report = _invoke_report(zato_client, 'zato.audit-log.hl7.reprocess', {'event_id': original['id']})
         assert report['is_ok'], report
 
-        _ = _wait_for_events(audit_db_path, _channel_name, 2, AuditEvent.Message_Received)
+        _ = _wait_for_events(database_env, _channel_name, 2, AuditEvent.Message_Received)
 
         reprocessed_messages = _messages_with_control_id(_recorded_messages(zato_client))
         assert len(reprocessed_messages) == 2, reprocessed_messages

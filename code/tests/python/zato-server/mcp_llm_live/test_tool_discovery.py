@@ -211,8 +211,8 @@ class TestToolSelectionByLLM:
 
     def test_llm_runs_two_tools_in_sequence(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Main)
 
@@ -241,7 +241,7 @@ class TestToolSelectionByLLM:
 
         # .. and each call landed as its own audit event, in the same order.
         events = _audit.wait_for_events(
-            audit_db_path, 2,
+            database_env, 2,
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)

@@ -13,7 +13,6 @@ import logging
 from nodes import Timers
 from postgresql_cluster import ModuleCtx as ClusterCtx
 from postgresql_env import get_cluster, ready_pair
-from pubsub_exactly_once.database import postgresql_only
 from pubsub_exactly_once.harness import new_keys, stage_batch, verify
 from pubsub_exactly_once_takeover.ha_pair import ControlDirHook, get_cluster_env, get_control_dir
 from zato.common.test.exactly_once.config import TestConfig
@@ -47,7 +46,6 @@ _synchronous_standby = ClusterCtx.Standby_Names[0]
 # ################################################################################################################################
 # ################################################################################################################################
 
-@postgresql_only
 def test_database_failover_on_postgresql(relay_ha_session:'HASession', request:'any_') -> 'None':
     """ The primary of the shared database fails while the relay of the active node holds the last key of a batch,
     and its synchronous standby is promoted. The promoted database holds each output once.

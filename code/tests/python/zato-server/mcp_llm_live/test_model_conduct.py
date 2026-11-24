@@ -183,8 +183,8 @@ class TestModelConduct:
 
     def test_two_independent_lookups_are_answered_call_by_call(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Conduct)
 
@@ -239,7 +239,7 @@ class TestModelConduct:
 
         # .. and both calls are audited under this one conversation.
         events = _audit.wait_for_events(
-            audit_db_path, 2,
+            database_env, 2,
             object_name=_constants.Gateway_Conduct,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)

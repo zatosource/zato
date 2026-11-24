@@ -122,8 +122,8 @@ class TestAgentFilterApplication:
 
     def test_a_valid_filter_reshapes_the_response_and_is_traced(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Filters)
         session_id = _helpers.open_session(client)
@@ -137,7 +137,7 @@ class TestAgentFilterApplication:
 
         # .. and the audit event records the expression that was applied.
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Filters,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -183,8 +183,8 @@ class TestAgentFiltersWithLLM:
 
     def test_llm_passes_a_filter_and_gets_the_filtered_shape(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Filters)
 
@@ -219,7 +219,7 @@ class TestAgentFiltersWithLLM:
 
         # .. and the audit data records the filter that was applied.
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Filters,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -295,8 +295,8 @@ class TestFilterLanguage:
 
     def test_the_language_beyond_one_path(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Filters)
         session_id = _helpers.open_session(client)
@@ -318,7 +318,7 @@ class TestFilterLanguage:
 
         # .. and each of the three is audited verbatim, in order.
         events = _audit.wait_for_events(
-            audit_db_path, 3,
+            database_env, 3,
             object_name=_constants.Gateway_Filters,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -335,8 +335,8 @@ class TestFilterLanguage:
 
     def test_no_match_is_a_defined_result(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Filters)
         session_id = _helpers.open_session(client)
@@ -349,7 +349,7 @@ class TestFilterLanguage:
 
         # .. and the audit still records the expression.
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Filters,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -361,8 +361,8 @@ class TestFilterLanguage:
 
     def test_an_evaluation_error_is_invalid_params(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Filters)
         session_id = _helpers.open_session(client)
@@ -377,7 +377,7 @@ class TestFilterLanguage:
 
         # .. audited as an error, with no filter trace because none was applied.
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Filters,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -391,8 +391,8 @@ class TestFilterLanguage:
 
     def test_the_expression_length_cap_over_the_wire(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Filters)
         session_id = _helpers.open_session(client)
@@ -406,7 +406,7 @@ class TestFilterLanguage:
 
         # .. and audited as an error.
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Filters,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -433,8 +433,8 @@ class TestFilterLanguage:
 
     def test_filters_never_touch_error_responses(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Filters)
         session_id = _helpers.open_session(client)
@@ -452,7 +452,7 @@ class TestFilterLanguage:
 
         # .. and the audit event carries no filter trace.
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Filters,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -465,8 +465,8 @@ class TestFilterLanguage:
 
     def test_one_session_many_filters(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Filters)
         session_id = _helpers.open_session(client)
@@ -484,7 +484,7 @@ class TestFilterLanguage:
 
         # .. and each audit event of the session records its own filter verbatim, in order.
         events = _audit.wait_for_events(
-            audit_db_path, len(expressions),
+            database_env, len(expressions),
             object_name=_constants.Gateway_Filters,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)

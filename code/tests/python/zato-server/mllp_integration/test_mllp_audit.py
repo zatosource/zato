@@ -19,7 +19,6 @@ from urllib.request import Request, urlopen
 from sqlalchemy import select
 
 # Zato
-from zato.common.db_env.engine import new_zato_engine
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table, \
     AuditEvent, AuditLink, AuditOutcome, AuditSource
 from zato.common.audit_log.common import event_data
@@ -27,15 +26,17 @@ from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
 
 # Zato - test helpers
 from conftest import wait_for_port_open
+from live_environment.audit import new_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, anylist
+    from zato.common.typing_ import any_, anydict, anylist, strstrdict
     any_ = any_
     anydict = anydict
     anylist = anylist
+    strstrdict = strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -164,11 +165,11 @@ def _send_rest(host:'str', port:'int', url_path:'str', payload_bytes:'bytes', pa
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_events(audit_db_path:'str', object_name:'str', event_type:'str'='') -> 'anylist':
+def _get_events(database_env:'strstrdict', object_name:'str', event_type:'str'='') -> 'anylist':
     """ Returns the audit events written for one object, oldest first, each as a dict.
     """
 
-    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
+    engine = new_database_engine(database_env)
 
     query = select(event_table, event_data)
     query = query.where(event_table.c.object_name == object_name)
@@ -189,11 +190,11 @@ def _get_events(audit_db_path:'str', object_name:'str', event_type:'str'='') -> 
 
 # ################################################################################################################################
 
-def _get_attr_map(audit_db_path:'str', event_id:'int') -> 'anydict':
+def _get_attr_map(database_env:'strstrdict', event_id:'int') -> 'anydict':
     """ Returns the attributes of one event as a dict of name to value.
     """
 
-    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
+    engine = new_database_engine(database_env)
 
     query = select(event_attr_table)
     query = query.where(event_attr_table.c.event_id == event_id)
@@ -210,11 +211,11 @@ def _get_attr_map(audit_db_path:'str', event_id:'int') -> 'anydict':
 
 # ################################################################################################################################
 
-def _get_body_map(audit_db_path:'str', event_id:'int') -> 'anydict':
+def _get_body_map(database_env:'strstrdict', event_id:'int') -> 'anydict':
     """ Returns the bodies of one event as a dict of kind to data.
     """
 
-    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
+    engine = new_database_engine(database_env)
 
     query = select(event_body_table)
     query = query.where(event_body_table.c.event_id == event_id)
@@ -231,11 +232,11 @@ def _get_body_map(audit_db_path:'str', event_id:'int') -> 'anydict':
 
 # ################################################################################################################################
 
-def _get_children(audit_db_path:'str', parent_event_id:'int', link_type:'str') -> 'anylist':
+def _get_children(database_env:'strstrdict', parent_event_id:'int', link_type:'str') -> 'anylist':
     """ Returns the child event ids linked to one parent, oldest first.
     """
 
-    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
+    engine = new_database_engine(database_env)
 
     query = select(event_link_table.c.child_event_id)
     query = query.where(event_link_table.c.parent_event_id == parent_event_id)
@@ -253,7 +254,7 @@ def _get_children(audit_db_path:'str', parent_event_id:'int', link_type:'str') -
 
 # ################################################################################################################################
 
-def _wait_for_events(audit_db_path:'str', object_name:'str', expected_count:'int', event_type:'str'='') -> 'anylist':
+def _wait_for_events(database_env:'strstrdict', object_name:'str', expected_count:'int', event_type:'str'='') -> 'anylist':
     """ Polls until the expected number of events shows up for one object.
     """
 
@@ -261,14 +262,14 @@ def _wait_for_events(audit_db_path:'str', object_name:'str', expected_count:'int
 
     while time.monotonic() < deadline:
 
-        out = _get_events(audit_db_path, object_name, event_type)
+        out = _get_events(database_env, object_name, event_type)
 
         if len(out) >= expected_count:
             return out
 
         time.sleep(0.1)
 
-    out = _get_events(audit_db_path, object_name, event_type)
+    out = _get_events(database_env, object_name, event_type)
     return out
 
 # ################################################################################################################################
@@ -385,7 +386,7 @@ class TestMLLPAudit:
         """ One accepted message writes a received event with parsed attributes
         and an ACK event, both on one cid.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         message_bytes = _build_adt_a01('AUDIT-001')
         ack_bytes = _send_and_receive('127.0.0.1', mllp_port, message_bytes)
@@ -393,32 +394,32 @@ class TestMLLPAudit:
 
         # The received event carries the message and its searchable attributes ..
         received_events = _wait_for_events(
-            audit_db_path, 'test-mllp-audit-accept', 1, AuditEvent.Message_Received)
+            database_env, 'test-mllp-audit-accept', 1, AuditEvent.Message_Received)
 
         received = received_events[-1]
         assert received['source'] == AuditSource.MLLP_Channel
         assert received['msg_id'] == 'AUDIT-001'
         assert received['outcome'] == AuditOutcome.OK
 
-        attrs = _get_attr_map(audit_db_path, received['id'])
+        attrs = _get_attr_map(database_env, received['id'])
         assert attrs['msg_type'] == 'ADT^A01', attrs
         assert attrs['mrn'] == '445566', attrs
         assert attrs['facility'] == 'GENERAL_HOSPITAL', attrs
 
         # .. the full message body is stored by reference ..
-        bodies = _get_body_map(audit_db_path, received['id'])
+        bodies = _get_body_map(database_env, received['id'])
         assert 'PID|||445566^^^GENERAL_HOSPITAL^MR||SMITH^JOHN' in bodies['request']
 
         # .. and the acknowledgment landed on the same cid, marked accepted.
         ack_events = _wait_for_events(
-            audit_db_path, 'test-mllp-audit-accept', 1, AuditEvent.Ack_Sent)
+            database_env, 'test-mllp-audit-accept', 1, AuditEvent.Ack_Sent)
 
         ack = ack_events[-1]
         assert ack['cid'] == received['cid']
         assert ack['msg_id'] == 'AUDIT-001'
         assert ack['outcome'] == AuditOutcome.OK
 
-        ack_attrs = _get_attr_map(audit_db_path, ack['id'])
+        ack_attrs = _get_attr_map(database_env, ack['id'])
         assert ack_attrs['ack_status'] == 'AA', ack_attrs
 
 # ################################################################################################################################
@@ -426,7 +427,7 @@ class TestMLLPAudit:
     def test_03_service_error_writes_negative_ack(self, zato_server:'dict', mllp_port:'int') -> 'None':
         """ A message whose service raises writes an ACK event that is an error of its own.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         message_bytes = _build_adt_a01('AUDIT-ERR-001', sender_application=_error_sender_application)
         ack_bytes = _send_and_receive('127.0.0.1', mllp_port, message_bytes)
@@ -434,12 +435,12 @@ class TestMLLPAudit:
 
         # The receipt itself succeeded ..
         received_events = _wait_for_events(
-            audit_db_path, 'test-mllp-audit-error', 1, AuditEvent.Message_Received)
+            database_env, 'test-mllp-audit-error', 1, AuditEvent.Message_Received)
         assert received_events[-1]['outcome'] == AuditOutcome.OK
 
         # .. and the negative acknowledgment is a failure with its code on the row.
         ack_events = _wait_for_events(
-            audit_db_path, 'test-mllp-audit-error', 1, AuditEvent.Ack_Sent)
+            database_env, 'test-mllp-audit-error', 1, AuditEvent.Ack_Sent)
 
         ack = ack_events[-1]
         assert ack['outcome'] == AuditOutcome.Error
@@ -450,7 +451,7 @@ class TestMLLPAudit:
     def test_04_unaudited_channel_writes_nothing(self, zato_server:'dict', mllp_port:'int') -> 'None':
         """ A channel whose audit log is off leaves no trace in the audit database.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         message_bytes = _build_adt_a01('AUDIT-QUIET-001', sender_application=_quiet_sender_application)
         ack_bytes = _send_and_receive('127.0.0.1', mllp_port, message_bytes)
@@ -459,7 +460,7 @@ class TestMLLPAudit:
         # Give any misdirected write time to land before asserting there is none
         time.sleep(1)
 
-        events = _get_events(audit_db_path, 'test-mllp-audit-quiet')
+        events = _get_events(database_env, 'test-mllp-audit-quiet')
 
         # The channel's own creation is in the config-audit stream - what must
         # not exist is any trace of the message traffic itself
@@ -472,7 +473,7 @@ class TestMLLPAudit:
         """ A BHS batch writes a parent event plus a child row per contained message,
         linked through the lineage table, each child with its own attributes.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         batch_bytes = _build_batch('BATCH-MSG-1', 'BATCH-MSG-2')
         ack_bytes = _send_and_receive('127.0.0.1', mllp_port, batch_bytes)
@@ -480,14 +481,14 @@ class TestMLLPAudit:
 
         # The parent event describes the batch as a unit ..
         parent_events = _wait_for_events(
-            audit_db_path, 'test-mllp-audit-accept', 1, AuditEvent.Interchange_Received)
+            database_env, 'test-mllp-audit-accept', 1, AuditEvent.Interchange_Received)
 
         parent = parent_events[-1]
-        parent_attrs = _get_attr_map(audit_db_path, parent['id'])
+        parent_attrs = _get_attr_map(database_env, parent['id'])
         assert parent_attrs['batch_count'] == '2', parent_attrs
 
         # .. the children hang off it through the lineage table ..
-        child_ids = _get_children(audit_db_path, parent['id'], AuditLink.Batch_Item_Of)
+        child_ids = _get_children(database_env, parent['id'], AuditLink.Batch_Item_Of)
         assert len(child_ids) == 2, child_ids
 
         # .. and each child carries its own control id and attributes.
@@ -496,7 +497,7 @@ class TestMLLPAudit:
         for child_id in child_ids:
 
             child_events = [
-                event for event in _get_events(audit_db_path, 'test-mllp-audit-accept', AuditEvent.Message_Received)
+                event for event in _get_events(database_env, 'test-mllp-audit-accept', AuditEvent.Message_Received)
                 if event['id'] == child_id
             ]
 
@@ -508,7 +509,7 @@ class TestMLLPAudit:
 
         # The one acknowledgment covering the batch shares the parent's cid
         ack_events = _wait_for_events(
-            audit_db_path, 'test-mllp-audit-accept', 1, AuditEvent.Ack_Sent)
+            database_env, 'test-mllp-audit-accept', 1, AuditEvent.Ack_Sent)
 
         batch_acks = [event for event in ack_events if event['cid'] == parent['cid']]
         assert len(batch_acks) == 1, batch_acks
@@ -526,7 +527,7 @@ class TestMLLPAudit:
         """ A message forwarded through an audited outconn writes a sent event
         and an ACK-received event, both on one cid.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         # The audited outconn pointing at the standalone backend ..
         response = zato_client.create( # type: ignore[union-attr]
@@ -575,19 +576,19 @@ class TestMLLPAudit:
 
         # .. the sent event carries the message and where it went ..
         sent_events = _wait_for_events(
-            audit_db_path, _forward_outconn_name, 1, AuditEvent.Message_Sent)
+            database_env, _forward_outconn_name, 1, AuditEvent.Message_Sent)
 
         sent = sent_events[-1]
         assert sent['source'] == AuditSource.MLLP_Outgoing
         assert sent['msg_id'] == 'AUDIT-FWD-001'
         assert sent['endpoint'] == f'127.0.0.1:{backend_port}'
 
-        sent_attrs = _get_attr_map(audit_db_path, sent['id'])
+        sent_attrs = _get_attr_map(database_env, sent['id'])
         assert sent_attrs['msg_type'] == 'ADT^A01', sent_attrs
 
         # .. and the backend's acknowledgment landed on the same cid, marked accepted.
         ack_events = _wait_for_events(
-            audit_db_path, _forward_outconn_name, 1, AuditEvent.Ack_Received)
+            database_env, _forward_outconn_name, 1, AuditEvent.Ack_Received)
 
         ack = ack_events[-1]
         assert ack['cid'] == sent['cid']
@@ -600,7 +601,7 @@ class TestMLLPAudit:
         """ HL7 arriving over REST is re-tagged at the writer - the events land
         as the channel-side MLLP source with HL7 fields, not as rest-channel noise.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         # An audited REST channel whose data format marks it as HL7 ..
         response = zato_client.create( # type: ignore[union-attr]
@@ -634,19 +635,19 @@ class TestMLLPAudit:
 
         # .. the request landed as an HL7 received event with HL7 fields ..
         received_events = _wait_for_events(
-            audit_db_path, self.__class__.rest_channel_name, 1, AuditEvent.Message_Received)
+            database_env, self.__class__.rest_channel_name, 1, AuditEvent.Message_Received)
 
         received = received_events[-1]
         assert received['source'] == AuditSource.MLLP_Channel
         assert received['msg_id'] == 'AUDIT-REST-001'
 
-        attrs = _get_attr_map(audit_db_path, received['id'])
+        attrs = _get_attr_map(database_env, received['id'])
         assert attrs['msg_type'] == 'ADT^A01', attrs
         assert attrs['facility'] == 'GENERAL_HOSPITAL', attrs
 
         # .. and the response landed as the acknowledgment answering it, on the same cid.
         ack_events = _wait_for_events(
-            audit_db_path, self.__class__.rest_channel_name, 1, AuditEvent.Ack_Sent)
+            database_env, self.__class__.rest_channel_name, 1, AuditEvent.Ack_Sent)
 
         ack = ack_events[-1]
         assert ack['source'] == AuditSource.MLLP_Channel
@@ -662,7 +663,7 @@ class TestMLLPAudit:
         """ A FHIR call through an audited outconn writes a request event
         and a response event, both on one cid, with the resource type searchable.
         """
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         # A minimal FHIR server for the outconn to talk to ..
         fhir_server = HTTPServer(('127.0.0.1', 0), _FHIRRequestHandler)
@@ -698,19 +699,19 @@ class TestMLLPAudit:
 
             # .. the request event says what was asked for ..
             request_events = _wait_for_events(
-                audit_db_path, _fhir_outconn_name, 1, AuditEvent.Request_Sent)
+                database_env, _fhir_outconn_name, 1, AuditEvent.Request_Sent)
 
             request = request_events[-1]
             assert request['source'] == AuditSource.FHIR
             assert request['endpoint'] == 'GET Patient/example'
 
-            attrs = _get_attr_map(audit_db_path, request['id'])
+            attrs = _get_attr_map(database_env, request['id'])
             assert attrs['resource_type'] == 'Patient', attrs
             assert attrs['method'] == 'GET', attrs
 
             # .. and the response landed on the same cid, marked a success.
             response_events = _wait_for_events(
-                audit_db_path, _fhir_outconn_name, 1, AuditEvent.Response_Received)
+                database_env, _fhir_outconn_name, 1, AuditEvent.Response_Received)
 
             fhir_response = response_events[-1]
             assert fhir_response['cid'] == request['cid']

@@ -1,7 +1,7 @@
-//! The subscription list of a worker - the subscriber and topic pairs of every subscription in `config.db`.
+//! The subscription list of a worker, built from the configuration database.
 //!
 //! The list governs the rows of `pubsub_topic_sub` of the sub keys that `new_sub_key` produces. It holds the pairs
-//! that `config.db` configures and the pairs whose rows are committed in the pub/sub database, and the status
+//! that the configuration database configures and the pairs whose rows are committed in the pub/sub database, and the status
 //! of each pair follows from the two. The write path of pub/sub reads it under the write lock of its transactions.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -47,7 +47,7 @@ pub fn is_governed_key(sub_key: &str) -> bool {
 // ################################################################################################################################
 // ################################################################################################################################
 
-/// The flags of one subscriber and topic pair in `config.db`.
+/// The flags of one subscriber and topic pair in the configuration database.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PairFlags {
     /// Whether the subscriber may publish to the topic.
@@ -57,7 +57,7 @@ pub struct PairFlags {
     pub is_delivery_enabled: bool,
 }
 
-/// One governed subscription of `config.db` with the flags of each of its topics.
+/// One governed subscription of the configuration database with the flags of each of its topics.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Subscriber {
     /// Whether the subscriber may publish to any of its topics.
@@ -95,10 +95,10 @@ impl Status {
 // ################################################################################################################################
 // ################################################################################################################################
 
-/// The pairs that `config.db` configures and the pairs whose rows are committed, for governed sub keys alone.
+/// The pairs that the configuration database configures and the pairs whose rows are committed, for governed sub keys alone.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ListState {
-    /// The governed subscriptions of `config.db` by sub key.
+    /// The governed subscriptions of the configuration database by sub key.
     subscribers: HashMap<String, Subscriber>,
 
     /// The configured sub keys of each topic, kept in step with `subscribers`.
@@ -107,7 +107,7 @@ pub struct ListState {
     /// The topics of each sub key whose rows are committed in the pub/sub database.
     committed: HashMap<String, BTreeSet<String>>,
 
-    /// Whether the state was built from `config.db`. Until then, publications use the rows of the pub/sub database as they are.
+    /// Whether the state was built from the configuration database. Until then, publications use the rows of the pub/sub database as they are.
     is_loaded: bool,
 }
 
@@ -122,7 +122,7 @@ pub struct Decision {
 }
 
 impl ListState {
-    /// Builds the state from the subscriptions of `config.db` and the rows committed in the pub/sub database,
+    /// Builds the state from the subscriptions of the configuration database and the rows committed in the pub/sub database,
     /// leaving out the sub keys that the list does not govern.
     #[must_use]
     pub fn from_parts(subscribers: Vec<(String, Subscriber)>, committed: Vec<Pair>) -> Self {
@@ -224,7 +224,7 @@ impl ListState {
         out
     }
 
-    /// Replaces the subscriptions with those of `config.db` and keeps the rows that the list considers committed,
+    /// Replaces the subscriptions with those of the configuration database and keeps the rows that the list considers committed,
     /// for a reload during which the rows cannot be read from the pub/sub database.
     pub fn replace_subscribers(&mut self, subscribers: Vec<(String, Subscriber)>) {
         // The rows remain committed whatever the subscriptions that they were recorded under,
@@ -488,7 +488,7 @@ pub struct PairStatus {
 /// so a reader sees the state either before or after a change, never in between.
 #[pyclass(frozen, name = "SubscriptionList")]
 pub struct SubscriptionList {
-    /// The configured and the committed pairs with the subscribers of `config.db`.
+    /// The configured and the committed pairs with the subscribers of the configuration database.
     state: RwLock<ListState>,
 }
 
@@ -514,7 +514,7 @@ impl SubscriptionList {
         }
     }
 
-    /// Replaces the whole list with the subscriptions of `config.db` and the rows committed in the pub/sub database.
+    /// Replaces the whole list with the subscriptions of the configuration database and the rows committed in the pub/sub database.
     ///
     /// The subscriptions map each sub key to a dict with `is_pub_active` and `topics`, which maps the name of each topic
     /// to a dict with `is_pub_enabled` and `is_delivery_enabled`.
@@ -555,7 +555,7 @@ impl SubscriptionList {
         self.state.write().replace_committed(committed);
     }
 
-    /// Replaces the subscriptions with those of `config.db` and keeps the rows that the list considers committed,
+    /// Replaces the subscriptions with those of the configuration database and keeps the rows that the list considers committed,
     /// for a reload during which the rows cannot be read from the pub/sub database.
     fn replace_subscribers(&self, subscribers: &Bound<'_, PyDict>) -> PyResult<()> {
         let mut parsed = Vec::with_capacity(subscribers.len());
@@ -587,7 +587,7 @@ impl SubscriptionList {
         (decision.subscribers, decision.added)
     }
 
-    /// Returns whether startup has built the list from `config.db`.
+    /// Returns whether startup has built the list from the configuration database.
     fn is_loaded(&self) -> bool {
         self.state.read().is_loaded
     }

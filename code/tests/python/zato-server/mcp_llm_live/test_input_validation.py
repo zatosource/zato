@@ -78,10 +78,10 @@ class TestInputValidation:
     def test_missing_required_field_is_refused_before_the_service_runs(self, zato_server:'anydict') -> 'None':
 
         marker_path = zato_server['marker_path']
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         count_before = _markers.count_invocations(marker_path, _constants.Service_Customer_Get)
-        min_id = _audit.last_event_id(audit_db_path)
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Validate)
         session_id = _helpers.open_session(client)
@@ -94,7 +94,7 @@ class TestInputValidation:
 
         # .. the audit outcome is an error ..
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Validate,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -148,8 +148,8 @@ class TestInputValidation:
 
     def test_unknown_tool_returns_the_proper_error_and_is_audited(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Main)
         session_id = _helpers.open_session(client)
@@ -160,7 +160,7 @@ class TestInputValidation:
         assert body['error']['code'] == _constants.Error_Method_Not_Found, body
 
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -250,8 +250,8 @@ class TestValidationWithLLM:
 
     def test_llm_reports_a_service_error(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Main)
 
@@ -277,7 +277,7 @@ class TestValidationWithLLM:
         # .. and the audit log has the error outcome for the call - all of this
         # conversation's calls have landed once their count matches the transcript.
         events = _audit.wait_for_events(
-            audit_db_path, len(result.tool_calls),
+            database_env, len(result.tool_calls),
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -304,10 +304,10 @@ class TestValidationOptions:
     def test_an_unknown_parameter_is_refused(self, zato_server:'anydict') -> 'None':
 
         marker_path = zato_server['marker_path']
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         count_before = _markers.count_invocations(marker_path, _constants.Service_Customer_Get)
-        min_id = _audit.last_event_id(audit_db_path)
+        min_id = _audit.last_event_id(database_env)
 
         # A call with a field the schema does not declare is invalid params, naming the field ..
         arguments = {'customer_id': _constants.Customer_ID, _unknown_key: _unknown_value}
@@ -318,7 +318,7 @@ class TestValidationOptions:
 
         # .. audited as an error ..
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Validate,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -334,7 +334,7 @@ class TestValidationOptions:
     def test_the_same_calls_with_validation_off(self, zato_server:'anydict') -> 'None':
 
         marker_path = zato_server['marker_path']
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         # The unknown-parameter call reaches the service with the extra argument intact ..
         count_before = _markers.count_invocations(marker_path, _constants.Service_Customer_Get)
@@ -350,7 +350,7 @@ class TestValidationOptions:
 
         # .. while the missing-field call fails under the service's own input contract -
         # a service error, not a validation one ..
-        min_id = _audit.last_event_id(audit_db_path)
+        min_id = _audit.last_event_id(database_env)
 
         body = _call_customer(zato_server, _constants.Path_Main, {})
 
@@ -360,7 +360,7 @@ class TestValidationOptions:
         # .. and the audit records the difference - an error outcome with no
         # JSON-RPC error code, unlike a validation refusal.
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -442,8 +442,8 @@ class TestNameRenderingInErrors:
 
     def test_a_tool_name_with_line_breaks_is_reported_on_one_line(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Main)
         session_id = _helpers.open_session(client)
@@ -465,7 +465,7 @@ class TestNameRenderingInErrors:
 
         # .. and the audit event keeps the name exactly as it was sent.
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)

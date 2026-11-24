@@ -31,6 +31,7 @@ import pytest  # noqa: E402
 
 # Zato
 from zato.common.test import kill_server_process, rand_string  # noqa: E402
+from zato.common.test.zato_database import create_test_database, drop_test_database  # noqa: E402
 from zato.common.typing_ import cast_  # noqa: E402
 from zato.common.util.config import get_config_object, update_config_file  # noqa: E402
 
@@ -433,7 +434,12 @@ def zato_server() -> 'any_':
     port = _find_free_port()
     _temp_directory = tempfile.mkdtemp(prefix='zato_mcp_llm_live_test_')
 
-    # Create a quickstart environment with a clean env,
+    # The environment receives a Zato database of its own, which the quickstart, the server, the listener
+    # and every enmasse command that this process runs use ..
+    database_env = create_test_database()
+    os.environ.update(database_env)
+
+    # .. create a quickstart environment with a clean env,
     # removing stale COVERAGE_PROCESS_START interference ..
     quickstart_env = os.environ.copy()
     _ = quickstart_env.pop('COVERAGE_PROCESS_START', None)
@@ -495,11 +501,6 @@ def zato_server() -> 'any_':
     server_env['Zato_MCP_Check_Origin'] = 'true'
 
     _ = server_env.pop('COVERAGE_PROCESS_START', None)
-
-    # Point the audit log at a file inside the temp directory so the live server
-    # never writes into the real environment's audit database.
-    audit_db_path = os.path.join(_temp_directory, 'zato.db')
-    server_env['Zato_Database_Path'] = audit_db_path
 
     _spawn_server(server_directory, server_env, 'w')
     print(f'[TIMING] server log: {_server_log_path}')
@@ -584,7 +585,7 @@ def zato_server() -> 'any_':
         'server_directory': server_directory,
         'temp_directory': _temp_directory,
         'pickup_directory': pickup_directory,
-        'audit_db_path': audit_db_path,
+        'database_env': database_env,
         'marker_path': marker_path,
         'payload_path': payload_path,
         'hook_path': hook_path,
@@ -597,7 +598,7 @@ def zato_server() -> 'any_':
         'bearer_static_token': _constants.Bearer_Static_Token,
     }
 
-    # Teardown: stop the server and remove the temporary directory.
+    # Teardown: stop the server and remove the temporary directory ..
     _kill_server()
 
     if _temp_directory:
@@ -605,6 +606,12 @@ def zato_server() -> 'any_':
             shutil.rmtree(_temp_directory, ignore_errors=True)
 
     _temp_directory = None
+
+    # .. and remove the variables that selected the database together with the database.
+    for name in database_env:
+        del os.environ[name]
+
+    drop_test_database(database_env)
 
 # ################################################################################################################################
 # ################################################################################################################################

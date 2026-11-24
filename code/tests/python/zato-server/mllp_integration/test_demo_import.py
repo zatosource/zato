@@ -18,16 +18,19 @@ import json
 from sqlalchemy import func, select
 
 # Zato
-from zato.common.db_env.engine import new_zato_engine
 from zato.common.audit_log.api import event_table
+
+# Zato - test helpers
+from live_environment.audit import new_database_engine
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict
+    from zato.common.typing_ import any_, anydict, strstrdict
     any_ = any_
     anydict = anydict
+    strstrdict = strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,10 +63,10 @@ _rest_object_count = 2
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _count_demo_events(audit_db_path:'str') -> 'int':
+def _count_demo_events(database_env:'strstrdict') -> 'int':
     """ Returns how many events in the server's audit database belong to the demo.
     """
-    engine = new_zato_engine(f'sqlite:///{audit_db_path}')
+    engine = new_database_engine(database_env)
 
     query = select(func.count()).select_from(event_table)
     query = query.where(event_table.c.cid.like(f'{_cid_prefix}%'))
@@ -117,8 +120,8 @@ class TestDemoImport:
         assert result['burst_count'] == _live_burst_count, result
 
         # The seeded rows are in the server's own audit database
-        audit_db_path = zato_server['audit_db_path']
-        demo_event_count = _count_demo_events(audit_db_path)
+        database_env = zato_server['database_env']
+        demo_event_count = _count_demo_events(database_env)
         assert demo_event_count >= result['event_count'], (demo_event_count, result['event_count'])
 
         self.__class__.first_event_count = demo_event_count
@@ -152,8 +155,8 @@ class TestDemoImport:
 
         # The seeded rows were replaced, not appended to - the live burst adds its
         # own wire events on top, which is why this compares the demo-cid count.
-        audit_db_path = zato_server['audit_db_path']
-        demo_event_count = _count_demo_events(audit_db_path)
+        database_env = zato_server['database_env']
+        demo_event_count = _count_demo_events(database_env)
 
         assert demo_event_count == self.__class__.first_event_count, \
             (demo_event_count, self.__class__.first_event_count)
@@ -170,8 +173,8 @@ class TestDemoImport:
         assert len(result['deleted_connections']) == _connection_count + _rest_object_count, result
 
         # No demo rows are left in the audit database
-        audit_db_path = zato_server['audit_db_path']
-        assert _count_demo_events(audit_db_path) == 0
+        database_env = zato_server['database_env']
+        assert _count_demo_events(database_env) == 0
 
         # The demo channels are no longer on the live board
         states = _get_channel_states(zato_client)

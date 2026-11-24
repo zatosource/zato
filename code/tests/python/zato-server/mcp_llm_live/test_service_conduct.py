@@ -49,8 +49,8 @@ class TestServiceConduct:
 
     def test_a_hanging_tool_is_cut_off_at_the_bound(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Ops)
         session_id = _helpers.open_session(client)
@@ -74,7 +74,7 @@ class TestServiceConduct:
         # .. and the audit records the error with the duration column filled
         # and the bound named in the trace's error message.
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Ops,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -93,8 +93,8 @@ class TestServiceConduct:
 
     def test_an_exception_maps_to_one_error_shape(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Main)
         session_id = _helpers.open_session(client)
@@ -113,7 +113,7 @@ class TestServiceConduct:
 
         # .. while the audit data records the service's own error message.
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -149,8 +149,8 @@ class TestServiceConduct:
 
     def test_an_empty_response_is_a_defined_shape(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Ops)
         session_id = _helpers.open_session(client)
@@ -166,7 +166,7 @@ class TestServiceConduct:
         # .. the outcome is OK and the shaping pipeline left it alone - the audit data
         # carries the request's own facts and not one shaping key.
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Ops,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)

@@ -52,7 +52,7 @@ if 0:
 
 @pytest.fixture(scope='session')
 def kube_session() -> 'any_':
-    """ The cluster, the receivers, the quickstart environment of the pods and PostgreSQL, deleted at the end of the run,
+    """ The cluster, the receivers, the referee and PostgreSQL, deleted at the end of the run,
     including a run that fails.
     """
     # A session that fails while it is created leaves no cluster behind ..

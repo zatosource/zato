@@ -81,8 +81,8 @@ def relay_yaml() -> 'str':
 
 @pytest.fixture(scope='session')
 def ha_session(relay_yaml:'str') -> 'any_':
-    """ The network, the referee, the receivers and the quickstart environments of both nodes, with the relay,
-    which every test of the HA pair copies.
+    """ The network, the referee and the receivers, which every test of the HA pair shares, and the relay,
+    which the quickstart environment of each test receives.
     """
     session = create_session(relay_yaml, _services_source)
 

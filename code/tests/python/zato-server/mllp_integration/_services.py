@@ -550,22 +550,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import json
-import os
 
 # SQLAlchemy
 from sqlalchemy import func, select, text
 
 # Zato
 from zato.common.audit_log.common import AuditEvent, AuditOutcome, event_table
-from zato.common.db_env.common import Type_SQLite
 from zato.common.db_env.database import get_database_engine
 from zato.server.service import Service
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# The suffix of the write-ahead log of a SQLite database, which holds the most recent writes until a checkpoint
-_wal_suffix = '-wal'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -585,20 +577,8 @@ class TestHL7AuditCounts(Service):
         out = connection.execute(query).scalar_one()
         return out
 
-    def _get_database_size(self, engine, connection):
-
-        # A SQLite database is its file together with its write-ahead log ..
-        if engine.dialect.name == Type_SQLite:
-            path = engine.url.database
-            out = os.path.getsize(path)
-
-            if os.path.exists(path + _wal_suffix):
-                out += os.path.getsize(path + _wal_suffix)
-
-        # .. and PostgreSQL reports the size of its database itself.
-        else:
-            out = connection.execute(text('select pg_database_size(current_database())')).scalar_one()
-
+    def _get_database_size(self, connection):
+        out = connection.execute(text('select pg_database_size(current_database())')).scalar_one()
         return out
 
     def handle(self):
@@ -613,7 +593,7 @@ class TestHL7AuditCounts(Service):
                 'acks': self._count(connection, event_type == AuditEvent.Ack_Sent),
                 'error_acks': self._count(connection, event_type == AuditEvent.Ack_Sent,
                     event_table.c.outcome == AuditOutcome.Error),
-                'database_size': self._get_database_size(engine, connection),
+                'database_size': self._get_database_size(connection),
             }
 
         self.response.payload = json.dumps(out)

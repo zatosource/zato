@@ -51,8 +51,8 @@ def _prove_no_events(zato_server:'anydict', min_id:'int') -> 'None':
     on an audited gateway is waited for first, so the absence is not just a race.
     """
 
-    audit_db_path = zato_server['audit_db_path']
-    probe_min_id = _audit.last_event_id(audit_db_path)
+    database_env = zato_server['database_env']
+    probe_min_id = _audit.last_event_id(database_env)
 
     body = _call_order_status(zato_server, _constants.Path_Main)
 
@@ -60,12 +60,12 @@ def _prove_no_events(zato_server:'anydict', min_id:'int') -> 'None':
     assert data['status'] == _constants.Order_Status, body
 
     _ = _audit.wait_for_events(
-        audit_db_path, 1,
+        database_env, 1,
         object_name=_constants.Gateway_Main,
         event_type=AuditEvent.MCP_Tools_Call,
         min_id=probe_min_id)
 
-    events = _audit.read_events(audit_db_path, object_name=_constants.Gateway_Audit_Off, min_id=min_id)
+    events = _audit.read_events(database_env, object_name=_constants.Gateway_Audit_Off, min_id=min_id)
     assert events == [], events
 
 # ################################################################################################################################
@@ -80,8 +80,8 @@ class TestAuditOptions:
 
     def test_audit_off_writes_nothing(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         # A whole conversation runs on the audit-off gateway and every call succeeds ..
         client = _helpers.make_client(zato_server, _constants.Path_Audit_Off)
@@ -106,9 +106,9 @@ class TestAuditOptions:
     def test_the_toggle_is_live(self, zato_server:'anydict') -> 'None':
 
         server_directory = zato_server['server_directory']
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
-        min_id = _audit.last_event_id(audit_db_path)
+        min_id = _audit.last_event_id(database_env)
 
         # A call before the flip leaves no event ..
         body = _call_order_status(zato_server, _constants.Path_Audit_Off)
@@ -126,12 +126,12 @@ class TestAuditOptions:
 
             # .. and once the flip reaches enforcement, events start at the call boundary ..
             def audit_is_on() -> 'bool':
-                probe_min_id = _audit.last_event_id(audit_db_path)
+                probe_min_id = _audit.last_event_id(database_env)
 
                 _ = _call_order_status(zato_server, _constants.Path_Audit_Off)
 
                 events = _audit.read_events(
-                    audit_db_path,
+                    database_env,
                     object_name=_constants.Gateway_Audit_Off,
                     event_type=AuditEvent.MCP_Tools_Call,
                     min_id=probe_min_id)
@@ -142,13 +142,13 @@ class TestAuditOptions:
             _wait_until(audit_is_on, 'the audit flag on reached enforcement')
 
             # .. with exactly one event per call from here on.
-            on_min_id = _audit.last_event_id(audit_db_path)
+            on_min_id = _audit.last_event_id(database_env)
 
             for _call_index in range(_toggle_call_count):
                 _ = _call_order_status(zato_server, _constants.Path_Audit_Off)
 
             events = _audit.wait_for_events(
-                audit_db_path, _toggle_call_count,
+                database_env, _toggle_call_count,
                 object_name=_constants.Gateway_Audit_Off,
                 event_type=AuditEvent.MCP_Tools_Call,
                 min_id=on_min_id)
@@ -161,7 +161,7 @@ class TestAuditOptions:
             _enmasse.run_import(server_directory, config)
 
             def audit_is_off() -> 'bool':
-                probe_min_id = _audit.last_event_id(audit_db_path)
+                probe_min_id = _audit.last_event_id(database_env)
 
                 _ = _call_order_status(zato_server, _constants.Path_Audit_Off)
 
@@ -170,13 +170,13 @@ class TestAuditOptions:
                 assert data['status'] == _constants.Order_Status, body
 
                 _ = _audit.wait_for_events(
-                    audit_db_path, 1,
+                    database_env, 1,
                     object_name=_constants.Gateway_Main,
                     event_type=AuditEvent.MCP_Tools_Call,
                     min_id=probe_min_id)
 
                 events = _audit.read_events(
-                    audit_db_path,
+                    database_env,
                     object_name=_constants.Gateway_Audit_Off,
                     min_id=probe_min_id)
 

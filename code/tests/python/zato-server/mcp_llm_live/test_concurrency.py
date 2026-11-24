@@ -61,8 +61,8 @@ class TestConcurrency:
 
     def test_parallel_calls_on_one_session_match_their_requests(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Main)
         session_id = _helpers.open_session(client)
@@ -96,13 +96,13 @@ class TestConcurrency:
 
         # .. and the audit holds exactly one row per call, each with a CID of its own.
         _ = _audit.wait_for_events(
-            audit_db_path, _parallel_session_calls,
+            database_env, _parallel_session_calls,
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
 
         events = _audit.read_events(
-            audit_db_path, object_name=_constants.Gateway_Main, event_type=AuditEvent.MCP_Tools_Call, min_id=min_id)
+            database_env, object_name=_constants.Gateway_Main, event_type=AuditEvent.MCP_Tools_Call, min_id=min_id)
 
         session_events = []
 
@@ -123,8 +123,8 @@ class TestConcurrency:
 
     def test_many_conversations_at_once_stay_apart(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Main)
 
@@ -164,13 +164,13 @@ class TestConcurrency:
         total_calls = _concurrent_conversations * _calls_per_conversation
 
         _ = _audit.wait_for_events(
-            audit_db_path, total_calls,
+            database_env, total_calls,
             object_name=_constants.Gateway_Main,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
 
         events = _audit.read_events(
-            audit_db_path, object_name=_constants.Gateway_Main, event_type=AuditEvent.MCP_Tools_Call, min_id=min_id)
+            database_env, object_name=_constants.Gateway_Main, event_type=AuditEvent.MCP_Tools_Call, min_id=min_id)
 
         events_by_session = {}
 
@@ -289,8 +289,8 @@ class TestConcurrency:
 
     def test_the_audit_log_under_parallel_writers(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         # Sustained parallel traffic on two gateways at once ..
         gateways = [
@@ -332,13 +332,13 @@ class TestConcurrency:
         for gateway_name, _ in gateways:
 
             _ = _audit.wait_for_events(
-                audit_db_path, expected_per_gateway,
+                database_env, expected_per_gateway,
                 object_name=gateway_name,
                 event_type=AuditEvent.MCP_Tools_Call,
                 min_id=min_id)
 
             events = _audit.read_events(
-                audit_db_path, object_name=gateway_name, event_type=AuditEvent.MCP_Tools_Call, min_id=min_id)
+                database_env, object_name=gateway_name, event_type=AuditEvent.MCP_Tools_Call, min_id=min_id)
 
             assert len(events) == expected_per_gateway, (gateway_name, len(events))
 

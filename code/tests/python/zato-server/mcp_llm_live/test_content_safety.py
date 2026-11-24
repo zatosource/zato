@@ -166,8 +166,8 @@ class TestRejectModeWithLLM:
 
     def test_a_rejected_response_is_reported(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Safety_Reject)
 
@@ -194,7 +194,7 @@ class TestRejectModeWithLLM:
 
         # .. and the refusal is audited with its kind and an error outcome.
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Safety_Reject,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)

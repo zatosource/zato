@@ -59,8 +59,8 @@ class TestRuntimeChanges:
 
     def test_a_slow_service_is_measured_not_lost(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Runtime)
         session_id = _helpers.open_session(client)
@@ -74,7 +74,7 @@ class TestRuntimeChanges:
 
         # .. and the audit event's duration reflects the sleep.
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Runtime,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -130,12 +130,12 @@ class TestRuntimeChanges:
 
     def test_a_restart_starts_clean(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         client = _helpers.make_client(zato_server, _constants.Path_Main)
         old_session_id = _helpers.open_session(client)
 
-        max_id_before = _audit.last_event_id(audit_db_path)
+        max_id_before = _audit.last_event_id(database_env)
 
         # The server restarts ..
         zato_server['restart']()
@@ -151,7 +151,7 @@ class TestRuntimeChanges:
         assert _helpers.text_contains(result.final_text, _constants.Customer_City), result.final_text
 
         # .. and the audit event ids continue past the pre-restart ones without duplicates.
-        events = _audit.read_events(audit_db_path, min_id=max_id_before)
+        events = _audit.read_events(database_env, min_id=max_id_before)
         assert events, 'No audit events after the restart'
 
         event_ids = []
@@ -225,8 +225,8 @@ class TestRuntimeChanges:
 
     def test_a_retried_confirmation_leaves_an_exact_trail(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Runtime)
 
@@ -250,7 +250,7 @@ class TestRuntimeChanges:
 
         # .. and the audit shows the error event before the success event, same conversation.
         events = _audit.wait_for_events(
-            audit_db_path, call_count,
+            database_env, call_count,
             object_name=_constants.Gateway_Runtime,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)

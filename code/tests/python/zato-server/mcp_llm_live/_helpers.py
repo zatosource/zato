@@ -310,8 +310,8 @@ def call_and_read_event(
     the whole response body and the audit data document of the call's event.
     """
 
-    audit_db_path = zato_server['audit_db_path']
-    min_id = _audit.last_event_id(audit_db_path)
+    database_env = zato_server['database_env']
+    min_id = _audit.last_event_id(database_env)
 
     client = make_client(zato_server, url_path)
     session_id = open_session(client)
@@ -319,7 +319,7 @@ def call_and_read_event(
     body = call_tool(client, session_id, tool_name, arguments)
 
     events = _audit.wait_for_events(
-        audit_db_path, 1,
+        database_env, 1,
         object_name=gateway_name,
         event_type=AuditEvent.MCP_Tools_Call,
         min_id=min_id)

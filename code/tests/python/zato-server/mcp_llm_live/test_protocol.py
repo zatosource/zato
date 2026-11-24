@@ -202,8 +202,8 @@ class TestConcurrentSessions:
 
     def test_concurrent_agents_do_not_share_state(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client_one = _helpers.make_client(zato_server, _constants.Path_Main)
         client_two = _helpers.make_client(zato_server, _constants.Path_Main)
@@ -228,9 +228,9 @@ class TestConcurrentSessions:
         # .. and in the audit trail, every event belongs to exactly one of the two sessions,
         # with no CID ever appearing under both.
         total_calls = len(result_one.tool_calls) + len(result_two.tool_calls)
-        _ = _audit.wait_for_events(audit_db_path, total_calls, object_name=_constants.Gateway_Main, min_id=min_id)
+        _ = _audit.wait_for_events(database_env, total_calls, object_name=_constants.Gateway_Main, min_id=min_id)
 
-        events = _audit.read_events(audit_db_path, object_name=_constants.Gateway_Main, min_id=min_id)
+        events = _audit.read_events(database_env, object_name=_constants.Gateway_Main, min_id=min_id)
 
         cids_one = set()
         cids_two = set()
@@ -259,8 +259,8 @@ class TestMalformedRequests:
 
     def test_a_batch_array_is_refused_whole(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Main)
         session_id = _helpers.open_session(client)
@@ -282,7 +282,7 @@ class TestMalformedRequests:
 
         # .. and one audit event records the refusal under the unknown-method marker.
         events = _audit.wait_for_events(
-            audit_db_path, 1, object_name=_constants.Gateway_Main, event_type=Method_Unknown, min_id=min_id)
+            database_env, 1, object_name=_constants.Gateway_Main, event_type=Method_Unknown, min_id=min_id)
 
         assert events[-1]['outcome'] == AuditOutcome.Error, events
 
@@ -290,8 +290,8 @@ class TestMalformedRequests:
 
     def test_a_notification_returns_no_body(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Main)
         session_id = _helpers.open_session(client)
@@ -309,7 +309,7 @@ class TestMalformedRequests:
 
         # .. and the audit event carries the literal method name.
         events = _audit.wait_for_events(
-            audit_db_path, 1, object_name=_constants.Gateway_Main, event_type=_notification_method, min_id=min_id)
+            database_env, 1, object_name=_constants.Gateway_Main, event_type=_notification_method, min_id=min_id)
 
         assert events[-1]['outcome'] == AuditOutcome.OK, events
 
@@ -403,8 +403,8 @@ class TestInvalidCursors:
 
     def test_invalid_cursors_are_invalid_params(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Main)
         session_id = _helpers.open_session(client)
@@ -423,7 +423,7 @@ class TestInvalidCursors:
 
         # Every refusal landed in the audit log with the error outcome.
         events = _audit.wait_for_events(
-            audit_db_path, len(cursors), object_name=_constants.Gateway_Main,
+            database_env, len(cursors), object_name=_constants.Gateway_Main,
             event_type=AuditEvent.MCP_Tools_List, min_id=min_id)
 
         for event in events:
@@ -478,8 +478,8 @@ class TestHTTPLayer:
 
     def test_a_non_utf8_body_is_a_parse_error(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Main)
         session_id = _helpers.open_session(client)
@@ -494,7 +494,7 @@ class TestHTTPLayer:
 
         # .. audited under the unknown-method marker with the error outcome.
         events = _audit.wait_for_events(
-            audit_db_path, 1, object_name=_constants.Gateway_Main, event_type=Method_Unknown, min_id=min_id)
+            database_env, 1, object_name=_constants.Gateway_Main, event_type=Method_Unknown, min_id=min_id)
 
         assert events[-1]['outcome'] == AuditOutcome.Error, events
 
@@ -510,13 +510,13 @@ class TestRequestValueRendering:
 
     def test_a_notification_method_renders_on_one_log_line(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
         server_log_path = zato_server['server_log_path']
 
         client = _helpers.make_client(zato_server, _constants.Path_Main)
         session_id = _helpers.open_session(client)
 
-        min_id = _audit.last_event_id(audit_db_path)
+        min_id = _audit.last_event_id(database_env)
         log_offset = os.path.getsize(server_log_path)
 
         # The method name carries line breaks and a distinctive trailer ..
@@ -530,7 +530,7 @@ class TestRequestValueRendering:
 
         # .. the audit event keeps the method exactly as it was sent ..
         events = _audit.wait_for_events(
-            audit_db_path, 1, object_name=_constants.Gateway_Main, event_type=method, min_id=min_id)
+            database_env, 1, object_name=_constants.Gateway_Main, event_type=method, min_id=min_id)
 
         assert events[-1]['outcome'] == AuditOutcome.OK, events
 

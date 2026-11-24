@@ -150,7 +150,15 @@ class PostgreSQLCluster(Backend):
             certs_dir=self.certs_dir,
         )
 
-        self.database.env['Zato_Database_SSL_CA_File'] = self.ca_path
+        self.database.env = {
+            'Zato_Database_Host': self.ip,
+            'Zato_Database_Port': str(ModuleCtx.Port),
+            'Zato_Database_Username': DatabaseCtx.Username,
+            'Zato_Database_Password': self.password,
+            'Zato_Database_Name': DatabaseCtx.DB_Name,
+            'Zato_Database_SSL': 'true',
+            'Zato_Database_SSL_CA_File': self.ca_path,
+        }
 
         # .. and the nodes reach it under the name of the endpoint.
         self.node_env = {

@@ -6,9 +6,10 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The session and the pair of the Kubernetes suites. A session creates the cluster, loads the images and creates
-# the quickstart environment that both pods begin from. The referee record is in a Lease of the namespace of the pair.
-# Each test replaces the pair with a new StatefulSet whose pods begin from that environment, with no Lease of the pair.
+# The session and the pair of the Kubernetes suites. A session creates the cluster and loads the images. The referee
+# record is in a Lease of the namespace of the pair. Each test clears the Zato database, creates in it the quickstart
+# environment that both pods begin from and replaces the pair with a new StatefulSet whose pods begin from that
+# environment, with no Lease of the pair.
 
 # stdlib
 import json
@@ -255,6 +256,7 @@ class KubeSession:
     proxy: 'KubeProxy'
     control_plane_ip: 'str'
     data_mount: 'str'
+    template_dir: 'str'
     placeholders: 'strstrdict'
 
 # ################################################################################################################################
@@ -387,8 +389,8 @@ def _create_host_directories(run_dir:'str') -> 'None':
 # ################################################################################################################################
 
 def create_cluster_session(database_image:'str', database_zone:'str') -> 'KubeSession':
-    """ Creates the cluster, the receivers, the quickstart environment of the pods, the CA that they trust and the referee,
-    without the Zato database, which the caller adds. The image of the database, unless it is empty for a database
+    """ Creates the cluster, the receivers, the CA that the pods trust and the referee, without the Zato database,
+    which the caller adds. The image of the database, unless it is empty for a database
     outside of the cluster, is loaded into the nodes of its zone together with the image of the pods.
     """
     run_dir = prepare_runtime_dir()
@@ -415,22 +417,15 @@ def create_cluster_session(database_image:'str', database_zone:'str') -> 'KubeSe
 
     base = HASession()
     base.run_dir = run_dir
-    base.template_dir = os.path.join(run_dir, 'k8s-template')
 
     # The receivers listen on the address of the host on the network of kind ..
     rendered_yaml, invoke_password = start_receivers(base, get_kind_gateway())
+    base.rendered_yaml = rendered_yaml
     base.invoke_password = invoke_password
 
-    # .. the environment is created at the path that each pod mounts its local volume at, and kept as the template
-    # that each pod copies to its volume when it first starts ..
+    # .. each test creates its quickstart environment at the path that each pod mounts its local volume at ..
     data_mount = os.path.join(run_dir, 'k8s-data')
-    home_dir = os.path.join(data_mount, 'home')
-
-    server_directory = create_quickstart_environment(ModuleCtx.Quickstart_Label, data_mount, home_dir, rendered_yaml,
-        invoke_password)
-    base.server_directories[ModuleCtx.Quickstart_Label] = server_directory
-
-    os.rename(data_mount, base.template_dir)
+    template_dir = os.path.join(run_dir, 'k8s-template')
 
     # .. and the CA that the pods trust is created.
     authority = Authority(os.path.join(run_dir, 'authority'))
@@ -449,6 +444,7 @@ def create_cluster_session(database_image:'str', database_zone:'str') -> 'KubeSe
     out.proxy = proxy
     out.control_plane_ip = control_plane_ip
     out.data_mount = data_mount
+    out.template_dir = template_dir
     out.placeholders = {
         'namespace': ClusterCtx.Namespace,
         'zato_image': pod_image,
@@ -459,7 +455,7 @@ def create_cluster_session(database_image:'str', database_zone:'str') -> 'KubeSe
         'volume_dir': ClusterCtx.Volume_Dir,
         'data_mount': data_mount,
         'deploy_dir': base.deploy_dir,
-        'template_dir': base.template_dir,
+        'template_dir': template_dir,
         'start_script': NodesCtx.Start_Script,
         'pubsub_db_secret': ModuleCtx.PubSub_DB_Secret,
         'lease_name': TopologyCtx.Lease_Name,
@@ -474,7 +470,6 @@ def create_cluster_session(database_image:'str', database_zone:'str') -> 'KubeSe
         'zato_binary': NodesCtx.Zato_Binary,
         'logs_dir': os.path.join(run_dir, 'logs'),
         'run_logs_dir': os.path.join(run_dir, 'run-logs'),
-        'server_directory': server_directory,
         'service_node_port': str(ModuleCtx.Service_Node_Port),
         'server_liveness_timeout': str(ModuleCtx.Server_Liveness_Timeout),
         'server_start_timeout': str(ModuleCtx.Server_Start_Timeout),
@@ -538,12 +533,34 @@ def _remove_pair(session:'KubeSession') -> 'None':
 
 # ################################################################################################################################
 
+def _create_template(session:'KubeSession') -> 'str':
+    """ Creates the quickstart environment of the pods in the Zato database of the session, at the path that each pod
+    mounts its local volume at, keeps it as the template that each pod copies to its volume when it first starts,
+    and returns its server directory.
+    """
+    base = session.base
+    shutil.rmtree(session.template_dir, ignore_errors=True)
+
+    home_dir = os.path.join(session.data_mount, 'home')
+
+    out = create_quickstart_environment(ModuleCtx.Quickstart_Label, session.data_mount, home_dir, base.rendered_yaml,
+        base.invoke_password, session.database.env)
+
+    os.rename(session.data_mount, session.template_dir)
+
+    return out
+
+# ################################################################################################################################
+
 def build_kube_environment(session:'KubeSession', test_name:'str', timers:'Timers') -> 'KubeEnvironment':
-    """ Replaces the pair of an earlier test with a new one with the given timers, without waiting for it.
+    """ Replaces the pair of an earlier test with a new one with the given timers, which begins from a new quickstart
+    environment in the cleared Zato database, without waiting for it.
     """
     _remove_pair(session)
+    server_directory = _create_template(session)
 
     placeholders = dict(session.placeholders)
+    placeholders['server_directory'] = server_directory
     placeholders['heartbeat_time'] = str(timers.heartbeat)
     placeholders['takeover_time'] = str(timers.takeover)
 

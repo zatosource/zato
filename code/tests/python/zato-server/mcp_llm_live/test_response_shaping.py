@@ -68,8 +68,8 @@ class TestResponseShaping:
 
     def test_truncate_mode_cuts_and_traces(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Shaping_Truncate)
         session_id = _helpers.open_session(client)
@@ -85,7 +85,7 @@ class TestResponseShaping:
 
         # .. and the audit trace names both sides of the cut.
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Shaping_Truncate,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -100,8 +100,8 @@ class TestResponseShaping:
 
     def test_a_response_under_the_threshold_passes_untouched(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         # The same cap is set here, but the activation threshold is far above
         # anything the service returns, so the cap never runs.
@@ -115,7 +115,7 @@ class TestResponseShaping:
 
         # No shaping happened, so the audit event carries no shaping keys at all.
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Shaping_Threshold,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -162,8 +162,8 @@ class TestBlockModeWithLLM:
 
     def test_blocked_response_is_reported_not_invented(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Shaping_Block)
 
@@ -203,7 +203,7 @@ class TestBlockModeWithLLM:
 
         # .. and the refusal is audited with its measured size and an error outcome.
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Shaping_Block,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)

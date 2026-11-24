@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from failover import docker, read_generation, wait_for_generation, wait_until_up
-from pubsub_exactly_once.database import postgresql_only
 from pubsub_exactly_once.harness import new_keys, stage_batch, verify
 from zato.common.test.exactly_once.config import TestConfig
 from zato.common.test.exactly_once.control import count_invocations, release
@@ -32,7 +31,6 @@ _takeover_timeout = 180
 # ################################################################################################################################
 # ################################################################################################################################
 
-@postgresql_only
 def test_frozen_server_on_postgresql(server_pair:'ServerPair') -> 'None':
     """ The active server is frozen while its relay holds the last key of a batch, the standby takes over and
     delivers the batch, and the frozen server resumes and finishes the held key, whose commit is rejected.

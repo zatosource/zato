@@ -99,8 +99,8 @@ def _call_customer(zato_server:'anydict', url_path:'str', gateway_name:'str') ->
     returning the record and the audit data document of the call's event.
     """
 
-    audit_db_path = zato_server['audit_db_path']
-    min_id = _audit.last_event_id(audit_db_path)
+    database_env = zato_server['database_env']
+    min_id = _audit.last_event_id(database_env)
 
     client = _helpers.make_client(zato_server, url_path)
     session_id = _helpers.open_session(client)
@@ -109,7 +109,7 @@ def _call_customer(zato_server:'anydict', url_path:'str', gateway_name:'str') ->
         {'customer_id': _constants.Customer_ID})
 
     events = _audit.wait_for_events(
-        audit_db_path, 1,
+        database_env, 1,
         object_name=gateway_name,
         event_type=AuditEvent.MCP_Tools_Call,
         min_id=min_id)
@@ -156,7 +156,7 @@ class TestToolIsolation:
 
     def test_a_tool_of_one_gateway_does_not_exist_on_the_others(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         # The probe service is assigned to A but neither to B nor to C ..
         client_a = _make_client_a(zato_server)
@@ -182,13 +182,13 @@ class TestToolIsolation:
         assert tools_c == [_constants.Service_Order_Status], tools_c
 
         # .. calling it on B is the unknown-tool error, audited against B ..
-        min_id = _audit.last_event_id(audit_db_path)
+        min_id = _audit.last_event_id(database_env)
 
         body = _helpers.call_tool(client_b, session_b, _constants.Service_Deploy_Probe, {'revision': 'one'})
         assert body['error']['code'] == _constants.Error_Method_Not_Found, body
 
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Iso_B,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -198,14 +198,14 @@ class TestToolIsolation:
         assert event['endpoint'] == _constants.Service_Deploy_Probe, event
 
         # .. and calling a CRM tool on C fails the same way, audited against C.
-        min_id = _audit.last_event_id(audit_db_path)
+        min_id = _audit.last_event_id(database_env)
 
         body = _helpers.call_tool(client_c, session_c, _constants.Service_Customer_Get,
             {'customer_id': _constants.Customer_ID}, extra_headers=bearer)
         assert body['error']['code'] == _constants.Error_Method_Not_Found, body
 
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Iso_C,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -226,11 +226,11 @@ class TestProcessingIsolation:
 
     def test_the_same_service_processes_differently_per_gateway(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
         arguments = {'customer_id': _constants.Customer_ID}
 
         # Through A, whose PII removal is on, the email is a token ..
-        min_id = _audit.last_event_id(audit_db_path)
+        min_id = _audit.last_event_id(database_env)
 
         client_a = _make_client_a(zato_server)
         session_a = _helpers.open_session(client_a)
@@ -242,7 +242,7 @@ class TestProcessingIsolation:
         assert _constants.Customer_Email not in str(data), data
 
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Iso_A,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -257,7 +257,7 @@ class TestProcessingIsolation:
 
         # .. and through B, whose PII removal is off, the same input comes back raw
         # with no trace key at all.
-        min_id = _audit.last_event_id(audit_db_path)
+        min_id = _audit.last_event_id(database_env)
 
         client_b = _make_client_b(zato_server)
         session_b = _helpers.open_session(client_b)
@@ -268,7 +268,7 @@ class TestProcessingIsolation:
         assert data['email'] == _constants.Customer_Email, data['email']
 
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Iso_B,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -279,13 +279,13 @@ class TestProcessingIsolation:
 
     def test_each_option_family_stays_within_its_gateway(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         # For every family, the same call runs through the gateway that has the family on
         # and through the B side that has everything off - only the former transforms and traces.
 
         # Shaping - the oversized listing truncates on the shaping gateway ..
-        min_id = _audit.last_event_id(audit_db_path)
+        min_id = _audit.last_event_id(database_env)
 
         client = _helpers.make_client(zato_server, _constants.Path_Shaping_Truncate)
         session_id = _helpers.open_session(client)
@@ -295,7 +295,7 @@ class TestProcessingIsolation:
         assert len(data['invoices']) < int(_oversized_count), len(data['invoices'])
 
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Shaping_Truncate,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -303,7 +303,7 @@ class TestProcessingIsolation:
         assert events[-1]['data']['was_truncated'] is True, events[-1]['data']
 
         # .. while B returns the whole listing with no trace keys ..
-        min_id = _audit.last_event_id(audit_db_path)
+        min_id = _audit.last_event_id(database_env)
 
         client_b = _make_client_b(zato_server)
         session_b = _helpers.open_session(client_b)
@@ -313,7 +313,7 @@ class TestProcessingIsolation:
         assert len(data['invoices']) == int(_oversized_count), len(data['invoices'])
 
         events = _audit.wait_for_events(
-            audit_db_path, 1,
+            database_env, 1,
             object_name=_constants.Gateway_Iso_B,
             event_type=AuditEvent.MCP_Tools_Call,
             min_id=min_id)
@@ -522,8 +522,8 @@ class TestSessionIsolation:
 
     def test_a_session_of_one_caller_is_refused_for_another(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         # Two callers with different credentials, both accepted on A ..
         client_shared = _make_client_a(zato_server)
@@ -550,7 +550,7 @@ class TestSessionIsolation:
 
         # .. and every audit row attributes the session to the right caller.
         events = _audit.wait_for_events(
-            audit_db_path, 2,
+            database_env, 2,
             object_name=_constants.Gateway_Iso_A,
             event_type=AuditEvent.MCP_Tools_List,
             min_id=min_id)
@@ -650,8 +650,8 @@ class TestRoutingIsolation:
 
     def test_an_unrouted_path_is_a_404_with_no_audit_event(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         # The path continues the pair's shared prefix but belongs to no gateway ..
         client = _helpers.make_client(zato_server, _path_unrouted, auth=zato_server['basic_auth_shared'])
@@ -662,10 +662,10 @@ class TestRoutingIsolation:
         # .. and after giving the audit writer time to run, neither neighbor has a new event.
         time.sleep(_audit_silence_wait)
 
-        events = _audit.read_events(audit_db_path, object_name=_constants.Gateway_Iso_A, min_id=min_id)
+        events = _audit.read_events(database_env, object_name=_constants.Gateway_Iso_A, min_id=min_id)
         assert not events, events
 
-        events = _audit.read_events(audit_db_path, object_name=_constants.Gateway_Iso_B, min_id=min_id)
+        events = _audit.read_events(database_env, object_name=_constants.Gateway_Iso_B, min_id=min_id)
         assert not events, events
 
 # ################################################################################################################################
@@ -681,7 +681,7 @@ class TestLifecycleIsolation:
     def test_changes_to_one_gateway_leave_the_neighbor_alone(self, zato_server:'anydict') -> 'None':
 
         server_directory = zato_server['server_directory']
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         # B's session opens before anything happens to A ..
         client_b = _make_client_b(zato_server)
@@ -707,7 +707,7 @@ class TestLifecycleIsolation:
             assert sorted(tools_b) == sorted(_constants.Service_List_CRM), tools_b
 
             # .. A is deleted outright - B's session, tools and audit trail are still intact ..
-            min_id = _audit.last_event_id(audit_db_path)
+            min_id = _audit.last_event_id(database_env)
 
             overrides = {_constants.Gateway_Iso_A: {'should_delete': True}}
             config = _enmasse.build_suite_config(gateway_overrides=overrides)
@@ -727,7 +727,7 @@ class TestLifecycleIsolation:
             assert data['status'] == _constants.Order_Status, body
 
             events = _audit.wait_for_events(
-                audit_db_path, 1,
+                database_env, 1,
                 object_name=_constants.Gateway_Iso_B,
                 event_type=AuditEvent.MCP_Tools_Call,
                 min_id=min_id)
@@ -758,8 +758,8 @@ class TestConcurrentIsolation:
 
     def test_concurrent_agents_on_contradictory_gateways(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
-        min_id = _audit.last_event_id(audit_db_path)
+        database_env = zato_server['database_env']
+        min_id = _audit.last_event_id(database_env)
 
         # One agent runs against the truncating gateway, the other against the blocking one,
         # both asking for the same oversized listing at the same time.
@@ -807,10 +807,10 @@ class TestConcurrentIsolation:
         # .. and in the audit trail, each gateway holds only its own agent's events,
         # with no CID appearing under both.
         events_truncate = _audit.wait_for_events(
-            audit_db_path, 1, object_name=_constants.Gateway_Shaping_Truncate, min_id=min_id)
+            database_env, 1, object_name=_constants.Gateway_Shaping_Truncate, min_id=min_id)
 
         events_block = _audit.wait_for_events(
-            audit_db_path, 1, object_name=_constants.Gateway_Shaping_Block, min_id=min_id)
+            database_env, 1, object_name=_constants.Gateway_Shaping_Block, min_id=min_id)
 
         cids_truncate = set()
 
@@ -857,12 +857,12 @@ class TestAuditIsolation:
 
     def test_audit_events_never_cross_gateways_or_callers(self, zato_server:'anydict') -> 'None':
 
-        audit_db_path = zato_server['audit_db_path']
+        database_env = zato_server['database_env']
 
         # The counts below are exact, so any in-flight audit write of earlier traffic
         # must land before the snapshot is taken.
         time.sleep(_audit_silence_wait)
-        min_id = _audit.last_event_id(audit_db_path)
+        min_id = _audit.last_event_id(database_env)
 
         # One identical conversation per gateway, each on its own credentials ..
         client_a = _make_client_a(zato_server)
@@ -879,9 +879,9 @@ class TestAuditIsolation:
         _ = _helpers.list_tools(client_c, session_c, extra_headers=bearer)
 
         # .. each gateway's query returns exactly its own two events ..
-        events_a = _audit.wait_for_events(audit_db_path, 2, object_name=_constants.Gateway_Iso_A, min_id=min_id)
-        events_b = _audit.wait_for_events(audit_db_path, 2, object_name=_constants.Gateway_Iso_B, min_id=min_id)
-        events_c = _audit.wait_for_events(audit_db_path, 2, object_name=_constants.Gateway_Iso_C, min_id=min_id)
+        events_a = _audit.wait_for_events(database_env, 2, object_name=_constants.Gateway_Iso_A, min_id=min_id)
+        events_b = _audit.wait_for_events(database_env, 2, object_name=_constants.Gateway_Iso_B, min_id=min_id)
+        events_c = _audit.wait_for_events(database_env, 2, object_name=_constants.Gateway_Iso_C, min_id=min_id)
 
         assert len(events_a) == 2, events_a
         assert len(events_b) == 2, events_b
@@ -904,7 +904,7 @@ class TestAuditIsolation:
             assert event['ext_client_id'] == _constants.Sec_Bearer_Static, event
 
         # .. the counts add up exactly - the three queries cover everything the trio wrote ..
-        all_events = _audit.read_events(audit_db_path, min_id=min_id)
+        all_events = _audit.read_events(database_env, min_id=min_id)
 
         trio_events = []
 

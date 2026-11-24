@@ -6,7 +6,7 @@ pub mod json;
 /// Building of the messages that pulls of pub/sub hand out.
 pub mod pulled_messages;
 
-/// The subscriber and topic pairs of every pub/sub subscription in `config.db`.
+/// The subscriber and topic pairs of every pub/sub subscription in the configuration database.
 pub mod pubsub_subscription_list;
 
 /// Extraction of the words of audit log payloads that the free-text search indexes.
