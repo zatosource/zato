@@ -16,9 +16,6 @@ import pytest
 
 _here = os.path.dirname(os.path.abspath(__file__))
 
-_scheduler_failover_dir = os.path.join(_here, '..', 'scheduler_failover')
-_scheduler_failover_dir = os.path.abspath(_scheduler_failover_dir)
-
 _ha_postgresql_dir = os.path.join(_here, '..', 'ha_postgresql')
 _ha_postgresql_dir = os.path.abspath(_ha_postgresql_dir)
 
@@ -26,7 +23,6 @@ _pubsub_faults_dir = os.path.join(_here, '..', '..', 'zato-common', 'pubsub_faul
 _pubsub_faults_dir = os.path.abspath(_pubsub_faults_dir)
 
 sys.path.insert(0, _pubsub_faults_dir)
-sys.path.insert(0, _scheduler_failover_dir)
 sys.path.insert(0, _ha_postgresql_dir)
 sys.path.insert(0, _here)
 

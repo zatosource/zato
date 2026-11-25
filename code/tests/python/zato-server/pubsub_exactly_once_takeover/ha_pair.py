@@ -16,7 +16,7 @@ from functools import partial
 # Zato
 from ha_env import create_session as create_ha_session
 from nodes import Node, NodeHook
-from pair import import_jobs
+from scheduler_jobs import import_jobs
 from zato.common.test.exactly_once.control import create_control_dir, Env_Dir
 
 # ################################################################################################################################

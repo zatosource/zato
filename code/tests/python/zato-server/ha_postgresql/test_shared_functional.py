@@ -18,7 +18,7 @@ from urllib.error import HTTPError
 from urllib.request import urlopen
 
 # Zato
-from checks import get_starts, read_run_log
+from scheduler_checks import get_starts, read_run_log
 from ha_checks import check_no_runs_after, check_publications_stored, check_scheduler
 from ha_traffic import TimedPublisher
 from postgresql_checks import check_active_server

@@ -27,7 +27,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = logging.getLogger('zato.test.scheduler_failover')
+logger = logging.getLogger('zato.test.ha_postgresql.scheduler_jobs')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,7 +38,7 @@ class ModuleCtx:
     Service_File_Name = 'zato_test_scheduler_run_log.py'
 
     # The enmasse file with the jobs.
-    Scheduler_Template = 'scheduler_failover/_enmasse_template.yaml'
+    Scheduler_Template = os.path.join(os.path.dirname(os.path.abspath(__file__)), '_scheduler_enmasse_template.yaml')
 
     # How long ago the grid of the interval jobs begins, in seconds.
     Grid_Start_Age_Seconds = 3600
@@ -56,9 +56,6 @@ class ModuleCtx:
     Run_State_Object_Type = 'scheduler.job'
 
 # ################################################################################################################################
-
-_tests_dir = os.path.join(os.path.dirname(__file__), '..')
-_tests_dir = os.path.abspath(_tests_dir)
 
 _repository_dir = os.environ['ZATO_TEST_BASE_DIR']
 _zato_bin = os.path.join(_repository_dir, 'code', 'bin', 'zato')
@@ -110,8 +107,7 @@ def render_job_file(placeholders:'strstrdict') -> 'tuple[str, datetime]':
     placeholders['past_start'] = format_date(past_start)
     placeholders['gap_start'] = format_date(gap_start)
 
-    template_path = os.path.join(_tests_dir, ModuleCtx.Scheduler_Template)
-    rendered_yaml = render_template(template_path, placeholders)
+    rendered_yaml = render_template(ModuleCtx.Scheduler_Template, placeholders)
 
     out = (rendered_yaml, gap_start)
     return out

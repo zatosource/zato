@@ -13,8 +13,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import time
 
 # Zato
-from checks import get_repeated_completed_slots, get_starts_after, get_state_mismatches, read_run_log
-from pair import ModuleCtx as PairCtx
+from scheduler_checks import get_repeated_completed_slots, get_starts_after, get_state_mismatches, read_run_log
+from scheduler_jobs import ModuleCtx as SchedulerJobsCtx
 from workload import get_count_mismatches, get_repeats_not_in_flight, read_rows as read_database_rows, Topic_Name, \
     wait_for_deliveries
 from zato.common.typing_ import cast_
@@ -48,7 +48,7 @@ class ModuleCtx:
 def read_run_states(env:'HAEnvironment') -> 'anydict':
     """ Returns the run state of each scheduler job as the Zato database that both nodes share holds it.
     """
-    object_type = "'" + PairCtx.Run_State_Object_Type + "'"
+    object_type = "'" + SchedulerJobsCtx.Run_State_Object_Type + "'"
     query = f'select name, data from zato_shared_object where object_type = {object_type}'
     rows = read_database_rows(cast_('any_', env), query)
 

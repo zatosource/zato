@@ -30,7 +30,7 @@ class RecordRun(Service):
     """ Appends the start and the end of each run of a scheduler job to the run log of this server, with the job,
     its nominal slot, the server and the time, and runs for as many seconds as the payload of the job requests.
     """
-    name = 'test.scheduler.failover.record-run'
+    name = 'test.scheduler.record-run'
 
     def _append(self, entry:'dict') -> 'None':
         path = os.environ[ModuleCtx.Env_Run_Log]

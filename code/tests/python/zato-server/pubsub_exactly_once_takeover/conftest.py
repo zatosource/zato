@@ -17,13 +17,11 @@ _current_dir = os.path.dirname(os.path.abspath(__file__))
 _server_tests_dir = os.path.dirname(_current_dir)
 
 _ha_postgresql_dir      = os.path.join(_server_tests_dir, 'ha_postgresql')
-_scheduler_failover_dir = os.path.join(_server_tests_dir, 'scheduler_failover')
 _pubsub_failover_dir    = os.path.join(_server_tests_dir, 'pubsub_failover')
 _container_lib_dir      = os.path.join(os.path.dirname(_server_tests_dir), 'zato-common', 'lib')
 
 sys.path.insert(0, _container_lib_dir)
 sys.path.insert(0, _pubsub_failover_dir)
-sys.path.insert(0, _scheduler_failover_dir)
 sys.path.insert(0, _ha_postgresql_dir)
 sys.path.insert(0, _server_tests_dir)
 

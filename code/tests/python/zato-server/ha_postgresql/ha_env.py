@@ -24,7 +24,7 @@ from functools import partial
 # Zato
 from nodes import is_named_by_record, ModuleCtx as NodesCtx, Node, NodeHook, Timers
 from load_balancer import HAProxy
-from pair import ModuleCtx as PairCtx, render_job_file
+from scheduler_jobs import ModuleCtx as SchedulerJobsCtx, render_job_file
 from topology import Backend, create_network, Lease, ModuleCtx as TopologyCtx, prepare_runtime_dir, Referee, remove_network, \
     save_container_logs
 from zato.common.crypto.api import CryptoManager
@@ -58,8 +58,8 @@ logger = logging.getLogger('zato.test.ha_postgresql.env')
 
 class ModuleCtx:
 
-    # The scheduler suite, whose service of the jobs both nodes deploy
-    Scheduler_Failover_Dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'scheduler_failover'))
+    # The directory of this suite, with the service of the jobs that both nodes deploy
+    Suite_Dir = os.path.dirname(os.path.abspath(__file__))
 
     # The enmasse file of the pub/sub push suite, whose topics, subscriptions and outgoing connections both nodes import
     Template_Path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'pubsub_push', '_enmasse_template.yaml')
@@ -288,7 +288,7 @@ def create_deploy_dir(run_dir:'str', job_yaml:'str') -> 'str':
     os.makedirs(code_dir)
     os.makedirs(enmasse_dir)
 
-    service_path = os.path.join(ModuleCtx.Scheduler_Failover_Dir, PairCtx.Service_File_Name)
+    service_path = os.path.join(ModuleCtx.Suite_Dir, SchedulerJobsCtx.Service_File_Name)
     _ = shutil.copy2(service_path, code_dir)
 
     jobs_path = os.path.join(enmasse_dir, ModuleCtx.Jobs_File_Name)
