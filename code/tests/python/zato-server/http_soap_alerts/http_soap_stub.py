@@ -44,6 +44,9 @@ URL_Path = '/orders'
 SOAP_Action = 'urn:orders'
 SOAP_Version = '1.1'
 
+# The logger of every service the stub builds
+Logger_Name = 'test-http-soap-alerts'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -82,7 +85,7 @@ def new_service(class_:'any_', session_factory:'any_', input_data:'stranydict') 
     service.response = SimpleNamespace(payload=Bunch())
     service.odb = SimpleNamespace(session=session_factory)
     service.config_dispatcher = MagicMock()
-    service.logger = logging.getLogger('test-http-soap-alerts')
+    service.logger = logging.getLogger(Logger_Name)
     service.invoke = MagicMock(return_value={})
 
     server = SimpleNamespace(

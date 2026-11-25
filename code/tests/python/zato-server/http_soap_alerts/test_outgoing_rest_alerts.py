@@ -10,6 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stored, defaulted, validated and listed the way a channel's are, while its health check asks for how often
 # to ping and nothing else, its outcome reaching people through those very alerts.
 
+# stdlib
+from unittest import TestCase
+
 # pytest
 import pytest
 
@@ -29,7 +32,7 @@ from zato.server.service.internal.http_soap.health_check import has_health_check
 # Test support
 from http_soap_stub import create as _create, get as _get, get_list as _get_list, new_service as _new_service, \
     outgoing_input as _outgoing_input, stored_opaque as _stored_opaque, \
-    Outgoing_Name as _outgoing_name
+    Logger_Name as _logger_name, Outgoing_Name as _outgoing_name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -173,8 +176,11 @@ class TestEdit:
 
         service = _new_service(Edit, session_factory, _outgoing_input(id=item_id, alert_status_codes='40'))
 
-        with pytest.raises(BadRequest):
+        # The service logs the refusal it raises
+        with pytest.raises(BadRequest), TestCase().assertLogs(_logger_name, level='ERROR') as logs:
             service.handle()
+
+        assert 'Status code `40`' in logs.output[0], logs.output
 
         opaque = _stored_opaque(session_factory, item_id)
         assert opaque['alert_status_codes'] == '404'

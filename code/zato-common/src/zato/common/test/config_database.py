@@ -55,21 +55,31 @@ def _with_referenced_tables(tables:'tablelist') -> 'tablelist':
 # ################################################################################################################################
 
 @contextmanager
-def config_database_engine(tables:'tablelist') -> 'enginegen':
-    """ Yields an engine of the configuration database in a new database of its own, built by the engine factory
-    with the settings of durability of every database of Zato, and with the given tables of the configuration model
-    and the tables that they refer to, then disposes of the engine and drops the database.
+def config_tables_engine(tables:'tablelist') -> 'enginegen':
+    """ Yields an engine of the configuration database in the Zato database that the environment already selects,
+    built by the engine factory with the settings of durability of every database of Zato, and with the given tables
+    of the configuration model and the tables that they refer to, then disposes of the engine. The configuration
+    and the audit log of a test share that database, as they do in a server.
     """
-    with isolated_database_env():
-        engine = new_odb_engine()
+    engine = new_odb_engine()
 
-        tables = _with_referenced_tables(tables)
-        Base.metadata.create_all(engine, tables=tables)
+    tables = _with_referenced_tables(tables)
+    Base.metadata.create_all(engine, tables=tables)
 
-        try:
-            yield engine
-        finally:
-            engine.dispose()
+    try:
+        yield engine
+    finally:
+        engine.dispose()
+
+# ################################################################################################################################
+
+@contextmanager
+def config_database_engine(tables:'tablelist') -> 'enginegen':
+    """ Yields an engine of the configuration database in a new database of its own, as config_tables_engine
+    builds it, then disposes of the engine and drops the database.
+    """
+    with isolated_database_env(), config_tables_engine(tables) as engine:
+        yield engine
 
 # ################################################################################################################################
 # ################################################################################################################################

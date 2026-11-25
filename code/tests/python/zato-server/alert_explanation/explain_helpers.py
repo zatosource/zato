@@ -41,7 +41,7 @@ from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
 from zato.common.crypto.api import CryptoManager
 from zato.common.odb.model import GenericConn, GenericObject, HTTPBasicAuth, HTTPSOAP, SecurityBase, Service
-from zato.common.test.config_database import config_database_engine
+from zato.common.test.config_database import config_tables_engine
 from zato.server.service.internal.alerting import Explain
 
 # Test helpers
@@ -276,7 +276,8 @@ class _EmailAPI:
 
 @contextmanager
 def new_session() -> 'sessionmakergen':
-    """ A sessionmaker over a new PostgreSQL database with the tables the explain service reads.
+    """ A sessionmaker over the database of the test, the one its audit events are written to,
+    with the tables the explain service reads.
     """
     tables = [
         Service.__table__,
@@ -287,7 +288,7 @@ def new_session() -> 'sessionmakergen':
         HTTPSOAP.__table__,
     ]
 
-    with config_database_engine(tables) as engine:
+    with config_tables_engine(tables) as engine:
         out = sessionmaker(bind=engine)
         yield out
 

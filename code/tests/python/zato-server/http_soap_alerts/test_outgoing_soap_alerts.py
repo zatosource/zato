@@ -12,6 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from types import SimpleNamespace
+from unittest import TestCase
 
 # pytest
 import pytest
@@ -32,7 +33,7 @@ from zato.server.service.internal.http_soap.invoke import InvokeOutconn
 # Test support
 from http_soap_stub import create as _create, get as _get, get_list as _get_list, new_service as _new_service, \
     soap_outgoing_input as _soap_outgoing_input, stored_opaque as _stored_opaque, \
-    Outgoing_Name as _outgoing_name, SOAP_Action as _soap_action, SOAP_Version as _soap_version
+    Logger_Name as _logger_name, Outgoing_Name as _outgoing_name, SOAP_Action as _soap_action, SOAP_Version as _soap_version
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -191,8 +192,11 @@ class TestEdit:
 
         service = _new_service(Edit, session_factory, _soap_outgoing_input(id=item_id, alert_status_codes='50'))
 
-        with pytest.raises(BadRequest):
+        # The service logs the refusal it raises
+        with pytest.raises(BadRequest), TestCase().assertLogs(_logger_name, level='ERROR') as logs:
             service.handle()
+
+        assert 'Status code `50`' in logs.output[0], logs.output
 
         opaque = _stored_opaque(session_factory, item_id)
         assert opaque['alert_status_codes'] == '500'
