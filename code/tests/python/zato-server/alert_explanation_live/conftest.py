@@ -150,8 +150,21 @@ class MLLPSend(Service):
 
     def handle(self):
         request = self.request.raw_request
-        ack = self.mllp[request['outconn']].send(request['data'])
-        self.response.payload = {{'ack_code': ack.ack_code, 'is_accepted': ack.is_accepted, 'ack_text': ack.ack_text}}
+
+        # A connection just created is not among the server's connections until its configuration arrives
+        try:
+            connection = self.mllp[request['outconn']]
+        except KeyError:
+            self.response.payload = {{'is_present': False}}
+            return
+
+        ack = connection.send(request['data'])
+        self.response.payload = {{
+            'is_present': True,
+            'ack_code': ack.ack_code,
+            'is_accepted': ack.is_accepted,
+            'ack_text': ack.ack_text,
+        }}
 
 class LLMInvoke(Service):
     """ Asks the named outgoing LLM connection for one completion and reports its text, its finish reason and its usage,

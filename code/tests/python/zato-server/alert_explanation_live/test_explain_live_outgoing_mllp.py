@@ -169,6 +169,10 @@ _sending_facility = 'EXPLAIN_LIVE_HOSPITAL'
 _message_count = 4
 _ack_threshold = 3
 
+# A rejection counts as a failed send, so the first one stops the connection's sending. With no reset time,
+# every message that follows is let through as the trial send and all of them reach the receiver.
+_breaker_reset_seconds = 0
+
 # The rule the acks fire, of the ruleset the outgoing MLLP connections are judged by
 _negative_acks_rule = 'Negative_Acks'
 
@@ -197,6 +201,7 @@ def _create_rejected_outgoing(address:'str') -> 'anydict':
             'address': address,
             'pool_size': 1,
             'is_audit_log_active': True,
+            'circuit_breaker_reset_seconds': _breaker_reset_seconds,
             'alerts': {
                 'is_active': True,
                 'use_llm': True,
@@ -236,15 +241,15 @@ def _send_through(client:'AdminClient', message:'str') -> 'anydict':
     deadline = time() + _wrapper_wait_timeout
 
     while True:
-        try:
-            out = _unwrap(client.invoke(LiveServer.mllp_send_service, payload))
-        except Exception:
-            if time() < deadline:
-                sleep(_wrapper_wait_step)
-                continue
-            raise
-        else:
+        out = _unwrap(client.invoke(LiveServer.mllp_send_service, payload))
+
+        if out['is_present']:
             return out
+
+        if time() >= deadline:
+            raise Exception(f'Connection `{_conn_name}` absent from the server after {_wrapper_wait_timeout}s')
+
+        sleep(_wrapper_wait_step)
 
 # ################################################################################################################################
 

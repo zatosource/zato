@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import logging
+import socket
 import threading
 import time
 from http.client import OK
@@ -121,7 +122,9 @@ class _Server(ThreadingHTTPServer):
     """ A threading HTTP server holding the recorded requests and per-path response configuration,
     plus the response-building logic every scenario shares.
     """
-    daemon_threads = True
+
+    # The request threads are joined when the server closes, so none of them outlives the test that started the server
+    daemon_threads = False
 
     def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
         super().__init__(*args, **kwargs)
@@ -129,6 +132,39 @@ class _Server(ThreadingHTTPServer):
         self.recorded_requests:'anylist' = []
         self.last_request:'anydict | None' = None
         self.path_config:'anydict' = {}
+
+        # The connections accepted and not yet closed. A client that keeps its connection alive holds the thread
+        # of that connection in a read of the next request until the connection is closed.
+        self._open_requests:'set[socket.socket]' = set()
+        self._open_requests_lock = threading.Lock()
+
+# ################################################################################################################################
+
+    def get_request(self) -> 'any_':
+        request, client_address = super().get_request()
+
+        with self._open_requests_lock:
+            self._open_requests.add(request)
+
+        return request, client_address
+
+# ################################################################################################################################
+
+    def shutdown_request(self, request:'any_') -> 'None':
+
+        with self._open_requests_lock:
+            self._open_requests.remove(request)
+
+        super().shutdown_request(request)
+
+# ################################################################################################################################
+
+    def end_open_requests(self) -> 'None':
+        """ Shuts down every open connection, which ends the read of each request thread so the thread returns.
+        """
+        with self._open_requests_lock:
+            for request in self._open_requests:
+                request.shutdown(socket.SHUT_RDWR)
 
 # ################################################################################################################################
 
@@ -264,6 +300,10 @@ class LLMTestServer:
 
     def stop(self) -> 'None':
         self._httpd.shutdown()
+        self._thread.join()
+
+        # The connections are shut down first, otherwise closing the server waits for the request threads indefinitely
+        self._httpd.end_open_requests()
         self._httpd.server_close()
 
         logger.info('[LLMTestServer] stopped on %s', self.address)

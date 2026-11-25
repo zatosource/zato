@@ -155,15 +155,14 @@ class ConnectionQueue:
             if self.queue.full():
                 is_accepted = False
                 msg = 'Skipped adding a superfluous `%s` client to %s (%s)'
-                log_func = self.logger.info
             else:
                 self.queue.put(client)
                 is_accepted = True
                 msg = 'Added `%s` client to `%s` (%s)'
-                log_func = self.logger.info
 
+            # One message per client of the queue - the queue as a whole is logged at the info level once it is built
             if self.connection_exists():
-                log_func(msg, self.conn_name, self.address_masked, self.conn_type)
+                self.logger.debug(msg, self.conn_name, self.address_masked, self.conn_type)
 
             return is_accepted
 

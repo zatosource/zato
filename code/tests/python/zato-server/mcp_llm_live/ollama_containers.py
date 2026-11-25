@@ -36,7 +36,7 @@ Ollama_Base_URL       = f'http://localhost:{Ollama_Port}'
 Ollama_OpenAI_URL = f'{Ollama_Base_URL}/v1'
 
 # The model the tests drive
-Model_Name = 'gpt-oss:20b'
+Model_Name = 'gemma4:e4b'
 
 # The context window the instance serves - the default of 4096 truncates longer agent
 # conversations mid-reasoning, which degenerates the model's output.
