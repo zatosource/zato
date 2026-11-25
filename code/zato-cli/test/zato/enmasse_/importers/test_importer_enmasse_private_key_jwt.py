@@ -67,13 +67,18 @@ class TestEnmassePrivateKeyJWT(TestCase):
         self.key_a = generate_rsa_private_key_pem()
         self.key_b = generate_rsa_private_key_pem()
 
-        _ = os.environ.pop(ModuleCtx.Env_Var, None)
+        # Each test starts with the variable unset, and the value that the suite set is restored afterwards.
+        self.suite_env_value = os.environ.pop(ModuleCtx.Env_Var, None)
 
 # ################################################################################################################################
 
     def tearDown(self) -> 'None':
         self.session.close()
         _ = os.environ.pop(ModuleCtx.Env_Var, None)
+
+        if self.suite_env_value is not None:
+            os.environ[ModuleCtx.Env_Var] = self.suite_env_value
+
         cleanup_enmasse(self.server_path)
 
 # ################################################################################################################################

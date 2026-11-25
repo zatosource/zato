@@ -684,9 +684,7 @@ class SecurityImporter:
 
             self.populate_sec_defs_from_db(session)
 
-        except Exception as e:
-            logger.error('Error syncing security definitions: %s', e)
-            logger.exception('Full exception details:')
+        except Exception:
             session.rollback()
             raise
 

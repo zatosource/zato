@@ -215,8 +215,7 @@ class ChannelAMQPImporter:
 
             session.commit()
 
-        except Exception as e:
-            logger.error('Error syncing %s channel definitions: %s', label, e)
+        except Exception:
             session.rollback()
             raise
 
@@ -392,8 +391,7 @@ class OutgoingAMQPImporter:
 
             session.commit()
 
-        except Exception as e:
-            logger.error('Error syncing outgoing %s connection definitions: %s', label, e)
+        except Exception:
             session.rollback()
             raise
 

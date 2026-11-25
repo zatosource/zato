@@ -231,9 +231,7 @@ class SMTPImporter:
             session.commit()
             logger.info('Successfully committed all changes')
 
-        except Exception as e:
-            logger.error('Error syncing SMTP connection definitions: %s', e)
-            logger.exception('Full exception details:')
+        except Exception:
             session.rollback()
             raise
 

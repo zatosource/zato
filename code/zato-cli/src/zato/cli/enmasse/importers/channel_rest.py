@@ -678,9 +678,7 @@ class ChannelImporter:
                 session.refresh(instance)
                 logger.info('Verified channel: name=%s id=%s security_id=%s', instance.name, instance.id, instance.security_id)
 
-        except Exception as e:
-            logger.error('Error syncing REST channels: %s', e)
-            logger.exception('Full exception details:')
+        except Exception:
             session.rollback()
             raise
 

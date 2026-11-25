@@ -260,9 +260,7 @@ class SQLImporter:
             session.commit()
             logger.info('Successfully committed all changes')
 
-        except Exception as e:
-            logger.error('Error syncing SQL connection pool definitions: %s', e)
-            logger.exception('Full exception details:')
+        except Exception:
             session.rollback()
             raise
 

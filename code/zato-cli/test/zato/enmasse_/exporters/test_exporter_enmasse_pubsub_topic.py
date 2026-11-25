@@ -173,8 +173,6 @@ class TestEnmassePubSubTopicExporter(TestCase):
                             f'Field {field} has incorrect value in topic {name}, expected {value}, got {topic[field]}')
                     else:
                         logger.info(f'Optional field {field} not found in exported topic {name}, but was in template')
-        else:
-            logger.warning('No pubsub topic definitions found in test YAML template')
 
         # The template turns the audit log off for topic.2 only, the other topics do not export the flag
         exported_by_name = {topic['name']: topic for topic in exported_topics}

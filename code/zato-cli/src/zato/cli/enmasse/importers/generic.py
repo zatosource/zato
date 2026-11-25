@@ -489,9 +489,7 @@ class GenericConnectionImporter:
             session.commit()
             logger.info('Successfully committed all changes')
 
-        except Exception as e:
-            logger.error('Error syncing connection definitions: %s (%s)', e, self.connection_type)
-            logger.exception('Full exception details:')
+        except Exception:
             session.rollback()
             raise
 
