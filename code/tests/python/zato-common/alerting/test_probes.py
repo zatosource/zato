@@ -17,6 +17,7 @@ from zato.common.alerting.collectors import collect_certificate_facts, collect_h
 from zato.common.alerting.probes import normalize_health_state, parse_tls_target, run_certificate_probe, \
     run_health_probe, run_test_transfer_probe
 from zato.common.audit_log.api import event_table, AuditEvent, AuditLog, AuditOutcome, AuditSource
+from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
 from zato.common.util.api import utcnow
 
@@ -54,6 +55,7 @@ def _load_events(source:'str') -> 'anylist':
         event_table.c.event_type,
         event_table.c.outcome,
         event_table.c.status,
+        event_data,
     ).where(event_table.c.source == source).order_by(event_table.c.id)
 
     with engine.connect() as connection:
@@ -276,7 +278,7 @@ class TestTransferProbe(TestCase):
         events = _load_events(AuditSource.Test_Transfer)
         assert len(events) == 1
         assert events[0].outcome == AuditOutcome.Error
-        assert events[0].status == 'Upload failed'
+        assert events[0].data == 'Upload failed'
 
         facts = collect_test_transfer_facts(engine, now)
         assert facts[0]['test_transfer_failed'] == 1
