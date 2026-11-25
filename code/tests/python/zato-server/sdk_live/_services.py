@@ -258,6 +258,26 @@ class GetTicket(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class GetTicketError(Service):
+    """ Reads one ticket from GLPI and returns the message of the exception that the connector raises.
+    """
+    name = 'demo.glpi.get-ticket-error'
+
+    input = Int('ticket_id')
+
+    def handle(self) -> 'None':
+        conn = self.out.glpi['My GLPI']
+
+        try:
+            _ = conn.get_ticket(self.request.input.ticket_id)
+        except Exception as e:
+            self.response.payload = {'error': str(e)}
+        else:
+            self.response.payload = {'error': None}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class CreateTicket(Service):
     """ Creates a ticket in GLPI and returns its ID.
     """

@@ -55,20 +55,26 @@ class FeedClient:
 
     def _read_loop(self) -> 'None':
 
-        for line in self.reader_file:
-            text = line.strip()
+        # A read error ends the loop as the end of the stream does, e.g. a connection reset by the feed,
+        # or the shutdown in close, which under gevent cancels the pending read instead of returning the end of the stream.
+        try:
+            for line in self.reader_file:
+                text = line.strip()
 
-            # A message the feed pushed on its own.
-            if text.startswith('push '):
-                self.on_message(text[len('push '):])
+                # A message the feed pushed on its own.
+                if text.startswith('push '):
+                    self.on_message(text[len('push '):])
 
-            # The feed confirmed our subscription.
-            elif text == 'subscribed':
-                self.subscribed_event.set()
+                # The feed confirmed our subscription.
+                elif text == 'subscribed':
+                    self.subscribed_event.set()
 
-            # The feed answered a ping.
-            elif text == 'pong':
-                self.pong_event.set()
+                # The feed answered a ping.
+                elif text == 'pong':
+                    self.pong_event.set()
+
+        except OSError:
+            pass
 
         # The loop ended, which means the socket is gone - the reader file is closed by the thread that reads it.
         self.reader_file.close()

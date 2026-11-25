@@ -55,24 +55,29 @@ class PaymentsClient:
 
     def _read_loop(self) -> 'None':
 
-        for line in self.reader_file:
-            text = line.strip()
-            corr_id, _, payload = text.partition(' ')
+        # A read error ends the loop as the end of the stream does, e.g. a connection reset by the switch,
+        # or the shutdown in close, which under gevent cancels the pending read instead of returning the end of the stream.
+        try:
+            for line in self.reader_file:
+                text = line.strip()
+                corr_id, _, payload = text.partition(' ')
 
-            # The call this reply belongs to may have given up already, e.g. it timed out.
-            with self.lock:
-                holder = self.pending.pop(corr_id, None)
+                # The call this reply belongs to may have given up already, e.g. it timed out.
+                with self.lock:
+                    holder = self.pending.pop(corr_id, None)
 
-            if holder:
-                holder['response'] = payload
-                holder['event'].set()
+                if holder:
+                    holder['response'] = payload
+                    holder['event'].set()
+
+        except OSError:
+            pass
 
         # The loop ended, which means the socket is gone - the reader file is closed by the thread that reads it ..
         self.reader_file.close()
         self.is_connected = False
 
         # .. and everyone still waiting is woken up.
-
         with self.lock:
             for holder in self.pending.values():
                 holder['event'].set()

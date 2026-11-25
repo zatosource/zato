@@ -11,9 +11,6 @@ import os
 import subprocess
 import tempfile
 
-# PyPI
-import pytest
-
 # Zato
 from zato.common.crypto.api import CryptoManager
 
@@ -34,6 +31,7 @@ _conn_name_wrong_token = 'My GLPI With a Wrong App Token'
 _conn_type = 'outconn-glpi'
 
 _get_ticket_service = 'demo.glpi.get-ticket'
+_get_ticket_error_service = 'demo.glpi.get-ticket-error'
 _create_ticket_service = 'demo.glpi.create-ticket'
 
 # An ID the GLPI mode never assigns
@@ -174,16 +172,11 @@ def test_glpi_get_ticket(zato_server:'stranydict') -> 'None':
     assert response['name'] == 'Printer offline'
     assert response['content'] == 'The printer on floor 3 is offline.'
 
-    # .. while a missing one makes the service raise an exception with GLPI's error code.
-    with pytest.raises(Exception):
-        _ = client.invoke(_get_ticket_service, {'ticket_id': _missing_ticket_id})
+    # .. while a missing one makes the connector raise an exception with GLPI's error code.
+    response = client.invoke(_get_ticket_error_service, {'ticket_id': _missing_ticket_id})
 
-    def _is_logged() -> 'bool':
-        log_content = read_server_log(zato_server)
-        out = 'ERROR_ITEM_NOT_FOUND' in log_content
-        return out
-
-    _ = wait_for(_is_logged, 'the missing ticket error to be logged')
+    assert response['error'] is not None, 'The connector was expected to raise for a missing ticket'
+    assert 'ERROR_ITEM_NOT_FOUND' in response['error'], response['error']
 
 # ################################################################################################################################
 
