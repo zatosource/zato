@@ -31,6 +31,10 @@ class ModuleCtx:
     # .. log records at the levels below them, whose traceback, when they carry one, is diagnostic detail ..
     Detail_Record_Pattern = re.compile(r' - (?:DEBUG|INFO) - ')
 
+    # .. and the same levels as the tracing crate of the Rust components formats them, after a UTC timestamp
+    # and with or without ANSI colors ..
+    Tracing_Detail_Record_Pattern = re.compile(r'\d{4}-\d\d-\d\dT[\d:.]+Z(?:\x1b\[[\d;]*m)?\s+(?:\x1b\[[\d;]*m)?\s*(?:TRACE|DEBUG|INFO)\b')
+
     # .. a record that pytest repeats in the captured log of a failure, which is already counted, so neither the record
     # nor its traceback counts again, whatever its level ..
     Captured_Record_Pattern = re.compile(r'^(?:DEBUG|INFO|WARNING|ERROR|CRITICAL) +\S+:\S+:\d+ ')
@@ -155,6 +159,7 @@ class LogCounter:
             or bool(ModuleCtx.Cargo_Warning_Pattern.match(line))
 
         is_detail = bool(ModuleCtx.Detail_Record_Pattern.search(line)) \
+            or bool(ModuleCtx.Tracing_Detail_Record_Pattern.search(line)) \
             or bool(ModuleCtx.Captured_Record_Pattern.match(line))
 
         # .. an error record, a failure or a cargo error is an error ..

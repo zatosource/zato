@@ -525,6 +525,11 @@ def process_files(service:'Service', context:'stranydict') -> 'None':
     facade = getattr(service, facade_attr)
     conn = facade[conn_name]
 
+    # An inactive connection has no clients in its queue, so its schedule's runs are skipped
+    if not conn.wrapper.config.is_active:
+        service.logger.info('Skipping a run of schedule `%s`, connection `%s` is inactive', schedule_name, conn_name)
+        return
+
     audit_log:'AuditLog' = conn.wrapper.audit_log
 
     # Interrupted runs are closed, and their claims released, before the new one opens, as are the claims

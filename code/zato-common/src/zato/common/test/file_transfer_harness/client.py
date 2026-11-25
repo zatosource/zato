@@ -171,12 +171,13 @@ class ScheduleClient:
 # ################################################################################################################################
 
     def create_foreign_conn(self, name:'str') -> 'int':
-        """ Creates a generic connection that is not a file transfer one, returning its ID.
+        """ Creates an inactive generic connection that is not a file transfer one, returning its ID.
+        Being inactive, it is never connected to its server.
         """
         request:'anydict' = {
             'name': name,
             'type_': Foreign_Conn_Type,
-            'is_active': True,
+            'is_active': False,
             'is_internal': False,
             'is_channel': False,
             'is_outgoing': True,

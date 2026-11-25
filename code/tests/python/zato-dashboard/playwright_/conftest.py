@@ -707,9 +707,10 @@ def soap_test_server_mtls() -> 'any_':
 # ################################################################################################################################
 # ################################################################################################################################
 
-@pytest.fixture(scope='session')
+@pytest.fixture()
 def llm_test_server() -> 'any_':
-    """ A session-scoped live LLM provider simulator over plain HTTP.
+    """ A live LLM provider simulator over plain HTTP, started for each test. Stopping it closes the connections
+    that the server keeps alive to it and joins their request threads before the test ends.
     """
     from llm_test_server import LLMTestServer
 

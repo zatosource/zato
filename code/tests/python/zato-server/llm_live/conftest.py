@@ -20,6 +20,9 @@ sys.path.insert(0, os.path.dirname(__file__))
 # pytest
 import pytest
 
+# Zato
+from zato.common.test.zato_database import use_process_database
+
 # local
 import ollama_containers as containers
 
@@ -116,6 +119,15 @@ def redis_server() -> 'anydictgen':
 
     process.terminate()
     _ = process.wait(timeout=5)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='session', autouse=True)
+def zato_database() -> 'None':
+    """ Points this process at a PostgreSQL database of its own, which the audit log of the wrappers writes to.
+    """
+    _ = use_process_database()
 
 # ################################################################################################################################
 # ################################################################################################################################
