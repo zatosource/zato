@@ -279,13 +279,17 @@ def object_attrs(_object:'any_', ignore_double_underscore:'bool', to_avoid_list:
 
 # ################################################################################################################################
 
-def pluralize(count:'int', singular:'str') -> 'str':
+def pluralize(count:'int', singular:'str', plural:'strnone'=None) -> 'str':
     """ Returns the count with the correctly pluralized noun, e.g. 1 rule, 45 rules.
+    A noun whose plural is not formed by adding "s", e.g. 1 entry, 2 entries, is given its plural explicitly.
     """
+    if plural is None:
+        plural = f'{singular}s'
+
     if count == 1:
         out = f'{count} {singular}'
     else:
-        out = f'{count} {singular}s'
+        out = f'{count} {plural}'
 
     return out
 

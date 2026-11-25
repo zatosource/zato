@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import atexit
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -23,6 +24,7 @@ from unittest import main, TestCase
 # Zato
 from zato.common.test.process_util import kill_process_tree
 from zato.common.test.zato_database import isolated_database_env
+from zato.common.util.api import pluralize
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,6 +40,9 @@ _ZATO_BIN = os.path.join(_ZATO_BASE, 'bin', 'zato')
 _PYTHON_BIN = os.path.join(_ZATO_BASE, 'bin', 'py')
 _LISTENER_PATH = os.path.join(_ZATO_BASE, 'zato-common', 'src', 'zato', 'common', 'file_transfer', 'listener.py')
 _PASSWORD = 'test.enmasse.pickup.' + os.urandom(8).hex()
+
+# The beginning of each record in server.log
+_log_record_start = re.compile(r'^\d{4}-\d{2}-\d{2} ')
 
 _server_proc = None
 _listener_proc = None
@@ -315,37 +320,54 @@ class TestEnmassePickup(TestCase):
             f'Current data sections: {list(last_data.keys())}')
 
     def _count_import_markers(self):
-        """ Returns how many enmasse imports the server has started and completed so far,
-        based on the markers its commands facade writes to server.log.
+        """ Returns how many enmasse imports the server has started and completed so far, and the log records
+        of the imports that failed, based on the markers its commands facade writes to server.log.
         """
         server_log = os.path.join(self.server_dir, 'logs', 'server.log')
         if not os.path.isfile(server_log):
-            return 0, 0
+            return 0, 0, []
         started = 0
         completed = 0
+        failures = []
+        in_failure = False
         with open(server_log) as f:
             for line in f:
+
+                # A line without a timestamp continues the record before it, such as the stderr of a failed import ..
+                is_record_start = _log_record_start.match(line) is not None
+                if in_failure and not is_record_start:
+                    failures[-1] += line
+                    continue
+                in_failure = False
+
+                # .. while each record is one of the markers of an import.
                 if 'Invoking command' in line and '--import' in line:
                     started += 1
                 elif 'Enmasse stdout' in line:
                     completed += 1
-        return started, completed
+                elif 'Enmasse import failed' in line:
+                    failures.append(line)
+                    in_failure = True
+        return started, completed, failures
 
     def _wait_for_imports_done(self, min_completed, timeout=120):
         """ Waits until at least min_completed enmasse imports have finished and none is still
         running. The listener may deploy the same file more than once, and a new import must
         never run concurrently with a previous one, which is why both counts are checked.
+        An import that fails ends the wait at once with the record of its failure.
         """
         deadline = time.monotonic() + timeout
         started, completed = 0, 0
         while time.monotonic() < deadline:
-            started, completed = self._count_import_markers()
+            started, completed, failures = self._count_import_markers()
+            if failures:
+                self.fail('Enmasse import failed on the server:\n' + '\n'.join(failures))
             if completed >= min_completed and started == completed:
                 return completed
             time.sleep(1)
 
         self.fail(
-            f'Timeout waiting for {min_completed} completed enmasse imports, '
+            f'Timeout waiting for {pluralize(min_completed, "completed enmasse import")}, '
             f'started={started} completed={completed}')
 
     def _wait_for_edited_es_timeout(self, timeout=90):

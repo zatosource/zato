@@ -240,6 +240,13 @@ channel_rest:
           - 10.0.0.0/8
           - 192.168.0.0/16
         time_range:
+          - is_all_day: true
+            limit: 2000
+            limit_unit: hour
+            rate: 10
+            burst: 20
+            disabled: false
+            disallowed: false
           - is_all_day: false
             time_from: '08:00'
             time_to: '17:00'

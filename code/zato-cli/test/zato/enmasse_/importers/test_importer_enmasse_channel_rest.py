@@ -236,15 +236,21 @@ class TestEnmasseChannelRESTImporter(TestCase):
         rules_3 = opaque_3['rate_limiting']
         self.assertEqual(len(rules_3), 2)
 
-        # First rule - time range with two CIDR entries
+        # First rule - an all-day range followed by a business-hours range, with two CIDR entries
         self.assertEqual(len(rules_3[0]['cidr_list']), 2)
+        self.assertEqual(len(rules_3[0]['time_range']), 2)
 
-        time_range_3_first = rules_3[0]['time_range'][0]
-        self.assertEqual(time_range_3_first['limit'], 100)
-        self.assertEqual(time_range_3_first['limit_unit'], 'minute')
-        self.assertFalse(time_range_3_first['is_all_day'])
-        self.assertEqual(time_range_3_first['time_from'], '08:00')
-        self.assertEqual(time_range_3_first['time_to'], '17:00')
+        time_range_3_all_day = rules_3[0]['time_range'][0]
+        self.assertEqual(time_range_3_all_day['limit'], 2000)
+        self.assertEqual(time_range_3_all_day['limit_unit'], 'hour')
+        self.assertTrue(time_range_3_all_day['is_all_day'])
+
+        time_range_3_business_hours = rules_3[0]['time_range'][1]
+        self.assertEqual(time_range_3_business_hours['limit'], 100)
+        self.assertEqual(time_range_3_business_hours['limit_unit'], 'minute')
+        self.assertFalse(time_range_3_business_hours['is_all_day'])
+        self.assertEqual(time_range_3_business_hours['time_from'], '08:00')
+        self.assertEqual(time_range_3_business_hours['time_to'], '17:00')
 
         # Second rule - all-day, disabled, disallowed
         time_range_3_second = rules_3[1]['time_range'][0]
