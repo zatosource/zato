@@ -20,7 +20,7 @@ from json import dumps
 from sqlalchemy import select
 
 # Zato
-from zato.common.api import SCHEDULER
+from zato.common.api import Alerting, PubSub, SCHEDULER
 from zato.common.audit_log.api import AuditEvent, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.common import event_attr_table, event_body_table, event_table
@@ -77,6 +77,15 @@ _log_level_kind = {
 # The level name of the entries the scheduler adds on its own
 Log_Level_System = 'SYSTEM'
 
+# The jobs the server creates for its own housekeeping - their runs are not recorded.
+Unrecorded_Job_Names = frozenset({
+    Alerting.Job_Name,
+    Alerting.Cert_Job_Name,
+    Alerting.Health_Job_Name,
+    Alerting.Test_Transfer_Job_Name,
+    PubSub.Outgoing.DLQ_Job_Name,
+})
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -123,11 +132,15 @@ def record_job_start(
     ) -> 'intnone':
     """ Writes the running event for a job run the server is about to execute.
     Returns the event id the completion and log writes update, or None when the audit log
-    is turned off, in which case those writes no-op like any other source's would.
+    is turned off or the job is one of Unrecorded_Job_Names, in which case those writes no-op.
     A run repeated from the audit log passes the repeated run's cid as correl_id and its event id in parents.
     """
 
-    # The searchable attributes every history query keys on
+    # The server's own housekeeping jobs are not recorded ..
+    if job_name in Unrecorded_Job_Names:
+        return None
+
+    # .. otherwise the searchable attributes every history query keys on are built.
     attrs = {
         Attr_Job_ID: job_id,
         Attr_Current_Run: current_run,

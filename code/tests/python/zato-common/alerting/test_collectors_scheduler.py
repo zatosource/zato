@@ -11,6 +11,7 @@ from datetime import timedelta
 
 # Zato
 from zato.common.alerting.collectors import collect_facts, collect_file_transfer_facts, collect_scheduler_facts, Measure_File_Runs
+from zato.common.api import Alerting
 from zato.common.audit_log.api import AuditEvent, AuditLog, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.scheduler import Attr_Delay_Ms
@@ -73,6 +74,32 @@ class TestSchedulerFacts:
         facts = collect_scheduler_facts(engine, Window_Seconds, now, {})
 
         assert facts == []
+
+# ################################################################################################################################
+
+    def test_the_servers_own_housekeeping_jobs_are_not_measured(self) -> 'None':
+        audit_log = AuditLog(Server_Name)
+        engine = get_database_engine()
+        now = utcnow()
+
+        # Both jobs last ran twenty minutes ago with the same start delay, on a five-minute interval
+        event_time = now - timedelta(seconds=1200)
+
+        for job_name in (Alerting.Job_Name, 'billing.sync'):
+            _ = seed_event(audit_log, event_time, AuditSource.Scheduler, AuditEvent.Job_Executed, job_name,
+                cid=f'housekeeping-{job_name}', outcome=AuditOutcome.OK, attrs={Attr_Delay_Ms: 1200})
+
+        job_intervals = {
+            Alerting.Job_Name: 300,
+            'billing.sync': 300,
+        }
+
+        facts = collect_scheduler_facts(engine, Window_Seconds, now, job_intervals)
+
+        assert len(facts) == 1
+        assert facts[0]['object_name'] == 'billing.sync'
+        assert facts[0]['start_delay_ms'] == 1200
+        assert facts[0]['overdue_ratio'] == 4.0
 
 # ################################################################################################################################
 # ################################################################################################################################

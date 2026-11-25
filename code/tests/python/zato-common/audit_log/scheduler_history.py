@@ -11,7 +11,7 @@ from os import environ
 
 # Zato
 from common import delete_all_events
-from zato.common.api import SCHEDULER
+from zato.common.api import Alerting, SCHEDULER
 from zato.common.audit_log.api import AuditLog, ModuleCtx as AuditLogCtx
 from zato.common.audit_log.scheduler import append_job_log_entry, record_job_complete, record_job_start, record_job_timeout
 from zato.common.audit_log.scheduler_query import get_chart_data, get_history_page, get_history_since, get_job_aggregates, \
@@ -40,6 +40,9 @@ _job_id = 5001
 # A second job proving that per-job aggregates and history are kept apart
 _other_job_name = 'audit.test.other-scheduler-job'
 _other_job_id = 5002
+
+# The ID the server's own alerting job runs under in the scenario
+_housekeeping_job_id = 5003
 
 # The service the jobs invoke
 _service_name = 'audit.test.scheduler-service'
@@ -338,13 +341,39 @@ def _run_enabled_switch_checks(audit_log:'AuditLog') -> 'None':
     assert len(page['records']) == 3
 
 # ################################################################################################################################
+
+def _run_unrecorded_job_checks(audit_log:'AuditLog') -> 'None':
+    """ Confirms a run of one of the server's own housekeeping jobs records nothing and returns no event id,
+    while the runs of the user jobs recorded before remain the only ones in the per-job aggregates.
+    """
+    now = utcnow()
+
+    result = record_job_start(
+        audit_log,
+        Alerting.Job_Name,
+        cid='cid-scheduler-housekeeping',
+        job_id=_housekeeping_job_id,
+        current_run=1,
+        planned_fire_time=now,
+        delay_ms=0,
+        service=Alerting.Service,
+    )
+
+    assert result is None
+
+    aggregates = get_job_aggregates()
+
+    assert set(aggregates) == {_job_name, _other_job_name}
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def run_scheduler_history_scenario() -> 'None':
     """ The scheduler history scenario every backend must pass: one audit event per run
     updated in place from running to its final outcome, log lines as event body rows
     with incremental tailing, run detail navigation, incremental history polls, per-job
-    aggregates, the pre-aggregated chart, the cross-job timeline and the audit log switch.
+    aggregates, the pre-aggregated chart, the cross-job timeline, the audit log switch
+    and the server's own housekeeping jobs, whose runs are not recorded.
     """
     delete_all_events()
 
@@ -365,6 +394,7 @@ def run_scheduler_history_scenario() -> 'None':
     _run_other_job_and_aggregate_checks(audit_log)
     _run_chart_and_timeline_checks()
     _run_enabled_switch_checks(audit_log)
+    _run_unrecorded_job_checks(audit_log)
 
 # ################################################################################################################################
 # ################################################################################################################################

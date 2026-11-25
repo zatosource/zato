@@ -20,7 +20,7 @@ from sqlalchemy import and_, func, select
 # Zato
 from zato.common.alerting.collectors.common import new_fact
 from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditSource
-from zato.common.audit_log.scheduler import Attr_Delay_Ms
+from zato.common.audit_log.scheduler import Attr_Delay_Ms, Unrecorded_Job_Names
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,6 +54,9 @@ def collect_scheduler_facts(
 
     window_start = now - timedelta(seconds=window_seconds)
 
+    # The server's own housekeeping jobs are not measured, whatever rows of theirs the audit database still has.
+    is_recorded_job = event_table.c.object_name.notin_(Unrecorded_Job_Names)
+
     # The worst start delay of each job within the window - the delay rides
     # in every run event's own attr.
     delay_query = select(
@@ -65,6 +68,7 @@ def collect_scheduler_facts(
         event_table.c.source == AuditSource.Scheduler,
         event_table.c.event_time >= window_start,
         event_attr_table.c.name == Attr_Delay_Ms,
+        is_recorded_job,
     )).group_by(event_table.c.object_name)
 
     # When each job ran last, regardless of the window - overdue is about absence
@@ -74,6 +78,7 @@ def collect_scheduler_facts(
     ).where(and_(
         event_table.c.source == AuditSource.Scheduler,
         event_table.c.event_type == AuditEvent.Job_Executed,
+        is_recorded_job,
     )).group_by(event_table.c.object_name)
 
     with engine.connect() as connection:
