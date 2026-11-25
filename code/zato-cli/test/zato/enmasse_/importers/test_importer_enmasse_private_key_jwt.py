@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import sys
+from logging import WARNING
 from unittest import main, TestCase
 
 # Make the shared test helpers importable
@@ -48,6 +49,10 @@ class ModuleCtx:
     Env_Var = Env_Var_Private_Key
     Env_Var_Reference = 'Zato_Enmasse_Env.' + Env_Var_Private_Key
     Missing = EnvVariable.Missing_Value_Prefix + Env_Var_Private_Key
+
+    # The logger that reports an unset variable and the beginning of its message
+    Env_Logger_Name = 'zato.cli.enmasse.util.common'
+    Env_Unset_Message = f'Environment variable `{Env_Var_Private_Key}` is not set'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -112,6 +117,18 @@ class TestEnmassePrivateKeyJWT(TestCase):
 
 # ################################################################################################################################
 
+    def _sync_with_variable_unset(self, definition:'anydict') -> 'tuple':
+        """ Runs an import while the key's environment variable is unset and confirms that the importer warns about it.
+        """
+        with self.assertLogs(ModuleCtx.Env_Logger_Name, WARNING) as captured:
+            out = self._sync(definition)
+
+        self.assertIn(ModuleCtx.Env_Unset_Message, captured.output[0])
+
+        return out
+
+# ################################################################################################################################
+
     def _get_row(self, name:'str'=ModuleCtx.Name) -> 'any_':
         self.session.expire_all()
         out = self.session.query(OAuth).filter_by(name=name).one()
@@ -172,7 +189,7 @@ class TestEnmassePrivateKeyJWT(TestCase):
         self._assert_stored_key(self._get_row(), self.key_b)
 
         # .. a placeholder for an unset environment variable is no update and B stays ..
-        _, updated = self._sync(self._definition(ModuleCtx.Env_Var_Reference))
+        _, updated = self._sync_with_variable_unset(self._definition(ModuleCtx.Env_Var_Reference))
         self.assertNotIn('security', updated)
         self._assert_stored_key(self._get_row(), self.key_b)
 
@@ -198,7 +215,7 @@ class TestEnmassePrivateKeyJWT(TestCase):
 
         del os.environ[ModuleCtx.Env_Var]
 
-        _, updated = self._sync(self._definition(ModuleCtx.Env_Var_Reference))
+        _, updated = self._sync_with_variable_unset(self._definition(ModuleCtx.Env_Var_Reference))
         self.assertNotIn('security', updated)
         self._assert_stored_key(self._get_row(), self.key_a)
 
@@ -208,7 +225,7 @@ class TestEnmassePrivateKeyJWT(TestCase):
         """ A definition created while its variable is unset stores the placeholder, the same as a password does,
         so the next import with the variable set replaces it with the real key.
         """
-        created, _ = self._sync(self._definition(ModuleCtx.Env_Var_Reference))
+        created, _ = self._sync_with_variable_unset(self._definition(ModuleCtx.Env_Var_Reference))
         self.assertEqual(len(created['security']), 1)
 
         # The placeholder carries a unique suffix after the variable's name

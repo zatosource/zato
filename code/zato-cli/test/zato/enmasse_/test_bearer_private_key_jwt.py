@@ -117,6 +117,9 @@ class EnmasseBearerPrivateKeyJWTTestCase(TestCase):
         enmasse_env = os.environ.copy()
         enmasse_env['Zato_Needs_Config_Reload'] = 'False'
 
+        # The test sets the private key variable for each import itself, so the value that the suite sets is not inherited
+        _ = enmasse_env.pop(Env_Var_Private_Key, None)
+
         if env:
             enmasse_env.update(env)
 
