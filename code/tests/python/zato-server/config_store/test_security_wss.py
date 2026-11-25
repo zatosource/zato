@@ -36,6 +36,10 @@ _trust_anchors_path = '/opt/zato/pki/wss-trust-anchors.pem'
 
 @pytest.fixture(scope='module')
 def client(zato_server:'anydict') -> 'ZatoClient':
+
+    # The SAML definition is created without any trust material
+    zato_server['expected_server_records'].append('WS-Security definition `test-wss-saml` has neither trust anchors')
+
     base_url = f'http://{zato_server["host"]}:{zato_server["port"]}'
 
     out = ZatoClient(base_url, zato_server['password'])

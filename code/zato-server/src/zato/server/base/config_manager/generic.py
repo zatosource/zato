@@ -19,6 +19,7 @@ from zato.common.ext.bunch import Bunch
 from zato.common.api import GENERIC as COMMON_GENERIC, HL7, HTTP_SOAP, LDAP, ZATO_NONE
 from zato.common.broker_message import GENERIC as GENERIC_BROKER_MSG
 from zato.common.const import SECRETS
+from zato.common.exception import PingNotSupported
 from zato.common.hl7.fhir.fields import Outgoing_Bool_Names as outconn_fhir_bool_config_keys, \
     Outgoing_Config_Defaults as outconn_fhir_config_defaults, Outgoing_Int_Names as outconn_fhir_int_config_keys
 from zato.common.typing_ import cast_
@@ -30,8 +31,8 @@ from zato.server.generic.api.channel_kafka import channel_bool_config_keys as ch
     channel_config_defaults as channel_kafka_config_defaults, channel_int_config_keys as channel_kafka_int_config_keys
 from zato.server.generic.api.chat_discord import discord_config_defaults, discord_int_config_keys
 from zato.server.generic.api.cloud_salesforce import cloud_salesforce_config_defaults
-from zato.server.generic.api.config_defaults import cloud_aws_config_defaults, cloud_aws_int_config_keys, \
-    outconn_es_bool_config_keys, outconn_es_config_defaults, outconn_es_int_config_keys, outconn_grpc_bool_config_keys, \
+from zato.server.generic.api.config_defaults import cloud_atlassian_config_defaults, cloud_aws_config_defaults, \
+    cloud_aws_int_config_keys, outconn_es_bool_config_keys, outconn_es_config_defaults, outconn_es_int_config_keys, outconn_grpc_bool_config_keys, \
     outconn_grpc_config_defaults, outconn_grpc_int_config_keys, outconn_ldap_config_defaults, \
     outconn_mongodb_bool_config_keys, outconn_mongodb_config_defaults, outconn_mongodb_int_config_keys, \
     outconn_smb_bool_config_keys, outconn_smb_config_defaults, outconn_smb_int_config_keys, outconn_smb_string_config_keys
@@ -387,6 +388,10 @@ class Generic(ConfigManagerImpl):
 
         self.logger.info('About to ping generic connection `%s` (%s)', conn_dict.name, conn_dict.type_)
         conn = conn_dict['conn']
+
+        if not hasattr(conn, 'ping'):
+            raise PingNotSupported(conn_dict.name, conn_dict.type_)
+
         conn.ping()
         self.logger.info('Generic connection `%s` pinged successfully (%s)', conn_dict.name, conn_dict.type_)
 
@@ -582,6 +587,20 @@ class Generic(ConfigManagerImpl):
         for key, default in cloud_salesforce_config_defaults.items():
             if config.get(key) is None:
                 config[key] = default
+
+# ################################################################################################################################
+
+    def _generic_normalize_config_cloud_jira(self, config:'stranydict') -> 'None':
+        """ Fills in defaults for fields that the create path did not supply,
+        e.g. when a connection is created directly through zato.generic.connection.create.
+        """
+
+        # Apply a default for every field that is missing or None.
+        for key, default in cloud_atlassian_config_defaults.items():
+            if config.get(key) is None:
+                config[key] = default
+
+    _generic_normalize_config_cloud_confluence = _generic_normalize_config_cloud_jira
 
 # ################################################################################################################################
 

@@ -26,6 +26,7 @@ import pytest
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.config import TestConfig
+from zato.common.test.conftest_base_pubsub import Expected_Record_Marker
 from zato.common.test.process_util import kill_process_tree
 from zato.common.typing_ import cast_
 from zato.common.util.config import get_config_object, update_config_file
@@ -57,6 +58,12 @@ _quickstart_timeout   = 180
 
 _server_process = None
 _temp_directory = None
+
+# Fragments of server records that the commands service provokes deliberately - its timeout test
+# runs a command that sleeps for longer than the timeout it is given.
+_expected_server_records = (
+    "Timeout: Command 'sleep ",
+)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -183,7 +190,11 @@ def zato_server() -> 'any_':
     def _consume_server_output() -> 'None':
         stdout = cast_('any_', _server_process).stdout
         for line in iter(stdout.readline, b''):
-            logger.debug('[SERVER] %s', line.decode('utf-8', errors='replace').rstrip())
+            text = line.decode('utf-8', errors='replace').rstrip()
+            if any(record in text for record in _expected_server_records):
+                logger.debug('[SERVER] %s %s', Expected_Record_Marker, text)
+            else:
+                logger.debug('[SERVER] %s', text)
 
     stdout_thread = threading.Thread(target=_consume_server_output, daemon=True)
     stdout_thread.start()

@@ -12,7 +12,8 @@ from unittest import TestCase
 
 # Zato
 from zato.common.defaults import http_plain_server_port
-from zato.common.hl7.mllp.haproxy import Env_Port_Name, Internal_Port_Base, resolve_internal_port
+from zato.common.hl7.mllp.haproxy import Env_Port_Name, Internal_Port_Base, Internal_Port_Span, Max_Port, \
+    resolve_internal_port
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,6 +56,15 @@ class TestResolveInternalPort(TestCase):
         second = resolve_internal_port(http_plain_server_port + 1)
 
         self.assertEqual(first, second)
+
+# ################################################################################################################################
+
+    def test_a_high_server_port_stays_within_the_tcp_range(self) -> 'None':
+        """ A server port that would take the listener past the last TCP port wraps around to the base.
+        """
+        self.assertEqual(resolve_internal_port(http_plain_server_port + Max_Port - Internal_Port_Base), Max_Port)
+        self.assertEqual(resolve_internal_port(http_plain_server_port + Internal_Port_Span), Internal_Port_Base)
+        self.assertEqual(resolve_internal_port(64313), 44391)
 
 # ################################################################################################################################
 

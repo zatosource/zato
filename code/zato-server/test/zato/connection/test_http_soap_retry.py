@@ -48,6 +48,9 @@ class ModuleCtx:
 # The target of the sleep patch - the shared retry loop sleeps between attempts through this name
 _sleep_target = 'zato.common.util.http_retry.sleep'
 
+# The logger through which the shared retry loop reports each retry as a warning
+_retry_logger_target = 'zato.common.util.http_retry.logger'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -201,7 +204,11 @@ class RetryLoopTestCase(TestCase):
     """
 
     def _invoke(self, wrapper:'BaseHTTPSOAPWrapper', **kwargs:'any_') -> 'any_':
-        out = wrapper.invoke_http(ModuleCtx.CID, ModuleCtx.Method, ModuleCtx.Address, '', {}, None, **kwargs)
+        with patch(_retry_logger_target) as mock_logger:
+            try:
+                out = wrapper.invoke_http(ModuleCtx.CID, ModuleCtx.Method, ModuleCtx.Address, '', {}, None, **kwargs)
+            finally:
+                self.retry_warning_count = mock_logger.warning.call_count
         return out
 
 # ################################################################################################################################
@@ -249,6 +256,7 @@ class RetryLoopTestCase(TestCase):
             sleep_times.append(call.args[0])
 
         self.assertListEqual(sleep_times, [1, 2, 4])
+        self.assertEqual(self.retry_warning_count, 3)
 
 # ################################################################################################################################
 

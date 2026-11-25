@@ -32,6 +32,7 @@ class ModuleCtx:
     CID = 'abc-123'
     Conn_Name = 'CRM and Billing'
     Host = 'https://example.com'
+    REST_Logger_Name = 'zato_rest'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -156,9 +157,20 @@ class MissingPasswordTestCase(TestCase):
 
 # ################################################################################################################################
 
+    def _get_placeholder_wrapper(self, placeholder:'str') -> 'HTTPSOAPWrapper':
+        """ Builds a wrapper whose password is the placeholder and checks the warning that names it.
+        """
+        with self.assertLogs(ModuleCtx.REST_Logger_Name, level='WARNING') as logs:
+            out = _get_wrapper({'sec_type': SEC_DEF_TYPE.BASIC_AUTH, 'password': placeholder})
+
+        self.assertIn(placeholder, logs.output[0])
+        return out
+
+# ################################################################################################################################
+
     def test_placeholder_is_noticed(self) -> 'None':
         placeholder = self._get_placeholder()
-        wrapper = _get_wrapper({'sec_type': SEC_DEF_TYPE.BASIC_AUTH, 'password': placeholder})
+        wrapper = self._get_placeholder_wrapper(placeholder)
 
         self.assertEqual(wrapper.missing_password, placeholder)
 
@@ -166,7 +178,7 @@ class MissingPasswordTestCase(TestCase):
 
     def test_invocation_is_refused(self) -> 'None':
         placeholder = self._get_placeholder()
-        wrapper = _get_wrapper({'sec_type': SEC_DEF_TYPE.BASIC_AUTH, 'password': placeholder})
+        wrapper = self._get_placeholder_wrapper(placeholder)
 
         with self.assertRaises(BackendInvocationError) as raised:
             _ = wrapper.invoke_http(ModuleCtx.CID, 'GET', wrapper.address, '', {}, None)

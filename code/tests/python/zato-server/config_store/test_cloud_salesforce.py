@@ -44,6 +44,9 @@ class TestCloudSalesforce:
             is_outconn=False,
             address='https://test.salesforce.com',
             username='test@test.com',
+            password='test-password',
+            consumer_key='test-key',
+            consumer_secret='test-secret',
             pool_size=1,
         )
         assert 'id' in resp
@@ -67,6 +70,9 @@ class TestCloudSalesforce:
                 is_outconn=False,
                 address='https://test.salesforce.com',
                 username=f'test{i}@test.com',
+                password='test-password',
+                consumer_key='test-key',
+                consumer_secret='test-secret',
                 pool_size=1,
             )
             assert 'id' in resp
@@ -90,6 +96,9 @@ class TestCloudSalesforce:
             is_outconn=False,
             address='https://test.salesforce.com',
             username='test@test.com',
+            password='test-password',
+            consumer_key='test-key',
+            consumer_secret='test-secret',
             pool_size=2,
         )
         assert resp['id'] == item_id

@@ -34,6 +34,7 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import asbool, parse_simple_type
 from zato.common.util.delivery_config import apply_delivery_defaults, Delivery_Int_Fields, validate_delivery_fields
 from zato.common.util.sql import parse_instance_opaque_attr
+from zato.common.util.tcp import parse_address
 from zato.common.util.gateway import on_mcp_gateway_create_edit, on_mcp_gateway_delete
 from zato.common.util.rule_engine_api import on_rule_engine_api_create_edit, on_rule_engine_api_delete
 from zato.server.config_audit import get_model_snapshot, record_service_config_change
@@ -114,8 +115,16 @@ def on_kafka_create_edit(service:'Service', data:'Bunch', model:'any_', old_name
 # ################################################################################################################################
 
 def on_mllp_outgoing_create_edit(service:'Service', data:'Bunch', model:'any_', old_name:'any_') -> 'None':
-    """ Checks that an HL7 MLLP outgoing connection's client certificate comes with a CA bundle.
+    """ Checks that an HL7 MLLP outgoing connection's address names a host and a port
+    and that its client certificate comes with a CA bundle.
     """
+    address = data['address']
+
+    try:
+        _ = parse_address(address)
+    except ValueError:
+        raise BadRequest(service.cid, f'HL7 MLLP outgoing connection address `{address}` is not in the form host:port')
+
     try:
         validate_mllp_client_paths(data)
     except HL7Exception as e:

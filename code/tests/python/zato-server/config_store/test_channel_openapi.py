@@ -96,6 +96,7 @@ class TestChannelOpenAPI:
         item_id = self.__class__.created_ids[0]
         result = client.invoke('zato.generic.connection.ping', {'id': item_id})
         assert result['is_success'] is False
+        assert 'does not support ping' in result['info']
 
     def test_09_delete_one(self, client:'any_'):
         item_id = self.__class__.created_ids.pop(0)

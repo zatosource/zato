@@ -6,6 +6,7 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+import json
 import time
 
 import pytest
@@ -27,6 +28,39 @@ def client(zato_server:'any_'):
     base_url = f'http://{zato_server["host"]}:{zato_server["port"]}'
     return ZatoClient(base_url, zato_server['password'])
 
+def _odoo_handler(method:'any_', path:'any_', body_bytes:'any_'):
+    """ Answers the JSON-RPC calls that the Odoo client makes to log in and to ping.
+    """
+    request = json.loads(body_bytes)
+    params = request['params']
+    service = params['service']
+    rpc_method = params['method']
+
+    if service == 'common' and rpc_method in ('login', 'authenticate'):
+        result = 1
+    elif service == 'object':
+        # execute_kw args: (db, uid, password, model, method, args...)
+        model_method = params['args'][4]
+        if model_method == 'search':
+            result = [1]
+        elif model_method == 'read':
+            result = [{'id': 1, 'login': 'admin'}]
+        else:
+            result = True
+    else:
+        result = True
+
+    return {'jsonrpc': '2.0', 'id': request['id'], 'result': result}
+
+@pytest.fixture(scope='module')
+def odoo_port():
+    """ The port of a local Odoo JSON-RPC server, so that each connection created here can log in.
+    """
+    from _ping_stubs import start_http_stub
+    port, server = start_http_stub(_odoo_handler)
+    yield port
+    server.shutdown()
+
 class TestOutgoingOdoo:
     created_ids = []
 
@@ -34,15 +68,16 @@ class TestOutgoingOdoo:
         data, _meta = client.get_list(f'{SERVICE}.get-list', cur_page=1, paginate=False)
         assert isinstance(data, list)
 
-    def test_02_create_one(self, client:'any_'):
+    def test_02_create_one(self, client:'any_', odoo_port:'int'):
         resp = client.create(f'{SERVICE}.create',
             name='test-out-odoo-1',
             is_active=True,
-            host='http://localhost',
-            port=8069,
+            host='127.0.0.1',
+            port=odoo_port,
             user='admin',
+            password='admin',
             database='testdb',
-            protocol='xmlrpc',
+            protocol='jsonrpc',
             pool_size=1,
         )
         assert 'id' in resp
@@ -54,16 +89,17 @@ class TestOutgoingOdoo:
         names = [item['name'] for item in data]
         assert 'test-out-odoo-1' in names
 
-    def test_04_create_batch(self, client:'any_'):
+    def test_04_create_batch(self, client:'any_', odoo_port:'int'):
         for i in range(2, 6):
             resp = client.create(f'{SERVICE}.create',
                 name=f'test-out-odoo-{i}',
                 is_active=True,
-                host='http://localhost',
-                port=8069,
+                host='127.0.0.1',
+                port=odoo_port,
                 user='admin',
+                password='admin',
                 database='testdb',
-                protocol='xmlrpc',
+                protocol='jsonrpc',
                 pool_size=1,
             )
             assert 'id' in resp
@@ -74,17 +110,18 @@ class TestOutgoingOdoo:
         test_items = [item for item in data if item['name'].startswith('test-out-odoo-')]
         assert len(test_items) >= 5
 
-    def test_06_edit_one(self, client:'any_'):
+    def test_06_edit_one(self, client:'any_', odoo_port:'int'):
         item_id = self.__class__.created_ids[0]
         resp = client.edit(f'{SERVICE}.edit',
             id=item_id,
             name='test-out-odoo-1-edited',
             is_active=True,
-            host='http://localhost',
-            port=8069,
+            host='127.0.0.1',
+            port=odoo_port,
             user='admin',
+            password='admin',
             database='testdb-edited',
-            protocol='xmlrpc',
+            protocol='jsonrpc',
             pool_size=2,
         )
         assert resp['id'] == item_id
@@ -95,64 +132,35 @@ class TestOutgoingOdoo:
         assert 'test-out-odoo-1-edited' in names
         assert 'test-out-odoo-1' not in names
 
-    def test_08_ping(self, client:'any_'):
-        import json
-        from _ping_stubs import start_http_stub
-
-        def handler(method:'any_', path:'any_', body_bytes:'any_'):
-            request = json.loads(body_bytes)
-            params = request['params']
-            service = params['service']
-            rpc_method = params['method']
-
-            if service == 'common' and rpc_method in ('login', 'authenticate'):
-                result = 1
-            elif service == 'object':
-                # execute_kw args: (db, uid, password, model, method, args...)
-                model_method = params['args'][4]
-                if model_method == 'search':
-                    result = [1]
-                elif model_method == 'read':
-                    result = [{'id': 1, 'login': 'admin'}]
-                else:
-                    result = True
-            else:
-                result = True
-
-            return {'jsonrpc': '2.0', 'id': request['id'], 'result': result}
-
-        port, server = start_http_stub(handler)
+    def test_08_ping(self, client:'any_', odoo_port:'int'):
+        resp = client.create(f'{SERVICE}.create',
+            name='test-out-odoo-ping-live',
+            is_active=True,
+            host='127.0.0.1',
+            port=odoo_port,
+            user='admin',
+            password='admin',
+            database='testdb',
+            protocol='jsonrpc',
+            pool_size=1,
+        )
+        ping_id = resp['id']
         try:
-            resp = client.create(f'{SERVICE}.create',
-                name='test-out-odoo-ping-live',
-                is_active=True,
-                host='127.0.0.1',
-                port=port,
-                user='admin',
-                password='admin',
-                database='testdb',
-                protocol='jsonrpc',
-                pool_size=1,
-            )
-            ping_id = resp['id']
-            try:
-                # The connection queue is built asynchronously so retry until a client is available
-                deadline = time.time() + 30
-                while True:
-                    try:
-                        result = client.invoke(f'{SERVICE}.ping', {'id': ping_id})
-                    except Exception as e:
-                        if 'No free connections' in str(e) and time.time() < deadline:
-                            time.sleep(0.25)
-                            continue
-                        raise
-                    else:
-                        break
-                assert 'Ping OK' in result['info']
-            finally:
-                client.delete(f'{SERVICE}.delete', id=ping_id)
+            # The connection queue is built asynchronously so retry until a client is available
+            deadline = time.time() + 30
+            while True:
+                try:
+                    result = client.invoke(f'{SERVICE}.ping', {'id': ping_id})
+                except Exception as e:
+                    if 'No free connections' in str(e) and time.time() < deadline:
+                        time.sleep(0.25)
+                        continue
+                    raise
+                else:
+                    break
+            assert 'Ping OK' in result['info']
         finally:
-            server.shutdown()
+            client.delete(f'{SERVICE}.delete', id=ping_id)
 
     def test_09_delete_one(self, client:'any_'):
         item_id = self.__class__.created_ids.pop(0)

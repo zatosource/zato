@@ -41,8 +41,7 @@ class TestOutgoingHL7MLLP:
             is_internal=False,
             is_channel=False,
             is_outconn=True,
-            address='127.0.0.1',
-            port=18001,
+            address='127.0.0.1:18001',
             pool_size=1,
         )
         assert 'id' in resp
@@ -63,8 +62,7 @@ class TestOutgoingHL7MLLP:
                 is_internal=False,
                 is_channel=False,
                 is_outconn=True,
-                address='127.0.0.1',
-                port=18000 + i,
+                address=f'127.0.0.1:{18000 + i}',
                 pool_size=1,
             )
             assert 'id' in resp
@@ -85,8 +83,7 @@ class TestOutgoingHL7MLLP:
             is_internal=False,
             is_channel=False,
             is_outconn=True,
-            address='127.0.0.1',
-            port=18001,
+            address='127.0.0.1:18001',
             pool_size=2,
         )
         assert resp['id'] == item_id

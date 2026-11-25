@@ -22,6 +22,10 @@ SERVICE = 'zato.http-soap'
 
 @pytest.fixture(scope='module')
 def client(zato_server:'any_'):
+
+    # Each channel that an edit renames or a test deletes takes its endpoint out of the OpenAPI document
+    zato_server['expected_server_records'].append('OpenAPI breaking change: endpoint removed: POST /test/channel/rest/')
+
     base_url = f'http://{zato_server["host"]}:{zato_server["port"]}'
     return ZatoClient(base_url, zato_server['password'])
 

@@ -23,6 +23,7 @@ import pytest
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.test.conftest_base_pubsub import Expected_Record_Marker
 from zato.common.test.process_util import kill_process_tree
 from zato.common.util.config import get_config_object, update_config_file
 from zato.common.typing_ import cast_
@@ -32,7 +33,7 @@ from zato.common.test.zato_database import use_process_database
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,6 +55,9 @@ _COVERAGE_SOURCE = os.path.join(
 
 _server_proc = None
 _tmpdir = None
+
+# Fragments of server records that tests provoke deliberately, each such record is relayed with the expected marker
+_expected_server_records:'strlist' = []
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -257,7 +261,10 @@ def zato_server(request:'any_'):
         for line in iter(cast_('any_', _server_proc).stdout.readline, b''):
             text = line.decode('utf-8', errors='replace').rstrip()
             elapsed = time.monotonic() - t3
-            print(f'[SERVER {elapsed:6.1f}s] {text}')
+            if any(record in text for record in _expected_server_records):
+                print(f'[SERVER {elapsed:6.1f}s] {Expected_Record_Marker} {text}')
+            else:
+                print(f'[SERVER {elapsed:6.1f}s] {text}')
 
     _stdout_thread = threading.Thread(target=_stream_server_output, daemon=True)
     _stdout_thread.start()
@@ -280,6 +287,7 @@ def zato_server(request:'any_'):
         'password': _PASSWORD,
         'server_dir': server_dir,
         'tmpdir': _tmpdir,
+        'expected_server_records': _expected_server_records,
     }
 
     # 6) Teardown: stop server, optionally generate coverage report

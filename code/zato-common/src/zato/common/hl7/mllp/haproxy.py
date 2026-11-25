@@ -30,6 +30,10 @@ __all__ = ('resolve_internal_port',)
 # port, which is why it is a fixed number rather than anything discovered at run time.
 Internal_Port_Base = 31312
 
+# The highest TCP port number and the count of ports from the base up to and including it.
+Max_Port = 65535
+Internal_Port_Span = Max_Port - Internal_Port_Base + 1
+
 # If this environment variable is set, the internal MLLP server binds to exactly this port.
 # The load balancer reads the same variable, so the two never disagree.
 Env_Port_Name = 'Zato_HL7_MLLP_Port'
@@ -51,6 +55,10 @@ def resolve_internal_port(server_port:'int'=http_plain_server_port) -> 'int':
     # Every server sits as far above the MLLP base as it does above the first server's own port,
     # so two servers never collide and neither has to probe for a free port.
     out = Internal_Port_Base + server_port - http_plain_server_port
+
+    # A server port high enough to take the result past the last TCP port wraps around to the base.
+    if out > Max_Port:
+        out = Internal_Port_Base + (out - Internal_Port_Base) % Internal_Port_Span
 
     logger.info('Resolved internal MLLP port %d for server port %d', out, server_port)
 

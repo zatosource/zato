@@ -213,7 +213,14 @@ class InterleavingTestCase(CoalescingBaseTestCase):
         holder_ctx = make_ctx(self.cache, key, is_admitted=True)
         waiter_ctx = make_ctx(self.cache, key, is_admitted=True)
 
-        holder = spawn(invoke_coalesced, holder_ctx, holder_invoke, ())
+        # The holder's exception is returned rather than left to end the greenlet
+        def run_holder() -> 'Exception | None':
+            try:
+                _ = invoke_coalesced(holder_ctx, holder_invoke, ())
+            except Exception as e:
+                return e
+
+        holder = spawn(run_holder)
         _ = holder_started.wait()
 
         waiter = spawn(invoke_coalesced, waiter_ctx, waiter_invoke, ())
@@ -224,7 +231,7 @@ class InterleavingTestCase(CoalescingBaseTestCase):
         _ = waiter.join()
 
         # The holder failed but nobody was stranded
-        self.assertIsNotNone(holder.exception)
+        self.assertEqual(str(holder.value), 'The service failed')
         self.assertEqual(waiter.value, 'waiter-body')
 
         self.assertEqual(counters.invoke_count, 2)

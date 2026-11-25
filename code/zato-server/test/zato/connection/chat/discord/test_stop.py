@@ -19,7 +19,7 @@ from gevent import sleep, spawn
 from live_discord.simulator import Close_Code_Invalid_Token
 
 # Test support
-from test.zato.connection.chat.discord.common import DiscordTestCase, Handshake_Pause, wait_until
+from test.zato.connection.chat.discord.common import DiscordTestCase, Handshake_Pause, Logger_Name, wait_until
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,13 +79,16 @@ class StopTestCase(DiscordTestCase):
         self.simulator.identify_close_codes = [Close_Code_Invalid_Token]
 
         client = self.new_client()
-        client.start_handshake()
 
-        # The first attempt fails and the loop sleeps before the next one ..
-        wait_until(lambda: client.last_error != '', 'the first attempt fails')
+        with self.assertLogs(Logger_Name, level='WARNING'):
+            client.start_handshake()
 
-        # .. and the stop lands in that sleep.
-        client.stop(Stop_Reason)
+            # The first attempt fails and the loop sleeps before the next one ..
+            wait_until(lambda: client.last_error != '', 'the first attempt fails')
+
+            # .. and the stop lands in that sleep.
+            client.stop(Stop_Reason)
+
         self._assert_stopped(client)
 
         sleep(Observation_Period)

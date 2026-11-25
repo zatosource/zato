@@ -17,10 +17,12 @@ def silence_logging_teardown() -> 'None':
     destroys the log handlers, whose weakref cleanup callback takes the logging module
     lock - and under gevent that lock needs the hub, which is already gone by then,
     so every run ends with a spurious 'greenlet is being finalized' traceback.
-    Flushing the handlers now and removing the lock makes the late cleanup a no-op.
+    Flushing the handlers now and dropping their weak references makes the late cleanup a no-op.
+    The lock itself stays in place, because exit handlers that run after this one may still fork
+    and the logging module reinitializes the lock in each child process.
     """
     logging.shutdown()
-    logging._lock = None # type: ignore[assignment]
+    del logging._handlerList[:] # type: ignore[attr-defined]
 
 # ################################################################################################################################
 # ################################################################################################################################

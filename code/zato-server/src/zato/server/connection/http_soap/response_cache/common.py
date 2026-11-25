@@ -57,6 +57,9 @@ class ModuleCtx:
     # The request directive that skips the cache lookup
     Directive_No_Cache = 'no-cache'
 
+    # The generation of a context whose lookup has not run yet, no counter ever has this value
+    Generation_Not_Read = -1
+
     # Response directives that keep a response out of the cache
     Uncacheable_Directives = ('no-store', 'no-cache', 'private')
 
@@ -129,7 +132,7 @@ class ResponseCacheContext:
     request_ctx: 'stranydict'
 
     # The generation of the cached responses of the channel, read at the lookup
-    generation: 'int'
+    generation: 'int' = ModuleCtx.Generation_Not_Read
 
 # ################################################################################################################################
 # ################################################################################################################################

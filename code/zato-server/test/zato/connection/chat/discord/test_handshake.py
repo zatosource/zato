@@ -21,7 +21,8 @@ from zato.common.test.timing import Timer_Tolerance_Seconds
 from live_discord.simulator import Close_Code_Invalid_Token
 
 # Test support
-from test.zato.connection.chat.discord.common import DiscordTestCase, Handshake_Pause, Timeout, Token, wait_until
+from test.zato.connection.chat.discord.common import DiscordTestCase, Handshake_Pause, Logger_Name, Timeout, Token, \
+    wait_until
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -87,10 +88,13 @@ class HandshakeTestCase(DiscordTestCase):
         self.simulator.identify_close_codes = [Close_Code_Invalid_Token, 4014]
 
         client = self.new_client()
-        client.start_handshake()
 
-        response = client.send('after retries')
+        with self.assertLogs(Logger_Name, level='WARNING') as logs:
+            client.start_handshake()
+            response = client.send('after retries')
+
         self.assertEqual(response['content'], 'after retries')
+        self.assertEqual(len(logs.output), 2)
 
         identifies = self.simulator.identifies
         self.assertEqual(len(identifies), 3)
@@ -110,15 +114,19 @@ class HandshakeTestCase(DiscordTestCase):
         self.simulator.token = 'another-token'
 
         client = self.new_client()
-        client.start_handshake()
 
-        wait_until(lambda: '401' in client.last_error, 'the REST API refuses the token')
+        with self.assertLogs(Logger_Name, level='WARNING') as logs:
+            client.start_handshake()
 
-        self.assertEqual(self.simulator.identifies, [])
+            wait_until(lambda: '401' in client.last_error, 'the REST API refuses the token')
 
-        self.simulator.token = Token
+            self.assertEqual(self.simulator.identifies, [])
 
-        response = client.send('after the token is accepted')
+            self.simulator.token = Token
+
+            response = client.send('after the token is accepted')
+
+        self.assertIn('401', logs.output[0])
         self.assertEqual(response['content'], 'after the token is accepted')
         self.assertEqual(len(self.simulator.identifies), 1)
 
@@ -146,10 +154,12 @@ class HandshakeTestCase(DiscordTestCase):
         self.simulator.identify_close_codes = [Close_Code_Invalid_Token]
 
         client = self.new_client()
-        client.start_handshake()
-
         identifies = self.simulator.identifies
-        wait_until(lambda: len(identifies) >= 2, 'the second IDENTIFY arrives')
+
+        with self.assertLogs(Logger_Name, level='WARNING'):
+            client.start_handshake()
+            wait_until(lambda: len(identifies) >= 2, 'the second IDENTIFY arrives')
+
         pause = identifies[1].received_at - identifies[0].received_at
 
         self.assertGreaterEqual(pause, Handshake_Pause)

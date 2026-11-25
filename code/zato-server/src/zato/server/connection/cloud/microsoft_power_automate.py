@@ -248,6 +248,13 @@ class MicrosoftPowerAutomateClient:
 
 # ################################################################################################################################
 
+    def zato_delete_impl(self, reason:'strnone'=None) -> 'None':
+        """ Called by the connection queue when the connection is deleted, closes the HTTP session of the client.
+        """
+        self.session.close()
+
+# ################################################################################################################################
+
     def _get_environment_path(self) -> 'str':
         """ Returns the URL path prefix of the environment this connection points to.
         """

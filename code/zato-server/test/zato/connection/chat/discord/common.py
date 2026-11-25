@@ -49,6 +49,9 @@ Timeout = 2
 # The pause between handshake attempts, in seconds, shorter than the default so that retries are quick to observe
 Handshake_Pause = 0.3
 
+# The logger through which the client reports each failed handshake attempt as a warning
+Logger_Name = 'zato.server.connection.chat.discord'
+
 # How long a test waits for the simulator to record an event
 Wait_Timeout = 5.0
 

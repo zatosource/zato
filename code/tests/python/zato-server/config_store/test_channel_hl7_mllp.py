@@ -39,6 +39,19 @@ def client(zato_server:'any_'):
     base_url = f'http://{zato_server["host"]}:{zato_server["port"]}'
     return ZatoClient(base_url, zato_server['password'])
 
+@pytest.fixture(scope='module')
+def mtls_id(client:'any_'):
+    """ The ID of an mTLS definition that one of the channels references.
+    """
+    resp = client.create('zato.security.mtls.create',
+        name='test-ch-hl7mllp-mtls-def',
+        is_active=True,
+        client_cert_fingerprint='AB:CD:EF:01:23:45:67:89:AB:CD:EF:01:23:45:67:89:AB:CD:EF:01:23:45:67:89:AB:CD:EF:01:23:45:67:89',
+        client_cert_subject_dn='CN=mllp.example.com,O=Example Corporation,C=US',
+    )
+    yield resp['id']
+    client.delete('zato.security.mtls.delete', id=resp['id'])
+
 class TestChannelHL7MLLP:
     created_ids = []
 
@@ -63,7 +76,7 @@ class TestChannelHL7MLLP:
         assert resp['name'] == 'test-ch-hl7mllp-1'
         self.__class__.created_ids.append(resp['id'])
 
-    def test_02a_create_with_security_id(self, client:'any_'):
+    def test_02a_create_with_security_id(self, client:'any_', mtls_id:'int'):
         # The Dashboard's MLLP view sends security_id as a plain integer,
         # with no security-type prefix in front of it
         resp = client.create(f'{SERVICE}.create',
@@ -77,7 +90,7 @@ class TestChannelHL7MLLP:
             port=17010,
             pool_size=1,
             service='demo.ping',
-            security_id=123,
+            security_id=mtls_id,
         )
         assert 'id' in resp
         assert resp['name'] == 'test-ch-hl7mllp-mtls'

@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # the config manager imports when it builds the first connection of each type. The module imports no client library.
 
 # Zato
-from zato.common.api import AWS, ES, GRPC, LDAP, MongoDB, SMB
+from zato.common.api import Atlassian, AWS, ES, GRPC, LDAP, MongoDB, SMB
 from zato.common.file_transfer.api import Default_Verify_How
 
 # ################################################################################################################################
@@ -38,6 +38,16 @@ cloud_aws_config_defaults = {
 
 # Values of these configuration keys may arrive as strings from opaque storage and need to be integers.
 cloud_aws_int_config_keys = ['pool_size']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Defaults of the Jira and Confluence connections for fields that the create path may not have supplied,
+# e.g. when a connection is created directly through zato.generic.connection.create.
+cloud_atlassian_config_defaults = {
+    'api_version': Atlassian.Default.API_Version,
+    'is_cloud': Atlassian.Default.Is_Cloud,
+}
 
 # ################################################################################################################################
 # ################################################################################################################################

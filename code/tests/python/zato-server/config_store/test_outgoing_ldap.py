@@ -28,6 +28,15 @@ def client(zato_server:'any_'):
     base_url = f'http://{zato_server["host"]}:{zato_server["port"]}'
     return ZatoClient(base_url, zato_server['password'])
 
+@pytest.fixture(scope='module')
+def ldap_address():
+    """ The address of a local LDAP server that accepts every bind, so that each connection created here can connect.
+    """
+    from _ping_stubs import start_ldap_stub
+    port, server = start_ldap_stub()
+    yield f'ldap://127.0.0.1:{port}'
+    server.shutdown()
+
 class TestOutgoingLDAP:
     created_ids = []
 
@@ -35,7 +44,7 @@ class TestOutgoingLDAP:
         data, _meta = client.get_list(f'{SERVICE}.get-list', type_=TYPE)
         assert isinstance(data, list)
 
-    def test_02_create_one(self, client:'any_'):
+    def test_02_create_one(self, client:'any_', ldap_address:'str'):
         resp = client.create(f'{SERVICE}.create',
             name='test-out-ldap-1',
             type_=TYPE,
@@ -43,15 +52,16 @@ class TestOutgoingLDAP:
             is_internal=False,
             is_channel=False,
             is_outconn=True,
-            address='ldap://localhost:389',
+            address=ldap_address,
             username='cn=admin,dc=test,dc=com',
+            password='test-password',
             pool_size=1,
             pool_max_cycles=1,
             pool_keep_alive=30,
             use_auto_range=True,
             use_tls=False,
             sasl_mechanism='',
-            server_list='ldap://localhost:389',
+            server_list=ldap_address,
         )
         assert 'id' in resp
         assert resp['name'] == 'test-out-ldap-1'
@@ -62,7 +72,7 @@ class TestOutgoingLDAP:
         names = [item['name'] for item in data]
         assert 'test-out-ldap-1' in names
 
-    def test_04_create_batch(self, client:'any_'):
+    def test_04_create_batch(self, client:'any_', ldap_address:'str'):
         for i in range(2, 6):
             resp = client.create(f'{SERVICE}.create',
                 name=f'test-out-ldap-{i}',
@@ -71,15 +81,16 @@ class TestOutgoingLDAP:
                 is_internal=False,
                 is_channel=False,
                 is_outconn=True,
-                address='ldap://localhost:389',
+                address=ldap_address,
                 username=f'cn=admin{i},dc=test,dc=com',
+                password='test-password',
                 pool_size=1,
                 pool_max_cycles=1,
                 pool_keep_alive=30,
                 use_auto_range=True,
                 use_tls=False,
                 sasl_mechanism='',
-                server_list='ldap://localhost:389',
+                server_list=ldap_address,
             )
             assert 'id' in resp
             self.__class__.created_ids.append(resp['id'])
@@ -89,7 +100,7 @@ class TestOutgoingLDAP:
         test_items = [item for item in data if item['name'].startswith('test-out-ldap-')]
         assert len(test_items) >= 5
 
-    def test_06_edit_one(self, client:'any_'):
+    def test_06_edit_one(self, client:'any_', ldap_address:'str'):
         item_id = self.__class__.created_ids[0]
         resp = client.edit(f'{SERVICE}.edit',
             id=item_id,
@@ -99,15 +110,16 @@ class TestOutgoingLDAP:
             is_internal=False,
             is_channel=False,
             is_outconn=True,
-            address='ldap://localhost:389',
+            address=ldap_address,
             username='cn=admin,dc=test,dc=com',
+            password='test-password',
             pool_size=2,
             pool_max_cycles=1,
             pool_keep_alive=30,
             use_auto_range=True,
             use_tls=False,
             sasl_mechanism='',
-            server_list='ldap://localhost:389',
+            server_list=ldap_address,
         )
         assert resp['id'] == item_id
 

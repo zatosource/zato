@@ -111,6 +111,14 @@ class Inactive(ZatoException):
         super(Inactive, self).__init__(None, '`{}` is inactive'.format(name))
 
 # ################################################################################################################################
+
+class PingNotSupported(ZatoException):
+    """ Raised when a connection is pinged whose type has no ping implementation.
+    """
+    def __init__(self, name:'str', type_:'str') -> 'None':
+        super(PingNotSupported, self).__init__(None, 'Connection `{}` of type `{}` does not support ping'.format(name, type_))
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 # Below are HTTP exceptions

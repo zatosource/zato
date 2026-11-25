@@ -17,6 +17,7 @@ from urllib.parse import parse_qsl
 
 # Zato
 from zato.common.api import GENERIC as COMMON_GENERIC
+from zato.common.exception import PingNotSupported
 from zato.common.json_internal import dumps, loads
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.util.time_ import utcnow
@@ -60,6 +61,14 @@ class Ping(_BaseService):
 
             try:
                 _ = ping_func(self.request.input.id)
+
+            # A connection type without a ping implementation is not a failure of the connection itself ..
+            except PingNotSupported as e:
+                self.logger.info(e.msg)
+                self.response.payload.info = e.msg
+                self.response.payload.is_success = False
+
+            # .. whereas this is one.
             except Exception as e:
 
                 # The full traceback goes to the server log ..
