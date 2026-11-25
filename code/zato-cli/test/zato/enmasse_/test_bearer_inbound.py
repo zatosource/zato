@@ -22,7 +22,7 @@ sys.path.insert(0, _this_directory)
 import yaml  # noqa: E402
 
 # Zato
-from env_helper import create_environment, delete_environment  # noqa: E402
+from zato.common.test.enmasse_.env_helper import create_environment, delete_environment  # noqa: E402
 from zato.common.test import rand_string, rand_unicode  # noqa: E402
 from zato.common.util.open_ import open_w  # noqa: E402
 
@@ -30,7 +30,7 @@ from zato.common.util.open_ import open_w  # noqa: E402
 # ################################################################################################################################
 
 if 0:
-    from env_helper import TestEnvironment
+    from zato.common.test.enmasse_.env_helper import TestEnvironment
     TestEnvironment = TestEnvironment
 
 # ################################################################################################################################

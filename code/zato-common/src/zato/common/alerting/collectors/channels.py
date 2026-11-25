@@ -18,7 +18,7 @@ from __future__ import annotations
 from datetime import timedelta
 
 # SQLAlchemy
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, literal, or_, select
 
 # Zato
 from zato.common.alerting.collectors.common import channel_sources, new_fact, request_event_type_by_source, \
@@ -84,7 +84,8 @@ def collect_channel_status_facts(
     else:
         sources = list(channel_sources)
 
-    status_code = func.substr(event_table.c.status, 1, Status_Code_Length)
+    status_code = func.substr(
+        event_table.c.status, literal(1, literal_execute=True), literal(Status_Code_Length, literal_execute=True))
 
     for row_source in sources:
 

@@ -14,6 +14,7 @@ from tempfile import gettempdir
 from unittest import TestCase, main
 
 # Zato
+from zato.common.test.enmasse_.env_helper import get_shared_environment
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.cli.enmasse.exporters.mcp import GatewayMCPExporter
@@ -21,7 +22,6 @@ from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.mcp import GatewayMCPImporter
 from zato.common.api import MCP
 from zato.common.crypto.api import CryptoManager
-from zato.common.defaults import default_server_base_dir
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -73,7 +73,7 @@ class TestEnmasseMCPGatewayExporter(TestCase):
     def setUp(self:'any_') -> 'None':
 
         # Server path for the database connection ..
-        self.server_path = default_server_base_dir
+        self.server_path = get_shared_environment().server_dir
 
         # .. the YAML template goes to a file of its own ..
         file_name = 'enmasse.mcp.gateway.export.' + CryptoManager.generate_hex_string() + '.yaml'

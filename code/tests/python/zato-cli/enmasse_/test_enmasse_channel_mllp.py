@@ -16,6 +16,7 @@ from unittest import main
 import yaml
 
 # Zato
+from zato.common.test.enmasse_.env_helper import get_shared_environment
 from zato.common.test import rand_string, rand_unicode
 from zato.common.test.enmasse_.base import BaseEnmasseTestCase
 from zato.common.util.open_ import open_w
@@ -87,10 +88,14 @@ class TestEnmasseChannelMLLPLive(BaseEnmasseTestCase):
     """ Live CLI tests for HL7 MLLP channel import, export, and reimport against a real server.
     """
 
+    def setUp(self) -> 'None':
+        self.server_dir = get_shared_environment().server_dir
+
+# ################################################################################################################################
+
     def _cleanup(self, test_suffix:'str') -> 'None':
         from zato.cli.enmasse.client import cleanup_enmasse
-        from zato.common.defaults import default_server_base_dir
-        cleanup_enmasse(default_server_base_dir)
+        cleanup_enmasse(self.server_dir)
 
 # ################################################################################################################################
 
@@ -121,11 +126,12 @@ class TestEnmasseChannelMLLPLive(BaseEnmasseTestCase):
         try:
 
             # .. import the HL7 MLLP channels ..
-            _ = self.invoke_enmasse(import_path)
+            _ = self.invoke_enmasse(import_path, server_dir=self.server_dir)
 
             # .. export them back out ..
             _ = self.invoke_enmasse(
-                export_path, is_import=False, is_export=True, include_type='channel_mllp,security')
+                export_path, is_import=False, is_export=True, include_type='channel_mllp,security',
+                server_dir=self.server_dir)
 
             # .. read the exported file ..
             with open(export_path, 'r') as f:
@@ -206,13 +212,13 @@ class TestEnmasseChannelMLLPLive(BaseEnmasseTestCase):
             self.assertEqual(len(channel_4['destinations']), 1)
 
             # .. now reimport the exported file to confirm idempotency ..
-            _ = self.invoke_enmasse(export_path)
+            _ = self.invoke_enmasse(export_path, server_dir=self.server_dir)
 
             # .. and export again to make sure nothing drifted.
             reimport_export_file_name = 'zato-enmasse-hl7-reimport-export-' + test_suffix + '.yaml'
             reimport_export_path = os.path.join(tmp_dir, reimport_export_file_name)
 
-            _ = self.invoke_enmasse(reimport_export_path, is_import=False, is_export=True, include_type='channel_mllp')
+            _ = self.invoke_enmasse(reimport_export_path, is_import=False, is_export=True, include_type='channel_mllp', server_dir=self.server_dir)
 
             with open(reimport_export_path, 'r') as f:
                 reimport_data = f.read()

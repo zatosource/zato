@@ -28,6 +28,9 @@ class ModuleCtx:
     Error_Record_Pattern   = re.compile(r' - (?:ERROR|CRITICAL) - ')
     Warning_Record_Pattern = re.compile(r' - WARN(?:ING)? - ')
 
+    # .. log records at the levels below them, whose traceback, when they carry one, is diagnostic detail ..
+    Detail_Record_Pattern = re.compile(r' - (?:DEBUG|INFO) - ')
+
     # .. the line that the failure_reports pytest plugin writes for each failure ..
     Failure_Marker = '>>> ZATO TEST FAILURE'
 
@@ -134,6 +137,8 @@ class LogCounter:
             or bool(ModuleCtx.Python_Warning_Pattern.search(line)) \
             or bool(ModuleCtx.Cargo_Warning_Pattern.match(line))
 
+        is_detail = bool(ModuleCtx.Detail_Record_Pattern.search(line))
+
         # .. an error record, a failure or a cargo error is an error ..
         if is_error:
             self.error_count += 1
@@ -142,12 +147,12 @@ class LogCounter:
         elif is_warning:
             self.warning_count += 1
 
-        # .. and a traceback is an error, unless it belongs to the error or warning record directly before it.
+        # .. and a traceback is an error, unless it belongs to a log record on the same line or directly before it.
         elif ModuleCtx.Traceback_Marker in line:
-            if not self.previous_is_record:
+            if not (self.previous_is_record or is_detail):
                 self.error_count += 1
 
-        self.previous_is_record = is_error or is_warning
+        self.previous_is_record = is_error or is_warning or is_detail
 
 # ################################################################################################################################
 

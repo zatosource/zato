@@ -443,8 +443,9 @@ qa-reqs-install: rust-lint-tools-install
 rust-lint-tools-install: ## Install the cargo subcommands the Rust lint pipeline needs - dylint, deny, vet and geiger.
 	$(LOAD_CARGO_ENV) && cargo install cargo-deny cargo-vet
 # These need --locked - their newest dependency versions want a newer rustc than the toolchain ships.
-# Dylint is pinned to the last release whose locked dependencies build with rustc 1.95.
-	$(LOAD_CARGO_ENV) && cargo install --locked dylint-link@$(DYLINT_CRATE_VERSION) cargo-dylint@$(DYLINT_CRATE_VERSION) cargo-geiger
+# Dylint and geiger are pinned to the last releases whose locked dependencies build with rustc 1.95.
+	$(LOAD_CARGO_ENV) && cargo install --locked dylint-link@$(DYLINT_CRATE_VERSION) cargo-dylint@$(DYLINT_CRATE_VERSION) \
+		cargo-geiger@$(GEIGER_CRATE_VERSION)
 
 unify:
 	mkdir -p $(SITE_PACKAGES)/lib2to3/pgen2
@@ -1342,7 +1343,7 @@ test-perf-rules: ## The settings gate of performance figures and the scan of eve
 		-v -s --tb=short -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_perf_rules -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-# The directory of the enmasse suites of zato-cli, which their modules import env_helper from
+# The directory of the enmasse suites of zato-cli
 Zato_Test_Enmasse_Dir := $(CURDIR)/code/zato-cli/test/zato/enmasse_
 
 # discord_disabled - these enmasse suites run in test-discord only
@@ -2400,6 +2401,9 @@ DYLINT_TAG  := v5.0.0
 
 # The version of the dylint-link and cargo-dylint crates that rust-lint-tools-install installs
 DYLINT_CRATE_VERSION := 6.0.4
+
+# The version of cargo-geiger that rust-lint-tools-install installs, the last release that builds with rustc 1.95
+GEIGER_CRATE_VERSION := 0.13.0
 DYLINT_LIBS := --git $(DYLINT_GIT) --tag $(DYLINT_TAG) --pattern examples/general
 
 ZATO_DYLINT_FLAGS_COMMON := \

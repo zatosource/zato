@@ -13,13 +13,13 @@ import tempfile
 from unittest import TestCase, main
 
 # Zato
+from zato.common.test.enmasse_.env_helper import get_shared_environment
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.channel_mllp import ChannelMLLPImporter
 from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
-from zato.common.defaults import default_server_base_dir
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,7 +39,7 @@ class TestEnmasseChannelMLLPImporter(TestCase):
     def setUp(self) -> 'None':
 
         # Server path for database connection
-        self.server_path = default_server_base_dir
+        self.server_path = get_shared_environment().server_dir
 
         # Create a temporary file for YAML content
         self.temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.yaml')

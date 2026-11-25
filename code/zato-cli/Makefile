@@ -7,7 +7,7 @@ Zato_Package_Name=zato-cli
 Zato_Test_Python := $(Zato_Python_Dir)/py
 include $(CURDIR)/../tests/check.mk
 
-# The directory of the suites, which their modules import env_helper from
+# The directory of the suites
 Zato_Enmasse_Test_Dir := $(CURDIR)/test/zato/enmasse_
 
 test:

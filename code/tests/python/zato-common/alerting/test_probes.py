@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from unittest import TestCase
+
 # SQLAlchemy
 from sqlalchemy import select
 
@@ -34,6 +37,9 @@ _server_name = 'test-probes-server'
 
 # The Microsoft 365 connection the health probe polls through
 _health_conn_name = 'Microsoft 365 notifications'
+
+# The logger the probes report a failed check under
+_probes_logger_name = 'zato.common.alerting.probes'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -96,7 +102,7 @@ class TestNormalizeHealthState:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestCertificateProbe:
+class TestCertificateProbe(TestCase):
 
     def test_a_measured_target_writes_the_days_left_the_collector_reads(self) -> 'None':
         audit_log = AuditLog(_server_name)
@@ -140,9 +146,13 @@ class TestCertificateProbe:
             {'object_name': 'Down', 'host': 'down.example.com', 'port': 443},
             {'object_name': 'Up', 'host': 'up.example.com', 'port': 443},
         ]
-        checked = run_certificate_probe(audit_log, targets, now, cid='cert-probe-2', check=check)
+        with self.assertLogs(_probes_logger_name, level='DEBUG') as logs:
+            checked = run_certificate_probe(audit_log, targets, now, cid='cert-probe-2', check=check)
 
         assert checked == 2
+
+        assert len(logs.output) == 1
+        assert 'Certificate check of `Down` (down.example.com:443) failed' in logs.output[0]
 
         events = _load_events(AuditSource.Certificate)
         by_name = {event.object_name: event for event in events}
@@ -154,7 +164,7 @@ class TestCertificateProbe:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestHealthProbe:
+class TestHealthProbe(TestCase):
 
     def test_every_state_is_recorded_normalized_with_the_raw_one_kept(self) -> 'None':
         audit_log = AuditLog(_server_name)
@@ -196,9 +206,13 @@ class TestHealthProbe:
         def fetch() -> 'anylist':
             raise Exception('The health endpoint returned 403 Forbidden')
 
-        recorded = run_health_probe(audit_log, _health_conn_name, fetch, now, cid='health-probe-2')
+        with self.assertLogs(_probes_logger_name, level='DEBUG') as logs:
+            recorded = run_health_probe(audit_log, _health_conn_name, fetch, now, cid='health-probe-2')
 
         assert recorded == 0
+
+        assert len(logs.output) == 1
+        assert f'Health probe through `{_health_conn_name}` failed' in logs.output[0]
 
         # The failure is filed under the connection the probe went through, with no state
         events = _load_events(AuditSource.Microsoft_Health)
@@ -216,7 +230,7 @@ class TestHealthProbe:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestTransferProbe:
+class TestTransferProbe(TestCase):
 
     def test_a_successful_transfer_writes_an_ok_outcome(self) -> 'None':
         audit_log = AuditLog(_server_name)
@@ -251,9 +265,13 @@ class TestTransferProbe:
         def transfer() -> 'None':
             raise Exception('Upload failed')
 
-        is_ok = run_test_transfer_probe(audit_log, 'sftp.backups', transfer, now, cid='test-transfer-probe-2')
+        with self.assertLogs(_probes_logger_name, level='DEBUG') as logs:
+            is_ok = run_test_transfer_probe(audit_log, 'sftp.backups', transfer, now, cid='test-transfer-probe-2')
 
         assert is_ok is False
+
+        assert len(logs.output) == 1
+        assert 'Test transfer of `sftp.backups` failed' in logs.output[0]
 
         events = _load_events(AuditSource.Test_Transfer)
         assert len(events) == 1

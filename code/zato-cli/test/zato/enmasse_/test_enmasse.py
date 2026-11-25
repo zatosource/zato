@@ -18,7 +18,7 @@ _this_directory = os.path.dirname(__file__)
 sys.path.insert(0, _this_directory)
 
 # Zato
-from env_helper import create_environment, delete_environment
+from zato.common.test.enmasse_.env_helper import create_environment, delete_environment
 from zato.common.test import rand_string, rand_unicode
 from zato.common.test.enmasse_.base import BaseEnmasseTestCase
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
@@ -28,7 +28,7 @@ from zato.common.util.open_ import open_w
 # ################################################################################################################################
 
 if 0:
-    from env_helper import TestEnvironment
+    from zato.common.test.enmasse_.env_helper import TestEnvironment
     TestEnvironment = TestEnvironment
 
 # ################################################################################################################################

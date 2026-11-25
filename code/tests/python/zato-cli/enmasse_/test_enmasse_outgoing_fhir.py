@@ -16,6 +16,7 @@ from unittest import main
 import yaml
 
 # Zato
+from zato.common.test.enmasse_.env_helper import get_shared_environment
 from zato.common.test import rand_string, rand_unicode
 from zato.common.test.enmasse_.base import BaseEnmasseTestCase
 from zato.common.util.open_ import open_w
@@ -61,10 +62,14 @@ class TestEnmasseOutgoingFHIRLive(BaseEnmasseTestCase):
     """ Live CLI tests for outgoing HL7 FHIR import, export, and reimport against a real server.
     """
 
+    def setUp(self) -> 'None':
+        self.server_dir = get_shared_environment().server_dir
+
+# ################################################################################################################################
+
     def _cleanup(self, test_suffix:'str') -> 'None':
         from zato.cli.enmasse.client import cleanup_enmasse
-        from zato.common.defaults import default_server_base_dir
-        cleanup_enmasse(default_server_base_dir)
+        cleanup_enmasse(self.server_dir)
 
 # ################################################################################################################################
 
@@ -72,7 +77,7 @@ class TestEnmasseOutgoingFHIRLive(BaseEnmasseTestCase):
         """ Exports the outgoing FHIR connections and answers with the ones this test created,
         keyed by the name each of them goes by.
         """
-        _ = self.invoke_enmasse(export_path, is_import=False, is_export=True, include_type='outgoing_fhir')
+        _ = self.invoke_enmasse(export_path, is_import=False, is_export=True, include_type='outgoing_fhir', server_dir=self.server_dir)
 
         with open(export_path, 'r') as f:
             export_data = f.read()
@@ -122,7 +127,7 @@ class TestEnmasseOutgoingFHIRLive(BaseEnmasseTestCase):
         try:
 
             # .. import the outgoing FHIR connections ..
-            _ = self.invoke_enmasse(import_path)
+            _ = self.invoke_enmasse(import_path, server_dir=self.server_dir)
 
             # .. export them back out ..
             exported = self._export_connections(export_path, test_suffix)
@@ -144,7 +149,7 @@ class TestEnmasseOutgoingFHIRLive(BaseEnmasseTestCase):
             self.assertEqual(exported[connection_3_name]['security'], f'enmasse.fhir.sec.{test_suffix}')
 
             # .. now reimport the exported file, which must update rather than duplicate ..
-            _ = self.invoke_enmasse(export_path)
+            _ = self.invoke_enmasse(export_path, server_dir=self.server_dir)
 
             # .. and export again to make sure nothing drifted.
             reimported = self._export_connections(reimport_export_path, test_suffix)

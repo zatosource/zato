@@ -22,7 +22,7 @@ sys.path.insert(0, _this_directory)
 import yaml  # noqa: E402
 
 # Zato
-from env_helper import create_environment, delete_environment  # noqa: E402
+from zato.common.test.enmasse_.env_helper import create_environment, delete_environment  # noqa: E402
 from zato.cli.enmasse.client import get_session_from_server_dir  # noqa: E402
 from zato.cli.enmasse.util.secrets import decrypt_secret, is_encrypted, load_opaque  # noqa: E402
 from zato.common.odb.model import OAuth  # noqa: E402
@@ -35,7 +35,7 @@ from zato.common.util.open_ import open_w  # noqa: E402
 # ################################################################################################################################
 
 if 0:
-    from env_helper import TestEnvironment
+    from zato.common.test.enmasse_.env_helper import TestEnvironment
     TestEnvironment = TestEnvironment
 
 # ################################################################################################################################

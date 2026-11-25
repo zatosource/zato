@@ -28,7 +28,7 @@ import yaml
 from zato.common.ext.bunch import bunchify
 
 # Zato
-from env_helper import create_environment, delete_environment
+from zato.common.test.enmasse_.env_helper import create_environment, delete_environment
 from es_server import start_es, stop_es
 from zato.cli.enmasse.client import get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
@@ -45,7 +45,7 @@ from zato.server.generic.api.outconn_es import OutconnESWrapper
 # ################################################################################################################################
 
 if 0:
-    from env_helper import TestEnvironment
+    from zato.common.test.enmasse_.env_helper import TestEnvironment
     from es_server import ESServer
     from zato.common.typing_ import any_, stranydict
     any_, stranydict = any_, stranydict

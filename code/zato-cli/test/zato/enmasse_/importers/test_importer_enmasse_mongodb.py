@@ -29,7 +29,7 @@ sys.path.insert(0, _enmasse_tests_dir)
 
 # Zato
 from containers import start_mongodb, stop_container
-from env_helper import get_shared_environment
+from zato.common.test.enmasse_.env_helper import get_shared_environment
 from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.mongodb import MongoDBImporter

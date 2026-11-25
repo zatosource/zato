@@ -36,7 +36,7 @@ if 0:
 # ################################################################################################################################
 
 # The zato binary of the checkout the tests run from
-_zato_base = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
+_zato_base = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', '..', '..'))
 _zato_bin = os.path.join(_zato_base, 'bin', 'zato')
 
 # The Python binary and the file listener that deploys files dropped into the pickup directory

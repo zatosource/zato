@@ -34,7 +34,7 @@ import yaml  # noqa: E402
 import requests  # noqa: E402
 
 # Zato
-from env_helper import create_environment, delete_environment, get_worker_reload_counts, \
+from zato.common.test.enmasse_.env_helper import create_environment, delete_environment, get_worker_reload_counts, \
     wait_for_worker_reload  # noqa: E402
 from zato.cli.enmasse.client import get_server_client, get_session_from_server_dir  # noqa: E402
 from zato.cli.enmasse.util.secrets import is_encrypted, Secret_Prefixes  # noqa: E402
@@ -51,7 +51,7 @@ from zato.server.service.internal.generic.connection import never_returned_keys 
 # ################################################################################################################################
 
 if 0:
-    from env_helper import TestEnvironment
+    from zato.common.test.enmasse_.env_helper import TestEnvironment
     from zato.client import ZatoClient
     from zato.common.typing_ import any_, anydict, anylist, stranydict, strlist
     TestEnvironment = TestEnvironment
