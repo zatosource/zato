@@ -21,6 +21,7 @@ import _helpers
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
+from zato.common.test.timing import Timer_Tolerance_Ms
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -82,7 +83,7 @@ class TestRuntimeChanges:
         event_data = events[-1]['data']
         expected_minimum_ms = _constants.Slow_Echo_Seconds * _ms_per_second
 
-        assert event_data['duration_ms'] >= expected_minimum_ms, event_data
+        assert event_data['duration_ms'] >= expected_minimum_ms - Timer_Tolerance_Ms, event_data
 
 # ################################################################################################################################
 

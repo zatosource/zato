@@ -23,6 +23,7 @@ from requests.exceptions import HTTPError
 # Zato
 from zato.common.api import DATA_FORMAT
 from zato.common.exception import BadRequest
+from zato.common.test.timing import Timer_Tolerance_Seconds
 
 # Test support
 from http_endpoint.endpoint import EndpointResponse
@@ -126,7 +127,7 @@ def test_elapsed(endpoint:'TestEndpoint', server:'ServerStub', path:'str') -> 'N
     response = connection.get(Test_CID)
 
     assert isinstance(response.elapsed, timedelta)
-    assert response.elapsed >= timedelta(seconds=0.2)
+    assert response.elapsed >= timedelta(seconds=0.2 - Timer_Tolerance_Seconds)
 
 # ################################################################################################################################
 

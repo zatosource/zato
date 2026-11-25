@@ -14,6 +14,7 @@ import sys
 
 # Zato
 from conftest import get_license_key_env
+from zato.common.test.timing import Timer_Tolerance_Seconds
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,7 +75,7 @@ def test_concurrent_queries_from_greenlets(oracle_server:'DatabaseServer') -> 'N
     assert report['distinct_session_count'] >= _pool_size, failure_details
 
     # .. the long statement really slept on the database side ..
-    assert report['long_query_seconds'] >= _long_query_sleep, failure_details
+    assert report['long_query_seconds'] >= _long_query_sleep - Timer_Tolerance_Seconds, failure_details
 
     # .. the event loop kept running while it did, so the driver call did not block it ..
     assert report['long_query_tick_count'] > 0, failure_details

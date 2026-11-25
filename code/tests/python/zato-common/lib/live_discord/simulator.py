@@ -97,6 +97,7 @@ class ReceivedMessage:
     files: 'list[ReceivedFile]'
     headers: 'strdict'
     is_multipart: 'bool'
+    received_at: 'float' = field(default_factory=time.monotonic)
 
 # ################################################################################################################################
 
@@ -131,6 +132,7 @@ class Identify:
     close_code: 'int' = 0
     is_ready_sent: 'bool' = False
     received_at: 'float' = field(default_factory=time.monotonic)
+    ready_sent_at: 'float | None' = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -585,6 +587,8 @@ class DiscordSimulator:
 
         if self.ready_delay:
             time.sleep(self.ready_delay)
+
+        identify.ready_sent_at = time.monotonic()
 
         connection.send(json.dumps({
             'op': _gateway.Op_Dispatch,

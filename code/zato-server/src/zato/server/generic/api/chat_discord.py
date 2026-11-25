@@ -11,6 +11,7 @@ from logging import getLogger
 
 # Zato
 from zato.common.api import Discord
+from zato.common.worker_slot import is_config_process
 from zato.server.connection.chat.discord import DiscordClient
 from zato.server.connection.queue import Wrapper
 
@@ -65,9 +66,11 @@ class ChatDiscordWrapper(Wrapper):
 
     def build_wrapper(self) -> 'None':
 
-        # The handshake runs in the background - this call returns before it completes ..
+        # The handshake runs in the background - this call returns before it completes. The config process
+        # of a server sends no messages, so only the workers identify with the gateway ..
         if self.config['is_active']:
-            self.shared_client.start_handshake()
+            if not is_config_process():
+                self.shared_client.start_handshake()
 
         # .. and the queue is filled with references to the shared client.
         self.build_queue()

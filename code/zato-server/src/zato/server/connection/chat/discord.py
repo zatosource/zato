@@ -197,9 +197,9 @@ class DiscordClient:
                     if message['t'] == _gateway.Event_Ready:
                         break
 
-            socket.close(status=_gateway.Close_Normal)
-
+        # The websocket is closed after a failed attempt too, including one that timed out waiting for READY
         finally:
+            socket.close(status=_gateway.Close_Normal)
             self.gateway_socket = None
 
 # ################################################################################################################################

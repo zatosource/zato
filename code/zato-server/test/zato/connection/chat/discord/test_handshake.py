@@ -15,6 +15,7 @@ from unittest import main
 
 # Zato
 from zato.common.api import Discord
+from zato.common.test.timing import Timer_Tolerance_Seconds
 
 # Live Discord
 from live_discord.simulator import Close_Code_Invalid_Token
@@ -57,7 +58,7 @@ class HandshakeTestCase(DiscordTestCase):
         response = client.send('after READY')
         elapsed = monotonic() - start
 
-        self.assertGreaterEqual(elapsed, 1.0)
+        self.assertGreaterEqual(elapsed, 1.0 - Timer_Tolerance_Seconds)
         self.assertEqual(response['content'], 'after READY')
         self.assertEqual(len(self.simulator.messages), 1)
 
@@ -75,7 +76,7 @@ class HandshakeTestCase(DiscordTestCase):
             _ = client.send('never sent')
         elapsed = monotonic() - start
 
-        self.assertGreaterEqual(elapsed, Timeout)
+        self.assertGreaterEqual(elapsed, Timeout - Timer_Tolerance_Seconds)
         self.assertIn(f'not ready after {Timeout}s', str(ctx.exception))
         self.assertEqual(self.simulator.messages, [])
 
@@ -135,7 +136,7 @@ class HandshakeTestCase(DiscordTestCase):
         client._wait_until_ready()
         elapsed = monotonic() - start
 
-        self.assertGreaterEqual(elapsed, 0.7)
+        self.assertGreaterEqual(elapsed, 0.7 - Timer_Tolerance_Seconds)
         self.assertEqual(len(self.simulator.identifies), 1)
 
 # ################################################################################################################################

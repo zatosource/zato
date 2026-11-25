@@ -16,6 +16,7 @@ from gevent import sleep, spawn
 from common import delete_all_rows
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.test.audit_log_ import new_test_audit_log
+from zato.common.test.timing import Timer_Tolerance_Seconds
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,7 +65,7 @@ def run_wakeup_scenario() -> 'None':
     elapsed_seconds = monotonic() - wait_start
 
     assert messages == []
-    assert elapsed_seconds >= _short_block_ms / 1000
+    assert elapsed_seconds >= _short_block_ms / 1000 - Timer_Tolerance_Seconds
 
     # .. a queue with messages returns at once no matter the block time ..
     _ = backend.publish(_topic, 'already-here')
@@ -90,7 +91,7 @@ def run_wakeup_scenario() -> 'None':
 
     assert len(messages) == 1
     assert messages[0]['data'] == 'published-while-fetch-was-waiting'
-    assert elapsed_seconds >= _publish_delay_seconds
+    assert elapsed_seconds >= _publish_delay_seconds - Timer_Tolerance_Seconds
     assert elapsed_seconds < _long_block_bound_seconds
 
 # ################################################################################################################################

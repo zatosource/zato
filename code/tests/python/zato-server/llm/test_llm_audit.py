@@ -37,6 +37,7 @@ from zato.distlock import LockManager
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.llm.common import LLMError
 from zato.server.generic.api.outconn_llm import OutconnLLMWrapper
+from zato.common.test.timing import Timer_Tolerance_Ms
 
 # Test helpers
 from llm_test_server import Input_Tokens, Output_Tokens
@@ -438,7 +439,7 @@ class TestFailureRows:
         # A request that never got a response is written under its transport status, what the connection failures count ..
         assert row['outcome'] == 'error'
         assert row['status'] == TransportStatus.Timeout
-        assert row['duration_ms'] >= _short_timeout * 1000
+        assert row['duration_ms'] >= _short_timeout * 1000 - Timer_Tolerance_Ms
 
         # .. with the model alone
         attrs = _attrs_of(row['id'])

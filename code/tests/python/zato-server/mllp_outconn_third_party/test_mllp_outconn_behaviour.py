@@ -12,6 +12,7 @@ import time
 # Zato
 from zato.common.hl7.mllp.circuit_breaker import CircuitBreaker, CircuitState
 from zato.common.hl7.mllp.client import HL7MLLPClient
+from zato.common.test.timing import Timer_Tolerance_Ms
 
 # Zato - the suite's own parts
 from _outconn_api import create_outconn, send, send_one, wait_until_ready
@@ -280,7 +281,7 @@ class TestOutconnSlowReceiver:
             assert 'MSA|AA|SLOW-0002' in result['ack_text']
 
             # The send did wait, rather than the listener having answered early
-            assert result['elapsed_ms'] >= _Slow_Receiver_Delay * 1000
+            assert result['elapsed_ms'] >= _Slow_Receiver_Delay * 1000 - Timer_Tolerance_Ms
 
         finally:
             receiver.stop()

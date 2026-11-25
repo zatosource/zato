@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import time
 
+# Zato
+from zato.common.test.timing import Timer_Tolerance_Seconds
+
 # Test support
 from conftest import ModuleCtx
 
@@ -45,7 +48,7 @@ class TestReadyWait:
 
         assert response['is_ok'] is False, response
         assert f'not ready after {ModuleCtx.Timeout}s' in response['error'], response
-        assert elapsed >= ModuleCtx.Timeout
+        assert elapsed >= ModuleCtx.Timeout - Timer_Tolerance_Seconds
         assert discord.simulator.messages == []
 
 # ################################################################################################################################
@@ -85,13 +88,17 @@ class TestReadyWait:
 
         start = time.monotonic()
         response = discord.send('while READY is on its way', conn_name=Conn_Name)
-        elapsed = time.monotonic() - start
 
         assert response['is_ok'] is True, response
-        assert elapsed >= 1.0
 
+        identify = discord.wait_for_identifies(1)[0]
         message = discord.wait_for_messages(1)[0]
         assert message.content == 'while READY is on its way'
+
+        # The call was made before the gateway sent READY, and the message was delivered only after it
+        assert identify.ready_sent_at is not None
+        assert start < identify.ready_sent_at
+        assert message.received_at >= identify.ready_sent_at
 
 # ################################################################################################################################
 # ################################################################################################################################

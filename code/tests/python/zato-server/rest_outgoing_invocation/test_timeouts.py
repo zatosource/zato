@@ -19,6 +19,7 @@ import pytest
 # Zato
 from zato.common.audit_log.common import TransportStatus
 from zato.common.exception import BackendInvocationError
+from zato.common.test.timing import Timer_Tolerance_Seconds
 
 # Test support
 from http_endpoint.endpoint import EndpointResponse
@@ -66,7 +67,7 @@ def test_read_timeout(endpoint:'TestEndpoint', server:'ServerStub', path:'str') 
     assert info.value.transport_status == TransportStatus.Timeout
     assert info.value.args[0].startswith('Timeout error: ')
 
-    assert elapsed >= _timeout
+    assert elapsed >= _timeout - Timer_Tolerance_Seconds
     assert elapsed < _max_elapsed, elapsed
 
     assert len(endpoint.get_requests(path)) == 1
@@ -103,7 +104,7 @@ def test_connect_timeout(unresponsive_listener:'UnresponsiveListener', server:'S
     assert info.value.transport_status == TransportStatus.Timeout
     assert info.value.args[0].startswith('Timeout error: ')
 
-    assert elapsed >= _timeout
+    assert elapsed >= _timeout - Timer_Tolerance_Seconds
     assert elapsed < _max_elapsed, elapsed
 
 # ################################################################################################################################

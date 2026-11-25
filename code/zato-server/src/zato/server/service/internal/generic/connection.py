@@ -253,6 +253,9 @@ skip_simple_type = {
     # arrive as an integer and encryption works only with text.
     'secret',
 
+    # Discord IDs are snowflakes, all-digit text with more digits than a JavaScript number holds exactly
+    'default_channel_id',
+
     # Kafka fields that are text even when they look like a number, a boolean or JSON - acks of `1` or `0`
     # are what Kafka calls these settings, not a count or a flag
     'topic',

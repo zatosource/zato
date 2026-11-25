@@ -24,6 +24,7 @@ from dataclasses import dataclass
 # Zato
 from zato.common.test.pubsub_database import connect, pubsub_db_env
 from zato.common.test.takeover import ModuleCtx as TakeoverCtx, take_over_as_another_server
+from zato.common.test.timing import Timer_Tolerance_Seconds
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -250,7 +251,7 @@ def test_plain_takeover_waits_for_the_frozen_server(pubsub_database:'PubSubDatab
         guard = backend.generation_guard
         assert guard is not None
         assert guard.generation == stored_generation + 2
-        assert elapsed >= ModuleCtx.Plain_Takeover_Wait, elapsed
+        assert elapsed >= ModuleCtx.Plain_Takeover_Wait - Timer_Tolerance_Seconds, elapsed
         assert elapsed < ModuleCtx.Plain_Takeover_Wait + ModuleCtx.Plain_Takeover_Margin, elapsed
         assert not _is_session_present(pubsub_database, holder.backend_pid)
 

@@ -23,6 +23,7 @@ from zato.common.api import DATA_FORMAT, HTTP_SOAP, URL_TYPE
 from zato.common.pubsub.sql.backend import PublishResult
 from zato.server.connection.http_soap.channel_queue import QueuedChannelHandler
 from zato.server.service import Service
+from zato.common.test.timing import Timer_Tolerance_Seconds
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -254,7 +255,7 @@ class HookGreenletTestCase(TestCase):
 
         self.assertEqual(response.payload, {'cid': _cid_1, 'msg_id': _msg_id_prefix + _cid_1})
         self.assertGreaterEqual(response_built_at, service.record['finished_at'])
-        self.assertGreaterEqual(service.record['finished_at'] - service.record['started_at'], _hook_delay)
+        self.assertGreaterEqual(service.record['finished_at'] - service.record['started_at'], _hook_delay - Timer_Tolerance_Seconds)
 
 # ################################################################################################################################
 

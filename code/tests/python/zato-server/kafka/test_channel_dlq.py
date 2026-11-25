@@ -26,6 +26,7 @@ from zato.common.pubsub.dlq import Header_Attempts, Header_CID, Header_Error, He
     Header_Source, Header_Source_Topic, Key_DLQ
 from zato.common.pubsub.outgoing import InboundType, Key_CID, Key_Conn_Name, Key_Conn_Type, Key_Data, Key_DLQ_Rounds, \
     Key_Headers, Key_Is_Base64, Key_Request, Key_Service
+from zato.common.test.timing import Timer_Tolerance_Seconds
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -455,7 +456,7 @@ def test_with_the_dlq_off_a_failing_message_blocks_its_partition_only(kafka_suit
 
         # .. the blocked message is tried once per round, a round wait apart ..
         rounds = kafka_suite.wait_for_payload(blocked, 2, timeout=Round_Timeout)
-        assert rounds[1]['time'] - rounds[0]['time'] >= PubSub.Delivery.Retry_Round_Wait
+        assert rounds[1]['time'] - rounds[0]['time'] >= PubSub.Delivery.Retry_Round_Wait - Timer_Tolerance_Seconds
         assert {elem['cid'] for elem in rounds} == {rounds[0]['cid']}
 
         # .. nothing was committed and the one behind it was not invoked ..

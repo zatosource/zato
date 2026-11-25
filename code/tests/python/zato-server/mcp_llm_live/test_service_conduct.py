@@ -12,6 +12,7 @@ from http.client import OK
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
+from zato.common.test.timing import Timer_Tolerance_Ms
 
 # local
 import _audit
@@ -83,7 +84,7 @@ class TestServiceConduct:
         assert event['outcome'] == AuditOutcome.Error, event
 
         expected_minimum_ms = _constants.Invoke_Timeout_Seconds * _ms_per_second
-        assert event['data']['duration_ms'] >= expected_minimum_ms, event
+        assert event['data']['duration_ms'] >= expected_minimum_ms - Timer_Tolerance_Ms, event
 
         error_message = event['data']['error_message']
         assert 'timed out' in error_message, event

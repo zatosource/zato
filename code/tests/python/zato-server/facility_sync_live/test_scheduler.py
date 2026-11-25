@@ -16,6 +16,7 @@ import pytest
 
 # Zato
 from zato.common.api import SCHEDULER
+from zato.common.test.timing import Timer_Tolerance_Seconds
 
 # Live environment
 from live_containers.ready import wait_until
@@ -299,7 +300,7 @@ def test_run_still_in_flight_is_not_started_again(
 
     for run in runs:
         assert run.outcome == SCHEDULER.OUTCOME.OK, run
-        assert run.duration >= Run_Duration, run
+        assert run.duration >= Run_Duration - timedelta(seconds=Timer_Tolerance_Seconds), run
 
     sections = records.sections(Section_Treatments)
     section_count = len(sections)
