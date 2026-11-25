@@ -198,7 +198,7 @@ class TestEnmassePubSubSubscriptionExporter(TestCase):
                 topic_list_missing_msg = f'Required field topic_list missing in subscription {security_name}'
                 self.assertIn('topic_list', subscription, topic_list_missing_msg)
 
-                subscription_topic_list = set(subscription['topic_list']) # type: ignore
+                subscription_topic_list = {topic['name'] for topic in subscription['topic_list']} # type: ignore
                 expected_topic_list = set(expected['topic_list'])
                 topic_list_incorrect_msg = f'Field topic_list has incorrect value in subscription {security_name}'
 
@@ -229,7 +229,8 @@ class TestEnmassePubSubSubscriptionExporter(TestCase):
                         self.assertEqual(subscription_push_service, expected_push_service, push_service_incorrect_msg)
 
                 # Verify no unexpected fields
-                allowed_fields = {'security', 'delivery_type', 'topic_list', 'push_rest_endpoint', 'push_service', 'max_retry_time'}
+                allowed_fields = {'security', 'delivery_type', 'topic_list', 'push_rest_endpoint', 'push_service', 'max_retry_time',
+                    'is_delivery_active', 'is_pub_active'}
                 subscription_fields = subscription
                 for field in subscription_fields:
                     unexpected_field_msg = f'Unexpected field {field} in subscription {security_name}'
@@ -250,7 +251,7 @@ class TestEnmassePubSubSubscriptionExporter(TestCase):
                 auth1_delivery_type = auth1_sub['delivery_type'] # type: ignore
                 self.assertEqual(auth1_delivery_type, 'pull')
 
-                auth1_topic_list = set(auth1_sub['topic_list']) # type: ignore
+                auth1_topic_list = {topic['name'] for topic in auth1_sub['topic_list']} # type: ignore
                 expected_auth1_topics = {'enmasse.topic.1', 'enmasse.topic.2'}
                 self.assertEqual(auth1_topic_list, expected_auth1_topics)
 
@@ -266,7 +267,7 @@ class TestEnmassePubSubSubscriptionExporter(TestCase):
                 auth2_delivery_type = auth2_sub['delivery_type'] # type: ignore
                 self.assertEqual(auth2_delivery_type, 'push')
 
-                auth2_topic_list = auth2_sub['topic_list'] # type: ignore
+                auth2_topic_list = [topic['name'] for topic in auth2_sub['topic_list']] # type: ignore
                 expected_auth2_topics = ['enmasse.topic.1']
                 self.assertEqual(auth2_topic_list, expected_auth2_topics)
 
@@ -287,7 +288,7 @@ class TestEnmassePubSubSubscriptionExporter(TestCase):
                 auth3_delivery_type = auth3_sub['delivery_type'] # type: ignore
                 self.assertEqual(auth3_delivery_type, 'push')
 
-                auth3_topic_list = auth3_sub['topic_list'] # type: ignore
+                auth3_topic_list = [topic['name'] for topic in auth3_sub['topic_list']] # type: ignore
                 expected_auth3_topics = ['enmasse.topic.3']
                 self.assertEqual(auth3_topic_list, expected_auth3_topics)
 

@@ -15,6 +15,7 @@ from zato.cli.enmasse.util.secrets import encrypt_secret, ensure_encrypted, is_u
 from zato.common.crypto.api import CryptoManager
 from zato.common.odb.model import SQLConnectionPool, to_json
 from zato.common.odb.query import out_sql_list
+from zato.common.typing_ import cast_
 from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
@@ -42,7 +43,7 @@ logger = logging.getLogger(__name__)
 _default_is_active = True
 
 # What the extra column stores when a definition carries no extra options.
-_empty_extra = b''
+_empty_extra = ''
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -113,7 +114,7 @@ class SQLImporter:
 
     def create_sql_definition(self, sql_definition:'anydict', session:'SASession') -> 'SQLConnectionPool':
 
-        out = SQLConnectionPool()
+        out:'any_' = SQLConnectionPool()
 
         # .. the user-friendly type maps to the engine name the column stores ..
         connection_type = sql_definition['type']
@@ -131,8 +132,7 @@ class SQLImporter:
 
         # .. the 'extra' options are a YAML list, joined into the newline-separated string the column stores ..
         if extra := sql_definition.get('extra'):
-            extra = '\n'.join(extra)
-            out.extra = extra.encode('utf8')
+            out.extra = '\n'.join(extra)
         else:
             out.extra = _empty_extra
 
@@ -140,7 +140,7 @@ class SQLImporter:
         # and whichever it is, it is stored encrypted ..
         password = sql_definition.get('password')
         if not is_usable_secret(password):
-            password = CryptoManager.generate_password(to_str=True)
+            password = cast_('str', CryptoManager.generate_password(to_str=True))
         out.password = encrypt_secret(session, password)
 
         # .. payloads leave with the audit export only if the YAML definition says so ..
@@ -205,8 +205,7 @@ class SQLImporter:
 
         # .. the 'extra' options are a YAML list, joined into the newline-separated string the column stores ..
         if 'extra' in sql_definition:
-            extra = '\n'.join(sql_definition['extra'])
-            out.extra = extra.encode('utf8')
+            out.extra = '\n'.join(sql_definition['extra'])
 
         # .. payloads leave with the audit export only if the YAML definition says so ..
         sql_definition['is_audit_export_payload_active'] = sql_definition.get('is_audit_export_payload_active', False)

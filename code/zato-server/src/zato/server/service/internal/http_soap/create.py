@@ -30,6 +30,12 @@ from zato.server.service.internal.http_soap.health_check import sync_linked_jobs
 # ################################################################################################################################
 # ################################################################################################################################
 
+if 0:
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Create(_CreateEdit):
     """ Creates a new HTTP/SOAP connection.
     """
@@ -161,7 +167,15 @@ class Create(_CreateEdit):
 
             try:
 
-                item = HTTPSOAP()
+                # The security definition is looked up before the item is built,
+                # so that the query does not flush an item that is not complete yet.
+                if input.security_id:
+                    security_item = get_security_by_id(session, input.security_id)
+                else:
+                    security_item = None
+                    input.security_id = None # An empty string is not a valid foreign key
+
+                item:'any_' = HTTPSOAP()
                 item.connection = input.connection
                 item.transport = input.transport
                 item.is_internal = input.is_internal
@@ -194,10 +208,8 @@ class Create(_CreateEdit):
                 else:
                     skip_opaque.append('password')
 
-                if input.security_id:
-                    item.security = get_security_by_id(session, input.security_id)
-                else:
-                    input.security_id = None # An empty string is not a valid foreign key
+                if security_item is not None:
+                    item.security = security_item
 
                 # Opaque attributes
                 set_instance_opaque_attrs(item, input, skip=skip_opaque)

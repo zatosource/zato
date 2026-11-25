@@ -36,6 +36,8 @@ quota_tier:
           - is_all_day: true
             limit: 1000
             limit_unit: month
+            rate: 10
+            burst: 20
             disabled: false
             disallowed: false
 
@@ -48,6 +50,8 @@ quota_tier:
           - is_all_day: true
             limit: 50
             limit_unit: day
+            rate: 10
+            burst: 20
             disabled: false
             disallowed: false
 
@@ -64,6 +68,8 @@ security:
           - is_all_day: true
             limit: 500
             limit_unit: month
+            rate: 10
+            burst: 20
             disabled: false
             disallowed: false
 
@@ -209,6 +215,8 @@ channel_rest:
           - is_all_day: true
             limit: 1000
             limit_unit: day
+            rate: 10
+            burst: 20
             disabled: false
             disallowed: false
     response_cache:
@@ -237,6 +245,8 @@ channel_rest:
             time_to: '17:00'
             limit: 100
             limit_unit: minute
+            rate: 10
+            burst: 20
             disabled: false
             disallowed: false
       - cidr_list:
@@ -245,6 +255,8 @@ channel_rest:
           - is_all_day: true
             limit: 50
             limit_unit: hour
+            rate: 10
+            burst: 20
             disabled: true
             disallowed: true
 
@@ -296,6 +308,8 @@ channel_soap:
           - is_all_day: true
             limit: 1000
             limit_unit: day
+            rate: 10
+            burst: 20
             disabled: false
             disallowed: false
     response_cache:

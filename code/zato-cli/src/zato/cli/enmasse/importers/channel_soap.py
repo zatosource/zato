@@ -278,8 +278,10 @@ class ChannelSOAPImporter:
 
 # ################################################################################################################################
 
-    def _assign_security(self, channel:'any_', channel_def:'anydict', session:'SASession') -> 'None':
-        """ Assigns a security definition to the channel if the YAML definition names one.
+    def _get_security_item(self, channel_def:'anydict', session:'SASession') -> 'any_':
+        """ Returns the security definition that the YAML definition of a channel names, or None if it names none.
+        It is looked up before the channel is built or changed, so that the query does not flush a channel
+        that is not complete yet.
         """
         if (security_name := channel_def.get('security')) is not None:
             logger.info('Security name found: %s', security_name)
@@ -288,11 +290,13 @@ class ChannelSOAPImporter:
                 raise Exception(f'Security definition "{security_name}" not found for SOAP channel "{channel_def["name"]}"')
 
             sec_def = self.importer.sec_defs[security_name]
-            security_item = get_security_by_id(session, sec_def['id'])
-            channel.security = security_item
-            logger.info('Assigned security object with id %s to SOAP channel %s', sec_def['id'], channel_def['name'])
+            out = get_security_by_id(session, sec_def['id'])
+            logger.info('Found security object with id %s for SOAP channel %s', sec_def['id'], channel_def['name'])
         else:
+            out = None
             logger.info('No security definition specified for SOAP channel %s', channel_def['name'])
+
+        return out
 
 # ################################################################################################################################
 
@@ -305,6 +309,8 @@ class ChannelSOAPImporter:
 
         service_name = channel_def['service']
         service = session.query(Service).filter_by(name=service_name).one()
+
+        security_item = self._get_security_item(channel_def, session)
 
         channel = HTTPSOAP(service=service)
         channel.name = name
@@ -325,7 +331,8 @@ class ChannelSOAPImporter:
                 setattr(channel, key, value)
 
         # Handle security definition
-        self._assign_security(channel, channel_def, session)
+        if security_item is not None:
+            channel.security = security_item
 
         # Fields that are not columns go into the opaque attributes, the alert settings, every one of them, among them.
         opaque_attrs = self._build_opaque_attrs(channel_def)
@@ -346,6 +353,7 @@ class ChannelSOAPImporter:
         alert_attrs = take_alert_attrs(channel_def, alert_type_channels, _connection_type, session)
 
         channel = session.query(HTTPSOAP).filter_by(id=channel_id).one()
+        security_item = self._get_security_item(channel_def, session)
 
         if url_path := channel_def.get('url_path'):
             channel.url_path = url_path
@@ -362,7 +370,8 @@ class ChannelSOAPImporter:
                 setattr(channel, key, value)
 
         # Handle security definition
-        self._assign_security(channel, channel_def, session)
+        if security_item is not None:
+            channel.security = security_item
 
         # Fields that are not columns go into the opaque attributes, the alert settings among them,
         # merged with whatever the row already keeps there.

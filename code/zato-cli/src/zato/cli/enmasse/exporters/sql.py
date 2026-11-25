@@ -92,7 +92,6 @@ class SQLExporter:
             extra = row['extra']
 
             if extra:
-                extra = extra.decode('utf8')
                 if extra.strip():
                     item['extra'] = extra.splitlines()
 

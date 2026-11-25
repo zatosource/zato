@@ -10,6 +10,12 @@ Zato_Test_Lib_Dir := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))python/zato-co
 Zato_Test_Failure_Reports_Env := PYTHONPATH=$(Zato_Test_Lib_Dir)
 Zato_Test_Failure_Reports := -p failure_reports
 
+# The pytest plugin that runs every test of a suite and starts the next run of the suite from the test that failed first,
+# or from the test that was running when the run was interrupted, and from the first test under RESTART=1.
+# The plugin is in the same directory as the plugin of the failure reports, so the run is prefixed
+# with Zato_Test_Failure_Reports_Env, and it stores the test in the cache directory of the suite.
+Zato_Test_Resume = -p resume_first_failure $(if $(RESTART),--resume-reset,)
+
 zato-check:
 	$(Zato_Test_Python) $(Zato_Check_Script)
 

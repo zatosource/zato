@@ -12,9 +12,6 @@ from operator import itemgetter
 from traceback import format_exc
 from uuid import uuid4
 
-# Python 2/3 compatibility
-from zato.common.py23_.past.builtins import unicode
-
 # Zato
 from zato.common.api import query_parameters, ZATO_ODB_POOL_NAME
 from zato.common.audit_log.sql import all_levels as all_sql_audit_levels, Level_Off as SQL_Audit_Off
@@ -27,13 +24,28 @@ from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import AsIs, Integer
 from zato.server.service.internal import AdminService, ChangePasswordBase
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.config_dispatcher import ConfigDispatcher
+    from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # The connection attributes that live in the opaque column rather than in columns of their own
 _opaque_attrs = ['audit_log']
+
+# What the extra column stores when a connection carries no extra options
+_empty_extra = ''
 
 class _SQLService:
     """ A common class for various SQL-related services.
     """
-    def notify_server(self, params, action=OUTGOING.SQL_CREATE_EDIT.value):
+    config_dispatcher: 'ConfigDispatcher'
+
+    def notify_server(self, params:'any_', action:'str'=OUTGOING.SQL_CREATE_EDIT.value) -> 'None':
         """ Notify the server of new or updated parameters.
         """
         params['action'] = action
@@ -47,7 +59,7 @@ class _SQLService:
         except ValueError as e:
             raise ZatoException(cid, f'Invalid extra options, {e}')
 
-    def validate_audit_log(self, cid, audit_log):
+    def validate_audit_log(self, cid:'str', audit_log:'str') -> 'None':
         if audit_log not in all_sql_audit_levels:
             level_names = sorted(all_sql_audit_levels)
             raise ZatoException(cid, 'audit_log must be one of `{}` instead of `{}`'.format(level_names, audit_log))
@@ -61,7 +73,7 @@ class GetList(AdminService):
     output = 'id', 'name', 'is_active', 'engine', 'host', Integer('port'), 'db_name', 'username', \
         Integer('pool_size'), '-extra', '-engine_display_name', '-audit_log'
 
-    def get_data(self, session):
+    def get_data(self, session:'any_') -> 'any_':
         # The audit level lives in the opaque column, which is what elems_with_opaque surfaces
         return elems_with_opaque(self._search(out_sql_list, session, False))
 
@@ -69,7 +81,6 @@ class GetList(AdminService):
         with closing(self.odb.session()) as session:
             data = self.strip_listing_secrets(self.get_data(session))
             for item in data:
-                item.extra = item.extra.decode('utf8') if isinstance(item.extra, bytes) else item.extra
                 item.engine_display_name = get_sql_engine_display_name(item.engine, self.server.fs_sql_config)
 
                 # A connection created before the audit level existed has none in its opaque column, which means off
@@ -89,12 +100,13 @@ class Create(AdminService, _SQLService):
     def handle(self):
         input = self.request.input
         input.password = uuid4().hex
-        input.extra = input.extra.encode('utf-8') if input.extra else b''
+        if not input.extra:
+            input.extra = _empty_extra
 
         # A connection that does not say otherwise is not audited
         input.audit_log = input.audit_log or SQL_Audit_Off
 
-        self.validate_extra(self.cid, input.extra.decode('utf-8'))
+        self.validate_extra(self.cid, input.extra)
         self.validate_audit_log(self.cid, input.audit_log)
 
         with closing(self.odb.session()) as session:
@@ -106,7 +118,7 @@ class Create(AdminService, _SQLService):
                 raise Exception('An outgoing SQL connection [{0}] already exists'.format(input.name))
 
             try:
-                item = SQLConnectionPool()
+                item:'any_' = SQLConnectionPool()
                 item.name = input.name
                 item.is_active = input.is_active
                 item.engine = input.engine
@@ -123,9 +135,6 @@ class Create(AdminService, _SQLService):
 
                 session.add(item)
                 session.commit()
-
-                # Make sure not to use bytes when notifying other threads
-                input.extra = input.extra.decode('utf8') if isinstance(input.extra, bytes) else input.extra
 
                 self.notify_server(input)
 
@@ -149,12 +158,13 @@ class Edit(AdminService, _SQLService):
 
     def handle(self):
         input = self.request.input
-        input.extra = input.extra.encode('utf-8') if input.extra else b''
+        if not input.extra:
+            input.extra = _empty_extra
 
         # A connection that does not say otherwise is not audited
         input.audit_log = input.audit_log or SQL_Audit_Off
 
-        self.validate_extra(self.cid, input.extra.decode('utf-8'))
+        self.validate_extra(self.cid, input.extra)
         self.validate_audit_log(self.cid, input.audit_log)
 
         with closing(self.odb.session()) as session:
@@ -177,7 +187,7 @@ class Edit(AdminService, _SQLService):
                 item.db_name = input.db_name
                 item.username = input.username
                 item.pool_size = input.pool_size
-                item.extra = input.extra.encode('utf8') if isinstance(input.extra, unicode) else input.extra
+                item.extra = input.extra
 
                 # The audit level lives in the opaque column rather than in a column of its own
                 set_instance_opaque_attrs(item, input, only=_opaque_attrs)
@@ -187,9 +197,6 @@ class Edit(AdminService, _SQLService):
 
                 input.password = item.password
                 input.old_name = old_name
-
-                # Make sure not to use bytes when notifying other threads
-                input.extra = input.extra.decode('utf8') if isinstance(input.extra, bytes) else input.extra
 
                 self.notify_server(input)
 
@@ -232,7 +239,7 @@ class ChangePassword(ChangePasswordBase):
     """ Changes the password of an outgoing SQL connection.
     """
     def handle(self):
-        def _auth(instance, password):
+        def _auth(instance:'any_', password:'str') -> 'None':
             instance.password = password
 
         self._handle(SQLConnectionPool, _auth, OUTGOING.SQL_CHANGE_PASSWORD.value)
@@ -265,13 +272,13 @@ class Ping(AdminService):
                 session.rollback()
 
                 # .. and log or raise, depending on what we are instructed to do.
-                log_msg = 'SQL connection `{}` could not be pinged, e:`{}`'
+                log_msg = 'SQL connection with ID `{}` could not be pinged, e:`{}`'
 
                 if self.request.input.should_raise_on_error:
-                    self.logger.warning(log_msg.format(item.name, format_exc()))
+                    self.logger.warning(log_msg.format(self.request.input.id, format_exc()))
                     raise e
                 else:
-                    self.logger.warning(log_msg.format(item.name, e.args[0]))
+                    self.logger.warning(log_msg.format(self.request.input.id, e.args[0]))
 
 class AutoPing(AdminService):
     """ Invoked periodically from the scheduler - pings all the existing SQL connections.

@@ -85,7 +85,6 @@ class SchedulerExporter:
                 item['max_repeats'] = max_repeats
 
             if extra := row.get('extra'):
-                extra = extra.decode('utf8') if isinstance(extra, bytes) else extra
                 extra = extra.strip()
                 if extra:
                     item['extra'] = extra

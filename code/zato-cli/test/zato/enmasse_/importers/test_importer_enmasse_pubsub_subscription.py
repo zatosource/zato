@@ -162,15 +162,18 @@ class TestEnmassePubSubSubscriptionFromYAML(TestCase):
 
         # Get topic IDs
         topic_id_list = []
+        topic_entries = []
         for topic_name in subscription_def['topic_list']:
             topic_id = self.pubsub_subscription_importer.get_topic_id_by_name(topic_name, self.session)
             topic_id_list.append(topic_id)
+            topic_entries.append({'topic_id': topic_id, 'is_pub_enabled': True, 'is_delivery_enabled': True})
 
         # Prepare subscription definition
         sub_def = {
             'sec_base_id': sec_base_id,
             'delivery_type': subscription_def['delivery_type'],
             'topic_id_list': topic_id_list,
+            'topic_entries': topic_entries,
             'is_active': subscription_def.get('is_active', True),
             'max_retry_time': subscription_def.get('max_retry_time', '365d'),
             'name': subscription_def['security']
@@ -190,6 +193,7 @@ class TestEnmassePubSubSubscriptionFromYAML(TestCase):
             'push_type': 'service',
             'push_service_name': 'demo.updated-service',
             'topic_id_list': topic_id_list,
+            'topic_entries': topic_entries,
             'is_delivery_active': False  # Changed is_delivery_active
         }
 

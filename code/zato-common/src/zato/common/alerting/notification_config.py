@@ -52,9 +52,6 @@ def parse_extra(extra:'any_') -> 'stranydict':
     """ The sweep job's extra as a dict - the column is user-editable free text,
     so anything that is not a JSON object simply means nothing was configured.
     """
-    if isinstance(extra, bytes):
-        extra = extra.decode('utf8')
-
     if not extra:
         return {}
 
@@ -125,9 +122,6 @@ def set_notification_config(session:'any_', values:'stranydict') -> 'bool':
     # The column is nullable, so a job that never carried an extra holds None
     if current_extra is None:
         current_extra = ''
-
-    if isinstance(current_extra, bytes):
-        current_extra = current_extra.decode('utf8')
 
     # The same text means nothing to store
     if current_extra == new_extra:
