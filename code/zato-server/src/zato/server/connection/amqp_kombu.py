@@ -25,10 +25,12 @@ from gevent import sleep
 
 # Kombu
 from kombu import Connection, Consumer as KombuConsumer, pools, Queue
+from kombu.exceptions import OperationalError
 from kombu.transport.pyamqp import Connection as PyAMQPConnection, SSLTransport, Transport
 
 # Zato
 from zato.common.api import AMQP, PubSub
+from zato.common.exception import ConnectionException
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_component_name, new_cid_queue_consumer, utcnow, wait_for_predicate
 from zato.common.version import get_version
@@ -240,9 +242,15 @@ class Producer:
         """
         conn = self.conn.clone()
 
-        # A max_retries of zero is a single attempt, kombu counts retries only after the first failure.
+        # A max_retries of zero is a single attempt, kombu counts retries only after the first failure ..
         try:
             _ = conn.ensure_connection(max_retries=0)
+
+        # .. a broker that cannot be reached is reported as the result of the ping ..
+        except OperationalError as e:
+            raise ConnectionException(None, f'Could not connect to the broker of `{self.name}` -> {e}') from e
+
+        # .. and the connection is released whatever the outcome.
         finally:
             conn.release()
 

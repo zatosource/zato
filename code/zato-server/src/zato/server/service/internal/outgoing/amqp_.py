@@ -13,7 +13,7 @@ from traceback import format_exc
 # Zato
 from zato.common.api import query_parameters
 from zato.common.broker_message import OUTGOING
-from zato.common.exception import PingNotSupported
+from zato.common.exception import ConnectionException, PingNotSupported
 from zato.common.json_internal import dumps
 from zato.common.odb.model import OutgoingAMQP
 from zato.common.odb.query import out_amqp_list
@@ -296,7 +296,13 @@ class Ping(AdminService):
             self.response.payload.info = e.msg
             self.response.payload.is_success = False
 
-        # .. whereas this is one.
+        # .. a broker that cannot be reached is the result of the ping ..
+        except ConnectionException as e:
+            self.logger.info(e.msg)
+            self.response.payload.info = e.msg
+            self.response.payload.is_success = False
+
+        # .. whereas anything else is a fault of the ping itself.
         except Exception as e:
 
             # The full traceback goes to the server log ..

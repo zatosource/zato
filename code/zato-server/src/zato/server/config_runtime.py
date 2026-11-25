@@ -23,6 +23,7 @@ from gevent.event import Event
 
 # Zato
 from zato.common.config_dispatcher import handle_config_event
+from zato.common.exception import Reportable
 from zato.common.pubsub.sql.replaced import set_on_replaced
 from zato.common.typing_ import cast_
 from zato.server.arbiter_config import ModuleCtx as ArbiterCtx
@@ -179,6 +180,14 @@ class ConfigRuntime:
 
         try:
             result = invoke_forwarded(self.server, body)
+
+        # A reportable exception is the response to the caller, which the worker logs when it raises it again ..
+        except Reportable as e:
+            logger.info('Forwarded invocation of `%s` from slot %s returned status %s -> %s',
+                body['name'], message.slot, e.status, e.msg)
+            result = {'error': describe_error(e)}
+
+        # .. whereas anything else is a fault of the invocation.
         except Exception as e:
             logger.warning('Forwarded invocation of `%s` from slot %s failed -> %s', body['name'], message.slot, format_exc())
             result = {'error': describe_error(e)}
