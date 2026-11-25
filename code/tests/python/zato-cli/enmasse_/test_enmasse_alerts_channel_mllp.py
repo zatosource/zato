@@ -36,6 +36,7 @@ from zato.common.odb.model import GenericConn, GenericConnDef, GenericObject, Se
 from zato.common.test.config_database import config_database_engine
 from zato.common.typing_ import cast_
 from zato.common.test.direct_sql.seed import seed_config_objects
+from zato.server.generic.api.channel_hl7_mllp import get_listener_bounds
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -143,9 +144,19 @@ def session() -> 'any_':
 
 # ################################################################################################################################
 
+class _ChannelMLLPImporter(ChannelMLLPImporter):
+    """ Judges the channels against the bounds that the server's own listener lookup returns,
+    because no server runs for these tests to be asked for them.
+    """
+    def get_listener_bounds(self, session:'any_') -> 'anydict':
+        out = get_listener_bounds()
+        return out
+
+# ################################################################################################################################
+
 @pytest.fixture
 def mllp_importer() -> 'ChannelMLLPImporter':
-    out = ChannelMLLPImporter(EnmasseYAMLImporter())
+    out = _ChannelMLLPImporter(EnmasseYAMLImporter())
     return out
 
 # ################################################################################################################################

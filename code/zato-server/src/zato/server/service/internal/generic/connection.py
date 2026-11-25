@@ -292,6 +292,9 @@ for _alert_type in set(conn_type_to_alert_type.values()):
 # retry and DLQ counts, because they travel as opaque attributes rather than as columns of their own,
 # so nothing else says they are numbers.
 int_attrs = ['pool_size', 'ping_interval', 'pings_missed_threshold', 'socket_read_timeout', 'socket_write_timeout']
+
+# The id of the edited connection arrives in the raw request too, so an id of one reaches this point as True
+int_attrs.append('id')
 int_attrs = int_attrs + list(MLLP_Channel_Int_Names) + list(MLLP_Outgoing_Int_Names) + list(FHIR_Outgoing_Int_Names)
 
 # The Kafka integer fields
