@@ -30,7 +30,7 @@ from zato.cli.enmasse_command import write_result_file
 from zato.common.api import AMQP, HTTP_SOAP, SCHEDULER, SEC_DEF_TYPE
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.odb.model import Base, ChannelAMQP, GenericConn, GenericObject, HTTPBasicAuth, HTTPSOAP, IMAP, \
-    IntervalBasedJob, Job, OutgoingAMQP, OutgoingOdoo, PubSubPermission, PubSubSubscription, PubSubTopic, SecurityBase, \
+    IntervalBasedJob, Job, OAuth, OutgoingAMQP, OutgoingOdoo, PubSubPermission, PubSubSubscription, PubSubTopic, SecurityBase, \
     Service, SMTP, SQLConnectionPool
 from zato.common.test.config_database import config_database_engine
 from zato.common.test.direct_sql.seed import seed_config_objects, seed_config_row
@@ -387,8 +387,8 @@ class TestResolutionAndServices:
     def test_the_security_service_follows_the_stored_type(self, session:'any_', importer:'any_') -> 'None':
 
         # The row is stored as a bearer token definition, which YAML spells differently from the stored type ..
-        row = _add_security(session, _object_name)
-        row.sec_type = SEC_DEF_TYPE.OAUTH
+        row = OAuth(None, _object_name, True, 'user', 'password', '1.0', 'HMAC-SHA1', 1000)
+        seed_config_objects(session, [row])
         session.commit()
 
         # .. and the item names neither a type nor anything else beyond its name.

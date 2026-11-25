@@ -13,7 +13,7 @@ Zato_Enmasse_Test_Dir := $(CURDIR)/test/zato/enmasse_
 test:
 	$(Zato_Test_Failure_Reports_Env) $(Zato_Python_Dir)/py -m pytest $(Zato_Enmasse_Test_Dir) \
 		-v -s -o pythonpath=$(Zato_Enmasse_Test_Dir) -o cache_dir=$(CURDIR)/../tests/.pytest_cache_cli \
-		-W ignore::DeprecationWarning $(Zato_Test_Failure_Reports) $(Zato_Test_Resume) $(PYTEST_ARGS)
+		-W ignore::DeprecationWarning $(Zato_Test_Failure_Reports) $(PYTEST_ARGS)
 
 test-mcp:
 	$(Zato_Test_Failure_Reports_Env) $(Zato_Python_Dir)/py -m pytest $(Zato_Enmasse_Test_Dir)/test_mcp_auth.py \

@@ -10,16 +10,20 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from contextlib import ExitStack
 from tempfile import gettempdir
 from unittest import TestCase, main
 
+# SQLAlchemy
+from sqlalchemy.orm import sessionmaker
+
 # Zato
-from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.sql import SQLImporter
-from zato.common.crypto.api import CryptoManager
-from zato.common.defaults import default_server_base_dir
+from zato.cli.enmasse.util.secrets import Session_Key_Crypto_Manager
+from zato.common.crypto.api import CryptoManager, ServerCryptoManager
 from zato.common.odb.model import SQLConnectionPool
+from zato.common.test.config_database import config_database_engine
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -66,8 +70,14 @@ class TestEnmasseSQLImporterExtraList(TestCase):
 
     def setUp(self:'any_') -> 'None':
 
-        # Server path for the database connection ..
-        self.server_path = default_server_base_dir
+        # Each test gets a new PostgreSQL database of its own, dropped when the test ends ..
+        self.exit_stack = ExitStack()
+        engine = self.exit_stack.enter_context(config_database_engine([SQLConnectionPool.__table__]))
+
+        # .. with a session carrying the crypto manager the importer encrypts passwords with ..
+        session_factory = sessionmaker(bind=engine)
+        self.session = session_factory()
+        self.session.info[Session_Key_Crypto_Manager] = ServerCryptoManager.from_secret_key(ServerCryptoManager.generate_key())
 
         # .. the YAML template goes to a file of its own ..
         file_name = 'enmasse.sql.extra.' + CryptoManager.generate_hex_string() + '.yaml'
@@ -81,25 +91,19 @@ class TestEnmasseSQLImporterExtraList(TestCase):
         self.sql_importer = SQLImporter(self.importer)
 
         self.yaml_config = cast_('stranydict', None)
-        self.session = cast_('any_', None)
 
 # ################################################################################################################################
 
     def tearDown(self:'any_') -> 'None':
-        if self.session:
-            self.session.close()
+        self.session.close()
         os.remove(self.temp_file_path)
-        cleanup_enmasse(self.server_path)
+        self.exit_stack.close()
 
 # ################################################################################################################################
 
     def _setup_test_environment(self:'any_') -> 'None':
 
-        # Open a session to the server's own database ..
-        if not self.session:
-            self.session = get_session_from_server_dir(self.server_path)
-
-        # .. and parse the YAML file.
+        # Parse the YAML file.
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file_path)
 
@@ -115,7 +119,7 @@ class TestEnmasseSQLImporterExtraList(TestCase):
 
         # .. and read the row back.
         row = self.session.query(SQLConnectionPool).filter_by(name='enmasse.sql.extra.1').one()
-        self.assertEqual(row.extra, b'connect_timeout=10\ncharset=utf8mb4')
+        self.assertEqual(row.extra, 'connect_timeout=10\ncharset=utf8mb4')
 
 # ################################################################################################################################
 
@@ -129,7 +133,7 @@ class TestEnmasseSQLImporterExtraList(TestCase):
 
         # .. and read the row back.
         row = self.session.query(SQLConnectionPool).filter_by(name='enmasse.sql.extra.2').one()
-        self.assertEqual(row.extra, b'')
+        self.assertEqual(row.extra, '')
 
 # ################################################################################################################################
 
@@ -150,7 +154,7 @@ class TestEnmasseSQLImporterExtraList(TestCase):
 
         # .. and the row carries what the update said.
         row = self.session.query(SQLConnectionPool).filter_by(name='enmasse.sql.extra.1').one()
-        self.assertEqual(row.extra, b'connect_timeout=30\ncharset=utf8mb4')
+        self.assertEqual(row.extra, 'connect_timeout=30\ncharset=utf8mb4')
 
 # ################################################################################################################################
 # ################################################################################################################################

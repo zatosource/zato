@@ -41,13 +41,8 @@
 	hl7-haproxy hl7-backend-mllp hl7-backend-rest hl7-send-message \
 	quickstart dashboard server listener haproxy dev sbom scalar-update themes css
 
-# Each recipe line runs under bash with pipefail through code/tests/recipe_shell.sh, which records a line that fails
-# in /tmp/zato-test-failures.txt with its target. Make expands .SHELLFLAGS for each line, with the target in $@.
-SHELL := $(CURDIR)/code/tests/recipe_shell.sh
-.SHELLFLAGS = --target=$@ -o pipefail -c
+# The shell of each recipe line, and the resuming of each goal, are set in code/tests/check.mk, included below
 
-# The test targets that make was asked for, which tells recipe_shell.sh that the lines it runs belong to a test run
-export Zato_Test_Goal := $(strip $(filter test%,$(MAKECMDGOALS)) $(Zato_Test_Goal))
 MAKEFLAGS += --silent --no-print-directory
 
 CARGO_ENV := $(HOME)/.cargo/env

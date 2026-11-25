@@ -96,6 +96,9 @@ vscode
 # Where each multi-suite test target remembers which suite it stopped on
 .test-*-resume
 
+# Where each make goal records the stages and the tests that its next run resumes from
+.resume-state/
+
 # Cosmic-ray mutation testing
 *.py.meta
 

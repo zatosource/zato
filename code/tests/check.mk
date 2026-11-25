@@ -1,6 +1,28 @@
 .PHONY: zato-check
 
-Zato_Check_Script := $(dir $(lastword $(MAKEFILE_LIST)))python/tutorial_endpoints_check.py
+# The directory of this file, which every Makefile that includes it runs its tests through
+Zato_Tests_Dir := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+
+# Each recipe line runs under bash with pipefail through recipe_shell.sh, which records a line that fails
+# in /tmp/zato-test-failures.txt with its target. Make expands .SHELLFLAGS for each line, with the target in $@.
+SHELL := $(Zato_Tests_Dir)/recipe_shell.sh
+.SHELLFLAGS = --target=$@ -o pipefail -c
+
+# The test targets that make was asked for, which tells recipe_shell.sh that the lines it runs belong to a test run
+export Zato_Test_Goal := $(strip $(filter test%,$(MAKECMDGOALS)) $(Zato_Test_Goal))
+
+# The identifier of this run of make and the state file of its goals, one per directory of a Makefile, which nested
+# makes inherit. With them, recipe_shell.sh and the resume_first_failure pytest plugin resume every goal after a run
+# that failed or was interrupted, skipping the stages that completed and starting each pytest run from the test
+# that failed first or was interrupted. RESTART=1 starts the goal from scratch.
+ifndef Zato_Resume_Run_Id
+export Zato_Resume_Run_Id := $(shell date +%s%N)
+export Zato_Resume_State_Path := \
+	$(Zato_Tests_Dir)/.resume-state/$(notdir $(CURDIR))/$(subst $() ,+,$(or $(MAKECMDGOALS),default))
+endif
+export RESTART
+
+Zato_Check_Script := $(Zato_Tests_Dir)/python/tutorial_endpoints_check.py
 Zato_Saved_Default_Goal := $(.DEFAULT_GOAL)
 
 # The pytest plugin that appends each failure to /tmp/zato-test-failures.txt the moment it occurs.
@@ -9,12 +31,6 @@ Zato_Saved_Default_Goal := $(.DEFAULT_GOAL)
 Zato_Test_Lib_Dir := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))python/zato-common/lib)
 Zato_Test_Failure_Reports_Env := PYTHONPATH=$(Zato_Test_Lib_Dir)
 Zato_Test_Failure_Reports := -p failure_reports
-
-# The pytest plugin that runs every test of a suite and starts the next run of the suite from the test that failed first,
-# or from the test that was running when the run was interrupted, and from the first test under RESTART=1.
-# The plugin is in the same directory as the plugin of the failure reports, so the run is prefixed
-# with Zato_Test_Failure_Reports_Env, and it stores the test in the cache directory of the suite.
-Zato_Test_Resume = -p resume_first_failure $(if $(RESTART),--resume-reset,)
 
 zato-check:
 	$(Zato_Test_Python) $(Zato_Check_Script)
