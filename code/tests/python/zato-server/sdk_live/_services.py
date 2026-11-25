@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 
 # Zato
+from zato.server.generic.api.outconn_sdk import InvocationTimeout
 from zato.server.service import Int, Service
 
 # ################################################################################################################################
@@ -45,6 +46,21 @@ class SendMainframeCommand(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class HasConnection(Service):
+    """ Tells whether the server holds a definition of a connector type, e.g. `crm`, under a given name.
+    """
+    name = 'demo.sdk.has-connection'
+
+    input = 'connector_type', 'connection_name'
+
+    def handle(self) -> 'None':
+        container = getattr(self.out, self.request.input.connector_type)
+        is_present = self.request.input.connection_name in container
+        self.response.payload = json.dumps({'is_present': is_present})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class GetCustomerWithTimeout(Service):
     """ Returns one customer with a short per-call watchdog timeout - for the stall scenario.
     """
@@ -54,8 +70,13 @@ class GetCustomerWithTimeout(Service):
 
     def handle(self) -> 'None':
         conn = self.out.crm['My Failure CRM']
-        response = conn.get_customer(self.request.input.customer_id, timeout=2)
-        self.response.payload = json.dumps({'response': response})
+
+        try:
+            response = conn.get_customer(self.request.input.customer_id, timeout=2)
+        except InvocationTimeout:
+            self.response.payload = json.dumps({'is_timed_out': True})
+        else:
+            self.response.payload = json.dumps({'is_timed_out': False, 'response': response})
 
 # ################################################################################################################################
 # ################################################################################################################################

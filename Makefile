@@ -79,20 +79,16 @@ ZATO_PY := $(CURDIR)/code/bin/python
 RUFF := $(CURDIR)/code/bin/ruff
 PYRIGHT := $(CURDIR)/code/bin/pyright
 
-TS := ts '%Y-%m-%d %H:%M:%S'
-
 # What a test target's recipe lines end with - the output timestamped on the console and
 # appended to /tmp/logs-<target name>.txt, which Zato_Log_Reset on the first line truncates.
+# Each line is prefixed by the number of errors and warnings seen so far in the run of the target,
+# in red and yellow on a terminal. The first Ctrl+C reaches the tests while the output of their teardown is still
+# written to the console and the log, and the second Ctrl+C stops the writing at once.
 # Written as a line suffix rather than a wrapper target so that a target stays one target.
 # Zato_Log_Reset also records the start of the target in /tmp/zato-test-failures.txt, so that the failures
 # recorded after it are known to come from that run.
-Zato_Log       = 2>&1 | $(TS) | tee -a /tmp/logs-$@.txt
+Zato_Log       = 2>&1 | $(ZATO_PY) $(CURDIR)/code/tests/log_counter.py /tmp/logs-$@.txt
 Zato_Log_Reset = rm -f /tmp/logs-$@.txt /tmp/logs-$@.txt.counts; echo ">>> ZATO TEST TARGET STARTED $$(date '+%Y-%m-%d %H:%M:%S') $@" >> /tmp/zato-test-failures.txt
-
-# The same as Zato_Log, with each line prefixed by the number of errors and warnings seen so far in the run of the target,
-# in red and yellow on a terminal. The first Ctrl+C reaches the tests while the output of their teardown is still
-# written to the console and the log, and the second Ctrl+C stops the writing at once.
-Zato_Log_Counted = 2>&1 | $(ZATO_PY) $(CURDIR)/code/tests/log_counter.py /tmp/logs-$@.txt
 
 Zato_Test_Python := $(ZATO_PY)
 include $(CURDIR)/code/tests/check.mk
@@ -1335,6 +1331,7 @@ test-sql-conformance-static: ## The static scans of SQL conformance.
 	@$(call Zato_Test_Step_Run_Once,sql-conformance-static)
 
 test-pubsub-encoding-rust: ## The Rust unit tests of the split push envelope encoder and of the vectored writes of the outgoing HTTP transport.
+	$(Zato_Log_Reset)
 	$(LOAD_CARGO_ENV) && cargo test --manifest-path $(ZATO_RUST)/zato_common_core/Cargo.toml --lib json $(Zato_Log)
 	$(LOAD_CARGO_ENV) && cargo test --manifest-path $(ZATO_RUST)/zato_server_core/Cargo.toml --lib outgoing $(Zato_Log)
 
@@ -1388,7 +1385,7 @@ test-enmasse-delete-live: ## Enmasse should_delete against a live server - every
 
 test-cli: ## CLI tests.
 	$(Zato_Log_Reset)
-	$(MAKE) -C $(CURDIR)/code/zato-cli test $(Zato_Log_Counted)
+	$(MAKE) -C $(CURDIR)/code/zato-cli test $(Zato_Log)
 
 test-mcp: ## Every MCP test - the offline suites, the browser lifecycle, a real LLM and the local container.
 	$(Zato_Log_Reset)

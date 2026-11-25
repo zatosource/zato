@@ -20,6 +20,9 @@ import yaml
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.client import AdminClient
 
+# Test suite
+from _test_util import is_connection_present
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -255,14 +258,10 @@ def test_delete_definition(zato_server:'stranydict') -> 'None':
 
     _ = client.delete('zato.generic.connection.delete', id=_TestState.conn_id)
 
-    # The definition disappears from the container, so invoking the service starts to fail.
+    # The definition disappears from the container that services access.
     def _is_gone() -> 'bool':
-        try:
-            _ = client.invoke(_service_name, {'customer_id': _customer_id})
-        except Exception:
-            return True
-        else:
-            return False
+        out = not is_connection_present(zato_server, 'crm', _conn_name)
+        return out
 
     _ = _wait_for(_is_gone, f'connection {_conn_name} to be deleted')
 

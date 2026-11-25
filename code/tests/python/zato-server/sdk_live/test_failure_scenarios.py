@@ -66,20 +66,15 @@ def test_failure_stall_trips_watchdog(zato_server:'stranydict') -> 'None':
 
     try:
         # .. so this call, which carries a two-second timeout, fails through the watchdog ..
-        try:
-            _ = client.invoke('demo.crm.get-customer-timeout', {'customer_id': _customer_id})
-        except Exception:
-            watchdog_raised = True
-        else:
-            watchdog_raised = False
-
-        assert watchdog_raised, 'The watchdog was expected to raise while the target stalls'
+        response = client.invoke('demo.crm.get-customer-timeout', {'customer_id': _customer_id})
+        assert response['is_timed_out'], 'The watchdog was expected to raise while the target stalls'
 
     finally:
         # .. and once the target answers normally again, the next call goes through.
         echo_state.end_stall()
 
     response = client.invoke('demo.crm.get-customer-timeout', {'customer_id': _customer_id})
+    assert not response['is_timed_out']
     assert response['response'].endswith(f'get-customer {_customer_id}')
 
 # ################################################################################################################################

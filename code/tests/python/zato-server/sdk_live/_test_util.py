@@ -34,6 +34,20 @@ def get_client(zato_server:'stranydict') -> 'AdminClient':
 
 # ################################################################################################################################
 
+def is_connection_present(zato_server:'stranydict', connector_type:'str', connection_name:'str') -> 'bool':
+    """ Tells whether the server holds a definition of the connector type, e.g. `crm`, under the name.
+    """
+    client = get_client(zato_server)
+    response = client.invoke('demo.sdk.has-connection', {
+        'connector_type': connector_type,
+        'connection_name': connection_name,
+    })
+
+    out = response['is_present']
+    return out
+
+# ################################################################################################################################
+
 def read_server_log(zato_server:'stranydict') -> 'str':
     log_path = os.path.join(zato_server['server_directory'], 'logs', 'server.log')
 

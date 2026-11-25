@@ -1314,20 +1314,41 @@ def invoke_startup_services(
 
 # ################################################################################################################################
 
+def _run_spawned(callable:'callable_', args:'anytuple', kwargs:'anydict', state:'anydict') -> 'any_':
+    """ Runs the callable of spawn_greenlet and keeps the exception it raises while spawn_greenlet waits for it,
+    so that the exception reaches the caller of spawn_greenlet rather than the error report of the gevent hub.
+    An exception raised after spawn_greenlet stopped waiting is logged, since no caller receives it.
+    """
+    try:
+        return callable(*args, **kwargs)
+    except Exception:
+        if state['is_waiting']:
+            state['exc_info'] = sys.exc_info()
+        else:
+            logger.error('Greenlet of `%s` failed after its caller stopped waiting -> %s', callable, format_exc())
+
+# ################################################################################################################################
+
 def spawn_greenlet(callable:'callable_', *args:'any_', **kwargs:'any_') -> 'any_':
     """ Spawns a new greenlet and waits up to timeout seconds for its response. It is expected that the response never arrives
     because if it does, it means that there were some errors.
     """
     try:
         timeout = kwargs.pop('timeout', 0.2)
-        g = spawn(callable, *args, **kwargs)
+        state:'anydict' = {'is_waiting': True, 'exc_info': None}
+
+        g = spawn(_run_spawned, callable, args, kwargs, state)
         gevent_sleep(0)
         g.join(timeout)
 
-        if g.exception:
-            exc_info = cast_('anytuple', g.exc_info)
+        # From now on, an exception of the greenlet is logged by the greenlet itself ..
+        state['is_waiting'] = False
+
+        # .. while one that it raised already goes to the caller.
+        if state['exc_info']:
+            exc_info = cast_('anytuple', state['exc_info'])
             _, value, traceback = exc_info
-            exception = Exception(value, str(g.exception))
+            exception = Exception(value, str(value))
             raise exception.with_traceback(traceback)
 
     except Timeout:

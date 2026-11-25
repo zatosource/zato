@@ -666,6 +666,14 @@ class ConnectorContainer:
 
 # ################################################################################################################################
 
+    def __contains__(self, name:'str') -> 'bool':
+        """ Tells whether a definition of that name exists, e.g. 'My CRM' in self.out.crm.
+        """
+        out = name in self._container
+        return out
+
+# ################################################################################################################################
+
     def __getitem__(self, name:'str') -> 'ConnectorProxy':
 
         # This raises a KeyError if there is no definition of that name ..

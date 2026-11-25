@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import threading
 
 # Test suite
-from _test_util import create_definition, delete_definition, get_client, wait_for
+from _test_util import create_definition, delete_definition, get_client, is_connection_present, wait_for
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -133,15 +133,9 @@ def test_multiplexed_delete_definition(zato_server:'stranydict') -> 'None':
     """
     delete_definition(zato_server, _TestState.conn_id)
 
-    client = get_client(zato_server)
-
     def _is_gone() -> 'bool':
-        try:
-            _ = client.invoke(_service_name, {'payload': 'auth-x'})
-        except Exception:
-            return True
-        else:
-            return False
+        out = not is_connection_present(zato_server, 'payments', _conn_name)
+        return out
 
     _ = wait_for(_is_gone, f'connection {_conn_name} to be deleted')
 

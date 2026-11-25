@@ -86,7 +86,12 @@ class GLPIClient:
 # ################################################################################################################################
 
     def close_session(self) -> 'None':
-        _ = self.call('GET', 'killSession')
+
+        # A session that GLPI has already expired has nothing left to close.
+        try:
+            _ = self.call('GET', 'killSession')
+        except CredentialsExpired:
+            pass
 
 # ################################################################################################################################
 

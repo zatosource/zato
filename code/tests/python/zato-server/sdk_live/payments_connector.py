@@ -48,8 +48,8 @@ class PaymentsClient:
         self.is_connected = True
 
         # The reader loop matches replies back to waiting calls for as long as the connection lives.
-        reader_thread = threading.Thread(target=self._read_loop, daemon=True)
-        reader_thread.start()
+        self.reader_thread = threading.Thread(target=self._read_loop, daemon=True)
+        self.reader_thread.start()
 
 # ################################################################################################################################
 
@@ -67,8 +67,11 @@ class PaymentsClient:
                 holder['response'] = payload
                 holder['event'].set()
 
-        # The loop ended, which means the socket is gone - wake up everyone still waiting.
+        # The loop ended, which means the socket is gone - the reader file is closed by the thread that reads it ..
+        self.reader_file.close()
         self.is_connected = False
+
+        # .. and everyone still waiting is woken up.
 
         with self.lock:
             for holder in self.pending.values():
@@ -104,7 +107,18 @@ class PaymentsClient:
 # ################################################################################################################################
 
     def close(self) -> 'None':
-        self.reader_file.close()
+
+        # Shutting the socket down ends the read that the reader loop is blocked in. A socket that the remote end
+        # has already dropped is no longer connected, in which case the reader loop has ended on its own ..
+        try:
+            self.socket.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+
+        # .. the reader loop closes the reader file once it ends ..
+        self.reader_thread.join()
+
+        # .. and the socket is closed last.
         self.socket.close()
 
 # ################################################################################################################################

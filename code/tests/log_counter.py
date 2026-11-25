@@ -34,8 +34,12 @@ class ModuleCtx:
     # .. the first line of a traceback ..
     Traceback_Marker = 'Traceback (most recent call last)'
 
-    # .. and a Python warning, such as a DeprecationWarning or an SAWarning.
+    # .. a Python warning, such as a DeprecationWarning or an SAWarning ..
     Python_Warning_Pattern = re.compile(r'\b[A-Z]\w*Warning: ')
+
+    # .. and the errors, warnings and failed tests that cargo reports.
+    Cargo_Error_Pattern   = re.compile(r'^error(?:\[E\d+\])?: |^test .+ \.\.\. FAILED$')
+    Cargo_Warning_Pattern = re.compile(r'^warning: ')
 
     # The header of any pytest section, and of the section that repeats the warnings of the session
     Section_Header_Pattern   = re.compile(r'^=+ .+ =+$')
@@ -70,7 +74,7 @@ class LogCounter:
         self.warning_count = 0
 
         self.interrupt_count     = 0
-        self.previous_is_error   = False
+        self.previous_is_record  = False
         self.in_warnings_summary = False
 
         self.is_console_open = True
@@ -115,29 +119,35 @@ class LogCounter:
         # A pytest section header begins or ends the summary of warnings ..
         if ModuleCtx.Section_Header_Pattern.match(line):
             self.in_warnings_summary = bool(ModuleCtx.Warnings_Summary_Pattern.match(line))
-            self.previous_is_error = False
+            self.previous_is_record = False
             return
 
         # .. which repeats the warnings that were already counted ..
         if self.in_warnings_summary:
             return
 
-        is_error = bool(ModuleCtx.Error_Record_Pattern.search(line)) or ModuleCtx.Failure_Marker in line
+        is_error = bool(ModuleCtx.Error_Record_Pattern.search(line)) \
+            or ModuleCtx.Failure_Marker in line \
+            or bool(ModuleCtx.Cargo_Error_Pattern.match(line))
 
-        # .. an error record or a failure is an error ..
+        is_warning = bool(ModuleCtx.Warning_Record_Pattern.search(line)) \
+            or bool(ModuleCtx.Python_Warning_Pattern.search(line)) \
+            or bool(ModuleCtx.Cargo_Warning_Pattern.match(line))
+
+        # .. an error record, a failure or a cargo error is an error ..
         if is_error:
             self.error_count += 1
 
-        # .. so is a traceback, unless it belongs to the error record directly before it ..
-        elif ModuleCtx.Traceback_Marker in line:
-            if not self.previous_is_error:
-                self.error_count += 1
-
-        # .. and a warning record or a Python warning is a warning.
-        elif ModuleCtx.Warning_Record_Pattern.search(line) or ModuleCtx.Python_Warning_Pattern.search(line):
+        # .. a warning record, a Python warning or a cargo warning is a warning, including the traceback it carries ..
+        elif is_warning:
             self.warning_count += 1
 
-        self.previous_is_error = is_error
+        # .. and a traceback is an error, unless it belongs to the error or warning record directly before it.
+        elif ModuleCtx.Traceback_Marker in line:
+            if not self.previous_is_record:
+                self.error_count += 1
+
+        self.previous_is_record = is_error or is_warning
 
 # ################################################################################################################################
 

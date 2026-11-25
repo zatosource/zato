@@ -74,12 +74,15 @@ class HubRefused(Exception):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _report_hub_outage(e:'Exception') -> 'None':
-    """ Logs a hub outage once, at its onset.
+def _report_hub_outage(e:'Exception', has_gateways:'bool') -> 'None':
+    """ Logs a hub outage once, at its onset. Without any gateways defined, an outage does not affect the server.
     """
     global _hub_was_reachable
 
-    if _hub_was_reachable:
+    if not has_gateways:
+        logger.info('The on-prem gateway hub is not available and no on-prem gateways are defined: %s', e)
+
+    elif _hub_was_reachable:
         logger.warning('Could not reach the on-prem gateway hub: %s', e)
         _hub_was_reachable = False
 
@@ -478,7 +481,7 @@ class OnPremGatewayManager:
         try:
             self.hub.put_gateways(gateways)
         except HubUnavailable as e:
-            _report_hub_outage(e)
+            _report_hub_outage(e, bool(gateways))
             return
 
         _report_hub_available()
@@ -499,19 +502,21 @@ class OnPremGatewayManager:
         by_name:'strdict' = {}
         hub_error = ''
 
-        # The runtime state from the hub, if it is available ..
+        # The ODB configuration, in which a gateway is defined before it connects for the first time ..
+        items = self.get_list()
+
+        # .. the runtime state from the hub, if it is available ..
         try:
             for item in self.hub.get_gateways():
                 by_name[item['name']] = item
         except Exception as e:
             hub_error = str(e)
-            _report_hub_outage(e)
+            _report_hub_outage(e, bool(items))
         else:
             _report_hub_available()
 
-        # .. merged with the ODB configuration, in which a gateway is defined before
-        # it connects for the first time.
-        for item in self.get_list():
+        # .. and the two merged.
+        for item in items:
 
             hosts = item['hosts']
             host_count = len(hosts)
