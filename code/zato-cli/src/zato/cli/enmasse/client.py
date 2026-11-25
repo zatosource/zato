@@ -10,16 +10,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import time
 from traceback import format_exc
+from typing import NamedTuple
 
 # SQLAlchemy
-from sqlalchemy import MetaData, inspect, text
+from sqlalchemy import bindparam, MetaData, inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 
 # Zato
 from zato.cli.enmasse.util import get_value_from_environment
-from zato.common.typing_ import cast_
+from zato.common.typing_ import cast_, stranydict
 from zato.cli.enmasse.util.secrets import Session_Key_Crypto_Manager, Session_Key_Server_Dir
 from zato.common.crypto.api import ServerCryptoManager
+from zato.common.db_env.fence import set_environment_generation_file
 from zato.common.defaults import default_server_base_dir
 from zato.common.odb.model import to_json
 from zato.common.odb.query import service_list
@@ -44,7 +46,7 @@ Default_Initial_Wait_Time = 10
 
 if 0:
     from zato.client import ZatoClient
-    from zato.common.typing_ import any_, anydict, stranydict, strnone, strtuple
+    from zato.common.typing_ import any_, anydict, anylist, strlist, strnone, strtuple
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,6 +54,9 @@ if 0:
 def get_session_from_server_dir(server_dir:'str', stdin_data:'strnone'=None) -> 'any_':
     """ Creates a new SQLAlchemy session based on server configuration.
     """
+
+    # The transactions of this process confirm the generation that the server of this directory recorded
+    set_environment_generation_file(server_dir)
 
     # Find repository location from server directory
     repo_location = get_repo_dir_from_component_dir(server_dir)
@@ -95,7 +100,9 @@ def get_sdk_secret_field_names(server_dir:'str', type_:'str') -> 'strtuple':
     if not response.ok:
         raise Exception(f'Could not look up secret fields of `{type_}` from {client.address} -> {response.details}')
 
-    out = tuple(response.data['names'])
+    data = cast_('anydict', response.data)
+
+    out = tuple(data['names'])
     return out
 
 # ################################################################################################################################
@@ -114,6 +121,42 @@ def get_mllp_listener_bounds(server_dir:'str') -> 'stranydict':
     return out
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+class _NameFilter(NamedTuple):
+    """ The condition that matches the names that begin with any of a list of prefixes, along with its parameters.
+    """
+    where_clause: str
+    params: stranydict
+
+# ################################################################################################################################
+
+def _get_name_filter(prefixes:'strlist') -> '_NameFilter':
+    """ Returns the condition that matches the names that begin with any of the given prefixes.
+    """
+    conditions:'strlist' = []
+    params:'stranydict' = {}
+
+    for index, prefix in enumerate(prefixes):
+        param_name = f'name_prefix_{index}'
+        conditions.append(f'name LIKE :{param_name}')
+        params[param_name] = f'{prefix}%'
+
+    where_clause = ' OR '.join(conditions)
+
+    out = _NameFilter(where_clause, params)
+    return out
+
+# ################################################################################################################################
+
+def _execute_with_ids(session:'any_', query:'str', ids:'anylist') -> 'any_':
+    """ Executes a query whose :ids parameter expands to the given non-empty list of IDs.
+    """
+    statement = text(query).bindparams(bindparam('ids', expanding=True))
+
+    out = session.execute(statement, {'ids': ids})
+    return out
+
 # ################################################################################################################################
 
 def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -> 'None':
@@ -141,13 +184,15 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
         # Store security IDs that need to be cleaned up
         security_ids = []
 
+        # The names of the objects to delete begin with one of the prefixes
+        name_filter = _get_name_filter(prefixes)
+        where_clause = name_filter.where_clause
+
         # Special handling for sec_base table
         try:
             # First fetch IDs from sec_base that match any of the prefixes
-            like_clauses = [f'name LIKE "{p}%"' for p in prefixes]
-            where_clause = ' OR '.join(like_clauses)
             query = f'SELECT id FROM sec_base WHERE {where_clause}'
-            result = session.execute(text(query))
+            result = session.execute(text(query), name_filter.params)
             security_ids = [row[0] for row in result.fetchall()]
 
             if security_ids:
@@ -156,7 +201,7 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
 
                 # Delete from sec_base
                 delete_query = f'DELETE FROM sec_base WHERE {where_clause}'
-                result = session.execute(text(delete_query))
+                result = session.execute(text(delete_query), name_filter.params)
                 session.commit()
                 logger.info(f'Deleted {result.rowcount} row{'s' if result.rowcount != 1 else ''} from sec_base matching prefixes: {', '.join(prefixes)}')
         except SQLAlchemyError as e:
@@ -171,22 +216,13 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
             for table_name in security_tables:
                 try:
                     # Delete records with matching IDs
-                    if len(security_ids) == 1:
-                        ids_string = str(security_ids[0])
-                        query = f'DELETE FROM {table_name} WHERE id = {security_ids[0]}'
-                    else:
-                        ids_string = ', '.join(str(id) for id in security_ids)
-                        query = f'DELETE FROM {table_name} WHERE id IN ({ids_string})'
-
-                    result = session.execute(text(query))
+                    result = _execute_with_ids(session, f'DELETE FROM {table_name} WHERE id IN :ids', security_ids)
                     session.commit()
 
                     if result.rowcount > 0:
                         row_suffix = 's' if result.rowcount != 1 else ''
                         id_suffix = 's' if len(security_ids) != 1 else ''
                         logger.info(f'Deleted {result.rowcount} row{row_suffix} from {table_name} with ID{id_suffix} from sec_base')
-                        deleted_names = [row[1] for row in session.execute(text(f'SELECT name FROM {table_name} WHERE id IN ({ids_string})')).fetchall()]
-                        logger.debug(f'Deleted security names from {table_name}: {deleted_names}')
                 except SQLAlchemyError as e:
                     session.rollback()
                     logger.debug(f'Could not delete from {table_name}: {e}')
@@ -194,16 +230,10 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
         # Special handling for pubsub_permission table - delete by sec_base_id
         if 'pubsub_permission' in table_names:
             try:
-                pubsub_permission_ids = session.execute(
-                    text('SELECT id FROM pubsub_permission WHERE sec_base_id IN ({})'.format(','.join(map(str, security_ids))))
-                ).fetchall()
-
-                if pubsub_permission_ids:
-                    pubsub_permission_ids = [row[0] for row in pubsub_permission_ids]
-                    session.execute(
-                        text('DELETE FROM pubsub_permission WHERE sec_base_id IN ({})'.format(','.join(map(str, security_ids))))
-                    )
-                    logger.info('Deleted %d rows from pubsub_permission with sec_base_ids from sec_base', len(pubsub_permission_ids))
+                if security_ids:
+                    result = _execute_with_ids(session, 'DELETE FROM pubsub_permission WHERE sec_base_id IN :ids', security_ids)
+                    if result.rowcount > 0:
+                        logger.info('Deleted %d rows from pubsub_permission with sec_base_ids from sec_base', result.rowcount)
 
                 # Also delete any remaining pubsub_permission rows to ensure clean test state
                 remaining_perms = session.execute(
@@ -222,23 +252,18 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
         # Special handling for pubsub_subscription table - delete by sec_base_id
         if 'pubsub_subscription' in table_names and security_ids:
             try:
-                pubsub_subscription_ids = session.execute(
-                    text('SELECT id FROM pubsub_subscription WHERE sec_base_id IN ({})'.format(','.join(map(str, security_ids))))
-                ).fetchall()
+                result = _execute_with_ids(session, 'SELECT id FROM pubsub_subscription WHERE sec_base_id IN :ids', security_ids)
+                pubsub_subscription_ids = [row[0] for row in result.fetchall()]
 
                 if pubsub_subscription_ids:
-                    pubsub_subscription_ids = [row[0] for row in pubsub_subscription_ids]
 
                     # Delete the topic associations of these subscriptions first - they have no name column,
                     # so the generic prefix-based cleanup below never touches them
-                    result = session.execute(
-                        text('DELETE FROM pubsub_subscription_topic WHERE subscription_id IN ({})'.format(','.join(map(str, pubsub_subscription_ids))))
-                    )
+                    result = _execute_with_ids(session,
+                        'DELETE FROM pubsub_subscription_topic WHERE subscription_id IN :ids', pubsub_subscription_ids)
                     logger.info('Deleted %d rows from pubsub_subscription_topic linked to subscriptions being cleaned up', result.rowcount)
 
-                    session.execute(
-                        text('DELETE FROM pubsub_subscription WHERE sec_base_id IN ({})'.format(','.join(map(str, security_ids))))
-                    )
+                    _ = _execute_with_ids(session, 'DELETE FROM pubsub_subscription WHERE sec_base_id IN :ids', security_ids)
                     logger.info('Deleted %d rows from pubsub_subscription with sec_base_ids from sec_base', len(pubsub_subscription_ids))
 
                 session.commit()
@@ -265,20 +290,15 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
         # as it doesn't have a name column but depends on job_id from the job table
         try:
             # First fetch job IDs from the job table that match any of the prefixes
-            like_clauses = [f'name LIKE "{p}%"' for p in prefixes]
-            where_clause = ' OR '.join(like_clauses)
             query = f'SELECT id FROM job WHERE {where_clause}'
-            result = session.execute(text(query))
+            result = session.execute(text(query), name_filter.params)
             job_ids = [row[0] for row in result.fetchall()]
 
             if job_ids:
                 logger.info(f'Found {len(job_ids)} job ID{'s' if len(job_ids) != 1 else ''} in job table matching prefixes: {', '.join(prefixes)}')
 
                 # Delete from job_interval_based using the job_ids
-                ids_string = ', '.join(str(id) for id in job_ids)
-                delete_query = f'DELETE FROM job_interval_based WHERE job_id IN ({ids_string})'
-
-                result = session.execute(text(delete_query))
+                result = _execute_with_ids(session, 'DELETE FROM job_interval_based WHERE job_id IN :ids', job_ids)
                 session.commit()
                 suffix = 's' if result.rowcount != 1 else ''
                 logger.info(f'Deleted {result.rowcount} row{suffix} from job_interval_based linked to jobs matching prefixes: {', '.join(prefixes)}')
@@ -304,10 +324,8 @@ def cleanup(prefixes:list['str'], server_dir:'str', stdin_data:'strnone'=None) -
                     columns = [col['name'] for col in inspector.get_columns(table_name)] # type: ignore
                     if 'name' in columns:
                         # Execute a delete query for objects with names starting with any of the prefixes
-                        like_clauses = [f'name LIKE "{p}%"' for p in prefixes]
-                        where_clause = ' OR '.join(like_clauses)
                         result = session.execute(
-                            text(f'DELETE FROM {table_name} WHERE {where_clause}')
+                            text(f'DELETE FROM {table_name} WHERE {where_clause}'), name_filter.params
                         )
 
                         # Commit the changes

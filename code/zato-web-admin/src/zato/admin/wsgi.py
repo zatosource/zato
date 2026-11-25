@@ -17,7 +17,7 @@ from django.core.wsgi import get_wsgi_application
 # ################################################################################################################################
 
 from zato.admin.zato_settings import update_globals
-from zato.common.db_env.fence import follow_environment_generation
+from zato.common.db_env.fence import follow_environment_generation, set_environment_generation_file
 from zato.common.json_internal import loads
 from zato.common.util.open_ import open_r
 
@@ -58,6 +58,7 @@ if original_log_config:
 update_globals(config)
 
 # Every transaction of the Zato database confirms the generation that the server of this environment recorded
+set_environment_generation_file(base_dir_abs)
 follow_environment_generation()
 
 _ = os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'zato.admin.settings')

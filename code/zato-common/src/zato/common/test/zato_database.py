@@ -11,11 +11,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import atexit
+import os
+import tempfile
 from contextlib import contextmanager
+from shutil import rmtree
 
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.db_env.database import dispose_database_engine, get_database_engine
+from zato.common.db_env.fence import ModuleCtx as FenceCtx
 from zato.common.test.pubsub_database import connect, get_db_mode, ModuleCtx as DatabaseModuleCtx, pubsub_db_env, \
     PubSubDatabase, start_pubsub_database, stop_pubsub_database
 
@@ -46,6 +50,12 @@ class ModuleCtx:
 
     # The environment variable with the name of the Zato database
     Env_Name = 'Zato_Database_Name'
+
+    # The prefix of the directory with the generation file of each database
+    Generation_Dir_Prefix = 'zato_test_generation_'
+
+    # The name of the generation file in that directory
+    Generation_File_Name = 'database-generation'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -120,15 +130,20 @@ def drop_test_database(env:'strstrdict') -> 'None':
 @contextmanager
 def isolated_database_env() -> 'strstrdictgen':
     """ Points the Zato_Database_* variables at a new database for the duration of a block and yields them,
-    then drops the database.
+    then drops the database. The generation file of the block is new too, so that the servers and the processes
+    started in the block confirm only the generations recorded for this database.
     """
     env = create_test_database()
 
+    generation_dir = tempfile.mkdtemp(prefix=ModuleCtx.Generation_Dir_Prefix)
+    generation_env = {FenceCtx.Env_Generation_File: os.path.join(generation_dir, ModuleCtx.Generation_File_Name)}
+
     try:
-        with pubsub_db_env(env):
+        with pubsub_db_env(env), pubsub_db_env(generation_env):
             yield env
     finally:
         drop_test_database(env)
+        rmtree(generation_dir, ignore_errors=True)
 
 # ################################################################################################################################
 

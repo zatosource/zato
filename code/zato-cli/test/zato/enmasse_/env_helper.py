@@ -21,12 +21,16 @@ from typing import NamedTuple
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.process_util import kill_process_tree
 from zato.common.test.zato_database import isolated_database_env
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from zato.common.ext.configobj_ import ConfigObj
     from zato.common.typing_ import any_
+
+    ConfigObj = ConfigObj
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -105,7 +109,7 @@ def _start_server(base_dir:'str', server_dir:'str', password:'str') -> 'tuple':
 
     # Point the server at the port chosen for it ..
     repo_location = os.path.join(server_dir, 'config', 'repo')
-    config = get_config_object(repo_location, 'server.conf')
+    config = cast_('ConfigObj', get_config_object(repo_location, 'server.conf'))
     config['main']['port'] = str(port)
     config['main']['bind'] = f'0.0.0.0:{port}'
     update_config_file(config, repo_location, 'server.conf')
@@ -114,7 +118,7 @@ def _start_server(base_dir:'str', server_dir:'str', password:'str') -> 'tuple':
     server_env = os.environ.copy()
     server_env['Zato_Config_Bind_Port'] = str(port)
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
-    server_env.pop('COVERAGE_PROCESS_START', None)
+    _ = server_env.pop('COVERAGE_PROCESS_START', None)
 
     # .. start the server in its own process group so the whole tree can be stopped later ..
     server_process = subprocess.Popen(
@@ -139,7 +143,7 @@ def _start_server(base_dir:'str', server_dir:'str', password:'str') -> 'tuple':
     listener_env = os.environ.copy()
     listener_env['Zato_Config_Bind_Port'] = str(port)
     listener_env['Zato_Web_Admin_Repo_Dir'] = web_admin_repo
-    listener_env.pop('COVERAGE_PROCESS_START', None)
+    _ = listener_env.pop('COVERAGE_PROCESS_START', None)
 
     listener_process = subprocess.Popen(
         [_python_bin, _listener_path, pickup_dir],
@@ -177,7 +181,7 @@ def create_environment(prefix:'str', needs_server:'bool'=False) -> 'TestEnvironm
     ]
 
     create_env = os.environ.copy()
-    create_env.pop('COVERAGE_PROCESS_START', None)
+    _ = create_env.pop('COVERAGE_PROCESS_START', None)
 
     result = subprocess.run(command, capture_output=True, text=True, timeout=_create_timeout, env=create_env)
     if result.returncode != 0:

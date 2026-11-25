@@ -74,6 +74,7 @@ import yaml
 # Zato
 from zato.common.api import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.crypto.api import ServerCryptoManager
+from zato.common.db_env.fence import set_environment_generation_file
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
@@ -434,6 +435,9 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
         initial_env_variables = populate_environment_from_file(env_file)
     else:
         initial_env_variables = []
+
+    # The server records its generation in the directory of its environment
+    set_environment_generation_file(base_dir)
 
     # For dumping stacktraces
     if is_linux:

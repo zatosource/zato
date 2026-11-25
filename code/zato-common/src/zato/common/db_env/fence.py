@@ -95,12 +95,22 @@ class ActiveServer(NamedTuple):
 def get_generation_file_path() -> 'str':
     """ Returns the path to the file in which the active server records its generation.
     """
-    if path := get_env_value(ModuleCtx.Env_Generation_File, ModuleCtx.Env_Generation_File_Aliases):
-        out = path
-    else:
-        out = os.path.join(default_env_base_dir, _generation_file_name)
+    if not (out := get_env_value(ModuleCtx.Env_Generation_File, ModuleCtx.Env_Generation_File_Aliases)):
+        msg = f'Environment variable {ModuleCtx.Env_Generation_File} is not set - the default location ' + \
+            f'of the generation file under {default_env_base_dir} is no longer supported'
+        raise Exception(msg)
 
     return out
+
+# ################################################################################################################################
+
+def set_environment_generation_file(component_dir:'str') -> 'None':
+    """ Points the generation file to the environment directory that contains the directory of a component,
+    unless the path is already set in the environment.
+    """
+    if not get_env_value(ModuleCtx.Env_Generation_File, ModuleCtx.Env_Generation_File_Aliases):
+        env_dir = os.path.dirname(os.path.abspath(component_dir))
+        os.environ[ModuleCtx.Env_Generation_File] = os.path.join(env_dir, _generation_file_name)
 
 # ################################################################################################################################
 
@@ -368,6 +378,10 @@ def _before_cursor_execute(
     # .. an engine that a server took the database over through confirms the generation of that server ..
     if engine in _Fences.by_engine:
         _Fences.by_engine[engine].before_cursor_execute(connection, cursor, statement)
+        return
+
+    # .. a process with no server that took the database over and that does not follow its environment confirms nothing ..
+    if not (_Fences.by_generation_file or _Fences.follows_environment):
         return
 
     generation_file_path = get_generation_file_path()

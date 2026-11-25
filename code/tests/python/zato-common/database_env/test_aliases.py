@@ -163,4 +163,11 @@ def test_generation_file_is_read_under_an_alias(monkeypatch:'pytest.MonkeyPatch'
     assert path == '/opt/zato/env/pubsub-generation'
 
 # ################################################################################################################################
+
+def test_generation_file_without_a_path_is_rejected() -> 'None':
+
+    with pytest.raises(Exception, match='is no longer supported'):
+        _ = get_generation_file_path()
+
+# ################################################################################################################################
 # ################################################################################################################################
