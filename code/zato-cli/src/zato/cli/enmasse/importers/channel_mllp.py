@@ -79,13 +79,22 @@ class ChannelMLLPImporter(GenericConnectionImporter):
 
 # ################################################################################################################################
 
+    def get_listener_bounds(self, session:'SASession') -> 'anydict':
+        """ Returns the bounds that the listener of the server the session was opened for enforces on every channel.
+        """
+        server_dir = get_server_dir(session)
+
+        out = get_mllp_listener_bounds(server_dir)
+        return out
+
+# ################################################################################################################################
+
     def sync_definitions(self, conn_list:'anylist', session:'SASession') -> 'listtuple':
         """ Reads the listener's bounds from the server the session was opened for before any definition is
         judged against them. A server that cannot be reached fails the import - the bounds are the server's own
         and an import must not guess them from its own environment.
         """
-        server_dir = get_server_dir(session)
-        self.listener_config = listener_config_from_bounds(get_mllp_listener_bounds(server_dir))
+        self.listener_config = listener_config_from_bounds(self.get_listener_bounds(session))
 
         self._ensure_one_default(conn_list)
 

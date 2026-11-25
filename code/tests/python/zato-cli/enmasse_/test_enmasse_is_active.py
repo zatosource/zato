@@ -33,6 +33,7 @@ from zato.common.odb.model import GenericConn, GenericConnDef, GenericObject, HT
     SecurityBase, Service, SMTP
 from zato.common.test.config_database import config_database_engine
 from zato.common.test.direct_sql.seed import seed_config_objects
+from zato.server.generic.api.channel_hl7_mllp import get_listener_bounds
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,6 +48,17 @@ if 0:
 
 # The service the channels invoke
 _service_name = 'enmasse.is_active.service'
+
+class _ChannelMLLPImporter(ChannelMLLPImporter):
+    """ Judges the channels against the bounds that the server's own listener lookup returns,
+    because no server runs for these tests to be asked for them.
+    """
+    def get_listener_bounds(self, session:'any_') -> 'anydict':
+        out = get_listener_bounds()
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 # Each type under test - the importer class, the name of its sync method, the smallest definition it accepts
 # and the model its rows are of
@@ -63,7 +75,7 @@ _types = {
          'soap_action': 'urn:enmasse', 'soap_version': '1.1'}, HTTPSOAP),
     'outgoing_fhir': (OutgoingFHIRImporter, 'sync_definitions',
         {'name': 'enmasse.is_active.outgoing.fhir', 'address': 'https://fhir.example.com/r4'}, GenericConn),
-    'channel_mllp': (ChannelMLLPImporter, 'sync_definitions',
+    'channel_mllp': (_ChannelMLLPImporter, 'sync_definitions',
         {'name': 'enmasse.is_active.channel.mllp', 'service': _service_name}, GenericConn),
     'outgoing_mllp': (OutgoingMLLPImporter, 'sync_definitions',
         {'name': 'enmasse.is_active.outgoing.mllp', 'address': 'lab.example.com:2575'}, GenericConn),
