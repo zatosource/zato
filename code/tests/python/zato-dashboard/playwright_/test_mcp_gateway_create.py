@@ -1602,7 +1602,7 @@ class MCPTestAllowListB(Service):
             page.fill('#id_url_path', url_path)
             wizard_page.save_create(page)
 
-        logger.info('[test_mcp_list_pagination] created %d gateways', _gateway_count)
+            print(f'[test_mcp_list_pagination] created gateway {idx + 1} of {_gateway_count} -> {gateway_name}')
 
         # .. reload to get a fresh paginated view, filtered to this test's gateways only,
         # otherwise gateways left over from other tests in this file would add extra pages ..

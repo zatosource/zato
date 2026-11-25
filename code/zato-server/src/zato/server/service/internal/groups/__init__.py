@@ -20,7 +20,7 @@ from zato.common.odb.model import GenericConn as ModelGenericConn, GenericObject
 from zato.common.odb.query.generic import GroupsWrapper
 from zato.common.util.gateway import find_stranded_oauth_gateway
 from zato.common.util.sql import parse_instance_opaque_attr
-from zato.server.service import AsIs, Service
+from zato.server.service import AsIs, Int, Service
 
 logger_groups = logging.getLogger('zato.groups.service')
 
@@ -448,7 +448,7 @@ class Delete(Service):
 class GetMemberList(Service):
     """ Returns current members of a group.
     """
-    input:'any_' = 'group_type', 'group_id', '-should_serialize'
+    input:'any_' = 'group_type', Int('group_id'), '-should_serialize'
 
     def handle(self):
 

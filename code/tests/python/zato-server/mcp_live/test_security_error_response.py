@@ -21,7 +21,7 @@ from _constants import _mcp_public_name, _raise_service, _server_version, _zato_
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,6 +30,9 @@ _initialize_params = {'protocolVersion': '2025-06-18', 'capabilities': {}, 'clie
 
 # The generic error message expected from the server
 _expected_error_message = 'Bad request'
+
+# The server record that each call to the raising service produces
+_raise_service_record = f'MCP: Service `{_raise_service}` raised an exception'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -128,9 +131,11 @@ class TestExceptionResponse:
     """ Tests that service exceptions return a generic message and no internal details.
     """
 
-    def test_service_exception_returns_generic_message(self, client:'MCPClient', session_id:'str') -> 'None':
+    def test_service_exception_returns_generic_message(self, zato_server:'anydict', client:'MCPClient', session_id:'str') -> 'None':
         """ A tool whose service raises returns the generic error message with isError: True.
         """
+
+        zato_server['expected_server_records'].append(_raise_service_record)
 
         params = {'name': _raise_service, 'arguments': {}}
         response = client.jsonrpc('tools/call', params=params, session_id=session_id)
@@ -147,9 +152,11 @@ class TestExceptionResponse:
 
 # ################################################################################################################################
 
-    def test_service_exception_body_has_no_internal_detail(self, client:'MCPClient', session_id:'str') -> 'None':
+    def test_service_exception_body_has_no_internal_detail(self, zato_server:'anydict', client:'MCPClient', session_id:'str') -> 'None':
         """ The response body contains no exception text, file paths, tracebacks, or SQL.
         """
+
+        zato_server['expected_server_records'].append(_raise_service_record)
 
         params = {'name': _raise_service, 'arguments': {}}
         response = client.jsonrpc('tools/call', params=params, session_id=session_id)

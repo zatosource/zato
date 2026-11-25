@@ -14,6 +14,7 @@ from unittest import TestCase
 from zato.common.api import MCP
 from zato.common.json_internal import dumps
 from zato.common.test import _test_identity, _test_public_name
+from zato.common.test.expected_records import expected_records
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_params, _error_invalid_request, \
@@ -21,6 +22,7 @@ from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_params
     _message_request_too_deep, _server_version
 from zato.server.connection.mcp.prompts import SkillPrompts
 from zato.server.connection.mcp.session import MCPSessionManager
+from zato.server.connection.mcp.tools_call import logger as tools_call_logger
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -543,6 +545,7 @@ class HandleMalformedInput(TestCase):
         self.assertIsNone(mcp_response.session_id)
         self.assertEqual(session_manager.session_count, 0)
 
+    @expected_records(tools_call_logger.name)
     def test_undecodable_bytes_response_returns_is_error(self) -> 'None':
         """ A service response of bytes that do not decode as UTF-8
         produces an isError result, not an exception.
@@ -572,6 +575,7 @@ class HandleMalformedInput(TestCase):
         text = first_content['text']
         self.assertEqual(text, _message_bad_request)
 
+    @expected_records(tools_call_logger.name)
     def test_unserializable_response_returns_is_error(self) -> 'None':
         """ A service response that cannot be dumped to JSON
         produces an isError result, not an exception.

@@ -17,12 +17,14 @@ from gevent import sleep as gevent_sleep
 from zato.common.api import MCP
 from zato.common.json_internal import dumps
 from zato.common.test import _test_identity, _test_public_name
+from zato.common.test.expected_records import expected_records
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_params, _error_method_not_found, \
     _mcp_protocol_version, _message_bad_request
 from zato.server.connection.mcp.prompts import SkillPrompts
 from zato.server.connection.mcp.session import MCPSessionManager
+from zato.server.connection.mcp.tools_call import logger as tools_call_logger
 from zato.server.connection.mcp.validate import _message_not_an_object
 
 # ################################################################################################################################
@@ -210,6 +212,7 @@ class HandleToolsCall(TestCase):
         error = body['error']
         self.assertEqual(error['code'], _error_method_not_found)
 
+    @expected_records(tools_call_logger.name)
     def test_service_exception_returns_is_error(self) -> 'None':
         """ Verifies that a service exception produces isError with the error message.
         """
@@ -238,6 +241,7 @@ class HandleToolsCall(TestCase):
         # The exception's own message goes to the audit trace, never to the client
         self.assertEqual(mcp_response.trace, {'error_message': _test_service_error_message})
 
+    @expected_records(tools_call_logger.name)
     def test_service_timeout_returns_is_error(self) -> 'None':
         """ Verifies that a service running past the gateway's invoke timeout
         is cut off with the generic error, the bound named in the trace only.

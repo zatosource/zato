@@ -11,7 +11,9 @@ from unittest import TestCase
 
 # Zato
 from zato.common.soap.message import XMLMessage
+from zato.common.test.expected_records import expected_records
 from zato.server.connection.mcp.connection_tools.soap import definition
+from zato.server.connection.mcp.tools_call import logger as tools_call_logger
 
 # Zato - test helpers
 from connection_stubs import get_tool_registry, make_gateway_wrapper, make_mcp_handler, make_soap_item, run_tools_call, \
@@ -125,6 +127,7 @@ class SOAPToolsCall(TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(tools_call_logger.name)
     def test_tools_call_error_is_generic(self) -> 'None':
         """ Verifies that a failing connection produces the generic refusal with isError true.
         """

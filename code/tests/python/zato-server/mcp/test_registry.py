@@ -10,8 +10,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import TestCase
 
 # Zato
+from zato.common.test.expected_records import expected_records
 from zato.server.connection.mcp.common import InvalidCursor
 from zato.server.connection.mcp.registry import ToolRegistry, _cursor_separator, _default_page_size
+from zato.server.connection.mcp.registry import logger as registry_logger
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -193,6 +195,7 @@ class ToolRegistryBuild(TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(registry_logger.name)
     def test_unknown_service_omitted(self) -> 'None':
         """ Verifies that a service not in the store is left out of the tools and the others are kept.
         """
@@ -308,6 +311,7 @@ class ToolRegistryCache(TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(registry_logger.name)
     def test_rebuild_after_service_removed_from_store(self) -> 'None':
         """ Verifies that rebuild leaves out a previously deployed service that has been removed.
         """
@@ -498,6 +502,7 @@ class ToolRegistryAllowlistCheck(TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(registry_logger.name)
     def test_allowed_service_not_deployed(self) -> 'None':
         """ Verifies that an allowed service that is not deployed fails the check, as it is not among the tools.
         """

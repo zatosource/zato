@@ -38,6 +38,9 @@ _protocol_version_sessions = '2025-06-18'
 # The _meta key naming the server in each result
 _meta_key_server_info = 'io.modelcontextprotocol/serverInfo'
 
+# The server record that each rejected set of Basic Auth credentials produces
+_invalid_basic_auth_record = 'Invalid Basic Auth credentials (groups)'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -236,6 +239,8 @@ class TestAuth:
     """
 
     def test_wrong_credentials_rejected(self, zato_server:'anydict') -> 'None':
+
+        zato_server['expected_server_records'].append(_invalid_basic_auth_record)
 
         client = MCPStatelessClient(zato_server['mcp_url'], auth=('test.wrong.user', 'test.wrong.password'))
         response = client.tools_list()

@@ -16,12 +16,15 @@ from unittest import main, TestCase
 from zato.common.json_internal import dumps
 from zato.common.skills.api import skill_file_name, skills_directory_name
 from zato.common.test import _test_identity, _test_public_name
+from zato.common.test.expected_records import expected_records
 from zato.common.typing_ import cast_
 from zato.common.util.safeguards.config import build_safeguard_config
 from zato.common.util.truncate.tokens import build_token_cap_config
 from zato.server.connection.mcp.common import _message_prompt_not_found, InvalidCursor
 from zato.server.connection.mcp.handler import MCPHandler, _error_invalid_params, _mcp_protocol_version
+from zato.server.connection.mcp.handler import logger as handler_logger
 from zato.server.connection.mcp.prompts import SkillPrompts, _default_page_size
+from zato.server.connection.mcp.prompts import logger as prompts_logger
 from zato.server.connection.mcp.session import MCPSessionManager
 
 # ################################################################################################################################
@@ -185,6 +188,7 @@ class SkillPromptsListing(TestCase):
             self.assertEqual(len(page), 1)
             self.assertEqual(page[0]['name'], 'invoice-mapping')
 
+    @expected_records(prompts_logger.name)
     def test_unreadable_file_has_no_line_and_others_keep_serving(self) -> 'None':
         """ A skill file without read permissions has no line in the listing
         and the readable skills keep serving.
@@ -374,6 +378,7 @@ class HandlePromptsGet(TestCase):
             error = mcp_response.body['error']
             self.assertEqual(error['code'], _error_invalid_params)
 
+    @expected_records(handler_logger.name)
     def test_prompts_get_unreadable_file(self) -> 'None':
         """ A file that exists but cannot be read answers exactly the way an absent one does.
         """

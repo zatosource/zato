@@ -315,9 +315,17 @@ int_attrs = int_attrs + [
     HTTP_SOAP.Retry.Field_Backoff_Multiplier,
 ]
 
+# The integer columns of a generic connection that may hold no value, which the database stores as NULL,
+# and to which the clients that send back what the list service returned send an empty string.
+nullable_int_columns = ('cache_expiry', 'port', 'timeout', 'pool_size', 'conn_def_id')
+
 # ################################################################################################################################
 
 def ensure_ints(data:'strdict') -> 'None':
+
+    for name in nullable_int_columns:
+        if name in data and data[name] == '':
+            data[name] = None
 
     for name in int_attrs:
         value = data.get(name)

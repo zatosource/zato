@@ -35,6 +35,9 @@ if 0:
 # The protocol version the test client announces during initialize
 _protocol_version = '2025-06-18'
 
+# The server record that each rejected bearer token produces
+_invalid_bearer_record = 'Invalid bearer token (groups)'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -170,6 +173,8 @@ class TestBearerRejections:
 
     def test_wrong_audience(self, zato_server:'anydict') -> 'None':
 
+        zato_server['expected_server_records'].append(_invalid_bearer_record)
+
         token = keycloak_.get_token(keycloak_.Client_Wrong_Audience, keycloak_.Secret_Wrong_Audience)
         client = BearerMCPClient(zato_server['mcp_url'], token)
 
@@ -179,6 +184,8 @@ class TestBearerRejections:
 # ################################################################################################################################
 
     def test_missing_claim(self, zato_server:'anydict') -> 'None':
+
+        zato_server['expected_server_records'].append(_invalid_bearer_record)
 
         # This token has the right audience but carries no department claim,
         # so neither claim-filtered definition matches it
@@ -191,6 +198,8 @@ class TestBearerRejections:
 # ################################################################################################################################
 
     def test_invalid_static_token(self, zato_server:'anydict') -> 'None':
+
+        zato_server['expected_server_records'].append(_invalid_bearer_record)
 
         client = BearerMCPClient(zato_server['mcp_url'], 'this-is-not-the-configured-token')
 

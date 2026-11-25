@@ -32,18 +32,20 @@ import pytest  # noqa: E402
 
 # Zato
 from zato.common.test import kill_server_process, rand_string  # noqa: E402
+from zato.common.test.conftest_base_pubsub import Expected_Record_Marker  # noqa: E402
 from zato.common.test.zato_database import create_test_database, drop_test_database  # noqa: E402
 from zato.common.util.config import get_config_object, update_config_file  # noqa: E402
 
 # Zato - test helpers
 import keycloak_  # noqa: E402
-from _constants import _mcp_no_public_name_gateway, _mcp_public_name, _mcp_without_groups_gateway  # noqa: E402
+from _constants import _mcp_empty_group_gateway, _mcp_no_public_name_gateway, _mcp_public_name, \
+    _mcp_without_groups_gateway  # noqa: E402
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, tupnone
+    from zato.common.typing_ import any_, strlist, tupnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -98,7 +100,6 @@ _mcp_group_name = 'mcp.test-live-group'
 
 # The group with no members and the two gateways that carry no security
 _mcp_empty_group_name       = 'mcp.test-live-empty-group'
-_mcp_empty_group_gateway    = 'test.mcp.live.empty-group'
 
 _reports_directory = os.path.join(_zato_base, 'code', 'tests', 'python', 'zato-server', 'mcp_live', 'reports')
 
@@ -121,6 +122,9 @@ _listener_settle_seconds = 2
 _server_process   = None
 _listener_process = None
 _temp_directory   = None
+
+# Fragments of server records that tests provoke deliberately, each such record is relayed with the expected marker
+_expected_server_records:'strlist' = []
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -537,6 +541,10 @@ def zato_server(request:'any_') -> 'any_':
         for line in iter(stdout.readline, b''):
             text = line.decode('utf-8', errors='replace').rstrip()
             elapsed = time.monotonic() - popen_time
+
+            if any(record in text for record in _expected_server_records):
+                text = f'{Expected_Record_Marker} {text}'
+
             print(f'[SERVER {elapsed:6.1f}s] {text}')
 
             # .. mirror to the persistent log file and flush so it is readable on timeout ..
@@ -610,6 +618,7 @@ def zato_server(request:'any_') -> 'any_':
 
     # .. yield connection details to the tests.
     yield {
+        'expected_server_records': _expected_server_records,
         'host': host,
         'port': port,
         'password': _password,

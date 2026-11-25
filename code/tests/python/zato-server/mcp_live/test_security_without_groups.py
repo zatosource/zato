@@ -14,6 +14,7 @@ import pytest
 
 # local
 from _client import MCPClient
+from _constants import _mcp_empty_group_gateway
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,6 +38,9 @@ _initialize_params = {
 # and one whose only group has no members
 _url_keys = ['mcp_url_without_groups', 'mcp_url_empty_group']
 
+# The server record that each request to the gateway whose only group has no members produces
+_empty_group_record = f'Channel `{_mcp_empty_group_gateway}` is protected by security groups that have no members'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -49,6 +53,8 @@ class TestWithoutSecurity:
         """ An initialize request with no credentials gets 403 with an empty payload.
         """
 
+        zato_server['expected_server_records'].append(_empty_group_record)
+
         client = MCPClient(zato_server[url_key])
         response = client.jsonrpc('initialize', params=_initialize_params)
 
@@ -60,6 +66,8 @@ class TestWithoutSecurity:
         of the demo gateway's group is rejected too.
         """
 
+        zato_server['expected_server_records'].append(_empty_group_record)
+
         client = MCPClient(zato_server[url_key], auth=zato_server['mcp_auth'])
         response = client.jsonrpc('initialize', params=_initialize_params)
 
@@ -69,6 +77,8 @@ class TestWithoutSecurity:
     def test_tools_list_without_credentials_is_rejected(self, zato_server:'any_', url_key:'str') -> 'None':
         """ A tools/list request with no credentials gets 403 with an empty payload.
         """
+
+        zato_server['expected_server_records'].append(_empty_group_record)
 
         client = MCPClient(zato_server[url_key])
         response = client.jsonrpc('tools/list')
