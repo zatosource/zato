@@ -31,6 +31,7 @@ from zato.common.lets_encrypt.config import get_config
 from zato.common.lets_encrypt.paths import get_paths
 from zato.common.lets_encrypt.state import acquire_lock, get_running_operation, load_progress, load_status, LockBusy, \
      save_certificate_check, save_is_enabled, save_port_check
+from zato.common.test.expected_records import expected_records
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,6 +63,9 @@ class ModuleCtx:
     Loopback_Name = 'localhost'
     Invalid_Port = 'no-such-port'
     Check_Error = 'The check failed'
+
+    # The logger of the actions, which logs a warning when an action fails.
+    Actions_Logger_Name = 'zato.common.lets_encrypt.actions'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -282,7 +286,8 @@ def test_enable_now_failure_before_client(tmp_path:'Path') -> 'None':
     environ = _get_offline_environ(tmp_path)
     environ[Lets_Encrypt.Env.Port] = ModuleCtx.Invalid_Port
 
-    enable_now(environ)
+    with expected_records(ModuleCtx.Actions_Logger_Name):
+        enable_now(environ)
 
     paths = get_paths(environ)
     status = load_status(paths)
@@ -314,7 +319,8 @@ def test_check_port_now_failure_before_client(tmp_path:'Path') -> 'None':
     environ = _get_offline_environ(tmp_path)
     environ[Lets_Encrypt.Env.Port] = ModuleCtx.Invalid_Port
 
-    check_port_now(environ)
+    with expected_records(ModuleCtx.Actions_Logger_Name):
+        check_port_now(environ)
 
     status = load_status(get_paths(environ))
 

@@ -8,11 +8,11 @@
 	analytics update cron-update update-on-prem-gateway stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard scheduler queue-bridge on-prem-gateway on-prem-gateway-hub file-listener sftp api-portal api-portal-demo api-portal-tutorial b2b-portal mcp-demo \
 	help install-deps install-fhir-converter \
-	test-server test-server-fuzz test-rest test-rest-fuzz test-rest-outgoing test-rest-redirects test-rest-perf test-rest-channel test-rest-channel-perf test-scheduler test-scheduler-failover \
+	test-server test-server-fuzz test-rest test-rest-fuzz test-rest-outgoing test-rest-redirects test-rest-perf test-rest-channel test-rest-channel-perf test-scheduler \
 	test-ha test-ha-core test-ha-pubsub-subscription-in-process test-ha-push-delivery test-ha-pubsub-subscription \
 	test-ha-postgresql-local test-ha-power-loss test-ha-pubsub-subscription-ui test-ha-postgresql \
 	test-ha-postgresql-kubernetes test-ha-postgresql-soak \
-	test-soak test-soak-pubsub test-soak-scheduler-failover \
+	test-soak test-soak-pubsub \
 	test-arbiter \
 	test-rate-limiting test-enmasse test-cli \
 	test-pubsub test-pubsub-perf test-pubsub-perf-latency test-pubsub-exactly-once test-sql-conformance test-sql-conformance-fast test-sql-conformance-static test-pubsub-encoding test-pubsub-encoding-rust test-perf-rules test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
@@ -330,6 +330,7 @@ haproxy:
 		-e 's|bind 0.0.0.0:$${Zato_Port_MLLP}$$|&\n    bind 0.0.0.0:$${Zato_Port_MLLP_SSL} ssl crt $(HAPROXY_DEV_DIR)/user.pem|' \
 		$(HAPROXY_CFG) > $(HAPROXY_DEV_DIR)/haproxy.cfg
 	Zato_Port_Server=$(Zato_Port_Server) \
+	Zato_Server_Backend_Address=127.0.0.1:$(Zato_Port_Server) \
 	Zato_Port_Dashboard=$(Zato_Port_Dashboard) \
 	Zato_Port_API_Portal=$(Zato_Port_API_Portal) \
 	Zato_Port_Load_Balancer=$(Zato_Port_Load_Balancer) \
@@ -741,13 +742,6 @@ test-scheduler: ## All scheduler tests.
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_scheduler_run_state -W ignore::DeprecationWarning \
 		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
-test-scheduler-failover: ## Active-passive scheduler failover tests on PostgreSQL and PostgreSQL with TLS.
-	$(Zato_Log_Reset)
-	$(MAKE) scheduler-build $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/scheduler_failover/ $(Zato_Test_Without_Soak) \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_scheduler_failover -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
-
 # The HA targets in the order test-ha runs them, from the shortest to the longest, with the targets of the linked
 # repositories after the suites of this repository and the soak tests last, and the target test-ha is currently on.
 Zato_Test_HA = \
@@ -1074,7 +1068,7 @@ test-pubsub: ## Every pub/sub functional test - core, SQL and outgoing delivery,
 
 # The soak tests of every suite outside HA, which test-soak runs after every other target of test-all,
 # while test-ha runs the soak tests of HA after every other HA target.
-Zato_Test_Soak             := test-soak-pubsub test-soak-scheduler-failover
+Zato_Test_Soak             := test-soak-pubsub
 Zato_Test_Soak_Resume_File := $(CURDIR)/code/tests/.test-soak-resume
 
 test-soak-pubsub: ## The pub/sub soak tests - the stability suite on every database mode.
@@ -1085,13 +1079,6 @@ test-soak-pubsub: ## The pub/sub soak tests - the stability suite on every datab
 			-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_pubsub_stability_soak_$$mode -W ignore::DeprecationWarning \
 			$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log) || exit $$?; \
 	done
-
-test-soak-scheduler-failover: ## The soak test of the active-passive scheduler failover.
-	$(Zato_Log_Reset)
-	$(MAKE) scheduler-build $(Zato_Log)
-	ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-server/scheduler_failover/ $(Zato_Test_Soak_Only) \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_scheduler_failover_soak -W ignore::DeprecationWarning \
-		$(FAIL_FAST) $(PYTEST_ARGS) $(Zato_Log)
 
 test-soak: ## Every soak test, resuming from the target that last failed. RESTART=1 to start from scratch.
 	$(call Zato_Test_Walk,$(Zato_Test_Soak),$(Zato_Test_Soak_Resume_File))
@@ -2521,7 +2508,6 @@ Zato_HL7_MLLP_Port ?= 31312
 MLLP_TESTS            := $(CURDIR)/code/tests/python/zato-common/mllp
 HL7_DEV_DIR           := /tmp/zato-hl7-dev
 HL7_DEV_FRONTEND_PORT := 21223
-HL7_DEV_HTTP_LB_PORT  := 21225
 HL7_DEV_REST_PORT     := 27010
 HL7_DEV_MLLP_PORT     := 21312
 HL7_DEV_DASH_PORT     := 28183
@@ -2535,11 +2521,11 @@ hl7-haproxy: ## Start HAProxy in full debug mode on dev ports.
 	@sed \
 		-e 's|/opt/zato/env/qs-1/blocked-paths.txt|$(HL7_DEV_DIR)/blocked-paths.txt|g' \
 		-e 's|0.0.0.0:|127.0.0.1:|g' \
-		-e 's|127.0.0.1:11225|127.0.0.1:$(HL7_DEV_HTTP_LB_PORT)|g' \
 		-e 's|127.0.0.1:8182|127.0.0.1:$(HL7_DEV_DASH_PORT)|g' \
 		-e 's|\*:8404|127.0.0.1:$(HL7_DEV_STATS_PORT)|g' \
 		$(HAPROXY_CFG) > $(HL7_DEV_DIR)/haproxy.cfg
 	Zato_Port_Server=$(HL7_DEV_REST_PORT) \
+	Zato_Server_Backend_Address=127.0.0.1:$(HL7_DEV_REST_PORT) \
 	Zato_Port_Dashboard=$(HL7_DEV_DASH_PORT) \
 	Zato_Port_API_Portal=$(HL7_DEV_PORTAL_PORT) \
 	Zato_Port_Load_Balancer=$(HL7_DEV_FRONTEND_PORT) \

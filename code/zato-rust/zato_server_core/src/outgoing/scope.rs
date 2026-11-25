@@ -29,22 +29,22 @@ const SHARED_SECOND_MASK: u8 = 0b1100_0000;
 /// The second octet of 100.64.0.0/10 under its mask.
 const SHARED_SECOND_PREFIX: u8 = 0b0100_0000;
 
-/// The first segment of 64:ff9b::/96, the well-known prefix of NAT64.
+/// The first segment of `64:ff9b::/96`, the well-known prefix of NAT64.
 const NAT64_FIRST_SEGMENT: u16 = 0x0064;
 
-/// The second segment of 64:ff9b::/96.
+/// The second segment of `64:ff9b::/96`.
 const NAT64_SECOND_SEGMENT: u16 = 0xff9b;
 
-/// The mask of the first segment that fe80::/10 covers.
+/// The mask of the first segment that `fe80::/10` covers.
 const LINK_LOCAL_V6_MASK: u16 = 0xffc0;
 
-/// The first segment of fe80::/10 under its mask.
+/// The first segment of `fe80::/10` under its mask.
 const LINK_LOCAL_V6_PREFIX: u16 = 0xfe80;
 
-/// The mask of the first segment that fc00::/7 covers.
+/// The mask of the first segment that `fc00::/7` covers.
 const UNIQUE_LOCAL_V6_MASK: u16 = 0xfe00;
 
-/// The first segment of fc00::/7 under its mask.
+/// The first segment of `fc00::/7` under its mask.
 const UNIQUE_LOCAL_V6_PREFIX: u16 = 0xfc00;
 
 /// How many bits a segment of an IPv6 address is shifted by to form the upper half of an IPv4 address.
@@ -56,13 +56,13 @@ pub enum NetworkScope {
     /// An address reachable through the internet.
     Public,
 
-    /// RFC 1918 addresses, 100.64.0.0/10 and fc00::/7.
+    /// RFC 1918 addresses, `100.64.0.0/10` and `fc00::/7`.
     Private,
 
-    /// 127.0.0.0/8 and ::1.
+    /// `127.0.0.0/8` and `::1`.
     Loopback,
 
-    /// 169.254.0.0/16 and fe80::/10.
+    /// `169.254.0.0/16` and `fe80::/10`.
     LinkLocal,
 }
 
@@ -97,7 +97,7 @@ pub fn classify(address: IpAddr) -> Option<NetworkScope> {
 }
 
 /// Returns the scope of an IPv4 address.
-fn classify_v4(address: Ipv4Addr) -> Option<NetworkScope> {
+const fn classify_v4(address: Ipv4Addr) -> Option<NetworkScope> {
     let [first, second, _, _] = address.octets();
 
     // Addresses that do not name one host have no scope
@@ -175,7 +175,7 @@ fn classify_v6(address: Ipv6Addr) -> Option<NetworkScope> {
     Some(scope)
 }
 
-/// Returns the IPv4 address in the last 32 bits of an address in 64:ff9b::/96, or `None` for any other address.
+/// Returns the IPv4 address in the last 32 bits of an address in `64:ff9b::/96`, or `None` for any other address.
 fn nat64_embedded(address: Ipv6Addr) -> Option<Ipv4Addr> {
     // Only the well-known prefix followed by four zero segments embeds an IPv4 address
     let [NAT64_FIRST_SEGMENT, NAT64_SECOND_SEGMENT, 0, 0, 0, 0, high, low] = address.segments() else {

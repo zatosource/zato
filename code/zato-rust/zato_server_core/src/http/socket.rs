@@ -11,7 +11,7 @@ fn cint_socklen() -> PyResult<libc::socklen_t> {
 }
 
 /// Returns `size_of::<sockaddr_in>()` as a `socklen_t`.
-fn sockaddr_in_socklen() -> PyResult<libc::socklen_t> {
+pub(super) fn sockaddr_in_socklen() -> PyResult<libc::socklen_t> {
     libc::socklen_t::try_from(std::mem::size_of::<libc::sockaddr_in>())
         .map_err(|err| pyo3::exceptions::PyOverflowError::new_err(format!("sockaddr_in size overflow: {err}")))
 }

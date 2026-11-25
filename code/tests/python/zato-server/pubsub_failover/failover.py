@@ -19,12 +19,14 @@ import sys
 import tempfile
 import time
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from http.client import OK
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 # Zato
 from zato.common.test.conftest_base_pubsub import find_free_port
+from zato.common.test.container_output import follow_container_output, has_exited_since
 from zato.common.test.pubsub_database import connect, get_runtime_dir
 from zato.common.typing_ import cast_
 from zato_links.finder import get_link_directories
@@ -56,8 +58,11 @@ _server_name = 'server1'
 # The home directory of the zato user of the image.
 _container_home = '/opt/zato'
 
-# The program that a container runs, with the arguments of the start command of a server.
-_zato_entrypoint = os.path.join(_repository_dir, 'code', 'bin', 'zato')
+# The zato command, which the launcher of a container runs with the arguments of the start command of a server.
+_zato_binary = os.path.join(_repository_dir, 'code', 'bin', 'zato')
+
+# The program that a container runs, which passes the signal of docker stop to the server.
+_launcher_path = os.path.join(os.path.dirname(__file__), 'launcher.sh')
 
 # How long a server may take to answer its ping endpoint after its container started, in seconds.
 _ready_timeout_seconds = 180
@@ -108,9 +113,6 @@ class ContainerServer:
     broker_port: 'int'
     env: 'strstrdict' = field(default_factory=dict)
 
-    # A launcher in place of the zato command starts other processes of the container before the server.
-    entrypoint: 'str' = _zato_entrypoint
-
     @property
     def base_url(self) -> 'str':
         out = f'http://127.0.0.1:{self.port}'
@@ -141,6 +143,7 @@ def _container_command(server:'ContainerServer', action:'str') -> 'strlist':
         '--network', 'host',
         '--user', f'{os.getuid()}:{os.getgid()}',
         '-e', f'HOME={_container_home}',
+        '-e', f'Zato_Test_Zato_Binary={_zato_binary}',
         '-v', f'{_repository_dir}:{_repository_dir}',
         '-v', f'{runtime_dir}:{runtime_dir}',
     ]
@@ -161,7 +164,7 @@ def _container_command(server:'ContainerServer', action:'str') -> 'strlist':
         out.extend(['-v', f'{preload_dir}:{preload_dir}:ro'])
 
     out.extend([
-        '--entrypoint', server.entrypoint,
+        '--entrypoint', _launcher_path,
         _runtime_image,
         'start', server.server_directory, '--fg',
     ])
@@ -223,6 +226,7 @@ def run_container(server:'ContainerServer') -> 'None':
     command.insert(2, '-d')
 
     _ = subprocess.run(command, capture_output=True, text=True, check=True)
+    follow_container_output(server.container_name, server.name, logger)
 
 # ################################################################################################################################
 
@@ -232,6 +236,7 @@ def create_container(server:'ContainerServer') -> 'None':
     _ = docker('rm', '-f', '-v', server.container_name, check=False)
     command = _container_command(server, 'create')
     _ = subprocess.run(command, capture_output=True, text=True, check=True)
+    follow_container_output(server.container_name, server.name, logger)
 
 # ################################################################################################################################
 
@@ -267,11 +272,20 @@ def wait_until_up(server:'ContainerServer', timeout_seconds:'float'=_ready_timeo
     """
     start = time.monotonic()
     deadline = start + timeout_seconds
+    started_at = datetime.now(timezone.utc)
 
     while not is_server_up(server):
+
+        # A container that stopped while the server was awaited does not start the server ..
+        if has_exited_since(server.container_name, started_at):
+            logs = docker('logs', '--tail', '50', server.container_name, check=False)
+            raise Exception(f'Server {server.name} exited before it was ready:\n{logs.stdout}{logs.stderr}')
+
+        # .. and neither does one that is not ready in time.
         if time.monotonic() > deadline:
             logs = docker('logs', '--tail', '50', server.container_name, check=False)
             raise Exception(f'Server {server.name} not ready after {timeout_seconds}s:\n{logs.stdout}{logs.stderr}')
+
         time.sleep(_ping_poll_seconds)
 
     out = time.monotonic() - start

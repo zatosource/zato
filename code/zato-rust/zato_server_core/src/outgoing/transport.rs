@@ -264,6 +264,10 @@ impl HTTPTransport {
     /// With `required_scope` set to `public`, `private` or `loopback`, the request is sent only to an address
     /// of exactly that network scope, on a pooled connection or a new one.
     #[pyo3(signature = (method, url, headers, parts, required_scope=None))]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "Python-visible signature of invoke_parts, called from the outgoing REST connection and its tests"
+    )]
     fn invoke_parts<'py>(
         &self,
         method: &str,

@@ -22,6 +22,7 @@ from urllib.request import Request, urlopen
 
 # Zato
 from topology import docker, ModuleCtx as TopologyCtx, remove_container, save_container_logs
+from zato.common.test.container_output import follow_container_output
 from zato_links.finder import get_link_directories
 
 # ################################################################################################################################
@@ -301,6 +302,7 @@ class Node:
         remove_container(self.container_name)
         command = self._run_command()
         _ = docker(*command)
+        follow_container_output(self.container_name, self.node_name, logger)
 
         logger.info('Node %s started at %s', self.node_name, self.ip)
 

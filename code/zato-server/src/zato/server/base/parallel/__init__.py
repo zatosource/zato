@@ -158,6 +158,9 @@ _listener_error_log_interval = 60.0
 # How long a worker waits before it connects to the scheduler again after Redis refused the connection (in seconds).
 _scheduler_start_retry_interval = 1.0
 
+# The consumer group in which the workers read the fire and timeout streams of the scheduler.
+_scheduler_fire_group = 'server-fire'
+
 # The prefixes of an encrypted secret
 _secret_prefixes = (SECRETS.Encrypted_Indicator, SECRETS.PREFIX)
 
@@ -1277,9 +1280,13 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         """
         self._scheduler = SchedulerClient()
 
-        # The consumer group of the fire stream exists before the reload, because the scheduler fires
+        # The consumer groups of the fire and timeout streams exist before the reload, because the scheduler fires
         # the jobs that are due at once, and a group created afterwards would not receive these events.
-        # The config process runs no jobs, so it consumes no fire events.
+        # The config process sends the first reload, so it creates the groups too ..
+        for stream in (SchedulerStreamCtx.Fire_Stream, SchedulerStreamCtx.Timeout_Stream):
+            self._ensure_stream_group(self._scheduler.redis, stream, _scheduler_fire_group)
+
+        # .. but it runs no jobs, so it consumes no fire events, which remain for the worker.
         listener_loops:'list_[callable_]' = []
 
         if not is_config_process():
@@ -1299,18 +1306,15 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 # ################################################################################################################################
 
     def _new_scheduler_fire_listener(self) -> 'callable_':
-        """ Creates the consumer groups of the fire and timeout streams of the scheduler and returns the loop
-        that consumes their events in a greenlet of its own.
+        """ Returns the loop that consumes the events of the fire and timeout streams of the scheduler
+        in a greenlet of its own.
         """
         fire_redis = self._scheduler.new_redis_conn()
 
         fire_stream = SchedulerStreamCtx.Fire_Stream
         timeout_stream = SchedulerStreamCtx.Timeout_Stream
-        group_name = 'server-fire'
+        group_name = _scheduler_fire_group
         consumer_name = get_consumer_name(group_name)
-
-        for stream in (fire_stream, timeout_stream):
-            self._ensure_stream_group(fire_redis, stream, group_name)
 
         def _dispatch(stream_name:'str', msg_id:'str', fields:'anydict') -> 'None':
             """ Runs the handler of one entry in a greenlet that acknowledges the entry when the handler returns.

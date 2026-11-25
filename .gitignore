@@ -2,6 +2,8 @@
 .coverage_*
 .cr-session.sqlite
 .hypothesis
+/.lock
+/.tmp
 .vscode
 .zato-sftp-dev
 /links/

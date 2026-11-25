@@ -47,8 +47,11 @@ _connect_timeout_seconds          = 3.0
 _recv_timeout_seconds             = 3.0
 _recv_buffer_size                 = 8192
 
-# What a message sent to the main frontend is given before it is declared unrouted
-_main_frontend_settle_seconds = 1.0
+# What a message sent to the http frontend is given before it is declared unrouted
+_http_frontend_settle_seconds = 1.0
+
+# The address of the Zato server in the server_backend and mcp_backend sections of the shipped file
+_server_backend_line_pattern = r'server server1 \$\{Zato_Server_Backend_Address\} check.*'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -156,7 +159,6 @@ def _build_test_haproxy_cfg(
     tmp_dir:'str',
     frontend_port:'int',
     mllp_frontend_port:'int',
-    http_loopback_port:'int',
     http_backend_port:'int',
     mllp_backend_port:'int',
 ) -> 'str':
@@ -172,19 +174,15 @@ def _build_test_haproxy_cfg(
     config_text = re.sub(r'(?m)^# API portal frontend.*?(?=^# |\Z)', '', config_text, flags=re.DOTALL)
     config_text = re.sub(r'(?m)^# API portal backend.*?(?=^# |\Z)', '', config_text, flags=re.DOTALL)
 
-    # .. replace the main frontend port ..
+    # .. replace the port of the http frontend, which REST traffic enters directly ..
     config_text = config_text.replace('bind 0.0.0.0:${Zato_Port_Load_Balancer}', f'bind 127.0.0.1:{frontend_port}')
 
-    # .. and the one MLLP now has to itself ..
+    # .. and the one MLLP has to itself ..
     config_text = config_text.replace('bind 0.0.0.0:${Zato_Port_MLLP}', f'bind 127.0.0.1:{mllp_frontend_port}')
 
-    # .. replace the http_internal loopback port ..
-    config_text = config_text.replace('127.0.0.1:11225 send-proxy', f'127.0.0.1:{http_loopback_port} send-proxy')
-    config_text = config_text.replace('127.0.0.1:11225 accept-proxy', f'127.0.0.1:{http_loopback_port} accept-proxy')
-
-    # .. replace the HTTP backend server port ..
+    # .. point Zato_Server_Backend_Address at the TCP address of the HTTP backend, without health checks ..
     config_text = re.sub(
-        r'server server1 127\.0\.0\.1:\S+ check.*',
+        _server_backend_line_pattern,
         f'server server1 127.0.0.1:{http_backend_port}',
         config_text,
     )
@@ -238,7 +236,6 @@ def haproxy_routing_env() -> 'routing_env_gen':
     # .. allocate all ports up front ..
     frontend_port      = _find_free_port()
     mllp_frontend_port = _find_free_port()
-    http_loopback_port = _find_free_port()
     http_backend_port  = _find_free_port()
     mllp_backend_port  = _find_free_port()
 
@@ -259,7 +256,7 @@ def haproxy_routing_env() -> 'routing_env_gen':
 
     # .. write the test HAProxy config ..
     config_path = _build_test_haproxy_cfg(
-        tmp_dir, frontend_port, mllp_frontend_port, http_loopback_port, http_backend_port, mllp_backend_port,
+        tmp_dir, frontend_port, mllp_frontend_port, http_backend_port, mllp_backend_port,
     )
     env.config_path = config_path
 
@@ -580,7 +577,7 @@ class TestProtocolRouting:
         sock.sendall(start_sequence + _wellness_message_bytes + end_sequence)
 
         # .. give the load balancer time to do whatever it is going to do with it ..
-        time.sleep(_main_frontend_settle_seconds)
+        time.sleep(_http_frontend_settle_seconds)
         sock.close()
 
         assert haproxy_routing_env.mllp_backend.request_count == count_before, \

@@ -29,6 +29,7 @@ import requests
 # Zato
 from certificates import generate_certificates
 from zato.common.api import Lets_Encrypt
+from zato.common.lets_encrypt import client as lets_encrypt_client
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -239,6 +240,21 @@ def lets_encrypt_environ(pebble_server:'PebbleServer', tmp_path:'Path') -> 'strs
     }
 
     return out
+
+# ################################################################################################################################
+
+def _reload_haproxy(haproxy_config:'str') -> 'bool':
+    """ Stands in for the reload of HAProxy, which does not run in the tests, and reports the reload as successful.
+    """
+    return True
+
+# ################################################################################################################################
+
+@pytest.fixture(autouse=True)
+def haproxy(monkeypatch:'pytest.MonkeyPatch') -> 'None':
+    """ Puts the stand-in in place of the reload of HAProxy that installing a certificate ends with.
+    """
+    monkeypatch.setattr(lets_encrypt_client, 'reload_haproxy', _reload_haproxy)
 
 # ################################################################################################################################
 # ################################################################################################################################

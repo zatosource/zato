@@ -46,10 +46,6 @@ Loopback_Address = '127.0.0.1'
 # bridge address, which a loopback bind never answers on
 Every_Interface = '0.0.0.0'
 
-# What the shipped configuration binds on every interface, and so what has to be moved out of the way
-# before a suite can bind it without colliding with whatever else is on this machine.
-_Fixed_Internal_Port = '11225'
-
 # The path the shipped configuration reads its blocked paths from, which exists in a container only
 _Blocked_Paths_Path = '/opt/zato/env/qs-1/blocked-paths.txt'
 
@@ -146,10 +142,6 @@ def _render_config(
     # A container owns every interface it has, whereas this runs on a machine that is somebody's own
     content = content.replace(f'{Every_Interface}:', f'{Loopback_Address}:')
 
-    # The loopback hop between the two HTTP frontends has a port hard-coded in the shipped file,
-    # and that port may well belong to something already running here
-    content = content.replace(_Fixed_Internal_Port, str(find_free_port()))
-
     # The list of paths to turn away lives at a container path, so the run points at its own copy
     content = content.replace(_Blocked_Paths_Path, blocked_paths_path)
 
@@ -208,7 +200,10 @@ class HAProxyHandle:
 
         out['Zato_Port_MLLP'] = str(self.ports.mllp_plain)
         out[Env_Port_Name] = str(self.mllp_internal_port)
-        out['Zato_Port_Server'] = str(find_free_port())
+        server_port = find_free_port()
+
+        out['Zato_Port_Server'] = str(server_port)
+        out['Zato_Server_Backend_Address'] = f'{Loopback_Address}:{server_port}'
         out['Zato_Port_Dashboard'] = str(find_free_port())
         out['Zato_Port_API_Portal'] = str(find_free_port())
         out['Zato_Port_Load_Balancer'] = str(find_free_port())

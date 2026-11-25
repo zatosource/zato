@@ -126,6 +126,9 @@ class ModuleCtx:
     Env_Bind_Host = 'Zato_Config_Bind_Host'
     Env_Bind_Port = 'Zato_Config_Bind_Port'
 
+    # The path of the Unix domain socket that the worker listens on in addition to its TCP port
+    Env_Unix_Socket = 'Zato_Server_Unix_Socket'
+
     Env_Map = {
         bind_host:   Env_Bind_Host,
         bind_port:   Env_Bind_Port,
@@ -297,8 +300,12 @@ class ZatoApplication:
         # .. which we convert to bytes for the HTTP server.
         max_msg_size = max_msg_size * _megabyte
 
-        # The worker binds the port and serves until it is drained.
-        http_server = HTTPServer(host, port, request_handler, server_software, max_msg_size)
+        # The Unix domain socket is configured only in containers, other installations listen on TCP only.
+        unix_socket_path = os.environ.get(ModuleCtx.Env_Unix_Socket)
+
+        # The worker binds the port, and the Unix domain socket if there is one, and serves until it is drained.
+        bind_address = (host, port)
+        http_server = HTTPServer(bind_address, request_handler, server_software, max_msg_size, unix_socket_path)
         worker.serve(http_server)
 
 # ################################################################################################################################

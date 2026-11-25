@@ -76,10 +76,9 @@ impl RequestsExceptions {
             TransportError::NeedsRequests => (&self.connection_error, String::from("Request not supported by the transport")),
             TransportError::ConnectTimeout(message) => (&self.connect_timeout, message),
             TransportError::ReadTimeout(message) => (&self.read_timeout, message),
-            TransportError::Connection(message) => (&self.connection_error, message),
+            TransportError::Connection(message) | TransportError::ScopeRefused(message) => (&self.connection_error, message),
             TransportError::Tls(message) => (&self.ssl_error, message),
             TransportError::ChunkedEncoding(message) => (&self.chunked_encoding_error, message),
-            TransportError::ScopeRefused(message) => (&self.connection_error, message),
         };
 
         // Instantiating a requests exception does not fail for a message argument, but if it ever did,
