@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import atexit
 import json
 import os
-import shutil
 import socket
 import subprocess
 import sys
@@ -30,6 +29,7 @@ sys.path.insert(0, _live_sql_dir)
 from live_sql.containers import start_postgresql, stop_container  # noqa: E402
 from live_sql.env import build_env  # noqa: E402
 from zato.common.crypto.api import CryptoManager  # noqa: E402
+from zato.common.test.kept_dirs import keep_test_dir, make_test_dir, remove_test_dir  # noqa: E402
 from zato.common.test.reservation import reserve_name, reserve_port  # noqa: E402
 
 # ################################################################################################################################
@@ -167,7 +167,7 @@ class TestDashboardEnmasse(TestCase):
 
         cls.port = _find_free_port()
         broker_port = _find_free_port()
-        _tmpdir = tempfile.mkdtemp(prefix='zato_dashboard_enmasse_test_')
+        _tmpdir = make_test_dir('zato_dashboard_enmasse_test_')
 
         # The Zato database of the environment resides in a PostgreSQL container of its own ..
         cls.database_port = reserve_port(ModuleCtx.Database_Purpose)
@@ -200,7 +200,7 @@ class TestDashboardEnmasse(TestCase):
 
         result = subprocess.run(qs_cmd, capture_output=True, text=True, timeout=120, env=qs_env)
         if result.returncode != 0:
-            shutil.rmtree(_tmpdir, ignore_errors=True)
+            keep_test_dir(_tmpdir, 'quickstart create failed')
             _tmpdir = None
             cls._stop_database()
             raise SkipTest(
@@ -245,6 +245,7 @@ class TestDashboardEnmasse(TestCase):
             cls._dump_debug(repo_location)
             _kill_proc(_server_proc)
             cls._stop_database()
+            keep_test_dir(_tmpdir, 'the server did not start')
             raise
 
     @classmethod
@@ -281,7 +282,7 @@ class TestDashboardEnmasse(TestCase):
         _kill_proc(_server_proc)
         _server_proc = None
         if _tmpdir and os.path.isdir(_tmpdir):
-            shutil.rmtree(_tmpdir, ignore_errors=True)
+            remove_test_dir(_tmpdir)
         _tmpdir = None
         cls._stop_database()
 
@@ -355,6 +356,7 @@ class TestDashboardEnmasse(TestCase):
                 print(f'--- DEBUG stdout:\n{data.get("stdout", "")}', file=sys.stderr)
                 print(f'--- DEBUG stderr:\n{data.get("stderr", "")}', file=sys.stderr)
                 print(f'--- DEBUG exit_code: {data.get("exit_code")}', file=sys.stderr)
+                self._dump_debug()
             self.assertTrue(data.get('is_ok', False),
                 f'Dashboard import returned is_ok=false: {data.get("stderr", "")}')
 

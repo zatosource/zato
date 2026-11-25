@@ -9,11 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import atexit
 import os
-import shutil
 import socket
 import subprocess
 import sys
-import tempfile
 import threading
 import time
 from base64 import b64encode
@@ -21,6 +19,7 @@ from logging import basicConfig, getLogger, WARN
 from unittest import main, TestCase
 
 # Zato
+from zato.common.test.kept_dirs import keep_test_dir, make_test_dir, remove_test_dir
 from zato.common.test.process_util import kill_process_tree
 from zato.common.test.zato_database import isolated_database_env
 
@@ -223,7 +222,7 @@ class TestDockerPostStartEnmasseImport(TestCase):
         # Undo any pollution from earlier test modules that disable config reload
         os.environ.pop('Zato_Needs_Config_Reload', None)
 
-        cls._tmpdir = tempfile.mkdtemp(prefix='zato_docker_enmasse_test_')
+        cls._tmpdir = make_test_dir('zato_docker_enmasse_test_')
         cls.port = _find_free_port()
         cls.broker_port = _find_free_port()
 
@@ -233,7 +232,7 @@ class TestDockerPostStartEnmasseImport(TestCase):
 
         cls.server_dir, err = _create_quickstart(cls._tmpdir, _PASSWORD)
         if err:
-            shutil.rmtree(cls._tmpdir, ignore_errors=True)
+            keep_test_dir(cls._tmpdir, 'quickstart create failed')
             raise SkipTest(f'ZATO STARTUP DEPLOY TESTS SKIPPED - {err}')
 
         cls._token = os.urandom(12).hex()
@@ -290,7 +289,7 @@ channel_rest:
     def tearDownClass(cls):
         _stop_server(cls._proc, cls._thread)
         if cls._tmpdir and os.path.isdir(cls._tmpdir):
-            shutil.rmtree(cls._tmpdir, ignore_errors=True)
+            remove_test_dir(cls._tmpdir)
 
     def test_import_succeeded(self):
         self.assertTrue(self._enmasse_import_ok,
@@ -350,7 +349,7 @@ class TestDockerProjectRootFileListener(TestCase):
         if not os.path.isfile(_ZATO_BIN):
             raise SkipTest('ZATO STARTUP DEPLOY TESTS SKIPPED - zato binary not found')
 
-        cls._tmpdir = tempfile.mkdtemp(prefix='zato_docker_projroot_test_')
+        cls._tmpdir = make_test_dir('zato_docker_projroot_test_')
         cls.port = _find_free_port()
         cls.broker_port = _find_free_port()
 
@@ -360,7 +359,7 @@ class TestDockerProjectRootFileListener(TestCase):
 
         cls.server_dir, err = _create_quickstart(cls._tmpdir, _PASSWORD)
         if err:
-            shutil.rmtree(cls._tmpdir, ignore_errors=True)
+            keep_test_dir(cls._tmpdir, 'quickstart create failed')
             raise SkipTest(f'ZATO STARTUP DEPLOY TESTS SKIPPED - {err}')
 
         cls._token = os.urandom(12).hex()
@@ -412,7 +411,7 @@ channel_rest:
     def tearDownClass(cls):
         _stop_server(cls._proc, cls._thread)
         if cls._tmpdir and os.path.isdir(cls._tmpdir):
-            shutil.rmtree(cls._tmpdir, ignore_errors=True)
+            remove_test_dir(cls._tmpdir)
 
     def test_service_deployed_from_project_root(self):
         import requests as req_lib
@@ -468,7 +467,7 @@ class TestDockerProjectRootFromEnvIni(TestCase):
         if not os.path.isfile(_ZATO_BIN):
             raise SkipTest('ZATO STARTUP DEPLOY TESTS SKIPPED - zato binary not found')
 
-        cls._tmpdir = tempfile.mkdtemp(prefix='zato_docker_envini_projroot_test_')
+        cls._tmpdir = make_test_dir('zato_docker_envini_projroot_test_')
         cls.port = _find_free_port()
         cls.broker_port = _find_free_port()
 
@@ -478,7 +477,7 @@ class TestDockerProjectRootFromEnvIni(TestCase):
 
         cls.server_dir, err = _create_quickstart(cls._tmpdir, _PASSWORD)
         if err:
-            shutil.rmtree(cls._tmpdir, ignore_errors=True)
+            keep_test_dir(cls._tmpdir, 'quickstart create failed')
             raise SkipTest(f'ZATO STARTUP DEPLOY TESTS SKIPPED - {err}')
 
         cls._token = os.urandom(12).hex()
@@ -507,7 +506,7 @@ class TestDockerProjectRootFromEnvIni(TestCase):
     def tearDownClass(cls):
         _stop_server(cls._proc, cls._thread)
         if cls._tmpdir and os.path.isdir(cls._tmpdir):
-            shutil.rmtree(cls._tmpdir, ignore_errors=True)
+            remove_test_dir(cls._tmpdir)
 
     def test_service_deployed_from_suffixed_project_root(self):
         import requests as req_lib

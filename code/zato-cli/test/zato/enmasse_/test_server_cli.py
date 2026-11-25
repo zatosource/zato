@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import atexit
 import os
-import shutil
 import socket
 import subprocess
 import sys
@@ -21,6 +20,7 @@ from logging import basicConfig, getLogger, WARN
 from unittest import main, TestCase
 
 # Zato
+from zato.common.test.kept_dirs import keep_test_dir, make_test_dir, remove_test_dir
 from zato.common.test.zato_database import isolated_database_env
 
 # ################################################################################################################################
@@ -144,7 +144,7 @@ class TestEnmasseCLI(TestCase):
             raise SkipTest(f'ZATO ENMASSE CLI TESTS SKIPPED - zato binary not found at {_ZATO_BIN}')
 
         cls.port = _find_free_port()
-        _tmpdir = tempfile.mkdtemp(prefix='zato_enmasse_cli_test_')
+        _tmpdir = make_test_dir('zato_enmasse_cli_test_')
 
         # The environment has a PostgreSQL database of its own, which the Zato_Database_* variables of this process
         # select until the class completes, so quickstart, the server and the enmasse calls all read the same database.
@@ -161,7 +161,7 @@ class TestEnmasseCLI(TestCase):
 
         result = subprocess.run(qs_cmd, capture_output=True, text=True, timeout=120, env=qs_env)
         if result.returncode != 0:
-            shutil.rmtree(_tmpdir, ignore_errors=True)
+            keep_test_dir(_tmpdir, 'quickstart create failed')
             _tmpdir = None
             raise SkipTest(
                 f'ZATO ENMASSE CLI TESTS SKIPPED - quickstart create failed:\n{result.stdout}\n{result.stderr}')
@@ -223,7 +223,7 @@ class TestEnmasseCLI(TestCase):
         global _tmpdir
         _kill_server()
         if _tmpdir and os.path.isdir(_tmpdir):
-            shutil.rmtree(_tmpdir, ignore_errors=True)
+            remove_test_dir(_tmpdir)
         _tmpdir = None
 
 # ################################################################################################################################

@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import atexit
 import os
-import shutil
 import socket
 import subprocess
 import sys
@@ -20,6 +19,7 @@ from logging import basicConfig, getLogger, WARN
 from unittest import main, TestCase
 
 # Zato
+from zato.common.test.kept_dirs import keep_test_dir, make_test_dir, remove_test_dir
 from zato.common.test.process_util import kill_process_tree
 from zato.common.test.zato_database import isolated_database_env
 
@@ -142,7 +142,7 @@ class TestHotDeploy(TestCase):
 
         cls.port = _find_free_port()
         broker_port = _find_free_port()
-        _tmpdir = tempfile.mkdtemp(prefix='zato_hot_deploy_test_')
+        _tmpdir = make_test_dir('zato_hot_deploy_test_')
 
         logger.warning('[setUpClass] port=%d broker_port=%d tmpdir=%s', cls.port, broker_port, _tmpdir)
 
@@ -166,7 +166,7 @@ class TestHotDeploy(TestCase):
         result = subprocess.run(qs_cmd, capture_output=True, text=True, timeout=120, env=qs_env)
         if result.returncode != 0:
             logger.warning('[setUpClass] quickstart FAILED: stdout=%s stderr=%s', result.stdout[-500:], result.stderr[-500:])
-            shutil.rmtree(_tmpdir, ignore_errors=True)
+            keep_test_dir(_tmpdir, 'quickstart create failed')
             _tmpdir = None
             raise SkipTest(
                 f'ZATO HOT DEPLOY TESTS SKIPPED - quickstart create failed:\n{result.stdout}\n{result.stderr}')
@@ -293,9 +293,9 @@ class TestHotDeploy(TestCase):
         _server_proc.stdout.close()
         _server_proc = None
 
-        # .. and remove the temporary directory.
+        # .. and remove the temporary directory, unless a test failed in it.
         if _tmpdir and os.path.isdir(_tmpdir):
-            shutil.rmtree(_tmpdir, ignore_errors=True)
+            remove_test_dir(_tmpdir)
         _tmpdir = None
         logger.warning('[tearDownClass] Cleanup complete')
 

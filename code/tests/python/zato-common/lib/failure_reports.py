@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # of linked repositories. It imports nothing from Zato, because it is loaded before the suites that patch gevent.
 
 # stdlib
+import os
 from datetime import datetime
 from typing import cast
 
@@ -37,13 +38,31 @@ class ModuleCtx:
     Failures_Path = '/tmp/zato-test-failures.txt'
     Failure_Marker = '>>> ZATO TEST FAILURE'
 
+    # The environment variables through which zato.common.test.kept_dirs learns of the failures of the session,
+    # to keep the directories of the environments that the failed tests ran in
+    Env_Failure_Count = 'Zato_Test_Failure_Count'
+    Env_Failures_Path = 'Zato_Test_Failures_Path'
+
+    # The number of failures of the session so far
+    failure_count = 0
+
 # ################################################################################################################################
+# ################################################################################################################################
+
+def pytest_configure(config:'pytest.Config') -> 'None':
+    """ Makes the failures file known to the directories of the test environments, which name themselves in it when kept.
+    """
+    os.environ[ModuleCtx.Env_Failures_Path] = ModuleCtx.Failures_Path
+
 # ################################################################################################################################
 
 def _report_failure(config:'pytest.Config', name:'str', longreprtext:'str') -> 'None':
     """ Writes the reason of a failure to the terminal of the session and appends it to the failures file.
     The terminal reporter of pytest writes to the original output, which the capture of pytest does not hold back.
     """
+    ModuleCtx.failure_count += 1
+    os.environ[ModuleCtx.Env_Failure_Count] = str(ModuleCtx.failure_count)
+
     timestamp = datetime.now().isoformat(sep=' ', timespec='seconds')
     text = f'\n{ModuleCtx.Failure_Marker} {timestamp} {name}\n{longreprtext}\n'
 

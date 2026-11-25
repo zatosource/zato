@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import shutil
 import socket
 import subprocess
 import sys
@@ -23,6 +22,7 @@ from unittest import main, TestCase
 import requests
 
 # Zato
+from zato.common.test.kept_dirs import keep_test_dir, make_test_dir, remove_test_dir
 from zato.common.test.mcp_ import make_jsonrpc_initialize, wait_for_mcp_gateway
 from zato.common.test.process_util import kill_process_tree
 from zato.common.test.zato_database import isolated_database_env
@@ -93,7 +93,7 @@ class TestMCPAuth(TestCase):
         cls._password = 'test.mcp_auth.' + os.urandom(8).hex()
         cls._port = _find_free_port()
         cls._broker_port = _find_free_port()
-        cls._tmpdir = tempfile.mkdtemp(prefix='zato_mcp_auth_test_')
+        cls._tmpdir = make_test_dir('zato_mcp_auth_test_')
         cls._server_proc = None
         cls._server_output_lines = []
 
@@ -123,7 +123,7 @@ class TestMCPAuth(TestCase):
         if result.returncode != 0:
             logger.info('[MCP-AUTH setUpClass] quickstart FAILED: stdout=%s stderr=%s',
                 result.stdout, result.stderr)
-            shutil.rmtree(cls._tmpdir, ignore_errors=True)
+            keep_test_dir(cls._tmpdir, 'quickstart create failed')
             raise Exception(f'quickstart create failed:\n{result.stdout}\n{result.stderr}')
 
         logger.info('[MCP-AUTH setUpClass] quickstart OK')
@@ -399,7 +399,7 @@ mcp_gateway:
 
         if cls._tmpdir:
             if os.path.isdir(cls._tmpdir):
-                shutil.rmtree(cls._tmpdir, ignore_errors=True)
+                remove_test_dir(cls._tmpdir)
 
         cls._tmpdir = None
         logger.info('[MCP-AUTH tearDownClass] Cleanup complete')

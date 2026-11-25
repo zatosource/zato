@@ -11,14 +11,13 @@ import atexit
 import os
 import socket
 import subprocess
-import tempfile
 import time
 from contextlib import ExitStack
-from shutil import rmtree
 from typing import NamedTuple
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.test.kept_dirs import keep_test_dir, make_test_dir, remove_test_dir
 from zato.common.test.process_util import kill_process_tree
 from zato.common.test.zato_database import isolated_database_env
 from zato.common.typing_ import cast_
@@ -165,7 +164,7 @@ def create_environment(prefix:'str', needs_server:'bool'=False) -> 'TestEnvironm
     With needs_server, the environment's server and file listener are started too, which deploys
     all the internal and demo services into the environment's database.
     """
-    base_dir = tempfile.mkdtemp(prefix=prefix)
+    base_dir = make_test_dir(prefix)
     password = 'test.enmasse.' + CryptoManager.generate_hex_string()
 
     # The environment has a PostgreSQL database of its own, which the Zato_Database_* variables of this process select
@@ -185,7 +184,7 @@ def create_environment(prefix:'str', needs_server:'bool'=False) -> 'TestEnvironm
 
     result = subprocess.run(command, capture_output=True, text=True, timeout=_create_timeout, env=create_env)
     if result.returncode != 0:
-        rmtree(base_dir, ignore_errors=True)
+        keep_test_dir(base_dir, 'quickstart create failed')
         database_scope.close()
         raise Exception(f'quickstart create failed:\n{result.stdout}\n{result.stderr}')
 
@@ -200,7 +199,7 @@ def create_environment(prefix:'str', needs_server:'bool'=False) -> 'TestEnvironm
         try:
             server_process, listener_process = _start_server(base_dir, server_dir, password)
         except Exception:
-            rmtree(base_dir, ignore_errors=True)
+            keep_test_dir(base_dir, 'the server did not start')
             database_scope.close()
             raise
 
@@ -217,10 +216,11 @@ def create_environment(prefix:'str', needs_server:'bool'=False) -> 'TestEnvironm
 
 def delete_environment(environment:'TestEnvironment') -> 'None':
     """ Stops the environment's processes, if any, and removes it along with its database.
+    The directory of the environment is kept if a test failed while it was in use.
     """
     kill_process_tree(environment.listener_process)
     kill_process_tree(environment.server_process)
-    rmtree(environment.base_dir, ignore_errors=True)
+    remove_test_dir(environment.base_dir)
     environment.database_scope.close()
 
 # ################################################################################################################################

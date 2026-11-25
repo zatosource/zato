@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import atexit
 import os
 import re
-import shutil
 import socket
 import subprocess
 import sys
@@ -22,6 +21,7 @@ from logging import basicConfig, getLogger, WARN
 from unittest import main, TestCase
 
 # Zato
+from zato.common.test.kept_dirs import keep_test_dir, make_test_dir, remove_test_dir
 from zato.common.test.process_util import kill_process_tree
 from zato.common.test.zato_database import isolated_database_env
 from zato.common.util.api import pluralize
@@ -125,7 +125,7 @@ class TestEnmassePickup(TestCase):
 
         cls.port = _find_free_port()
         broker_port = _find_free_port()
-        _tmpdir = tempfile.mkdtemp(prefix='zato_enmasse_pickup_test_')
+        _tmpdir = make_test_dir('zato_enmasse_pickup_test_')
 
         # Quickstart needs an empty directory
         qs_dir = os.path.join(_tmpdir, 'qs')
@@ -150,7 +150,7 @@ class TestEnmassePickup(TestCase):
 
         result = subprocess.run(qs_cmd, capture_output=True, text=True, timeout=120, env=qs_env)
         if result.returncode != 0:
-            shutil.rmtree(_tmpdir, ignore_errors=True)
+            keep_test_dir(_tmpdir, 'quickstart create failed')
             _tmpdir = None
             raise SkipTest(
                 f'ZATO ENMASSE PICKUP TESTS SKIPPED - quickstart create failed:\n{result.stdout}\n{result.stderr}')
@@ -255,9 +255,9 @@ class TestEnmassePickup(TestCase):
         _server_proc.stdout.close()
         _server_proc = None
 
-        # .. and remove the temporary directory.
+        # .. and remove the temporary directory, unless a test failed in it.
         if _tmpdir and os.path.isdir(_tmpdir):
-            shutil.rmtree(_tmpdir, ignore_errors=True)
+            remove_test_dir(_tmpdir)
         _tmpdir = None
 
 # ################################################################################################################################
