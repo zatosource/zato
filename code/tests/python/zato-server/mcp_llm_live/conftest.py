@@ -31,6 +31,7 @@ import pytest  # noqa: E402
 
 # Zato
 from zato.common.test import kill_server_process, rand_string  # noqa: E402
+from zato.common.test.conftest_base_pubsub import Expected_Record_Marker  # noqa: E402
 from zato.common.test.zato_database import create_test_database, drop_test_database  # noqa: E402
 from zato.common.typing_ import cast_  # noqa: E402
 from zato.common.util.config import get_config_object, update_config_file  # noqa: E402
@@ -46,7 +47,7 @@ import keycloak_  # noqa: E402
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, tupnone
+    from zato.common.typing_ import any_, strlist, tupnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,6 +71,24 @@ def wire_log(request:'any_') -> 'any_':
     yield
 
     _diag.clear_current_test()
+
+# ################################################################################################################################
+
+def pytest_configure(config:'any_') -> 'None':
+    config.addinivalue_line('markers', 'expected_server_records(*fragments): server records the test provokes deliberately')
+
+# ################################################################################################################################
+
+@pytest.fixture(autouse=True)
+def expected_server_records(request:'any_') -> 'None':
+    """ Registers the fragments of the server records that the test provokes deliberately,
+    so the server output relays each such record with the expected marker.
+    """
+
+    marker = request.node.get_closest_marker('expected_server_records')
+
+    if marker:
+        _expected_server_records.extend(marker.args)
 
 # ################################################################################################################################
 
@@ -128,6 +147,9 @@ _gateway_poll_interval = 0.5
 _server_process   = None
 _listener_process = None
 _temp_directory   = None
+
+# Fragments of server records that tests provoke deliberately, each such record is relayed with the expected marker
+_expected_server_records:'strlist' = []
 
 # Where the server's output is persisted, outside the temp dir so it survives teardown
 _server_log_path = os.path.join(tempfile.gettempdir(), 'zato_mcp_llm_live_server.log')
@@ -308,6 +330,10 @@ def _spawn_server(server_directory:'str', server_env:'any_', log_mode:'str') -> 
         for line in iter(stdout.readline, b''):
             text = line.decode('utf-8', errors='replace').rstrip()
             elapsed = time.monotonic() - popen_time
+
+            if any(record in text for record in _expected_server_records):
+                text = f'{Expected_Record_Marker} {text}'
+
             print(f'[SERVER {elapsed:6.1f}s] {text}')
 
             # .. mirror to the persistent log file and flush so it is readable on timeout ..

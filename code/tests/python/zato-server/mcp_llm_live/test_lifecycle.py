@@ -10,6 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from concurrent.futures import ThreadPoolExecutor
 from http.client import NOT_FOUND, OK
 
+# pytest
+import pytest
+
 # local
 import _audit
 import _constants
@@ -95,6 +98,7 @@ class TestGatewayLifecycle:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Inactive_Channel)
     def test_is_active_toggles_the_gateway_live(self, zato_server:'anydict') -> 'None':
 
         server_directory = zato_server['server_directory']
@@ -175,6 +179,7 @@ class TestGatewayLifecycle:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_URL_Not_Found.format(_constants.Path_Lifecycle))
     def test_deleting_a_gateway_removes_its_routing(self, zato_server:'anydict') -> 'None':
 
         server_directory = zato_server['server_directory']

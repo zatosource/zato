@@ -190,8 +190,8 @@ Detector_Labels:'strstrdict' = {
     'it_phone':          'Phone number',
 
     # Japan
-    'jp_my_number':        'My Number (個人番号)',
-    'jp_corporate_number': 'Corporate number (法人番号)',
+    'jp_my_number':        'My Number',
+    'jp_corporate_number': 'Corporate number',
     'jp_passport':         'Passport number',
 
     # South Korea

@@ -99,8 +99,8 @@ Customer_ID_Japanese = 'CRM-3001'
 
 Customer_Name_Greek    = 'Νίκος Παπαδόπουλος'
 Customer_City_Greek    = 'Αθήνα'
-Customer_Name_Japanese = '山田太郎'
-Customer_City_Japanese = '東京'
+Customer_Name_Japanese = 'やまだたろう'
+Customer_City_Japanese = 'とうきょう'
 
 # The Greek record's two distinct emails, in one contacts line, for the distinct-replacement assertions
 Customer_Email_Greek   = 'nikos.papadopoulos@example.com'
@@ -143,7 +143,7 @@ Customer_ID_Mixed = 'CRM-6001'
 
 Customer_Name_Mixed  = 'Θεοδώρα Μακρή-Ζαφείρη'
 Customer_City_Mixed  = 'Αθήνα'
-Customer_Motto_Mixed = '顧客第一 שלום וברכה καλή τύχη 🚀 👍🏽'
+Customer_Motto_Mixed = 'おきゃくさまだいいち שלום וברכה καλή τύχη 🚀 👍🏽'
 Customer_Email_Mixed = 'theodora.makri@example.com'
 
 Customer_Note_Mixed_Raw       = 'Καλή    τύχη   φίλε'
@@ -165,10 +165,10 @@ Mixed_Whitespace_Removed = 5
 # spaces, long enough to cross the size cap, mirroring the fixture exactly
 Customer_ID_History = 'CRM-7001'
 
-Customer_Name_History = '佐藤花子'
-Customer_City_History = '大阪'
+Customer_Name_History = 'さとうはなこ'
+Customer_City_History = 'おおさか'
 
-Japanese_History_Sentence  = '東京の顧客担当チームは請求書の確認と発送状況の連絡を毎営業日に行います'
+Japanese_History_Sentence  = 'とうきょうのこきゃくたんとうチームはせいきゅうしょのかくにんとはっそうじょうきょうのれんらくをまいえいぎょうびにおこないます'
 Japanese_History_Repeat    = 700
 Japanese_History_Separator = '\u3000'
 
@@ -463,6 +463,18 @@ Hook_Replaced_Result   = {'replaced_by': 'crm.hook.response-replace'}
 # The JSON-RPC error codes of a message and of a reply a hook service refused
 Error_Request_Rejected  = -32030
 Error_Response_Rejected = -32031
+
+# Fragments of the server records that tests provoke deliberately
+Record_Invalid_Basic_Auth   = 'Invalid Basic Auth credentials (groups)'
+Record_Invalid_Bearer       = 'Invalid bearer token (groups)'
+Record_Invalid_API_Key      = 'Invalid API key (groups)'
+Record_No_Credentials       = 'Received neither Basic Auth, bearer token nor API key (groups)'
+Record_Malformed_Basic_Auth = 'Basic Auth -> '
+Record_Inactive_Channel     = 'is not active, raising NotFound'
+
+# Templates of the server records that tests provoke deliberately, filled in with a service name or a URL path
+Record_Service_Raised = 'MCP: Service `{}` raised an exception'
+Record_URL_Not_Found  = 'URL not found `{}`'
 
 # The name of the self.llm outconn the suite creates - no tests use it yet, it is the setup for them
 LLM_Outconn_Name = 'test.mcp.llm'

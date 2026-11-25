@@ -12,6 +12,9 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from http.client import OK
 
+# pytest
+import pytest
+
 # local
 import _agent
 import _audit
@@ -224,6 +227,7 @@ class TestRuntimeChanges:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Service_Raised.format(_constants.Service_Order_Confirm))
     def test_a_retried_confirmation_leaves_an_exact_trail(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
         database_env = zato_server['database_env']

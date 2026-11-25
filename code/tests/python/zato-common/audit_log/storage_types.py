@@ -202,7 +202,7 @@ def run_search_scenario() -> 'None':
 
     now = datetime.now(timezone.utc)
 
-    _ = _insert_event(engine, 'scripts', now, 'Zamówienie 請求書 τιμολόγιο ORDER-2026-ABC')
+    _ = _insert_event(engine, 'scripts', now, 'Zamówienie せいきゅうしょ τιμολόγιο ORDER-2026-ABC')
     _ = _insert_event(engine, 'percent', now, 'progress 100% done, item value_a')
     updated_id = _insert_event(engine, 'updated', now, 'item valuexa')
     _ = _insert_event(engine, 'quoted', now, 'a quote "inner" text')
@@ -217,7 +217,7 @@ def run_search_scenario() -> 'None':
 
     # .. terms long enough for every index ..
     assert _search(engine, 'ORDER-2026') == {'scripts'}
-    assert _search(engine, '請求書') == {'scripts'}
+    assert _search(engine, 'せいきゅうしょ') == {'scripts'}
     assert _search(engine, 'τιμολόγιο') == {'scripts'}
     assert _search(engine, 'Zamówienie') == {'scripts'}
 

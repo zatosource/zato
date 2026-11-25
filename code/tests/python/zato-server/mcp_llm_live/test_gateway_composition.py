@@ -10,6 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from http.client import NOT_FOUND, OK
 
+# pytest
+import pytest
+
 # local
 import _constants
 import _enmasse
@@ -106,6 +109,7 @@ class TestGatewayComposition:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_URL_Not_Found.format(_constants.Path_Lifecycle))
     def test_a_url_path_change_moves_the_endpoint(self, zato_server:'anydict') -> 'None':
 
         server_directory = zato_server['server_directory']
@@ -265,6 +269,7 @@ class TestGatewayComposition:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Invalid_Basic_Auth)
     def test_a_security_definition_is_added_live(self, zato_server:'anydict') -> 'None':
 
         server_directory = zato_server['server_directory']

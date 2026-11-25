@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from json import dumps
 
+# pytest
+import pytest
+
 # local
 import _agent
 import _audit
@@ -94,6 +97,7 @@ class TestModelConduct:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Service_Raised.format(_constants.Service_Order_Cancel))
     def test_the_turn_cap_ends_a_hopeless_task_cleanly(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
         client = _helpers.make_client(zato_server, _constants.Path_Main)

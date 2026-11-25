@@ -47,7 +47,7 @@ _thumb_blob = 'data:image/png;base64,QUJDREVG'
 
 # One Japanese sentence of the history record, repeated and joined with ideographic
 # spaces so a truncation boundary always lands between whole sentences
-_history_sentence = '東京の顧客担当チームは請求書の確認と発送状況の連絡を毎営業日に行います'
+_history_sentence = 'とうきょうのこきゃくたんとうチームはせいきゅうしょのかくにんとはっそうじょうきょうのれんらくをまいえいぎょうびにおこないます'
 _history_repeat = 700
 _history_separator = '\u3000'
 
@@ -86,8 +86,8 @@ _extra_customers = {
         'contacts': 'primary nikos.papadopoulos@example.com backup n.papadopoulos@example.org',
     },
     'CRM-3001': {
-        'name': '山田太郎',
-        'city': '東京',
+        'name': 'やまだたろう',
+        'city': 'とうきょう',
         'email': 'taro.yamada@example.com',
         'national_id': '123456789018',
         'profile': {
@@ -110,7 +110,7 @@ _extra_customers = {
     'CRM-6001': {
         'name': 'Θεοδώρα Μακρή-Ζαφείρη',
         'city': 'Αθήνα',
-        'motto': '顧客第一 שלום וברכה καλή τύχη 🚀 👍🏽',
+        'motto': 'おきゃくさまだいいち שלום וברכה καλή τύχη 🚀 👍🏽',
         'fax': None,
         'note': 'Καλή    τύχη   φίλε',
         'email': 'theodora.makri@example.com',
@@ -119,8 +119,8 @@ _extra_customers = {
         'attachment': _avatar_blob,
     },
     'CRM-7001': {
-        'name': '佐藤花子',
-        'city': '大阪',
+        'name': 'さとうはなこ',
+        'city': 'おおさか',
         'history': _history_separator.join([_history_sentence] * _history_repeat),
     },
     'CRM-8001': {

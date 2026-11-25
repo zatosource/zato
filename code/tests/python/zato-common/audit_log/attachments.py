@@ -56,7 +56,7 @@ _small_cap = 10
 _row_expired_age_days = 40
 
 # The raw content round trip - file names in three scripts, sizes of 0 bytes, 1 byte and 5 MB
-_japanese_name = '請求書_二〇二六年.pdf'
+_japanese_name = 'せいきゅうしょ_にせんにじゅうろくねん.pdf'
 _greek_name    = 'τιμολόγιο_Ιανουάριος.bin'
 _polish_name   = 'zażółć_gęślą_jaźń.dat'
 _binary_type   = 'application/octet-stream'

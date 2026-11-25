@@ -12,6 +12,9 @@ import time
 from base64 import b64encode
 from http.client import FORBIDDEN, OK
 
+# pytest
+import pytest
+
 # local
 import _agent
 import _audit
@@ -109,6 +112,7 @@ class TestBasicAuth:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Invalid_Basic_Auth, _constants.Record_No_Credentials)
     def test_rejected_credentials_never_reach_a_tool(self, zato_server:'anydict') -> 'None':
 
         marker_path = zato_server['marker_path']
@@ -148,6 +152,7 @@ class TestBasicAuth:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Invalid_Basic_Auth)
     def test_a_rejected_username_renders_on_one_log_line(self, zato_server:'anydict') -> 'None':
 
         database_env = zato_server['database_env']
@@ -235,6 +240,7 @@ class TestAPIKey:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Invalid_API_Key)
     def test_wrong_key_is_rejected(self, zato_server:'anydict') -> 'None':
 
         client = _helpers.make_client(zato_server, _constants.Path_Main, auth=None)
@@ -268,6 +274,7 @@ class TestStaticBearerToken:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Invalid_Bearer)
     def test_wrong_token_is_rejected(self, zato_server:'anydict') -> 'None':
 
         client = _helpers.make_client(zato_server, _constants.Path_Main, auth=None)
@@ -298,6 +305,7 @@ class TestKeycloakBearerToken:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Invalid_Bearer)
     def test_garbage_token_is_rejected(self, zato_server:'anydict', keycloak:'None') -> 'None':
 
         client = _helpers.make_client(zato_server, _constants.Path_Main, auth=None)
@@ -308,6 +316,7 @@ class TestKeycloakBearerToken:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Invalid_Bearer)
     def test_expired_token_is_rejected(self, zato_server:'anydict', keycloak:'None') -> 'None':
 
         token = keycloak_.get_token(keycloak_.Client_Short_Lived, keycloak_.Secret_Short_Lived)
@@ -332,6 +341,7 @@ class TestMalformedAuthorizationHeaders:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Malformed_Basic_Auth, _constants.Record_Invalid_Basic_Auth, _constants.Record_No_Credentials)
     def test_each_malformed_header_is_refused_cleanly(self, zato_server:'anydict') -> 'None':
 
         database_env = zato_server['database_env']
@@ -425,6 +435,7 @@ class TestCredentialSecrecy:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Invalid_Basic_Auth)
     def test_the_basic_password_never_appears(self, zato_server:'anydict') -> 'None':
 
         username, password = zato_server['basic_auth']
@@ -448,6 +459,7 @@ class TestCredentialSecrecy:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Invalid_API_Key)
     def test_the_api_key_never_appears(self, zato_server:'anydict') -> 'None':
 
         apikey_value = zato_server['apikey_value']
@@ -474,6 +486,7 @@ class TestCredentialSecrecy:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Invalid_Bearer)
     def test_the_static_bearer_token_never_appears(self, zato_server:'anydict') -> 'None':
 
         token = zato_server['bearer_static_token']
@@ -500,6 +513,7 @@ class TestCredentialSecrecy:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Invalid_Bearer)
     def test_a_keycloak_token_never_appears(self, zato_server:'anydict', keycloak:'None') -> 'None':
 
         token = keycloak_.get_token(keycloak_.Client_Accounting, keycloak_.Secret_Accounting)
@@ -533,6 +547,7 @@ class TestGroupMembershipChanges:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_No_Credentials)
     def test_removing_a_definition_from_the_group_takes_effect_live(self, zato_server:'anydict') -> 'None':
 
         server_directory = zato_server['server_directory']

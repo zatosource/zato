@@ -13,7 +13,7 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.hotkeys = factory());
 })(this, (function () { 'use strict';
 
-  var isff = typeof navigator !== 'undefined' ? navigator.userAgent.toLowerCase().indexOf('firefox') > 0 : false; // 绑定事件
+  var isff = typeof navigator !== 'undefined' ? navigator.userAgent.toLowerCase().indexOf('firefox') > 0 : false;
 
   function addEvent(object, event, method, useCapture) {
     if (object.addEventListener) {
@@ -23,7 +23,7 @@
         method(window.event);
       });
     }
-  } // 修饰键转换成对应的键码
+  }
 
 
   function getMods(modifier, key) {
@@ -34,16 +34,16 @@
     }
 
     return mods;
-  } // 处理传的key字符串转换成数组
+  }
 
 
   function getKeys(key) {
     if (typeof key !== 'string') key = '';
-    key = key.replace(/\s/g, ''); // 匹配任何空白字符,包括空格、制表符、换页符等等
+    key = key.replace(/\s/g, '');
 
-    var keys = key.split(','); // 同时设置多个快捷键，以','分割
+    var keys = key.split(',');
 
-    var index = keys.lastIndexOf(''); // 快捷键可能包含','，需特殊处理
+    var index = keys.lastIndexOf('');
 
     for (; index >= 0;) {
       keys[index - 1] += ',';
@@ -52,7 +52,7 @@
     }
 
     return keys;
-  } // 比较修饰键的数组
+  }
 
 
   function compareArray(a1, a2) {
@@ -160,33 +160,32 @@
     _keyMap["f".concat(k)] = 111 + k;
   }
 
-  var _downKeys = []; // 记录摁下的绑定键
+  var _downKeys = [];
 
-  var winListendFocus = false; // window是否已经监听了focus事件
+  var winListendFocus = false;
 
-  var _scope = 'all'; // 默认热键范围
+  var _scope = 'all';
 
-  var elementHasBindEvent = []; // 已绑定事件的节点记录
-  // 返回键码
+  var elementHasBindEvent = [];
 
   var code = function code(x) {
     return _keyMap[x.toLowerCase()] || _modifier[x.toLowerCase()] || x.toUpperCase().charCodeAt(0);
-  }; // 设置获取当前范围（默认为'所有'）
+  };
 
 
   function setScope(scope) {
     _scope = scope || 'all';
-  } // 获取当前范围
+  }
 
 
   function getScope() {
     return _scope || 'all';
-  } // 获取摁下绑定键的键值
+  }
 
 
   function getPressedKeyCodes() {
     return _downKeys.slice(0);
-  } // 表单控件控件判断 返回 Boolean
+  }
   // hotkey is effective only when filter return true
 
 
@@ -200,21 +199,21 @@
     }
 
     return flag;
-  } // 判断摁下的键是否为某个键，返回true或者false
+  }
 
 
   function isPressed(keyCode) {
     if (typeof keyCode === 'string') {
-      keyCode = code(keyCode); // 转换成键码
+      keyCode = code(keyCode);
     }
 
     return _downKeys.indexOf(keyCode) !== -1;
-  } // 循环删除handlers中的所有 scope(范围)
+  }
 
 
   function deleteScope(scope, newScope) {
     var handlers;
-    var i; // 没有指定scope，获取scope
+    var i;
 
     if (!scope) scope = getScope();
 
@@ -226,33 +225,33 @@
           if (handlers[i].scope === scope) handlers.splice(i, 1);else i++;
         }
       }
-    } // 如果scope被删除，将scope重置为all
+    }
 
 
     if (getScope() === scope) setScope(newScope || 'all');
-  } // 清除修饰键
+  }
 
 
   function clearModifier(event) {
     var key = event.keyCode || event.which || event.charCode;
 
-    var i = _downKeys.indexOf(key); // 从列表中清除按压过的键
+    var i = _downKeys.indexOf(key);
 
 
     if (i >= 0) {
       _downKeys.splice(i, 1);
-    } // 特殊处理 cmmand 键，在 cmmand 组合快捷键 keyup 只执行一次的问题
+    }
 
 
     if (event.key && event.key.toLowerCase() === 'meta') {
       _downKeys.splice(0, _downKeys.length);
-    } // 修饰键 shiftKey altKey ctrlKey (command||metaKey) 清除
+    }
 
 
     if (key === 93 || key === 224) key = 91;
 
     if (key in _mods) {
-      _mods[key] = false; // 将修饰键重置为false
+      _mods[key] = false;
 
       for (var k in _modifier) {
         if (_modifier[k] === key) hotkeys[k] = false;
@@ -296,7 +295,7 @@
         splitKey: '+'
       });
     }
-  } // 解除绑定某个范围的快捷键
+  }
 
 
   var eachUnbind = function eachUnbind(_ref) {
@@ -311,17 +310,16 @@
       var len = unbindKeys.length;
       var lastKey = unbindKeys[len - 1];
       var keyCode = lastKey === '*' ? '*' : code(lastKey);
-      if (!_handlers[keyCode]) return; // 判断是否传入范围，没有就获取范围
+      if (!_handlers[keyCode]) return;
 
       if (!scope) scope = getScope();
       var mods = len > 1 ? getMods(_modifier, unbindKeys) : [];
       _handlers[keyCode] = _handlers[keyCode].filter(function (record) {
-        // 通过函数判断，是否解除绑定，函数相等直接返回
         var isMatchingMethod = method ? record.method === method : true;
         return !(isMatchingMethod && record.scope === scope && compareArray(record.mods, mods));
       });
     });
-  }; // 对监听对应快捷键的回调函数进行处理
+  };
 
 
   function eventHandler(event, handler, scope, element) {
@@ -329,10 +327,9 @@
       return;
     }
 
-    var modifiersMatch; // 看它是否在当前范围
+    var modifiersMatch;
 
     if (handler.scope === scope || handler.scope === 'all') {
-      // 检查是否匹配修饰符（如果有返回true）
       modifiersMatch = handler.mods.length > 0;
 
       for (var y in _mods) {
@@ -341,7 +338,7 @@
             modifiersMatch = false;
           }
         }
-      } // 调用处理程序，如果是修饰键不做处理
+      }
 
 
       if (handler.mods.length === 0 && !_mods[16] && !_mods[18] && !_mods[17] && !_mods[91] || modifiersMatch || handler.shortcut === '*') {
@@ -352,15 +349,14 @@
         }
       }
     }
-  } // 处理keydown事件
+  }
 
 
   function dispatch(event, element) {
     var asterisk = _handlers['*'];
-    var key = event.keyCode || event.which || event.charCode; // 表单控件过滤 默认表单控件不触发快捷键
+    var key = event.keyCode || event.which || event.charCode;
 
-    if (!hotkeys.filter.call(this, event)) return; // Gecko(Firefox)的command键值224，在Webkit(Chrome)中保持一致
-    // Webkit左右 command 键值不一样
+    if (!hotkeys.filter.call(this, event)) return;
 
     if (key === 93 || key === 224) key = 91;
     /**
@@ -398,14 +394,14 @@
      */
 
     if (key in _mods) {
-      _mods[key] = true; // 将特殊字符的key注册到 hotkeys 上
+      _mods[key] = true;
 
       for (var k in _modifier) {
         if (_modifier[k] === key) hotkeys[k] = true;
       }
 
       if (!asterisk) return;
-    } // 将 modifierMap 里面的修饰键绑定到 event 中
+    }
 
 
     for (var e in _mods) {
@@ -432,10 +428,10 @@
 
       _mods[17] = true;
       _mods[18] = true;
-    } // 获取范围 默认为 `all`
+    }
 
 
-    var scope = getScope(); // 对任何快捷键都需要做的处理
+    var scope = getScope();
 
     if (asterisk) {
       for (var i = 0; i < asterisk.length; i++) {
@@ -443,7 +439,7 @@
           eventHandler(event, asterisk[i], scope, element);
         }
       }
-    } // key 不在 _handlers 中返回
+    }
 
 
     if (!(key in _handlers)) return;
@@ -454,20 +450,19 @@
           var record = _handlers[key][_i];
           var splitKey = record.splitKey;
           var keyShortcut = record.key.split(splitKey);
-          var _downKeysCurrent = []; // 记录当前按键键值
+          var _downKeysCurrent = [];
 
           for (var a = 0; a < keyShortcut.length; a++) {
             _downKeysCurrent.push(code(keyShortcut[a]));
           }
 
           if (_downKeysCurrent.sort().join('') === _downKeys.sort().join('')) {
-            // 找到处理内容
             eventHandler(event, record, scope, element);
           }
         }
       }
     }
-  } // 判断 element 是否已经绑定事件
+  }
 
 
   function isElementBind(element) {
@@ -476,18 +471,18 @@
 
   function hotkeys(key, option, method) {
     _downKeys = [];
-    var keys = getKeys(key); // 需要处理的快捷键列表
+    var keys = getKeys(key);
 
     var mods = [];
-    var scope = 'all'; // scope默认为all，所有范围都有效
+    var scope = 'all';
 
-    var element = document; // 快捷键事件绑定节点
+    var element = document;
 
     var i = 0;
     var keyup = false;
     var keydown = true;
     var splitKey = '+';
-    var capture = false; // 对为设定范围的判断
+    var capture = false;
 
     if (method === undefined && typeof option === 'function') {
       method = option;
@@ -507,18 +502,17 @@
       if (typeof option.splitKey === 'string') splitKey = option.splitKey; // eslint-disable-line
     }
 
-    if (typeof option === 'string') scope = option; // 对于每个快捷键进行处理
+    if (typeof option === 'string') scope = option;
 
     for (; i < keys.length; i++) {
-      key = keys[i].split(splitKey); // 按键列表
+      key = keys[i].split(splitKey);
 
-      mods = []; // 如果是组合快捷键取得组合快捷键
+      mods = [];
 
-      if (key.length > 1) mods = getMods(_modifier, key); // 将非修饰键转化为键码
+      if (key.length > 1) mods = getMods(_modifier, key);
 
       key = key[key.length - 1];
-      key = key === '*' ? '*' : code(key); // *表示匹配所有快捷键
-      // 判断key是否在_handlers中，不在就赋一个空数组
+      key = key === '*' ? '*' : code(key);
 
       if (!(key in _handlers)) _handlers[key] = [];
 
@@ -533,7 +527,7 @@
         splitKey: splitKey,
         element: element
       });
-    } // 在全局document上设置快捷键
+    }
 
 
     if (typeof element !== 'undefined' && !isElementBind(element) && window) {

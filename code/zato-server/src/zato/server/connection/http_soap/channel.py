@@ -749,7 +749,7 @@ class RequestDispatcher:
         """ Checks security, builds channel params and invokes the service.
         """
         if not channel_item['is_active']:
-            logger.warning('url_data:`%s` is not active, raising NotFound', url_match)
+            logger.warning('Channel `%s` is not active, raising NotFound', channel_item['name'])
             raise NotFound(cid, 'Channel inactive')
 
         # The channel's own limit is keyed by address alone, so it applies before any credential

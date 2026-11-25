@@ -156,7 +156,12 @@ class TestConversationsAtScale:
         task = f'Get the record of customer {_constants.Customer_ID_Greek} and report the name and city exactly as returned.'
         result = _agent.run_agent(client, task)
 
-        record = loads(result.tool_calls[0].result_text)
+        # The text the model reads carries the characters themselves, not their escape sequences ..
+        result_text = result.tool_calls[0].result_text
+        assert _constants.Customer_Name_Greek in result_text, result_text
+        assert _constants.Customer_City_Greek in result_text, result_text
+
+        record = loads(result_text)
         assert record['name'] == _constants.Customer_Name_Greek, record
         assert record['city'] == _constants.Customer_City_Greek, record
 
@@ -169,7 +174,12 @@ class TestConversationsAtScale:
         task = f'Get the record of customer {_constants.Customer_ID_Japanese} and report the name and city exactly as returned.'
         result = _agent.run_agent(client, task)
 
-        record = loads(result.tool_calls[0].result_text)
+        # The text the model reads carries the characters themselves, not their escape sequences ..
+        result_text = result.tool_calls[0].result_text
+        assert _constants.Customer_Name_Japanese in result_text, result_text
+        assert _constants.Customer_City_Japanese in result_text, result_text
+
+        record = loads(result_text)
         assert record['name'] == _constants.Customer_Name_Japanese, record
         assert record['city'] == _constants.Customer_City_Japanese, record
 

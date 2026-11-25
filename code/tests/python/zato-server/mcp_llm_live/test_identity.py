@@ -10,6 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import time
 from http.client import NOT_FOUND, OK
 
+# pytest
+import pytest
+
 # local
 import _audit
 import _constants
@@ -47,6 +50,7 @@ class TestIdentityOverTime:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Invalid_Basic_Auth)
     def test_a_password_change_takes_effect_live(self, zato_server:'anydict') -> 'None':
 
         old_auth = (_constants.Username_Basic_B, _constants.Password_Basic_B)
@@ -96,6 +100,7 @@ class TestIdentityOverTime:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Invalid_Bearer)
     def test_a_keycloak_token_expires_mid_session(self, zato_server:'anydict', keycloak:'None') -> 'None':
 
         # The token lives long enough to open a session and make a call, yet runs out within the test ..
@@ -139,6 +144,7 @@ class TestIdentityOverTime:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Invalid_Basic_Auth)
     def test_rejection_and_acceptance_audit_separately(self, zato_server:'anydict') -> 'None':
 
         database_env = zato_server['database_env']

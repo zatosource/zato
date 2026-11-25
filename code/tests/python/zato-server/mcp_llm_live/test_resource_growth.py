@@ -13,6 +13,9 @@ from concurrent.futures import ThreadPoolExecutor
 from http.client import NOT_FOUND, OK
 from statistics import median
 
+# pytest
+import pytest
+
 # local
 import _audit
 import _constants
@@ -343,6 +346,7 @@ class CatalogItem{item_index:04d}(Service):
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(*[_constants.Record_Service_Raised.format(name) for name in _constants.Service_List_CRM])
     def test_dozens_of_gateways_on_one_server(self, zato_server:'anydict') -> 'None':
 
         database_env = zato_server['database_env']

@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from http.client import FORBIDDEN
 
+# pytest
+import pytest
+
 # local
 import _agent
 import _audit
@@ -112,6 +115,7 @@ class TestAuditCompleteness:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Invalid_Basic_Auth, _constants.Record_Service_Raised.format(_constants.Service_Order_Cancel))
     def test_every_kind_of_failure_lands_with_an_error_outcome(self, zato_server:'anydict') -> 'None':
 
         database_env = zato_server['database_env']

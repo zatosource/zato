@@ -13,6 +13,7 @@ from math import ceil
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.audit_log.common import MCPAttr
 from zato.common.json_internal import dumps
+from zato.server.connection.mcp.common import printable
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -130,11 +131,12 @@ def build_audit_event(
     if method is None:
         method = Method_Unknown
 
-    # .. known methods map to their event types, anything else audits as its literal name ..
+    # .. known methods map to their event types, anything else audits as its literal name,
+    # or as a description of its length when it is longer than the event type column allows ..
     if method in _method_to_event:
         event_type = _method_to_event[method]
     else:
-        event_type = method
+        event_type = printable(method)
 
     # .. only tools/call events carry a tool name ..
     if tool_name is None:

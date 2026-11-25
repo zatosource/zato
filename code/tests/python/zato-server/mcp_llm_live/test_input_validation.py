@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 
+# pytest
+import pytest
+
 # local
 import _agent
 import _audit
@@ -248,6 +251,7 @@ class TestValidationWithLLM:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Service_Raised.format(_constants.Service_Order_Cancel))
     def test_llm_reports_a_service_error(self, zato_server:'anydict', ollama:'anydict') -> 'None':
 
         database_env = zato_server['database_env']
@@ -331,6 +335,7 @@ class TestValidationOptions:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Service_Raised.format(_constants.Service_Customer_Get))
     def test_the_same_calls_with_validation_off(self, zato_server:'anydict') -> 'None':
 
         marker_path = zato_server['marker_path']
@@ -388,6 +393,7 @@ class TestValidationOptions:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Service_Raised.format(_constants.Service_Customer_Get))
     def test_the_toggle_is_live(self, zato_server:'anydict') -> 'None':
 
         server_directory = zato_server['server_directory']

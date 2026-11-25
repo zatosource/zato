@@ -11,6 +11,9 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from http.client import FORBIDDEN, NOT_FOUND, OK
 
+# pytest
+import pytest
+
 # local
 import _agent
 import _audit
@@ -277,6 +280,7 @@ class TestProcessingIsolation:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Service_Raised.format(_constants.Service_Customer_Get))
     def test_each_option_family_stays_within_its_gateway(self, zato_server:'anydict') -> 'None':
 
         database_env = zato_server['database_env']
@@ -409,6 +413,7 @@ class TestSecurityIsolation:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Invalid_Basic_Auth, _constants.Record_Invalid_Bearer)
     def test_credentials_of_one_group_do_not_open_another_gateway(self, zato_server:'anydict') -> 'None':
 
         # The main basic auth definition sits in A's group but not in B's or C's ..
@@ -437,6 +442,7 @@ class TestSecurityIsolation:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Invalid_Basic_Auth)
     def test_removing_a_shared_definition_from_one_group_cuts_off_only_that_gateway(
         self, zato_server:'anydict') -> 'None':
 
@@ -648,6 +654,7 @@ class TestRoutingIsolation:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_URL_Not_Found.format(_path_unrouted))
     def test_an_unrouted_path_is_a_404_with_no_audit_event(self, zato_server:'anydict') -> 'None':
 
         database_env = zato_server['database_env']
@@ -678,6 +685,7 @@ class TestLifecycleIsolation:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_URL_Not_Found.format(_constants.Path_Iso_A), _constants.Record_Inactive_Channel)
     def test_changes_to_one_gateway_leave_the_neighbor_alone(self, zato_server:'anydict') -> 'None':
 
         server_directory = zato_server['server_directory']

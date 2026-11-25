@@ -63,6 +63,7 @@ from live_kerberos.containers import ModuleCtx as _KerberosCtx
 from login import login as login_to_dashboard
 
 # Zato
+from zato.common.test.conftest_base_pubsub import Expected_Record_Marker
 from zato.common.test.process_util import kill_process_tree
 from zato.common.test.zato_database import isolated_database_env
 from zato.common.typing_ import cast_
@@ -624,10 +625,16 @@ def logged_in_page(
     page.on('close', _on_page_close)
     context.on('close', _on_context_close)
 
-    # .. capture all response errors from the dashboard ..
+    # .. capture all response errors from the dashboard, where a test that provokes server-side errors
+    # through the expect_log_errors marker receives them as HTTP errors too, which makes them expected ..
+    is_error_expected = request.node.get_closest_marker('expect_log_errors') is not None
+
     def _on_response(response:'any_') -> 'None':
         if response.status >= 400:
-            logger.warning(f'[HTTP] {test_name}: {response.status} {response.url}')
+            if is_error_expected:
+                logger.warning(f'{Expected_Record_Marker} [HTTP] {test_name}: {response.status} {response.url}')
+            else:
+                logger.warning(f'[HTTP] {test_name}: {response.status} {response.url}')
 
     page.on('response', _on_response)
 

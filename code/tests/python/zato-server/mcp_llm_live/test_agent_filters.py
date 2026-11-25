@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from json import loads
 
+# pytest
+import pytest
+
 # local
 import _agent
 import _audit
@@ -431,6 +434,7 @@ class TestFilterLanguage:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Service_Raised.format(_constants.Service_Order_Cancel))
     def test_filters_never_touch_error_responses(self, zato_server:'anydict') -> 'None':
 
         database_env = zato_server['database_env']

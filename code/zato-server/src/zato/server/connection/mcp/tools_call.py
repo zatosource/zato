@@ -392,8 +392,9 @@ def serialize_service_response(
         out = response
         return out
 
-    # .. and everything else serializes to JSON.
-    out = dumps(response)
+    # .. and everything else serializes to JSON, with non-ASCII characters kept as they are,
+    # because the model reads this text and does not decode escape sequences reliably.
+    out = dumps(response, ensure_ascii=False)
     return out
 
 # ################################################################################################################################

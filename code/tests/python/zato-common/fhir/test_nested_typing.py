@@ -208,7 +208,7 @@ class TestRoundTrip:
     def test_from_json_round_trip_typed(self):
         raw = json.dumps({
             'resourceType': 'Patient',
-            'name': [{'family': 'Tanaka', 'given': ['太郎']}],
+            'name': [{'family': 'Tanaka', 'given': ['たろう']}],
         })
         p = Patient.from_json(raw)
         assert type(p.name[0]) is HumanName

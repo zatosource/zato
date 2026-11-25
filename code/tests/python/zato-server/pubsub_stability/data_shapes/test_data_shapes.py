@@ -178,7 +178,7 @@ def _run_binary_flow(server:'PubSubServer', publisher:'_Publisher') -> 'None':
     payloads:'strlist' = [
         b64encode(binary).decode('ascii'),
         '\x01\x02\x03\x1f\x7f control characters',
-        'Zażółć gęślą jaźń - Ελληνικά - 日本語 - \U0001F4E6\U0001F69A',
+        'Zażółć gęślą jaźń - Ελληνικά - にほんご - \U0001F4E6\U0001F69A',
         '{"emoji": "\\ud83d\\udce6", "escaped_nul": "\\u0000"}',
     ]
 
