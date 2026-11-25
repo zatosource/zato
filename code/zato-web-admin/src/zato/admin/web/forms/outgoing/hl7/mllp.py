@@ -74,20 +74,6 @@ class CreateForm(forms.Form):
     retry_backoff_threshold = forms.CharField(widget=forms.TextInput(), initial=_retry.Default_Backoff_Threshold)
     retry_backoff_multiplier = forms.CharField(widget=forms.TextInput(), initial=_retry.Default_Backoff_Multiplier)
 
-    # Circuit breaker
-    circuit_breaker_threshold_percent = forms.CharField(
-        initial=_default.circuit_breaker_threshold_percent,
-        widget=forms.TextInput(attrs={'style':'width:8%'}),
-    )
-    circuit_breaker_window_seconds = forms.CharField(
-        initial=_default.circuit_breaker_window_seconds,
-        widget=forms.TextInput(attrs={'style':'width:10%'}),
-    )
-    circuit_breaker_reset_seconds = forms.CharField(
-        initial=_default.circuit_breaker_reset_seconds,
-        widget=forms.TextInput(attrs={'style':'width:10%'}),
-    )
-
     # TLS
     tls_cert_path = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))
     tls_key_path  = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:100%'}))

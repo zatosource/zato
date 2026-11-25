@@ -2542,11 +2542,6 @@ class HL7:
         max_msg_size_unit  = 'mb'
         max_msg_size       = 2 * 1024 * 1024
 
-        # Circuit breaker defaults (outbound)
-        circuit_breaker_threshold_percent = 50
-        circuit_breaker_window_seconds    = 60
-        circuit_breaker_reset_seconds     = 60
-
         # Dedup defaults (inbound) - a TTL of zero means every message is delivered
         dedup_ttl_value = 0
         dedup_ttl_unit  = 'days'

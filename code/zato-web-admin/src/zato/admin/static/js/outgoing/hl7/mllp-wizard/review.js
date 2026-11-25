@@ -169,20 +169,6 @@ review._switchText = function(isOn) {
 
 // ////////////////////////////////////////////////////////////////////////
 
-// The word failures has to be here - "50% in 60 s" on its own would read
-// as a cap on how much may be sent, which is not what the limit is
-review.summarySendLimit = function() {
-
-    var failurePercent = wizard.field('circuit_breaker_threshold_percent').val();
-    var window_ = wizard.field('circuit_breaker_window_seconds').val();
-    var resume = wizard.field('circuit_breaker_reset_seconds').val();
-
-    var out = failurePercent + '% failures in ' + window_ + ' s, resume after ' + resume + ' s';
-    return out;
-};
-
-// ////////////////////////////////////////////////////////////////////////
-
 review.summaryLogging = function() {
 
     var ownConfig = review.config_own;
@@ -248,7 +234,6 @@ review.refreshSummaries = function() {
     review.setSummary('mllp-outconn-wizard-summary-pool', review.summaryPool());
     review.setSummary('mllp-outconn-wizard-summary-retries', review.summaryRetries());
     review.setSummary('mllp-outconn-wizard-summary-dlq', review.summaryDlq());
-    review.setSummary('mllp-outconn-wizard-summary-send-limit', review.summarySendLimit());
     review.setSummary(wizard.alerts.config.summaryId, wizard.alerts.summary());
 
     review.setSummary('mllp-outconn-wizard-summary-options', review.summaryLogging());
@@ -325,8 +310,7 @@ review.render = function() {
                 ['Pool', review.summaryPool()],
                 ['Retries', deliveryTab.formatRetriesSummary()],
                 ['Use queue', review._switchText(review.isQueueOn())],
-                ['Dead-letter queue', review.summaryDlq()],
-                ['Send limit', review.summarySendLimit()]
+                ['Dead-letter queue', review.summaryDlq()]
             ]
         },
         {

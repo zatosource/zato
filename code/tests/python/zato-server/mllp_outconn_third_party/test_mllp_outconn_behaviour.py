@@ -10,8 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import time
 
 # Zato
-from zato.common.hl7.mllp.circuit_breaker import CircuitBreaker, CircuitState
-from zato.common.hl7.mllp.client import HL7MLLPClient
 from zato.common.test.timing import Timer_Tolerance_Ms
 
 # Zato - the suite's own parts
@@ -32,13 +30,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The framing every listener in this suite reads and writes
-_Start_Sequence = b'\x0b'
-_End_Sequence   = b'\x1c\x0d'
-
-# What the loopback address is called here
-_Host = '127.0.0.1'
-
 # How many messages the concurrency test sends at once, and the pool it sends them through - the
 # two are the same number so that every message has a connection of its own to go out on
 _Concurrent_Send_Count = 8
@@ -50,30 +41,6 @@ _Slow_Receiver_Delay = 2.0
 # it is meant to wait, both in milliseconds
 _Timeout_Below_The_Delay = 500
 _Timeout_Above_The_Delay = 10000
-
-# What the circuit breaker is held to - a failure rate over half of a window, a window long enough
-# that a run of failures inside one test lands in the same one, and a reset short enough that a
-# test can wait it out
-_Breaker_Threshold_Percent = 50
-_Breaker_Window_Seconds    = 60.0
-_Breaker_Reset_Seconds     = 1.0
-
-# How many sends the breaker is put through before it is expected to have opened
-_Breaker_Failure_Count = 4
-
-# How long a send against a listener that is there waits for its answer, in seconds
-_Receive_Timeout = 10.0
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _build_client(port:'int') -> 'HL7MLLPClient':
-    """ Builds the client Zato's own outgoing connections send through, pointed at one of this
-    suite's listeners. The test below that drives the circuit breaker uses it directly, because
-    what it is about is what happens around a send rather than inside one.
-    """
-    out = HL7MLLPClient(_Host, port, _Start_Sequence, _End_Sequence, receive_timeout=_Receive_Timeout)
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -282,87 +249,6 @@ class TestOutconnSlowReceiver:
 
             # The send did wait, rather than the listener having answered early
             assert result['elapsed_ms'] >= _Slow_Receiver_Delay * 1000 - Timer_Tolerance_Ms
-
-        finally:
-            receiver.stop()
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class TestOutconnCircuitBreaker:
-    """ The circuit breaker an outgoing connection carries the settings for. A listener that is down
-    is worth a few attempts and then worth leaving alone, because the attempts cost the sender more
-    than they cost whatever is not answering them.
-    """
-
-# ################################################################################################################################
-
-    def test_the_circuit_opens_on_a_listener_that_is_down_and_closes_when_it_is_back(
-        self,
-        outconn_environment:'OutconnEnvironment',
-    ) -> 'None':
-        """ Enough failures inside the window cross the threshold and sending stops. Once the reset
-        has passed one trial message is allowed through, and its success closes the circuit again.
-        """
-        receiver = build_receiver(Receiver_Hl7apy)
-        receiver.start()
-
-        port = receiver.port
-        receiver.stop()
-
-        client = _build_client(port)
-
-        breaker = CircuitBreaker(
-            failure_threshold_percent=_Breaker_Threshold_Percent,
-            window_seconds=_Breaker_Window_Seconds,
-            reset_seconds=_Breaker_Reset_Seconds,
-        )
-
-        attempted_count = 0
-
-        # Every send fails, because there is nothing at the far end to answer one
-        for index in range(_Breaker_Failure_Count):
-
-            if not breaker.can_execute():
-                break
-
-            attempted_count += 1
-
-            try:
-                _ = client.send(build_adt_a01(f'BREAK-{index:04}').encode('utf8'), f'BREAK-{index:04}')
-                breaker.record_success()
-            except Exception:
-                breaker.record_failure()
-
-        # The circuit opened before every send had been tried, which is the whole point of it
-        assert breaker.state == CircuitState.Open
-        assert attempted_count < _Breaker_Failure_Count
-
-        # .. and while it is open nothing is sent at all
-        assert not breaker.can_execute()
-
-        # The listener comes back and the reset passes ..
-        receiver.start()
-
-        try:
-            time.sleep(_Breaker_Reset_Seconds)
-
-            # .. after which one trial message is allowed through ..
-            assert breaker.can_execute()
-            assert breaker.state == CircuitState.Half_Open
-
-            control_id = 'BREAK-TRIAL'
-            result = client.send(build_adt_a01(control_id).encode('utf8'), control_id)
-
-            assert result.is_accepted
-            breaker.record_success()
-
-            # .. and its success is what closes the circuit and lets everything through again
-            assert breaker.state == CircuitState.Closed
-            assert breaker.can_execute()
-
-            wait_for_deliveries(receiver, 1)
-            assert get_msh_field(receiver.deliveries[0].text, 10) == control_id
 
         finally:
             receiver.stop()

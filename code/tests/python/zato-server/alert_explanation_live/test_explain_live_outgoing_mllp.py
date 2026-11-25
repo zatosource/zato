@@ -169,10 +169,6 @@ _sending_facility = 'EXPLAIN_LIVE_HOSPITAL'
 _message_count = 4
 _ack_threshold = 3
 
-# A rejection counts as a failed send, so the first one stops the connection's sending. With no reset time,
-# every message that follows is let through as the trial send and all of them reach the receiver.
-_breaker_reset_seconds = 0
-
 # The rule the acks fire, of the ruleset the outgoing MLLP connections are judged by
 _negative_acks_rule = 'Negative_Acks'
 
@@ -201,7 +197,6 @@ def _create_rejected_outgoing(address:'str') -> 'anydict':
             'address': address,
             'pool_size': 1,
             'is_audit_log_active': True,
-            'circuit_breaker_reset_seconds': _breaker_reset_seconds,
             'alerts': {
                 'is_active': True,
                 'use_llm': True,

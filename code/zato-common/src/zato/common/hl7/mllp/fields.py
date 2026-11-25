@@ -214,11 +214,6 @@ Outgoing_Fields:'mllp_field_list' = [
     MLLPField(_dlq.Field_Forward_To, _dlq.Default_Forward_To),
     MLLPField(_dlq.Field_Keep_Header, _dlq.Default_Keep_Header),
 
-    # Circuit breaker
-    MLLPField('circuit_breaker_threshold_percent', HL7.Default.circuit_breaker_threshold_percent),
-    MLLPField('circuit_breaker_window_seconds', HL7.Default.circuit_breaker_window_seconds),
-    MLLPField('circuit_breaker_reset_seconds', HL7.Default.circuit_breaker_reset_seconds),
-
     # TLS turns on once a CA bundle is configured.
     MLLPField('tls_ca_path', ''),
     MLLPField('tls_cert_path', ''),

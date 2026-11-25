@@ -29,11 +29,11 @@ it is acknowledged or the wait for its acknowledgment fails.
 
 Object - the connection's definition with secrets left out - the address it sends to, whether it speaks TLS,
 how many connections it keeps open, how long it waits for an acknowledgment, how many times a failed send is
-retried and with what backoff, when sending pauses because too many sends failed and for how long, and whether
-the audit log is on. The alerts read the audit log, so a connection with the audit log off has nothing counted
-about it. When the connection has alert settings of its own, the `Alerts` line says whether they are on and the
-`Alert settings of its own` line gives the thresholds that differ from the defaults - among them the
-acknowledgment codes the connection alerts on, `AE, AR, CE, CR` being the default.
+retried and with what backoff, and whether the audit log is on. The alerts read the audit log, so a connection
+with the audit log off has nothing counted about it. When the connection has alert settings of its own, the
+`Alerts` line says whether they are on and the `Alert settings of its own` line gives the thresholds that differ
+from the defaults - among them the acknowledgment codes the connection alerts on, `AE, AR, CE, CR` being the
+default.
 
 Failures - the failed sends, newest first, grouped by what went wrong, with a count and the first and last time
 per group and the endpoint the group's messages went to. A failure is one of two things. Either an

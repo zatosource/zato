@@ -51,14 +51,6 @@ class TestHL7DefaultValues:
 
 # ################################################################################################################################
 
-    def test_circuit_breaker_defaults(self:'any_') -> 'None':
-
-        assert HL7.Default.circuit_breaker_threshold_percent == 50
-        assert HL7.Default.circuit_breaker_window_seconds == 60
-        assert HL7.Default.circuit_breaker_reset_seconds == 60
-
-# ################################################################################################################################
-
     def test_deduplication_defaults(self:'any_') -> 'None':
 
         assert HL7.Default.dedup_ttl_value == 0

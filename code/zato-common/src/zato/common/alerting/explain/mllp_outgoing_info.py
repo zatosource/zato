@@ -45,9 +45,6 @@ _defaults = {
     _retry.Field_Max_Retries: _retry.Default_Max_Retries,
     _retry.Field_Sleep_Time: _retry.Default_Sleep_Time,
     _retry.Field_Backoff_Threshold: _retry.Default_Backoff_Threshold,
-    'circuit_breaker_threshold_percent': HL7.Default.circuit_breaker_threshold_percent,
-    'circuit_breaker_window_seconds': HL7.Default.circuit_breaker_window_seconds,
-    'circuit_breaker_reset_seconds': HL7.Default.circuit_breaker_reset_seconds,
     'tls_ca_path': '',
     'is_audit_log_active': True,
 }
@@ -69,8 +66,8 @@ def _stored_value(opaque:'stranydict', name:'str') -> 'object':
 
 def describe_mllp_outgoing(session:'SASession', name:'str') -> 'anylist | None':
     """ The label and value pairs describing one outgoing MLLP connection - where it sends, whether over TLS,
-    how many connections it keeps open, how long it waits for an acknowledgment, how a failed send is retried
-    and when sending pauses, whether its audit log is on and the alert thresholds it sets of its own.
+    how many connections it keeps open, how long it waits for an acknowledgment, how a failed send is retried,
+    whether its audit log is on and the alert thresholds it sets of its own.
     None when no outgoing MLLP connection goes by the name.
     """
     row = session.query(GenericConn).\
@@ -108,11 +105,6 @@ def describe_mllp_outgoing(session:'SASession', name:'str') -> 'anylist | None':
 
     # A send the receiving system did not take waits in the connection's queue, and one the queue gave up on goes to its DLQ
     out.extend(queue_lines(opaque))
-
-    breaker_threshold = _stored_value(opaque, 'circuit_breaker_threshold_percent')
-    breaker_window = _stored_value(opaque, 'circuit_breaker_window_seconds')
-    breaker_reset = _stored_value(opaque, 'circuit_breaker_reset_seconds')
-    out.append(('Sending pauses', f'at {breaker_threshold}% failures in {breaker_window}s, for {breaker_reset}s'))
 
     # The alerts read the audit log, so a connection with it off has nothing for them to count
     is_audit_log_active = _stored_value(opaque, 'is_audit_log_active') is True

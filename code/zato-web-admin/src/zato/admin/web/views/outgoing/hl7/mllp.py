@@ -92,7 +92,6 @@ class Index(_Index):
         'should_log_messages', 'logging_level',
         'max_msg_size', 'read_buffer_size', 'recv_timeout',
         'start_seq', 'end_seq', 'max_wait_time',
-        'circuit_breaker_threshold_percent', 'circuit_breaker_window_seconds', 'circuit_breaker_reset_seconds',
         'tls_cert_path', 'tls_key_path', 'tls_ca_path',
     ) + generic_attrs + _delivery_field_names
     output_repeated = True
@@ -138,7 +137,6 @@ class _CreateEdit(CreateEdit):
         'should_log_messages', 'logging_level',
         'max_msg_size', 'read_buffer_size', 'recv_timeout',
         'start_seq', 'end_seq', 'max_wait_time',
-        'circuit_breaker_threshold_percent', 'circuit_breaker_window_seconds', 'circuit_breaker_reset_seconds',
         'tls_cert_path', 'tls_key_path', 'tls_ca_path',
     ) + generic_attrs + _delivery_field_names + _alert_field_names
     output_required = 'id', 'name'

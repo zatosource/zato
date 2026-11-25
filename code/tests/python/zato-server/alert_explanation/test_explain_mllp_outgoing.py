@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The explanation of an outgoing MLLP connection's alert - the mllp-outgoing skill explains it, the Object section is
-# read off the connection's generic row with its address, its TLS, its pool, its retries and its circuit breaker, and
+# read off the connection's generic row with its address, its TLS, its pool and its retries, and
 # the acknowledgment codes it alerts on, and the failures group by the text and the MSA-1 code of the acknowledgment
 # the remote system answered, a message no acknowledgment came back for reading as its timeout status.
 
@@ -61,7 +61,7 @@ _message_text = 'MSH|^~\\&|ZATO|ZATO|LAB|LAB_SYSTEM|20260914||ORU^R01|MSG-1|P|2.
 # ################################################################################################################################
 
 def _seed_connection(session_maker:'any_') -> 'None':
-    """ One outgoing MLLP connection over TLS, with retries and a breaker of its own and alert settings of its own.
+    """ One outgoing MLLP connection over TLS, with retries and alert settings of its own.
     """
     session = session_maker()
 
@@ -71,9 +71,6 @@ def _seed_connection(session_maker:'any_') -> 'None':
         'retry_sleep_time': 2,
         'retry_backoff_threshold': 120,
         'use_queue': True,
-        'circuit_breaker_threshold_percent': 50,
-        'circuit_breaker_window_seconds': 60,
-        'circuit_breaker_reset_seconds': 90,
         'tls_ca_path': '/etc/zato/ca.pem',
         'is_audit_log_active': True,
         storage_name('is_active'): True,
@@ -163,7 +160,7 @@ class TestMllpOutgoing:
 
 # ################################################################################################################################
 
-    def test_the_object_section_carries_the_address_the_tls_the_retries_the_breaker_and_the_codes(self, llm_address:'any_',
+    def test_the_object_section_carries_the_address_the_tls_the_retries_and_the_codes(self, llm_address:'any_',
         repo_dir:'str') -> 'None':
 
         _seed_acks()
@@ -184,7 +181,6 @@ class TestMllpOutgoing:
             assert 'Retries: 7, waiting from 2s, up to 120s in total' in section
             assert 'Use queue: on' in section
             assert 'Use DLQ: on' in section
-            assert 'Sending pauses: at 50% failures in 60s, for 90s' in section
             assert 'Audit log: on' in section
 
             # The connection's own codes and failures are the settings that differ from the defaults

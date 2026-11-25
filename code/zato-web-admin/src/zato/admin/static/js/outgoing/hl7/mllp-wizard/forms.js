@@ -103,18 +103,6 @@ $.fn.zato.micro_forms.setup(wizard, {
         'retries': deliveryDescriptors[deliveryConfig.retriesLine],
         'dlq': deliveryDescriptors[deliveryConfig.actionLine],
 
-        'send_limit': {
-            title: 'Send limit',
-            width: '430px',
-            pages: [[
-                [
-                    {field: 'circuit_breaker_threshold_percent', label: 'Failures (%)', kind: 'number', width: '150px'},
-                    {field: 'circuit_breaker_window_seconds',    label: 'Within (s)',   kind: 'number', width: '150px'}
-                ],
-                {field: 'circuit_breaker_reset_seconds', label: 'Resume after (s)', kind: 'number', width: '190px'}
-            ]]
-        },
-
         'logging': {
             title: 'Logging and audit',
             pages: [[
@@ -135,8 +123,7 @@ forms.config_own = {
         {linkId: 'mllp-outconn-wizard-edit-framing',    descriptor: 'framing'},
         {linkId: 'mllp-outconn-wizard-edit-timing',     descriptor: 'timing'},
         {linkId: 'mllp-outconn-wizard-edit-tls',        descriptor: 'tls'},
-        {linkId: 'mllp-outconn-wizard-edit-pool',       descriptor: 'pool'},
-        {linkId: 'mllp-outconn-wizard-edit-send-limit', descriptor: 'send_limit'}
+        {linkId: 'mllp-outconn-wizard-edit-pool',       descriptor: 'pool'}
     ],
 
     // The Retries and Dead-letter queue lines - their popovers are the shared tab's and are

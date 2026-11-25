@@ -344,10 +344,6 @@ wizard.helpDescriptions = function() {
         out[wizard.forms.inputId(fieldName)] = deliveryHelp[fieldName];
     }
 
-    out['mllp-outconn-wizard-edit-send-limit'] = 'How much may go wrong before the platform stops sending - once ' +
-        'the given share of sends within the window fails, sending stops for the given time rather than ' +
-        'queueing up work for an endpoint that is down. One trial message then decides whether it resumes.';
-
     // .. the Alerts line and, within its popover, the lines of the Alerts tab ..
     out['mllp-outconn-wizard-edit-alerts'] = 'When the platform sends an email about this connection - after how many ' +
         'failed sends in a row, at what share of failures, on which negative acknowledgments, after how many ' +

@@ -16,7 +16,6 @@ from datetime import datetime, timezone
 # Zato
 from zato.common.hl7.exception import HL7Exception
 from zato.common.hl7.mllp.ack import AckResult
-from zato.common.hl7.mllp.circuit_breaker import CircuitBreaker, CircuitState
 from zato.common.hl7.mllp.codec import FrameDecoder, frame_encode
 from zato.common.hl7.mllp.tls import build_client_ssl_context
 
@@ -42,7 +41,6 @@ _oversized_message_byte_count    = 500
 _unterminated_frame_recv_timeout_seconds = 1.0
 _slow_callback_delay_seconds     = 5
 _client_receive_timeout_seconds  = 1.0
-_circuit_breaker_reset_seconds   = 0.1
 _outconn_recv_timeout_ms         = 5000
 _outconn_max_wait_time           = 5
 
@@ -968,7 +966,7 @@ class TestTlsAndMtls:
         config.tls_cert_path = tls_certs['client_cert']
         config.tls_key_path = tls_certs['client_key']
 
-        connection = _HL7MLLPConnection(config, None, CircuitBreaker())
+        connection = _HL7MLLPConnection(config, None)
         result = connection.invoke(sample_adt_a01('OUTTLS01'))
 
         assert isinstance(result, AckResult)
@@ -999,7 +997,7 @@ class TestTlsAndMtls:
         config.tls_cert_path = ''
         config.tls_key_path = ''
 
-        connection = _HL7MLLPConnection(config, None, CircuitBreaker())
+        connection = _HL7MLLPConnection(config, None)
         result = connection.invoke(sample_adt_a01('OUTPLAIN1'))
 
         assert isinstance(result, AckResult)
@@ -1107,125 +1105,6 @@ class TestTimeoutsAndErrors:
 
             # The relay in front of the killed server stops along with it
             stop_server(process)
-
-# ################################################################################################################################
-# ################################################################################################################################
-# Group 7 - Circuit breaker in-process
-# ################################################################################################################################
-# ################################################################################################################################
-
-class TestCircuitBreaker:
-    """ Verifies circuit breaker state transitions using direct calls.
-    No subprocess needed.
-    """
-
-# ################################################################################################################################
-
-    def test_opens_after_threshold_exceeded(self) -> 'None':
-        """ When the failure rate exceeds the threshold, the circuit must open.
-        """
-
-        breaker = CircuitBreaker(failure_threshold_percent=50, window_seconds=60)
-
-        # Record 5 successes and 6 failures (>50% failure rate) ..
-        for _ in range(5):
-            breaker.record_success()
-
-        for _ in range(6):
-            breaker.record_failure()
-
-        assert breaker.state == CircuitState.Open
-        assert breaker.can_execute() is False
-
-# ################################################################################################################################
-
-    def test_half_open_after_reset_period(self) -> 'None':
-        """ After the reset period elapses, the circuit must transition to half-open.
-        """
-
-        breaker = CircuitBreaker(
-            failure_threshold_percent=50,
-            window_seconds=60,
-            reset_seconds=_circuit_breaker_reset_seconds,
-        )
-
-        # Open the circuit by exceeding the threshold ..
-        for _ in range(3):
-            breaker.record_success()
-
-        for _ in range(4):
-            breaker.record_failure()
-
-        assert breaker.state == CircuitState.Open
-
-        # .. sleep past the reset period ..
-        time.sleep(_circuit_breaker_reset_seconds + 0.05)
-
-        # .. can_execute should transition to half-open.
-        assert breaker.can_execute() is True
-        assert breaker.state == CircuitState.Half_Open
-
-# ################################################################################################################################
-
-    def test_success_in_half_open_closes(self) -> 'None':
-        """ A success recorded in half-open state must close the circuit.
-        """
-
-        breaker = CircuitBreaker(
-            failure_threshold_percent=50,
-            window_seconds=60,
-            reset_seconds=_circuit_breaker_reset_seconds,
-        )
-
-        # Open the circuit ..
-        for _ in range(3):
-            breaker.record_success()
-
-        for _ in range(4):
-            breaker.record_failure()
-
-        assert breaker.state == CircuitState.Open
-
-        # .. sleep past the reset period to reach half-open ..
-        time.sleep(_circuit_breaker_reset_seconds + 0.05)
-        _ = breaker.can_execute()
-
-        assert breaker.state == CircuitState.Half_Open
-
-        # .. record a success to close the circuit.
-        breaker.record_success()
-        assert breaker.state == CircuitState.Closed
-
-# ################################################################################################################################
-
-    def test_failure_in_half_open_reopens(self) -> 'None':
-        """ A failure recorded in half-open state must reopen the circuit.
-        """
-
-        breaker = CircuitBreaker(
-            failure_threshold_percent=50,
-            window_seconds=60,
-            reset_seconds=_circuit_breaker_reset_seconds,
-        )
-
-        # Open the circuit ..
-        for _ in range(3):
-            breaker.record_success()
-
-        for _ in range(4):
-            breaker.record_failure()
-
-        assert breaker.state == CircuitState.Open
-
-        # .. sleep past the reset period to reach half-open ..
-        time.sleep(_circuit_breaker_reset_seconds + 0.05)
-        _ = breaker.can_execute()
-
-        assert breaker.state == CircuitState.Half_Open
-
-        # .. record a failure to reopen the circuit.
-        breaker.record_failure()
-        assert breaker.state == CircuitState.Open
 
 # ################################################################################################################################
 # ################################################################################################################################

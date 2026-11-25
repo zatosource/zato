@@ -40,12 +40,6 @@ $.fn.zato.outgoing.hl7.mllp.field_descriptions = {
     // Delivery options
     'id_pool_size': 'How many connections the pool keeps open to the remote endpoint. ' +
         'Each concurrent send uses one connection. Default is 10.',
-    'id_circuit_breaker_threshold_percent': 'The share of failed sends within the window, in percent, ' +
-        'at which sending to the endpoint stops. Default is 50.',
-    'id_circuit_breaker_window_seconds': 'Length in seconds of the rolling window the share of failures ' +
-        'is computed over. Default is 60.',
-    'id_circuit_breaker_reset_seconds': 'How long in seconds sending stays stopped before a trial message ' +
-        'is let through again. Default is 60.',
 
     // Logging and audit
     'id_should_log_messages': 'When on, outgoing messages and acknowledgments are logged in full. ' +
