@@ -26,6 +26,7 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.test.process_util import kill_process_tree
 from zato.common.util.config import get_config_object, update_config_file
 from zato.common.typing_ import cast_
+from zato.common.test.zato_database import use_process_database
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -178,6 +179,9 @@ def _generate_coverage_report(cov_data_dir:'any_', coveragerc_path:'any_'):
 @pytest.fixture(scope='session')
 def zato_server(request:'any_'):
     global _server_proc, _tmpdir
+
+    # The environment has a PostgreSQL database of its own, which every process of the session uses
+    _ = use_process_database()
 
     use_coverage = request.config.getoption('--with-coverage')
 

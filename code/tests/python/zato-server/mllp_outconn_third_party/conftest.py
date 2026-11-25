@@ -37,6 +37,7 @@ from zato.common.test.client import AdminClient
 from zato.common.test.process_util import kill_process_tree
 from zato.common.typing_ import cast_
 from zato.common.util.config import get_config_object, update_config_file
+from zato.common.test.zato_database import use_process_database
 
 # Zato - the certificate material, made the same way the language suite makes it
 from _certs import generate_certificates, TestCertificates
@@ -189,6 +190,9 @@ def _wait_for_server(host:'str', port:'int') -> 'None':
 def _create_quickstart(directory:'str') -> 'str':
     """ Creates the throwaway environment one run operates on and returns its server directory.
     """
+
+    # The environment has a PostgreSQL database of its own, which every process of the session uses
+    _ = use_process_database()
 
     # The environment has to be laid down into a directory of its own, because quickstart refuses
     # to write into one that already holds anything

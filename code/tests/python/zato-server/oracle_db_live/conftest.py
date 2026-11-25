@@ -24,6 +24,7 @@ from urllib.request import Request, urlopen
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.test.zato_database import use_process_database
 
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'zato-common', 'lib')))
@@ -318,6 +319,9 @@ def zato_server(oracle_server:'DatabaseServer') -> 'any_':
     """ Session-scoped fixture that creates a Zato environment with an outgoing
     Oracle connection pointing at the container, then starts its server.
     """
+
+    # The environment has a PostgreSQL database of its own, which every process of the session uses
+    _ = use_process_database()
 
     # Kill any leftover Zato servers ..
     _ = subprocess.run(['pkill', '-f', 'zato.server.main'], capture_output=True)

@@ -29,6 +29,7 @@ from zato.common.test.config import TestConfig
 from zato.common.test.process_util import kill_process_tree
 from zato.common.typing_ import cast_
 from zato.common.util.config import get_config_object, update_config_file
+from zato.common.test.zato_database import use_process_database
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -126,6 +127,9 @@ def _wait_for_server(host:'str', port:'int', timeout:'int'=_server_wait_timeout)
 def zato_server() -> 'any_':
     """ Spins up a quickstart environment of its own so that the CLI has a server to invoke services on.
     """
+    # The environment has a PostgreSQL database of its own, which every process of the session uses
+    _ = use_process_database()
+
     global _server_process, _temp_directory
 
     host = '127.0.0.1'

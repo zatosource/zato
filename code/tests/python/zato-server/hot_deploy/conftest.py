@@ -28,6 +28,7 @@ import pytest
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.pickup_listener import PickupListener
 from zato.common.test.process_util import kill_process_tree, kill_processes_in_directories
+from zato.common.test.zato_database import use_process_database
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -170,6 +171,9 @@ def _wait_for_server(host:'str', port:'int', timeout:'int'=_server_wait_timeout)
 def zato_server() -> 'listenergen':
     """ Spins up a quickstart environment, starts its server and a file listener of a project, yields the listener.
     """
+    # The environment has a PostgreSQL database of its own, which every process of the session uses
+    _ = use_process_database()
+
     from zato.common.test.config_hot_deploy import TestConfig
 
     # A server or a listener that an interrupted run of this suite left behind is stopped, and no other process is

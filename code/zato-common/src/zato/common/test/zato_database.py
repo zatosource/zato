@@ -13,7 +13,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import atexit
 import os
 import tempfile
-from contextlib import contextmanager
+from contextlib import contextmanager, ExitStack
 from shutil import rmtree
 
 # Zato
@@ -144,6 +144,20 @@ def isolated_database_env() -> 'strstrdictgen':
     finally:
         drop_test_database(env)
         rmtree(generation_dir, ignore_errors=True)
+
+# ################################################################################################################################
+
+def use_process_database() -> 'strstrdict':
+    """ Points the Zato_Database_* variables of this process at a new database for the rest of the process and returns them,
+    so that an environment the process creates and every process it starts use that database, which is dropped
+    when the process exits.
+    """
+    scope = ExitStack()
+    out = scope.enter_context(isolated_database_env())
+
+    _ = atexit.register(scope.close)
+
+    return out
 
 # ################################################################################################################################
 

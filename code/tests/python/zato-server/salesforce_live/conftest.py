@@ -25,6 +25,7 @@ from urllib.request import Request, urlopen
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.typing_ import cast_
+from zato.common.test.zato_database import use_process_database
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -218,6 +219,9 @@ def zato_server() -> 'any_':
     """ Session-scoped fixture that spins up a simulated Salesforce instance
     and a Zato server with Salesforce connections.
     """
+
+    # The environment has a PostgreSQL database of its own, which every process of the session uses
+    _ = use_process_database()
 
     # Kill any leftover Zato servers ..
     _ = subprocess.run(['pkill', '-f', 'zato.server.main'], capture_output=True)

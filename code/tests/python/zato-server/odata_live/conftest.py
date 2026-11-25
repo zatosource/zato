@@ -24,6 +24,7 @@ from urllib.request import Request, urlopen
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.test.zato_database import use_process_database
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -213,6 +214,9 @@ def _start_server(server_directory:'str', server_port:'int', broker_port:'int') 
 def zato_server() -> 'any_':
     """ Session-scoped fixture that spins up two OData test servers and a Zato server with OData outgoing connections.
     """
+    # The environment has a PostgreSQL database of its own, which every process of the session uses
+    _ = use_process_database()
+
     from _odata_server import Profile, seed_business_central, seed_s4hana, start_odata_server
 
     # Kill any leftover Zato servers ..

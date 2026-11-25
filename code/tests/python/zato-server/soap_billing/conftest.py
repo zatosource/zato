@@ -35,6 +35,7 @@ import pytest
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.process_util import kill_process_tree
 from zato.common.typing_ import cast_
+from zato.common.test.zato_database import use_process_database
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -177,6 +178,9 @@ def zato_server() -> 'any_':
     """ Session-scoped fixture that creates a quickstart environment and starts its server,
     with this suite's fixture services deploying from pickup during boot.
     """
+    # The environment has a PostgreSQL database of its own, which every process of the session uses
+    _ = use_process_database()
+
     time_start = time.monotonic()
 
     # Allocate dynamic ports ..

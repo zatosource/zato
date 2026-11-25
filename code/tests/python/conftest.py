@@ -58,7 +58,7 @@ class ModuleCtx:
     # The directory on a disk under which the databases of the tests are kept, as zato.common.test.sql_conformance.disk
     # defines it, and the directory in it with the temporary directories of a run
     Env_Disk_Dir = 'Zato_Test_Disk_Dir'
-    Default_Disk_Dir = os.path.join(os.path.expanduser('~'), '.cache', 'zato-test')
+    Default_Disk_Dir = os.path.join('/tmp', 'zato-test')
     Temporary_Dir_Name = 'tmp'
 
     # The module that tells whether a directory is on a file system held in memory

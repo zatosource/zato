@@ -25,6 +25,7 @@ from urllib.request import Request, urlopen
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.test.zato_database import use_process_database
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -224,6 +225,9 @@ def zato_server() -> 'any_':
     """ Session-scoped fixture that spins up two gRPC test servers, plaintext and TLS,
     plus a Zato server with gRPC outgoing connections pointing to them.
     """
+    # The environment has a PostgreSQL database of its own, which every process of the session uses
+    _ = use_process_database()
+
     from _grpc_server import generate_tls_material, start_grpc_server
 
     # Kill any leftover Zato servers ..

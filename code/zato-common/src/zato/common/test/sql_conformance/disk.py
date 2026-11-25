@@ -23,8 +23,8 @@ class ModuleCtx:
     # The environment variable with the base directory of the databases of the tests
     Env_Base_Dir = 'Zato_Test_Disk_Dir'
 
-    # The base directory under the home directory of the user, unless the variable names another one
-    Default_Base_Dir = os.path.join(os.path.expanduser('~'), '.cache', 'zato-test')
+    # The base directory under /tmp, unless the variable names another one
+    Default_Base_Dir = os.path.join('/tmp', 'zato-test')
 
 # ################################################################################################################################
 # ################################################################################################################################

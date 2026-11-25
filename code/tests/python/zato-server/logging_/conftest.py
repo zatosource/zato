@@ -28,6 +28,7 @@ import pytest
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.process_util import kill_process_tree
 from zato.common.typing_ import cast_
+from zato.common.test.zato_database import use_process_database
 
 # Make this directory importable so test modules can use the helpers defined below
 _suite_dir = os.path.dirname(__file__)
@@ -211,6 +212,9 @@ def zato_server() -> 'any_':
     so the generated logging.conf carries their values, and the server itself starts with
     Zato_Log_Level and Zato_Log_Level_REST so the runtime overrides are exercised.
     """
+    # The environment has a PostgreSQL database of its own, which every process of the session uses
+    _ = use_process_database()
+
     time_start = time.monotonic()
 
     # Allocate dynamic ports ..

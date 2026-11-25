@@ -21,6 +21,7 @@ from urllib.request import Request, urlopen
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.test.zato_database import use_process_database
 
 
 # pytest
@@ -132,6 +133,9 @@ def _wait_for_server(host:'str', port:'int', timeout:'int'=_server_wait_timeout)
 
 @pytest.fixture(scope='session', autouse=True)
 def zato_server() -> 'any_':
+
+    # The environment has a PostgreSQL database of its own, which every process of the session uses
+    _ = use_process_database()
 
     global _server_process, _temp_directory
 

@@ -21,6 +21,7 @@ yappi==1.7.6
 aiohttp==3.14.3
 playwright
 hl7
+hl7apy==1.3.5
 aiosmtpd
 fhir.resources
 confluent-kafka

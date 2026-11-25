@@ -34,6 +34,9 @@ class ModuleCtx:
     # .. the line that the failure_reports pytest plugin writes for each failure ..
     Failure_Marker = '>>> ZATO TEST FAILURE'
 
+    # .. the line that pytest writes when a conftest cannot be loaded, before any plugin of the session runs ..
+    Conftest_Failure_Pattern = re.compile(r'^\w+Error while loading conftest ')
+
     # .. the first line of a traceback ..
     Traceback_Marker = 'Traceback (most recent call last)'
 
@@ -131,6 +134,7 @@ class LogCounter:
 
         is_error = bool(ModuleCtx.Error_Record_Pattern.search(line)) \
             or ModuleCtx.Failure_Marker in line \
+            or bool(ModuleCtx.Conftest_Failure_Pattern.match(line)) \
             or bool(ModuleCtx.Cargo_Error_Pattern.match(line))
 
         is_warning = bool(ModuleCtx.Warning_Record_Pattern.search(line)) \

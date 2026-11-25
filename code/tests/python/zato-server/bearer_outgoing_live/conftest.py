@@ -37,6 +37,7 @@ from zato.common.test import kill_server_process  # noqa: E402
 from zato.common.test.fhir import FHIRTestServer  # noqa: E402
 from zato.common.test.fhir.common import auth_type_oauth  # noqa: E402
 from zato.common.util.config import get_config_object, update_config_file  # noqa: E402
+from zato.common.test.zato_database import use_process_database
 
 # Zato - test helpers
 import keycloak_  # noqa: E402
@@ -209,6 +210,9 @@ def zato_server() -> 'any_':
     """ Session-scoped fixture - brings up Keycloak with signed JWT clients, spins up a Zato quickstart environment,
     deploys the private key JWT definitions with their outgoing connections and yields connection details.
     """
+    # The environment has a PostgreSQL database of its own, which every process of the session uses
+    _ = use_process_database()
+
     global _server_process, _temp_directory
 
     # Each run signs with keys of its own ..
