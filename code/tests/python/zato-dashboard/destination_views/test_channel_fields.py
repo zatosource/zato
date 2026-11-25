@@ -13,6 +13,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from http import HTTPStatus
 from json import loads
+from unittest import TestCase
 
 # Zato
 from zato.admin.web.views.channel.hl7.mllp import Create, Edit, Index
@@ -37,6 +38,28 @@ _edit_service = 'zato.generic.connection.edit'
 
 # What a saved channel comes back as
 _saved_channel = {'id': 123, 'name': 'test.mllp.channel'}
+
+# The logger through which the view reports a refused save
+_views_logger_name = 'zato.admin.web.views'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _create_refused(post_data:'anydict', reason:'str') -> 'any_':
+    """ Runs a create that the view refuses and confirms that the view logs the reason, which is captured
+    rather than written to the output of the run.
+    """
+    request = new_request(post_data)
+
+    with TestCase().assertLogs(_views_logger_name, level='ERROR') as logs:
+        response = Create()(request)
+
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert reason.encode('utf8') in response.content
+    assert reason in logs.output[0], logs.output
+
+    out = (request, response)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -144,11 +167,7 @@ def test_a_channel_with_neither_target_is_refused() -> 'None':
     """
     post_data = new_channel_post_data(service='')
 
-    request = new_request(post_data)
-    response = Create()(request)
-
-    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
-    assert b'needs a service or at least one active destination' in response.content
+    request, _ = _create_refused(post_data, 'needs a service or at least one active destination')
 
     assert request.zato.client.invocations == []
 
@@ -179,11 +198,7 @@ def test_a_service_less_channel_may_not_bridge_to_rest() -> 'None':
     """
     post_data = new_channel_post_data(service='', destinations=new_destination_list(), use_rest='on')
 
-    request = new_request(post_data)
-    response = Create()(request)
-
-    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
-    assert b'needs a service for its REST bridge' in response.content
+    _ = _create_refused(post_data, 'needs a service for its REST bridge')
 
 # ################################################################################################################################
 
@@ -193,11 +208,7 @@ def test_a_destination_list_that_is_not_json_is_refused() -> 'None':
     """
     post_data = new_channel_post_data(service='', destinations='this is not JSON')
 
-    request = new_request(post_data)
-    response = Create()(request)
-
-    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
-    assert b'needs a service or at least one active destination' in response.content
+    _ = _create_refused(post_data, 'needs a service or at least one active destination')
 
 # ################################################################################################################################
 # ################################################################################################################################
