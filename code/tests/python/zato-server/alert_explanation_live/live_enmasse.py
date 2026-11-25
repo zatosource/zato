@@ -73,8 +73,13 @@ def import_document(document:'anydict') -> 'None':
     trace(Channel_Enmasse, Sent, f'import {path}')
     trace(Channel_Enmasse, Sent, text)
 
+    # The CLI writes to the server's database, not to the one the autouse fixture gives each test
+    environment = os.environ.copy()
+    environment.update(LiveServer.process_env)
+
     command = [_zato_bin, 'enmasse', '--import', '--input', path, LiveServer.server_directory]
-    result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=_import_timeout)
+    result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=_import_timeout,
+        env=environment)
 
     if result.returncode != 0:
         raise RuntimeError(f'enmasse import failed for {path}:\nstdout: {result.stdout}\nstderr: {result.stderr}')

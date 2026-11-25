@@ -271,13 +271,15 @@ def run_test_transfer_probe(
 
         error = str(e)
 
+        # The error goes to the data of the event because the status column is bounded and an error,
+        # e.g. the output of an SFTP command, may be longer than it holds.
         _ = audit_log.insert(
             AuditSource.Test_Transfer,
             AuditEvent.Test_Transfer_Executed,
             object_name,
             cid=cid,
             outcome=AuditOutcome.Error,
-            status=error,
+            data=error,
         )
         return False
 

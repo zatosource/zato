@@ -229,7 +229,7 @@ class URLData(PyURLData):
             if enforce_auth:
                 msg = '401 Unauthorized path_info:`{}`, cid:`{}`'.format(path_info, cid)
                 error_msg = '401 Unauthorized'
-                logger.error(msg + ' (No header)')
+                logger.warning(msg + ' (No header)')
                 raise Unauthorized(cid, error_msg, None)
             else:
                 return False
@@ -249,7 +249,7 @@ class URLData(PyURLData):
             if enforce_auth:
                 msg = '401 Unauthorized path_info:`{}`, cid:`{}`'.format(path_info, cid)
                 error_msg = '401 Unauthorized'
-                logger.error(msg + ' (Password)')
+                logger.warning(msg + ' (Password)')
                 raise Unauthorized(cid, error_msg, None)
             else:
                 return False
@@ -271,7 +271,7 @@ class URLData(PyURLData):
                 msg_log = 'Unauthorized; path_info:`{}`, cid:`{}`, sec-wall code:`{}`, description:`{}`\n'.format(
                     path_info, cid, result.code, result.description)
                 msg_exc = 'Unauthorized; cid={}'.format(cid)
-                logger.error(msg_log)
+                logger.warning(msg_log)
                 raise Unauthorized(cid, msg_exc, 'Basic realm="{}"'.format(sec_def.realm))
             else:
                 return False
@@ -327,7 +327,7 @@ class URLData(PyURLData):
             if enforce_auth:
                 msg = '401 Unauthorized path_info:`{}`, cid:`{}`'.format(path_info, cid)
                 error_msg = '401 Unauthorized'
-                logger.error(msg + ' ({})'.format(reason))
+                logger.warning(msg + ' ({})'.format(reason))
                 raise Unauthorized(cid, error_msg, None)
             else:
                 return False
@@ -365,7 +365,7 @@ class URLData(PyURLData):
         if enforce_auth:
             msg = '401 Unauthorized path_info:`{}`, cid:`{}`'.format(path_info, cid)
             error_msg = '401 Unauthorized'
-            logger.error(msg + ' (Bearer token)')
+            logger.warning(msg + ' (Bearer token)')
             raise Unauthorized(cid, error_msg, 'Bearer')
         else:
             return False
@@ -394,7 +394,7 @@ class URLData(PyURLData):
             if enforce_auth:
                 msg = '401 Unauthorized path_info:`{}`, cid:`{}`, e:`{}`'.format(path_info, cid, format_exc())
                 error_msg = '401 Unauthorized'
-                logger.error(msg)
+                logger.warning(msg)
                 raise Unauthorized(cid, error_msg, None)
             else:
                 return False

@@ -12,7 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strstrdict
+    from zato.common.typing_ import strlist, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,6 +36,13 @@ class LiveServer:
 
     # The Zato_Database_* variables of the PostgreSQL database the server writes its configuration and audit log to
     database_env:'strstrdict' = {}
+
+    # The variables that the processes of the server's installation run with, the ones that select its database
+    # and the file of its generation among them, which the enmasse CLI receives in place of those of a test
+    process_env:'strstrdict' = {}
+
+    # Fragments of the server output records that the proofs provoke deliberately, shared with the session of the server
+    expected_server_records:'strlist' = []
 
     # Where the server's MLLP listener accepts the messages of the MLLP channel proof - decided before the server starts
     mllp_port = 0

@@ -44,7 +44,7 @@ import pytest
 from zato.common.alerting.explain.skill import get_default_skills_dir, Skills_Dir_Name
 from zato.common.alerting.rendering import get_default_template_dir, Template_Dir_Name
 from zato.common.hl7.mllp.haproxy import Env_Port_Name as MLLP_Port_Env_Name
-from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
+from zato.common.test.conftest_base_pubsub import create_zato_server_fixture, get_process_environment
 from zato.common.test.sftp_ import SFTPTestServer
 from zato.common.test.zato_database import zato_database_engine
 from zato.common.typing_ import cast_
@@ -219,6 +219,8 @@ def _build_live_server_config(
 
         pubsub_database = cast_('PubSubDatabase', state.pubsub_database)
         LiveServer.database_env = dict(pubsub_database.env)
+        LiveServer.process_env = get_process_environment()
+        LiveServer.expected_server_records = state.expected_server_records
 
     out:'anydict' = {
         'placeholders': {

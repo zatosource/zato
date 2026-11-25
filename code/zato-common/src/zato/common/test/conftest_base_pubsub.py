@@ -45,7 +45,7 @@ from zato.common.test.reservation import PortInUse
 if 0:
     from typing import Literal
     from zato.common.test.pubsub_database import PubSubDatabase
-    from zato.common.typing_ import any_, anydict, callable_, intlist, strnone, strstrdict, strtuple
+    from zato.common.typing_ import any_, anydict, callable_, intlist, strlist, strnone, strstrdict, strtuple
 
     fixture_scope = Literal['session', 'package', 'module', 'class', 'function']
 
@@ -130,6 +130,10 @@ Server_Stacks_File_Name = 'server-stacks.log'
 _stacks_head_pattern = re.compile(r' - Stacks of threads and greenlets$')
 _log_entry_pattern   = re.compile(r'^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3} - ')
 
+# Precedes a line of the server output that a test provokes deliberately, which tests/log_counter.py does not count
+# as an error or a warning - the two definitions must remain identical
+Expected_Record_Marker = '[Expected]'
+
 # The logging configuration and the main configuration of a server, relative to its directory
 _logging_conf_path = os.path.join('config', 'repo', 'logging.conf')
 _server_conf_path  = os.path.join('config', 'repo', 'server.conf')
@@ -158,6 +162,10 @@ class SessionState:
         self.worker_pids:'set[str]' = set()
         self.worker_reload_count = 0
         self.worker_reload_condition = threading.Condition()
+
+        # Fragments of the server output records that the tests provoke deliberately. A record arrives after the call
+        # that provoked it returns, so a fragment remains registered for the rest of the session.
+        self.expected_server_records:'strlist' = []
 
         self._logger = logging.getLogger(logger_name)
         self._server_log_copy_name = server_log_copy_name
@@ -461,7 +469,11 @@ def start_server_process(
                     _ = stacks_file.write(line)
 
                 elapsed = time.monotonic() - popen_time
-                logger.debug('[SERVER %6.1fs] %s', elapsed, text)
+
+                if any(record in text for record in state.expected_server_records):
+                    logger.debug('[SERVER %6.1fs] %s %s', elapsed, Expected_Record_Marker, text)
+                else:
+                    logger.debug('[SERVER %6.1fs] %s', elapsed, text)
 
                 if _worker_ready_pattern.search(text):
                     worker_ready.set()

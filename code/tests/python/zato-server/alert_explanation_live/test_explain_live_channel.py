@@ -408,6 +408,9 @@ def _produce_channel_failures(channel:'_ChannelDescription') -> 'None':
 
         assert str(response.status_code) == expected_status, response.text
 
+    # The server logs each rejection of the wrong password at the warning level
+    LiveServer.expected_server_records.append(f'Unauthorized; path_info:`{channel.url_path}`')
+
     for _ in range(_channel_call_count):
         call(_security_wrong_password, _status_unauthorized)
 

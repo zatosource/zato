@@ -31,6 +31,14 @@ class ModuleCtx:
     # .. log records at the levels below them, whose traceback, when they carry one, is diagnostic detail ..
     Detail_Record_Pattern = re.compile(r' - (?:DEBUG|INFO) - ')
 
+    # .. a record that pytest repeats in the captured log of a failure, which is already counted, so neither the record
+    # nor its traceback counts again, whatever its level ..
+    Captured_Record_Pattern = re.compile(r'^(?:DEBUG|INFO|WARNING|ERROR|CRITICAL) +\S+:\S+:\d+ ')
+
+    # .. a line of the server output that a test provokes deliberately, which is detail whatever its level,
+    # identical to Expected_Record_Marker of zato.common.test.conftest_base_pubsub ..
+    Expected_Record_Marker = '[Expected]'
+
     # .. the line that the failure_reports pytest plugin writes for each failure ..
     Failure_Marker = '>>> ZATO TEST FAILURE'
 
@@ -132,6 +140,11 @@ class LogCounter:
         if self.in_warnings_summary:
             return
 
+        # .. a record that a test provokes deliberately is detail, and so is the traceback that it carries ..
+        if ModuleCtx.Expected_Record_Marker in line:
+            self.previous_is_record = True
+            return
+
         is_error = bool(ModuleCtx.Error_Record_Pattern.search(line)) \
             or ModuleCtx.Failure_Marker in line \
             or bool(ModuleCtx.Conftest_Failure_Pattern.match(line)) \
@@ -141,7 +154,8 @@ class LogCounter:
             or bool(ModuleCtx.Python_Warning_Pattern.search(line)) \
             or bool(ModuleCtx.Cargo_Warning_Pattern.match(line))
 
-        is_detail = bool(ModuleCtx.Detail_Record_Pattern.search(line))
+        is_detail = bool(ModuleCtx.Detail_Record_Pattern.search(line)) \
+            or bool(ModuleCtx.Captured_Record_Pattern.match(line))
 
         # .. an error record, a failure or a cargo error is an error ..
         if is_error:
