@@ -17,6 +17,7 @@ from json import loads
 # Zato
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.json_internal import dumps
+from zato.server.config_audit import Invoker_Security_Username
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -78,6 +79,14 @@ def new_forward_body(service:'Service', channel:'str', request_ctx:'stranydict')
         is_text = False
 
     http_request_ctx = get_http_request_ctx(request_ctx)
+
+    # The config process has no channel of its own, so the identity the invocation runs under travels with it,
+    # either the one of the channel or the one the service invoker propagated, for the config-audit events to record.
+    if identity := service.channel.security.username:
+        http_request_ctx[Invoker_Security_Username] = identity
+
+    elif identity := request_ctx.get(Invoker_Security_Username):
+        http_request_ctx[Invoker_Security_Username] = identity
 
     out = {
         'name': service.name,

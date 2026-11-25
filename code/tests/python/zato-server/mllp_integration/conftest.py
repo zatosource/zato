@@ -27,6 +27,7 @@ import pytest
 # Zato
 from zato.common.test.client import AdminClient as ZatoClient
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
+from zato.common.test.pickup_listener import PickupListener
 from zato.common.typing_ import cast_
 
 # Zato - test services deployed to the server under test
@@ -89,6 +90,7 @@ _server_info:'anydict' = {}
 # Type aliases for generator-based fixtures
 strobj_dict = dict[str, object]
 backend_gen = Generator['BackendHandle', None, None]
+listener_gen = Generator[PickupListener, None, None]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -231,6 +233,27 @@ def zato_client(zato_server:'strobj_dict') -> 'ZatoClient':
 
     out = ZatoClient(base_url, str(zato_server['password']))
     return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def pickup_listener(zato_server:'strobj_dict') -> 'listener_gen':
+    """ The file-transfer listener of the pickup directory of the server, which deploys the files written there
+    while the server runs, such as the services of the demo import.
+    """
+    server_directory = cast_('str', zato_server['server_directory'])
+    server_port = cast_('int', zato_server['port'])
+
+    quickstart_directory = os.path.dirname(server_directory)
+    web_admin_repo_dir = os.path.join(quickstart_directory, 'web-admin', 'config', 'repo')
+
+    listener = PickupListener('mllp-integration', server_directory, web_admin_repo_dir, server_port)
+    listener.start()
+
+    yield listener
+
+    listener.stop()
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -460,7 +460,7 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
         if not service:
             msg = 'Service `{}` does not exist'.format(input.service)
             self.logger.info(msg)
-            raise ServiceMissingException(msg)
+            raise ServiceMissingException(self.cid, msg)
         else:
             return service
 

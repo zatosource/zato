@@ -14,6 +14,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 
+# pytest
+import pytest
+
 # SQLAlchemy
 from sqlalchemy import func, select
 
@@ -93,6 +96,7 @@ def _get_channel_states(zato_client:'any_') -> 'anydict':
 # ################################################################################################################################
 # ################################################################################################################################
 
+@pytest.mark.usefixtures('pickup_listener')
 class TestDemoImport:
 
     first_event_count:'int' = 0

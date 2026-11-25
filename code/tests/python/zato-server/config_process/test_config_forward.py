@@ -16,6 +16,7 @@ import pytest
 from zato.common.exception import Reportable, ZatoException
 from zato.common.json_internal import dumps
 from zato.common.typing_ import cast_
+from zato.server.config_audit import Invoker_Security_Username
 from zato.server.config_forward import apply_forward_result, describe_error, get_http_request_ctx, new_forward_body, \
     raise_error
 from zato.server.reqresp.response import Response
@@ -40,21 +41,34 @@ class RequestStub:
 
 # ################################################################################################################################
 
+class SecurityStub:
+    def __init__(self, username:'str') -> 'None':
+        self.username = username
+
+# ################################################################################################################################
+
+class ChannelStub:
+    def __init__(self, username:'str') -> 'None':
+        self.security = SecurityStub(username)
+
+# ################################################################################################################################
+
 class ServiceStub:
     """ The attributes of a service object that the forwarding of an invocation reads and writes.
     """
-    def __init__(self, raw_request:'any_') -> 'None':
+    def __init__(self, raw_request:'any_', username:'str') -> 'None':
         self.name = 'zato.security.basic-auth.create'
         self.cid = 'cid-1'
         self.data_format = 'json'
         self.transport = 'plain_http'
+        self.channel = ChannelStub(username)
         self.request = RequestStub(raw_request)
         self.response = Response()
 
 # ################################################################################################################################
 
-def _new_service(raw_request:'any_') -> 'Service':
-    out = cast_('Service', ServiceStub(raw_request))
+def _new_service(raw_request:'any_', username:'str'='') -> 'Service':
+    out = cast_('Service', ServiceStub(raw_request, username))
     return out
 
 # ################################################################################################################################
@@ -101,6 +115,24 @@ def test_the_body_of_a_forward_carries_the_request_as_text_or_json(raw_request:'
     assert out['is_text'] is is_text
     assert loads(out['payload']) == loads(payload)
     assert loads(out['request_ctx']) == {'REQUEST_METHOD': 'POST'}
+
+# ################################################################################################################################
+
+def test_the_identity_of_the_channel_travels_with_a_forward() -> 'None':
+    service = _new_service(b'{}', 'admin.invoke')
+
+    out = new_forward_body(service, 'http-soap', {'REQUEST_METHOD': 'POST'})
+
+    assert loads(out['request_ctx']) == {'REQUEST_METHOD': 'POST', Invoker_Security_Username: 'admin.invoke'}
+
+# ################################################################################################################################
+
+def test_the_identity_the_service_invoker_propagated_travels_with_a_forward() -> 'None':
+    service = _new_service(b'{}')
+
+    out = new_forward_body(service, 'invoke', {Invoker_Security_Username: 'admin.invoke'})
+
+    assert loads(out['request_ctx']) == {Invoker_Security_Username: 'admin.invoke'}
 
 # ################################################################################################################################
 
