@@ -230,13 +230,19 @@ def build_ssl_context_from_values(values:'stranydict') -> 'SSLContext':
 
     # Verify against the given CA or, if none was given, against the system store ..
     if ca_file:
-        out = ssl.create_default_context(cafile=ca_file)
+        try:
+            out = ssl.create_default_context(cafile=ca_file)
+        except OSError as e:
+            raise Exception(f'Could not load ssl_ca_file `{ca_file}` -> {e}') from e
     else:
         out = ssl.create_default_context()
 
     # .. a client certificate is only needed for mutual TLS ..
     if cert_file:
-        out.load_cert_chain(cert_file, key_file)
+        try:
+            out.load_cert_chain(cert_file, key_file)
+        except OSError as e:
+            raise Exception(f'Could not load ssl_cert_file `{cert_file}` with ssl_key_file `{key_file}` -> {e}') from e
 
     # .. and verification can be turned off explicitly.
     if not needs_verify:

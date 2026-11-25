@@ -567,7 +567,7 @@ class SQLConnectionPool:
                 self.logger.warning('Zato license key not found. Oracle DB connections will not be available.')
                 return
 
-        _extra = {
+        _extra:'strdict' = {
             'pool_pre_ping': True, # Make sure SQLAlchemy 1.2+ can refresh connections on transient errors
         }
 
@@ -633,11 +633,6 @@ class SQLConnectionPool:
         else:
             _extra.update(extra_parsed)
 
-        # Connections configured for SSL/TLS receive their SSL context through driver-level connect arguments.
-        if ssl_connect_args := get_ssl_connect_args(self.config, self.engine_name):
-            connect_args = _extra.setdefault('connect_args', {})
-            connect_args.update(ssl_connect_args) # type: ignore
-
         # SQLite has no pools
         if self.engine_name != 'sqlite':
             _extra['pool_size'] = int(self.config.get('pool_size', 1)) # type: ignore
@@ -657,10 +652,20 @@ class SQLConnectionPool:
                 base_url, oracle_db_name = engine_url.rsplit('/', 1)
                 engine_url = f'{base_url}/?service_name={oracle_db_name}'
 
+        # A connection whose SSL context or engine cannot be built is left without an engine,
+        # so that it does not prevent the other connections from starting.
         try:
+
+            # Connections configured for SSL/TLS receive their SSL context through driver-level connect arguments ..
+            if ssl_connect_args := get_ssl_connect_args(self.config, self.engine_name):
+                connect_args = _extra.setdefault('connect_args', {})
+                connect_args.update(ssl_connect_args) # type: ignore
+
+            # .. and the engine is created with them.
             self.engine = self._create_engine(engine_url, self.config, _extra)
+
         except Exception as e:
-            self.logger.warning('Could not create SQL connection `%s`, e:`%s`', self.name, e.args[0])
+            self.logger.warning('Could not create SQL connection `%s`, e:`%s`', self.name, e)
 
         if self.engine and (not self._is_unittest_engine(engine_url)) and self._is_sa_engine(engine_url):
             event.listen(self.engine, 'checkin', self.on_checkin)
