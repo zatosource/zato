@@ -511,6 +511,8 @@ urlpatterns += [
     url(r'^zato/outgoing/amqp/edit/$', login_required(out_amqp.edit), {'subtype': 'amqp'}, name='out-amqp-edit'),
     url(r'^zato/outgoing/amqp/delete/(?P<id>.*)/$',
         login_required(out_amqp.Delete('amqp')), name='out-amqp-delete'),
+    url(r'^zato/outgoing/amqp/ping/(?P<id>.*)/$',
+        login_required(out_amqp.ping), name='out-amqp-ping'),
 
     url(r'^zato/outgoing/amqp/invoke/action/(?P<conn_name>.*)/$',
         login_required(out_amqp.invoke_action), name='out-amqp-invoke-action'),

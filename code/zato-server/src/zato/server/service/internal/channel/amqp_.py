@@ -11,13 +11,24 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
-from zato.common.api import query_parameters
+from zato.common.api import AMQP, query_parameters
 from zato.common.broker_message import CHANNEL
-from zato.common.exception import ServiceMissingException
+from zato.common.exception import BadRequest, ServiceMissingException
 from zato.common.json_internal import dumps
 from zato.common.odb.model import ChannelAMQP, Service
 from zato.common.odb.query import channel_amqp_list
 from zato.server.service.internal import AdminService
+
+# ################################################################################################################################
+
+# The acknowledgment modes that a consumer of a channel supports
+_ack_mode_ids = tuple(item.id for item in AMQP.ACK_MODE())
+
+def validate_ack_mode(cid:'str', ack_mode:'str') -> 'None':
+    """ Refuses an acknowledgment mode that no consumer of a channel could be created with.
+    """
+    if ack_mode not in _ack_mode_ids:
+        raise BadRequest(cid, f'AMQP ack mode `{ack_mode}` is not one of {_ack_mode_ids}')
 
 # ################################################################################################################################
 
@@ -59,6 +70,7 @@ class Create(AdminService):
         with closing(self.odb.session()) as session:
 
             input = self.request.input
+            validate_ack_mode(self.cid, input.ack_mode)
 
             input.pool_size = int(input.pool_size)
             input.prefetch_count = int(input.prefetch_count)
@@ -137,6 +149,7 @@ class Edit(AdminService):
     def handle(self):
 
         input = self.request.input
+        validate_ack_mode(self.cid, input.ack_mode)
 
         input.pool_size = int(input.pool_size)
         input.prefetch_count = int(input.prefetch_count)

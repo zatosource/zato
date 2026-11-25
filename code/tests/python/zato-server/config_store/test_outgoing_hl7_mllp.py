@@ -26,6 +26,15 @@ def client(zato_server:'any_'):
     base_url = f'http://{zato_server["host"]}:{zato_server["port"]}'
     return ZatoClient(base_url, zato_server['password'])
 
+@pytest.fixture(scope='module')
+def mllp_address():
+    """ The address of a local TCP listener that each connection created here points to, so that a ping can reach it.
+    """
+    from _ping_stubs import start_tcp_listener_stub
+    port, server = start_tcp_listener_stub()
+    yield f'127.0.0.1:{port}'
+    server.shutdown()
+
 class TestOutgoingHL7MLLP:
     created_ids = []
 
@@ -33,7 +42,7 @@ class TestOutgoingHL7MLLP:
         data, _meta = client.get_list(f'{SERVICE}.get-list', type_=TYPE)
         assert isinstance(data, list)
 
-    def test_02_create_one(self, client:'any_'):
+    def test_02_create_one(self, client:'any_', mllp_address:'str'):
         resp = client.create(f'{SERVICE}.create',
             name='test-out-hl7mllp-1',
             type_=TYPE,
@@ -41,7 +50,7 @@ class TestOutgoingHL7MLLP:
             is_internal=False,
             is_channel=False,
             is_outconn=True,
-            address='127.0.0.1:18001',
+            address=mllp_address,
             pool_size=1,
         )
         assert 'id' in resp
@@ -53,7 +62,7 @@ class TestOutgoingHL7MLLP:
         names = [item['name'] for item in data]
         assert 'test-out-hl7mllp-1' in names
 
-    def test_04_create_batch(self, client:'any_'):
+    def test_04_create_batch(self, client:'any_', mllp_address:'str'):
         for i in range(2, 6):
             resp = client.create(f'{SERVICE}.create',
                 name=f'test-out-hl7mllp-{i}',
@@ -62,7 +71,7 @@ class TestOutgoingHL7MLLP:
                 is_internal=False,
                 is_channel=False,
                 is_outconn=True,
-                address=f'127.0.0.1:{18000 + i}',
+                address=mllp_address,
                 pool_size=1,
             )
             assert 'id' in resp
@@ -73,7 +82,7 @@ class TestOutgoingHL7MLLP:
         test_items = [item for item in data if item['name'].startswith('test-out-hl7mllp-')]
         assert len(test_items) >= 5
 
-    def test_06_edit_one(self, client:'any_'):
+    def test_06_edit_one(self, client:'any_', mllp_address:'str'):
         item_id = self.__class__.created_ids[0]
         resp = client.edit(f'{SERVICE}.edit',
             id=item_id,
@@ -83,7 +92,7 @@ class TestOutgoingHL7MLLP:
             is_internal=False,
             is_channel=False,
             is_outconn=True,
-            address='127.0.0.1:18001',
+            address=mllp_address,
             pool_size=2,
         )
         assert resp['id'] == item_id
@@ -95,10 +104,9 @@ class TestOutgoingHL7MLLP:
         assert 'test-out-hl7mllp-1' not in names
 
     def test_08_ping(self, client:'any_'):
-        # HL7 MLLP outgoing connections have no ping implementation so a failure is reported
         item_id = self.__class__.created_ids[0]
         result = client.invoke('zato.generic.connection.ping', {'id': item_id})
-        assert result['is_success'] is False
+        assert result['is_success'] is True
 
     def test_09_delete_one(self, client:'any_'):
         item_id = self.__class__.created_ids.pop(0)

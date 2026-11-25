@@ -343,4 +343,12 @@ class OutconnHL7MLLPWrapper(Wrapper):
         return ack
 
 # ################################################################################################################################
+
+    def ping(self) -> 'None':
+        """ Opens a connection to the receiving system through a pooled client and closes it again.
+        """
+        with self.client(should_block=True, block_timeout=pool_block_timeout) as connection:
+            connection.ping()
+
+# ################################################################################################################################
 # ################################################################################################################################

@@ -303,3 +303,24 @@ def zato_server(request:'any_'):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+@pytest.fixture(scope='session')
+def amqp_address() -> 'any_':
+    """ The address of a private RabbitMQ node on a random port, started only for the tests that request it.
+    """
+
+    # The import binds subprocess.Popen through sarge, so it must follow the gevent monkey-patching
+    # that other test packages in the same run apply during collection.
+    from zato.common.test.rabbitmq_ import RabbitMQProcess
+
+    # Start the node with its data in a temporary directory ..
+    broker = RabbitMQProcess()
+    broker.start()
+
+    yield f'amqp://127.0.0.1:{broker.amqp_port}'
+
+    # .. and stop it and remove the directory on teardown.
+    broker.stop()
+
+# ################################################################################################################################
+# ################################################################################################################################

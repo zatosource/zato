@@ -13,10 +13,12 @@ from traceback import format_exc
 # Zato
 from zato.common.api import query_parameters
 from zato.common.broker_message import OUTGOING
+from zato.common.exception import PingNotSupported
 from zato.common.json_internal import dumps
 from zato.common.odb.model import OutgoingAMQP
 from zato.common.odb.query import out_amqp_list
-from zato.server.service import AsIs
+from zato.common.util.time_ import utcnow
+from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService
 
 _delivery_mode_map = {
@@ -265,6 +267,55 @@ class Publish(AdminService):
         input = self.request.input
         self.out.amqp.publish(input.conn_name, input.request_data, input.exchange, input.routing_key)
         self.response.payload.response_data = '{"result": "OK"}'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Ping(AdminService):
+    """ Connects to the broker of an outgoing AMQP connection without publishing anything.
+    """
+    name = 'zato.outgoing.amqp.ping'
+
+    input = Int('id')
+    output = 'info', '-is_success'
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            item = session.query(OutgoingAMQP).\
+                filter(OutgoingAMQP.id==self.request.input.id).\
+                one()
+
+        start_time = utcnow()
+
+        try:
+            self.server.config_manager.amqp_ping(item.name)
+
+        # A broker type without a ping implementation is not a failure of the connection itself ..
+        except PingNotSupported as e:
+            self.logger.info(e.msg)
+            self.response.payload.info = e.msg
+            self.response.payload.is_success = False
+
+        # .. whereas this is one.
+        except Exception as e:
+
+            # The full traceback goes to the server log ..
+            self.logger.warning(format_exc())
+
+            # .. while the caller gets the actual error message alone.
+            error_message = str(e)
+            if not error_message:
+                error_message = e.__class__.__name__
+
+            self.response.payload.info = error_message
+            self.response.payload.is_success = False
+
+        else:
+            response_time = utcnow() - start_time
+            info = f'Connection pinged, response time: {response_time}'
+            self.logger.info(info)
+            self.response.payload.info = info
+            self.response.payload.is_success = True
 
 # ################################################################################################################################
 # ################################################################################################################################

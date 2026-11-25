@@ -19,7 +19,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.settings import delivery_friendly_name
 from zato.admin.web.forms.outgoing.amqp_ import CreateForm, EditForm
-from zato.admin.web.views import Delete as _Delete, Index as _Index, invoke_action_handler, method_allowed
+from zato.admin.web.views import Delete as _Delete, Index as _Index, invoke_action_handler, method_allowed, ping_connection
 from zato.common.api import AMQP_Subtype
 from zato.common.json_internal import dumps
 # Bunch
@@ -201,6 +201,14 @@ def invoke(req:'any_', conn_id:'str', conn_name:'str', conn_slug:'str', subtype:
 @method_allowed('POST')
 def invoke_action(req:'any_', conn_name:'str') -> 'any_':
     out = invoke_action_handler(req, 'zato.outgoing.amqp.publish', ('conn_name', 'request_data', 'exchange', 'routing_key'))
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def ping(req:'any_', id:'str') -> 'any_':
+    out = ping_connection(req, 'zato.outgoing.amqp.ping', id, 'AMQP connection')
     return out
 
 # ################################################################################################################################

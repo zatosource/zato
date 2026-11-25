@@ -190,6 +190,14 @@ class AMQP(ConfigManagerImpl):
         """
         return self.amqp_api.invoke(out_name, msg, exchange, routing_key, properties, headers, **kwargs)
 
+    def amqp_ping(
+        self:'ConfigManager', # type: ignore
+        out_name:'str',
+    ) -> 'None':
+        """ Connects to the broker of a named outgoing connection without publishing anything.
+        """
+        self.amqp_api.ping(out_name)
+
     def _amqp_invoke_async(
         self:'ConfigManager', # type: ignore
         *args:'any_',

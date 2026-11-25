@@ -98,6 +98,21 @@ def _start_tcp_stub(handler_class:'any_'):
     return port, server
 
 # ################################################################################################################################
+
+def start_tcp_listener_stub():
+    """ Starts a TCP server that accepts connections and reads from them until the client closes them,
+    without ever responding. Returns (port, server), the caller invokes server.shutdown().
+    """
+
+    class _ListenerHandler(socketserver.BaseRequestHandler):
+
+        def handle(self):
+            while self.request.recv(4096):
+                pass
+
+    return _start_tcp_stub(_ListenerHandler)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def start_smtp_stub():

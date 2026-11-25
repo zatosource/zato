@@ -32,42 +32,58 @@ class TestChannelAMQP:
         data, _meta = client.get_list(f'{SERVICE}.get-list')
         assert isinstance(data, list)
 
-    def test_02_create_one(self, client:'any_'):
+    def test_02_create_one(self, client:'any_', amqp_address:'str'):
         resp = client.create(f'{SERVICE}.create',
             name='test-ch-amqp-1',
             is_active=True,
-            address='amqp://localhost:5672',
+            address=amqp_address,
             username='guest',
             password='guest',
             queue='test-queue-1',
             consumer_tag_prefix='test',
             service='demo.ping',
             pool_size=1,
-            ack_mode='ack-after-processing',
+            ack_mode='ack',
             prefetch_count=1,
         )
         assert 'id' in resp
         assert resp['name'] == 'test-ch-amqp-1'
         self.__class__.created_ids.append(resp['id'])
 
+    def test_02_create_unknown_ack_mode(self, client:'any_', amqp_address:'str'):
+        with pytest.raises(Exception, match='returned HTTP'):
+            _ = client.create(f'{SERVICE}.create',
+                name='test-ch-amqp-unknown-ack-mode',
+                is_active=True,
+                address=amqp_address,
+                username='guest',
+                password='guest',
+                queue='test-queue-unknown-ack-mode',
+                consumer_tag_prefix='test',
+                service='demo.ping',
+                pool_size=1,
+                ack_mode='ack-after-processing',
+                prefetch_count=1,
+            )
+
     def test_03_get_list_after_create(self, client:'any_'):
         data, _meta = client.get_list(f'{SERVICE}.get-list')
         names = [item['name'] for item in data]
         assert 'test-ch-amqp-1' in names
 
-    def test_04_create_batch(self, client:'any_'):
+    def test_04_create_batch(self, client:'any_', amqp_address:'str'):
         for i in range(2, 6):
             resp = client.create(f'{SERVICE}.create',
                 name=f'test-ch-amqp-{i}',
                 is_active=True,
-                address='amqp://localhost:5672',
+                address=amqp_address,
                 username='guest',
                 password='guest',
                 queue=f'test-queue-{i}',
                 consumer_tag_prefix='test',
                 service='demo.ping',
                 pool_size=1,
-                ack_mode='ack-after-processing',
+                ack_mode='ack',
                 prefetch_count=1,
             )
             assert 'id' in resp
@@ -78,20 +94,20 @@ class TestChannelAMQP:
         test_items = [item for item in data if item['name'].startswith('test-ch-amqp-')]
         assert len(test_items) >= 5
 
-    def test_06_edit_one(self, client:'any_'):
+    def test_06_edit_one(self, client:'any_', amqp_address:'str'):
         item_id = self.__class__.created_ids[0]
         resp = client.edit(f'{SERVICE}.edit',
             id=item_id,
             name='test-ch-amqp-1',
             is_active=True,
-            address='amqp://localhost:5672',
+            address=amqp_address,
             username='guest',
             password='guest',
             queue='test-queue-1',
             consumer_tag_prefix='test',
             service='demo.ping',
             pool_size=2,
-            ack_mode='ack-after-processing',
+            ack_mode='ack',
             prefetch_count=1,
         )
         assert resp['id'] == item_id

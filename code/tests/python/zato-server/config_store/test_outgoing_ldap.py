@@ -62,6 +62,7 @@ class TestOutgoingLDAP:
             use_tls=False,
             sasl_mechanism='',
             server_list=ldap_address,
+            get_info='NO_INFO',
         )
         assert 'id' in resp
         assert resp['name'] == 'test-out-ldap-1'
@@ -91,6 +92,7 @@ class TestOutgoingLDAP:
                 use_tls=False,
                 sasl_mechanism='',
                 server_list=ldap_address,
+                get_info='NO_INFO',
             )
             assert 'id' in resp
             self.__class__.created_ids.append(resp['id'])
@@ -120,6 +122,7 @@ class TestOutgoingLDAP:
             use_tls=False,
             sasl_mechanism='',
             server_list=ldap_address,
+            get_info='NO_INFO',
         )
         assert resp['id'] == item_id
 

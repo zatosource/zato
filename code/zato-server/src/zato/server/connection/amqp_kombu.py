@@ -235,6 +235,17 @@ class Producer:
         producer = producers.acquire(*args, **kwargs)
         return producer
 
+    def ping(self) -> 'None':
+        """ Opens a connection to the broker and releases it again without publishing anything.
+        """
+        conn = self.conn.clone()
+
+        # A max_retries of zero is a single attempt, kombu counts retries only after the first failure.
+        try:
+            _ = conn.ensure_connection(max_retries=0)
+        finally:
+            conn.release()
+
     def stop(self):
         for pool in self.pool.values():
             pool.connections.force_close_all()

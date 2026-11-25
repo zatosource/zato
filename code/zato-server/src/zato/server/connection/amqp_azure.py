@@ -20,6 +20,7 @@ from gevent import sleep
 from gevent.lock import RLock
 
 # Zato
+from zato.common.exception import PingNotSupported
 from zato.common.util.api import new_cid_queue_consumer, wait_for_predicate
 from zato.server.connection.amqp_ import Message_State_Ack, Message_State_Received, Message_State_Rejected, \
     Message_State_Requeued
@@ -81,6 +82,12 @@ class AzureServiceBusProducer:
         sender = self._get_sender(queue)
         service_bus_msg = ServiceBusMessage(msg)
         sender.send_messages(service_bus_msg)
+
+    def ping(self) -> 'None':
+        """ A sender exists per queue and the queue is named by each publication, so there is nothing to connect to
+        before a message is published.
+        """
+        raise PingNotSupported(self.name, 'Azure Service Bus')
 
     def stop(self) -> 'None':
         with self.lock:

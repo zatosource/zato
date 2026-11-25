@@ -504,3 +504,18 @@ class ConnectorAMQP(Connector):
             return kombu_producer.publish(msg, headers=headers, **kwargs)
 
 # ################################################################################################################################
+
+    def ping(self) -> 'None':
+        """ Connects to the broker of the outgoing connection without publishing anything.
+        """
+        out_name = self.config['name']
+        with self.lock:
+            outconn_config = self.outconns[out_name]
+
+        if not outconn_config['is_active']:
+            raise Inactive(f'Connection is inactive `{out_name}` ({self._get_conn_string(False)})')
+
+        producer = self._producers[out_name]
+        producer.ping()
+
+# ################################################################################################################################

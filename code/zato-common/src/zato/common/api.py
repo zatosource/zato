@@ -23,7 +23,7 @@ from zato.common.defaults import http_plain_server_port
 if 0:
     from zato.common.documents.model import doclist
     from zato.common.ext.imbox import Imbox
-    from zato.common.typing_ import any_, iterator_, stranydict, strnone
+    from zato.common.typing_ import any_, iterator_, stranydict, strdictdict, strnone
     doclist = doclist
     Imbox = Imbox
     iterator_ = iterator_
@@ -1743,18 +1743,20 @@ ODATA_Subtype = {
 AMQP_Subtype_Plain = 'amqp'
 AMQP_Subtype_Azure_Service_Bus = 'azure-service-bus'
 
-AMQP_Subtype = {
+AMQP_Subtype:'strdictdict' = {
     AMQP_Subtype_Plain: {
         'label': 'AMQP',
         'url_prefix_outgoing': 'out-amqp',
         'url_prefix_channel': 'channel-amqp',
         'address_example': 'localhost:5672',
+        'has_ping': True,
     },
     AMQP_Subtype_Azure_Service_Bus: {
         'label': 'Azure Service Bus',
         'url_prefix_outgoing': 'out-azure-service-bus',
         'url_prefix_channel': 'channel-azure-service-bus',
         'address_example': 'my-namespace.servicebus.windows.net:5671',
+        'has_ping': False,
     },
 }
 

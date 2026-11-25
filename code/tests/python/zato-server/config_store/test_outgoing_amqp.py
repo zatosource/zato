@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 import pytest
 from zato.common.test.client import AdminClient as ZatoClient
+from zato.common.test.conftest_base_pubsub import find_free_port
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,14 +33,14 @@ class TestOutgoingAMQP:
         data, _meta = client.get_list(f'{SERVICE}.get-list')
         assert isinstance(data, list)
 
-    def test_02_create_one(self, client:'any_'):
+    def test_02_create_one(self, client:'any_', amqp_address:'str'):
         resp = client.create(f'{SERVICE}.create',
             name='test-out-amqp-1',
             is_active=True,
             delivery_mode='persistent',
             priority=5,
             pool_size=1,
-            address='amqp://localhost:5672',
+            address=amqp_address,
             username='guest',
             password='guest',
         )
@@ -52,7 +53,7 @@ class TestOutgoingAMQP:
         names = [item['name'] for item in data]
         assert 'test-out-amqp-1' in names
 
-    def test_04_create_batch(self, client:'any_'):
+    def test_04_create_batch(self, client:'any_', amqp_address:'str'):
         for i in range(2, 6):
             resp = client.create(f'{SERVICE}.create',
                 name=f'test-out-amqp-{i}',
@@ -60,7 +61,7 @@ class TestOutgoingAMQP:
                 delivery_mode='persistent',
                 priority=5,
                 pool_size=1,
-                address='amqp://localhost:5672',
+                address=amqp_address,
                 username='guest',
                 password='guest',
             )
@@ -72,7 +73,7 @@ class TestOutgoingAMQP:
         test_items = [item for item in data if item['name'].startswith('test-out-amqp-')]
         assert len(test_items) >= 5
 
-    def test_06_edit_one(self, client:'any_'):
+    def test_06_edit_one(self, client:'any_', amqp_address:'str'):
         item_id = self.__class__.created_ids[0]
         resp = client.edit(f'{SERVICE}.edit',
             id=item_id,
@@ -81,7 +82,7 @@ class TestOutgoingAMQP:
             delivery_mode='non_persistent',
             priority=3,
             pool_size=2,
-            address='amqp://localhost:5672',
+            address=amqp_address,
             username='guest',
             password='guest',
         )
@@ -97,10 +98,33 @@ class TestOutgoingAMQP:
         assert edited[0]['priority'] == 3
 
     def test_08_ping(self, client:'any_'):
-        # There is no ping service for outgoing AMQP so invoking it is an error
         item_id = self.__class__.created_ids[0]
-        with pytest.raises(Exception, match='returned HTTP'):
-            _ = client.invoke(f'{SERVICE}.ping', {'id': item_id})
+        result = client.invoke(f'{SERVICE}.ping', {'id': item_id})
+        assert result['is_success'] is True, result['info']
+
+    def test_08_ping_unreachable_broker(self, client:'any_'):
+
+        # A connection to a port nothing listens on ..
+        resp = client.create(f'{SERVICE}.create',
+            name='test-out-amqp-unreachable',
+            is_active=True,
+            delivery_mode='persistent',
+            priority=5,
+            pool_size=1,
+            address=f'amqp://127.0.0.1:{find_free_port()}',
+            username='guest',
+            password='guest',
+        )
+
+        # .. reports the failure of its single connection attempt ..
+        try:
+            result = client.invoke(f'{SERVICE}.ping', {'id': resp['id']})
+            assert result['is_success'] is False
+            assert result['info']
+
+        # .. and is deleted whatever the outcome.
+        finally:
+            client.delete(f'{SERVICE}.delete', id=resp['id'])
 
     def test_09_delete_one(self, client:'any_'):
         item_id = self.__class__.created_ids.pop(0)
