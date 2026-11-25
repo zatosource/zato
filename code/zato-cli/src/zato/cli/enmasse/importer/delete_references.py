@@ -11,7 +11,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.cli.enmasse.importer.delete_targets import Section_Alert_Notifications, Should_Delete_Key, get_key_field
-from zato.cli.enmasse.util.common import Security_Alias_Key, Security_Key
+from zato.cli.enmasse.util.common import ImportRefusedError, Security_Alias_Key, Security_Key
 from zato.common.alerting import object_config
 from zato.common.api import MCP
 
@@ -94,7 +94,7 @@ class ReferenceChecker:
         else:
             item_key = item.get(get_key_field(section))
 
-        raise Exception(
+        raise ImportRefusedError(
             f'Item `{item_key}` of section `{section}` refers in `{field}` to `{referenced_section}` `{referenced_key}` ' + \
             f'which the same file marks `{Should_Delete_Key}`')
 

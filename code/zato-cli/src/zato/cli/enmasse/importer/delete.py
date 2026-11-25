@@ -21,7 +21,7 @@ from zato.cli.enmasse.importer.delete_targets import Key_Field_Security, Section
     Section_Generic_Connection, Should_Delete_Key, deferred_sections, generic_type_to_section, get_delete_order, \
     get_key_field, is_known_section, log_dependents, resolve_targets, section_aliases
 from zato.cli.enmasse.importer.delete_references import check_references
-from zato.cli.enmasse.util.common import preprocess_item, Security_Alias_Key
+from zato.cli.enmasse.util.common import ImportRefusedError, preprocess_item, Security_Alias_Key
 from zato.cli.enmasse.util.secrets import Session_Key_Server_Dir
 
 # ################################################################################################################################
@@ -104,13 +104,13 @@ class DeleteSync:
         """ Records one marked item under its canonical section after resolving its key against the environment.
         """
         if not is_known_section(section):
-            raise Exception(f'Section `{section}` does not support `{Should_Delete_Key}`')
+            raise ImportRefusedError(f'Section `{section}` does not support `{Should_Delete_Key}`')
 
         key_field = get_key_field(section)
         item = preprocess_item(item)
 
         if key_field not in item:
-            raise Exception(f'Item {position} of section `{section}` is marked `{Should_Delete_Key}` but has no `{key_field}`')
+            raise ImportRefusedError(f'Item {position} of section `{section}` is marked `{Should_Delete_Key}` but has no `{key_field}`')
 
         keys = self.deletions.setdefault(section, [])
         keys.append(item[key_field])
@@ -133,7 +133,7 @@ class DeleteSync:
 
             if is_marked:
                 if section == Section_Alert_Rules:
-                    raise Exception(f'Section `{Section_Alert_Rules}` does not support `{Should_Delete_Key}`')
+                    raise ImportRefusedError(f'Section `{Section_Alert_Rules}` does not support `{Should_Delete_Key}`')
                 self._add_deletion(section, item, position)
             else:
                 out.append(item)
@@ -156,7 +156,7 @@ class DeleteSync:
             # The notification targets are one mapping that cannot be deleted ..
             if key == Section_Alert_Notifications:
                 if Should_Delete_Key in items:
-                    raise Exception(f'Section `{Section_Alert_Notifications}` does not support `{Should_Delete_Key}`')
+                    raise ImportRefusedError(f'Section `{Section_Alert_Notifications}` does not support `{Should_Delete_Key}`')
                 continue
 
             # .. an include list or any other non-list value has no items to mark ..
@@ -192,7 +192,7 @@ class DeleteSync:
                     unmarked_key = item.get(key_field)
 
                 if unmarked_key in keys:
-                    raise Exception(
+                    raise ImportRefusedError(
                         f'Section `{section}` has `{unmarked_key}` both marked `{Should_Delete_Key}` and not - ' + \
                         'an object cannot be deleted and defined in one file')
 
@@ -207,7 +207,7 @@ class DeleteSync:
                 server_dir = session.info.get(Session_Key_Server_Dir)
 
             if not server_dir:
-                raise Exception('Deleting objects requires the directory of a running server')
+                raise ImportRefusedError('Deleting objects requires the directory of a running server')
 
             self.delete_client = get_server_client(server_dir)
 
@@ -238,7 +238,7 @@ class DeleteSync:
         response = client.invoke(target.service, request)
 
         if not response.ok:
-            raise Exception(
+            raise ImportRefusedError(
                 f'Could not delete `{target.section}` `{target.key}` through {target.service} -> {response.details}')
 
         # .. and what it read before the deletion is read again afterwards.

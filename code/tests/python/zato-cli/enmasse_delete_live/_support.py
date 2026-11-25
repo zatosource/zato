@@ -44,6 +44,7 @@ class ModuleCtx:
     Marker_Started   = 'Invoking command'
     Marker_Import    = '--import'
     Marker_Completed = 'Enmasse stderr'
+    Marker_Failed    = 'Enmasse import failed'
 
     # What the enmasse output contains when an import ended well and when it did not
     Import_OK    = 'Enmasse OK'
@@ -110,7 +111,7 @@ class Pickup:
 # ################################################################################################################################
 
     def _count_markers(self, text:'str') -> 'tuple[int, int]':
-        """ How many pickup imports the log says started and how many completed.
+        """ How many pickup imports the log says started and how many completed, successfully or not.
         """
         started = 0
         completed = 0
@@ -118,7 +119,7 @@ class Pickup:
         for line in text.splitlines():
             if ModuleCtx.Marker_Started in line and ModuleCtx.Marker_Import in line:
                 started += 1
-            elif ModuleCtx.Marker_Completed in line:
+            elif ModuleCtx.Marker_Completed in line or ModuleCtx.Marker_Failed in line:
                 completed += 1
 
         out = started, completed

@@ -51,6 +51,7 @@ class Enmasse(ZatoCommand):
         from zato.cli.enmasse.exporter import EnmasseYAMLExporter
         from zato.cli.enmasse.importer import EnmasseYAMLImporter
         from zato.cli.enmasse.util import FileWriter
+        from zato.cli.enmasse.util.common import ImportRefusedError
 
         # Get server path from the command line arguments
         server_path = args.path
@@ -180,6 +181,12 @@ class Enmasse(ZatoCommand):
                 # .. and confirm it all went fine.
                 self.logger.info('⭐ Enmasse OK (%s)', args.input)
 
+            # A refused config is reported by its message alone ..
+            except ImportRefusedError as e:
+                self.logger.error('Error during import: %s', str(e))
+                sys.exit(self.SYS_ERROR.EXCEPTION_CAUGHT)
+
+            # .. and any other failure with its traceback as well.
             except Exception as e:
                 self.logger.error('Error during import: %s', str(e))
                 raise

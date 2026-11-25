@@ -441,9 +441,10 @@ qa-reqs-install: rust-lint-tools-install
 	sudo snap install k6
 
 rust-lint-tools-install: ## Install the cargo subcommands the Rust lint pipeline needs - dylint, deny, vet and geiger.
-	$(LOAD_CARGO_ENV) && cargo install dylint-link cargo-deny cargo-vet
-# These two need --locked - their newest dependency versions want a newer rustc than the toolchain ships
-	$(LOAD_CARGO_ENV) && cargo install --locked cargo-dylint cargo-geiger
+	$(LOAD_CARGO_ENV) && cargo install cargo-deny cargo-vet
+# These need --locked - their newest dependency versions want a newer rustc than the toolchain ships.
+# Dylint is pinned to the last release whose locked dependencies build with rustc 1.95.
+	$(LOAD_CARGO_ENV) && cargo install --locked dylint-link@$(DYLINT_CRATE_VERSION) cargo-dylint@$(DYLINT_CRATE_VERSION) cargo-geiger
 
 unify:
 	mkdir -p $(SITE_PACKAGES)/lib2to3/pgen2
@@ -2396,6 +2397,9 @@ clippy: clippy-zato ## Clippy everything.
 
 DYLINT_GIT  := https://github.com/trailofbits/dylint
 DYLINT_TAG  := v5.0.0
+
+# The version of the dylint-link and cargo-dylint crates that rust-lint-tools-install installs
+DYLINT_CRATE_VERSION := 6.0.4
 DYLINT_LIBS := --git $(DYLINT_GIT) --tag $(DYLINT_TAG) --pattern examples/general
 
 ZATO_DYLINT_FLAGS_COMMON := \
