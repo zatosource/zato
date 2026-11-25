@@ -14,6 +14,7 @@ _ = patch_all()
 
 # stdlib
 import argparse
+import os
 import signal
 import socket
 import sys
@@ -252,6 +253,12 @@ def main() -> 'None':
 
     # Block on the server loop
     server.start()
+
+    # Under gevent's patching, the finalization of the interpreter releases the handlers of logging
+    # from a greenlet that is being finalized, which raises, so the process ends without it.
+    _ = sys.stdout.flush()
+    _ = sys.stderr.flush()
+    os._exit(0)
 
 # ################################################################################################################################
 # ################################################################################################################################

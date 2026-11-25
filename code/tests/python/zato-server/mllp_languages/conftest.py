@@ -16,6 +16,7 @@ import tempfile
 import threading
 import time
 from collections.abc import Generator
+from contextlib import ExitStack
 from http.client import OK
 from typing import NamedTuple
 from urllib.request import Request, urlopen
@@ -28,6 +29,7 @@ import pytest
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.process_util import kill_process_tree
+from zato.common.test.zato_database import isolated_database_env
 from zato.common.typing_ import cast_
 from zato.common.util.config import get_config_object, update_config_file
 
@@ -75,6 +77,10 @@ _server_process:'any_'   = None
 _listener_process:'any_' = None
 _haproxy_handle:'any_'   = None
 _temp_directory:'str'    = ''
+
+# The PostgreSQL database of the environment, which the Zato_Database_* variables of this process select
+# for as long as the environment exists, so quickstart, the server, the listener and enmasse all use it
+_database_scope:'ExitStack | None' = None
 
 # Every path the listener reported as deployed, filled by the thread draining its output
 _listener_deployed_paths:'set[str]' = set()
@@ -125,7 +131,7 @@ def _kill_everything() -> 'None':
 def _cleanup() -> 'None':
     """ Ends everything and removes what one run wrote, whether it ended well or not.
     """
-    global _temp_directory
+    global _database_scope, _temp_directory
 
     _kill_everything()
 
@@ -134,6 +140,11 @@ def _cleanup() -> 'None':
             shutil.rmtree(_temp_directory, ignore_errors=True)
 
     _temp_directory = ''
+
+    # The database goes last, once no process of the environment can use it any more
+    if _database_scope:
+        _database_scope.close()
+        _database_scope = None
 
 _ = atexit.register(_cleanup)
 
@@ -321,7 +332,7 @@ def mllp_environment() -> 'environment_gen':
     """ Brings up everything one run of this suite operates on - a throwaway Zato environment, the
     services the channels invoke, the channels themselves and the HAProxy the clients connect to.
     """
-    global _haproxy_handle, _temp_directory
+    global _database_scope, _haproxy_handle, _temp_directory
 
     # A machine without a toolchain skips, unless the run was asked for outright, in which case
     # a silent skip would be the whole point of the run going missing
@@ -344,6 +355,9 @@ def mllp_environment() -> 'environment_gen':
     build_java()
 
     _temp_directory = tempfile.mkdtemp(prefix='zato_mllp_languages_')
+
+    _database_scope = ExitStack()
+    _ = _database_scope.enter_context(isolated_database_env())
 
     certificates = generate_certificates(os.path.join(_temp_directory, 'certs'))
     messages_file = os.path.join(_temp_directory, 'messages.txt')
