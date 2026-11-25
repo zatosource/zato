@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import atexit
 import os
+import re
 import socket
 import subprocess
 import time
@@ -47,6 +48,15 @@ _create_timeout = 120
 
 # How long the server may take to start responding, in seconds
 _server_start_timeout = 120
+
+# How long the workers of the server may take to reload their configuration after an import, in seconds,
+# and how often server.log is read while waiting for them
+_worker_reload_timeout = 120
+_worker_reload_poll_interval = 0.2
+
+# The lines of server.log that give the PID of a worker and that report a load of configuration by a process
+_worker_pid_pattern = re.compile(r' - [A-Z]+ - (\d+):\S+ - zato\.server\.worker_runtime:\d+ - Worker, generation \d+, PID \d+ is ready')
+_config_loaded_pattern = re.compile(r' - [A-Z]+ - (\d+):\S+ - (?:.* - )?zato\.server\.base\.parallel:\d+ - Config loaded OK$')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -222,6 +232,53 @@ def delete_environment(environment:'TestEnvironment') -> 'None':
     kill_process_tree(environment.server_process)
     remove_test_dir(environment.base_dir)
     environment.database_scope.close()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_worker_reload_counts(server_dir:'str') -> 'dict[str, int]':
+    """ Returns how many times each worker of the server has loaded its configuration, by the PID of the worker,
+    as server.log reports it.
+    """
+    out:'dict[str, int]' = {}
+
+    log_path = os.path.join(server_dir, 'logs', 'server.log')
+
+    with open(log_path, encoding='utf8') as log_file:
+        for line in log_file:
+            line = line.rstrip('\n')
+
+            if match := _worker_pid_pattern.search(line):
+                out[match.group(1)] = 0
+
+            elif match := _config_loaded_pattern.search(line):
+                pid = match.group(1)
+                if pid in out:
+                    out[pid] += 1
+
+    return out
+
+# ################################################################################################################################
+
+def wait_for_worker_reload(server_dir:'str', reload_counts:'dict[str, int]') -> 'None':
+    """ Waits until each worker of the server has loaded its configuration again since the given counts were read.
+    An import returns once the config process has reloaded, and each worker, which serves the requests, reloads after it.
+    """
+    deadline = time.monotonic() + _worker_reload_timeout
+
+    while time.monotonic() < deadline:
+
+        current_counts = get_worker_reload_counts(server_dir)
+
+        for pid, reload_count in reload_counts.items():
+            if current_counts[pid] <= reload_count:
+                break
+        else:
+            return
+
+        time.sleep(_worker_reload_poll_interval)
+
+    raise Exception(f'The workers of the server in {server_dir} did not reload their configuration within {_worker_reload_timeout}s')
 
 # ################################################################################################################################
 # ################################################################################################################################

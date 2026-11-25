@@ -34,7 +34,8 @@ import yaml  # noqa: E402
 import requests  # noqa: E402
 
 # Zato
-from env_helper import create_environment, delete_environment  # noqa: E402
+from env_helper import create_environment, delete_environment, get_worker_reload_counts, \
+    wait_for_worker_reload  # noqa: E402
 from zato.cli.enmasse.client import get_server_client, get_session_from_server_dir  # noqa: E402
 from zato.cli.enmasse.util.secrets import is_encrypted, Secret_Prefixes  # noqa: E402
 from zato.common.api import GENERIC  # noqa: E402
@@ -198,6 +199,9 @@ class EnmasseSecretRotationLiveTestCase(TestCase):
             '--verbose', '--missing-wait-time', '1', '--import', '--input', import_path,
         ]
 
+        # The import returns once the config process has reloaded, so the loads of the workers are counted before it ..
+        reload_counts = get_worker_reload_counts(self.environment.server_dir)
+
         try:
             result = subprocess.run(args, capture_output=True, text=True, timeout=ModuleCtx.Enmasse_Timeout)
         finally:
@@ -205,6 +209,9 @@ class EnmasseSecretRotationLiveTestCase(TestCase):
 
         if result.returncode != 0:
             self.fail(f'enmasse failed (exit {result.returncode}):\nstdout: {result.stdout}\nstderr: {result.stderr}')
+
+        # .. and the requests that follow reach workers that have loaded the import too.
+        wait_for_worker_reload(self.environment.server_dir, reload_counts)
 
 # ################################################################################################################################
 

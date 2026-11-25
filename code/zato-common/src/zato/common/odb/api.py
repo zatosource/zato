@@ -1423,28 +1423,32 @@ class ODBManager(SessionWrapper):
     def get_email_smtp_list(self, needs_columns=False):
         """ Returns a list of SMTP connections.
         """
-        return query.email_smtp_list(self._session, needs_columns)
+        with closing(self.session()) as session:
+            return query.email_smtp_list(session, needs_columns)
 
 # ################################################################################################################################
 
     def get_email_imap_list(self, needs_columns=False):
         """ Returns a list of IMAP connections.
         """
-        return query.email_imap_list(self._session, needs_columns)
+        with closing(self.session()) as session:
+            return query.email_imap_list(session, needs_columns)
 
 # ################################################################################################################################
 
     def get_generic_connection_list(self, needs_columns=False):
         """ Returns a list of generic connections.
         """
-        return query_generic.connection_list(self._session, needs_columns=needs_columns)
+        with closing(self.session()) as session:
+            return query_generic.connection_list(session, needs_columns=needs_columns)
 
 # ################################################################################################################################
 
     def get_pubsub_subscription_list(self, needs_columns=False):
         """ Returns a list of pub/sub subscriptions.
         """
-        return query.pubsub_subscription_list(self._session, needs_columns=needs_columns)
+        with closing(self.session()) as session:
+            return query.pubsub_subscription_list(session, needs_columns=needs_columns)
 
 # ################################################################################################################################
 
