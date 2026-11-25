@@ -15,9 +15,6 @@ import os
 from zato.common.lets_encrypt.config import get_dashboard_host_names
 from zato.common.util.open_ import open_r
 
-# Django
-from django.db.backends.signals import connection_created
-
 # SQLAlchemy
 from sqlalchemy.orm import sessionmaker, scoped_session
 
@@ -28,10 +25,11 @@ import yaml
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, strlist
 
     # Add dummy assignments to satisfy type checkers
     any_ = any_
+    strlist = strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,7 +37,7 @@ if 0:
 # These are placeholders that the 'zato start' command overwrites through the star import below.
 log_config:'any_' = None
 config_dir:'any_' = None
-DATABASES:'any_' = None
+DATABASES:'any_' = {}
 
 # Zato Django plugin configuration
 ZATO_URL = os.environ.get('ZATO_URL', 'http://localhost:17010/zato/api/invoke/django/{}')
@@ -49,9 +47,9 @@ ZATO_PASSWORD = os.environ.get('Zato_Django_Password') or os.environ.get('Zato_P
 # Zato
 from zato.common.api import TRACE1
 from zato.common.crypto.api import CryptoManager
-from zato.common.db_env.connection import Django_Engine, set_django_connection
-from zato.common.db_env.database import get_django_database, new_odb_engine
+from zato.common.db_env.database import new_odb_engine
 from zato.common.util.eval_ import as_bool
+from zato.common.webapp.dashboard_db import Django_Engine, get_django_database
 # Star import is how these settings are pulled into Django's settings module.
 from zato.admin.zato_settings import * # noqa: F403
 
@@ -103,9 +101,11 @@ attach_service_context_filter()
 
 # Session timeout
 if _session_timeout := os.environ.get(_session_timeout_env_key):
-    SESSION_COOKIE_AGE = int(_session_timeout)
+    _session_cookie_age = int(_session_timeout)
 else:
-    SESSION_COOKIE_AGE = _session_timeout_default
+    _session_cookie_age = _session_timeout_default
+
+SESSION_COOKIE_AGE = _session_cookie_age
 
 SESSION_SAVE_EVERY_REQUEST = False
 SESSION_COOKIE_HTTPONLY = True
@@ -122,23 +122,25 @@ USE_I18N = True
 
 # Debug mode is off unless explicitly requested.
 if _debug := os.environ.get(_debug_env_key):
-    DEBUG = as_bool(_debug)
+    _is_debug = as_bool(_debug)
 else:
-    DEBUG = False
+    _is_debug = False
+
+DEBUG = _is_debug
 
 csrf_trusted_origins = os.environ.get(_csrf_env_key_dashboard)
 
 if not csrf_trusted_origins:
     csrf_trusted_origins = os.environ.get(_csrf_env_key_django)
 
-if csrf_trusted_origins:
+_csrf_trusted_origins:'strlist' = []
 
-    CSRF_TRUSTED_ORIGINS = []
+if csrf_trusted_origins:
 
     for origin in csrf_trusted_origins.split(','):
         origin = origin.strip()
         if origin:
-            CSRF_TRUSTED_ORIGINS.append(origin)
+            _csrf_trusted_origins.append(origin)
 
 else:
     ssl_subject = os.environ.get('Zato_SSL_Subject', _default_ssl_subject)
@@ -156,10 +158,10 @@ else:
     dashboard_port = os.environ.get('Zato_Port_Dashboard', _default_dashboard_port)
     dashboard_ssl_port = os.environ.get('Zato_Port_Dashboard_SSL', _default_dashboard_ssl_port)
 
-    CSRF_TRUSTED_ORIGINS = [
-        f'http://{common_name}:{dashboard_port}',
-        f'https://{common_name}:{dashboard_ssl_port}'
-    ]
+    _csrf_trusted_origins.append(f'http://{common_name}:{dashboard_port}')
+    _csrf_trusted_origins.append(f'https://{common_name}:{dashboard_ssl_port}')
+
+CSRF_TRUSTED_ORIGINS = _csrf_trusted_origins
 
 # The host names under which the shared HTTPS port serves the Dashboard are trusted as well
 for dashboard_host_name in get_dashboard_host_names(dict(os.environ)):
@@ -260,14 +262,11 @@ LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
 
 # DATABASES is injected by the 'zato start' command, which reads the configuration from the web-admin.conf file.
-# The Django tables of the Dashboard reside in the Zato database, which the Zato_Database_* variables select.
-
-# Each connection of Django to the Zato database has the settings of durability of the engine factory
-connection_created.connect(set_django_connection)
+# The Django tables of the Dashboard reside in its own SQLite database in its configuration directory.
 
 if DATABASES:
 
-    DATABASES['default'] = get_django_database()
+    DATABASES['default'] = get_django_database(config_dir)
 
     # SQLAlchemy setup for the configuration database
     SASession = scoped_session(sessionmaker())
@@ -278,7 +277,6 @@ if DATABASES:
 else:
     ADMIN_INVOKE_NAME     = _standalone_value
     ADMIN_INVOKE_PASSWORD = _standalone_value
-    DATABASES             = {}
 
     DATABASES['default'] = {}
     DATABASES['default']['ENGINE'] = Django_Engine

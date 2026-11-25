@@ -6,8 +6,8 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# How connections to the Zato database are built - SSL contexts, driver-specific connection arguments,
-# SQLAlchemy URLs and the settings of Django.
+# How connections to the Zato database are built - SSL contexts, driver-specific connection arguments
+# and SQLAlchemy URLs.
 
 # stdlib
 import socket
@@ -34,14 +34,6 @@ Dialect_Name = 'postgresql+pg8000'
 
 # The port of the Zato database when none is given
 Default_Port = 5432
-
-# The Django backend of the Zato database
-Django_Engine = 'django.db.backends.postgresql'
-
-# How Django connects to a server whose certificate it verifies, and to one whose certificate it does not
-_django_ssl_mode_verify    = 'verify-full'
-_django_ssl_mode_no_verify = 'require'
-_django_ssl_mode_disabled  = 'disable'
 
 # How long a PostgreSQL connection stays idle before it sends its first keepalive probe, in seconds - below
 # the idle limits of cloud load balancers and NAT gateways, which drop idle flows silently after 240 to 350 seconds.
@@ -228,15 +220,6 @@ def verify_postgresql_server(dbapi_connection:'any_', connection_record:'any_') 
 
 # ################################################################################################################################
 
-def set_django_connection(sender:'any_', connection:'any_', **kwargs:'any_') -> 'None':
-    """ Gives each connection that Django opens to the Zato database the same settings of durability
-    as the connections of the engine factory.
-    """
-    set_postgresql_session(connection.connection, None)
-    verify_postgresql_server(connection.connection, None)
-
-# ################################################################################################################################
-
 def build_ssl_context_from_values(values:'stranydict') -> 'SSLContext':
     """ Builds an SSL context out of a dict of connection values.
     """
@@ -297,20 +280,6 @@ def get_port_from_values(values:'stranydict') -> 'int':
 
 # ################################################################################################################################
 
-def get_password_from_values(values:'stranydict') -> 'str':
-    """ Returns the password of the Zato database out of a dict of connection values, read from its file if one is given.
-    """
-    if password_file := values['password_file']:
-        with open(password_file) as password_file_handle:
-            password = password_file_handle.read()
-        out = password.strip()
-    else:
-        out = values['password']
-
-    return out
-
-# ################################################################################################################################
-
 def build_engine_url_from_values(values:'stranydict') -> 'URL':
     """ Builds the SQLAlchemy URL of the Zato database out of a dict of connection values.
     """
@@ -322,48 +291,6 @@ def build_engine_url_from_values(values:'stranydict') -> 'URL':
 
     # The URL is built from its parts so that characters such as @, / or % in a password are passed as they are.
     out = URL.create(Dialect_Name, username=username, password=password, host=host, port=port, database=db_name)
-    return out
-
-# ################################################################################################################################
-
-def build_django_database_from_values(values:'stranydict') -> 'stranydict':
-    """ Builds the entry of Django's DATABASES setting for the Zato database out of a dict of connection values.
-    """
-    password = get_password_from_values(values)
-    port     = get_port_from_values(values)
-
-    # The options of the connection depend on whether SSL is on ..
-    options:'stranydict' = {}
-
-    # .. and whether the server certificate is verified ..
-    if values['ssl']:
-        if values['ssl_verify']:
-            options['sslmode'] = _django_ssl_mode_verify
-        else:
-            options['sslmode'] = _django_ssl_mode_no_verify
-
-        # .. the certificate authority and the client certificate are given only when configured ..
-        if ssl_ca_file := values['ssl_ca_file']:
-            options['sslrootcert'] = ssl_ca_file
-
-        if ssl_cert_file := values['ssl_cert_file']:
-            options['sslcert'] = ssl_cert_file
-            options['sslkey'] = values['ssl_key_file']
-
-    # .. while a connection without SSL opts out of it explicitly.
-    else:
-        options['sslmode'] = _django_ssl_mode_disabled
-
-    out:'stranydict' = {
-        'ENGINE': Django_Engine,
-        'HOST': values['host'],
-        'PORT': port,
-        'USER': values['username'],
-        'PASSWORD': password,
-        'NAME': values['name'],
-        'OPTIONS': options,
-    }
-
     return out
 
 # ################################################################################################################################

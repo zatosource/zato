@@ -20,6 +20,7 @@ from gevent import get_hub
 from sqlalchemy import create_engine, text
 from sqlalchemy import event as sa_event
 from sqlalchemy.engine import Dialect
+from sqlalchemy.pool import NullPool
 
 # Zato
 from zato.common.db_env.common import get_env_values
@@ -29,6 +30,7 @@ from zato.common.db_env.connection import build_connect_args_from_values, build_
 from zato.common.db_env.fence import install_fence
 from zato.common.db_env.pg8000_common import Driver_Name as PG8000_Driver_Name
 from zato.common.db_env.write_path import check_write_path, get_write_path, Mechanism, run_in_write_path, write_path
+from zato.common.webapp.dashboard_db import Busy_Timeout_Seconds as Dashboard_Busy_Timeout_Seconds
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -65,6 +67,9 @@ _engine_cache:'anydict' = {}
 
 # The module whose import applies the extensions of pg8000, loaded by the first connection of pg8000 in a process
 _pg8000_install_module = 'zato.common.db_env.pg8000_install'
+
+# The URL of the SQLite database of Dashboard, opened read-only
+_dashboard_reader_url_template = 'sqlite:///file:{}?mode=ro&uri=true'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -284,13 +289,25 @@ def new_unshared_env_engine(config:'EnvDBConfig') -> 'Engine':
 # ################################################################################################################################
 
 def new_env_odb_engine(config:'EnvDBConfig', **engine_kwargs:'any_') -> 'Engine':
-    """ Returns an engine of the tables of the configuration database and of Dashboard, which reside in the database
+    """ Returns an engine of the tables of the configuration database, which reside in the database
     of an environment-configured store, with the same settings of durability on each of its connections
     as the engines of that store. Its writes are not subject to the mechanisms of the Zato database.
     """
     values = get_env_values(config)
 
     out = _new_engine(values, engine_kwargs)
+    return out
+
+# ################################################################################################################################
+
+def new_dashboard_reader_engine(db_path:'str') -> 'Engine':
+    """ Returns an engine that reads the SQLite database of Dashboard in the given file, which its caller disposes.
+    Each connection opens the file read-only, and a file that does not exist is not created.
+    """
+    engine_url = _dashboard_reader_url_template.format(db_path)
+    connect_args = {'timeout': Dashboard_Busy_Timeout_Seconds}
+
+    out = create_engine(engine_url, connect_args=connect_args, poolclass=NullPool)
     return out
 
 # ################################################################################################################################

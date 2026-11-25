@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from contextlib import closing
 from dataclasses import dataclass
 from json import dumps as json_dumps, loads as json_loads
 
@@ -19,7 +18,7 @@ from zato.common.bearer_token_verifier import build_verify_config
 from zato.common.crypto.api import is_string_equal
 from zato.common.util.api import new_cid_server
 from zato.common.webapp.auth.auth_type import PortalAuthType
-from zato.common.webapp.auth.dashboard_users import is_dashboard_admin
+from zato.common.webapp.auth.dashboard_users import is_environment_dashboard_admin
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -165,12 +164,11 @@ def sign_in(server:'ParallelServer', fields:'anydict') -> 'strnone':
     secret = fields['password']
 
     # Dashboard users are the portal's admins and sign in with a username and a password,
-    # checked against the auth_user table in the same database that the server's ODB uses ..
+    # checked against the auth_user table in the database of the Dashboard of the server's environment ..
     is_admin = False
 
     if auth_type == PortalAuthType.Basic_Auth:
-        with closing(server.odb.session()) as session:
-            is_admin = is_dashboard_admin(session, username, secret)
+        is_admin = is_environment_dashboard_admin(server.base_dir, username, secret)
 
     # .. and every other caller has to have at least one security definition that accepts the credentials.
     if not is_admin:

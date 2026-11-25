@@ -87,7 +87,7 @@ def _make_fields(auth_type:'str', username:'str', password:'str') -> 'anydict':
 
 # ################################################################################################################################
 
-def _is_admin(session:'MagicMock', username:'str', password:'str') -> 'bool':
+def _is_admin(server_dir:'MagicMock', username:'str', password:'str') -> 'bool':
     """ Stands in for the Dashboard's user table, which knows one admin.
     """
     out = username == _admin_username and password == _admin_password
@@ -98,7 +98,7 @@ def _is_admin(session:'MagicMock', username:'str', password:'str') -> 'bool':
 def _sign_in(server:'MagicMock', fields:'anydict') -> 'MagicMock':
     """ Signs in with the given fields and returns the stand-in for the admin check, which says how often it ran.
     """
-    with patch('zato.server.api_portal.caller.is_dashboard_admin', side_effect=_is_admin) as is_dashboard_admin:
+    with patch('zato.server.api_portal.caller.is_environment_dashboard_admin', side_effect=_is_admin) as is_dashboard_admin:
         server.test_session_token = sign_in(server, fields)
 
     return is_dashboard_admin
@@ -166,13 +166,12 @@ class ResolveSessionTestCase(TestCase):
         server = _make_server()
         is_dashboard_admin = _sign_in(server, _make_fields(PortalAuthType.Basic_Auth, _admin_username, _admin_password))
 
-        with patch('zato.server.api_portal.caller.is_dashboard_admin') as is_dashboard_admin_later:
+        with patch('zato.server.api_portal.caller.is_environment_dashboard_admin') as is_dashboard_admin_later:
             _ = resolve_session(server, server.test_session_token)
             _ = resolve_session(server, server.test_session_token)
 
         is_dashboard_admin.assert_called_once()
         is_dashboard_admin_later.assert_not_called()
-        server.odb.session.assert_called_once()
 
     def test_a_definition_deactivated_after_sign_in_ends_the_session(self) -> 'None':
 

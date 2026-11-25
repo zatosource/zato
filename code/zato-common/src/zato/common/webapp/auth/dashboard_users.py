@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from base64 import b64decode
 from hashlib import pbkdf2_hmac
 from hmac import compare_digest
@@ -14,6 +15,10 @@ from hmac import compare_digest
 # SQLAlchemy
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
+
+# Zato
+from zato.common.db_env.engine import new_dashboard_reader_engine
+from zato.common.webapp.dashboard_db import get_environment_dashboard_db_path
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,7 +38,7 @@ _django_hash_algorithm = 'pbkdf2_sha256'
 # The digest the algorithm above derives its hashes with.
 _pbkdf2_digest = 'sha256'
 
-# The Dashboard keeps its users in the same database the server uses, in Django's own table.
+# The Dashboard keeps its users in its own SQLite database, in Django's own table.
 _dashboard_user_query = 'select password from auth_user where username = :username and is_active = :is_active'
 
 # ################################################################################################################################
@@ -92,6 +97,30 @@ def is_dashboard_admin(session_or_engine:'SASession | Engine', username:'str', p
     if row is not None:
         stored_password = row[0]
         out = verify_django_password(password, stored_password)
+
+    return out
+
+# ################################################################################################################################
+
+def is_environment_dashboard_admin(server_dir:'str', username:'str', password:'str') -> 'bool':
+    """ Checks the credentials against the users of the Dashboard of the environment that the given server directory
+    belongs to. An environment without a Dashboard has no Dashboard users.
+    """
+
+    # Our response to produce
+    out = False
+
+    # The database of the Dashboard is next to the directory of the server ..
+    db_path = get_environment_dashboard_db_path(server_dir)
+
+    # .. and if it exists at all, it is read through a short-lived read-only engine.
+    if os.path.exists(db_path):
+        engine = new_dashboard_reader_engine(db_path)
+
+        try:
+            out = is_dashboard_admin(engine, username, password)
+        finally:
+            engine.dispose()
 
     return out
 
