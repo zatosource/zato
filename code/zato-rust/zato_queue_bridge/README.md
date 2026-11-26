@@ -79,8 +79,8 @@ On start the bridge publishes `request_config` and waits for the server's initia
 
 ## 5. HTTP query API
 
-An actix-web server on 127.0.0.1 exposes read-only state for the dashboard, on the port of `Zato_Queue_Bridge_HTTP_Port`,
-35111 by default:
+An actix-web server on 127.0.0.1 exposes read-only state for the dashboard, on the port of `Zato_Queue_Bridge_Port`,
+which the bridge and the server both require:
 
 1. `/api/get_connections` - every registered channel and outgoing connection.
 2. `/api/get_connection_status` - reachability of one named connection.

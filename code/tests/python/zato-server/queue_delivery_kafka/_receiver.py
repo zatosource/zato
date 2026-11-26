@@ -14,6 +14,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+import selectors
 import socket
 import threading
 import time
@@ -22,6 +23,7 @@ from dataclasses import dataclass, field
 
 # Test support
 from queue_delivery.receiver import RecordedRequest, RecordingReceiver
+from zato.common.typing_ import cast_
 from _protocol import Api_Metadata, Api_Produce, Api_Versions, build_produce_response, cap_api_versions_response, \
     Error_Invalid_Record, Error_None, frame, is_metadata_request_for_everything, read_produce_request, \
     read_request_header, Reader, rewrite_metadata_response
@@ -54,6 +56,9 @@ _reconnect_poll_seconds = 0.1
 # Every message on the wire opens with its length
 _length_size = 4
 
+# How many bytes one read of a connection takes at most
+_recv_size = 65536
+
 # A produce request that wants no acknowledgment is answered by no one
 _acks_none = 0
 
@@ -76,41 +81,22 @@ class KafkaRecordedRequest(RecordedRequest):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _read_frame(connection:'socket.socket') -> 'bytes | None':
-    """ One complete message off a connection, or None once the connection is closed.
+def _take_frames(buffer:'bytearray') -> 'list[bytes]':
+    """ Removes every complete message from the front of what arrived on a connection so far and returns them in order,
+    leaving an incomplete one in the buffer until the rest of it arrives.
     """
-    length_bytes = _read_exactly(connection, _length_size)
+    out:'list[bytes]' = []
 
-    if length_bytes is None:
-        return None
+    while len(buffer) >= _length_size:
+        length = Reader(bytes(buffer[:_length_size])).int32()
+        end = _length_size + length
 
-    length = Reader(length_bytes).int32()
-    out = _read_exactly(connection, length)
+        if len(buffer) < end:
+            break
 
-    return out
+        out.append(bytes(buffer[_length_size:end]))
+        del buffer[:end]
 
-# ################################################################################################################################
-
-def _read_exactly(connection:'socket.socket', length:'int') -> 'bytes | None':
-    """ So many bytes off a connection, or None if it is closed before they all arrive.
-    """
-    chunks:'list[bytes]' = []
-    remaining = length
-
-    while remaining:
-
-        try:
-            chunk = connection.recv(remaining)
-        except OSError:
-            return None
-
-        if not chunk:
-            return None
-
-        chunks.append(chunk)
-        remaining -= len(chunk)
-
-    out = b''.join(chunks)
     return out
 
 # ################################################################################################################################
@@ -130,6 +116,7 @@ class _Owed:
 class _Connection:
     """ One client's connection through the endpoint to the instance - requests go one way, answers the other,
     and answers reach the client in the order of their requests whether the instance or the endpoint gave them.
+    Both directions are served by the thread of the endpoint.
     """
 
     def __init__(self, receiver:'KafkaRecordingReceiver', client:'socket.socket', upstream:'socket.socket') -> 'None':
@@ -140,13 +127,9 @@ class _Connection:
         # What is owed to the client, in order
         self._pending:'deque[_Owed]' = deque()
 
-        self._lock = threading.Lock()
-
-# ################################################################################################################################
-
-    def start(self) -> 'None':
-        for target in (self._pump_requests, self._pump_responses):
-            threading.Thread(target=target, daemon=True).start()
+        # What arrived from each side and does not form a complete message yet
+        self._client_buffer = bytearray()
+        self._upstream_buffer = bytearray()
 
 # ################################################################################################################################
 
@@ -160,98 +143,110 @@ class _Connection:
 
 # ################################################################################################################################
 
-    def _pump_requests(self) -> 'None':
-        """ Reads the client's requests, records what the endpoint cares about and hands on the ones it does not answer itself.
+    def on_readable(self, sock:'socket.socket') -> 'bool':
+        """ Reads what arrived on one side and handles each message it completes. Returns False once the connection
+        is closed, by either side or because a message could not be handled.
         """
         try:
-            while True:
-                payload = _read_frame(self.client)
+            chunk = sock.recv(_recv_size)
+        except OSError:
+            return False
 
-                if payload is None:
-                    break
+        if not chunk:
+            return False
 
-                header = read_request_header(payload)
+        is_client = sock is self.client
 
-                if header.api_key == Api_Produce:
-                    request = read_produce_request(payload, header.body_position)
+        if is_client:
+            buffer = self._client_buffer
+        else:
+            buffer = self._upstream_buffer
 
-                    if self.receiver.handle_produce(request):
-                        if request.acks != _acks_none:
-                            reply = build_produce_response(header.correlation_id, request.partitions, Error_Invalid_Record)
-                            self._answer(reply)
-                        continue
+        buffer.extend(chunk)
 
-                    needs_answer = request.acks != _acks_none
+        for payload in _take_frames(buffer):
 
-                elif header.api_key == Api_Metadata:
-                    if is_metadata_request_for_everything(payload, header.body_position):
-                        self.receiver.handle_ping()
+            if is_client:
+                try:
+                    self._on_request(payload)
+                except Exception:
+                    logger.warning('Endpoint on port %d could not read a request', self.receiver.port, exc_info=True)
+                    return False
 
-                    needs_answer = True
+            else:
+                try:
+                    self._on_response(payload)
+                except Exception:
+                    logger.warning('Endpoint on port %d could not pass an answer on', self.receiver.port, exc_info=True)
+                    return False
 
-                else:
-                    needs_answer = True
-
-                self._forward(header, payload, needs_answer)
-
-        except Exception:
-            logger.warning('Endpoint on port %d could not read a request', self.receiver.port, exc_info=True)
-
-        finally:
-            self.close()
+        return True
 
 # ################################################################################################################################
 
-    def _pump_responses(self) -> 'None':
-        """ Reads the instance's answers and passes them to the client, rewritten where the endpoint has to.
+    def _on_request(self, payload:'bytes') -> 'None':
+        """ Records what the endpoint cares about in a request of the client and hands it on unless it answers it itself.
         """
-        try:
-            while True:
-                payload = _read_frame(self.upstream)
+        header = read_request_header(payload)
 
-                if payload is None:
-                    break
+        if header.api_key == Api_Produce:
+            request = read_produce_request(payload, header.body_position)
 
-                correlation_id = Reader(payload).int32()
+            if self.receiver.handle_produce(request):
+                if request.acks != _acks_none:
+                    reply = build_produce_response(header.correlation_id, request.partitions, Error_Invalid_Record)
+                    self._answer(reply)
+                return
 
-                with self._lock:
-                    header = self._take_request(correlation_id)
+            needs_answer = request.acks != _acks_none
 
-                    if header.api_key == Api_Versions:
-                        payload = cap_api_versions_response(payload, header.api_version)
+        elif header.api_key == Api_Metadata:
+            if is_metadata_request_for_everything(payload, header.body_position):
+                self.receiver.handle_ping()
 
-                    elif header.api_key == Api_Metadata:
-                        payload = rewrite_metadata_response(payload, _host, self.receiver.port)
+            needs_answer = True
 
-                    self.client.sendall(frame(payload))
-                    self._flush_own_answers()
+        else:
+            needs_answer = True
 
-        except Exception:
-            logger.warning('Endpoint on port %d could not pass an answer on', self.receiver.port, exc_info=True)
+        self._forward(header, payload, needs_answer)
 
-        finally:
-            self.close()
+# ################################################################################################################################
+
+    def _on_response(self, payload:'bytes') -> 'None':
+        """ Passes an answer of the instance to the client, rewritten where the endpoint has to.
+        """
+        correlation_id = Reader(payload).int32()
+        header = self._take_request(correlation_id)
+
+        if header.api_key == Api_Versions:
+            payload = cap_api_versions_response(payload, header.api_version)
+
+        elif header.api_key == Api_Metadata:
+            payload = rewrite_metadata_response(payload, _host, self.receiver.port)
+
+        self.client.sendall(frame(payload))
+        self._flush_own_answers()
 
 # ################################################################################################################################
 
     def _forward(self, header:'RequestHeader', payload:'bytes', needs_answer:'bool') -> 'None':
         """ Hands a request on to the instance, noting that its answer is owed to the client if one is.
         """
-        with self._lock:
-            if needs_answer:
-                self._pending.append(_Owed(header=header))
-            self.upstream.sendall(frame(payload))
+        if needs_answer:
+            self._pending.append(_Owed(header=header))
+
+        self.upstream.sendall(frame(payload))
 
 # ################################################################################################################################
 
     def _answer(self, reply:'bytes') -> 'None':
         """ Gives the client an answer of the endpoint's own - at once if nothing is owed before it, otherwise in its turn.
         """
-        with self._lock:
-            if self._pending:
-                self._pending.append(_Owed(reply=reply))
-            else:
-                self.client.sendall(reply)
+        if self._pending:
+            self._pending.append(_Owed(reply=reply))
+        else:
+            self.client.sendall(reply)
 
 # ################################################################################################################################
 
@@ -289,6 +284,11 @@ class KafkaRecordingReceiver(RecordingReceiver[KafkaRecordedRequest]):
     instance_host = _host
     instance_port = 0
 
+    # Set while the output of the queue bridge is expected to report errors - the suite sets it before any endpoint
+    # is started, and it is set while any endpoint is stopped, until the bridge has connected through it again
+    bridge_is_expected:'threading.Event'
+    stopped_ports:'set[int]' = set()
+
     def __init__(self, port:'int') -> 'None':
         super().__init__(port)
 
@@ -305,18 +305,19 @@ class KafkaRecordingReceiver(RecordingReceiver[KafkaRecordedRequest]):
 # ################################################################################################################################
 
     def start(self) -> 'None':
-        """ Starts listening in a thread of its own - and after a stop, waits for the client to find the endpoint again.
+        """ Starts listening in a thread of its own, which serves every connection through the endpoint and is named
+        after it, so a restart of the endpoint leaves no thread of a new name behind - and after a stop,
+        waits for the client to find the endpoint again.
         """
         listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         listener.bind((_host, self.port))
         listener.listen()
-        listener.settimeout(_accept_timeout_seconds)
 
         self._listener = listener
         self._is_running = True
 
-        thread = threading.Thread(target=self._serve, daemon=True)
+        thread = threading.Thread(target=self._serve, name=f'kafka-endpoint-{self.port}', daemon=True)
         thread.start()
 
         self._thread = thread
@@ -326,11 +327,19 @@ class KafkaRecordingReceiver(RecordingReceiver[KafkaRecordedRequest]):
         if self._was_stopped:
             self._wait_for_a_client()
 
+            KafkaRecordingReceiver.stopped_ports.discard(self.port)
+
+            if not KafkaRecordingReceiver.stopped_ports:
+                KafkaRecordingReceiver.bridge_is_expected.clear()
+
 # ################################################################################################################################
 
     def stop(self) -> 'None':
         """ Stops listening and cuts every connection through the endpoint - nothing answers on the port once this returns.
         """
+        KafkaRecordingReceiver.stopped_ports.add(self.port)
+        KafkaRecordingReceiver.bridge_is_expected.set()
+
         self._is_running = False
 
         if self._thread:
@@ -374,7 +383,8 @@ class KafkaRecordingReceiver(RecordingReceiver[KafkaRecordedRequest]):
 # ################################################################################################################################
 
     def _serve(self) -> 'None':
-        """ Accepts connections for as long as the endpoint runs, opening one to the instance for each.
+        """ Accepts connections for as long as the endpoint runs, opening one to the instance for each,
+        and passes on what arrives on either side of each of them.
         """
         listener = self._listener
 
@@ -382,30 +392,64 @@ class KafkaRecordingReceiver(RecordingReceiver[KafkaRecordedRequest]):
         if listener is None:
             return
 
-        while self._is_running:
+        selector = selectors.DefaultSelector()
+        _ = selector.register(listener, selectors.EVENT_READ)
 
-            try:
-                client, _ = listener.accept()
-            except socket.timeout:
-                continue
-            except OSError:
-                break
+        try:
+            while self._is_running:
 
-            try:
-                upstream = socket.create_connection((self.instance_host, self.instance_port), timeout=_connect_timeout_seconds)
-                upstream.settimeout(None)
-            except OSError:
-                logger.warning('Endpoint on port %d could not reach Kafka at %s:%d', self.port, self.instance_host,
-                    self.instance_port, exc_info=True)
-                client.close()
-                continue
+                for key, _ in selector.select(_accept_timeout_seconds):
 
-            connection = _Connection(self, client, upstream)
+                    if key.fileobj is listener:
+                        self._accept(listener, selector)
 
-            with self._connections_lock:
-                self._connections.append(connection)
+                    else:
+                        connection:'_Connection' = key.data
+                        sock = cast_('socket.socket', key.fileobj)
 
-            connection.start()
+                        if not connection.on_readable(sock):
+                            self._drop(connection, selector)
+
+        finally:
+            selector.close()
+
+# ################################################################################################################################
+
+    def _accept(self, listener:'socket.socket', selector:'selectors.BaseSelector') -> 'None':
+        """ Accepts one client and opens its connection to the instance.
+        """
+        client, _ = listener.accept()
+        client.settimeout(None)
+
+        try:
+            upstream = socket.create_connection((self.instance_host, self.instance_port), timeout=_connect_timeout_seconds)
+            upstream.settimeout(None)
+        except OSError:
+            logger.warning('Endpoint on port %d could not reach Kafka at %s:%d', self.port, self.instance_host,
+                self.instance_port, exc_info=True)
+            client.close()
+            return
+
+        connection = _Connection(self, client, upstream)
+
+        _ = selector.register(client, selectors.EVENT_READ, connection)
+        _ = selector.register(upstream, selectors.EVENT_READ, connection)
+
+        with self._connections_lock:
+            self._connections.append(connection)
+
+# ################################################################################################################################
+
+    def _drop(self, connection:'_Connection', selector:'selectors.BaseSelector') -> 'None':
+        """ Closes a connection that either side closed and stops watching it.
+        """
+        _ = selector.unregister(connection.client)
+        _ = selector.unregister(connection.upstream)
+
+        connection.close()
+
+        with self._connections_lock:
+            self._connections.remove(connection)
 
 # ################################################################################################################################
 

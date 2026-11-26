@@ -24,6 +24,7 @@ from zato.common.worker_slot import ModuleCtx as WorkerSlotCtx
 from zato.server.arbiter import Arbiter
 from zato.server.arbiter_config import ArbiterConfig, ModuleCtx as ArbiterCtx
 from zato.server.control.client import ControlClient
+from zato.server.control.envelope import MessageType
 from zato.server.control.hub import EntryStatus
 from zato.server.outgoing_region import get_outgoing_binding, SharedPublishLock
 from zato.server.worker_liveness import reopen_worker_logs, write_heartbeat
@@ -246,6 +247,12 @@ class ProcessUnderTest:
         self.client = ControlClient(
             ctx.control_fd, ctx.body_dir, self.on_event, self.on_query, self.on_drain, self.on_reload, reopen_worker_logs)
 
+        # The arbiter tells the config process about the loads in progress and about each worker that exited,
+        # which the config process of a server applies to its gate and the one of a test has none for
+        if not self.is_worker:
+            self.client.handlers[MessageType.Loading_State] = self.on_gate_message
+            self.client.handlers[MessageType.Worker_Gone] = self.on_gate_message
+
         _ = self.client.start()
 
         if not self.is_worker:
@@ -273,6 +280,9 @@ class ProcessUnderTest:
 
     def on_reload(self) -> 'None':
         self.probe.add(Reloads_Metric, 1)
+
+    def on_gate_message(self, _message:'Message') -> 'None':
+        pass
 
     def report_ready(self) -> 'None':
         self.is_ready = True

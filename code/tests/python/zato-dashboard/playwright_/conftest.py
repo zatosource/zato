@@ -65,6 +65,7 @@ from login import login as login_to_dashboard
 # Zato
 from zato.common.test.conftest_base_pubsub import Expected_Record_Marker
 from zato.common.test.process_util import kill_process_tree
+from zato.common.test.reservation import reserve_port
 from zato.common.test.zato_database import isolated_database_env
 from zato.common.typing_ import cast_
 
@@ -277,6 +278,10 @@ def run_zato_dashboard() -> 'any_':
     # steal recv events from the shared consumer groups there.
     queue_bridge_redis_port = _find_free_port()
 
+    # The HTTP query API of the queue bridge that a test starts, which the server reads connection state from
+    queue_bridge_http_reservation = reserve_port('playwright-queue-bridge-http')
+    queue_bridge_http_port = queue_bridge_http_reservation.port
+
     temporary_dir = tempfile.mkdtemp(prefix='zato_playwright_test_')
     _cleanup_refs['temporary_dir'] = temporary_dir
 
@@ -368,6 +373,7 @@ def run_zato_dashboard() -> 'any_':
     server_env['Zato_Config_Bind_Port'] = str(server_port)
     server_env['Zato_Broker_HTTP_Port'] = str(broker_port)
     server_env['Zato_Queue_Bridge_Redis_Port'] = str(queue_bridge_redis_port)
+    server_env['Zato_Queue_Bridge_Port'] = str(queue_bridge_http_port)
 
     # The internal MLLP listener binds to this port, which is how the tests that
     # speak to MLLP channels over the wire know where to connect upfront.
@@ -498,6 +504,7 @@ def run_zato_dashboard() -> 'any_':
         'dashboard_process': dashboard_process,
         'listener_process': listener_process,
         'queue_bridge_redis_port': queue_bridge_redis_port,
+        'queue_bridge_http_port': queue_bridge_http_port,
         'sftp_key_path': sftp_key_path,
     }
 
@@ -516,6 +523,9 @@ def run_zato_dashboard() -> 'any_':
     # .. stop the queue bridge Redis ..
     _kill_process(queue_bridge_redis_process)
     _cleanup_refs['queue_bridge_redis_process'] = None
+
+    # .. release the port of the queue bridge's HTTP query API ..
+    queue_bridge_http_reservation.release()
 
     # .. remove the temporary directory only if all tests passed.
     if _cleanup_refs.get('has_failures'):

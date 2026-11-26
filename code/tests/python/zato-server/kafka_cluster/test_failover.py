@@ -174,6 +174,7 @@ def _assert_each_once(kafka_suite:'ClusterSuite', names:'Names', payloads:'anyli
 # ################################################################################################################################
 
 @pytest.mark.parametrize('transport', Transports)
+@pytest.mark.bridge_errors_expected
 def test_a_connection_keeps_sending_after_its_only_named_instance_is_stopped(
     kafka_suite:'ClusterSuite',
     names_by_transport:'dict[str, Names]',
@@ -201,6 +202,7 @@ def test_a_connection_keeps_sending_after_its_only_named_instance_is_stopped(
 # ################################################################################################################################
 
 @pytest.mark.parametrize('transport', [Plaintext])
+@pytest.mark.bridge_errors_expected
 def test_a_connection_keeps_sending_while_every_instance_is_stopped_and_started_in_turn(
     kafka_suite:'ClusterSuite',
     names_by_transport:'dict[str, Names]',
@@ -235,6 +237,7 @@ def test_a_connection_keeps_sending_while_every_instance_is_stopped_and_started_
 # ################################################################################################################################
 
 @pytest.mark.parametrize('transport', Transports)
+@pytest.mark.bridge_errors_expected
 def test_a_channel_keeps_receiving_while_its_only_named_instance_is_down(
     kafka_suite:'ClusterSuite',
     names_by_transport:'dict[str, Names]',

@@ -171,6 +171,7 @@ def _members_holding_partitions(kafka_suite:'ClusterSuite', names:'Names') -> 'i
 # ################################################################################################################################
 # ################################################################################################################################
 
+@pytest.mark.bridge_errors_expected
 def test_every_message_reaches_a_service_once_across_a_rebalance(kafka_suite:'ClusterSuite', names:'Names') -> 'None':
     """ Both channels share the topic, the group's coordinator is killed and started again, and the three bursts
     around that are each received exactly once.

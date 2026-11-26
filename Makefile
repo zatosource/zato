@@ -96,6 +96,9 @@ include $(CURDIR)/code/tests/check.mk
 Zato_Health := $(Zato_Health_Root)
 Zato_Libs   := $(CURDIR)/code/zato-libs
 
+# The port of the HTTP query API of the queue bridge, which the bridge and every server require
+export Zato_Queue_Bridge_Port ?= 35111
+
 SKIP_PASSED_F   ?=
 FROM_LAST_F     ?=
 SLOW_F          ?=

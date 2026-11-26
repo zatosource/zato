@@ -167,6 +167,7 @@ def _wait_for_payloads_on_topic(kafka_suite:'ClusterSuite', topic:'str', payload
 # ################################################################################################################################
 # ################################################################################################################################
 
+@pytest.mark.bridge_errors_expected
 def test_sends_while_kafka_is_down_queue_up_move_to_the_dlq_raise_the_alert_and_a_retry_delivers_each_once(
     kafka_suite:'ClusterSuite',
     names:'Names',

@@ -7,7 +7,7 @@
 //!
 //! Communicates with the Zato server via Redis Streams for commands and
 //! recv events, and serves an HTTP query API on 127.0.0.1, on the port of
-//! `Zato_Queue_Bridge_HTTP_Port` or 35111 by default, for the server to read connection state.
+//! `Zato_Queue_Bridge_Port`, for the server to read connection state.
 
 use std::sync::Arc;
 
@@ -16,6 +16,26 @@ use tracing_subscriber::EnvFilter;
 use zato_queue_bridge::bridge;
 use zato_queue_bridge::http_api;
 use zato_queue_bridge::redis_streams;
+
+/// Environment variable with the port of the HTTP query API on 127.0.0.1, which the server reads as well.
+const PORT_VARIABLE: &str = "Zato_Queue_Bridge_Port";
+
+/// Reads a port number from an environment variable that must be set.
+fn required_port(variable: &str) -> std::io::Result<u16> {
+    // A missing variable stops the bridge, since the server could not find a port the bridge picked by itself
+    let text = std::env::var(variable)
+        .map_err(|err| std::io::Error::new(std::io::ErrorKind::NotFound, format!("{variable} is not set: {err}")))?;
+
+    // A value that is not a port number stops the bridge as well
+    let port = text.parse::<u16>().map_err(|err| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("{variable} is not a port number: `{text}`, {err}"),
+        )
+    })?;
+
+    Ok(port)
+}
 
 /// Configuration read from `Zato_Queue_Bridge_*` environment variables.
 struct QueueBridgeConfig {
@@ -33,20 +53,21 @@ struct QueueBridgeConfig {
 
 impl QueueBridgeConfig {
     /// Reads configuration from environment variables.
-    fn from_env() -> Self {
-        Self {
+    ///
+    /// Fails when `Zato_Queue_Bridge_Port` is not set or does not hold a port number.
+    fn from_env() -> std::io::Result<Self> {
+        let http_port = required_port(PORT_VARIABLE)?;
+
+        Ok(Self {
             redis_host: std::env::var("Zato_Queue_Bridge_Redis_Host").unwrap_or_else(|_| "localhost".to_string()),
             redis_port: std::env::var("Zato_Queue_Bridge_Redis_Port")
                 .ok()
                 .and_then(|val| val.parse::<u16>().ok())
                 .unwrap_or(6379),
             redis_password: std::env::var("Zato_Queue_Bridge_Redis_Password").unwrap_or_default(),
-            http_port: std::env::var("Zato_Queue_Bridge_HTTP_Port")
-                .ok()
-                .and_then(|val| val.parse::<u16>().ok())
-                .unwrap_or(http_api::DEFAULT_HTTP_PORT),
+            http_port,
             log_level: std::env::var("Zato_Queue_Bridge_Log_Level").unwrap_or_else(|_| "info".to_string()),
-        }
+        })
     }
 
     /// Builds a Redis connection URL from the config.
@@ -141,7 +162,7 @@ fn wait_for_initial_reload(conn: &mut redis::Connection, shared: &bridge::Bridge
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let config = QueueBridgeConfig::from_env();
+    let config = QueueBridgeConfig::from_env()?;
 
     tracing_subscriber::fmt().with_env_filter(EnvFilter::new(&config.log_level)).init();
 

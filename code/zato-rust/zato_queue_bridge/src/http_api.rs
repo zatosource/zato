@@ -1,7 +1,7 @@
 //! HTTP query API served by actix-web for the Zato server to read queue bridge state.
 //!
-//! All endpoints are GET-only, served on 127.0.0.1 on the port of `Zato_Queue_Bridge_HTTP_Port`,
-//! 35111 by default, with no authentication.
+//! All endpoints are GET-only, served on 127.0.0.1 on the port of `Zato_Queue_Bridge_Port`,
+//! with no authentication.
 
 use std::sync::Arc;
 
@@ -15,9 +15,6 @@ struct AppState {
     /// Reference to the queue bridge's shared state.
     shared: Arc<BridgeShared>,
 }
-
-/// Port of the HTTP query API when `Zato_Queue_Bridge_HTTP_Port` is not set.
-pub const DEFAULT_HTTP_PORT: u16 = 35111;
 
 /// Starts the actix-web HTTP server on the given port of 127.0.0.1.
 ///

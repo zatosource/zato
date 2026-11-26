@@ -12,6 +12,7 @@ import os
 
 # Zato
 from arbiter_common import new_config, Region_Config
+from zato.common.test.expected_records import expected_records
 from zato.server.arbiter import Arbiter
 from zato_ipc_core.zato_ipc_core import SharedRegion
 
@@ -108,6 +109,7 @@ def test_each_termination_within_the_window_doubles_the_delay(tmp_path:'Path') -
 
 # ################################################################################################################################
 
+@expected_records(_arbiter_logger)
 def test_a_worker_above_the_threshold_waits_for_the_ceiling(tmp_path:'Path', caplog:'LogCaptureFixture') -> 'None':
     arbiter = _new_arbiter(tmp_path)
     count = len(_expected_delays)

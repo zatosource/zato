@@ -111,6 +111,7 @@ def _partitions_by_leader(kafka_suite:'ClusterSuite', topic:'str') -> 'dict[int,
 # ################################################################################################################################
 # ################################################################################################################################
 
+@pytest.mark.bridge_errors_expected
 def test_a_frozen_instance_delays_neither_the_other_partitions_nor_the_service_sending_to_it(
     kafka_suite:'ClusterSuite',
     names:'Names',

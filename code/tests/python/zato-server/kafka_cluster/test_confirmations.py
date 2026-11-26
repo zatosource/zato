@@ -163,6 +163,7 @@ def _lose_the_leaders_copy(kafka_suite:'ClusterSuite', topic:'str', leader:'int'
 # ################################################################################################################################
 # ################################################################################################################################
 
+@pytest.mark.bridge_errors_expected
 def test_with_all_instances_a_send_during_a_leader_change_arrives_once_or_fails_out_loud(
     kafka_suite:'ClusterSuite',
     names:'Names',
@@ -211,6 +212,7 @@ def test_with_all_instances_a_send_during_a_leader_change_arrives_once_or_fails_
 
 # ################################################################################################################################
 
+@pytest.mark.bridge_errors_expected
 def test_with_one_instance_a_confirmed_message_the_others_never_saw_is_gone_with_the_leader(
     kafka_suite:'ClusterSuite',
     names:'Names',
@@ -250,6 +252,7 @@ def test_with_one_instance_a_confirmed_message_the_others_never_saw_is_gone_with
 
 # ################################################################################################################################
 
+@pytest.mark.bridge_errors_expected
 def test_with_no_confirmation_a_send_succeeds_while_every_instance_is_frozen_and_the_message_is_lost(
     kafka_suite:'ClusterSuite',
     names:'Names',

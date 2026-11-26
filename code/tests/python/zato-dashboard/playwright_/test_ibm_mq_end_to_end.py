@@ -85,6 +85,7 @@ def queue_bridge(ibm_mq_server:'any_', zato_dashboard:'anydict') -> 'any_':
     env = os.environ.copy()
     env['Zato_MQ_Client_Lib'] = _MQ_Client_Lib
     env['Zato_Queue_Bridge_Redis_Port'] = str(zato_dashboard['queue_bridge_redis_port'])
+    env['Zato_Queue_Bridge_Port'] = str(zato_dashboard['queue_bridge_http_port'])
 
     process = subprocess.Popen([_Bridge_Binary], env=env)
 

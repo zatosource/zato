@@ -13,6 +13,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import sys
 import tempfile
+from contextlib import ExitStack
 
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'zato-common', 'lib')))
@@ -26,6 +27,7 @@ from live_environment.quickstart import ZatoEnvironment
 from live_kafka.bridge import local_requirements, start_bridge_parts
 from live_kafka.containers import start_kafka_cluster
 from live_kafka.suite import KafkaSuite, ModuleCtx
+from zato.common.test.pubsub_database import pubsub_db_env
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -89,6 +91,11 @@ def kafka_suite() -> 'iterator_':
         parts.add('zato environment', zato.stop)
         zato.create()
 
+        # .. the tests read the audit log of the server, so this process uses the server's database too ..
+        database_scope = ExitStack()
+        parts.add('database environment', database_scope.close)
+        database_scope.enter_context(pubsub_db_env(zato.database_env))
+
         # The server gets a Zato database of its own, so nothing of an earlier session's DLQs is restored into it
         environment = dict(bridge.server_environment)
 
@@ -108,12 +115,19 @@ def kafka_suite() -> 'iterator_':
 
 # ################################################################################################################################
 
+def pytest_configure(config:'any_') -> 'None':
+    config.addinivalue_line('markers', 'bridge_errors_expected: the test stops, kills or pauses instances deliberately')
+
+# ################################################################################################################################
+
 @pytest.fixture(autouse=True)
 def clean_slate(request:'any_') -> 'iterator_':
     """ Every test starts with no recorded invocations, receivers that behave and every instance up and running,
-    and leaves the cluster whole for the next one whatever it did to it.
+    and leaves the cluster whole for the next one whatever it did to it. A test that takes instances down deliberately
+    has the output of the bridge marked as expected until the cluster is whole again.
     """
     used_suite:'ClusterSuite | None' = None
+    scope = ExitStack()
 
     if 'kafka_suite' in request.fixturenames:
         suite:'ClusterSuite' = request.getfixturevalue('kafka_suite')
@@ -122,10 +136,15 @@ def clean_slate(request:'any_') -> 'iterator_':
         suite.reset_behaviour()
         used_suite = suite
 
-    yield
+        if request.node.get_closest_marker('bridge_errors_expected'):
+            scope.enter_context(suite.bridge.expected_errors())
 
-    if used_suite:
-        used_suite.cluster.restore_all()
+    with scope:
+
+        yield
+
+        if used_suite:
+            used_suite.cluster.restore_all()
 
 # ################################################################################################################################
 # ################################################################################################################################

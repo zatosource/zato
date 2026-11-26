@@ -17,6 +17,8 @@ import pytest
 # Zato
 from arbiter_common import Condition_Timeout, config_started, is_running, new_config, none_running, Probe, \
     Region_Config, start_arbiter, start_arbiter_process, Starts_Metric, stop_arbiter, wait_until, worker_replaced
+from zato.common.test.expected_records import expected_records
+from zato.server.arbiter import logger as arbiter_logger
 from zato_ipc_core.zato_ipc_core import SharedRegion
 
 # ################################################################################################################################
@@ -77,6 +79,7 @@ def test_a_terminated_worker_is_replaced(tmp_path:'Path') -> 'None':
 
 # ################################################################################################################################
 
+@expected_records(arbiter_logger.name)
 def test_a_worker_without_heartbeats_is_terminated_and_replaced(tmp_path:'Path') -> 'None':
     tmp_dir = str(tmp_path)
     region = SharedRegion(Region_Config)
@@ -92,6 +95,7 @@ def test_a_worker_without_heartbeats_is_terminated_and_replaced(tmp_path:'Path')
 
 # ################################################################################################################################
 
+@expected_records(arbiter_logger.name)
 def test_a_worker_that_does_not_start_is_terminated_after_the_startup_timeout(tmp_path:'Path') -> 'None':
     tmp_dir = str(tmp_path)
     region = SharedRegion(Region_Config)
@@ -114,6 +118,7 @@ def test_a_worker_that_does_not_start_is_terminated_after_the_startup_timeout(tm
 
 # ################################################################################################################################
 
+@expected_records(arbiter_logger.name)
 def test_respawns_of_the_worker_back_off(tmp_path:'Path') -> 'None':
     tmp_dir = str(tmp_path)
     region = SharedRegion(Region_Config)
@@ -135,6 +140,7 @@ def test_respawns_of_the_worker_back_off(tmp_path:'Path') -> 'None':
 
 # ################################################################################################################################
 
+@expected_records(arbiter_logger.name)
 def test_a_worker_that_does_not_drain_is_terminated_after_the_grace_period(tmp_path:'Path') -> 'None':
     tmp_dir = str(tmp_path)
     region = SharedRegion(Region_Config)

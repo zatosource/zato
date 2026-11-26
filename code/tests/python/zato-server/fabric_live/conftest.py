@@ -7,10 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import os
-import shutil
-import socket
-import subprocess
 import tempfile
 import time
 from pathlib import Path
@@ -21,11 +17,13 @@ import pytest
 
 # Zato
 from zato.common.crypto.api import CryptoManager
-from zato.common.test.process_util import kill_process_tree
 
 # Live environment
 from live_environment.parts import Parts, skip_or_fail, tear_down
-from live_environment.quickstart import find_free_port, Host, ZatoEnvironment
+from live_environment.quickstart import ZatoEnvironment
+
+# Live Kafka
+from live_kafka.bridge import local_requirements, start_bridge_parts
 
 # Live Fabric
 from live_fabric.common import ModuleCtx as FabricCtx
@@ -37,12 +35,7 @@ from live_fabric.state import describe, missing_requirements
 if 0:
     from live_fabric.state import FabricEnvironment
     from zato.common.test.client import AdminClient
-    from zato.common.typing_ import iterator_, strlist, strstrdict
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-popen_ = subprocess.Popen[bytes]
+    from zato.common.typing_ import iterator_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,20 +48,9 @@ class ModuleCtx:
     # The connection whose client secret the token endpoint rejects
     Bad_Credentials_Connection_Name = 'test.fabric.bad-credentials'
 
-    # The bridge binary, relative to the repository root the tests are run from
-    Bridge_Binary = Path(os.environ['ZATO_TEST_BASE_DIR']) / 'code' / 'bin' / '_zato_queue_bridge'
-
     # The services the tests drive and the connections they use
     Services_File = Path(__file__).parent / '_services.py'
     Template_File = Path(__file__).parent / '_enmasse_template.yaml'
-
-    # How long a freshly started Redis has to open its port
-    Redis_Wait_Timeout  = 30
-    Redis_Poll_Interval = 0.2
-    Connect_Timeout     = 1
-
-    # The variable name both the server and the bridge read the Redis port from
-    Bridge_Redis_Port_Variable = 'Zato_Queue_Bridge_Redis_Port'
 
     # The service whose answer tells the deployed services are in place
     Ping_Service = 'test.fabric.ping'
@@ -87,75 +69,6 @@ class FabricLiveEnvironment(NamedTuple):
     fabric: 'FabricEnvironment'
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-class ProcessPart:
-    """ One started process, stopped along with everything it spawned.
-    """
-
-    def __init__(self, process:'popen_') -> 'None':
-        self.process = process
-
-# ################################################################################################################################
-
-    def stop(self) -> 'None':
-        kill_process_tree(self.process)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _wait_for_tcp_port(port:'int') -> 'None':
-    """ Polls a TCP port until it accepts connections, or raises after the timeout.
-    """
-    now = time.monotonic()
-    deadline = now + ModuleCtx.Redis_Wait_Timeout
-    address = (Host, port)
-
-    while time.monotonic() < deadline:
-        try:
-            with socket.create_connection(address, timeout=ModuleCtx.Connect_Timeout):
-                return
-        except OSError:
-            time.sleep(ModuleCtx.Redis_Poll_Interval)
-
-    raise Exception(f'Port {port} did not accept connections within {ModuleCtx.Redis_Wait_Timeout}s')
-
-# ################################################################################################################################
-
-def _start_redis(port:'int') -> 'popen_':
-    """ Starts a throwaway Redis with no persistence in its own session.
-    """
-    command = ['redis-server', '--port', str(port), '--save', '', '--appendonly', 'no']
-    out = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
-    _wait_for_tcp_port(port)
-
-    return out
-
-# ################################################################################################################################
-
-def _start_bridge(env:'strstrdict') -> 'popen_':
-    """ Starts the queue bridge binary pointed at the test Redis.
-    """
-    command = [str(ModuleCtx.Bridge_Binary)]
-
-    out = subprocess.Popen(command, env=env, start_new_session=True)
-    return out
-
-# ################################################################################################################################
-
-def _local_requirements() -> 'strlist':
-    """ What this machine lacks besides the Fabric side.
-    """
-    out:'strlist' = []
-
-    if not shutil.which('redis-server'):
-        out.append('redis-server is not installed')
-
-    if not ModuleCtx.Bridge_Binary.exists():
-        out.append(f'Bridge binary {ModuleCtx.Bridge_Binary} is missing')
-
-    return out
-
 # ################################################################################################################################
 
 def _render_template(fabric:'FabricEnvironment') -> 'str':
@@ -204,7 +117,7 @@ def fabric_live() -> 'iterator_':
     """
     # Skip or fail when anything the suite needs is missing ..
     missing_fabric = missing_requirements()
-    missing_local = _local_requirements()
+    missing_local = local_requirements()
     missing = missing_fabric + missing_local
     skip_or_fail(missing, FabricCtx.Required_Variable)
 
@@ -214,28 +127,18 @@ def fabric_live() -> 'iterator_':
         # .. read what the setup recorded ..
         fabric = describe()
 
-        # .. start Redis ..
-        redis_port = find_free_port()
-        redis_port_text = str(redis_port)
-        redis_process = _start_redis(redis_port)
-        redis_part = ProcessPart(redis_process)
-        parts.add('redis-server', redis_part.stop)
+        # .. start Redis and the bridge pointed at it ..
+        bridge = start_bridge_parts()
+        parts.add('redis-server', bridge.stop_redis)
+        parts.add('queue bridge', bridge.stop_bridge)
 
-        # .. start the bridge pointed at it ..
-        bridge_env = dict(os.environ)
-        bridge_env[ModuleCtx.Bridge_Redis_Port_Variable] = redis_port_text
-        bridge_process = _start_bridge(bridge_env)
-        bridge_part = ProcessPart(bridge_process)
-        parts.add('queue bridge', bridge_part.stop)
-
-        # .. start the server pointed at the same Redis ..
+        # .. start the server pointed at the same Redis and at the bridge's HTTP query API ..
         directory = tempfile.mkdtemp(prefix='zato_fabric_live_')
         zato = ZatoEnvironment(directory, password_prefix='test.fabric')
         parts.add('zato environment', zato.stop)
         zato.create()
 
-        extra_environment = {ModuleCtx.Bridge_Redis_Port_Variable: redis_port_text}
-        zato.start(extra_environment)
+        zato.start(dict(bridge.server_environment))
 
         # .. import the connections under test ..
         _ = zato.import_yaml('fabric_live.yaml', _render_template(fabric))

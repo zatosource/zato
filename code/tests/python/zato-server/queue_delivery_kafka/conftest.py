@@ -76,20 +76,20 @@ def zato_server(kafka_instance:'KafkaServer') -> 'any_':
     """ One quickstart server with a Redis and a queue bridge of its own.
     """
     bridge = start_bridge_parts()
+    kafka_type.server_environment = bridge.server_environment
+    KafkaRecordingReceiver.bridge_is_expected = bridge.is_expected
+    session = Session(kafka_type)
 
     try:
-        kafka_type.server_environment = bridge.server_environment
-
-        session = Session(kafka_type)
         session.start()
 
-        try:
-            yield
-        finally:
-            session.stop()
+        yield
 
+    # The bridge stops after the server and before the endpoints it is connected through
     finally:
+        session.state.kill_server()
         bridge.stop_bridge()
+        session.stop()
         bridge.stop_redis()
 
 # ################################################################################################################################

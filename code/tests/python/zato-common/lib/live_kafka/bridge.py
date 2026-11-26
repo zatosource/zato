@@ -13,13 +13,18 @@ import os
 import shutil
 import socket
 import subprocess
+import threading
 import time
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Generator, IO
 
 # Zato
 from live_environment.quickstart import Host
+from zato.common.test.conftest_base_pubsub import Expected_Record_Marker
 from zato.common.test.process_util import kill_process_tree
 from zato.common.test.reservation import PortInUse, reserve_port, start_on_reserved_port
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,7 +36,8 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-popen_ = subprocess.Popen[bytes]
+popen_  = subprocess.Popen[bytes]
+nonegen = Generator[None, None, None]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,7 +56,7 @@ class ModuleCtx:
     Bridge_Redis_Port_Variable = 'Zato_Queue_Bridge_Redis_Port'
 
     # The variable name both the server and the bridge read the port of the bridge's HTTP query API from
-    Bridge_HTTP_Port_Variable = 'Zato_Queue_Bridge_HTTP_Port'
+    Bridge_Port_Variable = 'Zato_Queue_Bridge_Port'
 
     # The purposes of the port reservations of Redis and of the bridge's HTTP query API
     Redis_Port_Purpose       = 'kafka-bridge-redis'
@@ -82,6 +88,7 @@ class BridgeParts:
         http_reservation:'PortReservation',
         redis:'ProcessPart',
         bridge:'ProcessPart',
+        is_expected:'threading.Event',
         ) -> 'None':
         self.redis_reservation = redis_reservation
         self.http_reservation = http_reservation
@@ -89,12 +96,13 @@ class BridgeParts:
         self.http_port = http_reservation.port
         self.redis = redis
         self.bridge = bridge
+        self.is_expected = is_expected
 
     @property
     def server_environment(self) -> 'strstrdict':
         out = {
             ModuleCtx.Bridge_Redis_Port_Variable: str(self.redis_port),
-            ModuleCtx.Bridge_HTTP_Port_Variable: str(self.http_port),
+            ModuleCtx.Bridge_Port_Variable: str(self.http_port),
         }
         return out
 
@@ -102,7 +110,19 @@ class BridgeParts:
         """ Ends the bridge and starts it again on the same Redis - what a bridge restart in production is.
         """
         self.bridge.stop()
-        self.bridge = ProcessPart(start_bridge(self.redis_port, self.http_port))
+        self.bridge = ProcessPart(start_bridge(self.redis_port, self.http_port, self.is_expected))
+
+    @contextmanager
+    def expected_errors(self) -> 'nonegen':
+        """ Marks each line of the output of the bridge as expected while the block runs,
+        for a test that makes the bridge report errors deliberately, e.g. by stopping Kafka.
+        """
+        self.is_expected.set()
+
+        try:
+            yield
+        finally:
+            self.is_expected.clear()
 
     def stop_redis(self) -> 'None':
         """ Ends Redis and releases its port.
@@ -152,14 +172,41 @@ def start_redis(port:'int') -> 'popen_':
 
 # ################################################################################################################################
 
-def start_bridge(redis_port:'int', http_port:'int') -> 'popen_':
-    """ Starts the queue bridge binary pointed at the test Redis, with its HTTP query API on the given port.
+def _relay_output(process:'popen_', is_expected:'threading.Event') -> 'None':
+    """ Writes each line of the output of the bridge to the output of the tests, with the expected record marker
+    while a test makes the bridge report errors deliberately.
+    """
+    stdout = cast_('IO[bytes]', process.stdout)
+
+    for line in iter(stdout.readline, b''):
+        text = line.decode('utf-8', errors='replace').rstrip()
+
+        if is_expected.is_set():
+            text = f'{Expected_Record_Marker} {text}'
+
+        print(text, flush=True)
+
+# ################################################################################################################################
+
+def start_bridge(redis_port:'int', http_port:'int', is_expected:'threading.Event') -> 'popen_':
+    """ Starts the queue bridge binary pointed at the test Redis, with its HTTP query API on the given port,
+    and relays its output to the output of the tests.
     """
     env = dict(os.environ)
     env[ModuleCtx.Bridge_Redis_Port_Variable] = str(redis_port)
-    env[ModuleCtx.Bridge_HTTP_Port_Variable] = str(http_port)
+    env[ModuleCtx.Bridge_Port_Variable] = str(http_port)
 
-    out = subprocess.Popen([str(ModuleCtx.Bridge_Binary)], env=env, start_new_session=True)
+    out = subprocess.Popen(
+        [str(ModuleCtx.Bridge_Binary)],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        start_new_session=True,
+    )
+
+    relay = threading.Thread(target=_relay_output, args=(out, is_expected), daemon=True)
+    relay.start()
+
     return out
 
 # ################################################################################################################################
@@ -188,9 +235,10 @@ def start_bridge_parts() -> 'BridgeParts':
 
     # .. while the bridge binds its HTTP query API only after the server's first reload, so its port is reserved up front.
     http_reservation = reserve_port(ModuleCtx.Bridge_HTTP_Port_Purpose)
-    bridge = ProcessPart(start_bridge(redis_started.reservation.port, http_reservation.port))
+    is_expected = threading.Event()
+    bridge = ProcessPart(start_bridge(redis_started.reservation.port, http_reservation.port, is_expected))
 
-    out = BridgeParts(redis_started.reservation, http_reservation, redis, bridge)
+    out = BridgeParts(redis_started.reservation, http_reservation, redis, bridge, is_expected)
     return out
 
 # ################################################################################################################################

@@ -141,6 +141,7 @@ def _count_on_topic(kafka_suite:'ClusterSuite', topic:'str', payload:'str') -> '
 # ################################################################################################################################
 # ################################################################################################################################
 
+@pytest.mark.bridge_errors_expected
 def test_with_exactly_once_on_a_message_stored_but_not_confirmed_is_on_the_topic_once(
     kafka_suite:'ClusterSuite',
     names:'Names',
@@ -158,6 +159,7 @@ def test_with_exactly_once_on_a_message_stored_but_not_confirmed_is_on_the_topic
 
 # ################################################################################################################################
 
+@pytest.mark.bridge_errors_expected
 def test_with_exactly_once_off_the_same_message_is_on_the_topic_twice(
     kafka_suite:'ClusterSuite',
     names:'Names',

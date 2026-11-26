@@ -115,6 +115,7 @@ def _wait_for_queue_depth(kafka_suite:'ClusterSuite', conn_name:'str', expected:
 # ################################################################################################################################
 # ################################################################################################################################
 
+@pytest.mark.bridge_errors_expected
 def test_a_send_with_too_few_instances_in_sync_fails_fast_waits_in_the_queue_and_drains_once_one_is_back(
     kafka_suite:'ClusterSuite',
     names:'Names',

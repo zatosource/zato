@@ -18,12 +18,14 @@ from uuid import uuid4
 from redis import Redis
 
 # Zato
+from zato.common.test.reservation import reserve_port
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from zato.common.test.reservation import PortReservation
     from zato.common.typing_ import anydict, anydictnone, anylist, strdict
 
 # ################################################################################################################################
@@ -53,6 +55,10 @@ class ModuleCtx:
     Bridge_Binary  = os.path.join(_repo_dir, 'code', 'bin', '_zato_queue_bridge')
     MQ_Client_Lib  = os.path.join(_repo_dir, 'lib', 'mqm', 'lib64', 'libmqm_r.so')
 
+    # The variable the bridge reads the port of its HTTP query API from, and the purpose of the reservation of that port
+    Bridge_Port_Variable      = 'Zato_Queue_Bridge_Port'
+    Bridge_HTTP_Port_Purpose  = 'ibm-mq-bridge-http'
+
     # How long to wait for the bridge to request its config after starting
     Startup_Timeout = 30
 
@@ -73,6 +79,7 @@ class QueueBridgeHarness:
     def __init__(self) -> 'None':
         self.redis = Redis(decode_responses=True)
         self.process:'subprocess.Popen | None' = None
+        self.http_reservation:'PortReservation | None' = None
         self.request_last_id = '0-0'
 
         # Channel names to the recv streams the bridge publishes their messages to
@@ -146,10 +153,13 @@ class QueueBridgeHarness:
         self._clean_streams()
         self._ensure_reply_group()
 
-        # .. start the bridge itself ..
+        # .. start the bridge itself, with its HTTP query API on a port of its own ..
+        self.http_reservation = reserve_port(ModuleCtx.Bridge_HTTP_Port_Purpose)
+
         env = dict(os.environ)
         env['Zato_MQ_Client_Lib'] = ModuleCtx.MQ_Client_Lib
         env['Zato_Queue_Bridge_Log_Level'] = 'info'
+        env[ModuleCtx.Bridge_Port_Variable] = str(self.http_reservation.port)
 
         self.process = subprocess.Popen(
             [ModuleCtx.Bridge_Binary],
@@ -176,6 +186,10 @@ class QueueBridgeHarness:
             self.process.terminate()
             _ = self.process.wait(timeout=10)
             self.process = None
+
+        if self.http_reservation:
+            self.http_reservation.release()
+            self.http_reservation = None
 
 # ################################################################################################################################
 

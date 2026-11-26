@@ -43,12 +43,6 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The queue bridge's HTTP query API binds on this port unless the environment overrides it
-_queue_bridge_http_port = os.environ.get('Zato_Queue_Bridge_HTTP_Port', '35111')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class ModuleCtx:
     Command_Stream = 'zato:queue_bridge:stream:command'
     Reply_Stream = 'zato:queue_bridge:stream:reply'
@@ -59,7 +53,8 @@ class ModuleCtx:
 
     Consumer_Group = 'server'
     Consumer_Name = 'server-0'
-    Http_Base = f'http://127.0.0.1:{_queue_bridge_http_port}'
+    # The variable with the port of the queue bridge's HTTP query API on 127.0.0.1
+    Port_Variable = 'Zato_Queue_Bridge_Port'
 
     # How long a command's reply is waited for by default, in seconds
     Reply_Timeout = 1.0
@@ -100,6 +95,11 @@ class QueueBridgeClient:
     """
 
     def __init__(self, redis_conn:'Redis | None'=None) -> 'None':
+
+        # The bridge binds its HTTP query API on the port of the same variable
+        http_port = os.environ[ModuleCtx.Port_Variable]
+        self.http_base = f'http://127.0.0.1:{http_port}'
+
         if redis_conn:
             self.redis = redis_conn
         else:
@@ -268,7 +268,7 @@ class QueueBridgeClient:
 
     def _http_get(self, path:'str', params:'anydict | None'=None) -> 'any_':
         """ Sends a GET request to the queue bridge's HTTP API. """
-        url = f'{ModuleCtx.Http_Base}{path}'
+        url = f'{self.http_base}{path}'
         response = requests.get(url, params=params, timeout=10.0)
         response.raise_for_status()
         return response.json()

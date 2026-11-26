@@ -157,6 +157,7 @@ def _rounds_of(kafka_suite:'ClusterSuite', conn_name:'str', payload:'str') -> 'i
 # ################################################################################################################################
 # ################################################################################################################################
 
+@pytest.mark.bridge_errors_expected
 def test_a_dlq_message_survives_its_instance_and_a_retry_without_a_leader_fails_counts_a_round_and_stays(
     kafka_suite:'ClusterSuite',
     names:'Names',
@@ -212,6 +213,7 @@ def test_a_dlq_message_survives_its_instance_and_a_retry_without_a_leader_fails_
 
 # ################################################################################################################################
 
+@pytest.mark.bridge_errors_expected
 def test_a_forward_from_the_dlq_publishes_while_every_instance_is_down(kafka_suite:'ClusterSuite', names:'Names') -> 'None':
     """ The DLQ and the topic a forward goes to are pub/sub topics, so with Kafka down altogether the forward still happens.
     """

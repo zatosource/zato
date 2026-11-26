@@ -19,7 +19,7 @@ from sqlalchemy import func, select
 from zato.common.api import Alerting
 from zato.common.audit_log.api import event_table
 from zato.common.db_env.database import get_database_engine
-from zato.common.audit_log.common import AuditEvent
+from zato.common.audit_log.common import AuditEvent, event_data
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -63,7 +63,7 @@ def get_alerts_raised(object_name:'str', since_id:'int') -> 'anylist':
     """
     engine = get_database_engine()
 
-    query = select(event_table)
+    query = select(event_table.c.source, event_data)
     query = query.where(event_table.c.event_type == AuditEvent.Alert_Raised)
     query = query.where(event_table.c.object_name == object_name)
     query = query.where(event_table.c.id > since_id)

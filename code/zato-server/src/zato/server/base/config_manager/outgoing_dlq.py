@@ -14,6 +14,7 @@ from threading import RLock
 
 # Zato
 from zato.common.api import PubSub
+from zato.common.broker_message import Server as BrokerMessageServer
 from zato.common.pubsub.dlq import DLQ_Sub_Key_Prefixes, get_dlq_sub_key, get_dlq_topic_name, is_dlq_sub_key, move_to_dlq, \
     parse_dlq_sub_key
 from zato.common.pubsub.outgoing import find_outgoing_conn, get_direction, get_outgoing_sub_key, has_queue, \
@@ -25,6 +26,7 @@ from zato.server.base.config_manager.outgoing_queues import changes_shared_queue
 # ################################################################################################################################
 
 if 0:
+    from zato.common.ext.bunch import Bunch
     from zato.common.pubsub.delivery import DeliveryExhausted
     from zato.common.typing_ import anydict, anytuple, callable_, stranydict
     from zato.server.base.config_manager.outgoing_queues import OutgoingQueueDepth
@@ -78,7 +80,22 @@ class OutgoingDLQs(ConfigManagerImpl):
 
                 logger.info('Created outgoing connection DLQ `%s` for topic `%s`', sub_key, topic_name)
 
+                # The worker moves messages to the DLQ, and the config process renames and deletes it along with
+                # its connection, so each process of the server adds it as well
+                self.server.config_dispatcher.relay_only({
+                    'action': BrokerMessageServer.Outgoing_DLQ_Created.value,
+                    'sub_key': sub_key,
+                })
+
         return topic_name, conn_name
+
+# ################################################################################################################################
+
+    def on_config_event_Server_Outgoing_DLQ_Created(self, msg:'Bunch') -> 'None':
+        """ Adds the DLQ that another process of the server created when it moved the first message to it.
+        """
+        with self._outgoing_dlq_lock:
+            self._outgoing_dlq_cache.add(msg.sub_key)
 
 # ################################################################################################################################
 

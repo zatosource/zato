@@ -17,6 +17,7 @@ from gevent import sleep
 # Zato
 from common import delete_all_rows, get_delivery_rows, get_message_rows, get_sub_rows, move_message_rows
 from zato.common.api import PubSub
+from zato.common.config_dispatcher import handle_config_event
 from zato.common.pubsub.delivery import wait_between_rounds
 from zato.common.pubsub.dlq import get_dlq_sub_key, get_dlq_topic_name
 from zato.common.pubsub.outgoing import deliver_envelope, get_outgoing_sub_key, get_outgoing_topic_name, Key_Data, \
@@ -148,6 +149,9 @@ class _StubConfigManager:
     rename_outgoing_dlq = ConfigManager.rename_outgoing_dlq
     delete_outgoing_dlq = ConfigManager.delete_outgoing_dlq
     restore_outgoing_dlqs = ConfigManager.restore_outgoing_dlqs
+
+    on_config_event_Server_Outgoing_Queue_Created = ConfigManager.on_config_event_Server_Outgoing_Queue_Created
+    on_config_event_Server_Outgoing_DLQ_Created = ConfigManager.on_config_event_Server_Outgoing_DLQ_Created
     _wait_for_current_outgoing_name = ConfigManager._wait_for_current_outgoing_name
 
     def __init__(self, server:'any_') -> 'None':
@@ -957,6 +961,43 @@ def _run_dlq_rename_crash_flow() -> 'None':
 
 # ################################################################################################################################
 
+def _run_dlq_of_another_process_rename_flow() -> 'None':
+    """ A DLQ that the worker created after the config process started moves with its connection when the config process
+    renames the connection, because the worker relays the creation of the DLQ to the config process.
+    """
+    delete_all_rows()
+
+    # The config process is running before the DLQ exists ..
+    _, config_server, _ = _new_server()
+    _, worker_server, _ = _new_server()
+
+    _ = _new_connection(_conn_id_orders, _name_orders)
+
+    # .. the worker creates the queue and the DLQ and moves a message to the DLQ ..
+    worker_server.config_manager.ensure_outgoing_subscription(_conn_type, _conn_id_orders)
+    dlq_topic, _ = worker_server.config_manager.ensure_outgoing_dlq(_conn_type, _conn_id_orders)
+    _ = worker_server.pubsub_backend.publish(dlq_topic, '{"request": "Order 1"}')
+
+    # .. and relays what it created to the config process ..
+    for msg in worker_server.config_dispatcher.relayed:
+        _ = handle_config_event(msg, config_server.config_manager)
+
+    # .. which renames the connection ..
+    _rename_connection(config_server, _conn_id_orders, _name_orders_renamed)
+
+    # .. so the DLQ is under the topic of the new name, with its message in it.
+    dlq_sub_key = get_dlq_sub_key(_conn_type, _conn_id_orders)
+    new_dlq_topic = get_dlq_topic_name(_conn_type, _name_orders_renamed)
+    dlq_rows = get_sub_rows(dlq_sub_key)
+
+    assert len(dlq_rows) == 1, dlq_rows
+    assert dlq_rows[0].topic_name == new_dlq_topic, dlq_rows[0].topic_name
+
+    dlq_count = config_server.pubsub_backend.get_total_count(dlq_sub_key, new_dlq_topic, 'pending')
+    assert dlq_count == 1, dlq_count
+
+# ################################################################################################################################
+
 def _run_delete_flow() -> 'None':
     """ A deleted connection takes its queue with it, along with what that queue still held.
     """
@@ -1102,6 +1143,7 @@ def run_outgoing_scenario() -> 'None':
         _run_rename_keeps_order_flow()
         _run_rename_crash_flow()
         _run_dlq_rename_crash_flow()
+        _run_dlq_of_another_process_rename_flow()
         _run_delete_flow()
         _run_type_isolation_flow()
 

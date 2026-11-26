@@ -62,6 +62,10 @@ class ModuleCtx:
     # How many partitions a topic has unless a test says otherwise
     Default_Partitions = 1
 
+    # The topic of the message that has a new broker allocate its first block of producer IDs
+    Warm_Up_Topic   = 'zato-test-warm-up'
+    Warm_Up_Message = b'warm-up\n'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -113,6 +117,30 @@ def wait_until_ready(container_name:'str', port:'int'=ModuleCtx.Kafka_Port) -> '
     """
     check = partial(_list_topics, container_name, port)
     wait_until(check, f'the Kafka broker in `{container_name}`')
+
+# ################################################################################################################################
+
+def warm_up_producer_ids(container_name:'str', port:'int'=ModuleCtx.Kafka_Port) -> 'None':
+    """ Sends one message with an idempotent producer inside the container. A new broker allocates its first block
+    of producer IDs only when the first idempotent producer requests one, and until the block arrives it refuses
+    each such producer with a retriable error that librdkafka reports as a warning.
+    """
+    create_topic(container_name, ModuleCtx.Warm_Up_Topic, port=port)
+
+    command = [
+        'docker', 'exec', '-i', container_name,
+        f'{ModuleCtx.Kafka_Bin_Dir}/kafka-console-producer.sh',
+        '--bootstrap-server', f'localhost:{port}',
+        '--topic', ModuleCtx.Warm_Up_Topic,
+        '--command-property', 'enable.idempotence=true',
+        '--command-property', 'acks=all',
+    ]
+
+    result = subprocess.run(command, input=ModuleCtx.Warm_Up_Message, capture_output=True, check=False)
+
+    if result.returncode != 0:
+        output = result.stdout.decode('utf-8') + result.stderr.decode('utf-8')
+        raise Exception(f'Could not warm up the producer IDs of `{container_name}`: `{output.strip()}`')
 
 # ################################################################################################################################
 
@@ -273,6 +301,7 @@ def start_kafka() -> 'KafkaServer':
     # Wait until the broker responds to a metadata request
     print(f'Waiting for Kafka container {container_name} to accept connections', flush=True)
     wait_until_ready(container_name, port)
+    warm_up_producer_ids(container_name, port)
     print(f'Kafka container {container_name} is ready', flush=True)
 
     out = KafkaServer(
