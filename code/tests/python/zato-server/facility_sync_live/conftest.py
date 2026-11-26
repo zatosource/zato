@@ -183,8 +183,9 @@ def zato(schema:'Schema') -> 'zato_gen':
     directory = tempfile.mkdtemp(prefix='zato_facility_sync_')
 
     environment = ZatoEnvironment(directory, password_prefix='test.facility')
-    _parts.add('Zato', environment.stop)
+    # The server reads the streams of the scheduler until it stops, so the scheduler and its streams are ended after it
     _parts.add('Scheduler', _scheduler.cleanup)
+    _parts.add('Zato', environment.stop)
 
     try:
         environment.create(needs_scheduler=True)

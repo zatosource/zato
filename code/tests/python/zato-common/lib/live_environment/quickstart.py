@@ -21,6 +21,7 @@ from urllib.request import Request, urlopen
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.client import AdminClient
 from zato.common.test.process_util import kill_process_tree
+from zato.common.test.reservation import reserve_port
 from zato.common.test.zato_database import create_test_database, drop_test_database
 from zato.common.typing_ import cast_
 from zato.common.util.config import get_config_object, update_config_file
@@ -29,12 +30,14 @@ from zato.common.util.config import get_config_object, update_config_file
 # ################################################################################################################################
 
 if 0:
+    from zato.common.test.reservation import PortReservation
     from zato.common.typing_ import any_, floatnone, intnone, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 environment_list = list['ZatoEnvironment']
+reservation_list = list['PortReservation']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -59,6 +62,18 @@ _import_timeout          = 120
 
 # How long enmasse waits for an object a definition refers to but has not seen yet
 _missing_wait_time = '15'
+
+# What the listener prints when the server refuses a file, as "Deploy failed (<status>) -> <path>: <response>",
+# or when it cannot reach the server, as "Could not deploy file: <error> -> <path>"
+_deploy_failed_marker = 'Deploy failed ('
+_deploy_failed_separator = ') -> '
+_deploy_failed_reason_separator = ': '
+_deploy_error_marker = 'Could not deploy file: '
+
+# The purposes under which the ports of an environment are reserved
+_purpose_server = 'zato-environment-server'
+_purpose_mllp   = 'zato-environment-mllp'
+_purpose_broker = 'zato-environment-broker'
 
 # Every environment this process started, so the atexit handler can end what a killed run left behind
 _environments:'environment_list' = []
@@ -146,11 +161,20 @@ class ZatoEnvironment:
 
         self.password = password_prefix + '.' + CryptoManager.generate_hex_string()
 
-        self.server_port = find_free_port()
+        # The ports of the environment remain reserved until it stops, so that no other run on this machine
+        # takes them, including across a restart of the server
+        server_reservation = reserve_port(_purpose_server)
+        mllp_reservation = reserve_port(_purpose_mllp)
+        broker_reservation = reserve_port(_purpose_broker)
+
+        self._reservations:'reservation_list' = [server_reservation, mllp_reservation, broker_reservation]
+
+        self.server_port = server_reservation.port
+        self.broker_port = broker_reservation.port
 
         # Where the server's own MLLP listener sits - settled on here so that whatever fronts it
         # can name the port before the server has started
-        self.mllp_internal_port = find_free_port()
+        self.mllp_internal_port = mllp_reservation.port
 
         self._server_process:'any_' = None
         self._listener_process:'any_' = None
@@ -158,6 +182,9 @@ class ZatoEnvironment:
         # Every path the listener reported as deployed, filled by the thread draining its output
         self._deployed_paths:'set[str]' = set()
         self._deployed_condition = threading.Condition()
+
+        # Each outcome that the listener reported for each path, in order, True for a deployment and False for a refusal
+        self._deploy_outcomes:'dict[str, list[bool]]' = {}
 
         _environments.append(self)
 
@@ -227,11 +254,25 @@ class ZatoEnvironment:
             text = line.decode('utf8', errors='replace').rstrip()
             print(f'[{label}] {text}')
 
-            # The listener prints this once the server confirmed a file, which is what a deploy waits on
+            # The listener prints this once the server confirmed a file, which is what a deploy waits on ..
             if 'Deployed -> ' in text:
                 deployed_path = text.split('Deployed -> ')[1]
                 with self._deployed_condition:
                     self._deployed_paths.add(deployed_path)
+                    self._deploy_outcomes.setdefault(deployed_path, []).append(True)
+                    self._deployed_condition.notify_all()
+
+            # .. and this once the server refused a file or could not be reached.
+            elif _deploy_failed_marker in text or _deploy_error_marker in text:
+
+                if _deploy_failed_marker in text:
+                    remainder = text.split(_deploy_failed_separator, 1)[1]
+                    failed_path = remainder.split(_deploy_failed_reason_separator, 1)[0]
+                else:
+                    failed_path = text.rsplit(' -> ', 1)[1]
+
+                with self._deployed_condition:
+                    self._deploy_outcomes.setdefault(failed_path, []).append(False)
                     self._deployed_condition.notify_all()
 
 # ################################################################################################################################
@@ -265,7 +306,7 @@ class ZatoEnvironment:
         """
         environment = _subprocess_environment()
         environment['Zato_Config_Bind_Port'] = str(self.server_port)
-        environment['Zato_Broker_HTTP_Port'] = str(find_free_port())
+        environment['Zato_Broker_HTTP_Port'] = str(self.broker_port)
         environment['Zato_HL7_MLLP_Port'] = str(self.mllp_internal_port)
         environment.update(self.database_env)
         environment.update(extra_environment)
@@ -324,6 +365,37 @@ class ZatoEnvironment:
             raise Exception(f'The listener did not deploy {file_path} within {_hot_deploy_timeout}s')
 
         print(f'[DEPLOY] Deployed {file_path}')
+
+# ################################################################################################################################
+
+    def deploy_attempt(self, file_name:'str', source:'str') -> 'bool':
+        """ Writes one module of services into the pickup directory, waits for the listener to report the outcome
+        of this write and returns whether the server deployed the module.
+        """
+        file_path = os.path.join(self.pickup_directory, file_name)
+
+        with self._deployed_condition:
+            outcomes = self._deploy_outcomes.setdefault(file_path, [])
+            outcome_count = len(outcomes)
+
+        with open(file_path, 'w') as file_handle:
+            _ = file_handle.write(source)
+
+        def _has_outcome() -> 'bool':
+            out = len(outcomes) > outcome_count
+            return out
+
+        with self._deployed_condition:
+            has_outcome = self._deployed_condition.wait_for(_has_outcome, timeout=_hot_deploy_timeout)
+
+        if not has_outcome:
+            raise Exception(f'The listener reported no outcome for {file_path} within {_hot_deploy_timeout}s')
+
+        out = outcomes[-1]
+
+        print(f'[DEPLOY] Outcome of {file_path} -> {out}')
+
+        return out
 
 # ################################################################################################################################
 
@@ -404,6 +476,10 @@ class ZatoEnvironment:
 
         if os.path.isdir(self.directory):
             shutil.rmtree(self.directory, ignore_errors=True)
+
+        # The processes no longer listen on the ports, so other runs may reserve them
+        for reservation in self._reservations:
+            reservation.release()
 
 # ################################################################################################################################
 # ################################################################################################################################

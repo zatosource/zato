@@ -1,0 +1,53 @@
+security:
+
+  - name: order-to-cash.partner
+    type: basic_auth
+    username: order-to-cash.partner
+    password: "{{partner_password}}"
+
+pubsub_topic:
+
+  - name: order-to-cash.order.accepted
+  - name: order-to-cash.order.approved
+  - name: order-to-cash.order.rejected
+  - name: order-to-cash.order.shipped
+  - name: order-to-cash.invoice.issued
+
+pubsub_subscription:
+
+  - delivery_type: push
+    push_service: order-to-cash.credit-check
+    topic_list:
+      - order-to-cash.order.accepted
+
+  - delivery_type: push
+    push_service: order-to-cash.fulfillment
+    topic_list:
+      - order-to-cash.order.approved
+
+  - delivery_type: push
+    push_service: order-to-cash.invoicing
+    topic_list:
+      - order-to-cash.order.shipped
+
+  - delivery_type: push
+    push_service: order-to-cash.receivables
+    is_delivery_active: {{receivables_delivery_active}}
+    topic_list:
+      - order-to-cash.order.rejected
+      - order-to-cash.invoice.issued
+
+channel_rest:
+
+  - name: order-to-cash.order-intake
+    service: order-to-cash.order-intake
+    url_path: /order-to-cash/order
+    security: order-to-cash.partner
+    data_format: json
+    use_queue: true
+    max_retries: 3
+    retry_sleep_time: 1
+    retry_backoff_threshold: 10
+    retry_backoff_multiplier: 1
+    use_dlq: true
+    dlq_action: keep

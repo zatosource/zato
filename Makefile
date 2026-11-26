@@ -15,7 +15,7 @@
 	test-soak test-soak-pubsub \
 	test-arbiter \
 	test-rate-limiting test-enmasse test-cli \
-	test-pubsub test-pubsub-perf test-pubsub-perf-latency test-pubsub-exactly-once test-sql-conformance test-sql-conformance-fast test-sql-conformance-static test-pubsub-encoding test-pubsub-encoding-rust test-perf-rules test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
+	test-pubsub test-pubsub-perf test-pubsub-perf-latency test-pubsub-exactly-once test-sql-conformance test-sql-conformance-fast test-sql-conformance-static test-pubsub-encoding test-pubsub-encoding-rust test-pubsub-services test-perf-rules test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
 	test-mcp test-bearer test-graphql test-grpc \
 	test-edifact test-soap test-openapi test-api-portal-live \
@@ -997,6 +997,11 @@ Zato_Test_Step_Tests_pubsub-encoding  := \
 	$(CURDIR)/code/tests/python/zato-common/pubsub_encoding/ \
 	$(CURDIR)/code/tests/python/zato-server/pubsub_push_encoding/
 
+Zato_Test_Step_Runner_pubsub-services := $(Zato_Test_PubSub_Plain)
+Zato_Test_Step_Tests_pubsub-services  := \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_services/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_services_live/
+
 Zato_Test_Step_Runner_pubsub-failover := $(Zato_Test_PubSub_Plain)
 Zato_Test_Step_Tests_pubsub-failover  := $(CURDIR)/code/tests/python/zato-server/pubsub_failover/
 
@@ -1055,7 +1060,7 @@ Zato_Test_Step_Tests_pubsub-outgoing-live  := $(CURDIR)/code/tests/python/zato-s
 # The steps of test-pubsub in the order they run, the step of exactly-once delivery, which runs its own walk, last,
 # and the step that the target is currently on.
 Zato_Test_PubSub_Steps := sql-conformance-static sql-conformance-engines \
-	pubsub-core pubsub-encoding pubsub-failover pubsub-replication pubsub-faults \
+	pubsub-core pubsub-encoding pubsub-services pubsub-failover pubsub-replication pubsub-faults \
 	$(foreach mode,$(Zato_Test_PubSub_Managed_Modes),pubsub-managed-$(mode)) \
 	$(foreach mode,$(Zato_Test_PubSub_Stability_Modes),pubsub-stability-$(mode)) \
 	$(foreach mode,$(Zato_Test_PubSub_Stability_Modes),pubsub-subscription-flags-$(mode)) \
@@ -1345,6 +1350,10 @@ test-pubsub-encoding: ## Push payload encoding once per message - the Rust unit 
 	-$(MAKE) test-pubsub-encoding-rust
 	-@status=0; $(call Zato_Test_Step_Run_Once,pubsub-encoding) exit $$status
 	$(Zato_Target_Status)
+
+test-pubsub-services: ## The order-to-cash chain of five services that pass orders on with self.publish - the unit tests of its rules and routing and the live tests of errors, retries, the queued channel and deployments through the pickup directory, which test-pubsub runs as a step of its own.
+	$(Zato_Log_Reset)
+	@status=0; $(call Zato_Test_Step_Run_Once,pubsub-services) exit $$status
 
 test-perf-rules: ## The settings gate of performance figures and the scan of every performance suite.
 	$(Zato_Log_Reset)
@@ -2070,7 +2079,8 @@ test-smb: ## Live SMB tests against Windows Server 2025, 2022 and 2019 guests an
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_smb_audit -W ignore::DeprecationWarning \
 		$(PYTEST_ARGS) $(Zato_Log)
 	-trap '$(Zato_SMB_Windows_CLI) stop' EXIT; \
-	$(Zato_SMB_Windows_CLI) start $(Zato_Log) && \
+	$(Zato_SMB_Windows_CLI) start $(Zato_Log) || exit $$?; \
+	status=0; \
 	Zato_Test_SMB_Windows=1 ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(Zato_SMB_Windows_Tests)/test_connectivity.py \
 		$(Zato_SMB_Windows_Tests)/test_exchange_hub.py \
@@ -2081,15 +2091,16 @@ test-smb: ## Live SMB tests against Windows Server 2025, 2022 and 2019 guests an
 		$(Zato_SMB_Windows_Tests)/test_bidirectional.py \
 		$(Zato_SMB_Windows_Tests)/test_reliability.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_smb_windows -W ignore::DeprecationWarning \
-		$(PYTEST_ARGS) $(Zato_Log) && \
-	$(MAKE) test-smb-ui $(Zato_Log) && \
+		$(PYTEST_ARGS) $(Zato_Log) || status=1; \
+	$(MAKE) test-smb-ui $(Zato_Log) || status=1; \
 	Zato_Test_SMB_Windows=1 ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(Zato_SMB_Windows_Tests)/test_failover.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_smb_windows_failover -W ignore::DeprecationWarning \
-		$(PYTEST_ARGS) $(Zato_Log)
+		$(PYTEST_ARGS) $(Zato_Log) || status=1; \
+	exit $$status
 	$(Zato_Target_Status)
 
-test-file-transfer: test-sftp test-smb ## File transfer demo tests - the SFTP suites first, then the demo config set, the local SFTP, FTP, FTPS and SMB servers, a live server polling all of them, and the Dashboard card.
+test-file-transfer: ## File transfer tests - the demo config set, the local SFTP, FTP, FTPS and SMB servers, a live server polling all of them and the Dashboard card first, then test-sftp, then test-smb against the live Windows guests.
 	$(Zato_Log_Reset)
 	-ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-server/demo_config/test_demo_config.py \
@@ -2101,6 +2112,8 @@ test-file-transfer: test-sftp test-smb ## File transfer demo tests - the SFTP su
 		$(CURDIR)/code/tests/python/zato-dashboard/playwright_/test_demo_config.py \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_playwright -o log_cli_level=WARNING -W ignore::DeprecationWarning \
 		$(PYTEST_ARGS) $(Zato_Log)
+	-$(MAKE) test-sftp
+	-$(MAKE) test-smb
 	$(Zato_Target_Status)
 
 test-destinations: ## Channel destination tests - the destination list, payload overrides, delivery order, retries, the dispatchers, the per-hop trail and the Dashboard views, fully offline.

@@ -120,6 +120,9 @@ def smb_suite() -> 'iterator_':
         # .. the server runs against a scheduler of its own ..
         scheduler = SchedulerProcess()
 
+        # .. whose streams the server reads until it stops, so the scheduler is ended after the server ..
+        parts.add('scheduler', scheduler.cleanup)
+
         directory = tempfile.mkdtemp(prefix=ModuleCtx.Directory_Prefix)
         zato = ZatoEnvironment(directory, password_prefix=ModuleCtx.Password_Prefix)
         parts.add('zato environment', zato.stop)
@@ -127,9 +130,8 @@ def smb_suite() -> 'iterator_':
         zato.create()
         zato.start(scheduler.server_environment())
 
-        # .. which starts once the server is up, because the server sends it its jobs ..
+        # .. and which starts once the server is up, because the server sends it its jobs ..
         scheduler.start()
-        parts.add('scheduler', scheduler.cleanup)
 
         # .. the services the schedules invoke ..
         source = ModuleCtx.Services_File.read_text()
