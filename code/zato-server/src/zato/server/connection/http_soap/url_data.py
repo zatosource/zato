@@ -1038,8 +1038,9 @@ class URLData(PyURLData):
 
         if security_groups:
             channel_item['security_groups'] = security_groups
-            self.config_manager.server.security_groups_ctx_builder.populate_members()
-            security_groups_ctx = self.config_manager.server.security_groups_ctx_builder.build_ctx(channel_item['id'], security_groups)
+            security_groups_ctx_builder = self.config_manager.server.security_groups_ctx_builder
+            security_groups_ctx_builder.populate_members(self)
+            security_groups_ctx = security_groups_ctx_builder.build_ctx(channel_item['id'], security_groups, self)
             channel_item['security_groups_ctx'] = security_groups_ctx
 
         channel_item['service_impl_name'] = msg.get('impl_name')

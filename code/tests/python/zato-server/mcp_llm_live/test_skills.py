@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 
+# pytest
+import pytest
+
 # local
 import _agent
 import _constants
@@ -227,6 +230,8 @@ class TestSkillStorageFailure:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Skill_Unreadable.format(_constants.Skill_Unassigned),
+        _constants.Record_Prompt_Unreadable.format(_constants.Skill_Unassigned))
     def test_an_unreadable_skill_file_answers_as_an_absent_one(self, zato_server:'anydict') -> 'None':
 
         server_directory = zato_server['server_directory']

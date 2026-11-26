@@ -507,6 +507,13 @@ class RequestDispatcher:
         security_groups_ctx = channel_item.get('security_groups_ctx')
         has_sec_def = sec.sec_def != ZATO_NONE
 
+        # A channel with security groups is served only once it has the context of these groups.
+        if not security_groups_ctx:
+            if channel_item.get('security_groups'):
+                logger.error('Channel `%s` has security groups but no security groups context, cid:`%s`',
+                    channel_item['name'], cid)
+                raise Forbidden(cid)
+
         try:
 
             if has_sec_def:

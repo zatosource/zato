@@ -14,6 +14,9 @@ from http.client import OK
 from zato.common.audit_log.api import AuditEvent, AuditOutcome
 from zato.common.test.timing import Timer_Tolerance_Ms
 
+# pytest
+import pytest
+
 # local
 import _audit
 import _constants
@@ -48,6 +51,7 @@ class TestServiceConduct:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Service_Timed_Out.format(_constants.Service_Archive_Build))
     def test_a_hanging_tool_is_cut_off_at_the_bound(self, zato_server:'anydict') -> 'None':
 
         database_env = zato_server['database_env']
@@ -92,6 +96,7 @@ class TestServiceConduct:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Service_Raised.format(_constants.Service_Order_Cancel))
     def test_an_exception_maps_to_one_error_shape(self, zato_server:'anydict') -> 'None':
 
         database_env = zato_server['database_env']
@@ -125,6 +130,8 @@ class TestServiceConduct:
 
 # ################################################################################################################################
 
+    @pytest.mark.expected_server_records(_constants.Record_Service_Raised.format(_constants.Service_Badge_Render),
+        _constants.Record_Service_Raised.format(_constants.Service_Tag_Collect))
     def test_unserializable_output_is_refused_cleanly(self, zato_server:'anydict') -> 'None':
 
         client = _helpers.make_client(zato_server, _constants.Path_Ops)

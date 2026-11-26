@@ -298,7 +298,8 @@ class Edit(Service):
 
         # The diff is computed even when the input list is empty - an empty list means
         # the caller wants all the current members removed from the group.
-        group_members = self.server.groups_manager.get_member_list(input.group_type, group_id)
+        url_data = self.server.config_manager.request_dispatcher.url_data
+        group_members = self.server.groups_manager.get_member_list(input.group_type, url_data, group_id)
 
         logger_groups.info('Edit.handle: group_members=%s', group_members)
 
@@ -455,7 +456,8 @@ class GetMemberList(Service):
         # Local variables
         input = self.request.input
 
-        member_list = self.server.groups_manager.get_member_list(input.group_type, input.group_id)
+        url_data = self.server.config_manager.request_dispatcher.url_data
+        member_list = self.server.groups_manager.get_member_list(input.group_type, url_data, input.group_id)
         member_list = [elem.to_dict() for elem in member_list]
 
         if input.should_serialize:

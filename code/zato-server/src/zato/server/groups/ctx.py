@@ -18,6 +18,7 @@ from gevent.lock import RLock
 from zato.common.api import Groups, Sec_Def_Type
 from zato.common.crypto.api import CryptoManager, is_string_equal
 from zato.common.groups import Member
+from zato.common.typing_ import cast_
 from zato.server.connection.mcp.common import printable
 from zato.server.groups.ctx_bearer import BearerTokenCtx
 
@@ -27,6 +28,7 @@ from zato.server.groups.ctx_bearer import BearerTokenCtx
 if 0:
     from zato.common.typing_ import anydict, boolnone, dict_, intanydict, intlist, intnone, intset, list_, strlist, strnone
     from zato.server.base.parallel import ParallelServer
+    from zato.server.connection.http_soap.url_data import URLData
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -653,7 +655,7 @@ class SecurityGroupsCtx(BearerTokenCtx):
 
 # ################################################################################################################################
 
-    def on_group_assigned_to_channel(self, group_id:'int', members:'list_[Member]') -> 'None':
+    def on_group_assigned_to_channel(self, group_id:'int', members:'list_[Member]', url_data:'URLData') -> 'None':
 
         # Register the group itself first - it may be empty at assignment time,
         # e.g. the auto-created group of a new MCP gateway, and without this registration
@@ -668,7 +670,8 @@ class SecurityGroupsCtx(BearerTokenCtx):
             if member.sec_type == Sec_Def_Type.BASIC_AUTH:
 
                 # .. get the member's security definition ..
-                sec_def = self.server.config_manager.basic_auth_get_by_id(member.security_id)
+                sec_def = url_data.basic_auth_get_by_id(member.security_id)
+                sec_def = cast_('anydict', sec_def)
 
                 # .. populate the correct container, unless the definition is inactive ..
                 if sec_def['is_active']:
@@ -678,7 +681,8 @@ class SecurityGroupsCtx(BearerTokenCtx):
             elif member.sec_type == Sec_Def_Type.APIKEY:
 
                 # .. get the member's security definition ..
-                sec_def = self.server.config_manager.apikey_get_by_id(member.security_id)
+                sec_def = url_data.apikey_get_by_id(member.security_id)
+                sec_def = cast_('anydict', sec_def)
 
                 # .. populate the correct container, unless the definition is inactive ..
                 if sec_def['is_active']:
@@ -688,7 +692,8 @@ class SecurityGroupsCtx(BearerTokenCtx):
             elif member.sec_type == Sec_Def_Type.OAUTH:
 
                 # .. get the member's security definition ..
-                sec_def = self.server.config_manager.oauth_get_by_id(member.security_id)
+                sec_def = url_data.oauth_get_by_id(member.security_id)
+                sec_def = cast_('anydict', sec_def)
 
                 # .. populate the correct container, unless the definition is inactive ..
                 if sec_def['is_active']:
@@ -727,8 +732,8 @@ class SecurityGroupsCtxBuilder:
 
 # ################################################################################################################################
 
-    def populate_members(self) -> 'None':
-        self.members = self.server.groups_manager.get_member_list(Groups.Type.API_Clients)
+    def populate_members(self, url_data:'URLData') -> 'None':
+        self.members = self.server.groups_manager.get_member_list(Groups.Type.API_Clients, url_data)
 
 # ################################################################################################################################
 
@@ -751,7 +756,7 @@ class SecurityGroupsCtxBuilder:
 
 # ################################################################################################################################
 
-    def build_ctx(self, channel_id:'int', security_groups: 'intlist') -> 'SecurityGroupsCtx':
+    def build_ctx(self, channel_id:'int', security_groups:'intlist', url_data:'URLData') -> 'SecurityGroupsCtx':
 
         # Build a basic object ..
         ctx = SecurityGroupsCtx(self.server)
@@ -766,7 +771,7 @@ class SecurityGroupsCtxBuilder:
             members = self._get_members_by_group_id(group_id)
 
             # .. add them to the channel ..
-            ctx.on_group_assigned_to_channel(group_id, members)
+            ctx.on_group_assigned_to_channel(group_id, members, url_data)
 
         # .. and return the business object to our caller.
         return ctx

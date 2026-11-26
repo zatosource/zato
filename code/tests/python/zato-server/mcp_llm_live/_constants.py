@@ -475,6 +475,9 @@ Record_Inactive_Channel     = 'is not active, raising NotFound'
 # Templates of the server records that tests provoke deliberately, filled in with a service name or a URL path
 Record_Service_Raised = 'MCP: Service `{}` raised an exception'
 Record_URL_Not_Found  = 'URL not found `{}`'
+Record_Service_Timed_Out = 'MCP: Service `{}` timed out after'
+Record_Skill_Unreadable  = 'MCP: Skill `{}` could not be read'
+Record_Prompt_Unreadable = 'MCP: Prompt `{}` could not be read'
 
 # The name of the self.llm outconn the suite creates - no tests use it yet, it is the setup for them
 LLM_Outconn_Name = 'test.mcp.llm'

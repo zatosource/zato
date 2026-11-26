@@ -53,7 +53,10 @@ class SecurityGroups(ConfigManagerImpl):
         """
         group_id_list:'intlist' = []
 
-        for member in self.server.groups_manager.get_member_list(Groups.Type.API_Clients):
+        url_data = self.request_dispatcher.url_data
+        member_list = self.server.groups_manager.get_member_list(Groups.Type.API_Clients, url_data)
+
+        for member in member_list:
             if member.security_id == security_id:
                 group_id_list.append(member.group_id)
 

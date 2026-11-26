@@ -618,6 +618,7 @@ test-server: ## Server unit and integration tests.
 		$(CURDIR)/code/zato-common/test/zato/common/marshall_/ \
 		$(CURDIR)/code/tests/python/zato-server/marshall/ \
 		$(CURDIR)/code/tests/python/zato-server/config_store/ \
+		$(CURDIR)/code/tests/python/zato-server/channel_security_reload/ \
 		$(CURDIR)/code/tests/python/zato-server/service/ \
 		$(CURDIR)/code/tests/python/zato-server/django_plugin/ \
 		$(CURDIR)/code/zato-server/test/zato/connection/ \

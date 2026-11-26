@@ -28,6 +28,7 @@ logger_groups = logging.getLogger('zato.groups.manager')
 if 0:
     from zato.common.typing_ import any_, anydict, anylist, intnone, list_, strlist
     from zato.server.base.parallel import ParallelServer
+    from zato.server.connection.http_soap.url_data import URLData
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -176,7 +177,10 @@ class GroupsManager:
 
 # ################################################################################################################################
 
-    def get_member_list(self, group_type:'str', group_id:'intnone'=None) -> 'list_[Member]':
+    def get_member_list(self, group_type:'str', url_data:'URLData', group_id:'intnone'=None) -> 'list_[Member]':
+        """ Returns the members of the groups of a type, or of one group, with each member's definition
+        resolved through the security definitions of the given URLData.
+        """
 
         # Our reponse to produce
         out:'list_[Member]' = []
@@ -204,11 +208,11 @@ class GroupsManager:
                 sec_type = SEC_DEF_TYPE.OAUTH
 
             if sec_type == SEC_DEF_TYPE.BASIC_AUTH:
-                get_sec_func = self.server.config_manager.basic_auth_get_by_id
+                get_sec_func = url_data.basic_auth_get_by_id
             elif sec_type == SEC_DEF_TYPE.APIKEY:
-                get_sec_func = self.server.config_manager.apikey_get_by_id
+                get_sec_func = url_data.apikey_get_by_id
             elif sec_type == SEC_DEF_TYPE.OAUTH:
-                get_sec_func = self.server.config_manager.oauth_get_by_id
+                get_sec_func = url_data.oauth_get_by_id
             else:
                 raise Exception(f'Unrecognized sec_type: {sec_type}')
 

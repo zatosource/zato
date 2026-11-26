@@ -370,40 +370,8 @@ class ConfigManager(_ConfigManagerBase):
         # API keys
         self.update_apikeys()
 
-        # During a config reload, the previous URLData instance is still registered with the dispatcher,
-        # so it needs to be unregistered first - otherwise each security event would be handled twice,
-        # e.g. API key headers would be transformed to their HTTP_ key form two times ('HTTP_HTTP_X_API_KEY').
-        if self.request_dispatcher:
-            dispatcher.unlisten(self.request_dispatcher.url_data.dispatcher_callback)
-
-        request_handler = RequestHandler(self.server)
-        url_data = URLData(
-            self,
-            self.config_store.http_soap,
-            self._get_channel_url_sec(),
-            self.config_store.basic_auth,
-            self.config_store.mtls,
-            self.config_store.ntlm,
-            self.config_store.oauth,
-            self.config_store.spnego,
-            self.config_store.apikey,
-            self.config_store.wss,
-            self.config_dispatcher,
-            self.server.odb,
-        )
-
-        # Request dispatcher - matches URLs, checks security and dispatches HTTP requests to services.
-        self.request_dispatcher = RequestDispatcher(
-            server = self.server,
-            url_data = url_data,
-            request_handler = request_handler,
-            return_tracebacks = self.server.return_tracebacks,
-            default_error_message = self.server.default_error_message,
-            http_methods_allowed = self.server.http_methods_allowed
-        )
-
-        # Security groups - add details of each one to REST channels
-        self._populate_channel_security_groups_info(self.config_store.http_soap)
+        # REST channels, their security and the dispatcher that serves them
+        self._install_request_dispatcher()
 
         # Create all the expected connections and objects
         self.init_sql()
@@ -427,15 +395,64 @@ class ConfigManager(_ConfigManagerBase):
 
 # ################################################################################################################################
 
-    def _populate_channel_security_groups_info(self, channel_data:'anylist') -> 'None':
+    def _install_request_dispatcher(self) -> 'None':
+        """ Builds the URLData and the RequestDispatcher of the current configuration and installs the dispatcher.
+        The dispatcher is assigned after every channel item has its security groups context.
+        """
+
+        # During a config reload, the previous URLData instance is still registered with the dispatcher,
+        # so it needs to be unregistered first - otherwise each security event would be handled twice,
+        # e.g. API key headers would be transformed to their HTTP_ key form two times ('HTTP_HTTP_X_API_KEY').
+        if self.request_dispatcher:
+            dispatcher.unlisten(self.request_dispatcher.url_data.dispatcher_callback)
+
+        channel_url_sec = self._get_channel_url_sec()
+
+        url_data = URLData(
+            self,
+            self.config_store.http_soap,
+            channel_url_sec,
+            self.config_store.basic_auth,
+            self.config_store.mtls,
+            self.config_store.ntlm,
+            self.config_store.oauth,
+            self.config_store.spnego,
+            self.config_store.apikey,
+            self.config_store.wss,
+            self.config_dispatcher,
+            self.server.odb,
+        )
+
+        # Security groups - add details of each one to REST channels, resolved through the new URLData ..
+        self._populate_channel_security_groups_info(self.config_store.http_soap, url_data)
+
+        # .. build the request dispatcher that matches URLs, checks security and dispatches HTTP requests to services ..
+        request_handler = RequestHandler(self.server)
+
+        request_dispatcher = RequestDispatcher(
+            server = self.server,
+            url_data = url_data,
+            request_handler = request_handler,
+            return_tracebacks = self.server.return_tracebacks,
+            default_error_message = self.server.default_error_message,
+            http_methods_allowed = self.server.http_methods_allowed
+        )
+
+        # .. and install it as the last step.
+        self.request_dispatcher = request_dispatcher
+
+# ################################################################################################################################
+
+    def _populate_channel_security_groups_info(self, channel_data:'anylist', url_data:'URLData') -> 'None':
 
         # First, make sure the server has all the groups ..
-        self.server.security_groups_ctx_builder.populate_members()
+        self.server.security_groups_ctx_builder.populate_members(url_data)
 
         # .. now, we can attach a groups context object to each channel that has any groups.
         for channel_item in channel_data:
             if security_groups := channel_item.get('security_groups'):
-                security_groups_ctx = self.server.security_groups_ctx_builder.build_ctx(channel_item['id'], security_groups)
+                security_groups_ctx = self.server.security_groups_ctx_builder.build_ctx(
+                    channel_item['id'], security_groups, url_data)
                 channel_item['security_groups_ctx'] = security_groups_ctx
 
 # ################################################################################################################################

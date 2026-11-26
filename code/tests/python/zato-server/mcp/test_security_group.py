@@ -22,7 +22,9 @@ from zato.server.groups.ctx import SecurityGroupsCtx
 if 0:
     from zato.common.typing_ import any_, anydict, anylist, stranydict
     from zato.server.base.parallel import ParallelServer
+    from zato.server.connection.http_soap.url_data import URLData
     ParallelServer = ParallelServer
+    URLData = URLData
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,15 +41,11 @@ _static_token = 'test-static-token-value'
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _FakeConfigManager:
-    """ A minimal stand-in for the config manager - the ctx object looks up definitions by ID through it.
+class _FakeURLData:
+    """ A minimal stand-in for URLData - a group assigned to a channel resolves its members' definitions through it.
     """
     def __init__(self, oauth_defs:'anydict') -> 'None':
         self.oauth_defs = oauth_defs
-
-        # The verifier is built with this cache on the first failed static comparison,
-        # it is never actually used because these tests carry no JWT definitions.
-        self.cache_api = None
 
     def basic_auth_get_by_id(self, security_id:'int') -> 'any_':
         return None
@@ -57,6 +55,19 @@ class _FakeConfigManager:
 
     def oauth_get_by_id(self, security_id:'int') -> 'any_':
         return self.oauth_defs.get(security_id)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _FakeConfigManager(_FakeURLData):
+    """ A minimal stand-in for the config manager - the ctx object looks up definitions by ID through it.
+    """
+    def __init__(self, oauth_defs:'anydict') -> 'None':
+        super().__init__(oauth_defs)
+
+        # The verifier is built with this cache on the first failed static comparison,
+        # it is never actually used because these tests carry no JWT definitions.
+        self.cache_api = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -256,6 +267,15 @@ class BearerTokenLifecycle(TestCase):
 
 # ################################################################################################################################
 
+    def _make_url_data(self) -> 'URLData':
+        sec_def = self._make_sec_def()
+        url_data = _FakeURLData({_bearer_security_id: sec_def})
+
+        out = cast_('URLData', url_data)
+        return out
+
+# ################################################################################################################################
+
     def _make_member(self) -> 'Member':
         out = Member()
 
@@ -273,8 +293,9 @@ class BearerTokenLifecycle(TestCase):
     def test_group_assignment_populates_credentials(self) -> 'None':
         ctx = self._make_ctx()
         member = self._make_member()
+        url_data = self._make_url_data()
 
-        ctx.on_group_assigned_to_channel(_group_id, [member])
+        ctx.on_group_assigned_to_channel(_group_id, [member], url_data)
 
         self.assertIn(_bearer_security_id, ctx.bearer_token_credentials)
         self.assertTrue(ctx.has_members())
@@ -288,8 +309,9 @@ class BearerTokenLifecycle(TestCase):
     def test_wrong_static_token_is_rejected(self) -> 'None':
         ctx = self._make_ctx()
         member = self._make_member()
+        url_data = self._make_url_data()
 
-        ctx.on_group_assigned_to_channel(_group_id, [member])
+        ctx.on_group_assigned_to_channel(_group_id, [member], url_data)
 
         security_id = ctx.check_security_bearer_token(_cid, _channel_name, 'test-wrong-token')
         self.assertIsNone(security_id)
@@ -315,8 +337,9 @@ class BearerTokenLifecycle(TestCase):
     def test_member_removed_from_last_group_deletes_definition(self) -> 'None':
         ctx = self._make_ctx()
         member = self._make_member()
+        url_data = self._make_url_data()
 
-        ctx.on_group_assigned_to_channel(_group_id, [member])
+        ctx.on_group_assigned_to_channel(_group_id, [member], url_data)
         ctx.on_member_removed_from_group(_group_id, _bearer_security_id)
 
         self.assertNotIn(_bearer_security_id, ctx.bearer_token_credentials)
@@ -330,8 +353,9 @@ class BearerTokenLifecycle(TestCase):
     def test_group_deleted_removes_credentials(self) -> 'None':
         ctx = self._make_ctx()
         member = self._make_member()
+        url_data = self._make_url_data()
 
-        ctx.on_group_assigned_to_channel(_group_id, [member])
+        ctx.on_group_assigned_to_channel(_group_id, [member], url_data)
         ctx.on_group_deleted(_group_id)
 
         self.assertNotIn(_bearer_security_id, ctx.bearer_token_credentials)
@@ -343,8 +367,9 @@ class BearerTokenLifecycle(TestCase):
     def test_group_unassigned_from_channel(self) -> 'None':
         ctx = self._make_ctx()
         member = self._make_member()
+        url_data = self._make_url_data()
 
-        ctx.on_group_assigned_to_channel(_group_id, [member])
+        ctx.on_group_assigned_to_channel(_group_id, [member], url_data)
         ctx.on_group_unassigned_from_channel(_group_id)
 
         self.assertNotIn(_bearer_security_id, ctx.bearer_token_credentials)
@@ -355,8 +380,9 @@ class BearerTokenLifecycle(TestCase):
     def test_definition_edit_updates_verify_config(self) -> 'None':
         ctx = self._make_ctx()
         member = self._make_member()
+        url_data = self._make_url_data()
 
-        ctx.on_group_assigned_to_channel(_group_id, [member])
+        ctx.on_group_assigned_to_channel(_group_id, [member], url_data)
 
         # The definition is edited to carry a new static token ..
         sec_def = self._make_sec_def()
@@ -376,8 +402,9 @@ class BearerTokenLifecycle(TestCase):
     def test_bearer_token_deleted(self) -> 'None':
         ctx = self._make_ctx()
         member = self._make_member()
+        url_data = self._make_url_data()
 
-        ctx.on_group_assigned_to_channel(_group_id, [member])
+        ctx.on_group_assigned_to_channel(_group_id, [member], url_data)
         ctx.on_bearer_token_deleted(_bearer_security_id)
 
         self.assertNotIn(_bearer_security_id, ctx.bearer_token_credentials)

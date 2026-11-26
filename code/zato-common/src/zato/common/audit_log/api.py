@@ -83,7 +83,20 @@ __all__ = [
 # How much of a group commit's capacity each event takes - the capacity is counted in events
 _commit_event_weight = 1
 
+# The NUL character, which no text column of PostgreSQL can hold, and what replaces it in the text of an event,
+# the same replacement character that stands for the bytes of a binary body that cannot be decoded
+_nul_character = '\x00'
+_nul_replacement = '\ufffd'
+
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _replace_nul(text:'str') -> 'str':
+    """ Returns the text with each NUL character replaced, so that PostgreSQL accepts it.
+    """
+    out = text.replace(_nul_character, _nul_replacement)
+    return out
+
 # ################################################################################################################################
 
 def _insert_links(connection:'Connection', rows:'anylist') -> 'None':
@@ -310,6 +323,13 @@ class AuditLog:
 
         if bodies is None:
             bodies = {}
+
+        # .. the text of the event, e.g. a response decoded from binary data, may contain NUL characters ..
+        bodies = {kind: _replace_nul(body) for kind, body in bodies.items()}
+
+        status = _replace_nul(status)
+        data = _replace_nul(data)
+        internal_data = _replace_nul(internal_data)
 
         if attachments is None:
             attachments = []

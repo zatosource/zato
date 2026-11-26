@@ -101,7 +101,8 @@ class ChannelItemSecurityGroupsTestCase(TestCase):
 
         self.assertEqual(channel_item['security_groups'], [_group_id1, _group_id2])
 
-        builder.build_ctx.assert_called_once_with(_channel_id, [_group_id1, _group_id2])
+        builder.populate_members.assert_called_once_with(url_data)
+        builder.build_ctx.assert_called_once_with(_channel_id, [_group_id1, _group_id2], url_data)
         self.assertIs(channel_item['security_groups_ctx'], builder.build_ctx.return_value)
 
 # ################################################################################################################################
@@ -120,7 +121,8 @@ class ChannelItemSecurityGroupsTestCase(TestCase):
 
         self.assertEqual(channel_item['security_groups'], [_group_id1])
 
-        builder.build_ctx.assert_called_once_with(_channel_id, [_group_id1])
+        builder.populate_members.assert_called_once_with(url_data)
+        builder.build_ctx.assert_called_once_with(_channel_id, [_group_id1], url_data)
         self.assertIs(channel_item['security_groups_ctx'], builder.build_ctx.return_value)
 
 # ################################################################################################################################
