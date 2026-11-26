@@ -117,10 +117,10 @@ class Paths:
     Agent_Path = Path(__file__).parent / 'agent' / 'agent.ps1'
 
     # Where the prepared disks are kept, one directory per Windows version
-    Cache_Dir = Path(os.path.expanduser('~/.cache/zato-test-windows'))
+    Cache_Dir = Path(os.path.expanduser(os.environ['Zato_Test_Cache_Directory']))
 
     # Where the installation media are kept, one ISO file per Windows version
-    ISO_Dir = Path(os.path.expanduser('~/files/iso'))
+    ISO_Dir = Path(os.path.expanduser(os.environ['Zato_Test_ISO_Directory']))
 
     # Where the names and ports of running guests are recorded, one file per instance
     State_Dir = Path('/tmp/zato-test-windows')
