@@ -281,8 +281,7 @@ class ConfigManager(_ConfigManagerBase):
 
         # Pub/sub topic manager for topic-level lookups
         from zato.common.pubsub.topic_manager import TopicManager
-        session = server.odb.session()
-        self.pubsub_topic_manager = TopicManager(session)
+        self.pubsub_topic_manager = TopicManager(server.odb.session)
 
 # ################################################################################################################################
 

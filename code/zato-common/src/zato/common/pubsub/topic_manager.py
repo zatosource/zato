@@ -6,6 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from contextlib import closing
+
 # Zato
 from zato.common.typing_ import cast_
 
@@ -13,8 +16,7 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.orm.session import Session as SASession
-    from zato.common.typing_ import anylist, strbooldict
+    from zato.common.typing_ import anylist, callable_, strbooldict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -24,12 +26,14 @@ class TopicManager:
     and the configuration events of the topic remove it from memory, so the next lookup reads it again.
     """
 
-    def __init__(self, session:'SASession') -> 'None':
+    def __init__(self, new_session:'callable_') -> 'None':
 
         # Zato
         from zato.common.odb.query.pubsub import pubsub_subscriptions_by_topic_id, pubsub_topic_by_name
 
-        self._session = session
+        # Each lookup opens a session of its own, because lookups run concurrently and a session holds one connection
+        self._new_session = new_session
+
         self._pubsub_topic_by_name = pubsub_topic_by_name
         self._pubsub_subscriptions_by_topic_id = pubsub_subscriptions_by_topic_id
 
@@ -45,7 +49,8 @@ class TopicManager:
         if topic_name in self._is_active_by_name:
             return self._is_active_by_name[topic_name]
 
-        topic = self._pubsub_topic_by_name(self._session, topic_name)
+        with closing(self._new_session()) as session:
+            topic = self._pubsub_topic_by_name(session, topic_name)
 
         # .. a topic that does not exist is not kept, so it is found once it is created ..
         if not topic:
@@ -70,7 +75,9 @@ class TopicManager:
         """ Returns all subscription rows linked to a given topic.
         Must be called before the topic is deleted from the ODB.
         """
-        out = self._pubsub_subscriptions_by_topic_id(self._session, topic_id)
+        with closing(self._new_session()) as session:
+            out = self._pubsub_subscriptions_by_topic_id(session, topic_id)
+
         return out
 
 # ################################################################################################################################

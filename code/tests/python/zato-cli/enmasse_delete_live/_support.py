@@ -127,13 +127,17 @@ class Pickup:
 
 # ################################################################################################################################
 
-    def place(self, label:'str', config:'anydict') -> 'str':
+    def place(self, label:'str', config:'anydict', *, is_refused:'bool'=False) -> 'str':
         """ Writes a config under a unique name into the pickup directory, waits for the import the server runs for it
-        to complete and returns what the server logged in the meantime.
+        to complete and returns what the server logged in the meantime. The failure that the server logs
+        for a file the test expects to be refused is marked as provoked deliberately.
         """
         self.counter += 1
         file_name = f'enmasse-{self.counter:03}-{label}.yaml'
         path = os.path.join(self.environment.pickup_directory, file_name)
+
+        if is_refused:
+            self.environment.expect_records(file_name)
 
         # What the log held before the file was placed is where the new segment starts ..
         log_before = self._read_log()

@@ -272,7 +272,7 @@ def test_quota_tier(client:'AdminClient', pickup:'Pickup', runtime:'Runtime') ->
     assert is_listed(client, runtime, 'quota_tier', names['tier'])
 
     # .. the tier alone cannot go ..
-    log = pickup.place('tier-refused', deletion_file('quota_tier', names['tier']))
+    log = pickup.place('tier-refused', deletion_file('quota_tier', names['tier']), is_refused=True)
     assert SupportCtx.Import_Error in log, log
     assert ModuleCtx.Tier_Referenced in log, log
     assert is_listed(client, runtime, 'quota_tier', names['tier'])

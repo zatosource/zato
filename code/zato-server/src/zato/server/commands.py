@@ -445,8 +445,8 @@ class CommandsFacade:
             logger.info('Enmasse stderr -> `%s`', result.stderr.strip())
         else:
             logger.error(
-                'Enmasse import failed, exit_code=%s, stderr=`%s`, stdout=`%s`',
-                result.exit_code, result.stderr.strip(), result.stdout.strip())
+                'Enmasse import failed, command=`%s`, exit_code=%s, stderr=`%s`, stdout=`%s`',
+                result.command, result.exit_code, result.stderr.strip(), result.stdout.strip())
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -192,7 +192,7 @@ def test_refused_files(client:'AdminClient', pickup:'Pickup', runtime:'Runtime')
         ],
     }
 
-    log = pickup.place('refused-conflict', config)
+    log = pickup.place('refused-conflict', config, is_refused=True)
     assert SupportCtx.Import_Error in log, log
     assert ModuleCtx.Refused_Conflict in log, log
     assert not is_listed(client, runtime, 'channel_rest', names['conflict'])
@@ -207,7 +207,7 @@ def test_refused_files(client:'AdminClient', pickup:'Pickup', runtime:'Runtime')
         ],
     }
 
-    log = pickup.place('refused-reference', config)
+    log = pickup.place('refused-reference', config, is_refused=True)
     assert SupportCtx.Import_Error in log, log
     assert ModuleCtx.Refused_Reference in log, log
     assert not is_listed(client, runtime, 'channel_rest', names['referrer'])
@@ -219,7 +219,7 @@ def test_refused_files(client:'AdminClient', pickup:'Pickup', runtime:'Runtime')
         'channel_rest': [rest_channel(names['witness'], _url_path('refused', 'witness'))],
     }
 
-    log = pickup.place('refused-alert-rules', config)
+    log = pickup.place('refused-alert-rules', config, is_refused=True)
     assert SupportCtx.Import_Error in log, log
     assert ModuleCtx.Refused_Alert_Rule in log, log
     assert not is_listed(client, runtime, 'channel_rest', names['witness'])
