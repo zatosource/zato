@@ -34,7 +34,7 @@ from zato.common.api import PubSub
 from zato.common.db_env.database import database_config
 from zato.common.db_env.fence import ModuleCtx as FenceCtx
 from zato.common.hl7.mllp.haproxy import Env_Port_Name as MLLP_Env_Port_Name
-from zato.common.test.process_util import get_process_tree_pids
+from zato.common.test.process_util import get_process_tree_pids, kill_process_tree_at_once
 from zato.common.typing_ import cast_
 from zato.common.test.pubsub_database import get_db_mode, start_pubsub_database, stop_pubsub_database
 from zato.common.test.reservation import PortInUse
@@ -111,6 +111,10 @@ _database_env_names = (
     FenceCtx.Env_Generation_File,
 )
 
+# The port of the HTTP API of the queue bridge, which the Makefile exports and each worker of a server reads at its start,
+# as the image of Zato declares it for its servers
+_queue_bridge_port_env_name = 'Zato_Queue_Bridge_Port'
+
 # The variable with which Python writes the perf map of its functions, so that the stacks that perf records name them
 _python_perf_support_env_name = 'PYTHONPERFSUPPORT'
 
@@ -175,10 +179,11 @@ class SessionState:
     def kill_server(self) -> 'None':
         """ Terminates the server subprocess if it is still running.
         """
+        # The workers are killed and have exited before this returns, so that a worker of this server
+        # never runs alongside the processes of a server that starts after it.
         if self.server_process:
             if self.server_process.poll() is None:
-                self.server_process.kill()
-                _ = self.server_process.wait(timeout=_process_kill_timeout)
+                kill_process_tree_at_once(self.server_process)
                 self._logger.info('Killed server process')
 
         self.server_process = None
@@ -392,14 +397,15 @@ def get_server_environment(
     extra_server_env:'strstrdict',
     ) -> 'strstrdict':
     """ Builds the environment of a server process from an explicit mapping - the variables of the operating system,
-    those that select the Zato database, the ports of the server and the variables that the caller gives,
-    so that no other variable of the environment of the test process reaches the server.
+    those that select the Zato database, the ports of the server and of the queue bridge and the variables
+    that the caller gives, so that no other variable of the environment of the test process reaches the server.
     """
     out = get_process_environment()
 
     out['Zato_Config_Bind_Port'] = str(server_port)
     out['Zato_Broker_HTTP_Port'] = str(broker_port)
     out[MLLP_Env_Port_Name] = str(mllp_port)
+    out[_queue_bridge_port_env_name] = os.environ[_queue_bridge_port_env_name]
 
     out.update(extra_server_env)
 

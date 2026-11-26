@@ -19,6 +19,7 @@
 #   pending <pid>                     - a line that started and has not completed, so the run failed or was interrupted
 #   done <run id> <stage id>          - a stage that completed
 #   first <run id> <stage id> <test>  - the test that a pytest run failed first in or was interrupted in
+#   failed <run id> <target>          - a target with a line that failed, which target_status.sh reports at its end
 #
 # The first line of a run of make keeps the done and first entries if the previous run left a pending line behind,
 # unless RESTART is set, and drops them otherwise. A stage is either one pytest run, which the resume_first_failure
@@ -67,7 +68,7 @@ is_skipped=''
     # The first line of this run of make decides whether the run resumes the previous one ..
     if [ "$state_run_id" != "$Zato_Resume_Run_Id" ]; then
         if [ -z "$RESTART" ] && [ -f "$state_path" ] && grep -q '^pending ' "$state_path"; then
-            { echo "run $Zato_Resume_Run_Id"; grep -v -e '^run ' -e '^pending ' "$state_path"; } > "$state_path.tmp"
+            { echo "run $Zato_Resume_Run_Id"; grep -v -e '^run ' -e '^pending ' -e '^failed ' "$state_path"; } > "$state_path.tmp"
             echo ">>> Resuming from where the previous run of this goal stopped, RESTART=1 starts it from scratch"
         else
             echo "run $Zato_Resume_Run_Id" > "$state_path.tmp"
@@ -143,6 +144,17 @@ if [ "$status" -eq 0 ]; then
 
     exit 0
 fi
+
+# The status line of a target reports the failures of its other lines, which are already recorded
+if [[ "$line" == *target_status.sh* ]]; then
+    exit "$status"
+fi
+
+# A failed line marks its target as failed, so that the status line of the target fails once its other lines ran
+{
+    flock 9
+    echo "failed $Zato_Resume_Run_Id $target" >> "$state_path"
+} 9>"$lock_path"
 
 if [ -f "$Failures_Path" ]; then
     size_after=$(stat -c %s "$Failures_Path")
