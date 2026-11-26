@@ -103,7 +103,7 @@ fn wait_for_initial_reload(conn: &mut redis::Connection, shared: &bridge::Bridge
             .arg("COUNT")
             .arg(10_u64)
             .arg("STREAMS")
-            .arg(redis_streams::COMMAND_STREAM)
+            .arg(&redis_streams::STREAM_KEYS.command)
             .arg(">")
             .query(conn);
 
@@ -111,6 +111,11 @@ fn wait_for_initial_reload(conn: &mut redis::Connection, shared: &bridge::Bridge
             Ok(streams) => streams,
             Err(err) => {
                 tracing::warn!("XREADGROUP error on attempt {attempt}: {err}");
+
+                // The reload that the server sends in reply is published to the recreated stream, which the group reads from its start
+                if redis_streams::is_missing_group(&err) {
+                    redis_streams::ensure_consumer_group(conn, redis_streams::GROUP_START_FIRST_ENTRY);
+                }
                 continue;
             }
         };
@@ -136,7 +141,7 @@ fn wait_for_initial_reload(conn: &mut redis::Connection, shared: &bridge::Bridge
                     redis_streams::process_startup_reload(conn, shared, &correlation_id, &payload);
 
                     let ack_result: Result<u32, redis::RedisError> = redis::cmd("XACK")
-                        .arg(redis_streams::COMMAND_STREAM)
+                        .arg(&redis_streams::STREAM_KEYS.command)
                         .arg(redis_streams::CONSUMER_GROUP_NAME)
                         .arg(msg_id.as_str())
                         .query(conn);
@@ -148,7 +153,7 @@ fn wait_for_initial_reload(conn: &mut redis::Connection, shared: &bridge::Bridge
                 }
 
                 let ack_result: Result<u32, redis::RedisError> = redis::cmd("XACK")
-                    .arg(redis_streams::COMMAND_STREAM)
+                    .arg(&redis_streams::STREAM_KEYS.command)
                     .arg(redis_streams::CONSUMER_GROUP_NAME)
                     .arg(msg_id.as_str())
                     .query(conn);
@@ -197,7 +202,7 @@ async fn main() -> std::io::Result<()> {
         )
     })?;
 
-    redis_streams::ensure_consumer_group(&mut command_conn);
+    redis_streams::ensure_consumer_group(&mut command_conn, redis_streams::GROUP_START_NEW_ONLY);
 
     // The runtime is built here rather than in the bridge loop so its handle is
     // available to the command listener from the first command on.

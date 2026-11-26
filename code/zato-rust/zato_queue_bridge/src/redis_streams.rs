@@ -1,30 +1,57 @@
 //! Redis Streams integration for the standalone queue bridge binary.
 //!
-//! Provides command ingestion from `zato:queue_bridge:stream:command`, recv event publishing
-//! to one `zato:queue_bridge:stream:recv:<channel_id>` stream per channel, and reply publishing
-//! to `zato:queue_bridge:stream:reply`.
+//! Provides command ingestion from `<prefix>:stream:command`, recv event publishing
+//! to one `<prefix>:stream:recv:<channel_id>` stream per channel, and reply publishing
+//! to `<prefix>:stream:reply`, where the prefix is the per-environment stream key prefix.
 
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use serde::Deserialize;
 
 use crate::bridge::{BridgeShared, ChannelConfig, OutgoingConfig, RecvEvent, ReplyEvent, SendRequest};
 use crate::wire;
 
-/// Redis stream key where the server publishes commands for the queue bridge.
-pub const COMMAND_STREAM: &str = "zato:queue_bridge:stream:command";
+/// Environment variable holding the per-environment stream key prefix, which the server reads as well.
+pub const STREAM_PREFIX_ENV_VAR: &str = "Zato_Queue_Bridge_Stream_Prefix";
 
-/// Prefix of the per-channel Redis stream keys where the queue bridge publishes received messages.
-///
-/// The channel ID follows the prefix, so one slow channel never holds back another.
-pub const RECV_STREAM_PREFIX: &str = "zato:queue_bridge:stream:recv:";
+/// Default stream key prefix used when the environment does not set one.
+pub const DEFAULT_STREAM_PREFIX: &str = "zato:queue_bridge";
 
-/// Redis stream key where the queue bridge publishes synchronous replies.
-pub const REPLY_STREAM: &str = "zato:queue_bridge:stream:reply";
+/// Redis stream keys of the queue bridge, all namespaced by the per-environment prefix,
+/// so that environments sharing one Redis never read each other's commands, replies or received messages.
+pub struct StreamKeys {
+    /// Stream where the server publishes commands for the queue bridge.
+    pub command: String,
 
-/// Redis stream key where the queue bridge requests config from the server.
-pub const REQUEST_STREAM: &str = "zato:queue_bridge:stream:request";
+    /// Prefix of the per-channel streams where the queue bridge publishes received messages.
+    ///
+    /// The channel ID follows the prefix, so one slow channel never holds back another.
+    pub recv_prefix: String,
+
+    /// Stream where the queue bridge publishes synchronous replies.
+    pub reply: String,
+
+    /// Stream where the queue bridge requests config from the server.
+    pub request: String,
+}
+
+impl StreamKeys {
+    /// Builds the stream keys from the `Zato_Queue_Bridge_Stream_Prefix` environment variable.
+    fn from_env() -> Self {
+        // The prefix is genuinely optional - a standalone production environment runs with the default.
+        let prefix = std::env::var(STREAM_PREFIX_ENV_VAR).unwrap_or_else(|_| DEFAULT_STREAM_PREFIX.to_string());
+        Self {
+            command: format!("{prefix}:stream:command"),
+            recv_prefix: format!("{prefix}:stream:recv:"),
+            reply: format!("{prefix}:stream:reply"),
+            request: format!("{prefix}:stream:request"),
+        }
+    }
+}
+
+/// Stream keys of this process, read from the environment once, before the first stream is used.
+pub static STREAM_KEYS: LazyLock<StreamKeys> = LazyLock::new(StreamKeys::from_env);
 
 /// Consumer group name used by the queue bridge for the command stream.
 pub const CONSUMER_GROUP_NAME: &str = "queue_bridge";
@@ -40,27 +67,40 @@ type StreamReadResult = Vec<(String, Vec<(String, Vec<(String, String)>)>)>;
 
 /// Returns the recv stream key of one channel.
 pub fn recv_stream_key(channel_id: u64) -> String {
-    format!("{RECV_STREAM_PREFIX}{channel_id}")
+    format!("{}{channel_id}", STREAM_KEYS.recv_prefix)
 }
 
-/// Ensures the consumer group exists on the command stream.
+/// Stream ID at which a consumer group created at startup begins, so that commands left over from an earlier run are not replayed.
+pub const GROUP_START_NEW_ONLY: &str = "$";
+
+/// Stream ID at which a consumer group recreated after its command stream was removed begins,
+/// so that the commands the server published to the new stream before the group existed are processed.
+pub const GROUP_START_FIRST_ENTRY: &str = "0";
+
+/// Returns whether a read of the command stream failed because the stream or its consumer group no longer exists,
+/// e.g. after a key cleanup of another environment sharing the same Redis.
+pub fn is_missing_group(err: &redis::RedisError) -> bool {
+    err.to_string().contains("NOGROUP")
+}
+
+/// Ensures the consumer group exists on the command stream, beginning at the given stream ID.
 ///
 /// Creates the stream and group if they do not exist.
-pub fn ensure_consumer_group(conn: &mut redis::Connection) {
+pub fn ensure_consumer_group(conn: &mut redis::Connection, start_id: &str) {
     let result: Result<(), redis::RedisError> = redis::cmd("XGROUP")
         .arg("CREATE")
-        .arg(COMMAND_STREAM)
+        .arg(&STREAM_KEYS.command)
         .arg(CONSUMER_GROUP_NAME)
-        .arg("$")
+        .arg(start_id)
         .arg("MKSTREAM")
         .query(conn);
 
     match result {
-        Ok(()) => tracing::info!("Created consumer group '{CONSUMER_GROUP_NAME}' on '{COMMAND_STREAM}'"),
+        Ok(()) => tracing::info!("Created consumer group '{CONSUMER_GROUP_NAME}' on '{}'", STREAM_KEYS.command),
         Err(err) => {
             let msg = err.to_string();
             if msg.contains("BUSYGROUP") {
-                tracing::debug!("Consumer group '{CONSUMER_GROUP_NAME}' already exists on '{COMMAND_STREAM}'");
+                tracing::debug!("Consumer group '{CONSUMER_GROUP_NAME}' already exists on '{}'", STREAM_KEYS.command);
             } else {
                 tracing::error!("Failed to create consumer group: {err}");
             }
@@ -72,7 +112,7 @@ pub fn ensure_consumer_group(conn: &mut redis::Connection) {
 /// to send a reload command with connection configs from ODB.
 pub fn request_config(conn: &mut redis::Connection) {
     let result: Result<String, redis::RedisError> = redis::cmd("XADD")
-        .arg(REQUEST_STREAM)
+        .arg(&STREAM_KEYS.request)
         .arg("MAXLEN")
         .arg("~")
         .arg(STREAM_MAXLEN)
@@ -82,7 +122,7 @@ pub fn request_config(conn: &mut redis::Connection) {
         .query(conn);
 
     match result {
-        Ok(_) => tracing::info!("Published request_config to '{REQUEST_STREAM}'"),
+        Ok(_) => tracing::info!("Published request_config to '{}'", STREAM_KEYS.request),
         Err(err) => tracing::error!("Failed to publish request_config: {err}"),
     }
 }
@@ -148,7 +188,7 @@ fn publish_reply(conn: &mut redis::Connection, correlation_id: &str, status: &st
 fn publish_reply_with_data(conn: &mut redis::Connection, correlation_id: &str, status: &str, data: &str) {
     tracing::info!("Publishing reply: correlation_id={correlation_id} status={status} data={data}");
     let result: Result<String, redis::RedisError> = redis::cmd("XADD")
-        .arg(REPLY_STREAM)
+        .arg(&STREAM_KEYS.reply)
         .arg("MAXLEN")
         .arg("~")
         .arg(STREAM_MAXLEN)
@@ -175,7 +215,7 @@ pub fn publish_reply_event(conn: &mut redis::Connection, event: &ReplyEvent) {
 ///
 /// This function blocks on XREADGROUP and should be run on its own thread.
 pub fn command_listener_loop(conn: &mut redis::Connection, shared: &Arc<BridgeShared>) {
-    tracing::info!("Command listener started on '{COMMAND_STREAM}'");
+    tracing::info!("Command listener started on '{}'", STREAM_KEYS.command);
 
     loop {
         if shared.stop_flag.load(std::sync::atomic::Ordering::Relaxed) {
@@ -192,7 +232,7 @@ pub fn command_listener_loop(conn: &mut redis::Connection, shared: &Arc<BridgeSh
             .arg("COUNT")
             .arg(10_u64)
             .arg("STREAMS")
-            .arg(COMMAND_STREAM)
+            .arg(&STREAM_KEYS.command)
             .arg(">")
             .query(conn);
 
@@ -203,6 +243,17 @@ pub fn command_listener_loop(conn: &mut redis::Connection, shared: &Arc<BridgeSh
                 if msg.contains("timeout") || msg.contains("nil") {
                     continue;
                 }
+
+                // No command reaches the bridge until the group exists again
+                if is_missing_group(&err) {
+                    tracing::warn!(
+                        "Recreating consumer group '{CONSUMER_GROUP_NAME}' on '{}': {err}",
+                        STREAM_KEYS.command
+                    );
+                    ensure_consumer_group(conn, GROUP_START_FIRST_ENTRY);
+                    continue;
+                }
+
                 tracing::error!("XREADGROUP error: {err}");
                 std::thread::sleep(std::time::Duration::from_secs(1));
                 continue;
@@ -227,7 +278,7 @@ pub fn command_listener_loop(conn: &mut redis::Connection, shared: &Arc<BridgeSh
                 process_command(conn, shared, &command, &correlation_id, &payload);
 
                 let ack_result: Result<u32, redis::RedisError> = redis::cmd("XACK")
-                    .arg(COMMAND_STREAM)
+                    .arg(&STREAM_KEYS.command)
                     .arg(CONSUMER_GROUP_NAME)
                     .arg(msg_id.as_str())
                     .query(conn);

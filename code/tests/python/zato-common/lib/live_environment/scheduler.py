@@ -37,10 +37,9 @@ if 0:
 # The root of the checkout - this file sits six levels below it.
 _zato_base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', '..', '..'))
 
-# Where a build of the scheduler is looked for, the release build first.
+# Where the scheduler-build target of the Makefile installs the scheduler
 _binary_paths = (
-    os.path.join(_zato_base_dir, 'code', 'zato-rust', 'zato_scheduler_core', 'target', 'release', '_zato_scheduler'),
-    os.path.join(_zato_base_dir, 'code', 'zato-rust', 'zato_scheduler_core', 'target', 'debug', '_zato_scheduler'),
+    os.path.join(_zato_base_dir, 'code', 'bin', '_zato_scheduler'),
 )
 
 # The variables the server and the scheduler share.

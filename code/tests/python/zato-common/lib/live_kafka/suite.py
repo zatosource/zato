@@ -26,6 +26,7 @@ from live_environment.quickstart import Host
 from live_kafka.containers import create_topic, KafkaCluster
 from zato.common.audit_log.api import event_table
 from zato.common.crypto.api import CryptoManager
+from zato.common.queue_bridge import QueueBridgeStreams
 from zato.common.util.api import pluralize
 
 # ################################################################################################################################
@@ -65,7 +66,7 @@ class ModuleCtx:
     Poll_Interval = 0.2
 
     # The stream the bridge writes a channel's messages to, the channel's id follows
-    Recv_Stream_Prefix = 'zato:queue_bridge:stream:recv:'
+    Recv_Stream_Prefix = QueueBridgeStreams.Recv_Prefix
 
     # The consumer group the server reads a recv stream as
     Recv_Group = 'server-recv'

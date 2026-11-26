@@ -87,8 +87,7 @@ _scheduler_wait_timeout = 30
 _scheduler_poll_interval = 0.5
 
 # The scheduler binary, the same one zato start <scheduler-dir> runs
-_scheduler_binary = os.path.join(os.environ['ZATO_TEST_BASE_DIR'], 'code', 'zato-rust', 'zato_scheduler_core', 'target',
-    'release', '_zato_scheduler')
+_scheduler_binary = os.path.join(os.environ['ZATO_TEST_BASE_DIR'], 'code', 'bin', '_zato_scheduler')
 
 # Where the scheduler's log goes
 _scheduler_log_path = '/tmp/zato-explain-live-scheduler.log'

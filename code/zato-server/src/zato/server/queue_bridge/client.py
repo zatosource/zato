@@ -26,6 +26,7 @@ from redis import Redis
 import requests
 
 # Zato
+from zato.common.queue_bridge import QueueBridgeStreams
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -44,12 +45,12 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 class ModuleCtx:
-    Command_Stream = 'zato:queue_bridge:stream:command'
-    Reply_Stream = 'zato:queue_bridge:stream:reply'
-    Request_Stream = 'zato:queue_bridge:stream:request'
+    Command_Stream = QueueBridgeStreams.Command
+    Reply_Stream = QueueBridgeStreams.Reply
+    Request_Stream = QueueBridgeStreams.Request
 
     # The prefix of a channel's recv stream, the channel's id follows
-    Recv_Stream_Prefix = 'zato:queue_bridge:stream:recv:'
+    Recv_Stream_Prefix = QueueBridgeStreams.Recv_Prefix
 
     Consumer_Group = 'server'
     Consumer_Name = 'server-0'

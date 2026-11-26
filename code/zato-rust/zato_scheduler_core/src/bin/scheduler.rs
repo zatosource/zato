@@ -89,6 +89,11 @@ fn wait_for_initial_reload(conn: &mut RedisLink, keys: &redis_streams::StreamKey
             Ok(streams) => streams,
             Err(err) => {
                 tracing::warn!("XREADGROUP error on attempt {attempt}: {err}");
+
+                // The reload that the server sends in reply is published to the recreated stream, which the group reads from its start
+                if redis_streams::is_missing_group(&err) {
+                    redis_streams::ensure_consumer_group(conn, keys, redis_streams::GROUP_START_FIRST_ENTRY);
+                }
                 continue;
             }
         };

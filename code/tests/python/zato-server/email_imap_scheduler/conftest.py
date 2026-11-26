@@ -233,7 +233,7 @@ def scheduler_process(zato_server:'any_') -> 'any_':
 
     # There is none so we start our own, the same way zato start <scheduler-dir> does it
     zato_base = os.environ['ZATO_TEST_BASE_DIR']
-    binary = os.path.join(zato_base, 'code', 'zato-rust', 'zato_scheduler_core', 'target', 'release', '_zato_scheduler')
+    binary = os.path.join(zato_base, 'code', 'bin', '_zato_scheduler')
 
     environment = os.environ.copy()
     _ = environment.setdefault('Zato_Scheduler_Redis_Host', 'localhost')

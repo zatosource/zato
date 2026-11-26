@@ -88,7 +88,7 @@ from zato.server.connection.outgoing_delivery import register_delivery_handlers
 from zato.server.generic.connection import GenericConnection
 from zato.server.groups.base import GroupsManager
 from zato.server.groups.ctx import SecurityGroupsCtxBuilder
-from zato.server.queue_bridge.client import QueueBridgeClient
+from zato.server.queue_bridge.client import ModuleCtx as QueueBridgeStreamCtx, QueueBridgeClient
 from zato.server.queue_bridge.recv import ChannelListeners
 from zato.server.quota_tiers import QuotaTiersManager
 from zato.server.rule_engine_api import start_rule_engine_change_listener
@@ -1944,7 +1944,7 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         """
         request_redis = self._queue_bridge.new_redis_conn()
 
-        request_stream = 'zato:queue_bridge:stream:request'
+        request_stream = QueueBridgeStreamCtx.Request_Stream
         group_name = 'server-request'
         consumer_name = get_consumer_name(group_name)
 

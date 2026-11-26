@@ -18,6 +18,7 @@ from uuid import uuid4
 from redis import Redis
 
 # Zato
+from zato.common.queue_bridge import QueueBridgeStreams
 from zato.common.test.reservation import reserve_port
 from zato.common.typing_ import cast_
 
@@ -40,12 +41,12 @@ _repo_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 
 class ModuleCtx:
 
     # Redis streams the bridge communicates through
-    Command_Stream = 'zato:queue_bridge:stream:command'
-    Reply_Stream   = 'zato:queue_bridge:stream:reply'
-    Request_Stream = 'zato:queue_bridge:stream:request'
+    Command_Stream = QueueBridgeStreams.Command
+    Reply_Stream   = QueueBridgeStreams.Reply
+    Request_Stream = QueueBridgeStreams.Request
 
     # The prefix of a channel's recv stream, the channel's id follows
-    Recv_Stream_Prefix = 'zato:queue_bridge:stream:recv:'
+    Recv_Stream_Prefix = QueueBridgeStreams.Recv_Prefix
 
     # Consumer group details for the reply stream, the same the server uses
     Consumer_Group = 'server'

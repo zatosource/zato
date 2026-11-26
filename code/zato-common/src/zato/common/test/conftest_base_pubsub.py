@@ -34,7 +34,8 @@ from zato.common.api import PubSub
 from zato.common.db_env.database import database_config
 from zato.common.db_env.fence import ModuleCtx as FenceCtx
 from zato.common.hl7.mllp.haproxy import Env_Port_Name as MLLP_Env_Port_Name
-from zato.common.test.process_util import get_process_tree_pids, kill_process_tree_at_once
+from zato.common.queue_bridge import Stream_Prefix_Variable as Queue_Bridge_Stream_Prefix_Variable
+from zato.common.test.process_util import get_process_tree_pids, kill_process_tree_at_once, kill_processes_in_directories
 from zato.common.typing_ import cast_
 from zato.common.test.pubsub_database import get_db_mode, start_pubsub_database, stop_pubsub_database
 from zato.common.test.reservation import PortInUse
@@ -121,6 +122,9 @@ _python_perf_support_env_name = 'PYTHONPERFSUPPORT'
 # The variables that configure the profiling of a server, which the test process passes on to it
 _monitoring_env_names = (_python_perf_support_env_name,)
 
+# The prefix of the stream keys of the queue bridge, which every process of the installation and the bridge of a suite share
+_queue_bridge_env_names = (Queue_Bridge_Stream_Prefix_Variable,)
+
 # The logs that are copied out of an environment before it is torn down
 _server_log_file_name        = 'server.log'
 _file_transfer_log_file_name = 'file-transfer.log'
@@ -188,9 +192,10 @@ class SessionState:
 
         self.server_process = None
 
-        # .. also kill the processes that the server of this session forked, and no other server ..
+        # .. also kill the processes that the server of this session forked, and no other server, waiting until they exited,
+        # .. so that none of them recreates its Redis streams after the streams of the session were removed ..
         if self.quickstart_directory:
-            _ = subprocess.run(['pkill', '-f', f'zato.server.main {self.quickstart_directory}'], capture_output=True)
+            kill_processes_in_directories([self.quickstart_directory])
 
 # ################################################################################################################################
 
@@ -378,11 +383,12 @@ def render_template(template_path:'str', placeholders:'anydict') -> 'str':
 
 def get_process_environment() -> 'strstrdict':
     """ Builds the environment of a process of an installation, such as the cleanup process of pub/sub,
-    from the variables of the operating system and those that select the Zato database alone.
+    from the variables of the operating system, those that select the Zato database and the prefix of the streams
+    of the queue bridge alone.
     """
     out:'strstrdict' = {}
 
-    for name in _system_env_names + _database_env_names + _monitoring_env_names:
+    for name in _system_env_names + _database_env_names + _monitoring_env_names + _queue_bridge_env_names:
         if name in os.environ:
             out[name] = os.environ[name]
 

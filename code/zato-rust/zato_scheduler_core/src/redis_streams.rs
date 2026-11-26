@@ -83,7 +83,13 @@ pub const GROUP_START_NEW_ONLY: &str = "$";
 
 /// Stream ID at which a consumer group recreated after its command stream was removed begins,
 /// so that the commands the server published to the new stream before the group existed are processed.
-const GROUP_START_FIRST_ENTRY: &str = "0";
+pub const GROUP_START_FIRST_ENTRY: &str = "0";
+
+/// Returns whether a read of the command stream failed because the stream or its consumer group no longer exists,
+/// e.g. after a key cleanup of another environment sharing the same Redis.
+pub fn is_missing_group(err: &redis::RedisError) -> bool {
+    err.to_string().contains("NOGROUP")
+}
 
 /// Ensures the consumer group exists on the command stream, beginning at the given stream ID.
 ///
@@ -268,7 +274,7 @@ pub fn command_listener_loop(conn: &mut RedisLink, keys: &StreamKeys, shared: &A
 
                 // The command stream and its group were removed from Redis, e.g. by a key cleanup of another environment,
                 // and no command reaches the scheduler until the group exists again
-                if msg.contains("NOGROUP") {
+                if is_missing_group(&err) {
                     tracing::warn!("Recreating consumer group '{CONSUMER_GROUP_NAME}' on '{}': {err}", keys.command);
                     ensure_consumer_group(conn, keys, GROUP_START_FIRST_ENTRY);
                     continue;

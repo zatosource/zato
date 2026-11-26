@@ -88,7 +88,7 @@ def _start_scheduler() -> 'subprocess.Popen[bytes]':
     """ Starts this suite's private scheduler and waits until its HTTP API is up.
     """
     zato_base = os.environ['ZATO_TEST_BASE_DIR']
-    binary = os.path.join(zato_base, 'code', 'zato-rust', 'zato_scheduler_core', 'target', 'release', '_zato_scheduler')
+    binary = os.path.join(zato_base, 'code', 'bin', '_zato_scheduler')
 
     environment = os.environ.copy()
     _ = environment.setdefault('Zato_Scheduler_Redis_Host', 'localhost')
