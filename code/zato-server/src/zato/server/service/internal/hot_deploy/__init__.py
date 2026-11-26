@@ -23,6 +23,7 @@ from zato.common.ext.bunch import Bunch
 # Zato
 from zato.common.typing_ import cast_
 from zato.common.broker_message import HOT_DEPLOY
+from zato.common.exception import BadRequest
 from zato.common.util.api import import_module_from_path, is_python_file, is_archive_file
 from zato.common.util.file_system import fs_safe_now, get_file_digest
 from zato.common.util.import_graph import ImportGraph
@@ -35,6 +36,7 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
+    from types import ModuleType
     from zato.common.typing_ import any_, anylist, anylistnone, commoniter, intlist, stranydict, strbytes, strlist, strset
     from zato.server.service.store import InRAMService
     strbytes = strbytes
@@ -81,6 +83,16 @@ class DeploymentCtx:
     model_name_list:     'strlist'
     service_id_list:     'intlist'
     service_name_list:   'strlist'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ModuleImportError(BadRequest):
+    """ Raised when a module that is being deployed cannot be imported, in which case nothing from it is deployed.
+    """
+    def __init__(self, cid:'str', file_name:'str', reason:'str', details:'str') -> 'None':
+        super().__init__(cid, f'Could not import module `{file_name}` -> {reason}', True)
+        self.details = details
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -310,24 +322,27 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
-    def _deploy_sdk_connectors(self, current_work_dir:'str', file_name:'str') -> 'strlist':
+    def _import_module(self, current_work_dir:'str', file_name:'str') -> 'ModuleType':
+        """ Imports a module that is being deployed, or raises an exception that names the file and the reason.
+        """
+        try:
+            mod_info = import_module_from_path(file_name, current_work_dir)
+        except Exception as e:
+            reason = f'{e.__class__.__name__}: {e}'
+            raise ModuleImportError(self.cid, file_name, reason, format_exc()) from None
+
+        out = mod_info.module
+        return out
+
+# ################################################################################################################################
+
+    def _deploy_sdk_connectors(self, module:'ModuleType') -> 'strlist':
 
         # Our response to produce
         out:'strlist' = []
 
-        # Files that the service store ignores are not scanned for connectors either
-        if self.server.service_store._should_ignore_file(file_name, current_work_dir):
-            return out
-
-        # Import the module to look for connector classes inside ..
-        try:
-            mod_info = import_module_from_path(file_name, current_work_dir)
-        except Exception:
-            self.logger.warning('Could not import module `%s` to look for connectors, e:`%s`', file_name, format_exc())
-            return out
-
-        # .. collect all the connector classes defined in it ..
-        connector_classes = extract_connector_classes(mod_info.module)
+        # Collect all the connector classes defined in the module ..
+        connector_classes = extract_connector_classes(module)
 
         # .. and register each one with the config manager.
         for connector_class in connector_classes:
@@ -376,7 +391,16 @@ class Create(AdminService):
             with open(file_name, 'wb') as f:
                 _ = f.write(payload)
 
-        connector_type_list = self._deploy_sdk_connectors(current_work_dir, file_name)
+        # A file that the service store ignores is not imported, so it has no connectors either ..
+        if self.server.service_store._should_ignore_file(file_name, current_work_dir):
+            connector_type_list:'strlist' = []
+
+        # .. whereas any other one is imported before anything is deployed from it, so that a module
+        # that cannot be imported is refused as a whole.
+        else:
+            module = self._import_module(current_work_dir, file_name)
+            connector_type_list = self._deploy_sdk_connectors(module)
+
         model_name_list = self._deploy_models(current_work_dir, file_name)
         service_id_list = self._deploy_services(current_work_dir, file_name)
 
@@ -720,7 +744,21 @@ class Create(AdminService):
                 # and the next deployment of the pickup directory deploys it again ..
                 file_digest = get_file_digest(payload_name)
 
-                services_deployed = self.deploy_package(payload, payload_name, is_importer) or []
+                try:
+                    services_deployed = self.deploy_package(payload, payload_name, is_importer) or []
+
+                except ModuleImportError as e:
+
+                    # A module that cannot be imported is passed over by the deployments of the pickup directory
+                    # until its contents change ..
+                    self.server.deployed_file_digests[payload_name] = file_digest
+
+                    # .. and the refusal is logged by the process that the file was deployed to,
+                    # while a relayed deployment leaves it to its caller.
+                    if not is_relayed:
+                        self.logger.error('%s\n%s', e.msg, e.details)
+
+                    raise
 
                 # .. which otherwise passes over the file, as this process has it in effect already.
                 self.server.deployed_file_digests[payload_name] = file_digest

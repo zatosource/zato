@@ -40,6 +40,7 @@ from zato.common.broker_message import HOT_DEPLOY, PUBSUB, SCHEDULER as SCHEDULE
 from zato.common.common_db.store import SharedObjectStore
 from zato.common.const import SECRETS
 from zato.common.db_env.outage import call_until_available
+from zato.common.exception import Reportable
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import loads
 from zato.common.log_streaming import LogStreamingManager
@@ -2280,12 +2281,16 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
                 if self.deployed_file_digests[full_path] == get_file_digest(full_path):
                     continue
 
-            # .. so only a file that is new to this process or that changed since is deployed.
-            _ = self.invoke('zato.hot-deploy.create', {
-                'payload': item['data'],
-                'payload_name': full_path,
-                'is_relayed': is_relayed,
-            })
+            # .. so only a file that is new to this process or that changed since is deployed,
+            # and a file that the server refuses does not stop the deployment of the files after it.
+            try:
+                _ = self.invoke('zato.hot-deploy.create', {
+                    'payload': item['data'],
+                    'payload_name': full_path,
+                    'is_relayed': is_relayed,
+                })
+            except Reportable as e:
+                logger.info('File `%s` not deployed from the pickup directory -> %s', full_path, e.msg)
 
 # ################################################################################################################################
 

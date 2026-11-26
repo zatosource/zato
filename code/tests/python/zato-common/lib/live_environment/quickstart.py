@@ -75,6 +75,10 @@ _deploy_error_marker = 'Could not deploy file: '
 _purpose_server = 'zato-environment-server'
 _purpose_mllp   = 'zato-environment-mllp'
 _purpose_broker = 'zato-environment-broker'
+_purpose_queue_bridge = 'zato-environment-queue-bridge'
+
+# The port of the read-only state of the queue bridge, which the server reads its address from
+_queue_bridge_port_variable = 'Zato_Queue_Bridge_Port'
 
 # Every environment this process started, so the atexit handler can end what a killed run left behind
 _environments:'environment_list' = []
@@ -167,11 +171,14 @@ class ZatoEnvironment:
         server_reservation = reserve_port(_purpose_server)
         mllp_reservation = reserve_port(_purpose_mllp)
         broker_reservation = reserve_port(_purpose_broker)
+        queue_bridge_reservation = reserve_port(_purpose_queue_bridge)
 
-        self._reservations:'reservation_list' = [server_reservation, mllp_reservation, broker_reservation]
+        self._reservations:'reservation_list' = [
+            server_reservation, mllp_reservation, broker_reservation, queue_bridge_reservation]
 
         self.server_port = server_reservation.port
         self.broker_port = broker_reservation.port
+        self.queue_bridge_port = queue_bridge_reservation.port
 
         # Where the server's own MLLP listener sits - settled on here so that whatever fronts it
         # can name the port before the server has started
@@ -317,6 +324,7 @@ class ZatoEnvironment:
         environment['Zato_Config_Bind_Port'] = str(self.server_port)
         environment['Zato_Broker_HTTP_Port'] = str(self.broker_port)
         environment['Zato_HL7_MLLP_Port'] = str(self.mllp_internal_port)
+        environment[_queue_bridge_port_variable] = str(self.queue_bridge_port)
         environment.update(self.database_env)
         environment.update(extra_environment)
 
