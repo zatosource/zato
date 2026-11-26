@@ -172,7 +172,7 @@ async fn main() -> std::io::Result<()> {
     // environments sharing one Redis never steal each other's messages.
     let stream_keys = redis_streams::StreamKeys::from_env();
 
-    redis_streams::ensure_consumer_group(&mut command_conn, &stream_keys);
+    redis_streams::ensure_consumer_group(&mut command_conn, &stream_keys, redis_streams::GROUP_START_NEW_ONLY);
 
     let shared = Arc::new(SchedulerShared::new());
 

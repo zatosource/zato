@@ -15,6 +15,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # connection's health check. The suite skips when docker is not available.
 
 # stdlib
+import atexit
 import logging
 import os
 import socket
@@ -53,6 +54,7 @@ from zato.common.typing_ import cast_
 from hl7_client.smtp_receiver import SMTPReceiver
 from llm_test_server import LLMTestServer
 from live_config import IMAP_Password, LiveServer
+from live_environment.scheduler import delete_scheduler_keys
 from live_trace import is_on as is_trace_on
 
 containers = cast_('any_', import_module('ollama_containers'))
@@ -94,7 +96,7 @@ _scheduler_log_path = '/tmp/zato-explain-live-scheduler.log'
 # The server and the suite's own scheduler share these, and nothing else on the machine does - the stream prefix keeps
 # their Redis streams apart from any other scheduler's, the port keeps the scheduler's HTTP API off the default one.
 # Both are decided here, before the server fixture below is built, because the server reads them from its environment.
-_scheduler_stream_prefix = 'zato:scheduler:explain-live:' + uuid4().hex
+_scheduler_stream_prefix = 'zato-test:scheduler:explain-live:' + uuid4().hex
 
 # The enmasse document the quickstart server imports before it starts - the LLM connection
 # the explanations go through, pointed at the Ollama container
@@ -322,6 +324,9 @@ def scheduler_process(zato_server:'any_') -> 'any_':
         _ = process.wait()
         log_file.close()
         raise Exception(f'The scheduler did not answer on port {_scheduler_http_port} within {_scheduler_wait_timeout}s')
+
+    # The server recreates the streams it reads for as long as it runs, so the keys are removed once the session ended
+    _ = atexit.register(delete_scheduler_keys, _scheduler_stream_prefix)
 
     yield process
 

@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import atexit
 import os
 import subprocess
 import sys
@@ -32,6 +33,7 @@ from zato.common.util.tcp import get_free_port
 
 # Local test helpers
 from _config import TestConfig
+from live_environment.scheduler import delete_scheduler_keys
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,7 +56,7 @@ _key_path = os.path.join(_key_directory, 'client-key')
 # so that parallel test runs and the user's own scheduler never clash on the default port.
 # The port search starts at a random offset in a high range, away from the range that test servers
 # allocate from, because the port is probed now but bound only once the scheduler starts.
-_scheduler_stream_prefix = 'zato:scheduler:test-file-transfer-' + CryptoManager.generate_hex_string(32)
+_scheduler_stream_prefix = 'zato-test:scheduler:file-transfer-' + CryptoManager.generate_hex_string(32)
 _scheduler_http_port = get_free_port(randint(41000, 51000))
 
 # How long to wait for the scheduler's HTTP API to come up, in seconds
@@ -247,6 +249,9 @@ def scheduler_process(zato_server:'any_') -> 'any_':
             continue
         else:
             break
+
+    # The server recreates the streams it reads for as long as it runs, so the keys are removed once the session ended
+    _ = atexit.register(delete_scheduler_keys, _scheduler_stream_prefix)
 
     yield process
 

@@ -23,6 +23,7 @@ from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import list_attachments
 from zato.common.audit_log.file_transfer import Operation_Move, Operation_Read
 from zato.common.audit_log.file_transfer_run import Phase_Reading, Run_Status_Interrupted, Run_Status_No_Directory
+from zato.common.test.expected_records import expected_records
 from zato.common.typing_ import cast_
 from zato.common.util.file_transfer_scheduler import apply_schedule_defaults
 from zato.server.service.internal.outgoing.file_transfer.process import process_files
@@ -32,8 +33,8 @@ from zato.server.service.internal.outgoing.file_transfer.run import open_run
 from audit_env import audit_db_env
 from schedule_stub import events_of_type, get_attrs, get_events, new_environment, new_schedule, Ack_Error, \
     AckRefusingClient, ClaimRefusingClient, Connection_Name, Directory, FailingOnceServiceStub, FailingServiceStub, \
-    File_Content, File_Name, Release_Error, ReleaseRefusingClient, Run_Cid, Schedule_Name, Service_Error, ServiceStub, \
-    Target_Service
+    File_Content, File_Name, Release_Error, ReleaseRefusingClient, Run_Cid, Schedule_Name, Service_Error, Service_Logger_Name, \
+    ServiceStub, Target_Service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -161,7 +162,8 @@ def test_a_run_summary_counts_a_failure_next_to_a_success(tmp_path:'any_') -> 'N
             service_class=OneFileFails, file_names=['bad.csv', 'good.csv'])
         context[_scheduler.Extra_Schedule] = new_schedule()
 
-        process_files(cast_('any_', service), context)
+        with expected_records(Service_Logger_Name):
+            process_files(cast_('any_', service), context)
 
         # Only the accepted file reached the target service ..
         assert len(service.invoked) == 1
@@ -223,7 +225,8 @@ def test_a_failing_service_leaves_the_error_and_the_file(tmp_path:'any_') -> 'No
         service, context, base_dir = new_environment(tmp_path, service_class=FailingServiceStub)
         context[_scheduler.Extra_Schedule] = new_schedule()
 
-        process_files(cast_('any_', service), context)
+        with expected_records(Service_Logger_Name):
+            process_files(cast_('any_', service), context)
 
         # The file was never lost - it waits for the next run
         assert os.path.exists(os.path.join(base_dir, Directory, File_Name))
@@ -319,7 +322,8 @@ def test_a_missing_directory_leaves_a_run_summary_with_the_note(tmp_path:'any_')
         service, context, _ = new_environment(tmp_path)
         context[_scheduler.Extra_Schedule] = new_schedule(directory='share/not-there')
 
-        process_files(cast_('any_', service), context)
+        with expected_records(Service_Logger_Name):
+            process_files(cast_('any_', service), context)
 
         events = get_events()
         assert len(events) == 1
@@ -393,7 +397,8 @@ def test_a_file_whose_ack_failed_is_acked_by_the_next_run(tmp_path:'any_') -> 'N
         archive_path = os.path.join(base_dir, Directory, _scheduler.Default_Move_Directory, File_Name)
 
         # The first run delivers the file and fails to ack it ..
-        process_files(cast_('any_', service), context)
+        with expected_records(Service_Logger_Name):
+            process_files(cast_('any_', service), context)
 
         assert len(service.invoked) == 1
         assert os.path.exists(claim_path)
@@ -438,7 +443,8 @@ def test_a_claim_that_could_not_be_released_is_released_by_the_next_run(tmp_path
         archive_path = os.path.join(base_dir, Directory, _scheduler.Default_Move_Directory, File_Name)
 
         # The first run fails to deliver the file and fails to release its claim ..
-        process_files(cast_('any_', service), context)
+        with expected_records(Service_Logger_Name):
+            process_files(cast_('any_', service), context)
 
         assert service.invoked == []
         assert os.path.exists(claim_path)

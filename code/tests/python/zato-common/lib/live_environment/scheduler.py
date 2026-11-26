@@ -84,12 +84,39 @@ def find_binary() -> 'str':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def delete_scheduler_keys(stream_prefix:'str') -> 'None':
+    """ Removes the streams and the sequence of a private scheduler from Redis. The prefix is outside the zato: namespace,
+    which quickstart clears, so that a quickstart of another environment does not remove them while the scheduler runs.
+    """
+    # The keys are in the Redis that the binary was started with
+    host = _redis_defaults['Zato_Scheduler_Redis_Host']
+    if host_from_env := os.environ.get('Zato_Scheduler_Redis_Host'):
+        host = host_from_env
+
+    port = _redis_defaults['Zato_Scheduler_Redis_Port']
+    if port_from_env := os.environ.get('Zato_Scheduler_Redis_Port'):
+        port = port_from_env
+
+    redis_connection = Redis(host=host, port=int(port), decode_responses=True)
+
+    pattern = stream_prefix + ':*'
+    keys = redis_connection.keys(pattern)
+    keys = cast_('anylist', keys)
+
+    if keys:
+        _ = redis_connection.delete(*keys)
+
+    redis_connection.close()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class SchedulerProcess:
     """ The scheduler binary run against one server, on Redis streams of its own. Creating and starting it are separate steps.
     """
 
     def __init__(self) -> 'None':
-        self.stream_prefix = 'zato:scheduler:test-' + CryptoManager.generate_hex_string()
+        self.stream_prefix = 'zato-test:scheduler:' + CryptoManager.generate_hex_string()
         self.http_port_reservation = reserve_port(_http_port_purpose)
         self.http_port = self.http_port_reservation.port
 
@@ -206,23 +233,7 @@ class SchedulerProcess:
     def delete_streams(self) -> 'None':
         """ Removes this scheduler's streams from Redis.
         """
-        # The streams are in the Redis that the binary was started with
-        host = _redis_defaults['Zato_Scheduler_Redis_Host']
-        if host_from_env := os.environ.get('Zato_Scheduler_Redis_Host'):
-            host = host_from_env
-
-        port = _redis_defaults['Zato_Scheduler_Redis_Port']
-        if port_from_env := os.environ.get('Zato_Scheduler_Redis_Port'):
-            port = port_from_env
-
-        redis_connection = Redis(host=host, port=int(port), decode_responses=True)
-
-        pattern = self.stream_prefix + ':stream:*'
-        keys = redis_connection.keys(pattern)
-        keys = cast_('anylist', keys)
-
-        if keys:
-            _ = redis_connection.delete(*keys)
+        delete_scheduler_keys(self.stream_prefix)
 
 # ################################################################################################################################
 

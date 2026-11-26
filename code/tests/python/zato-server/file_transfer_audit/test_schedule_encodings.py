@@ -29,13 +29,14 @@ from zato.common.audit_log.file_transfer import load_transfer_content, Operation
 from zato.common.file_transfer.api import Default_Encoding, Encoding, Encoding_List
 from zato.common.file_transfer.spool import Env_Spool_Directory
 from zato.common.test.file_transfer_harness.encoding_samples import sample_bytes, sample_lines, sample_text
+from zato.common.test.expected_records import expected_records
 from zato.common.typing_ import cast_
 from zato.server.service.internal.outgoing.file_transfer.process import process_files
 
 # Test support
 from audit_env import audit_db_env
 from schedule_stub import events_of_type, get_attrs, get_events, new_environment, new_schedule, Connection_Name, \
-    Directory, File_Name, LocalDirectoryClient, Read_Chunk_Size, TextServiceStub
+    Directory, File_Name, LocalDirectoryClient, Read_Chunk_Size, Service_Logger_Name, TextServiceStub
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -196,7 +197,8 @@ def test_a_file_in_another_encoding_fails_its_delivery(tmp_path:'any_', spool_di
 
     with audit_db_env():
 
-        service = _run(tmp_path, sample_bytes(encoding), encoding=Encoding.UTF_8)
+        with expected_records(Service_Logger_Name):
+            service = _run(tmp_path, sample_bytes(encoding), encoding=Encoding.UTF_8)
 
         # The service never got as far as recording the text ..
         assert service.texts == []

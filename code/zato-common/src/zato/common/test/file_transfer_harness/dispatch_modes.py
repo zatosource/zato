@@ -7,9 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import time
 from hashlib import sha256
-from threading import Thread
+from threading import Event, Thread
 
 # Zato
 from zato.common.api import FileTransfer
@@ -39,8 +38,12 @@ _binary_payload = bytes(range(256)) * 8
 # How long a schedule waits for a file to stop changing in the tests that watch one grow, in seconds
 _stability_delay = 3
 
-# How long into that wait the file grows, in seconds - early enough for the schedule to still be waiting
-_growth_delay = 0.5
+# How often the file grows while the first run of the schedule lasts, in seconds - well within the stability delay,
+# so that the two listings of the run see different sizes however long the run takes to reach its first listing
+_growth_interval = 0.5
+
+# What each growth appends to the file
+_growth_chunk = ' and more'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -126,15 +129,22 @@ class DispatchModeTests(FileTransferScheduleTestBase):
 
         schedule = harness.create_schedule(conn, schedule_name, directory, stability_delay=_stability_delay)
 
-        # The file grows while the schedule is waiting to see whether it stopped changing
+        # The file grows for as long as the first run lasts, which covers the wait of the schedule
+        # to see whether it stopped changing, whenever the run begins that wait
+        is_first_run_complete = Event()
+        growth_count = 0
+
         def _grow_the_file() -> 'None':
-            time.sleep(_growth_delay)
-            harness.append(directory, 'growing.txt', ' and the second half')
+            nonlocal growth_count
+            while not is_first_run_complete.wait(_growth_interval):
+                harness.append(directory, 'growing.txt', _growth_chunk)
+                growth_count += 1
 
         grower = Thread(target=_grow_the_file, name='zato-test-file-growth', daemon=True)
         grower.start()
 
         harness.run(conn, schedule)
+        is_first_run_complete.set()
         grower.join()
 
         # The upload was still in progress, so nothing was delivered and the file stayed put ..
@@ -147,7 +157,7 @@ class DispatchModeTests(FileTransferScheduleTestBase):
         entries = harness.delivered(schedule_name)
 
         assert len(entries) == 1
-        assert entries[0]['data'] == 'The first half of the payload and the second half'
+        assert entries[0]['data'] == 'The first half of the payload' + _growth_chunk * growth_count
 
         harness.assert_names(harness.move_directory_of(directory), ['growing.txt'])
 

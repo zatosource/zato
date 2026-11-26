@@ -38,6 +38,9 @@ from zato.common.util.local_server import read_pid_file, stop_pid
 from zato.common.util.tcp import get_free_port
 from zato.server.demo_file_transfer.common import get_paths, Root_Env_Name
 
+# Zato - tests
+from live_environment.scheduler import delete_scheduler_keys
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -54,7 +57,7 @@ logger = logging.getLogger('zato.test.demo_file_transfer.conftest')
 
 # The private scheduler's Redis streams and HTTP port belong to this run only. The port search starts
 # at a random offset in a high range, away from the range that test servers allocate from.
-_scheduler_stream_prefix = 'zato:scheduler:test-demo-file-transfer-' + CryptoManager.generate_hex_string(32)
+_scheduler_stream_prefix = 'zato-test:scheduler:demo-file-transfer-' + CryptoManager.generate_hex_string(32)
 _scheduler_http_port = get_free_port(randint(41000, 51000))
 
 # How long to wait for the scheduler's HTTP API to come up, in seconds
@@ -293,6 +296,9 @@ def zato_server() -> 'any_':
         kill_process_tree(listener_process)
 
         kill_server_process(server_process, _kill_timeout, server_directory=server_directory)
+
+        # The server recreates the streams it reads for as long as it runs, so the keys are removed once it stopped
+        delete_scheduler_keys(_scheduler_stream_prefix)
 
         # The server was killed, so it had no chance to stop what it started
         _stop_demo_processes()

@@ -53,6 +53,9 @@ Target_Service = 'my.results.handler'
 # The run's own cid, what the dispatch service would carry
 Run_Cid = 'cid-schedule-run-1'
 
+# The logger of the dispatch service stub, which the schedule logs each failed delivery to
+Service_Logger_Name = 'test-file-transfer-schedule'
+
 # The directory the schedule polls, relative to the local base directory
 Directory = 'share/incoming'
 
@@ -226,7 +229,7 @@ class ServiceStub:
 
     def __init__(self, conn:'SMBConnection') -> 'None':
         self.cid = Run_Cid
-        self.logger = getLogger('test-file-transfer-schedule')
+        self.logger = getLogger(Service_Logger_Name)
         self.smb = {Connection_Name: conn}
         self.invoked:'anylist' = []
         self.contents:'anylist' = []

@@ -78,15 +78,22 @@ impl StreamKeys {
     }
 }
 
-/// Ensures the consumer group exists on the command stream.
+/// Stream ID at which a consumer group created at startup begins, so that commands left over from an earlier run are not replayed.
+pub const GROUP_START_NEW_ONLY: &str = "$";
+
+/// Stream ID at which a consumer group recreated after its command stream was removed begins,
+/// so that the commands the server published to the new stream before the group existed are processed.
+const GROUP_START_FIRST_ENTRY: &str = "0";
+
+/// Ensures the consumer group exists on the command stream, beginning at the given stream ID.
 ///
 /// Creates the stream and group if they do not exist.
-pub fn ensure_consumer_group(conn: &mut RedisLink, keys: &StreamKeys) {
+pub fn ensure_consumer_group(conn: &mut RedisLink, keys: &StreamKeys, start_id: &str) {
     let result: Result<(), redis::RedisError> = redis::cmd("XGROUP")
         .arg("CREATE")
         .arg(&keys.command)
         .arg(CONSUMER_GROUP_NAME)
-        .arg("$")
+        .arg(start_id)
         .arg("MKSTREAM")
         .query(conn);
 
@@ -258,6 +265,15 @@ pub fn command_listener_loop(conn: &mut RedisLink, keys: &StreamKeys, shared: &A
                 if msg.contains("timeout") || msg.contains("nil") {
                     continue;
                 }
+
+                // The command stream and its group were removed from Redis, e.g. by a key cleanup of another environment,
+                // and no command reaches the scheduler until the group exists again
+                if msg.contains("NOGROUP") {
+                    tracing::warn!("Recreating consumer group '{CONSUMER_GROUP_NAME}' on '{}': {err}", keys.command);
+                    ensure_consumer_group(conn, keys, GROUP_START_FIRST_ENTRY);
+                    continue;
+                }
+
                 tracing::error!("XREADGROUP error: {err}");
                 std::thread::sleep(std::time::Duration::from_secs(1));
                 continue;
