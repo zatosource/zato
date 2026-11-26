@@ -257,7 +257,8 @@ class SOAPRecordingReceiver(RecordingReceiver[SOAPRecordedRequest]):
 
         self._server = server
 
-        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        # The name is the same after a restart, so a receiver that a test stops and starts again leaves no new thread
+        thread = threading.Thread(target=server.serve_forever, name=f'soap-endpoint-{self.port}', daemon=True)
         thread.start()
 
         self._thread = thread
