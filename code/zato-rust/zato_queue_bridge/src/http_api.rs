@@ -1,6 +1,7 @@
 //! HTTP query API served by actix-web for the Zato server to read queue bridge state.
 //!
-//! All endpoints are GET-only, served on 127.0.0.1:35111, no authentication.
+//! All endpoints are GET-only, served on 127.0.0.1 on the port of `Zato_Queue_Bridge_HTTP_Port`,
+//! 35111 by default, with no authentication.
 
 use std::sync::Arc;
 
@@ -15,7 +16,10 @@ struct AppState {
     shared: Arc<BridgeShared>,
 }
 
-/// Starts the actix-web HTTP server on 127.0.0.1:35111.
+/// Port of the HTTP query API when `Zato_Queue_Bridge_HTTP_Port` is not set.
+pub const DEFAULT_HTTP_PORT: u16 = 35111;
+
+/// Starts the actix-web HTTP server on the given port of 127.0.0.1.
 ///
 /// This function blocks until the server shuts down.
 ///
@@ -23,10 +27,10 @@ struct AppState {
 /// which is by design - the server is awaited directly on the actix runtime of the main
 /// thread and is never moved to another one.
 #[expect(clippy::future_not_send, reason = "actix HttpServer is Rc-based and stays on its own runtime")]
-pub async fn start_http_server(shared: Arc<BridgeShared>) -> std::io::Result<()> {
+pub async fn start_http_server(shared: Arc<BridgeShared>, http_port: u16) -> std::io::Result<()> {
     let state = web::Data::new(AppState { shared });
 
-    tracing::info!("Starting HTTP query API on 127.0.0.1:35111");
+    tracing::info!("Starting HTTP query API on 127.0.0.1:{http_port}");
 
     HttpServer::new(move || {
         App::new()
@@ -34,7 +38,7 @@ pub async fn start_http_server(shared: Arc<BridgeShared>) -> std::io::Result<()>
             .route("/api/get_connections", web::get().to(get_connections))
             .route("/api/get_connection_status", web::get().to(get_connection_status))
     })
-    .bind("127.0.0.1:35111")?
+    .bind(("127.0.0.1", http_port))?
     .run()
     .await
 }

@@ -23,6 +23,7 @@ from requests.exceptions import ChunkedEncodingError
 
 # Zato
 from zato.common.exception import BackendInvocationError
+from zato.common.test.expected_records import expected_records
 from zato.common.util import http_retry
 
 # Test support
@@ -183,6 +184,7 @@ def test_other_error_metrics(endpoint:'TestEndpoint', server:'ServerStub', path:
 
 # ################################################################################################################################
 
+@expected_records(http_retry.logger.name)
 def test_retried_call_metrics(
     endpoint:'TestEndpoint',
     server:'ServerStub',

@@ -20,8 +20,10 @@ import pytest
 # Zato
 from zato.common.api import DATA_FORMAT, NotGiven
 from zato.common.exception import BackendInvocationError
+from zato.common.test.expected_records import expected_records
 from zato.common.typing_ import list_
 from zato.common.util import http_retry
+from zato.server.connection.http_soap.outgoing.common import logger as rest_logger
 
 # Test support
 from http_endpoint.endpoint import CloseMode, EndpointResponse, Host
@@ -136,6 +138,7 @@ def test_error_response_without_query_string(endpoint:'TestEndpoint', server:'Se
 
 # ################################################################################################################################
 
+@expected_records(rest_logger.name)
 def test_needs_exception_off(server:'ServerStub', path:'str') -> 'None':
     """ A call that fails before a response arrives returns None instead of raising when exceptions are not needed.
     """
@@ -229,6 +232,7 @@ def test_callback(endpoint:'TestEndpoint', server:'ServerStub', path:'str') -> '
 
 # ################################################################################################################################
 
+@expected_records(http_retry.logger.name)
 def test_retry_arguments(
     endpoint:'TestEndpoint',
     server:'ServerStub',

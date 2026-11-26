@@ -20,6 +20,7 @@ import pytest
 # Zato
 from zato.common.audit_log.common import TransportStatus
 from zato.common.exception import BackendInvocationError
+from zato.common.test.expected_records import expected_records
 from zato.common.util import http_retry
 
 # Test support
@@ -81,6 +82,7 @@ def test_no_retries_by_default(endpoint:'TestEndpoint', server:'ServerStub', pat
 
 # ################################################################################################################################
 
+@expected_records(http_retry.logger.name)
 def test_connection_error_retried(endpoint:'TestEndpoint', server:'ServerStub', path:'str', sleeps:'list[int]') -> 'None':
     """ A connection error is retried, each sleep longer than the previous one by the multiplier.
     """
@@ -98,6 +100,7 @@ def test_connection_error_retried(endpoint:'TestEndpoint', server:'ServerStub', 
 
 # ################################################################################################################################
 
+@expected_records(http_retry.logger.name)
 def test_timeout_retried(endpoint:'TestEndpoint', server:'ServerStub', path:'str', sleeps:'list[int]') -> 'None':
     """ A timeout is retried.
     """
@@ -115,6 +118,7 @@ def test_timeout_retried(endpoint:'TestEndpoint', server:'ServerStub', path:'str
 
 # ################################################################################################################################
 
+@expected_records(http_retry.logger.name)
 def test_retries_exhausted(endpoint:'TestEndpoint', server:'ServerStub', path:'str', sleeps:'list[int]') -> 'None':
     """ A connection error that persists through every retry is raised after the last attempt.
     """
@@ -131,6 +135,7 @@ def test_retries_exhausted(endpoint:'TestEndpoint', server:'ServerStub', path:'s
 
 # ################################################################################################################################
 
+@expected_records(http_retry.logger.name)
 def test_retry_after_seconds(endpoint:'TestEndpoint', server:'ServerStub', path:'str', sleeps:'list[int]') -> 'None':
     """ A rate-limited response with Retry-After in seconds is retried after that many seconds.
     """
@@ -146,6 +151,7 @@ def test_retry_after_seconds(endpoint:'TestEndpoint', server:'ServerStub', path:
 
 # ################################################################################################################################
 
+@expected_records(http_retry.logger.name)
 def test_retry_after_date(endpoint:'TestEndpoint', server:'ServerStub', path:'str', sleeps:'list[int]') -> 'None':
     """ A rate-limited response with Retry-After as a date is retried once that date is reached.
     """
@@ -182,6 +188,7 @@ def test_retry_after_beyond_budget(endpoint:'TestEndpoint', server:'ServerStub',
 
 # ################################################################################################################################
 
+@expected_records(http_retry.logger.name)
 def test_rate_limited_retries_exhausted(endpoint:'TestEndpoint', server:'ServerStub', path:'str', sleeps:'list[int]') -> 'None':
     """ A rate-limited response that persists through every retry is returned after the last attempt.
     """
@@ -197,6 +204,7 @@ def test_rate_limited_retries_exhausted(endpoint:'TestEndpoint', server:'ServerS
 
 # ################################################################################################################################
 
+@expected_records(http_retry.logger.name)
 def test_backoff_threshold(endpoint:'TestEndpoint', server:'ServerStub', path:'str', sleeps:'list[int]') -> 'None':
     """ The backoff threshold caps the total sleep time, ending the retries before max_retries is reached.
     """
@@ -220,6 +228,7 @@ def test_backoff_threshold(endpoint:'TestEndpoint', server:'ServerStub', path:'s
 
 # ################################################################################################################################
 
+@expected_records(http_retry.logger.name)
 def test_call_overrides_connection(endpoint:'TestEndpoint', server:'ServerStub', path:'str', sleeps:'list[int]') -> 'None':
     """ Retry settings given in the call win over the settings of the connection.
     """

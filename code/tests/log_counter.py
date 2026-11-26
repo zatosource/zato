@@ -52,6 +52,12 @@ class ModuleCtx:
     # .. the first line of a traceback ..
     Traceback_Marker = 'Traceback (most recent call last)'
 
+    # .. the lines that join a chained traceback to the one before it, which was already classified ..
+    Chained_Traceback_Markers = {
+        'During handling of the above exception, another exception occurred:',
+        'The above exception was the direct cause of the following exception:',
+    }
+
     # .. a Python warning, such as a DeprecationWarning or an SAWarning ..
     Python_Warning_Pattern = re.compile(r'\b[A-Z]\w*Warning: ')
 
@@ -94,6 +100,7 @@ class LogCounter:
         self.interrupt_count     = 0
         self.previous_is_record  = False
         self.in_warnings_summary = False
+        self.is_chained          = False
 
         self.is_console_open = True
         self.use_color       = sys.stdout.isatty()
@@ -147,6 +154,18 @@ class LogCounter:
         # .. a record that a test provokes deliberately is detail, and so is the traceback that it carries ..
         if ModuleCtx.Expected_Record_Marker in line:
             self.previous_is_record = True
+            self.is_chained = False
+            return
+
+        stripped = line.strip()
+
+        # .. a chained traceback continues the traceback before it, so it is classified as that one was ..
+        if stripped in ModuleCtx.Chained_Traceback_Markers:
+            self.is_chained = True
+            return
+
+        # .. with only the empty lines around the joining line between the two ..
+        if self.is_chained and not stripped:
             return
 
         is_error = bool(ModuleCtx.Error_Record_Pattern.search(line)) \
@@ -172,10 +191,11 @@ class LogCounter:
 
         # .. and a traceback is an error, unless it belongs to a log record on the same line or directly before it.
         elif ModuleCtx.Traceback_Marker in line:
-            if not (self.previous_is_record or is_detail):
+            if not (self.previous_is_record or is_detail or self.is_chained):
                 self.error_count += 1
 
         self.previous_is_record = is_error or is_warning or is_detail
+        self.is_chained = False
 
 # ################################################################################################################################
 

@@ -19,6 +19,9 @@ from json import loads
 # pytest
 import pytest
 
+# O365
+from O365.connection import log as o365_connection_logger
+
 # SQLAlchemy
 from sqlalchemy import select
 
@@ -29,8 +32,10 @@ from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import get_attachment, list_attachments
 from zato.common.ext.bunch import Bunch
+from zato.common.test.expected_records import expected_records
 from zato.common.test.zato_database import zato_database_engine
 from zato.server.connection.email import Microsoft365SMTPConnection, SMTPConnection, SMTPConnStore
+from zato.server.connection.email.smtp import logger as smtp_logger
 
 # Test support
 from chat_simulators import find_free_port
@@ -273,6 +278,8 @@ def test_attachments_travel_inside_the_message_and_into_the_audit_log(
 
 # ################################################################################################################################
 
+@expected_records(o365_connection_logger.name)
+@expected_records(smtp_logger.name)
 def test_rejected_credentials_write_the_error_and_the_send_returns_false(
     graph_server:'str',
     ) -> 'None':

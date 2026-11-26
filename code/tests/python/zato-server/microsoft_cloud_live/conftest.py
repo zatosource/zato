@@ -24,6 +24,7 @@ from urllib.request import Request, urlopen
 
 # Zato
 from zato.common.crypto.api import CryptoManager
+from zato.common.test.conftest_base_pubsub import Expected_Record_Marker
 from zato.common.test.zato_database import use_process_database
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -55,6 +56,12 @@ _process_kill_timeout = 5
 _server_wait_timeout  = 120
 _quickstart_timeout   = 180
 _ping_poll_interval   = 0.5
+
+# The server records that a test provokes deliberately, here the refusal of the token request
+# that test_bad_credentials_are_rejected sends with a client secret the simulator does not accept
+_expected_server_records = (
+    'Unable to fetch auth token. Error: invalid_client | Description: Invalid client secret',
+)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -190,6 +197,10 @@ def _start_server(server_directory:'str', server_port:'int', broker_port:'int') 
         for line in iter(readline, b''):
             text = line.decode('utf-8', errors='replace').rstrip()
             elapsed = time.monotonic() - popen_time
+
+            if any(record in text for record in _expected_server_records):
+                text = f'{Expected_Record_Marker} {text}'
+
             logger.debug('[SERVER %6.1fs] %s', elapsed, text)
 
     stdout_thread = threading.Thread(target=_stream_output, daemon=True)

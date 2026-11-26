@@ -18,7 +18,8 @@ import pytest
 # Zato
 from zato.common.audit_log.common import TransportStatus
 from zato.common.exception import BackendInvocationError
-from zato.common.util.tls_verify import Skip_Verify_Env_Key
+from zato.common.test.expected_records import expected_records
+from zato.common.util.tls_verify import logger as tls_verify_logger, Skip_Verify_Env_Key
 
 # Test support
 from support import new_connection, Test_CID
@@ -69,6 +70,7 @@ def test_verification_off_for_connection(endpoint:'TestEndpoint', server:'Server
 
 # ################################################################################################################################
 
+@expected_records(tls_verify_logger.name)
 def test_verification_off_for_process(
     endpoint:'TestEndpoint',
     server:'ServerStub',

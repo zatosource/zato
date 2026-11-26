@@ -11,6 +11,7 @@ import os
 import re
 import string
 from datetime import timedelta
+from hashlib import sha256
 from logging import getLogger
 from pathlib import Path
 from tempfile import gettempdir
@@ -146,5 +147,16 @@ def get_python_files(root_dir:'str') -> 'dictlist':
         except Exception as e:
             logger.warning('Could not read %s -> %s', full_path, e)
     return results
+
+# ################################################################################################################################
+
+def get_file_digest(full_path:'str') -> 'str':
+    """ Returns the SHA-256 digest of the contents of a file, as a hexadecimal string.
+    """
+    with open(full_path, 'rb') as f:
+        data = f.read()
+
+    out = sha256(data).hexdigest()
+    return out
 
 # ################################################################################################################################

@@ -20,6 +20,7 @@ import pytest
 # Zato
 from zato.common.api import SEC_DEF_TYPE
 from zato.common.exception import BackendInvocationError
+from zato.common.test.expected_records import expected_records
 from zato.common.util import http_retry
 
 # Test support
@@ -183,6 +184,7 @@ def test_lines_with_transport_error(endpoint:'TestEndpoint', server:'ServerStub'
 
 # ################################################################################################################################
 
+@expected_records(http_retry.logger.name)
 def test_lines_with_retries(
     endpoint:'TestEndpoint',
     server:'ServerStub',

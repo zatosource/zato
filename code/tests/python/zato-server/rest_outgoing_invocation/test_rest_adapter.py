@@ -20,6 +20,7 @@ import pytest
 
 # Zato
 from zato.common.api import DATA_FORMAT, RESTAdapterResponse
+from zato.common.test.expected_records import expected_records
 from zato.common.util import http_retry
 from zato.server.service import RESTAdapter
 
@@ -369,6 +370,7 @@ def test_needs_raw_response(endpoint:'TestEndpoint', server:'ServerStub', path:'
 
 # ################################################################################################################################
 
+@expected_records(http_retry.logger.name)
 def test_retry_attributes(
     endpoint:'TestEndpoint',
     server:'ServerStub',

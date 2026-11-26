@@ -6,8 +6,8 @@
 //! Standalone Zato queue bridge binary.
 //!
 //! Communicates with the Zato server via Redis Streams for commands and
-//! recv events, and serves an HTTP query API on 127.0.0.1:35111 for the
-//! server to read connection state.
+//! recv events, and serves an HTTP query API on 127.0.0.1, on the port of
+//! `Zato_Queue_Bridge_HTTP_Port` or 35111 by default, for the server to read connection state.
 
 use std::sync::Arc;
 
@@ -25,6 +25,8 @@ struct QueueBridgeConfig {
     redis_port: u16,
     /// Redis password (empty string if not set).
     redis_password: String,
+    /// Port of the HTTP query API on 127.0.0.1, which the server reads connection state from.
+    http_port: u16,
     /// Tracing log level filter.
     log_level: String,
 }
@@ -39,6 +41,10 @@ impl QueueBridgeConfig {
                 .and_then(|val| val.parse::<u16>().ok())
                 .unwrap_or(6379),
             redis_password: std::env::var("Zato_Queue_Bridge_Redis_Password").unwrap_or_default(),
+            http_port: std::env::var("Zato_Queue_Bridge_HTTP_Port")
+                .ok()
+                .and_then(|val| val.parse::<u16>().ok())
+                .unwrap_or(http_api::DEFAULT_HTTP_PORT),
             log_level: std::env::var("Zato_Queue_Bridge_Log_Level").unwrap_or_else(|_| "info".to_string()),
         }
     }
@@ -225,7 +231,7 @@ async fn main() -> std::io::Result<()> {
         .map_err(|err| std::io::Error::other(format!("Failed to spawn recv publisher: {err}")))?;
 
     let shared_for_http = Arc::clone(&shared);
-    let http_result = http_api::start_http_server(shared_for_http).await;
+    let http_result = http_api::start_http_server(shared_for_http, config.http_port).await;
 
     shared.stop_flag.store(true, std::sync::atomic::Ordering::Relaxed);
 

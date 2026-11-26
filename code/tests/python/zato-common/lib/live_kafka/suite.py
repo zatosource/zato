@@ -26,6 +26,7 @@ from live_environment.quickstart import Host
 from live_kafka.containers import create_topic, KafkaCluster
 from zato.common.audit_log.api import event_table
 from zato.common.crypto.api import CryptoManager
+from zato.common.util.api import pluralize
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -357,7 +358,7 @@ class KafkaSuite:
 
             time.sleep(ModuleCtx.Poll_Interval)
 
-        raise Exception(f'DLQ of `{conn_name}` did not hold {expected} messages within {timeout}s: {out}')
+        raise Exception(f'DLQ of `{conn_name}` did not hold {pluralize(expected, 'message')} within {timeout}s: {out}')
 
 # ################################################################################################################################
 

@@ -57,8 +57,8 @@ def kafka_suite() -> 'iterator_':
 
         # .. Redis and the bridge ..
         bridge = start_bridge_parts()
-        parts.add('redis-server', bridge.redis.stop)
-        parts.add('queue bridge', lambda: bridge.bridge.stop())
+        parts.add('redis-server', bridge.stop_redis)
+        parts.add('queue bridge', bridge.stop_bridge)
 
         # .. the server pointed at the same Redis ..
         directory = tempfile.mkdtemp(prefix='zato_kafka_')

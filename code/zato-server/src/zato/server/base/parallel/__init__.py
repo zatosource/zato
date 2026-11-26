@@ -61,7 +61,7 @@ from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_
 from zato.common.util.channel import ensure_openapi_channel_exists
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.file_transfer import path_string_list_to_list
-from zato.common.util.file_system import get_python_files
+from zato.common.util.file_system import get_file_digest, get_python_files
 from zato.common.util.gateway import ensure_mcp_gateway_exists, ensure_mcp_oauth_metadata_channel_exists
 from zato.common.util.hot_deploy_ import extract_pickup_from_items
 from zato.common.util.json_ import BasicParser
@@ -107,7 +107,7 @@ if 0:
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, intset, list_, strdict, strbytes, \
-        strlist, strorlistnone, strnone, strorlist, strset, strtuple
+        strlist, strorlistnone, strnone, strorlist, strset, strstrdict, strtuple
     from zato.server.connection.http_soap.url_data import URLData
     from zato.server.scheduler_.run_state import ClaimResult
     from zato.server.service.store import ServiceStore
@@ -279,6 +279,10 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
         self.tls_dir = ''
         self.static_dir = ''
         self.hot_deploy_config = Bunch()
+
+        # The digest of the contents of each file this process deployed, by its full path
+        self.deployed_file_digests:'strstrdict' = {}
+
         self.fs_server_config:'any_' = None
         self.fs_sql_config = Bunch()
         self.pickup_config = Bunch()
@@ -2263,13 +2267,23 @@ class ParallelServer(ConfigDispatchReceiver, ConfigLoader):
 # ################################################################################################################################
 
     def deploy_pickup_dir(self, *, is_relayed:'bool') -> 'None':
-        """ Deploys each Python file of the pickup directory. A relayed deployment sends no event to the other processes.
+        """ Deploys each Python file of the pickup directory that this process has not deployed with its current contents.
+        A relayed deployment sends no event to the other processes.
         """
         py_files = get_python_files(self.hot_deploy_config.pickup_dir)
         for item in py_files:
+
+            full_path = os.path.normpath(item['full_path'])
+
+            # A file deployed again would import its module anew and discard the state that its services keep in it ..
+            if full_path in self.deployed_file_digests:
+                if self.deployed_file_digests[full_path] == get_file_digest(full_path):
+                    continue
+
+            # .. so only a file that is new to this process or that changed since is deployed.
             _ = self.invoke('zato.hot-deploy.create', {
                 'payload': item['data'],
-                'payload_name': item['full_path'],
+                'payload_name': full_path,
                 'is_relayed': is_relayed,
             })
 

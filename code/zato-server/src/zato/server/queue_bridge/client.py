@@ -43,6 +43,12 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The queue bridge's HTTP query API binds on this port unless the environment overrides it
+_queue_bridge_http_port = os.environ.get('Zato_Queue_Bridge_HTTP_Port', '35111')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ModuleCtx:
     Command_Stream = 'zato:queue_bridge:stream:command'
     Reply_Stream = 'zato:queue_bridge:stream:reply'
@@ -53,7 +59,7 @@ class ModuleCtx:
 
     Consumer_Group = 'server'
     Consumer_Name = 'server-0'
-    Http_Base = 'http://127.0.0.1:35111'
+    Http_Base = f'http://127.0.0.1:{_queue_bridge_http_port}'
 
     # How long a command's reply is waited for by default, in seconds
     Reply_Timeout = 1.0

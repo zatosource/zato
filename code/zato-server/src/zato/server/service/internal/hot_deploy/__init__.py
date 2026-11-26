@@ -24,7 +24,7 @@ from zato.common.ext.bunch import Bunch
 from zato.common.typing_ import cast_
 from zato.common.broker_message import HOT_DEPLOY
 from zato.common.util.api import import_module_from_path, is_python_file, is_archive_file
-from zato.common.util.file_system import fs_safe_now
+from zato.common.util.file_system import fs_safe_now, get_file_digest
 from zato.common.util.import_graph import ImportGraph
 from zato.common.util.open_ import open_r, open_w
 from zato.common.util.python_ import import_module_by_path
@@ -715,7 +715,15 @@ class Create(AdminService):
 
             try:
                 self.backup_current_work_dir()
+
+                # The digest is read before the deployment, so a file that changes during it differs from the digest
+                # and the next deployment of the pickup directory deploys it again ..
+                file_digest = get_file_digest(payload_name)
+
                 services_deployed = self.deploy_package(payload, payload_name, is_importer) or []
+
+                # .. which otherwise passes over the file, as this process has it in effect already.
+                self.server.deployed_file_digests[payload_name] = file_digest
 
                 # Go through all services deployed, check if any needs post-processing
                 # and if does, call the relevant function and clear the flag.

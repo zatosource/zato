@@ -18,6 +18,8 @@ import pytest
 # Zato
 from zato.common.api import EnvVariable, SEC_DEF_TYPE
 from zato.common.exception import BackendInvocationError
+from zato.common.test.expected_records import expected_records
+from zato.server.connection.http_soap.outgoing.common import logger as rest_logger
 
 # Test support
 from support import Basic_Password, Basic_Username, get_basic_authorization, new_basic_auth_connection, new_connection, \
@@ -97,6 +99,7 @@ def test_password_change(endpoint:'TestEndpoint', server:'ServerStub', path:'str
 
 # ################################################################################################################################
 
+@expected_records(rest_logger.name)
 def test_missing_password(endpoint:'TestEndpoint', server:'ServerStub', path:'str') -> 'None':
     """ A password that is the placeholder of an environment variable that was never set raises an error
     naming the connection, and nothing is sent.
