@@ -19,6 +19,7 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_table
+from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
 from zato.common.test.client import AdminClient
 from zato.common.test.conftest_base_pubsub import find_free_port, start_server_process
@@ -310,11 +311,11 @@ def wait_for_queue_empty(
 # ################################################################################################################################
 
 def get_audit_events(cid:'str', event_type:'strnone'=None) -> 'anylist':
-    """ The events the audit log holds under one correlation id, oldest first.
+    """ The events the audit log holds under one correlation id, oldest first, each with its payload under data.
     """
     engine = get_database_engine()
 
-    query = select(event_table)
+    query = select(event_table, event_data)
     query = query.where(event_table.c.cid == cid)
 
     if event_type:

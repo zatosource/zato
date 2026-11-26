@@ -105,7 +105,8 @@ class MLLPRecordingReceiver(RecordingReceiver[MLLPRecordedRequest]):
         self._listener = listener
         self._is_running = True
 
-        thread = threading.Thread(target=self._serve, daemon=True)
+        # The name is the same after a restart, so a receiver that a test stops and starts again leaves no new thread
+        thread = threading.Thread(target=self._serve, name=f'mllp-endpoint-{self.port}', daemon=True)
         thread.start()
 
         self._thread = thread
