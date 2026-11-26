@@ -216,7 +216,7 @@ def zato_server(request:'any_'):
     repo_location = os.path.join(server_dir, 'config', 'repo')
 
     config = cast_('any_', get_config_object(repo_location, 'server.conf'))
-    config['main']['port'] = str(port)
+    config['main']['bind'] = f'0.0.0.0:{port}'
     update_config_file(config, repo_location, 'server.conf')
 
     # Add SQLite to sql.conf so SQL ping tests can use a file-based database

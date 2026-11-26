@@ -11,10 +11,13 @@ import os
 import subprocess
 from base64 import b64encode
 from http.client import OK
-from threading import Event, Thread
-from time import monotonic, sleep
-from urllib.error import HTTPError, URLError
+from time import monotonic
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
+
+# gevent
+from gevent import joinall, sleep as gevent_sleep, spawn
+from gevent.event import Event
 
 # PyPI
 import pytest
@@ -52,6 +55,9 @@ _wrong_password = 'test.reload.channel.wrong.' + CryptoManager.generate_hex_stri
 
 _enmasse_timeout = 120
 
+# How long one invocation of the admin API may take, a configuration reload included
+_admin_timeout = 120.0
+
 # How long a request to the channel may take, and how long the channel has to start answering after the import
 _request_timeout = 10
 _channel_ready_timeout = 60
@@ -61,6 +67,9 @@ _channel_ready_timeout = 60
 _reload_count = 5
 _reload_interval = 1.0
 _settle_time = 3.0
+
+# How long the callers have to finish their last requests once they are told to stop
+_caller_stop_timeout = 30
 
 # The records that the requests without valid credentials cause on the server
 _expected_server_records = (
@@ -96,7 +105,7 @@ class _CallerResults:
     """
     def __init__(self) -> 'None':
         self.status_codes:'intlist' = []
-        self.connection_errors:'strlist' = []
+        self.request_errors:'strlist' = []
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -137,8 +146,8 @@ def _call_until_stopped(url:'str', auth_headers:'auth_header_list', stop_event:'
         for auth_header in auth_headers:
             try:
                 status_code = _call_channel(url, auth_header)
-            except URLError as e:
-                results.connection_errors.append(str(e))
+            except OSError as e:
+                results.request_errors.append(f'{type(e).__name__}: {e}')
             else:
                 results.status_codes.append(status_code)
 
@@ -178,7 +187,7 @@ def _wait_for_channel(url:'str', auth_header:'str') -> 'None':
         status_code = _call_channel(url, auth_header)
         if status_code == OK:
             break
-        sleep(0.5)
+        gevent_sleep(0.5)
     else:
         raise Exception(f'Channel {_channel_name} did not respond with {OK} within {_channel_ready_timeout}s')
 
@@ -209,7 +218,7 @@ def channel_url(zato_server:'any_') -> 'str':
 def admin_client(zato_server:'any_') -> 'AdminClient':
     base_url = f'http://{zato_server["host"]}:{zato_server["port"]}'
 
-    out = AdminClient(base_url, zato_server['password'])
+    out = AdminClient(base_url, zato_server['password'], timeout=_admin_timeout)
     return out
 
 # ################################################################################################################################
@@ -232,28 +241,35 @@ def test_channel_security_holds_during_configuration_reloads(channel_url:'str', 
     refused_args = (channel_url, refused_auth_headers, stop_event, refused_results)
     accepted_args = (channel_url, accepted_auth_headers, stop_event, accepted_results)
 
-    refused_caller = Thread(target=_call_until_stopped, args=refused_args)
-    accepted_caller = Thread(target=_call_until_stopped, args=accepted_args)
-
-    refused_caller.start()
-    accepted_caller.start()
+    refused_caller = spawn(_call_until_stopped, *refused_args)
+    accepted_caller = spawn(_call_until_stopped, *accepted_args)
 
     # .. both call the channel while the configuration is reloaded repeatedly ..
     try:
-        for _ in range(_reload_count):
+        for reload_number in range(1, _reload_count + 1):
             _ = admin_client.invoke('zato.server.invoker', {'func_name': 'reload_config'})
-            sleep(_reload_interval)
 
-        sleep(_settle_time)
+            refused_count = len(refused_results.status_codes)
+            accepted_count = len(accepted_results.status_codes)
+
+            print(f'[RELOAD] {reload_number}/{_reload_count} done; refused requests={refused_count}; ' + \
+                f'accepted requests={accepted_count}', flush=True)
+
+            gevent_sleep(_reload_interval)
+
+        gevent_sleep(_settle_time)
 
     finally:
         stop_event.set()
-        refused_caller.join()
-        accepted_caller.join()
+        callers = joinall([refused_caller, accepted_caller], timeout=_caller_stop_timeout)
 
-    # .. every request reached the server ..
-    assert refused_results.connection_errors == []
-    assert accepted_results.connection_errors == []
+    # .. both callers stopped on their own ..
+    caller_count = len(callers)
+    assert caller_count == 2
+
+    # .. every request received a response ..
+    assert refused_results.request_errors == []
+    assert accepted_results.request_errors == []
 
     refused_count = len(refused_results.status_codes)
     accepted_count = len(accepted_results.status_codes)
