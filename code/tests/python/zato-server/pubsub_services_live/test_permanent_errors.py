@@ -13,7 +13,7 @@ from zato.common.test.order_to_cash.models import Step, Topic
 # Order-to-cash
 from order_to_cash.scenario import check_empty_queues, check_orders, count_audit_events, count_messages_by_topic, \
     get_ledger_entries, get_msg_ids, get_steps, new_po_number, new_standard_order, new_unknown_sku_order, Outcome, \
-    read_trail, wait_until
+    read_trail, Unknown_SKU, wait_until
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -42,6 +42,9 @@ def test_unknown_sku_exhausts_the_retries(suite:'Suite') -> 'None':
 
     orders = [new_unknown_sku_order(failed_po)]
     orders.extend(new_standard_order(other) for other in other_po_numbers)
+
+    # The server logs the delivery that it gives up on, which names the SKU
+    suite.environment.expect_records(Unknown_SKU)
 
     suite.submit_many(orders)
 

@@ -22,6 +22,7 @@ from zato.common.test.order_to_cash.models import ServiceName
 
 # Live environment
 from live_environment.quickstart import Host, ZatoEnvironment
+from live_environment.redis_process import ModuleCtx as RedisCtx, RedisProcess
 
 # Order-to-cash
 from order_to_cash.scenario import Channel, Module, render_definitions, Source, submit_order, submit_orders, wait_until
@@ -97,8 +98,13 @@ def _create_suite(*, is_receivables_deployed:'bool') -> 'Generator[Suite, None, 
     environment = ZatoEnvironment(directory, password_prefix=SuiteCtx.Password_Prefix)
     partner_password = CryptoManager.generate_hex_string()
 
+    # The streams of the scheduler and of the queue bridge have the same keys in every Redis,
+    # so the server receives a Redis of its own that no other server on this machine uses
+    redis = RedisProcess()
+
     try:
-        environment.create()
+        redis.start()
+        environment.create(redis_port=redis.port)
 
         _copy_module(environment, Module.Core, Source.Core)
         _copy_module(environment, Module.Fulfillment, Source.Fulfillment)
@@ -107,7 +113,15 @@ def _create_suite(*, is_receivables_deployed:'bool') -> 'Generator[Suite, None, 
         if is_receivables_deployed:
             _copy_module(environment, Module.Receivables, Source.Receivables)
 
-        environment.start({AuditLogCtx.Env_Enabled: 'True'})
+        server_environment = redis.server_environment()
+        server_environment.update({
+            'Zato_Queue_Bridge_Redis_Host': RedisCtx.Host,
+            'Zato_Queue_Bridge_Redis_Port': str(redis.port),
+            'Zato_Queue_Bridge_Redis_Password': '',
+            AuditLogCtx.Env_Enabled: 'True',
+        })
+
+        environment.start(server_environment)
 
         suite = Suite(environment, partner_password)
 
@@ -124,6 +138,7 @@ def _create_suite(*, is_receivables_deployed:'bool') -> 'Generator[Suite, None, 
 
     finally:
         environment.stop()
+        redis.cleanup()
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -20,6 +20,7 @@ from urllib.request import Request, urlopen
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.client import AdminClient
+from zato.common.test.conftest_base_pubsub import Expected_Record_Marker
 from zato.common.test.process_util import kill_process_tree
 from zato.common.test.reservation import reserve_port
 from zato.common.test.zato_database import create_test_database, drop_test_database
@@ -186,6 +187,10 @@ class ZatoEnvironment:
         # Each outcome that the listener reported for each path, in order, True for a deployment and False for a refusal
         self._deploy_outcomes:'dict[str, list[bool]]' = {}
 
+        # The fragments of the output lines that a test provokes deliberately, which the output is marked with
+        # so that the log counter of the run does not count them as errors or warnings
+        self._expected_records:'list[str]' = []
+
         _environments.append(self)
 
 # ################################################################################################################################
@@ -252,7 +257,11 @@ class ZatoEnvironment:
         """
         for line in iter(process.stdout.readline, b''):
             text = line.decode('utf8', errors='replace').rstrip()
-            print(f'[{label}] {text}')
+
+            if any(record in text for record in self._expected_records):
+                print(f'[{label}] {Expected_Record_Marker} {text}')
+            else:
+                print(f'[{label}] {text}')
 
             # The listener prints this once the server confirmed a file, which is what a deploy waits on ..
             if 'Deployed -> ' in text:
@@ -343,6 +352,15 @@ class ZatoEnvironment:
 
         # The listener needs a moment to set its directory watch up before a file written lands in it
         time.sleep(_listener_settle_seconds)
+
+# ################################################################################################################################
+
+    def expect_records(self, *fragments:'str') -> 'None':
+        """ Marks each output line that contains any of the fragments as provoked deliberately, from now until
+        the environment stops. The marking does not depend on when the line is read, which can be after the test
+        that provoked it has already completed.
+        """
+        self._expected_records.extend(fragments)
 
 # ################################################################################################################################
 

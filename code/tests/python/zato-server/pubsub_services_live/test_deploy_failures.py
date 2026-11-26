@@ -37,6 +37,10 @@ _orders_after = 10
 _first_version = 1
 _carrier_version = 2
 
+# What the server logs when the worker that received the broken module forwards it to the other ones and they refuse it,
+# which is the only record of the refusal that does not name the module
+_forwarded_deploy_failure = 'Forwarded invocation of `zato.hot-deploy.create`'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -47,6 +51,9 @@ def test_broken_module_leaves_the_previous_version(suite:'Suite') -> 'None':
     """
     before = [new_po_number('BEFORE-BROKEN') for _ in range(_orders_before)]
     after = [new_po_number('AFTER-BROKEN') for _ in range(_orders_after)]
+
+    # The server and the listener log the refusal of the broken module
+    suite.environment.expect_records(Module.Fulfillment, _forwarded_deploy_failure)
 
     set_step_delay(suite.server_directory, _step_delay)
 

@@ -41,15 +41,20 @@ def test_retry_after_publication_publishes_once(suite:'Suite') -> 'None':
 
     suite.submit(new_standard_order(po_number))
 
-    # The intake step repeats for this order, which was in flight during the fault ..
-    trail = check_orders(suite.client, {po_number: Outcome.Invoiced}, in_flight={po_number})
+    # The publication of the first attempt can complete the chain before the queue retries the intake,
+    # so the checks wait until the intake recorded each of its attempts ..
+    def _are_attempts_complete() -> 'bool':
+        items = get_trail_items(read_trail(suite.client), po_number, Step.Intake)
+        out = len(items) == _failed_attempts + 1
+        return out
 
-    # .. once for each attempt of the queue ..
-    items = get_trail_items(trail, po_number, Step.Intake)
-    assert len(items) == _failed_attempts + 1, items
+    wait_until(_are_attempts_complete, f'The {_failed_attempts + 1} attempts of the intake of PO `{po_number}`')
 
-    # .. while the topic has the order once, as checked with the rest of the chain.
     assert count_pending_failures(suite.server_directory, Fault.Intake_After_Publish, po_number) == 0
+
+    # .. after which the intake step repeats for this order, which was in flight during the fault,
+    # while the topic has the order once, as checked with the rest of the chain.
+    _ = check_orders(suite.client, {po_number: Outcome.Invoiced}, in_flight={po_number})
 
 # ################################################################################################################################
 
