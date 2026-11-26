@@ -14,7 +14,8 @@ from unittest.mock import MagicMock
 # Zato
 from zato.common.api import SEC_DEF_TYPE
 from zato.common.exception import Forbidden
-from zato.server.connection.http_soap.channel import RequestDispatcher
+from zato.common.test.expected_records import expected_records
+from zato.server.connection.http_soap.channel import logger as channel_logger, RequestDispatcher
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -104,6 +105,7 @@ class MatchedCredentialWithoutADefinitionTestCase(TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(channel_logger.name)
     def test_basic_auth_without_a_definition(self) -> 'None':
         dispatcher = _make_dispatcher()
         dispatcher.url_data.basic_auth_get_by_id.return_value = None
@@ -120,6 +122,7 @@ class MatchedCredentialWithoutADefinitionTestCase(TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(channel_logger.name)
     def test_apikey_without_a_definition(self) -> 'None':
         dispatcher = _make_dispatcher()
         dispatcher.url_data.apikey_get_by_id.return_value = None
@@ -134,6 +137,7 @@ class MatchedCredentialWithoutADefinitionTestCase(TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(channel_logger.name)
     def test_bearer_token_without_a_definition(self) -> 'None':
         dispatcher = _make_dispatcher()
         dispatcher.url_data.oauth_get_by_id.return_value = None

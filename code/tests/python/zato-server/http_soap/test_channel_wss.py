@@ -17,8 +17,9 @@ from zato.common.soap.envelope import attach_body, build_envelope, to_bytes
 from zato.common.soap.message import SOAPMessage
 from zato.common.soap.security.usernametoken import add_username_token
 from zato.common.soap.security.wss import Mode
+from zato.common.test.expected_records import expected_records
 from zato.server.connection.http_soap.channel_soap import parse_soap_request
-from zato.server.connection.http_soap.url_data import URLData
+from zato.server.connection.http_soap.url_data import logger as url_data_logger, URLData
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -130,6 +131,7 @@ class HandleSecurityWSSTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(url_data_logger.name)
     def test_a_wrong_password_is_refused(self) -> 'None':
         body = _make_envelope(_username, 'THE-WRONG-PASSWORD')
 
@@ -138,6 +140,7 @@ class HandleSecurityWSSTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(url_data_logger.name)
     def test_a_wrong_username_is_refused(self) -> 'None':
         body = _make_envelope('SOMEBODY-ELSE', _password)
 
@@ -146,6 +149,7 @@ class HandleSecurityWSSTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(url_data_logger.name)
     def test_a_message_with_no_token_is_refused(self) -> 'None':
         body = _make_envelope()
 
@@ -154,6 +158,7 @@ class HandleSecurityWSSTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(url_data_logger.name)
     def test_the_refusal_carries_no_challenge(self) -> 'None':
         # WS-Security credentials live in the message, so there is no HTTP scheme for a client to
         # retry under and a WWW-Authenticate header would name one that does not apply.

@@ -21,8 +21,10 @@ from zato.common.api import CONTENT_TYPE, DATA_FORMAT, MISC, IO, TRACE1, ZATO_NO
 from zato.common.exception import BackendInvocationError, BadRequest, Forbidden, \
     MethodNotAllowed, NotFound, ServiceMissingException, TooManyRequests, Unauthorized
 from zato.common.marshal_.api import ElementMissing
+from zato.common.test.expected_records import expected_records
 from zato.common.util.logging_ import current_cid, current_service_name
-from zato.server.connection.http_soap.channel import RequestDispatcher, response_404, response_405, status_response
+from zato.server.connection.http_soap.channel import logger as channel_logger, RequestDispatcher, response_404, \
+    response_405, status_response
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -231,6 +233,7 @@ class DispatchURLMatchTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(channel_logger.name)
     def test_no_url_match_returns_404(self) -> 'None':
         """ When url_data.match returns (None, False) and no channel is at that path, dispatch returns 404.
         """
@@ -247,6 +250,7 @@ class DispatchURLMatchTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(channel_logger.name)
     def test_no_url_match_with_other_methods_at_that_path_returns_405(self) -> 'None':
         """ A path channels do sit at, reached with a method none of them accepts, is a 405
         that names the methods they do accept.
@@ -298,6 +302,7 @@ class DispatchInactiveChannelTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(channel_logger.name)
     def test_inactive_channel_returns_error(self) -> 'None':
         """ An inactive channel triggers a NotFound and returns an error response.
         """
@@ -413,6 +418,7 @@ class DispatchSecurityGroupsTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(channel_logger.name)
     def test_security_groups_without_members_skips_check(self) -> 'None':
         """ When security_groups_ctx has no members, check_security_via_groups is not called.
         """
@@ -1049,6 +1055,7 @@ class DispatchHypothesisTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(channel_logger.name)
     @given(
         is_active=st.booleans(),
         data_format=st.sampled_from([DATA_FORMAT.JSON, DATA_FORMAT.DICT, DATA_FORMAT.FORM_DATA, IO.FORMAT.FORM_DATA]),
@@ -1079,6 +1086,7 @@ class DispatchHypothesisTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(channel_logger.name)
     @given(
         use_sec_def=st.booleans(),
         use_groups=st.booleans(),

@@ -327,6 +327,7 @@ class AuditLog:
         # .. the text of the event, e.g. a response decoded from binary data, may contain NUL characters ..
         bodies = {kind: _replace_nul(body) for kind, body in bodies.items()}
 
+        event_type = _replace_nul(event_type)
         status = _replace_nul(status)
         data = _replace_nul(data)
         internal_data = _replace_nul(internal_data)

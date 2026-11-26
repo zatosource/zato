@@ -23,9 +23,10 @@ from zato.common.exception import (
     NotFound, ServiceMissingException, TooManyRequests, Unauthorized,
 )
 from zato.server.connection.http_soap.channel import (
-    RequestDispatcher, RequestHandler, _RequestMeta, status_response
+    logger as channel_logger, RequestDispatcher, RequestHandler, _RequestMeta, status_response
 )
 from zato.common.typing_ import cast_
+from zato.common.test.expected_records import expected_records
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -427,6 +428,7 @@ class CheckSecurityTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(channel_logger.name)
     def test_empty_security_groups_only_protection_rejects(self) -> 'None':
         """ A channel whose only protection is a group with no members rejects the request.
         """
@@ -932,6 +934,7 @@ class CheckSecurityGroupsTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(channel_logger.name)
     def test_both_basic_auth_and_apikey_raises_bad_request(self) -> 'None':
         """ When both HTTP_AUTHORIZATION and apikey header are present, BadRequest is raised.
         """
@@ -977,6 +980,7 @@ class CheckSecurityGroupsTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(channel_logger.name)
     def test_only_basic_auth_invalid_raises_forbidden(self) -> 'None':
         """ When basic_auth check fails (returns falsy), Forbidden is raised.
         """
@@ -1020,6 +1024,7 @@ class CheckSecurityGroupsTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(channel_logger.name)
     def test_only_apikey_invalid_raises_forbidden(self) -> 'None':
         """ When apikey check fails (returns falsy), Forbidden is raised.
         """
@@ -1039,6 +1044,7 @@ class CheckSecurityGroupsTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(channel_logger.name)
     def test_neither_auth_nor_apikey_raises_forbidden(self) -> 'None':
         """ When neither basic auth nor apikey is present, Forbidden is raised.
         """
@@ -1084,6 +1090,7 @@ class CheckSecurityGroupsCustomHeaderTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(channel_logger.name)
     def test_default_header_ignored_when_custom_configured(self) -> 'None':
         """ When the channel is configured with a custom header, a key sent in the default X-API-Key header is ignored,
         which means neither Basic Auth nor API key is found and Forbidden is raised.

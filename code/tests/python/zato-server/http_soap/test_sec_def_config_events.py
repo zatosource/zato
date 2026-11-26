@@ -13,9 +13,10 @@ from unittest.mock import MagicMock
 # Zato
 from zato.common.api import SEC_DEF_TYPE
 from zato.common.ext.bunch import Bunch
+from zato.common.test.expected_records import expected_records
 from zato.common.typing_ import cast_
 from zato.server.connection.http_soap import Unauthorized
-from zato.server.connection.http_soap.url_data import URLData
+from zato.server.connection.http_soap.url_data import logger as url_data_logger, URLData
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -147,6 +148,7 @@ class SecretCarryingEditTestCase(TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(url_data_logger.name)
     def test_an_edit_of_something_never_cached_is_refused(self) -> 'None':
         url_data = _make_url_data()
 
@@ -157,6 +159,7 @@ class SecretCarryingEditTestCase(TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(url_data_logger.name)
     def test_an_edit_of_something_never_cached_leaves_the_rest_alone(self) -> 'None':
         url_data = _make_url_data()
 
@@ -233,6 +236,7 @@ class APIKeyEditTestCase(TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(url_data_logger.name)
     def test_an_edit_of_something_never_cached_is_refused(self) -> 'None':
         url_data = _make_url_data()
 
@@ -309,6 +313,7 @@ class InactiveDefinitionTestCase(TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(url_data_logger.name)
     def test_a_key_deactivated_by_an_edit_is_refused(self) -> 'None':
         url_data = self._make_secured_url_data()
         self._edit(url_data, False)
@@ -342,6 +347,7 @@ class InactiveDefinitionTestCase(TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(url_data_logger.name)
     def test_an_inactive_basic_auth_definition_is_refused(self) -> 'None':
         url_data = _make_url_data()
 

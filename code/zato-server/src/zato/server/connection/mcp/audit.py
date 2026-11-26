@@ -11,7 +11,7 @@ from math import ceil
 
 # Zato
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
-from zato.common.audit_log.common import MCPAttr
+from zato.common.audit_log.common import Attr_Value_Max_Len, MCPAttr
 from zato.common.json_internal import dumps
 from zato.server.connection.mcp.common import printable
 
@@ -136,7 +136,12 @@ def build_audit_event(
     if method in _method_to_event:
         event_type = _method_to_event[method]
     else:
-        event_type = printable(method)
+        method_length = len(method)
+
+        if method_length > Attr_Value_Max_Len:
+            event_type = printable(method)
+        else:
+            event_type = method
 
     # .. only tools/call events carry a tool name ..
     if tool_name is None:

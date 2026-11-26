@@ -25,10 +25,12 @@ from zato.common.soap.message import SOAPMessage
 from zato.common.soap.mtom import build_mtom, parse_message, to_bytes_map
 from zato.common.soap.security.saml import add_assertion, new_assertion
 from zato.common.soap.security.wss import Mode
+from zato.common.test.expected_records import expected_records
 from zato.common.util.xml_.core import qname
-from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler, SOAP_Max_Body_Size
+from zato.server.connection.http_soap.channel import logger as channel_logger, RequestDispatcher, RequestHandler, \
+    SOAP_Max_Body_Size
 from zato.server.connection.http_soap.channel_soap import build_soap_fault_response, build_soap_response, \
-    parse_soap_request, resolve_soap_payload
+    logger as soap_logger, parse_soap_request, resolve_soap_payload
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -232,12 +234,14 @@ class ParseSOAPRequestTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(soap_logger.name)
     def test_invalid_xml_raises_bad_request(self) -> 'None':
         with self.assertRaises(BadRequest):
             _ = parse_soap_request(_test_cid, b'this is not an envelope', 'text/xml', _make_channel_item())
 
 # ################################################################################################################################
 
+    @expected_records(soap_logger.name)
     def test_non_envelope_root_raises_bad_request(self) -> 'None':
         with self.assertRaises(BadRequest):
             _ = parse_soap_request(_test_cid, b'<data>value</data>', 'text/xml', _make_channel_item())
@@ -726,6 +730,7 @@ class BodySizeTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(channel_logger.name)
     def test_a_body_over_the_default_limit_is_refused(self) -> 'None':
         payload = b'x' * (SOAP_Max_Body_Size + 1)
 
@@ -744,6 +749,7 @@ class BodySizeTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(channel_logger.name)
     def test_a_channel_may_lower_its_limit(self) -> 'None':
         payload = b'x' * 2048
         channel_item = _make_channel_item({'max_body_size': 1024})
@@ -753,6 +759,7 @@ class BodySizeTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(channel_logger.name)
     def test_the_limit_is_not_disclosed_to_the_caller(self) -> 'None':
         # The caller is not authenticated at this point, so what it is told is that the message is
         # too large and nothing about how large is too large.

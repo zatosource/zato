@@ -14,7 +14,9 @@ from unittest.mock import MagicMock, patch
 # Zato
 from zato.common.api import DATA_FORMAT, URL_TYPE, ZATO_NONE
 from zato.common.exception import Forbidden
-from zato.server.connection.http_soap.channel import Portal_Caller_Key, RequestDispatcher, status_response
+from zato.common.test.expected_records import expected_records
+from zato.server.connection.http_soap.channel import logger as channel_logger, Portal_Caller_Key, RequestDispatcher, \
+    status_response
 from zato.server.api_portal.invoke import _build_request_ctx
 
 # ################################################################################################################################
@@ -149,6 +151,7 @@ class PortalCallerSecurityTestCase(TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(channel_logger.name)
     def test_groups_without_members_refuse_a_request_over_http(self) -> 'None':
         security_groups_ctx = MagicMock()
         security_groups_ctx.has_members.return_value = False

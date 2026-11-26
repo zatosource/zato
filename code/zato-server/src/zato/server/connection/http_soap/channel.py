@@ -279,7 +279,7 @@ def client_json_error(cid:'str', details:'any_') -> 'str':
     if details:
         message['details'] = exc_details
 
-    return dumps(message)
+    return dumps(message, indent=_response_indent)
 
 # ################################################################################################################################
 
@@ -330,7 +330,7 @@ def serialize_response_payload(payload:'any_', data_format:'str') -> 'any_':
 
     # .. a dict behind a channel whose data format is dict-like is serialised as it is ..
     elif isinstance(payload, dict) and data_format in ModuleCtx.Dict_Like:
-        out = dumps(payload)
+        out = dumps(payload, indent=_response_indent)
 
     elif payload:
         out = _serialize_payload(payload)
@@ -642,7 +642,7 @@ class RequestDispatcher:
             if isinstance(out, dict):
                 if 'response' in out:
                     out = out['response']
-                    out = dumps(out)
+                    out = dumps(out, indent=_response_indent)
         else:
             out = response.payload
 
@@ -1778,7 +1778,7 @@ class RequestHandler:
                 else:
                     payload = zato_env
 
-                response.payload = dumps(payload)
+                response.payload = dumps(payload, indent=_response_indent)
         else:
             # Read once here - the vivified-model check above may have replaced it already.
             response.payload = serialize_response_payload(response.payload, data_format)

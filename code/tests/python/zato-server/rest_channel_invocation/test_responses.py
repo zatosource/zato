@@ -49,7 +49,7 @@ _customer_model_list = [
 def _json_bytes(value:'any_') -> 'bytes':
     """ Returns the bytes a value is serialized to in a JSON response.
     """
-    out = json.dumps(value, indent=4).encode('utf-8')
+    out = json.dumps(value).encode('utf-8')
     return out
 
 # ################################################################################################################################
@@ -84,7 +84,7 @@ def test_string(client:'ChannelClient') -> 'None':
 
 def test_bytes(client:'ChannelClient') -> 'None':
     response = client.get(Paths.Response_Bytes)
-    _assert_response(response, OK, 'OK', 'application/json', b'"Customer record accepted"')
+    _assert_response(response, OK, 'OK', 'application/json', b'Customer record accepted')
 
 # ################################################################################################################################
 
