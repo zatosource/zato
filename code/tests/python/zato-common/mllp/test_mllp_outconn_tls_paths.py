@@ -20,6 +20,7 @@ from zato.server.service.internal.generic.connection import hook, on_mllp_outgoi
 # ################################################################################################################################
 # ################################################################################################################################
 
+_address   = 'receiving-system.example.com:2575'
 _ca_path   = '/etc/zato/tls/receiving-system-ca.pem'
 _cert_path = '/etc/zato/tls/sending-system-cert.pem'
 _key_path  = '/etc/zato/tls/sending-system-key.pem'
@@ -74,7 +75,8 @@ class TestOutgoingTLSPaths:
 # ################################################################################################################################
 
     def test_the_hook_refuses_a_save_with_a_client_certificate_and_no_ca_bundle(self) -> 'None':
-        data = Bunch(name='outgoing.mllp.mutual', tls_ca_path='', tls_cert_path=_cert_path, tls_key_path=_key_path)
+        data = Bunch(name='outgoing.mllp.mutual', address=_address, tls_ca_path='', tls_cert_path=_cert_path,
+            tls_key_path=_key_path)
 
         with pytest.raises(BadRequest) as context:
             on_mllp_outgoing_create_edit(_Service(), data, None, None)
@@ -87,7 +89,8 @@ class TestOutgoingTLSPaths:
 # ################################################################################################################################
 
     def test_the_hook_accepts_a_save_with_a_client_certificate_and_a_ca_bundle(self) -> 'None':
-        data = Bunch(name='outgoing.mllp.mutual', tls_ca_path=_ca_path, tls_cert_path=_cert_path, tls_key_path=_key_path)
+        data = Bunch(name='outgoing.mllp.mutual', address=_address, tls_ca_path=_ca_path, tls_cert_path=_cert_path,
+            tls_key_path=_key_path)
 
         on_mllp_outgoing_create_edit(_Service(), data, None, None)
 

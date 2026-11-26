@@ -137,11 +137,11 @@ def test_the_resubmit_links_come_from_the_request_context() -> 'None':
 
 # ################################################################################################################################
 
-def test_the_records_are_linked_only_when_the_keys_are_present(tmp_path:'any_') -> 'None':
+def test_the_records_are_linked_only_when_the_keys_are_present() -> 'None':
     """ The request and the response the hook records are linked to the event named in the request
     context, and left unlinked when nothing is named.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         audit_log = AuditLog(Server_Name)
 
@@ -175,11 +175,11 @@ def test_the_records_are_linked_only_when_the_keys_are_present(tmp_path:'any_') 
 
 # ################################################################################################################################
 
-def test_a_reprocess_reinvokes_the_service_with_the_stored_body(tmp_path:'any_') -> 'None':
+def test_a_reprocess_reinvokes_the_service_with_the_stored_body() -> 'None':
     """ A reprocess hands the stored request body to the same service and names the original event
     in the request context - the service's own request and response events are the linked new attempt.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         original_id = _seed_original_request()
 
@@ -231,11 +231,11 @@ def test_a_reprocess_reinvokes_the_service_with_the_stored_body(tmp_path:'any_')
 
 # ################################################################################################################################
 
-def test_a_failed_reprocess_leaves_a_failed_response_on_record(tmp_path:'any_') -> 'None':
+def test_a_failed_reprocess_leaves_a_failed_response_on_record() -> 'None':
     """ A reprocess whose service raised comes back as a report with the error inside, and the
     response the hook recorded says the attempt failed.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         original_id = _seed_original_request()
 
@@ -270,10 +270,10 @@ def test_a_failed_reprocess_leaves_a_failed_response_on_record(tmp_path:'any_') 
 
 # ################################################################################################################################
 
-def test_only_requests_can_be_reprocessed(tmp_path:'any_') -> 'None':
+def test_only_requests_can_be_reprocessed() -> 'None':
     """ A response is not what a service was given - asking to run one again refuses.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         _ = _seed_original_request()
 

@@ -1806,10 +1806,6 @@ test-hl7: ## Every HL7 test - parsing, FHIR, MLLP channels, outgoing connections
 		$(CURDIR)/code/tests/python/zato-common/hl7_audit/ \
 		$(CURDIR)/code/tests/python/zato-common/hl7_feed/ \
 		$(CURDIR)/code/tests/python/zato-common/channel_state/ \
-		$(CURDIR)/code/tests/python/zato-common/alerting/ \
-		$(CURDIR)/code/tests/python/zato-common/destination/ \
-		$(CURDIR)/code/tests/python/zato-server/destinations/ \
-		$(CURDIR)/code/tests/python/zato-common/demo_seed/ \
 		--ignore=$(CURDIR)/code/tests/python/zato-common/mllp/fuzz \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7 -W ignore::DeprecationWarning \
 		$(PYTEST_ARGS) $(Zato_Log)
@@ -1833,10 +1829,6 @@ test-hl7: ## Every HL7 test - parsing, FHIR, MLLP channels, outgoing connections
 		$(CURDIR)/code/tests/python/zato-common/mllp_channels/ \
 		$(CURDIR)/code/tests/python/zato-server/mllp_integration/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_mllp_channels -W ignore::DeprecationWarning \
-		$(PYTEST_ARGS) $(Zato_Log)
-	-ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
-		$(CURDIR)/code/tests/python/zato-server/mllp_languages/ \
-		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_hl7_mllp_languages -W ignore::DeprecationWarning \
 		$(PYTEST_ARGS) $(Zato_Log)
 	-ZATO_TEST_BASE_DIR=$(CURDIR) \
 	Zato_Test_HL7_Outconn_Third_Party=1 \

@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from copy import copy
 from threading import Lock
 
 # Zato
@@ -123,9 +124,11 @@ class CommitQueue:
         if is_runner:
             self._commit(ticket)
 
-        # .. and the outcome of the commit is the caller's own.
+        # .. and the outcome of the commit is the caller's own. Each caller raises a copy of the exception of the commit,
+        # because each raise extends the traceback of the object raised, which the callers of one commit share.
         if ticket.exception is not None:
-            raise ticket.exception
+            exception = copy(ticket.exception)
+            raise exception from ticket.exception
 
 # ################################################################################################################################
 

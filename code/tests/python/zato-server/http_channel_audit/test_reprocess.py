@@ -166,11 +166,11 @@ def test_the_catalog_offers_reprocess_for_both_channel_kinds() -> 'None':
 
 # ################################################################################################################################
 
-def test_a_rest_request_reaches_the_channel_service_with_the_channel_data_format(tmp_path:'any_') -> 'None':
+def test_a_rest_request_reaches_the_channel_service_with_the_channel_data_format() -> 'None':
     """ A reprocess hands the raw body to the REST channel's service in the channel's data format
     and leaves the new attempt as its own event under the channel, linked to the original one.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         original_id = _seed_original_request(AuditSource.REST_Channel, REST_Channel_Name, REST_Service, REST_Body)
 
@@ -220,11 +220,11 @@ def test_a_rest_request_reaches_the_channel_service_with_the_channel_data_format
 
 # ################################################################################################################################
 
-def test_a_soap_request_reaches_the_channel_service_as_xml(tmp_path:'any_') -> 'None':
+def test_a_soap_request_reaches_the_channel_service_as_xml() -> 'None':
     """ A SOAP channel's envelope is not JSON - it is read raw and reaches the service as XML,
     recorded under the SOAP channel source.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         original_id = _seed_original_request(AuditSource.SOAP_Channel, SOAP_Channel_Name, SOAP_Service, SOAP_Body)
 
@@ -255,11 +255,11 @@ def test_a_soap_request_reaches_the_channel_service_as_xml(tmp_path:'any_') -> '
 
 # ################################################################################################################################
 
-def test_a_failed_reprocess_is_recorded_too(tmp_path:'any_') -> 'None':
+def test_a_failed_reprocess_is_recorded_too() -> 'None':
     """ A reprocess whose service is still down comes back as a report with the error inside,
     and the failed attempt is on record with the same links and the error as its status.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         original_id = _seed_original_request(AuditSource.REST_Channel, REST_Channel_Name, REST_Service, REST_Body)
 
@@ -298,10 +298,10 @@ def test_a_failed_reprocess_is_recorded_too(tmp_path:'any_') -> 'None':
 
 # ################################################################################################################################
 
-def test_a_channel_that_no_longer_exists_refuses(tmp_path:'any_') -> 'None':
+def test_a_channel_that_no_longer_exists_refuses() -> 'None':
     """ A request of a channel that was deleted since cannot reach a service and the report says so.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         original_id = _seed_original_request(AuditSource.REST_Channel, 'audit.test.gone.channel', REST_Service, REST_Body)
 
@@ -318,10 +318,10 @@ def test_a_channel_that_no_longer_exists_refuses(tmp_path:'any_') -> 'None':
 
 # ################################################################################################################################
 
-def test_only_received_requests_can_be_reprocessed(tmp_path:'any_') -> 'None':
+def test_only_received_requests_can_be_reprocessed() -> 'None':
     """ A response the channel sent is not a request - asking to run one again refuses.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         audit_log = AuditLog(Server_Name)
         response_id = audit_log.insert(AuditSource.REST_Channel, AuditEvent.Response_Sent, REST_Channel_Name,

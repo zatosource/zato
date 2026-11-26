@@ -260,11 +260,11 @@ def test_the_job_is_read_whole_while_its_session_is_open() -> 'None':
 
 # ################################################################################################################################
 
-def test_a_reprocess_runs_the_job_as_a_linked_run(tmp_path:'any_') -> 'None':
+def test_a_reprocess_runs_the_job_as_a_linked_run() -> 'None':
     """ A reprocess invokes the job's service with the job's extra data and leaves the new run
     as its own event linked to the original one.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         original_id = _seed_original_run(outcome=SCHEDULER.OUTCOME.ERROR)
 
@@ -320,11 +320,11 @@ def test_a_reprocess_runs_the_job_as_a_linked_run(tmp_path:'any_') -> 'None':
 
 # ################################################################################################################################
 
-def test_a_failed_reprocess_is_recorded_as_an_error_run(tmp_path:'any_') -> 'None':
+def test_a_failed_reprocess_is_recorded_as_an_error_run() -> 'None':
     """ A reprocess whose service is still down comes back as a report with the error inside,
     and the failed run is on record with the same links and the traceback.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         original_id = _seed_original_run(outcome=SCHEDULER.OUTCOME.ERROR)
 
@@ -364,10 +364,10 @@ def test_a_failed_reprocess_is_recorded_as_an_error_run(tmp_path:'any_') -> 'Non
 
 # ################################################################################################################################
 
-def test_a_job_without_extra_hands_its_service_nothing(tmp_path:'any_') -> 'None':
+def test_a_job_without_extra_hands_its_service_nothing() -> 'None':
     """ A job with no extra data invokes its service with what the ODB holds.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         original_id = _seed_original_run(outcome=SCHEDULER.OUTCOME.OK)
 
@@ -381,10 +381,10 @@ def test_a_job_without_extra_hands_its_service_nothing(tmp_path:'any_') -> 'None
 
 # ################################################################################################################################
 
-def test_a_job_the_odb_no_longer_has_refuses(tmp_path:'any_') -> 'None':
+def test_a_job_the_odb_no_longer_has_refuses() -> 'None':
     """ A run of a job that was deleted since cannot be repeated and the report says so.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         original_id = _seed_original_run(outcome=SCHEDULER.OUTCOME.OK)
 
@@ -402,10 +402,10 @@ def test_a_job_the_odb_no_longer_has_refuses(tmp_path:'any_') -> 'None':
 
 # ################################################################################################################################
 
-def test_only_job_runs_can_be_reprocessed(tmp_path:'any_') -> 'None':
+def test_only_job_runs_can_be_reprocessed() -> 'None':
     """ An event of another type under the scheduler is not a run - asking to repeat one refuses.
     """
-    with audit_db_env(tmp_path):
+    with audit_db_env():
 
         audit_log = AuditLog(Server_Name)
         other_id = audit_log.insert(AuditSource.Scheduler, AuditEvent.Service_Request, Job_Name, cid='cid-scheduler-other')

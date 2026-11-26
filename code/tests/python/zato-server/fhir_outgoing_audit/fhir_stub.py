@@ -93,9 +93,11 @@ class _FHIRHandler(BaseHTTPRequestHandler):
         body = self.rfile.read(content_length).decode('utf-8')
         stand_in.requests.append((self.command, self.path, body))
 
-        # A stalling stand-in outlasts the client's patience, so the client sees a timeout
+        # A stalling stand-in outlasts the client's patience, so the client sees a timeout, and it does not answer,
+        # because the client has closed the connection by then
         if stand_in.is_stalling:
             time.sleep(Stall_Seconds)
+            return
 
         response_body = stand_in.body.encode('utf-8')
 

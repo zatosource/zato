@@ -103,6 +103,19 @@ def _insert(audit_log:'AuditLog', index:'int') -> 'intnone':
 
 # ################################################################################################################################
 
+def _insert_failing(audit_log:'AuditLog', index:'int') -> 'Exception':
+    """ Writes one event whose commit is to fail and returns the exception raised, which a greenlet would print
+    if it ended with it.
+    """
+    try:
+        _ = _insert(audit_log, index)
+    except Exception as e:
+        return e
+
+    raise Exception(f'Event {index} was written although its commit was to fail')
+
+# ################################################################################################################################
+
 def _write_event_list(audit_log:'AuditLog', index:'int') -> 'pending_event_list':
     """ Writes several events of one operation together, each with a cid of its own.
     """
@@ -283,13 +296,23 @@ def test_failing_commit_raises_in_each_caller(audit_backend:'str') -> 'None':
     greenlets:'anylist' = []
 
     for index in range(_caller_count):
-        greenlet = spawn(_insert, audit_log, index)
+        greenlet = spawn(_insert_failing, audit_log, index)
         greenlets.append(greenlet)
 
-    _ = joinall(greenlets)
+    _ = joinall(greenlets, raise_error=True)
+
+    # Each caller receives an exception object of its own, caused by the exception of the commit.
+    exceptions:'anylist' = []
 
     for greenlet in greenlets:
-        assert str(greenlet.exception) == _error_message
+        exception = greenlet.value
+        assert str(exception) == _error_message
+        assert str(exception.__cause__) == _error_message
+
+        for other in exceptions:
+            assert exception is not other
+
+        exceptions.append(exception)
 
     # The queue is not left waiting for a commit that failed.
     audit_log.is_failing = False
@@ -521,16 +544,22 @@ class TestCommitQueue:
         sleep(0)
 
         # .. a second one stops waiting before its event is taken ..
-        def write_with_timeout() -> 'None':
+        def write_with_timeout() -> 'Timeout':
             pending = _new_pending(1)
 
-            with Timeout(_commit_time):
-                queue.write(pending, weight=_event_weight, is_urgent=False)
+            # The timeout is returned rather than raised, which a greenlet would print if it ended with it
+            try:
+                with Timeout(_commit_time):
+                    queue.write(pending, weight=_event_weight, is_urgent=False)
+            except Timeout as e:
+                return e
+
+            raise Exception('Event 1 was written although its caller stopped waiting')
 
         abandoned = spawn(write_with_timeout)
         _ = abandoned.join()
 
-        assert isinstance(abandoned.exception, Timeout)
+        assert isinstance(abandoned.value, Timeout)
 
         # .. a third one waits ..
         third = spawn(queue.write, _new_pending(2), weight=_event_weight, is_urgent=False)
