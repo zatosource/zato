@@ -453,31 +453,34 @@ function Step-Observer($Task) {
 function Start-SMBServiceRestart($Command) {
 
     # The restart runs in a process of its own, so that the heartbeat continues while the service is down
-    $null = Start-Process -FilePath 'powershell.exe' -WindowStyle Hidden `
+    $restart = Start-Process -FilePath 'powershell.exe' -WindowStyle Hidden -PassThru `
         -ArgumentList '-NoProfile', '-Command', 'Restart-Service -Name LanmanServer -Force'
 
     $Tasks[$Command.task] = @{
         kind       = 'service-wait'
         command    = $Command
-        was_down   = $false
+        restart    = $restart
     }
     Write-AgentEvent ([ordered]@{ kind = 'fault-started'; run = $Command.run; fault = 'restart-smb-service' })
 }
 
 function Step-ServiceWait($Task) {
 
+    # The restart has ended once its process exited, because Restart-Service returns only after the service started again.
+    # The status of the service alone does not tell it, a restart can complete between two ticks of the agent.
+    if (-not $Task.restart.HasExited) {
+        return
+    }
+
     $command = $Task.command
     $status = (Get-Service -Name 'LanmanServer').Status
 
     if ($status -ne 'Running') {
-        $Task.was_down = $true
         return
     }
 
-    if ($Task.was_down) {
-        $Tasks.Remove($command.task)
-        Write-AgentEvent ([ordered]@{ kind = 'fault-ended'; run = $command.run; fault = 'restart-smb-service' })
-    }
+    $Tasks.Remove($command.task)
+    Write-AgentEvent ([ordered]@{ kind = 'fault-ended'; run = $command.run; fault = 'restart-smb-service' })
 }
 
 function Step-UnblockWait($Task) {

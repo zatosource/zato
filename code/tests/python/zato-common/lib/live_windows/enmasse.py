@@ -56,6 +56,10 @@ class ModuleCtx:
     # Each file that cannot be processed is quarantined after this many attempts
     Max_Attempts = 1
 
+    # How long a file that a fault interrupted waits before its next attempt, in seconds - the default of the product
+    # is as long as the time limit of a test
+    Retry_Backoff = 1
+
     # The schedule that polls the outbox of the plant next to the regular one
     Contending_Schedule = 'hub.plant.contending'
 
@@ -104,6 +108,7 @@ def _schedule(
         'on_success': 'move',
         'move_directory': move_directory,
         'max_attempts': ModuleCtx.Max_Attempts,
+        'retry_backoff': ModuleCtx.Retry_Backoff,
         'quarantine_directory': Hub.Rejected,
         'run_every': ModuleCtx.Run_Every,
         'run_unit': 'seconds',

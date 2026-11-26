@@ -208,8 +208,10 @@ def fill_schedule_wizard(page:'Page', schedule:'anydict', start_date:'str') -> '
         _fill_micro_form(page, 'file-transfer-wizard-edit-success', {success_field: success_value})
 
     max_attempts = str(schedule['max_attempts'])
+    retry_backoff = str(schedule['retry_backoff'])
     retries = {
         'max_attempts': max_attempts,
+        'retry_backoff': retry_backoff,
         'quarantine_directory': schedule['quarantine_directory'],
     }
     _fill_micro_form(page, 'file-transfer-wizard-edit-retries', retries)
