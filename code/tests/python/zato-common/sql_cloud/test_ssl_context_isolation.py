@@ -15,6 +15,7 @@ import pytest
 # Zato
 from zato.common.db_env import build_ssl_context_from_values
 from zato.common.odb.api import SQLConnectionPool
+from zato.common.test.expected_records import expected_records
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -87,7 +88,8 @@ class TestSSLContextIsolation:
         config = _get_config(ca_file)
 
         with caplog.at_level(logging.WARNING, logger=ModuleCtx.Pool_Logger_Name):
-            pool = SQLConnectionPool(ModuleCtx.Connection_Name, config, config)
+            with expected_records(ModuleCtx.Pool_Logger_Name):
+                pool = SQLConnectionPool(ModuleCtx.Connection_Name, config, config)
 
         assert pool.engine is None
 

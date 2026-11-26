@@ -12,6 +12,9 @@ import logging
 import os
 import sys
 
+# pytest
+import pytest
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 # ################################################################################################################################
@@ -66,6 +69,18 @@ class _AdminClient:
 
         out = json.loads(raw)
         return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@pytest.fixture(scope='module', autouse=True)
+def redshift_connection(zato_server:'anydict') -> 'None':
+    """ Opens the pooled connection of the server to the Redshift simulator before the first test. The server keeps
+    the connection open, and the simulator serves it on a thread of its own for as long as it is open,
+    so the thread exists before every test and no test leaves it behind.
+    """
+    client = _AdminClient(zato_server['base_url'], zato_server['invoke_password'])
+    _ = client.invoke('test.sql.cloud.ping', {'conn_name': 'test.sql.redshift'})
 
 # ################################################################################################################################
 # ################################################################################################################################
