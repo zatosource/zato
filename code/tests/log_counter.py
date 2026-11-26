@@ -78,6 +78,10 @@ class ModuleCtx:
     Color_Warning = '\033[33m'
     Color_Reset   = '\033[0m'
 
+    # Set by recipe_shell.sh when the console of the outermost recipe line is a terminal, so that a line whose output
+    # it captures through a pipe, such as a nested make, still writes to the console in color
+    Env_Console_Is_Terminal = 'Zato_Test_Console_Is_Terminal'
+
     # The file, next to the log file, that holds the counts across the recipe lines of one target
     Counts_Suffix = '.counts'
 
@@ -106,6 +110,9 @@ class LogCounter:
 
         self.is_console_open = True
         self.use_color       = sys.stdout.isatty()
+
+        if ModuleCtx.Env_Console_Is_Terminal in os.environ:
+            self.use_color = True
 
         self.load_counts()
 

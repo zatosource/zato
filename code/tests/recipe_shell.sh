@@ -38,6 +38,12 @@ if [ -z "$target" ]; then
     exec /bin/bash "$@"
 fi
 
+# A line whose output is captured below writes to a pipe, so the console of the outermost line, inherited
+# by the lines of a nested make, decides whether log_counter.py writes in color.
+if [ -z "$Zato_Test_Console_Is_Terminal" ] && [ -t 1 ]; then
+    export Zato_Test_Console_Is_Terminal=1
+fi
+
 line="${*: -1}"
 log_path="/tmp/logs-$target.txt"
 capture_path=''

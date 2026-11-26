@@ -210,6 +210,7 @@ class WrapperStub:
 
         self.config = Bunch()
         self.config.name = Connection_Name
+        self.config.is_active = True
 
     @contextmanager
     def client(self, *, should_block:'bool', block_timeout:'int') -> 'any_':
