@@ -153,8 +153,16 @@ class UISuite:
         handles = list(self.handles.values())
         barrier = SettleBarrier()
 
-        out = Monitor(name, handles, self.server_log_path, barrier)
+        out = Monitor(name, handles, self.server_log_path, barrier, self.expect_records)
         return out
+
+# ################################################################################################################################
+
+    def expect_records(self, *fragments:'str') -> 'None':
+        """ Marks each server output line that contains any of the fragments as provoked deliberately,
+        from now until the environment stops.
+        """
+        self.zato_dashboard['expected_records'].extend(fragments)
 
 # ################################################################################################################################
 

@@ -133,7 +133,7 @@ class SMBWindowsSuite:
         handles = list(self.handles.values())
         barrier = SettleBarrier()
 
-        out = Monitor(name, handles, self.server_log_path, barrier)
+        out = Monitor(name, handles, self.server_log_path, barrier, self.zato.expect_records)
         return out
 
 # ################################################################################################################################

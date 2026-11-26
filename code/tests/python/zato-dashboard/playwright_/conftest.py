@@ -233,15 +233,21 @@ def _stream_output(
     time_reference:'float',
     ready_marker:'str',
     ready_event:'threading.Event',
+    expected_records:'list[str]',
     ) -> 'None':
     """ Streams subprocess stdout to the test console with timing information, signalling
-    the given event once the process prints the line that says it is ready.
+    the given event once the process prints the line that says it is ready. A line that contains
+    any of the expected records is marked as provoked deliberately by a test.
     """
 
     for line in iter(cast_('any_', process.stdout).readline, b''):
         text = line.decode('utf-8', errors='replace').rstrip()
         elapsed = time.monotonic() - time_reference
-        logger.info(f'[{label} {elapsed:6.1f}s] {text}')
+
+        if any(record in text for record in expected_records):
+            logger.info(f'[{label} {elapsed:6.1f}s] {Expected_Record_Marker} {text}')
+        else:
+            logger.info(f'[{label} {elapsed:6.1f}s] {text}')
 
         # An empty marker means this process has no readiness line to wait for
         if ready_marker and ready_marker in text:
@@ -387,6 +393,9 @@ def run_zato_dashboard() -> 'any_':
     # and exported here because the server reads its environment once, at start.
     server_env['KRB5_CONFIG'] = _KerberosCtx.Krb5_Config_Path
 
+    # Fragments of the output lines that tests provoke deliberately, which they declare as they run
+    expected_records:'list[str]' = []
+
     server_process = subprocess.Popen(
         [_Zato_Bin, 'start', server_dir, '--fg'],
         env=server_env,
@@ -400,7 +409,7 @@ def run_zato_dashboard() -> 'any_':
 
     server_thread = threading.Thread(
         target=_stream_output,
-        args=(server_process, 'SERVER', time_after_server_start, _No_Ready_Marker, threading.Event()),
+        args=(server_process, 'SERVER', time_after_server_start, _No_Ready_Marker, threading.Event(), expected_records),
         daemon=True)
     server_thread.start()
 
@@ -428,7 +437,7 @@ def run_zato_dashboard() -> 'any_':
 
     dashboard_thread = threading.Thread(
         target=_stream_output,
-        args=(dashboard_process, 'DASHBOARD', time_after_server_start, _No_Ready_Marker, threading.Event()),
+        args=(dashboard_process, 'DASHBOARD', time_after_server_start, _No_Ready_Marker, threading.Event(), expected_records),
         daemon=True)
     dashboard_thread.start()
 
@@ -474,7 +483,7 @@ def run_zato_dashboard() -> 'any_':
 
     listener_thread = threading.Thread(
         target=_stream_output,
-        args=(listener_process, 'LISTENER', time_after_server_start, _Listener_Ready_Marker, listener_ready),
+        args=(listener_process, 'LISTENER', time_after_server_start, _Listener_Ready_Marker, listener_ready, expected_records),
         daemon=True)
     listener_thread.start()
 
@@ -503,6 +512,7 @@ def run_zato_dashboard() -> 'any_':
         'server_process': server_process,
         'dashboard_process': dashboard_process,
         'listener_process': listener_process,
+        'expected_records': expected_records,
         'queue_bridge_redis_port': queue_bridge_redis_port,
         'queue_bridge_http_port': queue_bridge_http_port,
         'sftp_key_path': sftp_key_path,

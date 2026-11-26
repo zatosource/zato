@@ -118,10 +118,18 @@ class Monitor:
     and fails the test at the first agent error, Windows error, stopped container, stale heartbeat or server error,
     and once the time of the test is up.
     """
-    def __init__(self, name:'str', handles:'list[GuestHandle]', server_log_path:'str', barrier:'SettleBarrier') -> 'None':
+    def __init__(
+        self,
+        name:'str',
+        handles:'list[GuestHandle]',
+        server_log_path:'str',
+        barrier:'SettleBarrier',
+        expect_records:'callable_',
+        ) -> 'None':
         self.name = name
         self.server_log_path = server_log_path
         self.barrier = barrier
+        self.expect_records = expect_records
         self.server_log_offset = 0
         self.server_log_partial = ''
 
@@ -259,9 +267,11 @@ class Monitor:
 # ################################################################################################################################
 
     def expect_server_errors(self, *patterns:'str') -> 'None':
-        """ Declares server log errors that the test provokes on purpose.
+        """ Declares server log errors that the test provokes on purpose, which also marks the server output lines
+        that contain them, so that they are not counted as warnings or errors of the run.
         """
         self.expected_server_errors.extend(patterns)
+        self.expect_records(*patterns)
 
     def expect_windows_events(self, *patterns:'str') -> 'None':
         """ Declares Windows events that the test provokes on purpose, matched against their log, provider, ID and message.
