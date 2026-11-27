@@ -7,8 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from contextlib import contextmanager
 from functools import partial
 from logging import getLogger
+from threading import Condition
 
 # SQLAlchemy
 from sqlalchemy import and_, bindparam, select
@@ -27,7 +29,7 @@ from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.audit_events import collect_audit_events, drop_audit_events, prepare_audit_payloads
 from zato.common.pubsub.sql.config import get_commit_max_messages, get_commits_in_flight, Urgent_Commits_In_Flight
 from zato.common.pubsub.sql.dedup import get_existing_fingerprints, rewrite_fingerprints, write_dedup_records
-from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID
+from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID, PubSubTopicUnavailable
 from zato.common.pubsub.sql.fenced_ack import check_fenced, delete_fenced, PubSubAckConflict
 from zato.common.pubsub.sql.payloads import drop_payloads, get_chunks, get_message_ids
 from zato.common.pubsub.sql.pending import PendingAck, PendingAtomic, PendingAttempts, PendingPublication, PendingSync, \
@@ -40,6 +42,7 @@ from zato.common.pubsub.sql.subscription_sync import apply_syncs, set_lock_timeo
 # ################################################################################################################################
 
 if 0:
+    from collections.abc import Iterator
     from sqlalchemy.engine import Connection, Engine
     from zato.common.audit_log.api import AuditLog
     from zato.common.pubsub.sql.pending import PendingLease, pending_ack_list, pending_atomic_list, pending_attempts_list, \
@@ -63,6 +66,7 @@ if 0:
     pending_sync_list = pending_sync_list
     pairlist = pairlist
     SubscriptionList = SubscriptionList
+    noneiter = Iterator[None]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,6 +78,10 @@ logger = getLogger(__name__)
 
 # A publication refers to one message.
 _publication_weight = 1
+
+# The actions on the rows of a topic during which the topic refuses new publications.
+Topic_Action_Delete = 'deleted'
+Topic_Action_Rename = 'renamed'
 
 # How many times a group commit is run again after PostgreSQL rolled it back on a conflict with concurrent transactions.
 _max_conflict_retries = 5
@@ -164,12 +172,106 @@ class PubSubWriter:
 
         self._outage = OutageTracker('Pub/sub commit writer')
 
+        # The actions in progress on the rows of each topic, during which the topic refuses new publications ..
+        self._topic_changes:'anydict' = {}
+
+        # .. the number of publications of each topic accepted and not yet committed or failed ..
+        self._topic_publications:'anydict' = {}
+
+        # .. and what guards both of them.
+        self._topic_condition = Condition()
+
+# ################################################################################################################################
+
+    def _get_topic_names(self, publications:'pending_publication_list') -> 'strlist':
+        """ Returns the names of the topics the publications go to, each once.
+        """
+        out:'strlist' = []
+
+        for pending in publications:
+            topic_name = pending.message_values['topic_name']
+
+            if topic_name not in out:
+                out.append(topic_name)
+
+        return out
+
+# ################################################################################################################################
+
+    def _accept_publications(self, topic_names:'strlist') -> 'None':
+        """ Counts the publications of the given topics as accepted, unless the rows of any of the topics
+        are being deleted or renamed.
+        """
+        with self._topic_condition:
+
+            for topic_name in topic_names:
+                if topic_name in self._topic_changes:
+                    action = self._topic_changes[topic_name][-1]
+                    raise PubSubTopicUnavailable(f'Topic `{topic_name}` is being {action}')
+
+            for topic_name in topic_names:
+                if topic_name in self._topic_publications:
+                    self._topic_publications[topic_name] += 1
+                else:
+                    self._topic_publications[topic_name] = 1
+
+# ################################################################################################################################
+
+    def _release_publications(self, topic_names:'strlist') -> 'None':
+        """ Stops counting the publications of the given topics once they are committed or failed,
+        and wakes up the deletes and renames that wait for them.
+        """
+        with self._topic_condition:
+
+            for topic_name in topic_names:
+                self._topic_publications[topic_name] -= 1
+
+                if self._topic_publications[topic_name] == 0:
+                    del self._topic_publications[topic_name]
+
+            self._topic_condition.notify_all()
+
+# ################################################################################################################################
+
+    @contextmanager
+    def changing_topic(self, topic_name:'str', action:'str') -> 'noneiter':
+        """ Refuses new publications of a topic and waits until each one accepted earlier is committed or failed,
+        so that the rows the block deletes or renames include those of every publication that will ever commit
+        under the topic's name, and new publications are refused until the block ends.
+        """
+        with self._topic_condition:
+
+            if topic_name in self._topic_changes:
+                self._topic_changes[topic_name].append(action)
+            else:
+                self._topic_changes[topic_name] = [action]
+
+            while topic_name in self._topic_publications:
+                _ = self._topic_condition.wait()
+
+        try:
+            yield
+
+        finally:
+            with self._topic_condition:
+                actions = self._topic_changes[topic_name]
+                actions.remove(action)
+
+                if not actions:
+                    del self._topic_changes[topic_name]
+
 # ################################################################################################################################
 
     def publish(self, pending:'PendingPublication') -> 'None':
         """ Writes one message together with its delivery rows.
         """
-        self._commit_queue.write(pending, weight=_publication_weight, is_urgent=True)
+        topic_names = [pending.message_values['topic_name']]
+        self._accept_publications(topic_names)
+
+        try:
+            self._commit_queue.write(pending, weight=_publication_weight, is_urgent=True)
+        finally:
+            self._release_publications(topic_names)
 
         if pending.exception:
             raise pending.exception
@@ -193,7 +295,14 @@ class PubSubWriter:
         with other callers, none of whom shares the outcome of this item.
         """
         weight = len(pending.ack.msg_ids) + len(pending.publications)
-        self._commit_queue.write(pending, weight=weight, is_urgent=False)
+
+        topic_names = self._get_topic_names(pending.publications)
+        self._accept_publications(topic_names)
+
+        try:
+            self._commit_queue.write(pending, weight=weight, is_urgent=False)
+        finally:
+            self._release_publications(topic_names)
 
         if pending.exception:
             raise pending.exception

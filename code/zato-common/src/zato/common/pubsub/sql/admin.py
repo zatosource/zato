@@ -18,6 +18,7 @@ from zato.common.db_env.engine import call_database, execute_write
 from zato.common.pubsub.sql.browse import SQLBrowseAPI
 from zato.common.pubsub.sql.config import get_batch_size
 from zato.common.pubsub.sql.counts import Milliseconds_Per_Minute, No_Publisher
+from zato.common.pubsub.sql.writes import Topic_Action_Delete, Topic_Action_Rename
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
     topic_count_table, topic_sub_table
 
@@ -613,16 +614,20 @@ class SQLAdminAPI(SQLBrowseAPI):
         old_topic_name = old_topic_name.lower()
         new_topic_name = new_topic_name.lower()
 
-        # Message and delivery rows can be numerous, so they go in batches ..
-        self._update_topic_name_in_batches(message_table, old_topic_name, new_topic_name)
-        self._update_topic_name_in_batches(delivery_table, old_topic_name, new_topic_name)
+        # The rows are renamed only once each publication under the old name accepted earlier has committed or failed,
+        # and the publications under the old name that arrive while they are being renamed are refused ..
+        with self._writer.changing_topic(old_topic_name, Topic_Action_Rename):
 
-        # .. while subscriptions are few and move in one statement.
-        update_statement = topic_sub_table.update()
-        update_statement = update_statement.where(topic_sub_table.c.topic_name == old_topic_name)
-        update_statement = update_statement.values(topic_name=new_topic_name)
+            # .. message and delivery rows can be numerous, so they go in batches ..
+            self._update_topic_name_in_batches(message_table, old_topic_name, new_topic_name)
+            self._update_topic_name_in_batches(delivery_table, old_topic_name, new_topic_name)
 
-        result = execute_write(self.engine, update_statement)
+            # .. while subscriptions are few and move in one statement.
+            update_statement = topic_sub_table.update()
+            update_statement = update_statement.where(topic_sub_table.c.topic_name == old_topic_name)
+            update_statement = update_statement.values(topic_name=new_topic_name)
+
+            result = execute_write(self.engine, update_statement)
 
         logger.info('rename_topic -> old:%s, new:%s, subscribers_updated:%d',
             old_topic_name, new_topic_name, result.rowcount)
@@ -684,17 +689,21 @@ class SQLAdminAPI(SQLBrowseAPI):
         """
         topic_name = topic_name.lower()
 
-        # Deliveries go first ..
-        self._delete_topic_rows_in_batches(delivery_table, topic_name)
+        # The rows are deleted only once each publication accepted earlier has committed or failed,
+        # and the publications that arrive while they are being deleted are refused ..
+        with self._writer.changing_topic(topic_name, Topic_Action_Delete):
 
-        # .. then the messages themselves ..
-        self._delete_topic_rows_in_batches(message_table, topic_name)
+            # .. deliveries go first ..
+            self._delete_topic_rows_in_batches(delivery_table, topic_name)
 
-        # .. and finally the topic's subscriptions.
-        delete_statement = topic_sub_table.delete()
-        delete_statement = delete_statement.where(topic_sub_table.c.topic_name == topic_name)
+            # .. then the messages themselves ..
+            self._delete_topic_rows_in_batches(message_table, topic_name)
 
-        result = execute_write(self.engine, delete_statement)
+            # .. and finally the topic's subscriptions.
+            delete_statement = topic_sub_table.delete()
+            delete_statement = delete_statement.where(topic_sub_table.c.topic_name == topic_name)
+
+            result = execute_write(self.engine, delete_statement)
 
         logger.info('delete_topic -> topic_name:%s, subscribers_removed:%d', topic_name, result.rowcount)
 

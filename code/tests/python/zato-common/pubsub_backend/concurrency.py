@@ -22,6 +22,7 @@ from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.config import ModuleCtx
 from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.pending import new_pending_ack
+from zato.common.pubsub.sql.errors import PubSubTopicUnavailable
 from zato.common.pubsub.sql.publication import build_publication
 from zato.common.pubsub.sql.writes import PubSubDuplicateMsgID, PubSubWriter
 from zato.common.typing_ import cast_
@@ -33,7 +34,7 @@ if 0:
     from sqlalchemy.engine import Engine
     from zato.common.audit_log.api import AuditLog
     from zato.common.pubsub.sql.backend import PublishResult
-    from zato.common.typing_ import anydict, anylist, intlist, strlist
+    from zato.common.typing_ import any_, anydict, anylist, callable_, intlist, strlist
     from zato_common_core.zato_common_core import SubscriptionList
 
 # ################################################################################################################################
@@ -71,6 +72,16 @@ _overlap_msg_id_prefix = 'zpsm.test.concurrency.overlap'
 
 # How many commits the two overlapping commits are written in when neither is rolled back and run again
 _overlap_commit_count = 2
+
+# How many messages the topic of the delete and rename flows holds before the change begins
+_change_published_count = 20
+
+# The name the rename flow gives the topic
+_renamed_topic = 'pubsub.backend.test.concurrency.renamed'
+
+# How often and how many times the delete and rename flows check that the held commit is waiting
+_hold_wait_interval = 0.05
+_hold_wait_attempts = 200
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -531,6 +542,101 @@ def _run_overlapping_batches_flow() -> 'None':
 
 # ################################################################################################################################
 
+def _wait_until_held(writer:'_RecordingWriter') -> 'None':
+    """ Returns once the commit that the writer was told to hold is waiting.
+    """
+    for _ in range(_hold_wait_attempts):
+        if writer.hold_event is None:
+            return
+        gevent.sleep(_hold_wait_interval)
+
+    raise Exception('The commit was not held')
+
+# ################################################################################################################################
+
+def _change_topic_while_publishing(backend:'SQLPubSubBackend', writer:'_RecordingWriter', change:'callable_',
+    *args:'any_') -> 'None':
+    """ Runs a change of the topic's rows while a publication accepted before it has its commit held, and checks that
+    the change waits for that publication and refuses the publications that arrive while it runs.
+    """
+    _ = _publish_concurrently(backend, _change_published_count)
+
+    # A publication is accepted and its commit is held ..
+    hold_event = Event()
+    writer.hold_event = hold_event
+
+    held_publisher = gevent.spawn(backend.publish, _topic, 'held-message')
+    _wait_until_held(writer)
+
+    # .. so the change waits for it ..
+    changer = gevent.spawn(change, *args)
+    gevent.sleep(_hold_wait_interval)
+
+    assert not changer.ready()
+
+    # .. and a publication that arrives meanwhile is refused ..
+    try:
+        _ = backend.publish(_topic, 'refused-message')
+    except PubSubTopicUnavailable:
+        pass
+    else:
+        raise Exception('A publication to a topic being changed was accepted')
+
+    # .. until the held publication commits and the change completes.
+    _ = hold_event.set()
+    _ = gevent.joinall([held_publisher, changer], raise_error=True)
+
+# ################################################################################################################################
+
+def _run_concurrent_topic_delete_flow() -> 'None':
+    """ A topic delete waits until the publications accepted before it are committed, deletes their rows with all the others,
+    refuses the publications that arrive while it runs, and accepts the publications that arrive after it.
+    """
+    backend, writer = _new_backend()
+
+    _change_topic_while_publishing(backend, writer, backend.delete_topic, _topic)
+
+    # No rows of the topic remain, including those of the held publication ..
+    assert get_message_rows(_topic) == []
+    assert get_delivery_rows(_sub_key_1) == []
+    assert get_delivery_rows(_sub_key_2) == []
+
+    # .. after which the topic accepts publications again.
+    _ = backend.publish(_topic, 'message-after-delete')
+    assert len(get_message_rows(_topic)) == 1
+
+# ################################################################################################################################
+
+def _run_concurrent_topic_rename_flow() -> 'None':
+    """ A topic rename waits until the publications accepted before it under the old name are committed, moves their rows
+    to the new name with all the others, refuses the publications under the old name that arrive while it runs,
+    and accepts the publications under the old name that arrive after it.
+    """
+    backend, writer = _new_backend()
+
+    _change_topic_while_publishing(backend, writer, backend.rename_topic, _topic, _renamed_topic)
+
+    # Each message is under the new name, including that of the held publication ..
+    renamed_count = _change_published_count + 1
+
+    assert get_message_rows(_topic) == []
+    assert len(get_message_rows(_renamed_topic)) == renamed_count
+
+    # .. with the deliveries of both subscribers under that name too ..
+    for sub_key in (_sub_key_1, _sub_key_2):
+
+        delivery_rows = get_delivery_rows(sub_key)
+        assert len(delivery_rows) == renamed_count
+
+        for row in delivery_rows:
+            assert row.topic_name == _renamed_topic
+
+    # .. after which the old name accepts publications again.
+    _ = backend.publish(_topic, 'message-after-rename')
+    assert len(get_message_rows(_topic)) == 1
+
+# ################################################################################################################################
+
 def run_concurrency_scenario() -> 'None':
     """ Concurrent publications and acknowledgements, written in shared commits.
     """
@@ -542,6 +648,8 @@ def run_concurrency_scenario() -> 'None':
     _run_disjoint_ack_flow()
     _run_concurrent_claim_flow()
     _run_concurrent_clear_flow()
+    _run_concurrent_topic_delete_flow()
+    _run_concurrent_topic_rename_flow()
 
 # ################################################################################################################################
 # ################################################################################################################################

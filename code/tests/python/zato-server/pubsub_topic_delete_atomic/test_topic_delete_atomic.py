@@ -11,6 +11,9 @@ import logging
 import threading
 import time
 
+# pytest
+import pytest
+
 # Zato
 from zato.common.test import pubsub_db
 
@@ -18,7 +21,10 @@ from zato.common.test import pubsub_db
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anylist, strlist
+    from collections.abc import Iterator
+    from zato.common.typing_ import any_, anydict, anylist, strlist
+
+    noneiter = Iterator[None]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,7 +57,9 @@ def _get_publisher() -> 'any_':
 
 # ################################################################################################################################
 
-def _get_topic_id(admin:'any_', topic_name:'str') -> 'int':
+def _get_topic_ids(admin:'any_') -> 'anydict':
+    """ Returns the ID of each topic by its name.
+    """
     topic_list = admin.invoke('zato.pubsub.topic.get-list', {})
 
     if isinstance(topic_list, list):
@@ -59,11 +67,22 @@ def _get_topic_id(admin:'any_', topic_name:'str') -> 'int':
     else:
         items = topic_list['zato_pubsub_topic_get_list_response']
 
-    for item in items:
-        if item['name'] == topic_name:
-            return item['id']
+    out:'anydict' = {}
 
-    raise Exception(f'Topic not found: {topic_name}')
+    for item in items:
+        out[item['name']] = item['id']
+
+    return out
+
+# ################################################################################################################################
+
+def _get_topic_id(admin:'any_', topic_name:'str') -> 'int':
+    topic_ids = _get_topic_ids(admin)
+
+    if topic_name not in topic_ids:
+        raise Exception(f'Topic not found: {topic_name}')
+
+    return topic_ids[topic_name]
 
 # ################################################################################################################################
 
@@ -120,6 +139,20 @@ def _recreate_topic_and_subscribe(admin:'any_', topic_name:'str') -> 'None':
     time.sleep(_settle_time)
 
 # ################################################################################################################################
+
+@pytest.fixture(autouse=True)
+def restore_target_topic() -> 'noneiter':
+    """ Recreates the target topic with its subscription after each test that deleted it, whether the test passed or failed,
+    so that each test starts from the same configuration.
+    """
+    yield
+
+    admin = _get_admin()
+
+    if _topic_target not in _get_topic_ids(admin):
+        _recreate_topic_and_subscribe(admin, _topic_target)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class TestNoRowsRemainAfterConcurrentPublishAndDelete:
@@ -172,9 +205,6 @@ class TestNoRowsRemainAfterConcurrentPublishAndDelete:
         remaining = pubsub_db.count_message_rows(msg_ids_before)
         assert remaining == 0, f'Stale message rows: {remaining}'
 
-        # .. restore for subsequent tests.
-        _recreate_topic_and_subscribe(admin, _topic_target)
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -218,9 +248,6 @@ class TestNoDanglingSubReferenceAfterConcurrentSubscribeAndDelete:
         # .. holds both directions, so an empty subscriber list means no dangling references ..
         subscribers = pubsub_db.get_topic_subscribers(_topic_target)
         assert subscribers == [], f'Dangling references to {_topic_target}: {subscribers}'
-
-        # .. restore for subsequent tests.
-        _recreate_topic_and_subscribe(admin, _topic_target)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -321,9 +348,6 @@ class TestBurstPublishDuringDeleteLeavesNoRows:
         delivery_count = pubsub_db.count_topic_deliveries(_topic_target)
         assert delivery_count == 0, f'Stale delivery rows for deleted topic: {delivery_count}'
 
-        # .. restore.
-        _recreate_topic_and_subscribe(admin, _topic_target)
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -359,9 +383,6 @@ class TestNoStalePendingEntriesAfterDelete:
         # .. verify: the message rows are gone too ..
         remaining = pubsub_db.count_message_rows(msg_ids)
         assert remaining == 0, f'Stale message rows after delete: {remaining}'
-
-        # .. restore.
-        _recreate_topic_and_subscribe(admin, _topic_target)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -415,9 +436,6 @@ class TestMultiTopicSubscriberSurvivorTopicIntact:
         assert sub_key_survivor in pubsub_db.get_topic_subscribers(_topic_survivor), \
             'Survivor subscription state is gone'
 
-        # .. restore the target topic.
-        _recreate_topic_and_subscribe(admin, _topic_target)
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -446,10 +464,6 @@ class TestDoubleDeleteIdempotent:
             _ = admin.invoke('zato.pubsub.topic.delete', {'id': topic_id})
         except Exception:
             pass
-
-        # .. the important thing: no crash, no stale state.
-        # .. Restore for subsequent tests.
-        _recreate_topic_and_subscribe(admin, _topic_target)
 
 # ################################################################################################################################
 # ################################################################################################################################
