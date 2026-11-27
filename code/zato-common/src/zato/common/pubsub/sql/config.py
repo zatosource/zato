@@ -62,7 +62,7 @@ _default_batch_size = 5_000
 Default_Commit_Max_Messages = 500
 
 # How many group commits may be in progress at once.
-Default_Commits_In_Flight = 2
+Default_Commits_In_Flight = 4
 
 # How many group commits of publications may be in progress in addition to the ones above,
 # so that a publication does not wait for a commit of acknowledgements.
