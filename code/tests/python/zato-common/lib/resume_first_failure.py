@@ -17,7 +17,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 #
 # A pytest run is identified by its working directory, its command line arguments and the environment variables
 # named Zato_Test_* that its recipe line names, so that each pass of a loop over modes or parameters of a recipe line
-# resumes on its own, while the variables that the shell of the user exports do not change the identity.
+# resumes on its own, while the variables that the shell of the user exports do not change the identity. A driver that
+# starts several pytest runs from one recipe line, such as the shards of a suite, gives each of them an identity of its own
+# in Zato_Resume_Identity.
 # It imports nothing from Zato, because it is loaded before the suites that patch gevent.
 
 # stdlib
@@ -46,6 +48,11 @@ class ModuleCtx:
 
     # .. except for the goal, which differs between a target run on its own and the same target run by test-all.
     Env_Identity_Excluded = {'zato_test_goal'}
+
+    # The identity that a driver starting several pytest runs from one recipe line gives each of them,
+    # e.g. the shards of a suite, which run with the same arguments, and the identity of a run without one
+    Env_Identity = 'Zato_Resume_Identity'
+    No_Identity = ''
 
     # The entries of the state file that this plugin reads and writes
     Entry_Done = 'done'
@@ -83,13 +90,17 @@ def _write_line(config:'pytest.Config', text:'str') -> 'None':
 
 # ################################################################################################################################
 
-def _get_stage_id(config:'pytest.Config', line:'str') -> 'str':
-    """ Returns the identity of this pytest run - its directory, its arguments and the Zato_Test_* environment variables
-    that its recipe line names.
+def _get_stage_id(config:'pytest.Config', line:'str', identity:'str') -> 'str':
+    """ Returns the identity of this pytest run - its directory, its arguments, the Zato_Test_* environment variables
+    that its recipe line names and the identity that the driver of the run gave it, if any.
     """
     hasher = sha1()
 
     _ = hasher.update(str(config.invocation_params.dir).encode('utf8'))
+
+    if identity:
+        _ = hasher.update(b'\0')
+        _ = hasher.update(f'{ModuleCtx.Env_Identity}={identity}'.encode('utf8'))
 
     for arg in config.invocation_params.args:
         _ = hasher.update(b'\0')
@@ -158,8 +169,14 @@ def pytest_configure(config:'pytest.Config') -> 'None':
     else:
         del environ[ModuleCtx.Env_Addopts]
 
+    # .. only a driver of several pytest runs gives each of them an identity ..
+    if ModuleCtx.Env_Identity in environ:
+        identity = environ.pop(ModuleCtx.Env_Identity)
+    else:
+        identity = ModuleCtx.No_Identity
+
     # .. the identity is computed without the variables of the plugin ..
-    _run_state.stage_id = _get_stage_id(config, line)
+    _run_state.stage_id = _get_stage_id(config, line, identity)
 
     # .. and the last entry for this pytest run tells where it starts from.
     entry = _read_last_entry(_run_state.state_path, _run_state.stage_id)

@@ -87,6 +87,11 @@ if log_config:
         try:
             logging_config = yaml.load(f, yaml.FullLoader)
             logging_config = apply_logging_env_overrides(logging_config)
+
+            # Django creates django.request before the settings are read, and a disabled logger stays disabled
+            # through Django's own configuration, which would drop the traceback of every request that fails.
+            logging_config['disable_existing_loggers'] = False
+
             logging.config.dictConfig(logging_config)
         except ValueError:
             # This will be raised by 'zato quickstart' but we can ignore it

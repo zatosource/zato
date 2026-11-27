@@ -244,10 +244,11 @@ def _stream_output(
         text = line.decode('utf-8', errors='replace').rstrip()
         elapsed = time.monotonic() - time_reference
 
+        # The output is printed rather than logged, because the targets run with log_cli_level=WARNING
         if any(record in text for record in expected_records):
-            logger.info(f'[{label} {elapsed:6.1f}s] {Expected_Record_Marker} {text}')
+            print(f'[{label} {elapsed:6.1f}s] {Expected_Record_Marker} {text}', flush=True)
         else:
-            logger.info(f'[{label} {elapsed:6.1f}s] {text}')
+            print(f'[{label} {elapsed:6.1f}s] {text}', flush=True)
 
         # An empty marker means this process has no readiness line to wait for
         if ready_marker and ready_marker in text:

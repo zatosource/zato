@@ -24,6 +24,7 @@ import pytest
 from live_windows.containers import discard_instance, prepare_guests
 from live_windows.session import missing_guest_requirements
 from live_windows.settings import Instance, Shards, Versions
+from resume_first_failure import ModuleCtx as Resume_Ctx
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,8 +71,12 @@ class _Shard:
         self.instance = f'{ModuleCtx.Instance_Prefix}{index}'
         self.prefix = f'[{self.instance}]'
 
+        shard = f'{index}{Shards.Separator}{count}'
+
+        # Each shard resumes on its own after a failed run of the goal, because all of them have the same arguments
         environment = dict(os.environ)
-        environment[Shards.Variable] = f'{index}{Shards.Separator}{count}'
+        environment[Shards.Variable] = shard
+        environment[Resume_Ctx.Env_Identity] = shard
         environment[Instance.Variable] = self.instance
         environment['PYTHONUNBUFFERED'] = '1'
 
@@ -138,9 +143,12 @@ def _shard_count() -> 'int':
 
 # ################################################################################################################################
 
-def _wait_for_failure(shards:'list[_Shard]') -> 'int':
-    """ Waits until every shard ends or one of them fails, and returns the exit code of the failed one, or 0.
+def _wait_for_all(shards:'list[_Shard]') -> 'int':
+    """ Waits until every shard ends, a failed one included, and returns the exit code of the first one that failed, or 0.
     """
+    out = 0
+    reported:'set[str]' = set()
+
     while True:
 
         running = 0
@@ -153,11 +161,14 @@ def _wait_for_failure(shards:'list[_Shard]') -> 'int':
                 running += 1
 
             elif code not in ModuleCtx.Success_Codes:
-                _print(f'{ModuleCtx.Prefix} {shard.prefix} failed with exit code {code}, stopping the other shards')
-                return code
+                if shard.instance not in reported:
+                    reported.add(shard.instance)
+                    _print(f'{ModuleCtx.Prefix} {shard.prefix} failed with exit code {code}, the other shards continue')
+                    if not out:
+                        out = code
 
         if not running:
-            return 0
+            return out
 
         sleep(ModuleCtx.Poll_Interval)
 
@@ -204,7 +215,7 @@ def run(pytest_arguments:'strlist') -> 'int':
             shard = _Shard(index, count, pytest_arguments)
             shards.append(shard)
 
-        out = _wait_for_failure(shards)
+        out = _wait_for_all(shards)
 
     except KeyboardInterrupt:
         _print(f'{ModuleCtx.Prefix} Interrupted, stopping the shards')
