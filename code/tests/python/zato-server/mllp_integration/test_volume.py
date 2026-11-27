@@ -64,6 +64,13 @@ _host             = '127.0.0.1'
 # The positive acknowledgment code
 _ack_accepted = 'AA'
 
+# The acknowledgment segment of a message that the error channel refused
+_ack_refused_segment = b'MSA|AR|'
+
+# How long the routes of new channels may take to be installed, and how often a probe checks them
+_route_wait_seconds = 30.0
+_route_poll_seconds = 0.2
+
 _connection_type_channel = 'channel-hl7-mllp'
 _generic_service_name    = 'zato.generic.connection'
 _audit_counts_service    = 'test.hl7.audit-counts'
@@ -215,6 +222,33 @@ def _send_accepted(client:'HL7MLLPClient', message:'bytes', control_id:'str') ->
 
 # ################################################################################################################################
 
+def _wait_for_error_route(port:'int') -> 'None':
+    """ Sends probes of an injected failure until the error channel refuses one.
+    """
+    deadline = time.monotonic() + _route_wait_seconds
+    sender = _PersistentSender(port)
+
+    try:
+        probe_index = 0
+
+        while True:
+            message = _new_message(f'PROBE{probe_index:06d}', True)
+            acknowledgment = sender.send(message)
+
+            if _ack_refused_segment in acknowledgment:
+                return
+
+            if time.monotonic() > deadline:
+                raise Exception(f'The error channel did not refuse a probe within {_route_wait_seconds}s -> {acknowledgment!r}')
+
+            probe_index += 1
+            time.sleep(_route_poll_seconds)
+
+    finally:
+        sender.close()
+
+# ################################################################################################################################
+
 def _get_audit_counts(zato_client:'AdminClient') -> 'anydict':
     """ Returns how many events of each kind the audit log holds and the size of the Zato database.
     """
@@ -295,6 +329,10 @@ class TestHL7Volume:
         self.__class__.error_channel_id = response['id']
 
         wait_for_port_open(mllp_port)
+
+        # The port is open as soon as the first channel listens, so the feed starts only once a message
+        # of an injected failure is refused, which is when the route of the error channel is installed.
+        _wait_for_error_route(mllp_port)
 
 # ################################################################################################################################
 

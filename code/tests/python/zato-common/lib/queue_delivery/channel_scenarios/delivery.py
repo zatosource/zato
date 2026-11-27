@@ -21,13 +21,13 @@ from zato.common.pubsub.outgoing import get_outgoing_topic_name, Key_CID, Key_Co
     Key_Msg_ID, Key_Request
 
 # Test support
-from queue_delivery.channel.client import accept_all, get_gaps, get_received, Refuse_Everything, set_behaviour, \
-    wait_for_accepted, wait_for_received
+from queue_delivery.channel.client import accept_all, get_gaps, get_received, Refuse_Everything, \
+    restart_server_and_listener, set_behaviour, wait_for_accepted, wait_for_received
 from queue_delivery.channel.type_under_test import Attempts_Per_Round, Channel_DLQ_Discard, Channel_DLQ_Forward, \
     Channel_DLQ_Keep, Channel_DLQ_Retry, Channel_No_DLQ, Channel_No_Retries, Channel_Orders, DLQ_Retry_Channel_Rounds, \
     DLQ_Retry_Interval, Forward_Topic, Orders_Max_Retries, Orders_Sleep_Time, Refused_Error_Text
 from queue_delivery.channel_scenarios.base import acceptance_of, ChannelScenarioBase, order, sequences_of
-from queue_delivery.client import get_client, get_queue, restart_server, wait_for_audit_events, wait_for_queue_empty
+from queue_delivery.client import get_client, get_queue, wait_for_audit_events, wait_for_queue_empty
 from queue_delivery.dlq import get_dlq, get_topic_messages, invoke, Retry_Message, run_dlq_rule, subscribe_topic, \
     wait_for_dlq_count
 
@@ -357,7 +357,7 @@ class DeliveryScenarios(ChannelScenarioBase):
         received = wait_for_received(client, 1)
         assert received[0]['is_accepted'] is False
 
-        restart_server()
+        restart_server_and_listener()
 
         # A restart starts the services afresh, accepting
         accepted = wait_for_accepted(client, 1, timeout=_round_timeout)

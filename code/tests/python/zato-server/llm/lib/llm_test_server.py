@@ -90,7 +90,31 @@ class _Handler(BaseHTTPRequestHandler):
         config = server.path_config.get(self.path, {})
 
         status, body = server.build_response(record, config)
+
+        # A client that stopped waiting for a delayed answer has closed its connection, so the answer is not sent
+        if 'delay' in config and self._is_client_gone():
+            return
+
         self._send(status, body)
+
+# ################################################################################################################################
+
+    def _is_client_gone(self) -> 'bool':
+        """ Returns whether the client closed its connection, which a read that does not wait for data shows.
+        """
+        self.connection.setblocking(False)
+
+        try:
+            data = self.connection.recv(1, socket.MSG_PEEK)
+        except BlockingIOError:
+            return False
+        except ConnectionResetError:
+            return True
+        finally:
+            self.connection.setblocking(True)
+
+        out = not data
+        return out
 
 # ################################################################################################################################
 

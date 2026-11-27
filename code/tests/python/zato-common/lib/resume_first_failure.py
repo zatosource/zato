@@ -11,7 +11,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # code/tests/recipe_shell.sh loads it into every pytest run of every recipe line through PYTEST_ADDOPTS
 # and keeps one state file per make goal. While the previous run of the goal failed or was interrupted,
 # a pytest run that completed in that run is skipped in full, and a pytest run that failed or was interrupted
-# starts from the test that failed first or that was running when the run was interrupted. A run of the goal
+# starts from the first test of the module of the test that failed first or that was running when the run
+# was interrupted, because the tests of a module may depend on the state that its earlier tests create. A run of the goal
 # that completes, or a run with RESTART=1, makes the next run start from the first test of every pytest run.
 #
 # A pytest run is identified by its working directory, its command line arguments and the environment variables
@@ -182,7 +183,7 @@ def pytest_configure(config:'pytest.Config') -> 'None':
 @pytest.hookimpl(trylast=True)
 def pytest_collection_modifyitems(config:'pytest.Config', items:'list[pytest.Item]') -> 'None':
     """ Deselects every test of a pytest run that completed in the previous run of the goal, or the tests
-    that precede the test that the previous run failed first in or was interrupted in.
+    that precede the module of the test that the previous run failed first in or was interrupted in.
     """
     if _run_state.is_skipped:
         _write_line(config, '>>> Skipping the suite, which completed in the previous run of the goal')
@@ -206,13 +207,19 @@ def pytest_collection_modifyitems(config:'pytest.Config', items:'list[pytest.Ite
         _write_line(config, f'>>> Test {start_nodeid} not collected, starting the suite from its first test')
         return
 
+    # The run resumes from the first test of the module of the test, whose earlier tests may create what it needs
+    start_module = items[start_index].nodeid.split('::')[0]
+
+    while start_index > 0 and items[start_index - 1].nodeid.split('::')[0] == start_module:
+        start_index -= 1
+
     deselected = items[:start_index]
 
     if deselected:
         config.hook.pytest_deselected(items=deselected)
         del items[:start_index]
 
-    _write_line(config, f'>>> Resuming the suite from {start_nodeid}')
+    _write_line(config, f'>>> Resuming the suite from {items[0].nodeid}, the first test of the module of {start_nodeid}')
 
 # ################################################################################################################################
 

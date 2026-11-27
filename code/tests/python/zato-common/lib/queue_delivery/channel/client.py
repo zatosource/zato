@@ -23,7 +23,7 @@ from yaml import safe_load as yaml_load
 
 # Test support
 from queue_delivery.channel.type_under_test import Channel_Keys, get_type_under_test
-from queue_delivery.client import as_dict, get_client, wait_for_queue_empty
+from queue_delivery.client import as_dict, get_client, restart_server, wait_for_queue_empty
 from queue_delivery.dlq import Discard_All_Messages, get_dlq, invoke
 from queue_delivery.type_under_test import TestConfig
 
@@ -239,6 +239,17 @@ def redeploy_counting(source_path:'str') -> 'None':
         source = source_file.read()
 
     TestConfig.pickup_listener.deploy(Counting_Pickup_Name, source)
+
+# ################################################################################################################################
+
+def restart_server_and_listener() -> 'None':
+    """ Restarts the server, and the file-transfer listener of its pickup directory, which the restart stops
+    together with every other process whose command line refers to the quickstart directory.
+    """
+    restart_server()
+
+    TestConfig.pickup_listener.stop()
+    TestConfig.pickup_listener.start()
 
 # ################################################################################################################################
 # ################################################################################################################################
