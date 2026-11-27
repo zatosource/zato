@@ -62,11 +62,17 @@ _verb_table_position:'anydict' = {
 # ################################################################################################################################
 # ################################################################################################################################
 
+_statement_payload_select   = ('SELECT', 'event_payload')
+_statement_payload_insert   = ('INSERT', 'event_payload')
+_statement_event_ids_select = ('SELECT', 'generate_series')
+_statement_event_insert     = ('INSERT', 'event')
+
 # The statements of each part of a transaction, by verb and table. A publication writes its dedup record
-# before it reads the subscribers and writes its message.
+# before it reads the subscribers, stores a new payload in the payload table of the audit log, and writes its message
+# that references the payload.
 statements_publication = [
-    ('INSERT', 'zato_message_dedup'), ('SELECT', 'pubsub_topic_sub'), ('INSERT', 'pubsub_message'),
-    ('INSERT', 'pubsub_delivery'),
+    ('INSERT', 'zato_message_dedup'), ('SELECT', 'pubsub_topic_sub'), _statement_payload_select, _statement_payload_insert,
+    ('INSERT', 'pubsub_message'), ('INSERT', 'pubsub_delivery'),
 ]
 
 statements_ack = [
@@ -78,8 +84,8 @@ _statements_atomic_checks = [
 ]
 
 _statements_atomic_writes = [
-    ('INSERT', 'zato_message_dedup'), ('SELECT', 'pubsub_topic_sub'), ('INSERT', 'pubsub_message'),
-    ('INSERT', 'pubsub_delivery'), ('DELETE', 'pubsub_delivery'),
+    ('INSERT', 'zato_message_dedup'), ('SELECT', 'pubsub_topic_sub'), _statement_payload_select, _statement_payload_insert,
+    ('INSERT', 'pubsub_message'), ('INSERT', 'pubsub_delivery'), ('DELETE', 'pubsub_delivery'),
 ]
 
 statements_attempts = [
@@ -93,11 +99,6 @@ statements_lease = [
 statements_drop = [
     ('SELECT', 'pubsub_message'), ('SELECT', 'pubsub_message'), ('UPDATE', 'pubsub_message'),
 ]
-
-_statement_payload_select   = ('SELECT', 'event_payload')
-_statement_payload_insert   = ('INSERT', 'event_payload')
-_statement_event_ids_select = ('SELECT', 'generate_series')
-_statement_event_insert     = ('INSERT', 'event')
 
 # ################################################################################################################################
 # ################################################################################################################################

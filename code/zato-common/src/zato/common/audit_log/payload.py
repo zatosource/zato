@@ -20,7 +20,7 @@ from __future__ import annotations
 from hashlib import blake2b
 
 # SQLAlchemy
-from sqlalchemy import select
+from sqlalchemy import and_, false, select
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 
 # Zato
@@ -87,13 +87,17 @@ _deleted_payloads_query = _deleted_payloads_query.where(
 _deleted_payloads_query = _deleted_payloads_query.order_by(event_payload_table.c.digest)
 _deleted_payloads_query = _deleted_payloads_query.with_for_update()
 
-# The deletion of the payloads of the given ids that neither an event nor a pub/sub message references
+# The deletion of the payloads of the given ids that neither an event nor a pub/sub message that has not dropped
+# its payload references
 _is_referenced = select(event_table.c.id)
 _is_referenced = _is_referenced.where(event_table.c.payload_id == event_payload_table.c.id)
 _is_referenced = _is_referenced.exists()
 
 _is_message_payload = select(message_table.c.id)
-_is_message_payload = _is_message_payload.where(message_table.c.payload_id == event_payload_table.c.id)
+_is_message_payload = _is_message_payload.where(and_(
+    message_table.c.payload_id == event_payload_table.c.id,
+    message_table.c.payload_dropped.is_(false()),
+))
 _is_message_payload = _is_message_payload.exists()
 
 _unreferenced_payloads_delete = event_payload_table.delete()

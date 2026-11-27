@@ -79,9 +79,12 @@ def delivered_topics_parameters(subscription_list:'SubscriptionList', sub_key:'s
 # ################################################################################################################################
 
 # The payload of a message, read from the payload table of the audit log by the reference of the message row,
-# or NULL for a message whose payload was dropped.
+# or NULL for a message that dropped its payload.
 message_payload = select(event_payload_table.c.data)
-message_payload = message_payload.where(event_payload_table.c.id == message_table.c.payload_id)
+message_payload = message_payload.where(and_(
+    event_payload_table.c.id == message_table.c.payload_id,
+    message_table.c.payload_dropped.is_(false()),
+))
 message_payload = message_payload.scalar_subquery().label('payload')
 
 # The message columns that the conversion of rows into message dicts consumes.

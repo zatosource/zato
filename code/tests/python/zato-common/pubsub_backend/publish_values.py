@@ -28,6 +28,7 @@ from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
 from zato.common.pubsub.sql.config import ModuleCtx
 from zato.common.pubsub.sql.publication import build_publication
+from zato.common.pubsub.sql.pull import message_payload
 from zato.common.pubsub.sql.schema import message_table
 from zato.common.pubsub.sql.writes import PubSubDuplicateMsgID
 from zato.common.test.audit_log_ import new_test_audit_log
@@ -122,11 +123,15 @@ _msg_id_repeat = 'zpsm.test.publish-values.repeat'
 _data_repeat = 'Invoice INV-7781 for John Smith'
 _data_different = 'Shipment SHP-1203 for Jane Doe'
 
-# Every column of the message table
+# Every column of the message table, with the payload that a message row references in the payload table of the audit log
 _message_columns:'strset' = set(message_table.c.keys())
+_message_columns.add(message_payload.name)
 
 # The columns of a message row whose values follow from the time of the publication
 _time_columns:'strset' = {'id', 'recv_time_iso', 'expiration_time_iso', 'expiration_ms'}
+
+# The column of a message row whose value is the id of the row of its payload in the payload table of the audit log
+_payload_id_column = 'payload_id'
 
 # How many fully delivered messages each topic retains while the cleanup removes the repeated message
 _no_delivered_messages = '0'
@@ -189,6 +194,7 @@ def assert_message_row(values:'anydict', expected:'anydict', publish_start_ms:'i
     assert set(values) == _message_columns, set(values) ^ _message_columns
 
     expected_columns = set(expected) | _time_columns
+    expected_columns.add(_payload_id_column)
     assert expected_columns == _message_columns, expected_columns ^ _message_columns
 
     for name, value in expected.items():
@@ -196,6 +202,15 @@ def assert_message_row(values:'anydict', expected:'anydict', publish_start_ms:'i
         assert type(values[name]) is type(value), (name, type(values[name]), type(value))
 
     assert values['id'] > 0, values['id']
+
+    # A message published to a topic without subscribers references no payload, and any other one references
+    # the row of its payload.
+    payload_id = values[_payload_id_column]
+
+    if expected['payload_dropped']:
+        assert payload_id is None, payload_id
+    else:
+        assert payload_id > 0, payload_id
 
     # The time of the receipt is the time of the database, in milliseconds ..
     recv_time = parse_utc(values['recv_time_iso'])
@@ -249,6 +264,7 @@ def get_base_values(topic_name:'str', data:'str | None', crc32:'int', size:'int'
     out:'anydict' = {
         'topic_name': topic_name,
         'payload': data,
+        'payload_dropped': False,
         'payload_encrypted': False,
         'payload_base64': False,
         'payload_crc32': crc32,
@@ -333,6 +349,7 @@ def _run_every_field(backend:'SQLPubSubBackend') -> 'None':
         'msg_id': _msg_id_fields,
         'topic_name': _topic_fields,
         'payload': _data_fields,
+        'payload_dropped': False,
         'payload_encrypted': False,
         'payload_base64': False,
         'payload_crc32': _crc32_fields,
@@ -519,6 +536,7 @@ def _run_no_subscribers() -> 'None':
     expected['msg_id'] = values['msg_id']
     expected['pub_time_iso'] = values['pub_time_iso']
     expected['pub_time_ms'] = values['pub_time_ms']
+    expected['payload_dropped'] = True
 
     assert_message_row(values, expected, publish_start_ms, publish_end_ms)
 
@@ -643,6 +661,12 @@ def _run_repeat_of_removed_message(backend:'SQLPubSubBackend') -> 'None':
     backend._writer.publish(original.pending)
 
     _ = backend.ack_messages(_sub_key_first, [_msg_id_repeat])
+    assert len(get_trace_rows(_topic_repeat)) == 1
+
+    # .. the payload that the acknowledgement released is processed before the repeat, which holds a lock
+    # on the same payload that the processing of a release waits for, and the trace remains ..
+    counts = PubSubCleanup().sweep_once()
+    assert counts['released'] == 1, counts
     assert len(get_trace_rows(_topic_repeat)) == 1
 
     # .. the cleanup runs once the insert of the repeat met the original message ..

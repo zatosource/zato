@@ -15,10 +15,11 @@ import sys
 import time
 
 # SQLAlchemy
-from sqlalchemy import and_, select, text
+from sqlalchemy import and_, false, select, text
 from sqlalchemy.exc import DBAPIError
 
 # Zato
+from zato.common.audit_log.payload import delete_unreferenced_payloads
 from zato.common.common_db.message_dedup import sweep_expired
 from zato.common.db_env.errors import is_transient
 from zato.common.db_env.fence import follow_environment_generation, get_generation_file_path
@@ -29,14 +30,14 @@ from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.config import get_batch_size, get_delivered_max_days, get_delivered_max_messages
 from zato.common.pubsub.sql.counts import compact_counts
 from zato.common.pubsub.sql.replaced import PubSubReplaced
-from zato.common.pubsub.sql.schema import delivery_table, message_table, trace_table
+from zato.common.pubsub.sql.schema import delivery_table, message_table, released_payload_table, trace_table
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from sqlalchemy.engine import Connection, Engine
-    from zato.common.typing_ import any_, intlist, intnone, strintdict, strlist
+    from zato.common.typing_ import any_, intlist, intnone, intset, strintdict, strlist
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
@@ -215,7 +216,7 @@ class PubSubCleanup:
                 query = select(message_table.c.id)
                 query = query.where(and_(
                     message_table.c.expiration_ms < now_ms,
-                    message_table.c.payload_id.isnot(None),
+                    message_table.c.payload_dropped.is_(false()),
                 ))
                 query = query.limit(batch_size)
                 query = query.with_for_update(skip_locked=True)
@@ -299,6 +300,56 @@ class PubSubCleanup:
 
         if out:
             logger.info('Dedup sweep -> deleted:%d', out)
+
+        return out
+
+# ################################################################################################################################
+
+    def _sweep_released_payloads(self) -> 'int':
+        """ Deletes the payloads that messages released and that no message and no audit event references anymore,
+        together with the rows that released them. Returns how many releases were processed.
+        """
+        batch_size = get_batch_size()
+
+        out = 0
+
+        while True:
+
+            # Each batch is its own transaction so other work interleaves between the batches.
+            with self.engine.begin() as connection:
+
+                # The next releases, without those that another sweep holds ..
+                query = select(released_payload_table.c.id, released_payload_table.c.payload_id)
+                query = query.order_by(released_payload_table.c.id)
+                query = query.limit(batch_size)
+                query = query.with_for_update(skip_locked=True)
+
+                release_ids:'intlist' = []
+                payload_ids:'intset' = set()
+
+                for row in connection.execute(query):
+                    release_ids.append(row.id)
+                    payload_ids.add(row.payload_id)
+
+                # .. nothing is released anymore so the sweep is done ..
+                if not release_ids:
+                    break
+
+                # .. each payload is deleted unless a message or an audit event references it ..
+                delete_unreferenced_payloads(connection, sorted(payload_ids))
+
+                # .. and the releases are complete.
+                delete_releases = released_payload_table.delete()
+                delete_releases = delete_releases.where(released_payload_table.c.id.in_(release_ids))
+                _ = connection.execute(delete_releases)
+
+                out += len(release_ids)
+
+            # The pause between the batches is when the live traffic gets to write.
+            self._pause_after_batch()
+
+        if out:
+            logger.info('Released-payload sweep -> releases:%d', out)
 
         return out
 
@@ -410,7 +461,7 @@ class PubSubCleanup:
     def sweep_once(self) -> 'strintdict':
         """ Runs one full cleanup sweep - expired messages first, then the delivered-trace
         retention by age and by per-topic cap, then the dedup records whose windows ended,
-        then the compaction of the change rows of the counts.
+        then the released payloads, then the compaction of the change rows of the counts.
         Returns the per-sweep deletion counts.
         """
         with write_path(Mechanism.Maintenance):
@@ -418,6 +469,7 @@ class PubSubCleanup:
             aged = self._sweep_aged_traces()
             over_cap = self._sweep_over_cap_traces()
             dedup = self._sweep_dedup_records()
+            released = self._sweep_released_payloads()
             empty_counts = self._compact_counts()
 
         out = {
@@ -425,6 +477,7 @@ class PubSubCleanup:
             'aged': aged,
             'over_cap': over_cap,
             'dedup': dedup,
+            'released': released,
             'empty_counts': empty_counts,
         }
 

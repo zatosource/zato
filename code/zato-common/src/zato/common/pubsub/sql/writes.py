@@ -749,6 +749,7 @@ class PubSubWriter:
             else:
                 pending.subscriber_keys = []
                 message_values['payload_id'] = None
+                message_values['payload_dropped'] = True
                 message_values['payload_encrypted'] = False
                 message_values['payload_base64'] = False
 

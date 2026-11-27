@@ -77,7 +77,7 @@ def _get_trace_msg_ids(topic_name:'str') -> 'strlist':
     out:'strlist' = []
 
     for row in get_message_rows(topic_name):
-        if row.payload is None:
+        if row.payload_dropped:
             out.append(row.msg_id)
 
     return out
@@ -133,12 +133,13 @@ def run_cleanup_scenario() -> 'None':
 
     wait_past_expiry()
 
-    # .. the expiry sweep removes exactly the expired ones, delivery rows included ..
+    # .. the expiry sweep removes exactly the expired ones, delivery rows included, and the payloads they released ..
     counts = cleanup.sweep_once()
 
     assert counts['expired'] == 3, counts
     assert counts['aged'] == 0, counts
     assert counts['over_cap'] == 0, counts
+    assert counts['released'] == 3, counts
 
     message_rows = get_message_rows(_topic_expiry)
     assert len(message_rows) == 2, len(message_rows)
@@ -146,7 +147,7 @@ def run_cleanup_scenario() -> 'None':
     assert len(get_delivery_rows(_sub_key_1)) == 2
     assert len(get_delivery_rows(_sub_key_2)) == 2
 
-    # .. a fully delivered message becomes a trace with a NULL payload,
+    # .. a fully delivered message becomes a trace whose payload is dropped,
     # .. and traces are exempt from the expiry sweep even when expired ..
     trace_msg_id = kept_msg_ids[0]
 

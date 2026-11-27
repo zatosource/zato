@@ -47,7 +47,7 @@ metadata = MetaData()
 # ################################################################################################################################
 
 # One row per published message. The payload is stored once in the payload table of the audit log, which the events
-# of the message reference as well, and the reference is set to NULL once every subscriber has acknowledged the message.
+# of the message reference as well, and it is marked as dropped once every subscriber has acknowledged the message.
 # The row then stays behind as the delivered-message trace until the retention sweep removes it, listed in pubsub_trace.
 # The primary key is the publication sequence.
 message_table = Table('pubsub_message', metadata,
@@ -55,9 +55,13 @@ message_table = Table('pubsub_message', metadata,
     Column('msg_id', String(_short_column_len), nullable=False),
     Column('topic_name', String(_short_column_len), nullable=False),
 
-    # The id of the row of the payload in the payload table of the audit log. No index covers it, so that dropping
-    # the payload remains an update within the page.
+    # The id of the row of the payload in the payload table of the audit log, or NULL for a message published
+    # to a topic without subscribers. It does not change when the payload is dropped, so that dropping the payload
+    # changes no indexed column and remains an update within the page.
     Column('payload_id', BigInteger, nullable=True),
+
+    # Whether the payload was dropped, after which the row of the payload is released, see released_payload_table
+    Column('payload_dropped', Boolean, nullable=False, server_default=false()),
     Column('payload_encrypted', Boolean, nullable=False),
 
     # Whether the payload is stored as the Base64 of its UTF-8 bytes, because it holds a NUL character, which text cannot hold
@@ -95,8 +99,11 @@ message_table = Table('pubsub_message', metadata,
     # .. browsing walks a topic in publication order ..
     Index('idx_pubsub_message_topic', 'topic_name', 'id'),
 
-    # .. and the expiry sweep finds everything that is past its time.
+    # .. the expiry sweep finds everything that is past its time ..
     Index('idx_pubsub_message_expiration', 'expiration_ms'),
+
+    # .. and a payload is deleted only when no message that has not dropped it references it.
+    Index('idx_pubsub_message_payload', 'payload_id'),
 )
 
 # The retry columns, for the queries that read a message back
@@ -160,6 +167,17 @@ trace_table = Table('pubsub_trace', metadata,
 
     # .. and the retention sweep finds the oldest ones.
     Index('idx_pubsub_trace_pub_time', 'pub_time_ms'),
+)
+
+# ################################################################################################################################
+
+# One row per payload that a message released, by dropping it or by being deleted before it dropped it, which triggers
+# of the database insert along with the message rows - see traces.py. The cleanup sweep deletes each released payload
+# that no message and no audit event references anymore, and then the row. A payload released by many messages
+# has as many rows, so that concurrent releases never wait for one another.
+released_payload_table = Table('pubsub_released_payload', metadata,
+    _new_id_column(),
+    Column('payload_id', BigInteger, nullable=False),
 )
 
 # ################################################################################################################################
@@ -243,6 +261,9 @@ _storage_statements = {
     ],
     trace_table: [
         f'ALTER TABLE pubsub_trace SET ({_high_churn})',
+    ],
+    released_payload_table: [
+        f'ALTER TABLE pubsub_released_payload SET ({_high_churn})',
     ],
     queue_count_table: [
         f'ALTER TABLE pubsub_queue_count SET ({_high_churn})',

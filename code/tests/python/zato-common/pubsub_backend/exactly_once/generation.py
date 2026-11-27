@@ -37,7 +37,7 @@ _replaced_pool_size  = 8
 _replacing_pool_size = 9
 
 # The rows that a write of the replaced server would change
-_message_rows_query  = 'select id, msg_id, payload is null from pubsub_message order by id'
+_message_rows_query  = 'select id, msg_id, payload_id, payload_dropped from pubsub_message order by id'
 _delivery_rows_query = 'select id, sub_key, attempt, leased_until_ms from pubsub_delivery order by id'
 _sub_rows_query      = 'select sub_key, topic_name from pubsub_topic_sub order by sub_key, topic_name'
 

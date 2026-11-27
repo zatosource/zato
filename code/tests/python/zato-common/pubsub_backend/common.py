@@ -20,8 +20,9 @@ from zato.common.audit_log.common import event_count_table, event_dedup_table, e
 from zato.common.common_db.schema import message_dedup_table
 from zato.common.db_env.commit_ticket import CommitTicket
 from zato.common.db_env.database import get_database_engine
+from zato.common.pubsub.sql.pull import message_payload
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
-    topic_count_table, topic_sub_table, trace_table
+    released_payload_table, topic_count_table, topic_sub_table, trace_table
 from zato.common.test.direct_sql.fault import interrupt_topic_rename
 from zato.common.test.direct_sql.reset import reset_table_rows
 
@@ -67,8 +68,10 @@ def delete_all_rows() -> 'None':
     """ Starts a scenario from empty tables because containers can be reused between test runs.
     """
     engine = get_database_engine()
+
+    # The released payloads are emptied after the messages, whose deletion releases their payloads.
     tables = [delivery_table, message_table, message_dedup_table, topic_sub_table, queue_count_table, topic_count_table,
-        publish_count_table]
+        publish_count_table, released_payload_table]
 
     reset_table_rows(engine, tables)
 
@@ -138,12 +141,13 @@ def get_event_ids(column:'Column') -> 'intset':
 # ################################################################################################################################
 
 def get_message_rows(topic_name:'str') -> 'anylist':
-    """ Reads all of one topic's message rows straight from the database,
+    """ Reads all of one topic's message rows straight from the database, each with the payload that it references
+    in the payload table of the audit log under the name payload, or None if it dropped it or references none,
     bypassing the backend - what schema-level assertions look at.
     """
     engine = get_database_engine()
 
-    query = select(message_table)
+    query = select(message_table, message_payload)
     query = query.where(message_table.c.topic_name == topic_name)
     query = query.order_by(message_table.c.id)
 

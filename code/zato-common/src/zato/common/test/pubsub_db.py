@@ -11,7 +11,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # server fixture points at the current quickstart directory or at a PostgreSQL container.
 
 # SQLAlchemy
-from sqlalchemy import func, select
+from sqlalchemy import false, func, select
 
 # Zato
 from zato.common.common_db.schema import message_dedup_table
@@ -177,7 +177,7 @@ def count_messages_with_payload(msg_ids:'strlist') -> 'int':
     query = select(func.count())
     query = query.select_from(message_table)
     query = query.where(message_table.c.msg_id.in_(msg_ids))
-    query = query.where(message_table.c.payload_id.isnot(None))
+    query = query.where(message_table.c.payload_dropped.is_(false()))
 
     engine = get_database_engine()
 

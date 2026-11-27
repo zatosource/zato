@@ -207,7 +207,8 @@ def _write(backend:'SQLPubSubBackend', items:'anylist') -> 'TransactionRecorder'
 def _run_compositions() -> 'None':
     """ Each kind of item alone in a batch runs its own statements, in one transaction.
     """
-    one_event = get_event_statements(1, True)
+    # The audit event of a publication references the payload that the publication stored.
+    one_event = get_event_statements(1, False)
 
     # A publication with its audit event ..
     backend = _new_backend()
@@ -255,7 +256,7 @@ def _run_compositions() -> 'None':
 # ################################################################################################################################
 
 def _get_payload(topic_name:'str', msg_id:'str') -> 'any_':
-    """ Returns the payload column of the message row of one message identifier.
+    """ Returns the payload that the message row of one message identifier references, or None once it is dropped.
     """
     for row in get_message_rows(topic_name):
         if row.msg_id == msg_id:
@@ -307,7 +308,7 @@ def _run_every_kind() -> 'None':
         statements_attempts,
         statements_lease,
         statements_drop,
-        get_event_statements(_every_kind_event_count, True),
+        get_event_statements(_every_kind_event_count, False),
     ]
 
     assert_one_transaction(recorder, get_expected(parts))

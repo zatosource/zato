@@ -48,6 +48,9 @@ _expected_triggers = {
     ('pubsub_message', 'pubsub_trace_delete'),
 }
 
+# The pages of the tables whose rows are updated after their insert keep half of their space free.
+_updated_fillfactor = 'fillfactor=50'
+
 _high_churn_options = [
     'autovacuum_vacuum_scale_factor=0.01',
     'autovacuum_vacuum_insert_scale_factor=0.01',
@@ -143,32 +146,18 @@ def test_postgresql_schema(pubsub_database:'PubSubDatabase') -> 'None':
             generation = connection.execute(text('select generation from zato_active where id = 1')).scalar()
             assert generation == 0, generation
 
-            # .. the compression of the payloads ..
-            compression = connection.execute(text("""
-                select attcompression from pg_attribute
-                where attrelid = 'pubsub_message'::regclass and attname = 'payload'
-            """)).scalar()
-
-            assert compression == 'l', compression
-
-            # .. and the storage parameters of the tables and of the TOAST table of the messages.
+            # .. and the storage parameters of the tables.
             table_query = 'select reloptions from pg_class where oid = cast(:table_name as regclass)'
-            toast_query = """
-                select toast.reloptions from pg_class main join pg_class toast on toast.oid = main.reltoastrelid
-                where main.oid = cast(:table_name as regclass)
-            """
 
             for table_name in ('pubsub_message', 'pubsub_delivery'):
                 options = _get_options(connection, table_query, table_name)
-                assert 'fillfactor=90' in options, (table_name, options)
+                assert _updated_fillfactor in options, (table_name, options)
 
-            for table_name in ('pubsub_message', 'pubsub_delivery', 'pubsub_trace', *_count_key_indexes):
+            for table_name in ('pubsub_message', 'pubsub_delivery', 'pubsub_trace', 'pubsub_released_payload',
+                *_count_key_indexes):
                 options = _get_options(connection, table_query, table_name)
                 for option in _high_churn_options:
                     assert option in options, (table_name, options)
-
-            toast_options = _get_options(connection, toast_query, 'pubsub_message')
-            assert 'autovacuum_vacuum_scale_factor=0.01' in toast_options, toast_options
 
 # ################################################################################################################################
 

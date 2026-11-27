@@ -62,7 +62,7 @@ _delivery_rows_query = text('select count(*) from pubsub_delivery')
 
 # The rows of one topic and of one queue.
 _topic_message_query = text('select count(*) from pubsub_message where topic_name = :topic_name')
-_topic_payload_query = text('select count(*) from pubsub_message where topic_name = :topic_name and payload is not null')
+_topic_payload_query = text('select count(*) from pubsub_message where topic_name = :topic_name and not payload_dropped')
 _topic_delivery_query = text('select count(*) from pubsub_delivery where topic_name = :topic_name')
 _topic_sub_query = text('select count(*) from pubsub_topic_sub where topic_name = :topic_name')
 _queue_depth_query = text('select count(*) from pubsub_delivery where sub_key = :sub_key')

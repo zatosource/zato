@@ -18,11 +18,12 @@ from typing import NamedTuple
 from zlib import crc32
 
 # Zato
+from zato.common.audit_log.payload import store_payload
 from zato.common.common_db.schema import message_dedup_table
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.schema import active_table, delivery_table, message_table, metadata, topic_sub_table
 from zato.common.test.direct_sql.reset import truncate_tables
-from zato.common.test.direct_sql.seed import BulkLoad, ModuleCtx as SeedModuleCtx, refresh_statistics, seed_bulk
+from zato.common.test.direct_sql.seed import BulkLoad, ModuleCtx as SeedModuleCtx, refresh_statistics, run_seed, seed_bulk
 from zato.common.test.pubsub_database import get_db_mode, is_managed_mode
 from zato.common.util.api import sub_key_from_definition
 from zato.common.util.time_ import datetime_to_ms, utcnow
@@ -77,10 +78,11 @@ class ModuleCtx:
 # ################################################################################################################################
 
 # The columns of pubsub_message in the order of the seeded rows, with the identifier given explicitly,
-# so that the deliveries refer to their messages without a join.
-_message_columns = ('id', 'msg_id', 'topic_name', 'payload', 'payload_encrypted', 'data_class', 'data_size',
-    'data_preview', 'priority', 'expiration', 'pub_time_iso', 'recv_time_iso', 'expiration_time_iso', 'pub_time_ms',
-    'expiration_ms', 'publisher', 'cid', 'correl_id', 'in_reply_to', 'ext_client_id', 'payload_crc32')
+# so that the deliveries refer to their messages without a join. The payload of each message is a reference
+# to its row in the payload table of the audit log.
+_message_columns = ('id', 'msg_id', 'topic_name', 'payload_id', 'payload_dropped', 'payload_encrypted', 'data_class',
+    'data_size', 'data_preview', 'priority', 'expiration', 'pub_time_iso', 'recv_time_iso', 'expiration_time_iso',
+    'pub_time_ms', 'expiration_ms', 'publisher', 'cid', 'correl_id', 'in_reply_to', 'ext_client_id', 'payload_crc32')
 
 # The columns of pubsub_delivery, whose identifier the database assigns.
 _delivery_columns = ('message_id', 'sub_key', 'topic_name', 'priority', 'expiration_ms')
@@ -195,6 +197,9 @@ def seed_queues(queues:'seeded_queue_list') -> 'float':
     engine = get_database_engine()
     _clear_tables(engine)
 
+    # The payload that every seeded message references is stored in the payload table of the audit log first.
+    payload_id = run_seed(engine, store_payload, ModuleCtx.Payload)
+
     now_ms = int(datetime_to_ms(utcnow()))
     now_iso = _ms_to_iso(now_ms)
 
@@ -225,7 +230,7 @@ def seed_queues(queues:'seeded_queue_list') -> 'float':
                 msg_id = f'{ModuleCtx.Msg_ID_Prefix}.{queue_index:04d}.{number}'
                 pub_time_ms = now_ms - number * ModuleCtx.Pub_Time_Step_MS
 
-                yield (message_id, msg_id, queue.topic_name, ModuleCtx.Payload, False, None, len(ModuleCtx.Payload),
+                yield (message_id, msg_id, queue.topic_name, payload_id, False, False, None, len(ModuleCtx.Payload),
                     ModuleCtx.Payload, ModuleCtx.Priority, ModuleCtx.Seconds_Per_Year, now_iso, now_iso, expiration_iso,
                     pub_time_ms, expiration_ms, None, None, None, None, None, ModuleCtx.Payload_CRC32)
 
@@ -272,7 +277,7 @@ def seed_traces(topic_name:'str', message_count:'int', age_days:'int') -> 'float
             msg_id = f'{ModuleCtx.Msg_ID_Prefix}.trace.{number}'
             pub_time_ms = aged_ms - number
 
-            yield (message_id, msg_id, topic_name, None, False, None, len(ModuleCtx.Payload), ModuleCtx.Payload,
+            yield (message_id, msg_id, topic_name, None, True, False, None, len(ModuleCtx.Payload), ModuleCtx.Payload,
                 ModuleCtx.Priority, ModuleCtx.Seconds_Per_Year, aged_iso, aged_iso, expiration_iso, pub_time_ms,
                 expiration_ms, None, None, None, None, None, ModuleCtx.Payload_CRC32)
 

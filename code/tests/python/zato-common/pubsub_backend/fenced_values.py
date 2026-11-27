@@ -202,6 +202,7 @@ def _run_receipt_values(backend:'SQLPubSubBackend') -> 'None':
 
     # .. whose payload no subscriber needs anymore ..
     input_rows = get_message_rows(_topic_input)
+    assert input_rows[0].payload_dropped
     assert input_rows[0].payload is None
 
     # .. and the receipt has a row of its own with the values given ..
@@ -211,6 +212,7 @@ def _run_receipt_values(backend:'SQLPubSubBackend') -> 'None':
         'msg_id': _receipt_msg_id,
         'topic_name': _topic_output,
         'payload': _data_receipt,
+        'payload_dropped': False,
         'payload_encrypted': False,
         'payload_base64': False,
         'payload_crc32': _receipt_crc32,

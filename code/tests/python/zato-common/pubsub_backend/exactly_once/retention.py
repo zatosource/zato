@@ -70,6 +70,7 @@ def run_deduplication_window_scenario() -> 'None':
         rows = get_message_rows(Input_Topic)
         trace = rows[0]
 
+        assert trace.payload_dropped
         assert trace.payload is None
 
         # .. a repeated publication stores nothing new ..

@@ -10,8 +10,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # a message to the list when it is inserted without a payload or when its payload is dropped, and remove it
 # when the message is deleted or receives a payload again, in the transaction that changes the message row,
 # whichever code issues the statement. The retention sweeps read the list rather than the message table,
-# which no index of payloads may serve, because an index of the payload column would make dropping a payload
+# which no index of the dropped flag may serve, because such an index would make dropping a payload
 # an update of every index of the message table.
+#
+# The same triggers release the payload of a message when the message drops it, and when the message is deleted
+# before it dropped it, by listing the payload in pubsub_released_payload for the cleanup sweep.
 
 # Zato
 from zato.common.pubsub.sql.counts import postgresql_function, register_triggers
@@ -32,6 +35,8 @@ if 0:
 
 _insert_into = 'INSERT INTO pubsub_trace (message_id, topic_name, pub_time_ms)'
 
+_release_into = 'INSERT INTO pubsub_released_payload (payload_id)'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -40,21 +45,28 @@ def _trace_statements() -> 'anytuple':
     """
 
     # The messages a statement inserted without a payload are traces from the start ..
-    add_inserted = f'{_insert_into} SELECT id, topic_name, pub_time_ms FROM new_rows WHERE payload_id IS NULL;'
+    add_inserted = f'{_insert_into} SELECT id, topic_name, pub_time_ms FROM new_rows WHERE payload_dropped;'
 
     # .. the messages it updated are traces when they have no payload, and those that received one are traces no more.
     # .. A trigger with a list of columns cannot read the updated rows, so the trigger runs on each update of the messages ..
-    add_updated = f'{_insert_into} SELECT id, topic_name, pub_time_ms FROM new_rows WHERE payload_id IS NULL ' + \
+    add_updated = f'{_insert_into} SELECT id, topic_name, pub_time_ms FROM new_rows WHERE payload_dropped ' + \
         'ON CONFLICT (message_id) DO UPDATE SET topic_name = excluded.topic_name, pub_time_ms = excluded.pub_time_ms;'
 
-    remove_revived = 'DELETE FROM pubsub_trace WHERE message_id IN (SELECT id FROM new_rows WHERE payload_id IS NOT NULL);'
+    remove_revived = 'DELETE FROM pubsub_trace WHERE message_id IN (SELECT id FROM new_rows WHERE NOT payload_dropped);'
 
-    # .. and the traces it deleted leave the list.
-    remove_deleted = 'DELETE FROM pubsub_trace WHERE message_id IN (SELECT id FROM old_rows WHERE payload_id IS NULL);'
+    # .. the payloads of the messages it updated that have dropped them are released, which an update
+    # of a message that dropped its payload earlier releases again, without effect ..
+    release_updated = f'{_release_into} SELECT payload_id FROM new_rows WHERE payload_dropped AND payload_id IS NOT NULL;'
+
+    # .. the traces it deleted leave the list ..
+    remove_deleted = 'DELETE FROM pubsub_trace WHERE message_id IN (SELECT id FROM old_rows WHERE payload_dropped);'
+
+    # .. and the payloads of the messages it deleted before they dropped them are released.
+    release_deleted = f'{_release_into} SELECT payload_id FROM old_rows WHERE NOT payload_dropped AND payload_id IS NOT NULL;'
 
     insert_function = postgresql_function('pubsub_trace_insert', add_inserted)
-    update_function = postgresql_function('pubsub_trace_update', f'{add_updated} {remove_revived}')
-    delete_function = postgresql_function('pubsub_trace_delete', remove_deleted)
+    update_function = postgresql_function('pubsub_trace_update', f'{add_updated} {remove_revived} {release_updated}')
+    delete_function = postgresql_function('pubsub_trace_delete', f'{remove_deleted} {release_deleted}')
 
     after_insert = 'CREATE TRIGGER pubsub_trace_insert AFTER INSERT ON pubsub_message ' + \
         'REFERENCING NEW TABLE AS new_rows FOR EACH STATEMENT EXECUTE FUNCTION pubsub_trace_insert()'

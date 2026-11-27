@@ -156,6 +156,7 @@ def build_publication(
         'msg_id': message_id,
         'topic_name': topic_name,
         'payload_id': None,
+        'payload_dropped': False,
         'payload_encrypted': payload_encrypted,
         'payload_base64': payload_base64,
         'payload_crc32': payload_crc32,

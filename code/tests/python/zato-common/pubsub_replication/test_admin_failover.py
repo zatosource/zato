@@ -189,7 +189,7 @@ def test_failover_during_clear_queue() -> 'None':
 
         assert _count_deliveries(database) == 0
         assert _count(database, f"select count(*) from pubsub_message where topic_name = '{_topic_name}' " +
-            'and payload is not null') == 0
+            'and not payload_dropped') == 0
 
         _check_counts(backend, database)
 
@@ -237,7 +237,7 @@ def test_failover_during_retention_sweep() -> 'None':
 
         assert _count_deliveries(database) == 0
         assert _count(database, f"select count(*) from pubsub_message where topic_name = '{_topic_name}' " +
-            'and payload is not null') == 0
+            'and not payload_dropped') == 0
 
         _check_counts(backend, database)
 

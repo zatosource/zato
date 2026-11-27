@@ -20,6 +20,7 @@ from sqlalchemy import select
 # Zato
 from pubsub_exactly_once.harness import get_engine
 from pubsub_exactly_once.rest import ack, drain, publish, pull_raw
+from zato.common.pubsub.sql.pull import message_payload
 from zato.common.pubsub.sql.schema import delivery_table, message_table
 from zato.common.test.exactly_once.config import TestConfig
 
@@ -92,11 +93,12 @@ _every_field_meta_keys = _base_meta_keys | {'correl_id', 'in_reply_to', 'ext_cli
 # ################################################################################################################################
 
 def _get_message_row(msg_id:'str') -> 'any_':
-    """ Returns the message row of a message ID and the sub key of its only delivery row.
+    """ Returns the message row of a message ID, with the payload that it references in the payload table
+    of the audit log, and the sub key of its only delivery row.
     """
     engine = get_engine()
 
-    query = select(message_table, delivery_table.c.sub_key)
+    query = select(message_table, message_payload, delivery_table.c.sub_key)
     query = query.select_from(message_table.join(delivery_table, delivery_table.c.message_id == message_table.c.id))
     query = query.where(message_table.c.msg_id == msg_id)
 

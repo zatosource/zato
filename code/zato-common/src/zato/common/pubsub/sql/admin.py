@@ -13,7 +13,7 @@ from logging import getLogger
 from sqlalchemy import and_, BigInteger, cast, func, select
 
 # Zato
-from zato.common.audit_log.payload import store_payload
+from zato.common.audit_log.payload import delete_unreferenced_payloads, store_payload
 from zato.common.db_env.engine import call_database, execute_write
 from zato.common.pubsub.sql.browse import SQLBrowseAPI
 from zato.common.pubsub.sql.config import get_batch_size
@@ -516,25 +516,43 @@ class SQLAdminAPI(SQLBrowseAPI):
         values:'anydict',
         ) -> 'bool':
         """ Stores the given payload in the payload table and makes one message reference it, with the given values
-        derived from it, in one transaction. Returns True if the message existed and was updated.
+        derived from it, in one transaction, and deletes the payload it replaced if nothing else references it.
+        Returns True if the message existed and was updated.
         """
+        condition = and_(
+            message_table.c.msg_id == msg_id,
+            message_table.c.topic_name == topic_name,
+        )
+
         with engine.begin() as connection:
 
-            # The payload is stored unless it is stored already ..
+            # The payload that the message has not dropped yet, if any ..
+            previous_query = select(message_table.c.payload_id, message_table.c.payload_dropped)
+            previous_query = previous_query.where(condition)
+            previous_query = previous_query.with_for_update()
+
+            previous = connection.execute(previous_query).fetchone()
+
+            if previous is None:
+                return False
+
+            # .. the new one is stored unless it is stored already ..
             payload_id = store_payload(connection, payload)
 
-            # .. and the message references it.
+            # .. the message references it ..
             update_statement = message_table.update()
-            update_statement = update_statement.where(and_(
-                message_table.c.msg_id == msg_id,
-                message_table.c.topic_name == topic_name,
-            ))
-            update_statement = update_statement.values(payload_id=payload_id, **values)
+            update_statement = update_statement.where(condition)
+            update_statement = update_statement.values(payload_id=payload_id, payload_dropped=False, **values)
 
-            result = connection.execute(update_statement)
+            _ = connection.execute(update_statement)
 
-        out = result.rowcount > 0
-        return out
+            # .. and the previous one is deleted unless something else references it. A dropped one was released
+            # when the message dropped it.
+            if previous.payload_id is not None and not previous.payload_dropped:
+                if previous.payload_id != payload_id:
+                    delete_unreferenced_payloads(connection, [previous.payload_id])
+
+        return True
 
 # ################################################################################################################################
 
