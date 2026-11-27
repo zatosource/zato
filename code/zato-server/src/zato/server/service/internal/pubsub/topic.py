@@ -16,6 +16,7 @@ from zato.common.ext.bunch import Bunch
 # Zato
 from zato.common.api import PubSub, query_parameters
 from zato.common.broker_message import PUBSUB
+from zato.common.exception import NotFound
 from zato.common.json_internal import dumps
 from zato.common.odb.model import PubSubTopic
 from zato.common.odb.query import pubsub_subscription_topic_names, pubsub_topic_list
@@ -232,10 +233,16 @@ class Delete(AdminService):
     def handle(self) -> 'None':
 
         with closing(self.odb.session()) as session:
+
+            topic = session.query(PubSubTopic).\
+                filter(PubSubTopic.id==self.request.input.id).\
+                first()
+
+            # A topic that does not exist is the caller's error ..
+            if topic is None:
+                raise NotFound(self.cid, f'Pub/sub topic with ID `{self.request.input.id}` not found')
+
             try:
-                topic = session.query(PubSubTopic).\
-                    filter(PubSubTopic.id==self.request.input.id).\
-                    one()
 
                 # .. snapshot subscriptions linked to this topic before deletion,
                 # .. because the FK cascade on PubSubSubscriptionTopic will remove

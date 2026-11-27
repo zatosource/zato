@@ -738,6 +738,7 @@ class PubSubWriter:
                 pending.subscriber_keys = []
                 message_values['payload'] = None
                 message_values['payload_encrypted'] = False
+                message_values['payload_base64'] = False
 
             message_rows.append(message_values)
 

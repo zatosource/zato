@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Boolean, Column, DDL, event, Identity, Index, Integer, MetaData, String, Table, Text
+from sqlalchemy import BigInteger, Boolean, Column, DDL, event, false, Identity, Index, Integer, MetaData, String, Table, Text
 
 # Zato
 from zato.common.api import HTTP_SOAP, PubSub
@@ -55,6 +55,9 @@ message_table = Table('pubsub_message', metadata,
     Column('topic_name', String(_short_column_len), nullable=False),
     Column('payload', Text, nullable=True),
     Column('payload_encrypted', Boolean, nullable=False),
+
+    # Whether the payload is stored as the Base64 of its UTF-8 bytes, because it holds a NUL character, which text cannot hold
+    Column('payload_base64', Boolean, nullable=False, server_default=false()),
 
     # The CRC-32 of the payload as published, before any encryption, by which a publication repeated
     # with the same identifier is told apart from a different message reusing the identifier

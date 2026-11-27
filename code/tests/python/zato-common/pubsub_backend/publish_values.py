@@ -109,6 +109,14 @@ _payload_large_crc32 = 1984673339
 _payload_large_size = 1_025_000
 _payload_large_preview = _payload_large_line + _payload_large_line + 'Invoice line for M'
 
+# A payload with a NUL character, which is stored as the Base64 of its UTF-8 bytes, and whose preview holds
+# the replacement character in place of the NUL character
+_payload_nul = 'Order ORD-0042\x00for Maria Johnson'
+_payload_nul_base64 = 'T3JkZXIgT1JELTAwNDIAZm9yIE1hcmlhIEpvaG5zb24='
+_payload_nul_crc32 = 1319825628
+_payload_nul_size = 32
+_payload_nul_preview = 'Order ORD-0042\ufffdfor Maria Johnson'
+
 # The identifier of the message that the publications of the repeat parts share, and the payloads they publish
 _msg_id_repeat = 'zpsm.test.publish-values.repeat'
 _data_repeat = 'Invoice INV-7781 for John Smith'
@@ -242,6 +250,7 @@ def get_base_values(topic_name:'str', data:'str | None', crc32:'int', size:'int'
         'topic_name': topic_name,
         'payload': data,
         'payload_encrypted': False,
+        'payload_base64': False,
         'payload_crc32': crc32,
         'data_class': None,
         'data_size': size,
@@ -325,6 +334,7 @@ def _run_every_field(backend:'SQLPubSubBackend') -> 'None':
         'topic_name': _topic_fields,
         'payload': _data_fields,
         'payload_encrypted': False,
+        'payload_base64': False,
         'payload_crc32': _crc32_fields,
         'data_class': None,
         'data_size': 32,
@@ -468,6 +478,31 @@ def _run_encrypted_payload() -> 'None':
 
     assert_message_row(values, expected, publish_start_ms, publish_end_ms)
     assert_one_delivery(values, _sub_key_first)
+
+# ################################################################################################################################
+
+def _run_nul_payload(backend:'SQLPubSubBackend') -> 'None':
+    """ A payload with a NUL character is stored as the Base64 of its UTF-8 bytes, with the checksum and size of its text
+    and a preview that holds the replacement character, and it is read back as it was published.
+    """
+    backend.subscribe(_sub_key_first, _topic_forms)
+
+    values, publish_start_ms, publish_end_ms = _publish_plain(backend, _topic_forms, _payload_nul)
+
+    # The row holds the Base64 of the payload ..
+    expected = get_base_values(_topic_forms, _payload_nul_base64, _payload_nul_crc32, _payload_nul_size,
+        _payload_nul_preview)
+    expected['msg_id'] = values['msg_id']
+    expected['pub_time_iso'] = values['pub_time_iso']
+    expected['pub_time_ms'] = values['pub_time_ms']
+    expected['payload_base64'] = True
+
+    assert_message_row(values, expected, publish_start_ms, publish_end_ms)
+    assert_one_delivery(values, _sub_key_first)
+
+    # .. and the payload is read back with its NUL character.
+    message = {'sequence_id': values['id']}
+    assert backend.read_payload(message) == _payload_nul
 
 # ################################################################################################################################
 
@@ -663,6 +698,7 @@ def run_publish_values_scenario() -> 'None':
     _run_no_optional_field(_new_backend())
     _run_stored_forms()
     _run_encrypted_payload()
+    _run_nul_payload(_new_backend())
     _run_no_subscribers()
     _run_repeated_publication(_new_backend())
     _run_repeats_in_one_commit(_new_backend())

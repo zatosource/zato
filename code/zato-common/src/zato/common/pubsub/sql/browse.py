@@ -64,6 +64,7 @@ _browse_columns.extend(message_retry_columns)
 _browse_payload_columns = [
     message_table.c.payload,
     message_table.c.payload_encrypted,
+    message_table.c.payload_base64,
     message_table.c.data_class,
 ]
 

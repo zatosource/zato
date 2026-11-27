@@ -23,11 +23,14 @@ struct RowColumns {
     /// The topic that the message was published to.
     topic_name: usize,
 
-    /// The payload, stored as text or encrypted at rest.
+    /// The payload, stored as text, as Base64 or encrypted at rest.
     payload: usize,
 
     /// Whether the payload is encrypted at rest.
     payload_encrypted: usize,
+
+    /// Whether the payload is stored as the Base64 of its UTF-8 bytes, because it holds a NUL character.
+    payload_base64: usize,
 
     /// The class of the data of the payload.
     data_class: usize,
@@ -200,6 +203,7 @@ impl PulledMessageBuilder {
             topic_name: column_index(&column_names, "topic_name")?,
             payload: column_index(&column_names, "payload")?,
             payload_encrypted: column_index(&column_names, "payload_encrypted")?,
+            payload_base64: column_index(&column_names, "payload_base64")?,
             data_class: column_index(&column_names, "data_class")?,
             data_size: column_index(&column_names, "data_size")?,
             data_preview: column_index(&column_names, "data_preview")?,
@@ -294,7 +298,8 @@ impl PulledMessageBuilder {
         })
     }
 
-    /// Returns the payload of one message row, decrypted if it was encrypted at rest, a missing payload being ''.
+    /// Returns the payload of one message row, decrypted if it was encrypted at rest and decoded if it was stored
+    /// as Base64, a missing payload being ''.
     fn load_payload<'py>(&self, row: &Bound<'py, PyAny>, crypto_manager: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
         let py = row.py();
         let payload = row.get_item(self.columns.payload)?;
@@ -311,6 +316,16 @@ impl PulledMessageBuilder {
         if is_encrypted {
             let decrypted = crypto_manager.call_method1(intern!(py, "decrypt"), (payload,))?;
             return Ok(decrypted);
+        }
+
+        // .. one holding a NUL character was stored as Base64, which the decoder of the stored payloads reverses ..
+        let is_base64 = row.get_item(self.columns.payload_base64)?.is_truthy()?;
+
+        if is_base64 {
+            let payloads_module = py.import(intern!(py, "zato.common.pubsub.sql.payloads"))?;
+            let from_base64 = payloads_module.getattr(intern!(py, "from_base64"))?;
+            let decoded = from_base64.call1((payload,))?;
+            return Ok(decoded);
         }
 
         // .. and any other one is handed out as it is stored.

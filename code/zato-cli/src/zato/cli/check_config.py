@@ -21,9 +21,13 @@ class ModuleCtx:
     # The modules through which the Zato database is reached, imported only when the ODB is pinged
     SQLAlchemy_Module = 'sqlalchemy'
     Database_Module = 'zato.common.db_env.database'
+    Outage_Module = 'zato.common.db_env.outage'
 
     # The query that confirms that the ODB accepts connections
     Ping_Query = 'SELECT 1'
+
+    # What the log entries of the ping name while it waits for the database
+    Ping_Component = 'Zato database ping'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,8 +68,9 @@ class CheckConfig(ManageCommand):
 
 # ################################################################################################################################
 
-    def ping_sql_odb(self) -> 'None':
-        """ Opens a connection to the Zato database, which holds the ODB, and runs a query against it.
+    def _ping_database(self) -> 'None':
+        """ Opens a connection to the Zato database through a new engine, runs a query against it
+        and releases the connections of the engine.
         """
         sqlalchemy = import_module(ModuleCtx.SQLAlchemy_Module)
         database_module = import_module(ModuleCtx.Database_Module)
@@ -74,11 +79,22 @@ class CheckConfig(ManageCommand):
         sql_engine = database_module.new_odb_engine()
 
         # .. confirm that it accepts connections ..
-        with sql_engine.connect() as connection:
-            _ = connection.execute(sqlalchemy.text(ModuleCtx.Ping_Query))
+        try:
+            with sql_engine.connect() as connection:
+                _ = connection.execute(sqlalchemy.text(ModuleCtx.Ping_Query))
 
-        # .. and release its connections.
-        sql_engine.dispose()
+        # .. and release its connections, whether or not it accepted them.
+        finally:
+            sql_engine.dispose()
+
+# ################################################################################################################################
+
+    def ping_sql_odb(self) -> 'None':
+        """ Opens a connection to the Zato database, which holds the ODB, and runs a query against it.
+        The ping waits for the database through an outage or a failover, as the component that starts after it does.
+        """
+        outage_module = import_module(ModuleCtx.Outage_Module)
+        outage_module.call_until_available(ModuleCtx.Ping_Component, self._ping_database)
 
         if self.show_output:
             self.logger.info('SQL ODB connection OK')

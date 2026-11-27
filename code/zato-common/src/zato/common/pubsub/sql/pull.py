@@ -82,6 +82,7 @@ message_columns = [
     message_table.c.topic_name,
     message_table.c.payload,
     message_table.c.payload_encrypted,
+    message_table.c.payload_base64,
     message_table.c.data_class,
     message_table.c.data_size,
     message_table.c.data_preview,
@@ -100,7 +101,7 @@ message_columns.extend(message_retry_columns)
 
 # A fetch for push delivery reads the payloads apart from the other columns, because the server keeps the payloads
 # of the messages that many subscribers receive, and it also reads its delivery row, whose attempts the delivery records.
-_payload_columns = {message_table.c.payload.name, message_table.c.payload_encrypted.name}
+_payload_columns = {message_table.c.payload.name, message_table.c.payload_encrypted.name, message_table.c.payload_base64.name}
 
 _fetch_columns:'anylist' = [column for column in message_columns if column.name not in _payload_columns]
 _fetch_columns.append(delivery_table.c.id.label('delivery_id'))
@@ -129,7 +130,8 @@ outgoing_fetch_query = outgoing_fetch_query.order_by(*_order_by)
 outgoing_fetch_query = outgoing_fetch_query.limit(bindparam('fetch_max_messages'))
 
 # The payloads of the fetched messages that the server does not keep yet.
-payload_query = select(message_table.c.id, message_table.c.payload, message_table.c.payload_encrypted)
+payload_query = select(message_table.c.id, message_table.c.payload, message_table.c.payload_encrypted,
+    message_table.c.payload_base64)
 payload_query = payload_query.where(message_table.c.id.in_(bindparam('payload_message_ids', expanding=True)))
 
 # ################################################################################################################################

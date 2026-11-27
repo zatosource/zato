@@ -20,6 +20,7 @@ from zato.common.marshal_.api import Model
 from zato.common.pubsub.sql.config import get_dedup_window_days
 from zato.common.pubsub.sql.dedup import get_existing_fingerprints
 from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID
+from zato.common.pubsub.sql.payloads import get_data_preview
 from zato.common.pubsub.sql.pending import new_pending_publication
 from zato.common.typing_ import cast_, list_
 from zato.common.util.api import new_msg_id
@@ -52,7 +53,6 @@ _retry = HTTP_SOAP.Retry
 
 _default_priority   = PubSub.Message.Priority_Default
 _default_expiration = PubSub.Message.Default_Expiration
-_data_preview_len   = PubSub.Message.Data_Preview_Len
 
 # How many milliseconds one day has - the dedup window is given in days.
 _ms_per_day = 24 * 60 * 60 * 1000
@@ -141,19 +141,14 @@ def build_publication(
         serialized_data = json.dumps(data)
 
     data_size = len(serialized_data)
-    data_preview = serialized_data[:_data_preview_len]
+    data_preview = get_data_preview(serialized_data)
 
     # .. a publication repeated under the same identifier is recognized by its checksum ..
     serialized_bytes = serialized_data.encode('utf8')
     payload_crc32 = crc32(serialized_bytes)
 
-    # .. encrypt the payload at rest when configured to ..
-    if backend.encrypt_at_rest:
-        payload = backend._encrypt_payload(serialized_data)
-        payload_encrypted = True
-    else:
-        payload = serialized_data
-        payload_encrypted = False
+    # .. the payload is stored encrypted at rest when configured to, or in a form that text can hold ..
+    payload, payload_encrypted, payload_base64 = backend._store_payload(serialized_data)
 
     # .. and build the message row, with optional values stored as NULLs.
     message_values:'anydict' = {
@@ -161,6 +156,7 @@ def build_publication(
         'topic_name': topic_name,
         'payload': payload,
         'payload_encrypted': payload_encrypted,
+        'payload_base64': payload_base64,
         'payload_crc32': payload_crc32,
         'data_class': data_class if data_class else None,
         'data_size': data_size,

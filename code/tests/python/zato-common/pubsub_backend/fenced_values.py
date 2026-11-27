@@ -212,6 +212,7 @@ def _run_receipt_values(backend:'SQLPubSubBackend') -> 'None':
         'topic_name': _topic_output,
         'payload': _data_receipt,
         'payload_encrypted': False,
+        'payload_base64': False,
         'payload_crc32': _receipt_crc32,
         'data_class': None,
         'data_size': _receipt_size,

@@ -22,6 +22,7 @@ from zato.common.broker_message import PUBSUB
 logger = getLogger(__name__)
 
 from zato.common.api import PubSub, query_parameters
+from zato.common.exception import NotFound
 from zato.common.odb.model import HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
 from zato.common.odb.query import pubsub_subscription_list
 from zato.common.pubsub.util import evaluate_pattern_match, get_security_definition
@@ -485,7 +486,7 @@ class Create(AdminService):
                         filter(PubSubTopic.name==topic_name).first()
 
                     if not topic:
-                        raise Exception('Pub/sub topic with ID `{}` not found'.format(topic_name))
+                        raise NotFound(self.cid, f'Pub/sub topic `{topic_name}` not found')
                     else:
                         topics.append(topic)
 
@@ -529,6 +530,12 @@ class Create(AdminService):
 
                 session.commit()
 
+            # A topic that does not exist is the caller's error ..
+            except NotFound:
+                session.rollback()
+                raise
+
+            # .. whereas anything else is a fault of the operation.
             except Exception:
                 self.logger.error('Could not create pub/sub subscription, e:`%s`', format_exc())
                 session.rollback()

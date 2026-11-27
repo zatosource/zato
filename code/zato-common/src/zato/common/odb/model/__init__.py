@@ -1101,7 +1101,7 @@ class PubSubPermission(Base):
     )
 
     id = Column(Integer, Sequence('pubsub_permission_id_seq'), primary_key=True)
-    pattern = Column(String(400), nullable=False)
+    pattern = Column(Text, nullable=False)
     access_type = Column(String(20), nullable=False) # publisher, subscriber or publisher-subscriber
     is_active = Column(Boolean, nullable=False, default=True)
     created = Column(DateTime, nullable=False, default=_utcnow)

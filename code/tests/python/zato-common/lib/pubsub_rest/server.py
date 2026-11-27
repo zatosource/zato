@@ -10,10 +10,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import os
 
+# SQLAlchemy
+from sqlalchemy import inspect
+
 # Zato
 from pubsub_rest.definition import Definition
+from zato.common.db_env.database import get_database_engine
+from zato.common.odb.model import Base
 from zato.common.test.client import AdminClient
 from zato.common.test.conftest_base_pubsub import get_server_pids
+from zato.common.test.direct_sql.reset import reset_table_rows
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -23,7 +29,7 @@ if 0:
     from pubsub_rest.traffic import Traffic
     from zato.common.test.conftest_base_pubsub import SessionState
     from zato.common.test.pubsub_database import PubSubDatabase
-    from zato.common.typing_ import any_, anydict, callable_, intlist, strlist, strnone, strstrdict
+    from zato.common.typing_ import any_, anydict, anylist, callable_, intlist, strlist, strnone, strstrdict
 
     callable_list = list[callable_]
 
@@ -315,6 +321,26 @@ class PubSubServer:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _reset_configuration_tables() -> 'None':
+    """ Empties the configuration tables that the server of an earlier test left in the database that the environment
+    selects, so that the quickstart of the next server begins with none of their rows. A database that no server
+    has started on yet has none of the tables.
+    """
+    engine = get_database_engine()
+    inspector = inspect(engine)
+
+    tables:'anylist' = []
+
+    # The tables that others refer to are emptied after the tables that refer to them
+    for table in reversed(Base.metadata.sorted_tables):
+        if inspector.has_table(table.name):
+            tables.append(table)
+
+    if tables:
+        reset_table_rows(engine, tables)
+
+# ################################################################################################################################
+
 def get_fixture_arguments(
     server:'PubSubServer',
     setup:'callable_',
@@ -340,6 +366,11 @@ def get_fixture_arguments(
 
         server.reset(state)
 
+        # A database that the environment selects outlives the server of each test ..
+        if uses_environment_database:
+            _reset_configuration_tables()
+
+        # .. and the definition of the server is built anew for each of them.
         definition = Definition()
         setup(server, definition)
 

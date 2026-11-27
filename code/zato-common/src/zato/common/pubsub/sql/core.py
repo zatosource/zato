@@ -22,7 +22,7 @@ from zato.common.pubsub.sql.clock import get_engine_clock
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.generation import follow_takeover, get_fork_takeover, take_over
 from zato.common.pubsub.sql.payload_cache import Max_Payload_Cache_Size, PayloadCache, PayloadEpoch
-from zato.common.pubsub.sql.payloads import drop_payloads
+from zato.common.pubsub.sql.payloads import drop_payloads, from_base64, needs_base64, to_base64
 from zato.common.pubsub.sql.pending import new_pending_ack, new_pending_attempts
 from zato.common.pubsub.sql.pulled_messages import new_pulled_message_builder
 from zato.common.pubsub.sql.writes import PubSubWriter
@@ -44,7 +44,7 @@ if 0:
     from zato.common.pubsub.sql.clock import DatabaseClock
     from zato.common.db_env.fence import GenerationGuard
     from zato.common.pubsub.sql.pending import PendingAck
-    from zato.common.typing_ import any_, anydict, anylist, intlist, intlistnone, intset, strlist, strset
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, intlist, intlistnone, intset, strlist, strset
 
     # Dummy assignments to satisfy type checkers
     AuditLog = AuditLog
@@ -303,9 +303,29 @@ class SQLBackendCore:
 
 # ################################################################################################################################
 
+    def _store_payload(self, data:'str') -> 'anytuple':
+        """ Returns the form in which a payload is written to the database, whether it is encrypted at rest
+        and whether it is stored as Base64.
+        """
+        # A payload encrypted at rest is stored as its token, which holds no NUL character ..
+        if self.encrypt_at_rest:
+            out = self._encrypt_payload(data), True, False
+
+        # .. one holding a NUL character, which text cannot hold, is stored as Base64 ..
+        elif needs_base64(data):
+            out = to_base64(data), False, True
+
+        # .. and any other one is stored as it is.
+        else:
+            out = data, False, False
+
+        return out
+
+# ################################################################################################################################
+
     def _load_payload_from_row(self, row:'any_') -> 'str':
-        """ Returns the payload of one message row, decrypted if it was encrypted at rest.
-        A missing payload reads as ''.
+        """ Returns the payload of one message row, decrypted if it was encrypted at rest
+        and decoded if it was stored as Base64. A missing payload reads as ''.
         """
         payload = row.payload
 
@@ -313,6 +333,8 @@ class SQLBackendCore:
             out = ''
         elif row.payload_encrypted:
             out = self._decrypt_payload(payload)
+        elif row.payload_base64:
+            out = from_base64(payload)
         else:
             out = payload
 

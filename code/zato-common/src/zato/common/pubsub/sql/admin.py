@@ -13,11 +13,11 @@ from logging import getLogger
 from sqlalchemy import and_, BigInteger, cast, func, select
 
 # Zato
-from zato.common.api import PubSub
 from zato.common.db_env.engine import call_database, execute_write
 from zato.common.pubsub.sql.browse import SQLBrowseAPI
 from zato.common.pubsub.sql.config import get_batch_size
 from zato.common.pubsub.sql.counts import Milliseconds_Per_Minute, No_Publisher
+from zato.common.pubsub.sql.payloads import get_data_preview
 from zato.common.pubsub.sql.writes import Topic_Action_Delete, Topic_Action_Rename
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
     topic_count_table, topic_sub_table
@@ -36,9 +36,6 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-# How long the stored preview of each payload is.
-_data_preview_len = PubSub.Message.Data_Preview_Len
 
 # How many minutes of history the statistics cover unless told otherwise.
 _default_since_minutes = 60
@@ -517,15 +514,10 @@ class SQLAdminAPI(SQLBrowseAPI):
         topic_name = topic_name.lower()
 
         data_size = len(data)
-        data_preview = data[:_data_preview_len]
+        data_preview = get_data_preview(data)
 
-        # Encrypt the new payload at rest when configured to ..
-        if self.encrypt_at_rest:
-            payload = self._encrypt_payload(data)
-            payload_encrypted = True
-        else:
-            payload = data
-            payload_encrypted = False
+        # The new payload is stored encrypted at rest when configured to, or in a form that text can hold ..
+        payload, payload_encrypted, payload_base64 = self._store_payload(data)
 
         # .. replace the payload with everything derived from it ..
         update_statement = message_table.update()
@@ -536,6 +528,7 @@ class SQLAdminAPI(SQLBrowseAPI):
         update_statement = update_statement.values(
             payload=payload,
             payload_encrypted=payload_encrypted,
+            payload_base64=payload_base64,
             data_size=data_size,
             data_preview=data_preview if data_preview else None,
         )

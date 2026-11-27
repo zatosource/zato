@@ -24,6 +24,7 @@ from zato.common.test.audit_log_ import new_test_audit_log
 from zato.common.pubsub.sql.pending import new_pending_ack
 from zato.common.pubsub.sql.errors import PubSubTopicUnavailable
 from zato.common.pubsub.sql.publication import build_publication
+from zato.common.pubsub.sql.schema import message_table
 from zato.common.pubsub.sql.writes import PubSubDuplicateMsgID, PubSubWriter
 from zato.common.typing_ import cast_
 
@@ -31,11 +32,14 @@ from zato.common.typing_ import cast_
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy import String
     from sqlalchemy.engine import Engine
     from zato.common.audit_log.api import AuditLog
     from zato.common.pubsub.sql.backend import PublishResult
-    from zato.common.typing_ import any_, anydict, anylist, callable_, intlist, strlist
+    from zato.common.typing_ import any_, anydict, anylist, callable_, intlist, strlist, strnone
     from zato_common_core.zato_common_core import SubscriptionList
+
+    String = String
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -47,6 +51,11 @@ _sub_key_2 = 'zpsk.test.concurrency.2'
 
 # How many callers publish or acknowledge at the same time.
 _caller_count = 200
+
+# A correlation ID one character longer than its column
+_correl_id_type = cast_('String', message_table.c.correl_id.type)
+_correl_id_length = cast_('int', _correl_id_type.length)
+_rejected_correl_id = 'c' * (_correl_id_length + 1)
 
 # How many callers try to claim the same message.
 _claimer_count = 20
@@ -259,11 +268,11 @@ def _run_duplicate_flow() -> 'None':
 
 # ################################################################################################################################
 
-def _publish_or_fail(backend:'SQLPubSubBackend', data:'str') -> 'str':
+def _publish_or_fail(backend:'SQLPubSubBackend', data:'str', correl_id:'strnone') -> 'str':
     """ Publishes a message and tells whether it was stored or failed.
     """
     try:
-        _ = backend.publish(_topic, data)
+        _ = backend.publish(_topic, data, correl_id=correl_id)
     except DBAPIError:
         out = 'failed'
     else:
@@ -274,7 +283,7 @@ def _publish_or_fail(backend:'SQLPubSubBackend', data:'str') -> 'str':
 # ################################################################################################################################
 
 def _run_rejected_value_flow() -> 'None':
-    """ A payload that PostgreSQL cannot store fails its own publisher alone, and the other publications
+    """ A value that PostgreSQL cannot store fails its own publisher alone, and the other publications
     of its commit are stored.
     """
     backend, writer = _new_backend()
@@ -282,14 +291,15 @@ def _run_rejected_value_flow() -> 'None':
     greenlets:'anylist' = []
 
     for index in range(_caller_count):
+        data = f'accepted-message-{index}'
 
-        # One caller publishes a NUL character, which a text column of PostgreSQL rejects.
+        # One caller gives a correlation ID longer than its column, which PostgreSQL rejects.
         if index == _caller_count // 2:
-            data = 'rejected\x00message'
+            correl_id = _rejected_correl_id
         else:
-            data = f'accepted-message-{index}'
+            correl_id = None
 
-        greenlet = gevent.spawn(_publish_or_fail, backend, data)
+        greenlet = gevent.spawn(_publish_or_fail, backend, data, correl_id)
         greenlets.append(greenlet)
 
     _ = gevent.joinall(greenlets, raise_error=True)

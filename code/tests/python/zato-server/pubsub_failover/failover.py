@@ -64,6 +64,9 @@ _zato_binary = os.path.join(_repository_dir, 'code', 'bin', 'zato')
 # The program that a container runs, which passes the signal of docker stop to the server.
 _launcher_path = os.path.join(os.path.dirname(__file__), 'launcher.sh')
 
+# The variable with the port of the HTTP query API of the queue bridge, which each server reads on the network of the host.
+_queue_bridge_port_variable = 'Zato_Queue_Bridge_Port'
+
 # How long a server may take to answer its ping endpoint after its container started, in seconds.
 _ready_timeout_seconds = 180
 
@@ -181,6 +184,7 @@ def build_server_env(server:'ContainerServer', database:'PubSubDatabase') -> 'No
     server.env['Zato_Broker_HTTP_Port'] = str(server.broker_port)
     server.env['Zato_Database_Generation_File'] = os.path.join(server.server_directory, 'database-generation')
     server.env['Zato_PubSub_Pull_Lease_Seconds'] = _pull_lease_seconds
+    server.env[_queue_bridge_port_variable] = os.environ[_queue_bridge_port_variable]
     server.env.update(database.env)
 
 # ################################################################################################################################

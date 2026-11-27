@@ -6,10 +6,14 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from base64 import b64decode, b64encode
+
 # SQLAlchemy
 from sqlalchemy import and_, bindparam, exists, select, true
 
 # Zato
+from zato.common.api import PubSub
 from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.pubsub.sql.config import get_batch_size
 from zato.common.pubsub.sql.schema import delivery_table, message_table
@@ -22,6 +26,58 @@ if 0:
     from zato.common.typing_ import anydict, anylist, intlist, intset, strlist
 
     Connection = Connection
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# How many leading characters of a payload its preview holds
+_data_preview_len = PubSub.Message.Data_Preview_Len
+
+# The character that a text column of PostgreSQL cannot hold ..
+_nul_character = '\x00'
+
+# .. and what stands for it in the preview of a payload.
+_nul_replacement = '\ufffd'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_data_preview(data:'str') -> 'str':
+    """ Returns the preview of a payload, its leading characters with each NUL character replaced,
+    because the preview is stored as text, which holds no NUL character.
+    """
+    out = data[:_data_preview_len]
+    out = out.replace(_nul_character, _nul_replacement)
+
+    return out
+
+# ################################################################################################################################
+
+def needs_base64(data:'str') -> 'bool':
+    """ Tells whether a payload is stored as Base64, because it holds a NUL character, which text cannot hold.
+    """
+    out = _nul_character in data
+    return out
+
+# ################################################################################################################################
+
+def to_base64(data:'str') -> 'str':
+    """ Returns the Base64 of the UTF-8 bytes of a payload, in which form it is stored.
+    """
+    data_bytes = data.encode('utf8')
+    out = b64encode(data_bytes).decode('ascii')
+
+    return out
+
+# ################################################################################################################################
+
+def from_base64(payload:'str') -> 'str':
+    """ Returns the payload that was stored as the Base64 of its UTF-8 bytes.
+    """
+    data_bytes = b64decode(payload)
+    out = data_bytes.decode('utf8')
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -42,7 +98,7 @@ _drop_payloads_statement = _drop_payloads_statement.where(and_(
     message_table.c.payload.isnot(None),
     ~_still_needed,
 ))
-_drop_payloads_statement = _drop_payloads_statement.values(payload=None, payload_encrypted=False)
+_drop_payloads_statement = _drop_payloads_statement.values(payload=None, payload_encrypted=False, payload_base64=False)
 _drop_payloads_statement_plain = PlainStatement(_drop_payloads_statement.returning(message_table.c.id))
 
 # Two transactions that remove the last two delivery rows of a message would each see the row
