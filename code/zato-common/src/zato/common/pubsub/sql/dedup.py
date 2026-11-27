@@ -14,7 +14,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 
 # SQLAlchemy
-from sqlalchemy import and_, bindparam, cast, exists, literal_column, select, String
+from sqlalchemy import and_, BigInteger, bindparam, cast, exists, literal_column, null, select, String, union_all
 
 # Zato
 from zato.common.common_db.message_dedup import dedup_records_query, dedup_upsert, Kind, new_dedup_record
@@ -89,11 +89,32 @@ def new_fingerprint_rewrite(message_id_condition:'any_') -> 'any_':
 _fingerprint_rewrite = PlainStatement(new_fingerprint_rewrite(
     any_of(message_dedup_table.c.message_id, 'dedup_message_ids')))
 
-# The fingerprints of the stored messages of given message IDs.
-_message_fingerprints_select = select(message_table.c.msg_id, message_fingerprint.label('fingerprint'))
-_message_fingerprints_select = _message_fingerprints_select.where(
-    any_of(message_table.c.msg_id, 'write_msg_ids'))
-_message_fingerprints_query = PlainStatement(_message_fingerprints_select)
+# The fingerprints that given message IDs stand for, read in one statement - those of their stored messages ..
+_source_message = 'message'
+_source_dedup   = 'dedup'
+
+_message_fingerprints_select = select(
+    literal_column(f"'{_source_message}'").label('source'),
+    message_table.c.msg_id.label('msg_id'),
+    message_fingerprint.label('fingerprint'),
+    cast(null(), BigInteger).label('expires_ms'),
+)
+_message_fingerprints_select = _message_fingerprints_select.where(any_of(message_table.c.msg_id, 'write_msg_ids'))
+
+# .. and those of their dedup records, with the time when each record expires.
+_dedup_fingerprints_select = select(
+    literal_column(f"'{_source_dedup}'"),
+    message_dedup_table.c.message_id,
+    message_dedup_table.c.fingerprint,
+    message_dedup_table.c.expires_ms,
+)
+_dedup_fingerprints_select = _dedup_fingerprints_select.where(and_(
+    message_dedup_table.c.kind == bindparam('dedup_kind'),
+    message_dedup_table.c.scope == bindparam('dedup_scope'),
+    any_of(message_dedup_table.c.message_id, 'dedup_message_ids'),
+))
+
+_existing_fingerprints_query = PlainStatement(union_all(_message_fingerprints_select, _dedup_fingerprints_select))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -224,12 +245,21 @@ def get_existing_fingerprints(connection:'Connection', publications:'pending_pub
     msg_ids = _get_msg_ids(publications)
 
     out:'anydict' = {}
+    records:'anydict' = {}
 
     for chunk in get_chunks(msg_ids):
-        for row in _message_fingerprints_query.execute(connection, {'write_msg_ids': chunk}):
-            out[row.msg_id] = row.fingerprint
+        parameters = {
+            'write_msg_ids': chunk,
+            'dedup_kind': Kind.Pubsub,
+            'dedup_scope': Dedup_Scope,
+            'dedup_message_ids': chunk,
+        }
 
-    records = _get_dedup_records(connection, msg_ids)
+        for row in _existing_fingerprints_query.execute(connection, parameters):
+            if row.source == _source_message:
+                out[row.msg_id] = row.fingerprint
+            else:
+                records[row.msg_id] = (row.fingerprint, row.expires_ms)
 
     # A dedup record that expired by the time of the publication is replaced by it, so it stands for nothing.
     for pending in publications:

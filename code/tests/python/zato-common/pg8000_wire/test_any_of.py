@@ -75,7 +75,7 @@ _statements:'anylist' = [
     (fenced_ack._fenced_rows_query_plain, {'fenced_msg_ids': False}),
     (fenced_ack._fenced_delete_plain, {'fenced_delivery_ids': True}),
     (dedup._fingerprint_rewrite, {'dedup_message_ids': False}),
-    (dedup._message_fingerprints_query, {'write_msg_ids': False}),
+    (dedup._existing_fingerprints_query, {'write_msg_ids': False, 'dedup_message_ids': False}),
     (dedup_records_query, {'dedup_message_ids': False}),
     (pull.payload_statement, {'payload_message_ids': True}),
     (pull.fetch_statement, {'fetch_delivered_topics': False}),

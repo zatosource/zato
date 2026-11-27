@@ -8,14 +8,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The inserts of the audit log that write all the rows of one table in a batch with a single statement.
 
-# SQLAlchemy
-from sqlalchemy import bindparam, func, select
+# stdlib
+from typing import NamedTuple
+
+# zato_pg_wire
+from zato_pg_wire.zato_pg_wire import encode_column_arrays
 
 # Zato
 from zato.common.audit_log.attachment import build_attachment_rows
 from zato.common.audit_log.attr_rows import build_attr_rows
 from zato.common.audit_log.common import event_attr_table, event_body_table, event_link_table, event_table
 from zato.common.audit_log.payload import assign_payload_ids, find_stored_payloads, get_event_rows, insert_new_payloads
+from zato.common.db_env.any_of import type_name_of
 from zato.common.db_env.pg8000_copy import copy_rows
 from zato.common.db_env.plain_sql import PlainStatement
 
@@ -23,20 +27,21 @@ from zato.common.db_env.plain_sql import PlainStatement
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.engine import Connection, CursorResult
+    from sqlalchemy.engine import Connection, Dialect
     from sqlalchemy.sql.schema import Table
     from zato.common.audit_log.pending import pending_event_list
-    from zato.common.typing_ import any_, anydict, anylist, dictlist, intlist, strstrdict
+    from zato.common.typing_ import any_, anydict, anylist, dictlist, intlist, strlist, strstrdict
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
     anylist = anylist
-    CursorResult = CursorResult
+    Dialect = Dialect
     strstrdict = strstrdict
     Connection = Connection
     dictlist = dictlist
     intlist = intlist
     pending_event_list = pending_event_list
+    strlist = strlist
     Table = Table
 
 # ################################################################################################################################
@@ -46,65 +51,79 @@ if 0:
 # so the few rows of a single event are inserted with a statement of their own.
 _copy_min_rows = 16
 
-# The insert of a single event, which returns its id
-_insert_event_statement = PlainStatement(event_table.insert().returning(event_table.c.id))
-
-# The given number of new ids from the sequence of the event table
-_event_id_sequence = func.pg_get_serial_sequence(event_table.name, event_table.c.id.name)
-_reserve_event_ids = select(func.nextval(_event_id_sequence))
-_reserve_event_ids = _reserve_event_ids.select_from(func.generate_series(1, bindparam('row_count')))
-_reserve_event_ids_statement = PlainStatement(_reserve_event_ids)
-
 # The multi-row insert of each table, by the name of the table
 _insert_statements:'anydict' = {}
 
+# The inserts of event rows, by the keys of the rows
+_event_inserts:'anydict' = {}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _reserve_ids(connection:'Connection', row_count:'int') -> 'CursorResult[any_] | None':
-    """ Reserves the ids of a batch of more than one event from the sequence of the event table
-    and returns the result whose rows are the ids, which _insert_with_reserved_ids reads.
+class _EventInsert(NamedTuple):
+    """ The statement that inserts event rows with given keys and the name, the type and the bind processor
+    of each of its columns, in the order of its arrays.
     """
-    if row_count > 1:
-        out = _reserve_event_ids_statement.execute(connection, {'row_count': row_count})
-    else:
-        out = None
+    sql: 'str'
+    columns: 'anylist'
 
+# ################################################################################################################################
+
+def _new_event_insert(dialect:'Dialect', column_keys:'strlist') -> '_EventInsert':
+    """ Builds the statement that inserts the event rows of one batch from one array per column and returns the id
+    that each row received, with the position of the row in the batch. The ids are drawn from the sequence of the table
+    once, in a CTE that both the insert and the result read.
+    """
+    preparer = dialect.identifier_preparer
+    table_name = preparer.format_table(event_table)
+
+    columns:'anylist' = []
+    arrays:'strlist' = []
+    names:'strlist' = []
+
+    for name in column_keys:
+        column = event_table.c[name]
+        type_name = type_name_of(column.type, dialect)
+        processor = column.type.bind_processor(dialect)
+
+        columns.append((name, type_name, processor))
+        arrays.append(f'CAST(%s AS {type_name}[])')
+        names.append(preparer.quote(name))
+
+    array_list = ', '.join(arrays)
+    name_list = ', '.join(names)
+    id_name = preparer.quote(event_table.c.id.name)
+
+    sql = f"""WITH event_input AS MATERIALIZED (
+SELECT nextval(pg_get_serial_sequence('{event_table.name}', '{event_table.c.id.name}')) AS {id_name}, event_rows.*
+FROM unnest({array_list}) WITH ORDINALITY AS event_rows({name_list}, event_position)
+), event_inserted AS (
+INSERT INTO {table_name} ({id_name}, {name_list}) SELECT {id_name}, {name_list} FROM event_input
+)
+SELECT {id_name} FROM event_input ORDER BY event_position"""
+
+    out = _EventInsert(sql, columns)
     return out
 
 # ################################################################################################################################
 
-def _insert_with_reserved_ids(connection:'Connection', rows:'dictlist', reserved:'CursorResult[any_]') -> 'intlist':
-    """ Assigns the reserved ids to the event rows in ascending order and inserts the rows with the ids they were assigned.
+def _insert_events(connection:'Connection', rows:'dictlist') -> 'intlist':
+    """ Inserts the event rows of one batch in one statement and returns their ids in the order of the rows.
     """
-    out:'intlist' = list(reserved.scalars())
-    out.sort()
+    column_keys = sorted(rows[0])
+    key = tuple(column_keys)
 
-    id_rows:'dictlist' = []
+    if not (event_insert := _event_inserts.get(key)):
+        event_insert = _new_event_insert(connection.dialect, column_keys)
+        _event_inserts[key] = event_insert
 
-    for row, event_id in zip(rows, out):
-        id_row = dict(row)
-        id_row['id'] = event_id
-        id_rows.append(id_row)
+    arrays = encode_column_arrays(rows, event_insert.columns)
+    result = connection.exec_driver_sql(event_insert.sql, tuple(arrays))
 
-    insert_rows(connection, event_table, id_rows)
+    out:'intlist' = []
 
-    return out
-
-# ################################################################################################################################
-
-def _insert_events(connection:'Connection', rows:'dictlist', reserved:'CursorResult[any_] | None') -> 'intlist':
-    """ Inserts the event rows of one batch and returns their ids in the order of the rows.
-    """
-
-    # A batch of more than one event is inserted with the ids it reserved ..
-    if reserved is not None:
-        out = _insert_with_reserved_ids(connection, rows, reserved)
-
-    # .. and a single event receives its id from the insert itself.
-    else:
-        inserted = _insert_event_statement.insert_rows(connection, rows)
-        out = [inserted[0].id]
+    for row in result:
+        out.append(row.id)
 
     return out
 
@@ -113,15 +132,11 @@ def _insert_events(connection:'Connection', rows:'dictlist', reserved:'CursorRes
 def insert_events(connection:'Connection', rows:'dictlist', payloads:'strstrdict', search_texts:'strstrdict') -> 'intlist':
     """ Stores the payloads of a batch, keyed by their digests, that are not stored yet, then inserts the event rows
     of get_event_rows with the ids of their payloads' rows, and returns the ids of the events in the order of the rows.
-    Within deferred_replies, the lookup of the stored payloads and the reservation of the ids are sent before
-    either result is read, so their replies arrive together.
     """
     if payloads:
         stored = find_stored_payloads(connection, payloads)
     else:
         stored = None
-
-    reserved = _reserve_ids(connection, len(rows))
 
     # The events reference the rows of their payloads, which exist once the payloads are stored.
     if stored is not None:
@@ -131,7 +146,7 @@ def insert_events(connection:'Connection', rows:'dictlist', payloads:'strstrdict
 
     assign_payload_ids(rows, payload_ids)
 
-    out = _insert_events(connection, rows, reserved)
+    out = _insert_events(connection, rows)
     return out
 
 # ################################################################################################################################
