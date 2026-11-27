@@ -16,6 +16,7 @@ from sqlalchemy import and_, bindparam, Boolean, false, func, not_, or_, select
 
 # Zato
 from zato.common.api import HTTP_SOAP
+from zato.common.audit_log.common import event_payload_table
 from zato.common.db_env.any_of import any_of
 from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.pubsub.sql.schema import delivery_table, message_retry_columns, message_table
@@ -77,12 +78,18 @@ def delivered_topics_parameters(subscription_list:'SubscriptionList', sub_key:'s
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The payload of a message, read from the payload table of the audit log by the reference of the message row,
+# or NULL for a message whose payload was dropped.
+message_payload = select(event_payload_table.c.data)
+message_payload = message_payload.where(event_payload_table.c.id == message_table.c.payload_id)
+message_payload = message_payload.scalar_subquery().label('payload')
+
 # The message columns that the conversion of rows into message dicts consumes.
 message_columns = [
     message_table.c.id,
     message_table.c.msg_id,
     message_table.c.topic_name,
-    message_table.c.payload,
+    message_payload,
     message_table.c.payload_encrypted,
     message_table.c.payload_base64,
     message_table.c.data_class,
@@ -103,7 +110,7 @@ message_columns.extend(message_retry_columns)
 
 # A fetch for push delivery reads the payloads apart from the other columns, because the server keeps the payloads
 # of the messages that many subscribers receive, and it also reads its delivery row, whose attempts the delivery records.
-_payload_columns = {message_table.c.payload.name, message_table.c.payload_encrypted.name, message_table.c.payload_base64.name}
+_payload_columns = {message_payload.name, message_table.c.payload_encrypted.name, message_table.c.payload_base64.name}
 
 _fetch_columns:'anylist' = [column for column in message_columns if column.name not in _payload_columns]
 _fetch_columns.append(delivery_table.c.id.label('delivery_id'))
@@ -132,7 +139,7 @@ outgoing_fetch_query = outgoing_fetch_query.order_by(*_order_by)
 outgoing_fetch_query = outgoing_fetch_query.limit(bindparam('fetch_max_messages'))
 
 # The payloads of the fetched messages that the server does not keep yet.
-payload_query = select(message_table.c.id, message_table.c.payload, message_table.c.payload_encrypted,
+payload_query = select(message_table.c.id, message_payload, message_table.c.payload_encrypted,
     message_table.c.payload_base64)
 payload_query = payload_query.where(any_of(message_table.c.id, 'payload_message_ids'))
 

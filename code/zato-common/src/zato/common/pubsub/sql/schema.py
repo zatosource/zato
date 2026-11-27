@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Boolean, Column, DDL, event, false, Identity, Index, Integer, MetaData, String, Table, Text
+from sqlalchemy import BigInteger, Boolean, Column, DDL, event, false, Identity, Index, Integer, MetaData, String, Table
 
 # Zato
 from zato.common.api import HTTP_SOAP, PubSub
@@ -46,14 +46,18 @@ metadata = MetaData()
 
 # ################################################################################################################################
 
-# One row per published message. The payload is set to NULL once every subscriber
-# has acknowledged the message and the row stays behind as the delivered-message trace
-# until the retention sweep removes it, listed in pubsub_trace. The primary key is the publication sequence.
+# One row per published message. The payload is stored once in the payload table of the audit log, which the events
+# of the message reference as well, and the reference is set to NULL once every subscriber has acknowledged the message.
+# The row then stays behind as the delivered-message trace until the retention sweep removes it, listed in pubsub_trace.
+# The primary key is the publication sequence.
 message_table = Table('pubsub_message', metadata,
     _new_id_column(),
     Column('msg_id', String(_short_column_len), nullable=False),
     Column('topic_name', String(_short_column_len), nullable=False),
-    Column('payload', Text, nullable=True),
+
+    # The id of the row of the payload in the payload table of the audit log. No index covers it, so that dropping
+    # the payload remains an update within the page.
+    Column('payload_id', BigInteger, nullable=True),
     Column('payload_encrypted', Boolean, nullable=False),
 
     # Whether the payload is stored as the Base64 of its UTF-8 bytes, because it holds a NUL character, which text cannot hold
@@ -228,14 +232,11 @@ event.listen(active_table, 'after_create', DDL('INSERT INTO zato_active (id, gen
 _high_churn = 'autovacuum_vacuum_scale_factor = 0.01, autovacuum_vacuum_insert_scale_factor = 0.01, ' + \
     'autovacuum_analyze_scale_factor = 0.02'
 
-_toast_high_churn = 'toast.autovacuum_vacuum_scale_factor = 0.01, toast.autovacuum_vacuum_insert_scale_factor = 0.01'
-
 _updated_fillfactor = 'fillfactor = 50'
 
 _storage_statements = {
     message_table: [
-        'ALTER TABLE pubsub_message ALTER COLUMN payload SET COMPRESSION lz4',
-        f'ALTER TABLE pubsub_message SET ({_updated_fillfactor}, {_high_churn}, {_toast_high_churn})',
+        f'ALTER TABLE pubsub_message SET ({_updated_fillfactor}, {_high_churn})',
     ],
     delivery_table: [
         f'ALTER TABLE pubsub_delivery SET ({_updated_fillfactor}, {_high_churn})',

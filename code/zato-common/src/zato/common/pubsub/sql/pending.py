@@ -52,6 +52,12 @@ class PendingPublication:
     # The values of the message row
     message_values: 'anydict'
 
+    # The payload in the form in which it is stored, and its digest and search text in the payload table,
+    # both computed before the transaction that stores it
+    payload: 'str'
+    payload_digest: 'str'
+    search_text: 'str'
+
     # The values of the dedup record of the message ID - what the ID stands for, when the publication was received
     # and until when the ID is recognized as a repeat, in milliseconds since the epoch
     fingerprint: 'str'
@@ -185,12 +191,20 @@ class PendingSync:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def new_pending_publication(message_values:'anydict', received_ms:'int', dedup_window_ms:'int') -> 'PendingPublication':
-    """ Returns a publication that is yet to be written, received at the given time, whose message ID is recognized
-    as a repeat for the given window.
+def new_pending_publication(
+    message_values:'anydict',
+    payload:'str',
+    received_ms:'int',
+    dedup_window_ms:'int',
+    ) -> 'PendingPublication':
+    """ Returns a publication of the given payload, in its stored form, that is yet to be written, received
+    at the given time, whose message ID is recognized as a repeat for the given window.
     """
     out = PendingPublication()
     out.message_values = message_values
+    out.payload = payload
+    out.payload_digest = ''
+    out.search_text = ''
     out.fingerprint = get_fingerprint(message_values['topic_name'], message_values['payload_crc32'])
     out.received_ms = received_ms
     out.dedup_expires_ms = received_ms + dedup_window_ms

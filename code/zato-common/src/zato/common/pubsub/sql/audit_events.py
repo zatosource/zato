@@ -7,17 +7,21 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.common.audit_log.payload import prepare_payloads
+from zato.common.audit_log.payload import get_payload_digest, prepare_payloads
 from zato.common.pubsub.sql.pending import PendingAtomic, PendingPublication
+
+# Zato - Rust
+from zato_common_core.zato_common_core import extract_search_text
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.pubsub.sql.pending import pending_atomic_list, pending_lease_list, pending_publication_list
-    from zato.common.typing_ import anylist
+    from zato.common.typing_ import anydict, anylist
 
     # Dummy assignments to satisfy type checkers
+    anydict = anydict
     anylist = anylist
     pending_atomic_list = pending_atomic_list
     pending_lease_list = pending_lease_list
@@ -65,24 +69,47 @@ def collect_audit_events(
 
 # ################################################################################################################################
 
-def prepare_audit_payloads(batch:'anylist') -> 'None':
-    """ Prepares the payloads of the audit events that the items of a batch carry before the batch is written,
-    which are those of the publications and of the fenced acknowledgements with their publications.
-    The audit events of a pull are built in the transaction that leases its messages.
+def prepare_batch_payloads(batch:'anylist') -> 'None':
+    """ Prepares the payloads of a batch before it is written - those of the audit events that the publications
+    and the fenced acknowledgements with their publications carry, and those of the messages of the publications,
+    which are stored in the same payload table. The audit events of a pull are built in the transaction
+    that leases its messages.
     """
     events:'anylist' = []
+    publications:'pending_publication_list' = []
 
     for item in batch:
         if isinstance(item, PendingPublication):
             events.extend(item.audit_events)
+            publications.append(item)
 
         elif isinstance(item, PendingAtomic):
             events.extend(item.audit_events)
 
             for pending in item.publications:
                 events.extend(pending.audit_events)
+                publications.append(pending)
 
     prepare_payloads(events)
+
+    # A message whose stored payload is the payload of an audit event of the batch reuses what was prepared for it ..
+    prepared:'anydict' = {}
+
+    for event in events:
+        if event.payload_digest:
+            prepared[event.values['data']] = (event.payload_digest, event.search_text)
+
+    # .. while any other one is digested and its words are extracted.
+    for pending in publications:
+        if pending.payload in prepared:
+            digest, search_text = prepared[pending.payload]
+        else:
+            digest = get_payload_digest(pending.payload)
+            search_text = extract_search_text(pending.payload)
+            prepared[pending.payload] = (digest, search_text)
+
+        pending.payload_digest = digest
+        pending.search_text = search_text
 
 # ################################################################################################################################
 

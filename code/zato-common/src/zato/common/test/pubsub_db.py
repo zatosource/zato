@@ -177,7 +177,7 @@ def count_messages_with_payload(msg_ids:'strlist') -> 'int':
     query = select(func.count())
     query = query.select_from(message_table)
     query = query.where(message_table.c.msg_id.in_(msg_ids))
-    query = query.where(message_table.c.payload.isnot(None))
+    query = query.where(message_table.c.payload_id.isnot(None))
 
     engine = get_database_engine()
 

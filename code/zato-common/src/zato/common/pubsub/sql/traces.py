@@ -40,17 +40,17 @@ def _trace_statements() -> 'anytuple':
     """
 
     # The messages a statement inserted without a payload are traces from the start ..
-    add_inserted = f'{_insert_into} SELECT id, topic_name, pub_time_ms FROM new_rows WHERE payload IS NULL;'
+    add_inserted = f'{_insert_into} SELECT id, topic_name, pub_time_ms FROM new_rows WHERE payload_id IS NULL;'
 
     # .. the messages it updated are traces when they have no payload, and those that received one are traces no more.
     # .. A trigger with a list of columns cannot read the updated rows, so the trigger runs on each update of the messages ..
-    add_updated = f'{_insert_into} SELECT id, topic_name, pub_time_ms FROM new_rows WHERE payload IS NULL ' + \
+    add_updated = f'{_insert_into} SELECT id, topic_name, pub_time_ms FROM new_rows WHERE payload_id IS NULL ' + \
         'ON CONFLICT (message_id) DO UPDATE SET topic_name = excluded.topic_name, pub_time_ms = excluded.pub_time_ms;'
 
-    remove_revived = 'DELETE FROM pubsub_trace WHERE message_id IN (SELECT id FROM new_rows WHERE payload IS NOT NULL);'
+    remove_revived = 'DELETE FROM pubsub_trace WHERE message_id IN (SELECT id FROM new_rows WHERE payload_id IS NOT NULL);'
 
     # .. and the traces it deleted leave the list.
-    remove_deleted = 'DELETE FROM pubsub_trace WHERE message_id IN (SELECT id FROM old_rows WHERE payload IS NULL);'
+    remove_deleted = 'DELETE FROM pubsub_trace WHERE message_id IN (SELECT id FROM old_rows WHERE payload_id IS NULL);'
 
     insert_function = postgresql_function('pubsub_trace_insert', add_inserted)
     update_function = postgresql_function('pubsub_trace_update', f'{add_updated} {remove_revived}')

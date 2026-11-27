@@ -215,7 +215,7 @@ class PubSubCleanup:
                 query = select(message_table.c.id)
                 query = query.where(and_(
                     message_table.c.expiration_ms < now_ms,
-                    message_table.c.payload.isnot(None),
+                    message_table.c.payload_id.isnot(None),
                 ))
                 query = query.limit(batch_size)
                 query = query.with_for_update(skip_locked=True)

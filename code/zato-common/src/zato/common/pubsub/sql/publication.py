@@ -150,11 +150,12 @@ def build_publication(
     # .. the payload is stored encrypted at rest when configured to, or in a form that text can hold ..
     payload, payload_encrypted, payload_base64 = backend._store_payload(serialized_data)
 
-    # .. and build the message row, with optional values stored as NULLs.
+    # .. and build the message row, with optional values stored as NULLs, whose reference to its payload
+    # is assigned in the transaction that stores the payload.
     message_values:'anydict' = {
         'msg_id': message_id,
         'topic_name': topic_name,
-        'payload': payload,
+        'payload_id': None,
         'payload_encrypted': payload_encrypted,
         'payload_base64': payload_base64,
         'payload_crc32': payload_crc32,
@@ -184,7 +185,7 @@ def build_publication(
     dedup_window_ms = dedup_window_days * _ms_per_day
 
     out = BuiltPublication()
-    out.pending = new_pending_publication(message_values, received_ms, dedup_window_ms)
+    out.pending = new_pending_publication(message_values, payload, received_ms, dedup_window_ms)
     out.serialized_data = serialized_data
 
     return out

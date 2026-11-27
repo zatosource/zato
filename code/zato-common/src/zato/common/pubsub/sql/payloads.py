@@ -96,10 +96,10 @@ _still_needed = _still_needed.where(delivery_table.c.message_id == message_table
 _drop_payloads_statement = message_table.update()
 _drop_payloads_statement = _drop_payloads_statement.where(and_(
     any_of(message_table.c.id, 'drop_message_ids'),
-    message_table.c.payload.isnot(None),
+    message_table.c.payload_id.isnot(None),
     ~_still_needed,
 ))
-_drop_payloads_statement = _drop_payloads_statement.values(payload=None, payload_encrypted=False, payload_base64=False)
+_drop_payloads_statement = _drop_payloads_statement.values(payload_id=None, payload_encrypted=False, payload_base64=False)
 _drop_payloads_statement_plain = PlainStatement(_drop_payloads_statement.returning(message_table.c.id))
 
 # Two transactions that remove the last two delivery rows of a message would each see the row

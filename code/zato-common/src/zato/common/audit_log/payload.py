@@ -27,6 +27,7 @@ from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from zato.common.audit_log.common import event_payload_table, event_table
 from zato.common.db_env.any_of import any_of
 from zato.common.db_env.plain_sql import PlainStatement
+from zato.common.pubsub.sql.schema import message_table
 
 # Zato - Rust
 from zato_common_core.zato_common_core import extract_search_text
@@ -86,15 +87,20 @@ _deleted_payloads_query = _deleted_payloads_query.where(
 _deleted_payloads_query = _deleted_payloads_query.order_by(event_payload_table.c.digest)
 _deleted_payloads_query = _deleted_payloads_query.with_for_update()
 
-# The deletion of the payloads of the given ids that no event references
+# The deletion of the payloads of the given ids that neither an event nor a pub/sub message references
 _is_referenced = select(event_table.c.id)
 _is_referenced = _is_referenced.where(event_table.c.payload_id == event_payload_table.c.id)
 _is_referenced = _is_referenced.exists()
+
+_is_message_payload = select(message_table.c.id)
+_is_message_payload = _is_message_payload.where(message_table.c.payload_id == event_payload_table.c.id)
+_is_message_payload = _is_message_payload.exists()
 
 _unreferenced_payloads_delete = event_payload_table.delete()
 _unreferenced_payloads_delete = _unreferenced_payloads_delete.where(
     any_of(event_payload_table.c.id, 'payload_ids'))
 _unreferenced_payloads_delete = _unreferenced_payloads_delete.where(~_is_referenced)
+_unreferenced_payloads_delete = _unreferenced_payloads_delete.where(~_is_message_payload)
 
 # ################################################################################################################################
 # ################################################################################################################################

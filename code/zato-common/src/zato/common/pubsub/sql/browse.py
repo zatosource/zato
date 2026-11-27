@@ -15,6 +15,7 @@ from sqlalchemy import and_, exists, select
 # Zato
 from zato.common.api import PubSub
 from zato.common.pubsub.sql.core import SQLBackendCore
+from zato.common.pubsub.sql.pull import message_payload
 from zato.common.pubsub.sql.schema import delivery_table, message_retry_columns, message_table
 
 # ################################################################################################################################
@@ -62,7 +63,7 @@ _browse_columns.extend(message_retry_columns)
 
 # The additional columns read only when the entry carries the full payload.
 _browse_payload_columns = [
-    message_table.c.payload,
+    message_payload,
     message_table.c.payload_encrypted,
     message_table.c.payload_base64,
     message_table.c.data_class,

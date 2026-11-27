@@ -19,6 +19,7 @@ from sqlalchemy.exc import DBAPIError
 
 # Zato
 from zato.common.audit_log.bulk_insert import insert_pending_events
+from zato.common.audit_log.payload import store_payloads
 from zato.common.db_env.any_of import any_of
 from zato.common.db_env.commit_queue import CommitQueue
 from zato.common.db_env.engine import call_database
@@ -27,7 +28,7 @@ from zato.common.db_env.outage import OutageTracker
 from zato.common.db_env.pg8000_copy import copy_rows
 from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.db_env.database import get_database_engine
-from zato.common.pubsub.sql.audit_events import collect_audit_events, drop_audit_events, prepare_audit_payloads
+from zato.common.pubsub.sql.audit_events import collect_audit_events, drop_audit_events, prepare_batch_payloads
 from zato.common.pubsub.sql.config import get_commit_max_messages, get_commits_in_flight, Urgent_Commits_In_Flight
 from zato.common.pubsub.sql.dedup import get_existing_fingerprints, rewrite_fingerprints, write_dedup_records
 from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID, PubSubTopicUnavailable
@@ -49,7 +50,7 @@ if 0:
     from zato.common.pubsub.sql.pending import PendingLease, pending_ack_list, pending_atomic_list, pending_attempts_list, \
         pending_lease_list, pending_publication_list, pending_sync_list
     from zato.common.pubsub.subscription_list import pairlist
-    from zato.common.typing_ import any_, anydict, anylist, intlist, strlist
+    from zato.common.typing_ import any_, anydict, anylist, intlist, strlist, strstrdict
     from zato_common_core.zato_common_core import SubscriptionList
 
     # Dummy assignments to satisfy type checkers
@@ -64,6 +65,7 @@ if 0:
     pending_attempts_list = pending_attempts_list
     pending_lease_list = pending_lease_list
     pending_publication_list = pending_publication_list
+    strstrdict = strstrdict
     pending_sync_list = pending_sync_list
     pairlist = pairlist
     SubscriptionList = SubscriptionList
@@ -358,7 +360,7 @@ class PubSubWriter:
             drop_audit_events(batch)
 
         # .. with the payloads of those built already prepared before the transaction begins ..
-        prepare = partial(prepare_audit_payloads, batch)
+        prepare = partial(prepare_batch_payloads, batch)
 
         try:
             audit_events = call_database(engine, self._write_items, engine, batch, prepare=prepare)
@@ -728,6 +730,11 @@ class PubSubWriter:
 
         message_rows:'anylist' = []
 
+        # The payloads of the messages that have subscribers, by their digests, with their search texts ..
+        payloads:'strstrdict' = {}
+        search_texts:'strstrdict' = {}
+        with_payloads:'pending_publication_list' = []
+
         for pending in publications:
 
             message_values = pending.message_values
@@ -736,13 +743,24 @@ class PubSubWriter:
             # .. a topic without subscribers has its messages stored without their payloads ..
             if topic_name in subscribers:
                 pending.subscriber_keys = subscribers[topic_name]
+                payloads[pending.payload_digest] = pending.payload
+                search_texts[pending.payload_digest] = pending.search_text
+                with_payloads.append(pending)
             else:
                 pending.subscriber_keys = []
-                message_values['payload'] = None
+                message_values['payload_id'] = None
                 message_values['payload_encrypted'] = False
                 message_values['payload_base64'] = False
 
             message_rows.append(message_values)
+
+        # .. the payloads are stored once each, in the payload table that the audit events reference as well,
+        # and each message references the row of its payload ..
+        if payloads:
+            payload_ids = store_payloads(connection, payloads, search_texts)
+
+            for pending in with_payloads:
+                pending.message_values['payload_id'] = payload_ids[pending.payload_digest]
 
         # .. all the messages go in one statement, which returns the primary keys of those it inserted ..
         inserted:'anydict' = {}

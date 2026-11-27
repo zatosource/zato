@@ -13,6 +13,7 @@ from logging import getLogger
 from sqlalchemy import and_, BigInteger, cast, func, select
 
 # Zato
+from zato.common.audit_log.payload import store_payload
 from zato.common.db_env.engine import call_database, execute_write
 from zato.common.pubsub.sql.browse import SQLBrowseAPI
 from zato.common.pubsub.sql.config import get_batch_size
@@ -506,6 +507,37 @@ class SQLAdminAPI(SQLBrowseAPI):
 
 # ################################################################################################################################
 
+    def _update_message(
+        self,
+        engine:'Engine',
+        topic_name:'str',
+        msg_id:'str',
+        payload:'str',
+        values:'anydict',
+        ) -> 'bool':
+        """ Stores the given payload in the payload table and makes one message reference it, with the given values
+        derived from it, in one transaction. Returns True if the message existed and was updated.
+        """
+        with engine.begin() as connection:
+
+            # The payload is stored unless it is stored already ..
+            payload_id = store_payload(connection, payload)
+
+            # .. and the message references it.
+            update_statement = message_table.update()
+            update_statement = update_statement.where(and_(
+                message_table.c.msg_id == msg_id,
+                message_table.c.topic_name == topic_name,
+            ))
+            update_statement = update_statement.values(payload_id=payload_id, **values)
+
+            result = connection.execute(update_statement)
+
+        out = result.rowcount > 0
+        return out
+
+# ################################################################################################################################
+
     def update_message(self, topic_name:'str', msg_id:'str', data:'str') -> 'bool':
         """ Replaces one message's payload - what the dashboard's message edit form saves.
         The size and preview follow the new payload, and encryption at rest is honored.
@@ -520,26 +552,18 @@ class SQLAdminAPI(SQLBrowseAPI):
         payload, payload_encrypted, payload_base64 = self._store_payload(data)
 
         # .. replace the payload with everything derived from it ..
-        update_statement = message_table.update()
-        update_statement = update_statement.where(and_(
-            message_table.c.msg_id == msg_id,
-            message_table.c.topic_name == topic_name,
-        ))
-        update_statement = update_statement.values(
-            payload=payload,
-            payload_encrypted=payload_encrypted,
-            payload_base64=payload_base64,
-            data_size=data_size,
-            data_preview=data_preview if data_preview else None,
-        )
+        values = {
+            'payload_encrypted': payload_encrypted,
+            'payload_base64': payload_base64,
+            'data_size': data_size,
+            'data_preview': data_preview if data_preview else None,
+        }
 
-        result = execute_write(self.engine, update_statement)
+        out = call_database(self.engine, self._update_message, self.engine, topic_name, msg_id, payload, values)
 
         # .. and the payloads kept from earlier deliveries are dropped, or the next delivery would send
         # the replaced one instead.
         self.payload_cache.invalidate()
-
-        out = result.rowcount > 0
 
         logger.info('update_message -> topic_name:%s, msg_id:%s, data_size:%d, updated:%s',
             topic_name, msg_id, data_size, out)
