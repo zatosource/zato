@@ -230,7 +230,7 @@ def _raise_generation(engine:'Engine', owner:'str', ha_generation:'intnone', ser
 
             if terminated:
                 elapsed = monotonic() - started_at
-                logger.warning('Ended pub/sub sessions of a previous server -> pids:%s, waited:%.1fs', terminated, elapsed)
+                logger.info('Ended pub/sub sessions of a previous server -> pids:%s, waited:%.1fs', terminated, elapsed)
 
         thread.join(check_seconds)
 
@@ -278,7 +278,7 @@ def take_over(get_engine:'engine_factory', server_name:'strnone') -> 'Generation
     if generation is None:
         generation = cast_('int', ha_generation)
         is_replaced = True
-        logger.warning('Pub/sub generation %s is below the current one, this server does no pub/sub work', generation)
+        logger.info('Pub/sub generation %s is below the current one, this server does no pub/sub work', generation)
 
     # .. otherwise the server is the active one.
     else:

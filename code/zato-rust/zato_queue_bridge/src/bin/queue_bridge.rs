@@ -15,10 +15,14 @@ use tracing_subscriber::EnvFilter;
 
 use zato_queue_bridge::bridge;
 use zato_queue_bridge::http_api;
+use zato_queue_bridge::outage::OutageLog;
 use zato_queue_bridge::redis_streams;
 
 /// Environment variable with the port of the HTTP query API on 127.0.0.1, which the server reads as well.
 const PORT_VARIABLE: &str = "Zato_Queue_Bridge_Port";
+
+/// How long the startup waits before it requests the config again after Redis could not be used.
+const STARTUP_ERROR_WAIT: std::time::Duration = std::time::Duration::from_secs(1);
 
 /// Reads a port number from an environment variable that must be set.
 fn required_port(variable: &str) -> std::io::Result<u16> {
@@ -89,10 +93,20 @@ type StreamReadResult = Vec<(String, Vec<(String, Vec<(String, String)>)>)>;
 /// Retries indefinitely, requesting config every 10 seconds until the server responds.
 fn wait_for_initial_reload(conn: &mut redis::Connection, shared: &bridge::BridgeShared) {
     let mut attempt: u64 = 0;
+
+    // An unavailable Redis fails each attempt until it returns, which is logged once for the whole outage.
+    let mut outage = OutageLog::new("Queue bridge startup".to_owned());
+
     loop {
         attempt += 1;
         tracing::info!("Requesting config from server (attempt {attempt})");
-        redis_streams::request_config(conn);
+
+        // The request is published again on the next attempt, after a pause in which Redis may return.
+        if let Err(err) = redis_streams::request_config(conn) {
+            outage.on_failure(&err);
+            std::thread::sleep(STARTUP_ERROR_WAIT);
+            continue;
+        }
 
         let result: Result<StreamReadResult, redis::RedisError> = redis::cmd("XREADGROUP")
             .arg("GROUP")
@@ -108,14 +122,27 @@ fn wait_for_initial_reload(conn: &mut redis::Connection, shared: &bridge::Bridge
             .query(conn);
 
         let streams = match result {
-            Ok(streams) => streams,
+            Ok(streams) => {
+                outage.on_success();
+                streams
+            }
             Err(err) => {
-                tracing::warn!("XREADGROUP error on attempt {attempt}: {err}");
+                // A read that waited out its block without a reply is not an error, the config is requested again.
+                let msg = err.to_string();
+                if msg.contains("timeout") || msg.contains("nil") {
+                    continue;
+                }
 
                 // The reload that the server sends in reply is published to the recreated stream, which the group reads from its start
                 if redis_streams::is_missing_group(&err) {
+                    tracing::info!("Recreating the consumer group of the command stream on attempt {attempt}: {err}");
                     redis_streams::ensure_consumer_group(conn, redis_streams::GROUP_START_FIRST_ENTRY);
+                    continue;
                 }
+
+                // Any other error means Redis is unavailable, and the attempt runs again after a pause.
+                outage.on_failure(&err);
+                std::thread::sleep(STARTUP_ERROR_WAIT);
                 continue;
             }
         };

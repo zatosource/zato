@@ -16,6 +16,9 @@ from urllib.parse import quote
 # Bunch
 from zato.common.ext.bunch import Bunch, bunchify
 
+# SQLAlchemy
+from sqlalchemy.exc import NoResultFound
+
 # Zato
 from zato.common.broker_message import PUBSUB
 
@@ -708,6 +711,12 @@ class Edit(AdminService):
                 # Commit all changes
                 session.commit()
 
+            # A subscription that does not exist is the caller's error ..
+            except NoResultFound:
+                session.rollback()
+                raise
+
+            # .. whereas anything else is a fault of the operation.
             except Exception:
                 self.logger.error('Could not update pub/sub subscription, e:`%s`', format_exc())
                 session.rollback()
@@ -799,6 +808,12 @@ class Delete(AdminService):
             session.delete(sub)
             session.commit()
 
+        # A subscription that does not exist is the caller's error ..
+        except NoResultFound:
+            session.rollback()
+            raise
+
+        # .. whereas anything else is a fault of the operation.
         except Exception:
             self.logger.error('Could not delete pub/sub subscription, e:`%s`', format_exc())
             session.rollback()

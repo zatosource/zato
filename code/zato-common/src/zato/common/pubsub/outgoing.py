@@ -13,8 +13,13 @@ from json import dumps
 from logging import getLogger
 from traceback import format_exc
 
+# SQLAlchemy
+from sqlalchemy.exc import DBAPIError
+
 # Zato
 from zato.common.api import HTTP_SOAP, PubSub, URL_TYPE
+from zato.common.db_env.errors import is_transient
+from zato.common.db_env.outage import OutageTracker
 from zato.common.facade import PubSubFacade
 from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, SendRejected
 from zato.common.pubsub.util import validate_topic_name
@@ -34,6 +39,9 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# The messages that cannot be queued while the pub/sub database is unavailable
+_outage = OutageTracker('Outgoing queue')
 
 strpagedict = dict[str, 'OutgoingPage']
 
@@ -688,11 +696,24 @@ class OutgoingPublisher:
         try:
             result = self.publish_request(cid, attempts, request)
 
+        # The caller receives the error in each case. An unavailable database is one outage of the queueing ..
+        except DBAPIError as e:
+            if is_transient(e):
+                _outage.on_failure(e)
+            else:
+                logger.warning('Could not queue a message for `%s`, cid `%s`, e:`%s`', self.sub_key, cid, format_exc())
+            out.error = str(e)
+
+            return out
+
+        # .. while any other error is logged with its traceback.
         except Exception as e:
             logger.warning('Could not queue a message for `%s`, cid `%s`, e:`%s`', self.sub_key, cid, format_exc())
             out.error = str(e)
 
             return out
+
+        _outage.on_success()
 
         out.is_in_queue = True
         out.msg_id = result.msg_id

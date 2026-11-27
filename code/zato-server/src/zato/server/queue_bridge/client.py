@@ -21,11 +21,13 @@ from gevent.lock import RLock
 
 # redis
 from redis import Redis
+from redis.exceptions import ConnectionError as RedisConnectionError, TimeoutError as RedisTimeoutError
 
 # requests
 import requests
 
 # Zato
+from zato.common.db_env.outage import OutageTracker
 from zato.common.queue_bridge import QueueBridgeStreams
 from zato.common.typing_ import cast_
 
@@ -166,6 +168,8 @@ class QueueBridgeClient:
         """
         logger.info('Queue bridge reply reader entering')
 
+        outage = OutageTracker('Queue bridge reply reader')
+
         while True:
             try:
                 result = cast_('anylist', self._reply_redis.xreadgroup(
@@ -175,6 +179,8 @@ class QueueBridgeClient:
                     count=100,
                     block=ModuleCtx.Reply_Block_Ms,
                 ))
+
+                outage.on_success()
 
                 if not result:
                     continue
@@ -186,13 +192,19 @@ class QueueBridgeClient:
 
             except Exception as exc:
 
-                # A missing group is created again.
+                # A missing group, e.g. after Redis restarted without its data, is created again ..
                 if 'NOGROUP' in str(exc):
-                    logger.warning('Recreating queue bridge reply group: %s', exc)
+                    logger.info('Recreating queue bridge reply group: %s', exc)
                     try:
                         self._ensure_reply_group()
                     except Exception:
                         pass
+
+                # .. a Redis that is unavailable is one outage of the reader, which reads again once Redis returns ..
+                elif isinstance(exc, (RedisConnectionError, RedisTimeoutError)):
+                    outage.on_failure(exc)
+
+                # .. and any other error is logged with its traceback.
                 else:
                     logger.warning('Error in queue bridge reply reader: %s', format_exc())
 

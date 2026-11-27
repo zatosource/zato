@@ -420,14 +420,14 @@ class ChannelListener:
             error_since = now
             last_logged = now
             if is_missing_group:
-                logger.warning('Recreating stream and group for channel `%s` (%s): %s', name, self.channel_id, error_text)
+                logger.info('Recreating stream and group for channel `%s` (%s): %s', name, self.channel_id, error_text)
             else:
                 logger.warning('Error in channel listener `%s` (%s): %s', name, self.channel_id, format_exc())
 
         elif now - last_logged >= _error_log_interval:
             last_logged = now
             elapsed = int(now - error_since)
-            logger.warning('Channel listener `%s` (%s) still failing after %ss: %s', name, self.channel_id, elapsed, exc)
+            logger.info('Channel listener `%s` (%s) still failing after %ss: %s', name, self.channel_id, elapsed, exc)
 
         if is_missing_group:
             try:
@@ -442,7 +442,10 @@ class ChannelListener:
 
     def _handle_entry(self, msg_id:'str', fields:'strdict') -> 'None':
         """ Handles one entry until it is resolved, an error of the handling itself makes the entry wait and go again.
+        The first error is logged with its traceback, the ones that follow it as debug entries.
         """
+        attempts_failed = 0
+
         while not self._is_stopped:
             try:
                 if self.is_kafka:
@@ -450,13 +453,21 @@ class ChannelListener:
                 else:
                     self._handle_ibm_mq(msg_id, fields)
 
+                if attempts_failed:
+                    logger.info('Handled entry `%s` of `%s` after %d failed attempts', msg_id, self.stream, attempts_failed)
+
                 return
 
             except DeliveryInterrupted:
                 return
 
             except Exception:
-                logger.warning('Could not handle entry `%s` of `%s`, e:`%s`', msg_id, self.stream, format_exc())
+                if attempts_failed:
+                    logger.debug('Could not handle entry `%s` of `%s` again, e:`%s`', msg_id, self.stream, format_exc())
+                else:
+                    logger.warning('Could not handle entry `%s` of `%s`, e:`%s`', msg_id, self.stream, format_exc())
+
+                attempts_failed += 1
                 sleep(_error_sleep)
 
 # ################################################################################################################################

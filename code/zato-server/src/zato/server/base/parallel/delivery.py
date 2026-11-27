@@ -23,7 +23,8 @@ from sqlalchemy.exc import DBAPIError
 from zato.common.api import PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_values
-from zato.common.db_env.outage import OutageTracker
+from zato.common.db_env.errors import is_transient
+from zato.common.db_env.outage import SharedOutageTracker
 from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryInterrupted, Interrupt_Database, \
     Interrupt_Expired, Interrupt_Paused, Interrupt_Replaced, Interrupt_Withdrawn, wait_between_rounds
 from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID
@@ -99,6 +100,10 @@ class PushDelivery:
         pool_size = get_database_values()['pool_size']
         slot_count = pool_size * _delivery_pool_share_numerator // _delivery_pool_share_denominator
         self._database_slots = BoundedSemaphore(slot_count)
+
+        # An outage of the database interrupts the delivery loops of all the subscribers at once,
+        # so it is logged once for all of them.
+        self._outage = SharedOutageTracker('PubSub delivery')
 
 # ################################################################################################################################
 
@@ -214,6 +219,9 @@ class PushDelivery:
             logger.info('PubSub delivery greenlet ended for sub_key `%s`: %s', sub_key, e)
             return
 
+        finally:
+            self._outage.on_stopped(sub_key)
+
         logger.info('PubSub delivery greenlet stopped for sub_key `%s`', sub_key)
 
 # ################################################################################################################################
@@ -221,8 +229,6 @@ class PushDelivery:
     def _run_delivery_loop(self, sub_key:'str') -> 'None':
         """ Drains what is pending for one subscriber key and then delivers new messages until stopped.
         """
-        outage = OutageTracker(f'PubSub delivery for sub_key `{sub_key}`')
-
         # On startup, drain everything still unacknowledged for this subscriber ..
         while not self._stop_event.is_set():
             if sub_key not in self.server.config_manager._push_subs:
@@ -233,7 +239,7 @@ class PushDelivery:
                 read_epoch = self.backend.payload_cache.get_epoch()
                 with self._database_slots:
                     pending = self.backend.fetch_pending(sub_key, max_messages=_delivery_batch_size)
-                outage.on_success()
+                self._outage.on_success(sub_key)
                 if not pending:
                     break
                 self._deliver_batch(pending, sub_key, read_epoch)
@@ -247,10 +253,11 @@ class PushDelivery:
             except PubSubDuplicateMsgID as e:
                 logger.warning('PubSub batch for sub_key `%s` not committed, a publication was refused: %s', sub_key, e)
 
+            except DBAPIError as e:
+                self._on_database_error(sub_key, e)
+
             except Exception:
                 logger.warning('PubSub delivery error for sub_key `%s`: %s', sub_key, format_exc())
-                outage.on_failure()
-
                 sleep(_fetch_error_sleep)
 
         # .. then wait for new messages.
@@ -261,7 +268,7 @@ class PushDelivery:
                 break
             try:
                 messages, read_epoch = self._fetch_new(sub_key)
-                outage.on_success()
+                self._outage.on_success(sub_key)
                 if messages:
                     self._deliver_batch(messages, sub_key, read_epoch)
 
@@ -274,11 +281,27 @@ class PushDelivery:
             except PubSubDuplicateMsgID as e:
                 logger.warning('PubSub batch for sub_key `%s` not committed, a publication was refused: %s', sub_key, e)
 
+            except DBAPIError as e:
+                self._on_database_error(sub_key, e)
+
             except Exception:
                 logger.warning('PubSub delivery error for sub_key `%s`: %s', sub_key, format_exc())
-                outage.on_failure()
-
                 sleep(_fetch_error_sleep)
+
+# ################################################################################################################################
+
+    def _on_database_error(self, sub_key:'str', error:'DBAPIError') -> 'None':
+        """ Records a database error of the delivery loop of a subscriber and pauses the loop before it runs again.
+        """
+        # An unavailable database or a transaction that may run again unchanged is an outage of the delivery as a whole ..
+        if is_transient(error):
+            self._outage.on_failure(sub_key, error)
+
+        # .. while any other database error concerns this subscriber alone.
+        else:
+            logger.warning('PubSub delivery error for sub_key `%s`: %s', sub_key, format_exc())
+
+        sleep(_fetch_error_sleep)
 
 # ################################################################################################################################
 

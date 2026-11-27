@@ -65,6 +65,16 @@ _waitpid = get_original('os', 'waitpid')
 _poll    = get_original('select', 'poll')
 _signal  = get_original('signal', 'signal')
 
+# The signals that stop the server - one from a process manager and a Ctrl-C in a terminal
+_stop_signals = {signal.SIGTERM, signal.SIGINT}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _disregard_signal(signal_number:'int', _frame:'object') -> 'None':
+    """ Receives a signal that a child of the arbiter leaves to the arbiter.
+    """
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -131,7 +141,7 @@ class Arbiter:
 # ################################################################################################################################
 
     def _on_signal(self, signal_number:'int', _frame:'object') -> 'None':
-        if signal_number == signal.SIGTERM:
+        if signal_number in _stop_signals:
             self.is_stopping = True
 
 # ################################################################################################################################
@@ -140,6 +150,7 @@ class Arbiter:
         _ = signal.set_wakeup_fd(self.wake_write)
         _ = _signal(signal.SIGCHLD, self._on_signal)
         _ = _signal(signal.SIGTERM, self._on_signal)
+        _ = _signal(signal.SIGINT, self._on_signal)
 
 # ################################################################################################################################
 
@@ -147,6 +158,11 @@ class Arbiter:
         _ = signal.set_wakeup_fd(-1)
         _ = _signal(signal.SIGCHLD, signal.SIG_DFL)
         _ = _signal(signal.SIGTERM, signal.SIG_DFL)
+
+        # A Ctrl-C in a terminal reaches every process of its group, and the arbiter stops its processes in order,
+        # so a child disregards it. A handler of Python, unlike an ignored signal, does not pass on to the programs
+        # that the child executes.
+        _ = _signal(signal.SIGINT, _disregard_signal)
 
         os.close(self.wake_read)
         os.close(self.wake_write)

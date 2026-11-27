@@ -18,6 +18,7 @@ from sqlalchemy.exc import DBAPIError
 
 # Zato
 from zato.common.db_env.database import get_database_engine
+from zato.common.db_env.outage import OutageTracker
 from zato.common.typing_ import cast_
 from zato.common.util.time_ import datetime_from_ms
 
@@ -72,6 +73,9 @@ class DatabaseClock:
         # What the callers that arrive during the first reading wait on.
         self._first_reading_lock = Lock()
 
+        # The readings that fail while the database is unavailable, during which the previous reading remains in use
+        self._outage = OutageTracker('Pub/sub clock')
+
 # ################################################################################################################################
 
     def _synchronize(self, current:'float') -> 'None':
@@ -88,11 +92,13 @@ class DatabaseClock:
                 finished = monotonic()
 
         # .. in which case the previous reading remains in use, unless there is none yet ..
-        except DBAPIError:
+        except DBAPIError as e:
             if not self._is_synchronized:
                 raise
-            logger.warning('The time of the pub/sub database could not be read, the previous reading remains in use')
+            self._outage.on_failure(e)
             return
+
+        self._outage.on_success()
 
         # .. and the reading belongs to the middle of its round trip.
         round_trip_sum = started + finished

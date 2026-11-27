@@ -10,6 +10,7 @@ use std::sync::{Arc, LazyLock};
 use serde::Deserialize;
 
 use crate::bridge::{BridgeShared, ChannelConfig, OutgoingConfig, RecvEvent, ReplyEvent, SendRequest};
+use crate::outage::OutageLog;
 use crate::wire;
 
 /// Environment variable holding the per-environment stream key prefix, which the server reads as well.
@@ -110,7 +111,11 @@ pub fn ensure_consumer_group(conn: &mut redis::Connection, start_id: &str) {
 
 /// Publishes a `request_config` message to the request stream, asking the server
 /// to send a reload command with connection configs from ODB.
-pub fn request_config(conn: &mut redis::Connection) {
+///
+/// # Errors
+///
+/// Returns the error of Redis if the message could not be published, which the caller retries.
+pub fn request_config(conn: &mut redis::Connection) -> Result<(), redis::RedisError> {
     let result: Result<String, redis::RedisError> = redis::cmd("XADD")
         .arg(&STREAM_KEYS.request)
         .arg("MAXLEN")
@@ -121,10 +126,11 @@ pub fn request_config(conn: &mut redis::Connection) {
         .arg("request_config")
         .query(conn);
 
-    match result {
-        Ok(_) => tracing::info!("Published request_config to '{}'", STREAM_KEYS.request),
-        Err(err) => tracing::error!("Failed to publish request_config: {err}"),
-    }
+    // The caller logs a failure as a part of the outage of Redis that it waits through.
+    result?;
+
+    tracing::info!("Published request_config to '{}'", STREAM_KEYS.request);
+    Ok(())
 }
 
 /// Processes a reload command received during the startup wait phase.
@@ -217,6 +223,9 @@ pub fn publish_reply_event(conn: &mut redis::Connection, event: &ReplyEvent) {
 pub fn command_listener_loop(conn: &mut redis::Connection, shared: &Arc<BridgeShared>) {
     tracing::info!("Command listener started on '{}'", STREAM_KEYS.command);
 
+    // An unavailable Redis fails every read until it returns, which is logged once for the whole outage.
+    let mut outage = OutageLog::new("Command listener".to_owned());
+
     loop {
         if shared.stop_flag.load(std::sync::atomic::Ordering::Relaxed) {
             tracing::info!("Command listener exiting (stop flag set)");
@@ -237,16 +246,19 @@ pub fn command_listener_loop(conn: &mut redis::Connection, shared: &Arc<BridgeSh
             .query(conn);
 
         let streams = match result {
-            Ok(streams) => streams,
+            Ok(streams) => {
+                outage.on_success();
+                streams
+            }
             Err(err) => {
                 let msg = err.to_string();
                 if msg.contains("timeout") || msg.contains("nil") {
                     continue;
                 }
 
-                // No command reaches the bridge until the group exists again
+                // No command reaches the bridge until the group exists again, e.g. after Redis restarted without its data
                 if is_missing_group(&err) {
-                    tracing::warn!(
+                    tracing::info!(
                         "Recreating consumer group '{CONSUMER_GROUP_NAME}' on '{}': {err}",
                         STREAM_KEYS.command
                     );
@@ -254,7 +266,8 @@ pub fn command_listener_loop(conn: &mut redis::Connection, shared: &Arc<BridgeSh
                     continue;
                 }
 
-                tracing::error!("XREADGROUP error: {err}");
+                // Any other error means Redis is unavailable, and the read runs again after a pause.
+                outage.on_failure(&err);
                 std::thread::sleep(std::time::Duration::from_secs(1));
                 continue;
             }

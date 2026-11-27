@@ -43,6 +43,13 @@ _min_expiration   = 1
 # ################################################################################################################################
 # ################################################################################################################################
 
+class TopicExists(Exception):
+    """ Raised to the caller that creates or renames a topic to a name that another topic has already.
+    """
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class GetList(AdminService):
     """ Returns a list of pub/sub topics available.
     """
@@ -100,7 +107,7 @@ class Create(AdminService):
                     filter(PubSubTopic.name==input.name).first()
 
                 if existing_one:
-                    raise Exception('Pub/sub topic `{}` already exists'.format(input.name))
+                    raise TopicExists('Pub/sub topic `{}` already exists'.format(input.name))
 
                 topic = PubSubTopic()
                 topic.name = input.name
@@ -112,6 +119,12 @@ class Create(AdminService):
                 session.add(topic)
                 session.commit()
 
+            # A name that another topic has already is the caller's error ..
+            except TopicExists:
+                session.rollback()
+                raise
+
+            # .. whereas anything else is a fault of the operation.
             except Exception:
                 self.logger.error('Could not create a pub/sub topic, e:`%s`', format_exc())
                 session.rollback()
@@ -162,7 +175,7 @@ class Edit(AdminService):
                     existing_one = existing_one.first()
 
                 if existing_one:
-                    raise Exception('Pub/sub topic `{}` already exists'.format(input.name))
+                    raise TopicExists('Pub/sub topic `{}` already exists'.format(input.name))
 
                 topic = session.query(PubSubTopic)
 
@@ -188,6 +201,12 @@ class Edit(AdminService):
                 session.add(topic)
                 session.commit()
 
+            # A name that another topic has already is the caller's error ..
+            except TopicExists:
+                session.rollback()
+                raise
+
+            # .. whereas anything else is a fault of the operation.
             except Exception:
                 self.logger.error('Could not update pub/sub topic, e:`%s`', format_exc())
                 session.rollback()

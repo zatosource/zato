@@ -12,11 +12,14 @@ from threading import Event, Lock, Thread
 
 # SQLAlchemy
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 
 # Zato
 from zato.common.audit_log.common import event_attr_table
 from zato.common.audit_log.search_index import get_postgresql_index_names
 from zato.common.db_env.engine import call_database
+from zato.common.db_env.errors import is_transient
+from zato.common.db_env.outage import OutageTracker
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -98,11 +101,25 @@ class SearchIndexMerger:
     def _run(self) -> 'None':
         """ Merges the pending lists at each interval, until the merger is stopped.
         """
+        outage = OutageTracker('Search index merge')
+
         while not self._stop_event.wait(self.interval_seconds):
             try:
                 call_database(self.engine, self.merge)
+
+            # An unavailable database interrupts the merge, which the next interval runs again ..
+            except DBAPIError as e:
+                if is_transient(e):
+                    outage.on_failure(e)
+                else:
+                    logger.exception('Search index merge failed')
+
+            # .. while any other error is logged with its traceback.
             except Exception:
                 logger.exception('Search index merge failed')
+
+            else:
+                outage.on_success()
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -640,7 +640,7 @@ impl BridgeShared {
 
         // The publisher thread is gone only at shutdown, when nobody waits for the reply anyway.
         if self.reply_sender.send(event).is_err() {
-            tracing::warn!("Reply publisher is gone, dropping reply for correlation_id={correlation_id}");
+            tracing::info!("Reply publisher is gone, dropping reply for correlation_id={correlation_id}");
         }
     }
 

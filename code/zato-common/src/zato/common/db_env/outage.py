@@ -53,8 +53,7 @@ def call_until_available(component:'str', func:'callable_', *args:'any_') -> 'an
             out = func(*args)
             break
         except DBAPIError as e:
-            logger.warning('%s waiting for the database, retry in %ss -> %s', component, retry_seconds, e)
-            outage.on_failure()
+            outage.on_failure(e)
             sleep(retry_seconds)
             retry_seconds = min(retry_seconds * 2, _retry_max_seconds)
 
@@ -67,7 +66,8 @@ def call_until_available(component:'str', func:'callable_', *args:'any_') -> 'an
 
 class OutageTracker:
     """ Measures how long a component that uses the database was unable to complete its operations, from its first
-    failure to its next success, and logs that time when the component succeeds again.
+    failure to its next success. The first failure is logged as a warning, the ones that follow it as debug entries,
+    and the time is logged when the component succeeds again.
     """
 
     def __init__(self, component:'str') -> 'None':
@@ -80,11 +80,14 @@ class OutageTracker:
 
 # ################################################################################################################################
 
-    def on_failure(self) -> 'None':
+    def on_failure(self, error:'Exception') -> 'None':
         """ Records an operation that failed, the first one of a run of failures marking its beginning.
         """
         if self.failed_at is None:
             self.failed_at = monotonic()
+            logger.warning('%s could not complete a database operation, retrying until it completes -> %s', self.component, error)
+        else:
+            logger.debug('%s could not complete a database operation again -> %s', self.component, error)
 
 # ################################################################################################################################
 
@@ -98,6 +101,64 @@ class OutageTracker:
         self.failed_at = None
 
         logger.info('%s resumed -> after:%.3fs', self.component, elapsed)
+
+# ################################################################################################################################
+
+    def clear(self) -> 'None':
+        """ Ends a run of failures without logging it, because the component stopped before it succeeded again.
+        """
+        self.failed_at = None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SharedOutageTracker:
+    """ Measures how long a component made of members that use the database independently, e.g. the delivery loops
+    of all the subscribers, was unable to complete its operations, from the failure of its first member to the moment
+    when no member fails anymore. An outage of the database is logged once for the whole component.
+    """
+
+    def __init__(self, component:'str') -> 'None':
+
+        # Logs the beginning and the end of each outage of the component
+        self.tracker = OutageTracker(component)
+
+        # The members whose last operation failed
+        self.failing:'set[str]' = set()
+
+# ################################################################################################################################
+
+    def on_failure(self, member:'str', error:'Exception') -> 'None':
+        """ Records an operation of a member that failed.
+        """
+        self.failing.add(member)
+        self.tracker.on_failure(error)
+
+# ################################################################################################################################
+
+    def on_success(self, member:'str') -> 'None':
+        """ Records an operation of a member that succeeded, the outage ending once no member fails anymore.
+        """
+        if member not in self.failing:
+            return
+
+        self.failing.remove(member)
+
+        if not self.failing:
+            self.tracker.on_success()
+
+# ################################################################################################################################
+
+    def on_stopped(self, member:'str') -> 'None':
+        """ Records a member that stopped, which no longer takes part in an outage of the component.
+        """
+        if member not in self.failing:
+            return
+
+        self.failing.remove(member)
+
+        if not self.failing:
+            self.tracker.clear()
 
 # ################################################################################################################################
 # ################################################################################################################################

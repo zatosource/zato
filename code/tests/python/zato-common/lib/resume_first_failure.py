@@ -11,9 +11,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # code/tests/recipe_shell.sh loads it into every pytest run of every recipe line through PYTEST_ADDOPTS
 # and keeps one state file per make goal. While the previous run of the goal failed or was interrupted,
 # a pytest run that completed in that run is skipped in full, and a pytest run that failed or was interrupted
-# starts from the first test of the module of the test that failed first or that was running when the run
-# was interrupted, because the tests of a module may depend on the state that its earlier tests create. A run of the goal
-# that completes, or a run with RESTART=1, makes the next run start from the first test of every pytest run.
+# starts from the test that failed first or that was running when the run was interrupted. A test of a class starts
+# from the first test of its class instead, because the tests of a class may depend on the state that its earlier
+# tests create. The test that is running is recorded when it starts, so a run that is killed before pytest completes
+# its session resumes from it too. A run of the goal that completes, a run with RESTART=1 or make test-clear makes
+# the next run start from the first test of every pytest run.
 #
 # A pytest run is identified by its working directory, its command line arguments and the environment variables
 # named Zato_Test_* that its recipe line names, so that each pass of a loop over modes or parameters of a recipe line
@@ -74,7 +76,6 @@ class _RunState:
     is_skipped:'bool' = False
     start_nodeid:'str | None' = None
     first_failed:'str | None' = None
-    current:'str | None' = None
 
 _run_state = _RunState()
 
@@ -200,7 +201,7 @@ def pytest_configure(config:'pytest.Config') -> 'None':
 @pytest.hookimpl(trylast=True)
 def pytest_collection_modifyitems(config:'pytest.Config', items:'list[pytest.Item]') -> 'None':
     """ Deselects every test of a pytest run that completed in the previous run of the goal, or the tests
-    that precede the module of the test that the previous run failed first in or was interrupted in.
+    that precede the test that the previous run failed first in or was interrupted in, or its class.
     """
     if _run_state.is_skipped:
         _write_line(config, '>>> Skipping the suite, which completed in the previous run of the goal')
@@ -224,26 +225,30 @@ def pytest_collection_modifyitems(config:'pytest.Config', items:'list[pytest.Ite
         _write_line(config, f'>>> Test {start_nodeid} not collected, starting the suite from its first test')
         return
 
-    # The run resumes from the first test of the module of the test, whose earlier tests may create what it needs
-    start_module = items[start_index].nodeid.split('::')[0]
+    # A test of a class resumes from the first test of its class, whose earlier tests may create what it needs ..
+    start_item = items[start_index]
 
-    while start_index > 0 and items[start_index - 1].nodeid.split('::')[0] == start_module:
-        start_index -= 1
+    if isinstance(start_item, pytest.Function) and start_item.cls is not None:
+        while start_index > 0 and items[start_index - 1].parent is start_item.parent:
+            start_index -= 1
 
+    # .. while any other test resumes from itself.
     deselected = items[:start_index]
 
     if deselected:
         config.hook.pytest_deselected(items=deselected)
         del items[:start_index]
 
-    _write_line(config, f'>>> Resuming the suite from {items[0].nodeid}, the first test of the module of {start_nodeid}')
+    _write_line(config, f'>>> Resuming the suite from {items[0].nodeid}, the previous run stopped in {start_nodeid}')
 
 # ################################################################################################################################
 
 def pytest_runtest_logstart(nodeid:'str', location:'tuple[str, int | None, str]') -> 'None':
-    """ Records the test that is running, which the next run starts from if this run is interrupted in it.
+    """ Records the test that is running, which the next run starts from if this run is interrupted or killed in it,
+    unless a test of this run failed already, which the next run starts from instead.
     """
-    _run_state.current = nodeid
+    if _run_state.is_active and _run_state.first_failed is None:
+        _append_entry(_run_state.state_path, f'{ModuleCtx.Entry_First} {_run_state.run_id} {_run_state.stage_id} {nodeid}')
 
 # ################################################################################################################################
 
@@ -257,8 +262,9 @@ def pytest_runtest_logreport(report:'pytest.TestReport') -> 'None':
 # ################################################################################################################################
 
 def pytest_sessionfinish(session:'pytest.Session', exitstatus:'int') -> 'None':
-    """ Records where the next run of the goal starts this pytest run from. A pytest run that ends in any other way,
-    such as with a module that failed to import, keeps what the previous run recorded.
+    """ Records where the next run of the goal starts this pytest run from. A pytest run that was interrupted keeps
+    the test that was running, which its start recorded, and a pytest run that ends in any other way, such as with
+    a module that failed to import, keeps what was recorded last.
     """
     if not _run_state.is_active:
         return
@@ -272,10 +278,6 @@ def pytest_sessionfinish(session:'pytest.Session', exitstatus:'int') -> 'None':
 
     if _run_state.first_failed is not None:
         _append_entry(_run_state.state_path, f'{ModuleCtx.Entry_First} {prefix} {_run_state.first_failed}')
-
-    elif exitstatus == pytest.ExitCode.INTERRUPTED:
-        if _run_state.current is not None:
-            _append_entry(_run_state.state_path, f'{ModuleCtx.Entry_First} {prefix} {_run_state.current}')
 
     elif exitstatus == pytest.ExitCode.OK:
         _append_entry(_run_state.state_path, f'{ModuleCtx.Entry_Done} {prefix}')

@@ -160,7 +160,7 @@ class PubSubCleanup:
         try:
             out = self.sweep_until_done()
         except PubSubReplaced as e:
-            logger.warning('Sweep stopped -> %s', e)
+            logger.info('Sweep stopped -> %s', e)
 
         return out
 
@@ -450,8 +450,8 @@ class PubSubCleanup:
                     raise
 
                 # .. after the pause in which the other writers complete their transactions or the database returns.
-                logger.warning('Sweep postponed, %s -> retry in:%ds', e.orig, _lock_retry_seconds)
-                self._outage.on_failure()
+                logger.info('Sweep postponed, %s -> retry in:%ds', e.orig, _lock_retry_seconds)
+                self._outage.on_failure(e)
                 time.sleep(_lock_retry_seconds)
 
         self._outage.on_success()

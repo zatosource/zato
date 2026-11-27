@@ -21,5 +21,8 @@ pub mod wire;
 /// Redis Streams integration for command ingestion and recv event publishing.
 pub mod redis_streams;
 
+/// The log of an outage of a resource that a component retries until it is available again.
+pub mod outage;
+
 /// HTTP query API served by actix-web for the Zato server to read connection state.
 pub mod http_api;

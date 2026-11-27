@@ -16,10 +16,15 @@ from traceback import format_exc
 # gevent
 from gevent import GreenletExit
 
+# SQLAlchemy
+from sqlalchemy.exc import DBAPIError
+
 # Zato
 from zato.common.api import DATA_FORMAT
 from zato.common.audit_log.service import Push_Delivery_Key
+from zato.common.db_env.errors import is_transient
 from zato.common.pubsub.delivery_scope import close_delivery_scope, get_delivery_scope, open_delivery_scope
+from zato.common.pubsub.sql.replaced import PubSubReplaced
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -160,6 +165,19 @@ def _commit_on_exit(backend:'SQLPubSubBackend', scope:'DeliveryScope', sub_key:'
     """
     try:
         commit_delivery_scope(backend, scope, sub_key)
+
+    # A takeover by another server or an unavailable database leaves the messages unacknowledged,
+    # and they are delivered again, by this server or by the one that took over ..
+    except PubSubReplaced as e:
+        logger.info('Concluded messages not committed when delivery stopped, sub_key `%s`, delivered again: %s', sub_key, e)
+
+    except DBAPIError as e:
+        if is_transient(e):
+            logger.info('Concluded messages not committed when delivery stopped, sub_key `%s`, delivered again: %s', sub_key, e)
+        else:
+            logger.warning('Concluded messages not committed when delivery stopped, sub_key `%s`: %s', sub_key, format_exc())
+
+    # .. while any other error is logged with its traceback.
     except Exception:
         logger.warning('Concluded messages not committed when delivery stopped, sub_key `%s`: %s', sub_key, format_exc())
 

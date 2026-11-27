@@ -17,6 +17,7 @@ use rdkafka::{ClientConfig, TopicPartitionList};
 use tokio_util::sync::CancellationToken;
 
 use crate::bridge::{BridgeShared, ChannelConfig, CommitReceiver, OutgoingConfig, RecvEvent, SendOutcome, SendRequest};
+use crate::outage::OutageLog;
 use crate::wire;
 
 /// The sasl.mechanism value for PLAIN.
@@ -458,6 +459,9 @@ pub async fn consume_loop(
         return;
     }
 
+    // The failures of the consumer until the broker is available again are logged once for the whole outage.
+    let mut outage = OutageLog::new(format!("Kafka consumer `{}`", config.name));
+
     loop {
         if shared.stop_flag.load(Ordering::Relaxed) || cancel.is_cancelled() {
             tracing::info!("Kafka consumer `{}` stopping", config.name);
@@ -469,7 +473,7 @@ pub async fn consume_loop(
         let consumer: StreamConsumer = match client_config.create() {
             Ok(consumer) => consumer,
             Err(err) => {
-                tracing::warn!("Kafka consumer `{}`: waiting for broker: {err}", config.name);
+                outage.on_failure(&err);
                 if wait_before_retry(&cancel).await {
                     continue;
                 }
@@ -478,11 +482,7 @@ pub async fn consume_loop(
         };
 
         if let Err(err) = consumer.subscribe(&topics) {
-            tracing::warn!(
-                "Kafka consumer `{}`: cannot subscribe to `{}`: {err}",
-                config.name,
-                config.topics_text()
-            );
+            outage.on_failure(&err);
             if wait_before_retry(&cancel).await {
                 continue;
             }
@@ -522,6 +522,7 @@ pub async fn consume_loop(
                     match result {
                         Ok(borrowed_message) => {
                             consecutive_errors = 0;
+                            outage.on_success();
                             let event = build_recv_event(config, &borrowed_message);
                             if message_sender.send(event).is_err() {
                                 return;
@@ -530,9 +531,11 @@ pub async fn consume_loop(
                         }
                         Err(err) => {
                             consecutive_errors += 1;
-                            tracing::warn!("Kafka consumer `{}`: receive warning: {err}", config.name);
+                            outage.on_failure(&err);
+
+                            // A consumer that keeps failing is rebuilt, which is a part of the same outage.
                             if consecutive_errors >= MAX_CONSECUTIVE_ERRORS {
-                                tracing::warn!("Kafka consumer `{}`: reconnecting after repeated failures", config.name);
+                                tracing::info!("Kafka consumer `{}`: reconnecting after repeated failures", config.name);
                                 break;
                             }
                             tokio::time::sleep(RECEIVE_ERROR_WAIT).await;

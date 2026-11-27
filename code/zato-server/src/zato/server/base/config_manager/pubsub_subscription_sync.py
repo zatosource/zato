@@ -12,7 +12,13 @@ from logging import getLogger
 # gevent
 from gevent import spawn
 
+# SQLAlchemy
+from sqlalchemy.exc import DBAPIError
+
 # Zato
+from zato.common.db_env.errors import is_transient
+from zato.common.db_env.outage import OutageTracker
+from zato.common.pubsub.sql.replaced import PubSubReplaced
 from zato.common.pubsub.subscription_list import Reconcile_Batch_Size, build_subscribers, new_topic_flags
 from zato.common.worker_slot import is_config_process
 
@@ -39,6 +45,28 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# The writes and reads of the subscription rows that fail while the pub/sub database is unavailable,
+# whose differences the reconciler writes once the database is available again
+_outage = OutageTracker('Pub/sub subscription sync')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _on_sync_error(error:'Exception', message:'str', *args:'any_') -> 'None':
+    """ Logs an error of a write or a read of the subscription rows, which the reconciler writes again later.
+    """
+    # An unavailable database is one outage of the synchronization as a whole ..
+    if isinstance(error, DBAPIError) and is_transient(error):
+        _outage.on_failure(error)
+
+    # .. a server that another one took over writes the rows no more ..
+    elif isinstance(error, PubSubReplaced):
+        logger.info('Pub/sub subscription rows not written, another server took over -> %s', error)
+
+    # .. and any other error is logged with its traceback.
+    else:
+        logger.warning(message, *args, exc_info=True)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -101,9 +129,11 @@ def _write_pairs(config_manager:'ConfigManager', added:'pairlist', removed:'pair
 
     try:
         backend.sync_subscription_pairs(added, removed)
-    except Exception:
-        logger.warning('Pub/sub subscription row write failed -> added:%s, removed:%s', added, removed, exc_info=True)
+    except Exception as e:
+        _on_sync_error(e, 'Pub/sub subscription row write failed -> added:%s, removed:%s', added, removed)
         return
+
+    _outage.on_success()
 
     if removed:
         backend.cleanup_pair_deliveries(removed)
@@ -224,11 +254,13 @@ def replace_from_odb(config_manager:'ConfigManager') -> 'pairlist':
     # the list keeps the rows that it considers committed and the reconciler writes the difference once it can.
     try:
         committed = backend.get_governed_pairs()
-    except Exception:
-        logger.warning('Pub/sub subscription rows could not be read, the subscription list is replaced from the configuration database alone',
-            exc_info=True)
+    except Exception as e:
+        _on_sync_error(e,
+            'Pub/sub subscription rows could not be read, the subscription list is replaced from the configuration database alone')
         subscription_list.replace_subscribers(subscribers)
         return []
+
+    _outage.on_success()
 
     subscription_list.replace(subscribers, committed)
 
@@ -246,11 +278,11 @@ def replace_from_odb(config_manager:'ConfigManager') -> 'pairlist':
 
         try:
             backend.sync_subscription_pairs(added_batch, removed_batch)
-        except Exception:
-            logger.warning(
-                'Pub/sub subscription bulk sync failed -> added:%s, removed:%s',
-                added_batch, removed_batch, exc_info=True)
+        except Exception as e:
+            _on_sync_error(e, 'Pub/sub subscription bulk sync failed -> added:%s, removed:%s', added_batch, removed_batch)
             break
+
+        _outage.on_success()
 
         all_removed.extend(removed_batch)
 
@@ -289,11 +321,11 @@ def reconcile_once(config_manager:'ConfigManager', *, full:'bool') -> 'None':
 
     try:
         backend.sync_subscription_pairs(added_batch, removed_batch)
-    except Exception:
-        logger.warning(
-            'Pub/sub subscription reconciliation failed -> added:%s, removed:%s',
-            added_batch, removed_batch, exc_info=True)
+    except Exception as e:
+        _on_sync_error(e, 'Pub/sub subscription reconciliation failed -> added:%s, removed:%s', added_batch, removed_batch)
         return
+
+    _outage.on_success()
 
     if removed_batch:
         backend.cleanup_pair_deliveries(removed_batch)

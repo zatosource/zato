@@ -360,8 +360,8 @@ class PubSubWriter:
 
         try:
             audit_events = call_database(engine, self._write_items, engine, batch, prepare=prepare)
-        except DBAPIError:
-            self._outage.on_failure()
+        except DBAPIError as e:
+            self._outage.on_failure(e)
             raise
 
         self._outage.on_success()

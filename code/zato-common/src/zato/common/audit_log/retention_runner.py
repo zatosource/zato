@@ -11,11 +11,16 @@ from logging import getLogger
 from threading import Event, Lock, Thread
 from time import monotonic
 
+# SQLAlchemy
+from sqlalchemy.exc import DBAPIError
+
 # Zato
 from zato.common.audit_log.common import event_count_table
 from zato.common.audit_log.event_count import compact_event_counts
 from zato.common.audit_log.retention import RetentionRun, run_retention
 from zato.common.db_env.engine import call_database
+from zato.common.db_env.errors import is_transient
+from zato.common.db_env.outage import OutageTracker
 from zato.common.util.api import utcnow
 from zato.common.worker_slot import is_worker_process
 
@@ -116,6 +121,8 @@ class RetentionRunner:
     def _run(self) -> 'None':
         """ Runs retention on each requested engine, one engine after another, whenever requests arrive.
         """
+        outage = OutageTracker('Audit log retention')
+
         while True:
 
             # Wait for a request ..
@@ -143,8 +150,20 @@ class RetentionRunner:
                         if self._is_stopping:
                             break
                         call_database(engine, run_retention, engine, now, run)
+
+                # An unavailable database interrupts the run, which the next request runs again ..
+                except DBAPIError as e:
+                    if is_transient(e):
+                        outage.on_failure(e)
+                    else:
+                        logger.exception('Audit log retention could not be completed')
+
+                # .. while any other error is logged with its traceback.
                 except Exception:
                     logger.exception('Audit log retention could not be completed')
+
+                else:
+                    outage.on_success()
 
                 retention_elapsed = monotonic() - retention_start
                 retention_elapsed_ms = retention_elapsed * 1000

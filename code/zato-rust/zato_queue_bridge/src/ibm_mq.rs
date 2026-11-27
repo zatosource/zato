@@ -21,6 +21,7 @@ use mqi::{Connection, MqStr, Object, connection::MqServer, constants, structs, t
 use tokio_util::sync::CancellationToken;
 
 use crate::bridge::{BridgeShared, ChannelConfig, OutgoingConfig, RecvEvent};
+use crate::outage::OutageLog;
 use crate::rfh2;
 
 /// Application name reported to the queue manager for all bridge connections.
@@ -449,6 +450,9 @@ fn consume_loop_blocking(
 ) {
     let details = config.mq_details();
 
+    // A queue manager that is not reachable fails each connection until it returns, which is logged once for the whole outage.
+    let mut outage = OutageLog::new(format!("IBM MQ consumer `{}`", config.name));
+
     loop {
         if shared.stop_flag.load(Ordering::Relaxed) || cancel.is_cancelled() {
             tracing::info!("IBM MQ consumer `{}` stopping", config.name);
@@ -459,7 +463,7 @@ fn consume_loop_blocking(
         let connection = match connect(&details) {
             Ok(connection) => connection,
             Err(err) => {
-                tracing::warn!("IBM MQ consumer `{}`: waiting for queue manager: {err}", config.name);
+                outage.on_failure(&err);
                 std::thread::sleep(RECONNECT_DELAY);
                 continue;
             }
@@ -484,6 +488,7 @@ fn consume_loop_blocking(
             }
         };
 
+        outage.on_success();
         tracing::info!("IBM MQ consumer `{}` connected to queue `{}`", config.name, config.queue);
 
         // Keep getting messages until cancellation or a connection-level failure.
@@ -518,7 +523,7 @@ fn consume_loop_blocking(
 
                 // Anything else means the connection is gone - reconnect with backoff.
                 Err(err) => {
-                    tracing::warn!("IBM MQ consumer `{}`: receive error, reconnecting: {err}", config.name);
+                    outage.on_failure(&err);
                     std::thread::sleep(RECONNECT_DELAY);
                     break;
                 }

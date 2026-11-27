@@ -13,9 +13,14 @@ from json import dumps
 from logging import getLogger
 from traceback import format_exc
 
+# SQLAlchemy
+from sqlalchemy.exc import DBAPIError
+
 # Zato
 from zato.common.api import PubSub
 from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource, is_audit_log_enabled
+from zato.common.db_env.errors import is_transient
+from zato.common.db_env.outage import OutageTracker
 from zato.common.pubsub.outgoing import Direction_In, Direction_Out, get_direction, get_outgoing_topic_name, has_queue, \
     is_dlq_active, Key_CID, Key_Conn_ID, Key_Conn_Name, Key_Conn_Type, Key_DLQ_Rounds, Key_DLQ_Rule_Rounds, Key_Msg_ID, \
     Key_Pub_Time, locate_outgoing_conn
@@ -36,6 +41,9 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# The moves to the DLQ that fail while the pub/sub database is unavailable
+_outage = OutageTracker('Pub/sub DLQ move')
 
 # The DLQ prefixes by direction
 _topic_prefix_by_direction = {
@@ -216,10 +224,23 @@ def move_to_dlq(
             msg_id=msg_id,
             audit_events=audit_events,
         )
+
+    # An unavailable database is one outage of the moves to the DLQ, each of which runs again in the next round ..
+    except DBAPIError as e:
+        if is_transient(e):
+            _outage.on_failure(e)
+        else:
+            logger.warning('Could not move message `%s` of `%s` to DLQ `%s`, cid `%s`, e:`%s`',
+                envelope[Key_Msg_ID], conn_name, dlq_topic_name, cid, format_exc())
+        return ''
+
+    # .. while any other error is logged with its traceback.
     except Exception:
         logger.warning('Could not move message `%s` of `%s` to DLQ `%s`, cid `%s`, e:`%s`',
             envelope[Key_Msg_ID], conn_name, dlq_topic_name, cid, format_exc())
         return ''
+
+    _outage.on_success()
 
     logger.info('Moved message `%s` of `%s` to DLQ `%s` as `%s` after %d attempts, cid `%s`, reason `%s`',
         envelope[Key_Msg_ID], conn_name, dlq_topic_name, msg_id, exhausted.attempts, cid, exhausted.error)
