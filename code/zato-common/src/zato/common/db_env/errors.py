@@ -32,6 +32,13 @@ class SQLState:
     Idle_Session_Timeout   = '57P05'
     Idle_In_Transaction_Session_Timeout = '25P03'
 
+# The first two characters of an SQLSTATE code, which name the class of the condition
+class SQLStateClass:
+    Length                         = 2
+    Data_Exception                 = '22'
+    Integrity_Constraint_Violation = '23'
+    Insufficient_Resources         = '53'
+
 # The conflicts with concurrent transactions after which PostgreSQL rolled the transaction back as a whole.
 # A lock timeout is not among them, a batch that reaches one is split so that only the callers of the locked rows fail.
 _conflict_states = {
@@ -51,9 +58,13 @@ _transient_states = {
     SQLState.Idle_In_Transaction_Session_Timeout,
 }
 
+# The SQLSTATE classes of the conditions in which a transaction that failed succeeds unchanged once the server
+# has the resources again - insufficient resources, such as a full disk, exhausted memory or too many connections.
+_transient_classes = {SQLStateClass.Insufficient_Resources}
+
 # The SQLSTATE classes of the errors caused by the values of one statement - data exceptions
 # and integrity constraint violations.
-_value_error_classes = {'22', '23'}
+_value_error_classes = {SQLStateClass.Data_Exception, SQLStateClass.Integrity_Constraint_Violation}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,6 +84,14 @@ def get_sqlstate(error:'DBAPIError') -> 'str':
 
 # ################################################################################################################################
 
+def get_sqlstate_class(sqlstate:'str') -> 'str':
+    """ Returns the class of an SQLSTATE code, which is its first two characters.
+    """
+    out = sqlstate[:SQLStateClass.Length]
+    return out
+
+# ################################################################################################################################
+
 def is_conflict(error:'DBAPIError') -> 'bool':
     """ Whether a transaction failed on a conflict with concurrent transactions, which leaves nothing of it committed.
     """
@@ -87,7 +106,7 @@ def is_value_error(error:'DBAPIError') -> 'bool':
     """ Whether PostgreSQL rejected a value that a statement was to write, which fails again however often it is run.
     """
     sqlstate = get_sqlstate(error)
-    sqlstate_class = sqlstate[:2]
+    sqlstate_class = get_sqlstate_class(sqlstate)
 
     out = sqlstate_class in _value_error_classes
     return out
@@ -107,7 +126,7 @@ def is_lock_timeout(error:'DBAPIError') -> 'bool':
 def is_transient(error:'DBAPIError') -> 'bool':
     """ Whether a failed transaction may be started again unchanged - after a deadlock, a serialization failure,
     a lock that was not available, a server that shut down or restarted, a connection that was lost,
-    or a connection that could not be opened.
+    a connection that could not be opened, or a server that ran out of disk space, memory or connections.
     """
     if error.connection_invalidated:
         out = True
@@ -118,7 +137,8 @@ def is_transient(error:'DBAPIError') -> 'bool':
 
     else:
         sqlstate = get_sqlstate(error)
-        out = sqlstate in _transient_states
+        sqlstate_class = get_sqlstate_class(sqlstate)
+        out = sqlstate in _transient_states or sqlstate_class in _transient_classes
 
     return out
 

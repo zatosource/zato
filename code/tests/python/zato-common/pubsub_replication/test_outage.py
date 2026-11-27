@@ -44,14 +44,20 @@ _outage_seconds = [10, 120]
 
 # The logger of the resume times, and the components that log theirs.
 _outage_logger_name = 'zato.common.db_env.outage'
-_resuming_components = ['Pub/sub commit writer', 'PubSub delivery for sub_key', 'Pub/sub cleanup']
+_resuming_components = ['Pub/sub commit writer', 'PubSub delivery', 'Pub/sub cleanup']
+
+# What follows the name of a component in the entry that it logs when it resumes
+_resumed_suffix = ' resumed -> '
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def _is_logged(entries:'strlist', component:'str') -> 'bool':
+    """ Whether the component logged that it resumed, as opposed to the warning that it logs when an outage begins.
+    """
+    prefix = component + _resumed_suffix
     for entry in entries:
-        if entry.startswith(component):
+        if entry.startswith(prefix):
             return True
     return False
 

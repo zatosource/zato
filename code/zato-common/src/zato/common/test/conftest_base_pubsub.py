@@ -125,6 +125,9 @@ _monitoring_env_names = (_python_perf_support_env_name,)
 # The prefix of the stream keys of the queue bridge, which every process of the installation and the bridge of a suite share
 _queue_bridge_env_names = (Queue_Bridge_Stream_Prefix_Variable,)
 
+# The prefix of the stream keys of the scheduler, which every server of the installation and its scheduler share
+_scheduler_env_names = ('Zato_Scheduler_Stream_Prefix',)
+
 # The logs that are copied out of an environment before it is torn down
 _server_log_file_name        = 'server.log'
 _file_transfer_log_file_name = 'file-transfer.log'
@@ -383,12 +386,14 @@ def render_template(template_path:'str', placeholders:'anydict') -> 'str':
 
 def get_process_environment() -> 'strstrdict':
     """ Builds the environment of a process of an installation, such as the cleanup process of pub/sub,
-    from the variables of the operating system, those that select the Zato database and the prefix of the streams
-    of the queue bridge alone.
+    from the variables of the operating system, those that select the Zato database and the prefixes of the streams
+    of the queue bridge and of the scheduler alone.
     """
     out:'strstrdict' = {}
 
-    for name in _system_env_names + _database_env_names + _monitoring_env_names + _queue_bridge_env_names:
+    env_names = _system_env_names + _database_env_names + _monitoring_env_names + _queue_bridge_env_names + _scheduler_env_names
+
+    for name in env_names:
         if name in os.environ:
             out[name] = os.environ[name]
 
