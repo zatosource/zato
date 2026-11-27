@@ -32,13 +32,17 @@ from zato.common.util.api import utcnow
 
 if 0:
     from datetime import datetime
-    from zato.common.typing_ import anydict, anylist, dictlist, intnone, stranydict
+    from sqlalchemy.engine import Connection
+    from zato.common.typing_ import any_, anydict, anylist, dictlist, intnone, stranydict, strstrdict
     datetime = datetime
+    Connection = Connection
+    any_ = any_
     anydict = anydict
     anylist = anylist
     dictlist = dictlist
     intnone = intnone
     stranydict = stranydict
+    strstrdict = strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -224,22 +228,113 @@ def update_run_event(
 
 # ################################################################################################################################
 
-def write_run_ledger(event_id:'intnone', event_time:'datetime', records:'anylist') -> 'None':
-    """ Stores the first Run_Ledger_Max_Entries records as the run's ledger body.
+def _write_run_progress(connection:'Connection', payloads:'anylist') -> 'None':
+    """ Replaces the payload of each run's row, in the transaction of the connection.
+    """
+    for event_id, data_json in payloads:
+        update_event_payload(connection, event_id, {}, data_json)
+
+# ################################################################################################################################
+
+def write_run_progress(progress:'anylist') -> 'None':
+    """ Replaces the payloads of the rows of the given runs, (event_id, data) pairs, in one transaction,
+    with the data of each run as it is when the write is requested.
+    """
+
+    # The data is serialized before the transaction, which it shares with the writes of other callers ..
+    payloads = [(event_id, dumps(data)) for event_id, data in progress]
+
+    # .. and each run counts as one write towards the size of the commit.
+    engine = get_database_engine()
+    weight = len(payloads)
+
+    _ = write_audit(engine, _write_run_progress, payloads, weight=weight)
+
+    # The collector sees each updated run as another record of the same event
+    if export := get_audit_export():
+        for event_id, _ignored in payloads:
+            export.emit_row(engine, event_id)
+
+# ################################################################################################################################
+
+def build_ledger_body(records:'anylist') -> 'str':
+    """ The run's ledger body, the first Run_Ledger_Max_Entries records.
+    """
+    kept = records[:Run_Ledger_Max_Entries]
+
+    out = dumps(kept)
+    return out
+
+# ################################################################################################################################
+
+def _new_body_statement(event_id:'int', kind:'str', event_time:'datetime', data:'str') -> 'any_':
+    statement = event_body_table.insert()
+    statement = statement.values(event_id=event_id, kind=kind, event_time=event_time, data=data)
+
+    return statement
+
+# ################################################################################################################################
+
+def _close_run_event(
+    connection:'Connection',
+    event_id:'int',
+    values:'stranydict',
+    data_json:'str',
+    body_statements:'anylist',
+    ) -> 'None':
+    """ Stores a run's bodies and closes its row, in the transaction of the connection.
+    """
+    for statement in body_statements:
+        _ = connection.execute(statement)
+
+    update_event_payload(connection, event_id, values, data_json)
+
+# ################################################################################################################################
+
+def close_run_event(
+    event_id:'intnone',
+    *,
+    outcome:'str',
+    status:'str',
+    duration_ms:'int',
+    data:'stranydict',
+    event_time:'datetime',
+    bodies:'strstrdict',
+    ) -> 'None':
+    """ Closes a run's row with its outcome, status, duration and data, and stores its bodies, keyed by their kinds,
+    e.g. the ledger or the error, all in one transaction.
     """
     if event_id is None:
         return
 
-    kept = records[:Run_Ledger_Max_Entries]
-    data = dumps(kept)
+    values:'stranydict' = {
+        'outcome': outcome,
+        'status': status,
+        'duration_ms': duration_ms,
+    }
 
-    _write_body(event_id, AuditBody.Run_Ledger, event_time, data)
+    # The data and the bodies are prepared before the transaction, which they share with the writes of other callers.
+    data_json = dumps(data)
+    body_statements = [_new_body_statement(event_id, kind, event_time, body) for kind, body in bodies.items()]
+
+    engine = get_database_engine()
+    _ = write_audit(engine, _close_run_event, event_id, values, data_json, body_statements)
+
+    # The collector sees the closed run as another record of the same event
+    if export := get_audit_export():
+        export.emit_row(engine, event_id)
+
+# ################################################################################################################################
+
+def _write_bodies(connection:'Connection', statements:'anylist') -> 'None':
+    for statement in statements:
+        _ = connection.execute(statement)
 
 # ################################################################################################################################
 
 def write_run_exchanges(event_id:'intnone', event_time:'datetime', exchanges:'dictlist') -> 'None':
     """ Stores what the run said to the server as its request body and what the server
-    said back as its response body - one block per exchange on either side.
+    said back as its response body - one block per exchange on either side, both in one transaction.
     """
     if event_id is None:
         return
@@ -251,27 +346,13 @@ def write_run_exchanges(event_id:'intnone', event_time:'datetime', exchanges:'di
     commands = [exchange['command'] for exchange in exchanges]
     replies = [exchange['reply'] for exchange in exchanges]
 
-    _write_body(event_id, AuditBody.Request, event_time, Run_Exchange_Separator.join(commands))
-    _write_body(event_id, AuditBody.Response, event_time, Run_Exchange_Separator.join(replies))
-
-# ################################################################################################################################
-
-def write_run_error(event_id:'intnone', event_time:'datetime', error:'str') -> 'None':
-    """ Stores the traceback of a run as its error body.
-    """
-    if event_id is None:
-        return
-
-    _write_body(event_id, AuditBody.Error, event_time, error)
-
-# ################################################################################################################################
-
-def _write_body(event_id:'int', kind:'str', event_time:'datetime', data:'str') -> 'None':
-    statement = event_body_table.insert()
-    statement = statement.values(event_id=event_id, kind=kind, event_time=event_time, data=data)
+    statements = [
+        _new_body_statement(event_id, AuditBody.Request, event_time, Run_Exchange_Separator.join(commands)),
+        _new_body_statement(event_id, AuditBody.Response, event_time, Run_Exchange_Separator.join(replies)),
+    ]
 
     engine = get_database_engine()
-    _ = execute_audit_write(engine, statement)
+    _ = write_audit(engine, _write_bodies, statements)
 
 # ################################################################################################################################
 

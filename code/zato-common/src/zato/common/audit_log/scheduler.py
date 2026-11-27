@@ -36,10 +36,11 @@ if 0:
     from datetime import datetime
     from sqlalchemy.engine import Connection, Engine
     from zato.common.audit_log.api import AuditLog
-    from zato.common.typing_ import any_, intlistnone, intnone
+    from zato.common.typing_ import any_, anydict, intlistnone, intnone
 
     # Dummy assignments to satisfy type checkers
     any_ = any_
+    anydict = anydict
     AuditLog = AuditLog
     Connection = Connection
     datetime = datetime
@@ -179,15 +180,26 @@ def record_job_complete(event_id:'int', *, outcome:'str', duration_ms:'int', err
     engine = get_database_engine()
 
     values = {'outcome': outcome, 'duration_ms': duration_ms}
-    _ = write_audit(engine, update_event_payload, event_id, values, error)
 
-    # The run closes with its own system entry, mirroring the one it opened with.
+    # The run closes with its own system entry, mirroring the one it opened with, committed together with the outcome ..
     duration_human = format_duration_ms(duration_ms)
     now = utcnow()
-    append_job_log_entry(event_id, now, Log_Level_System, f'Job completed, outcome: {outcome}, duration: {duration_human}')
+    message = f'Job completed, outcome: {outcome}, duration: {duration_human}'
+    log_statement = _new_log_entry_statement(event_id, now, Log_Level_System, message)
 
-    # The collector sees the finished run as a second record of the same event
+    _ = write_audit(engine, _complete_run, event_id, values, error, log_statement)
+
+    # .. and the collector sees the finished run as a second record of the same event.
     _emit_updated_row(engine, event_id)
+
+# ################################################################################################################################
+
+def _complete_run(connection:'Connection', event_id:'int', values:'anydict', error:'str', log_statement:'any_') -> 'None':
+    """ Updates a run's event with its final columns and error and stores its closing log entry,
+    in the transaction of the connection.
+    """
+    update_event_payload(connection, event_id, values, error)
+    _ = connection.execute(log_statement)
 
 # ################################################################################################################################
 
@@ -258,6 +270,14 @@ def append_job_log_entry(event_id:'int', timestamp:'datetime', level:'str', mess
     """
     engine = get_database_engine()
 
+    insert_statement = _new_log_entry_statement(event_id, timestamp, level, message)
+    _ = execute_audit_write(engine, insert_statement)
+
+# ################################################################################################################################
+
+def _new_log_entry_statement(event_id:'int', timestamp:'datetime', level:'str', message:'str') -> 'any_':
+    """ The statement that stores one log line of a run as an event body row keyed by the run's event id.
+    """
     kind = _get_log_kind(level)
     timestamp_iso = timestamp.isoformat()
 
@@ -268,10 +288,10 @@ def append_job_log_entry(event_id:'int', timestamp:'datetime', level:'str', mess
     }
     body_json = dumps(body)
 
-    insert_statement = event_body_table.insert()
-    insert_statement = insert_statement.values(event_id=event_id, kind=kind, event_time=timestamp, data=body_json)
+    out = event_body_table.insert()
+    out = out.values(event_id=event_id, kind=kind, event_time=timestamp, data=body_json)
 
-    _ = execute_audit_write(engine, insert_statement)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

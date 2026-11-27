@@ -14,6 +14,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from contextlib import contextmanager
 from datetime import datetime, timezone
+from json import loads
 from logging import getLogger
 
 # SQLAlchemy
@@ -21,7 +22,7 @@ from sqlalchemy import select
 
 # Zato
 from zato.common.api import FileTransfer
-from zato.common.audit_log.api import event_attr_table, event_table, AuditLog
+from zato.common.audit_log.api import event_attr_table, event_table, AuditEvent, AuditLog
 from zato.common.audit_log.common import event_data
 from zato.common.db_env.database import get_database_engine
 from zato.common.ext.bunch import Bunch
@@ -156,6 +157,26 @@ class ClaimRefusingClient(LocalDirectoryClient):
 
     def rename(self, from_path:'str', to_path:'str') -> 'None':
         raise Exception('Renamed by another consumer first')
+
+# ################################################################################################################################
+
+class ClaimObservingClient(LocalDirectoryClient):
+    """ A directory that reads the committed data of the run's row at the moment a file is renamed to its claim name.
+    """
+
+    def __init__(self, base_dir:'str') -> 'None':
+        super().__init__(base_dir)
+        self.data_at_claim:'anylist' = []
+
+    def rename(self, from_path:'str', to_path:'str') -> 'None':
+
+        if to_path.endswith(_scheduler.Claim_Suffix):
+            for event in get_events():
+                if event['event_type'] == AuditEvent.Run_Completed:
+                    data = loads(event['data'])
+                    self.data_at_claim.append(data)
+
+        super().rename(from_path, to_path)
 
 # ################################################################################################################################
 

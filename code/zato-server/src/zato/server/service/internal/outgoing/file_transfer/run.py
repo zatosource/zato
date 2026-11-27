@@ -16,14 +16,18 @@ from logging import getLogger
 from time import monotonic
 from traceback import format_exc
 
+# gevent
+from gevent import spawn
+
 # Zato
 from zato.common.api import FileTransfer
-from zato.common.audit_log.common import AuditEvent, AuditOutcome
+from zato.common.audit_log.common import AuditBody, AuditEvent, AuditOutcome
 from zato.common.audit_log.file_transfer import record_schedule_event
-from zato.common.audit_log.file_transfer_run import count_delivered_since, find_running_runs, Interrupted_Note, \
-    Phase_Connecting, Phase_Done, Run_Ledger_Max_Entries, Run_Status_Clean, Run_Status_Empty, Run_Status_Failed, \
-    Run_Status_Interrupted, Run_Status_List_Failed, Run_Status_No_Directory, Run_Status_Partial, Run_Status_Running, \
-    Run_Status_Unchanged, update_run_event, write_run_error, write_run_exchanges, write_run_ledger
+from zato.common.audit_log.file_transfer_run import build_ledger_body, close_run_event, count_delivered_since, \
+    find_running_runs, Interrupted_Note, Phase_Claiming, Phase_Connecting, Phase_Done, Run_Ledger_Max_Entries, \
+    Run_Status_Clean, Run_Status_Empty, Run_Status_Failed, Run_Status_Interrupted, Run_Status_List_Failed, \
+    Run_Status_No_Directory, Run_Status_Partial, Run_Status_Running, Run_Status_Unchanged, update_run_event, \
+    write_run_exchanges, write_run_progress
 from zato.common.util.api import utcnow
 from zato.common.util.logging_ import file_transfer_logger_name
 
@@ -31,11 +35,14 @@ from zato.common.util.logging_ import file_transfer_logger_name
 # ################################################################################################################################
 
 if 0:
+    from gevent import Greenlet
     from zato.common.audit_log.api import AuditLog
-    from zato.common.typing_ import any_, anylist, intnone, stranydict, strintdict, strlist, strset
+    from zato.common.typing_ import any_, anylist, intnone, stranydict, strintdict, strlist, strset, strstrdict
     from zato.server.service import Service
     AuditLog = AuditLog
     any_ = any_
+    Greenlet = Greenlet
+    strstrdict = strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -87,23 +94,45 @@ class RunContext:
 
 # ################################################################################################################################
 
-    def update(self, **changes:'object') -> 'None':
-        """ Writes the changes into the run's data and its row.
+    def save(self, **changes:'object') -> 'None':
+        """ Writes the changes into the run's data and commits its row before returning.
         """
         self.data.update(changes)
+
+        # The row receives the whole data, so a progress write still pending for the run is not needed ..
+        _progress_writer.discard(self)
+
+        # .. and the data is committed now.
         update_run_event(self.event_id, data=self.data)
 
 # ################################################################################################################################
 
+    def note_progress(self, **changes:'object') -> 'None':
+        """ Writes the changes into the run's data, which its row receives in the background,
+        without the run waiting for a commit.
+        """
+        self.data.update(changes)
+        _progress_writer.note(self)
+
+# ################################################################################################################################
+
     def set_phase(self, phase:'str', current_file:'str'='') -> 'None':
-        """ Sets the run's phase and, in a file phase, its current file.
+        """ Sets the run's phase and, in a file phase, its current file, as the run's progress.
         """
         changes:'stranydict' = {'phase': phase}
 
         if current_file:
             changes['current_file'] = current_file
 
-        self.update(**changes)
+        self.note_progress(**changes)
+
+# ################################################################################################################################
+
+    def begin_claim(self, file_name:'str') -> 'None':
+        """ Commits the file the run is about to claim as its current file, so that a run interrupted
+        from now on releases the claim of the file.
+        """
+        self.save(phase=Phase_Claiming, current_file=file_name)
 
 # ################################################################################################################################
 
@@ -112,6 +141,75 @@ class RunContext:
             count = 0
 
         self.skip_reasons[reason] = count + 1
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _ProgressWriter:
+    """ Writes the progress of the runs of this process to their rows in a greenlet of its own, so that no run waits
+    for a commit of what only a view of a run in progress reads. A run noted again before its row is written
+    is written once, with its data as it is when the write is requested.
+
+    A write of progress never replaces newer data that a run committed itself, because the writes of the audit log
+    commit in the order they are requested and a run does not change its data while it waits for its own commit.
+    """
+
+    def __init__(self) -> 'None':
+
+        # The runs whose progress is not written yet, by the ids of their rows
+        self._pending:'dict[int, RunContext]' = {}
+
+        # The greenlet that writes the pending runs, if one was started
+        self._writer:'Greenlet | None' = None
+
+# ################################################################################################################################
+
+    def note(self, run:'RunContext') -> 'None':
+        """ Marks a run as one whose progress its row is to receive, starting the greenlet that writes it if none runs.
+        """
+
+        # A run without a row, e.g. one of a turned-off audit log, has nothing to write ..
+        if run.event_id is None:
+            return
+
+        # .. otherwise the run is pending ..
+        self._pending[run.event_id] = run
+
+        # .. and the greenlet that writes the pending runs is started unless one is about to run or runs already.
+        if self._writer is None or self._writer.dead:
+            self._writer = spawn(self._write_pending)
+
+# ################################################################################################################################
+
+    def discard(self, run:'RunContext') -> 'None':
+        """ Drops the pending progress of a run whose row receives its whole data in another write.
+        """
+        if run.event_id is not None:
+            _ = self._pending.pop(run.event_id, None)
+
+# ################################################################################################################################
+
+    def _write_pending(self) -> 'None':
+        """ Writes the pending runs, all of them in one transaction, until no run is pending.
+        """
+        while self._pending:
+
+            # Take all the runs pending now ..
+            progress = [(event_id, run.data) for event_id, run in self._pending.items()]
+            self._pending.clear()
+
+            # .. and write them - a failed write leaves the rows as they were, and the next write
+            # .. of each run replaces its whole data.
+            try:
+                write_run_progress(progress)
+            except Exception:
+                logger.warning('Could not write the progress of %d run(s) -> `%s`', len(progress), format_exc())
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The one writer of the progress of the runs of this process
+_progress_writer = _ProgressWriter()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -333,7 +431,7 @@ def note_listing(run:'RunContext', entries:'anylist', list_ms:'int') -> 'None':
             run.data['unchanged_since_iso'] = previous['event_time_iso']
 
     entry_count = len(entries)
-    run.update(entries=entry_count, list_ms=list_ms)
+    run.note_progress(entries=entry_count, list_ms=list_ms)
 
 # ################################################################################################################################
 
@@ -428,17 +526,30 @@ def close_run(run:'RunContext') -> 'None':
     else:
         outcome = AuditOutcome.OK
 
-    # .. and a changed listing writes the ledger.
+    # .. a changed listing writes the ledger ..
+    bodies:'strstrdict' = {}
+
     if not run.is_unchanged:
         ledger_count = len(run.ledger)
         if ledger_count > Run_Ledger_Max_Entries:
             data['ledger_overflow'] = ledger_count - Run_Ledger_Max_Entries
 
-        now = utcnow()
-        write_run_ledger(run.event_id, now, run.ledger)
+        bodies[AuditBody.Run_Ledger] = build_ledger_body(run.ledger)
 
-    update_run_event(run.event_id, outcome=outcome, status=status, duration_ms=duration_ms, data=data)
+    # .. which is committed together with the closed row.
+    _close(run, outcome, status, duration_ms, bodies)
     remember_listing(run)
+
+# ################################################################################################################################
+
+def _close(run:'RunContext', outcome:'str', status:'str', duration_ms:'int', bodies:'strstrdict') -> 'None':
+    """ Commits the closed row of a run with its bodies, which replaces any progress of the run still pending.
+    """
+    _progress_writer.discard(run)
+
+    now = utcnow()
+    close_run_event(run.event_id, outcome=outcome, status=status, duration_ms=duration_ms, data=run.data,
+        event_time=now, bodies=bodies)
 
 # ################################################################################################################################
 
@@ -448,8 +559,7 @@ def close_run_no_directory(run:'RunContext') -> 'None':
     run.data['phase'] = Phase_Done
     duration_ms = run.elapsed_ms()
 
-    update_run_event(run.event_id, outcome=AuditOutcome.Error, status=Run_Status_No_Directory,
-        duration_ms=duration_ms, data=run.data)
+    _close(run, AuditOutcome.Error, Run_Status_No_Directory, duration_ms, {})
 
 # ################################################################################################################################
 
@@ -460,11 +570,8 @@ def close_run_list_failed(run:'RunContext', phase:'str', error:'str') -> 'None':
     run.data['error'] = error_summary(error)
     duration_ms = run.elapsed_ms()
 
-    update_run_event(run.event_id, outcome=AuditOutcome.Error, status=Run_Status_List_Failed,
-        duration_ms=duration_ms, data=run.data)
-
-    now = utcnow()
-    write_run_error(run.event_id, now, error)
+    bodies = {AuditBody.Error: error}
+    _close(run, AuditOutcome.Error, Run_Status_List_Failed, duration_ms, bodies)
 
 # ################################################################################################################################
 # ################################################################################################################################

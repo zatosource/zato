@@ -80,12 +80,13 @@ _commit_queue = CommitQueue(write_batch=_write_batch, max_weight=get_commit_max_
 # ################################################################################################################################
 # ################################################################################################################################
 
-def write_audit(engine:'Engine', func:'callable_', *args:'any_') -> 'any_':
+def write_audit(engine:'Engine', func:'callable_', *args:'any_', weight:'int'=_write_weight) -> 'any_':
     """ Runs a function that writes to the tables of the audit log with the connection of a transaction shared
-    with concurrent callers, and returns what it returned once the transaction is committed.
+    with concurrent callers, and returns what it returned once the transaction is committed. A function that writes
+    the rows of several events counts as one write per event towards the size of the commit.
     """
     write = _AuditWrite(engine, func, args)
-    _commit_queue.write(write, weight=_write_weight, is_urgent=False)
+    _commit_queue.write(write, weight=weight, is_urgent=False)
 
     out = write.result
     return out

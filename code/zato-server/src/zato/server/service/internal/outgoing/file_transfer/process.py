@@ -17,7 +17,7 @@ from zato.common.audit_log.common import AuditEvent, AuditOutcome
 from zato.common.audit_log.file_transfer import record_schedule_event
 from zato.common.audit_log.file_transfer_run import build_ledger_record, days_ago, Decision_Failed, Decision_Picked_Up, \
     Decision_Quarantined, Decision_Skipped, find_seen_before, load_attempt_memory, Phase_Acking, \
-    Phase_Checking_Directory, Phase_Claiming, Phase_Delivering, Phase_Listing, Phase_Reading, Phase_Waiting, \
+    Phase_Checking_Directory, Phase_Delivering, Phase_Listing, Phase_Reading, Phase_Waiting, \
     Retry_Memory_Days, Seen_Before_Window_Days, Skip_Claim_Unconfirmed, Skip_Claimed_Elsewhere
 from zato.common.file_transfer.api import OutcomeUnknown
 from zato.common.model.file_transfer_ import FileTransferItem
@@ -85,6 +85,10 @@ class FileResult:
     error:         str = ''
     is_acked:      bool = False
     is_ack_failed: bool = False
+
+    # The file stays under a claim name that a run interrupted from now on must not release,
+    # because another consumer holds the claim or because the file was delivered without an ack
+    is_claim_held: bool = False
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -235,7 +239,7 @@ def _process_one_file(
 
     # With claiming on, the file is renamed before it is read, a failed rename means another consumer claimed it.
     if schedule['should_claim']:
-        run.set_phase(Phase_Claiming, file_name)
+        run.begin_claim(file_name)
         claim_path = full_path + _scheduler.Claim_Suffix
         try:
             _ = conn.move(full_path, claim_path)
@@ -258,6 +262,7 @@ def _process_one_file(
                 file_name=file_name, error=_claim_lost_error, attrs_extra=attrs_extra)
             out.status = _status_skipped
             out.reason = Skip_Claimed_Elsewhere
+            out.is_claim_held = True
             return out
         current_path = claim_path
 
@@ -388,6 +393,7 @@ def _process_one_file(
             extra={'ack_ms': ack_ms}, attrs_extra=attrs_extra)
         note_failed_ack(conn_name, schedule_name, full_path, file_name, file_cid, current_path)
         out.is_ack_failed = True
+        out.is_claim_held = schedule['should_claim']
         return out
 
     ack_ms = elapsed_ms(ack_start)
@@ -451,10 +457,15 @@ def _note_file_result(run:'RunContext', entry:'any_', result:'FileResult', durat
         reason=result.reason, file_cid=result.file_cid, duration_ms=duration_ms, attempt=result.attempt)
     run.ledger.append(record)
 
-    # The file is no longer in progress, so a run interrupted from now on has no claim of it to release
+    # The file is no longer in progress, so a run interrupted from now on has no claim of it to release ..
     _ = data.pop('current_file', None)
 
-    run.update()
+    # .. which is committed at once if the file stays under a claim name that must not be released,
+    # .. and is otherwise the run's progress.
+    if result.is_claim_held:
+        run.save()
+    else:
+        run.note_progress()
 
 # ################################################################################################################################
 
@@ -496,7 +507,7 @@ def _select_files(
         out = []
 
     picked_up_count = len(out)
-    run.update(candidates=candidate_count, picked_up=picked_up_count)
+    run.note_progress(candidates=candidate_count, picked_up=picked_up_count)
 
     return out
 
@@ -598,7 +609,7 @@ def process_files(service:'Service', context:'stranydict') -> 'None':
     for index, (entry, attempt, first_failed_iso) in enumerate(picked_up, 1):
 
         file_name = get_file_name(entry)
-        run.update(picked_up_so_far=index, current_file=file_name)
+        run.note_progress(picked_up_so_far=index, current_file=file_name)
         file_start = monotonic()
 
         try:

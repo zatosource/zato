@@ -15,6 +15,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from hashlib import sha256
 from json import loads
+from time import monotonic
+
+# gevent
+from gevent import sleep as gevent_sleep
 
 # Zato
 from zato.common.api import FileTransfer
@@ -22,17 +26,18 @@ from zato.common.audit_log.api import AuditEvent, AuditOutcome, AuditSource
 from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import list_attachments
 from zato.common.audit_log.file_transfer import Operation_Move, Operation_Read
-from zato.common.audit_log.file_transfer_run import Phase_Reading, Run_Status_Interrupted, Run_Status_No_Directory
+from zato.common.audit_log.file_transfer_run import Phase_Claiming, Phase_Done, Phase_Listing, Run_Status_Empty, \
+    Run_Status_Interrupted, Run_Status_No_Directory, Run_Status_Running
 from zato.common.test.expected_records import expected_records
 from zato.common.typing_ import cast_
 from zato.common.util.file_transfer_scheduler import apply_schedule_defaults
 from zato.server.service.internal.outgoing.file_transfer.process import process_files
-from zato.server.service.internal.outgoing.file_transfer.run import open_run
+from zato.server.service.internal.outgoing.file_transfer.run import close_run, open_run
 
 # Test support
 from audit_env import audit_db_env
 from schedule_stub import events_of_type, get_attrs, get_events, new_environment, new_schedule, Ack_Error, \
-    AckRefusingClient, ClaimRefusingClient, Connection_Name, Directory, FailingOnceServiceStub, FailingServiceStub, \
+    AckRefusingClient, ClaimObservingClient, ClaimRefusingClient, Connection_Name, Directory, FailingOnceServiceStub, FailingServiceStub, \
     File_Content, File_Name, Release_Error, ReleaseRefusingClient, Run_Cid, Schedule_Name, Service_Error, Service_Logger_Name, \
     ServiceStub, Target_Service
 
@@ -40,7 +45,8 @@ from schedule_stub import events_of_type, get_attrs, get_events, new_environment
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, intnone
+    intnone = intnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,7 +59,50 @@ _interrupted_run_cid = 'cid-file-transfer-interrupted-1'
 # The scheduler context of a run not fired by the scheduler
 _no_scheduler_context = {'job_id': 0, 'current_run': 0}
 
+# The cid of a run besides the one a test checks
+_other_run_cid = 'cid-file-transfer-other-1'
+
+# The second file of a directory with two files
+_second_file_name = 'summary.csv'
+
+# How long a test waits for the progress of a run to reach its row, and how often it reads the row
+_progress_wait_seconds    = 10
+_progress_poll_interval   = 0.05
+
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _get_run_row(event_id:'intnone') -> 'any_':
+    """ The row of the run with the given event id.
+    """
+    for event in get_events():
+        if event['id'] == event_id:
+            out = event
+            break
+    else:
+        raise Exception(f'No row of run `{event_id}`')
+
+    return out
+
+# ################################################################################################################################
+
+def _wait_for_entries(event_id:'intnone', entries:'int') -> 'any_':
+    """ Waits until the run's row carries the given entry count in its data and returns the row.
+    """
+    deadline = monotonic() + _progress_wait_seconds
+
+    while True:
+        row = _get_run_row(event_id)
+        data = loads(row['data'])
+
+        if data['entries'] == entries:
+            return row
+
+        if monotonic() > deadline:
+            raise Exception(f'Entries {entries} did not reach the row of run `{event_id}` -> {data}')
+
+        gevent_sleep(_progress_poll_interval)
+
 # ################################################################################################################################
 
 def _get_read_event(events:'any_') -> 'any_':
@@ -353,10 +402,10 @@ def test_a_claim_left_by_an_interrupted_run_is_released(tmp_path:'any_') -> 'Non
         apply_schedule_defaults(schedule)
         context[_scheduler.Extra_Schedule] = schedule
 
-        # A run that was reading the file when it stopped ..
+        # A run that claimed the file before it stopped ..
         audit_log = service.smb[Connection_Name].wrapper.audit_log
         interrupted = open_run(audit_log, Connection_Name, Directory, _interrupted_run_cid, schedule, _no_scheduler_context)
-        interrupted.set_phase(Phase_Reading, File_Name)
+        interrupted.begin_claim(File_Name)
 
         # .. with the file still under its claim name.
         file_path = os.path.join(base_dir, Directory, File_Name)
@@ -464,6 +513,98 @@ def test_a_claim_that_could_not_be_released_is_released_by_the_next_run(tmp_path
         failed_summary = loads(failed['data'])
         assert failed_summary['claim_released'] is False
         assert Release_Error in failed_summary['release_error']
+
+# ################################################################################################################################
+
+def test_each_file_is_committed_as_current_before_its_claim(tmp_path:'any_') -> 'None':
+    """ The run's row names the file the run is about to claim before the file is renamed to its claim name,
+    so a run interrupted after any rename releases the claim.
+    """
+    with audit_db_env():
+
+        file_names = [File_Name, _second_file_name]
+
+        service, context, _ = new_environment(tmp_path, client_class=ClaimObservingClient, file_names=file_names)
+        context[_scheduler.Extra_Schedule] = new_schedule(should_claim=True)
+
+        process_files(cast_('any_', service), context)
+
+        assert len(service.invoked) == 2
+
+        # The row read at the moment of each claim rename names the file that was being claimed.
+        wrapper = service.smb[Connection_Name].wrapper
+        with wrapper.client(should_block=True, block_timeout=0) as client:
+            data_at_claim = client.data_at_claim
+
+        assert len(data_at_claim) == 2
+
+        claimed_files = set()
+
+        for data in data_at_claim:
+            assert data['phase'] == Phase_Claiming
+            claimed_files.add(data['current_file'])
+
+        assert claimed_files == set(file_names)
+
+# ################################################################################################################################
+
+def test_the_newest_progress_of_a_run_reaches_its_row(tmp_path:'any_') -> 'None':
+    """ The progress of a run is written to its row in the background, and of several notes
+    made before the write the row receives the newest.
+    """
+    with audit_db_env():
+
+        service, _, _ = new_environment(tmp_path)
+
+        schedule = new_schedule()
+        apply_schedule_defaults(schedule)
+
+        audit_log = service.smb[Connection_Name].wrapper.audit_log
+        run = open_run(audit_log, Connection_Name, Directory, Run_Cid, schedule, _no_scheduler_context)
+
+        # Several notes of progress ..
+        run.set_phase(Phase_Listing)
+        run.note_progress(entries=3)
+        run.note_progress(entries=5)
+
+        # .. reach the row as the newest of them.
+        row = _wait_for_entries(run.event_id, 5)
+        data = loads(row['data'])
+
+        assert data['phase'] == Phase_Listing
+        assert row['status'] == Run_Status_Running
+
+# ################################################################################################################################
+
+def test_the_progress_of_a_closed_run_keeps_its_closed_row(tmp_path:'any_') -> 'None':
+    """ The progress of a run still pending when the run closes leaves the closed row as the run closed it.
+    """
+    with audit_db_env():
+
+        service, _, _ = new_environment(tmp_path)
+
+        schedule = new_schedule()
+        apply_schedule_defaults(schedule)
+
+        audit_log = service.smb[Connection_Name].wrapper.audit_log
+
+        # A run closes while its progress is pending ..
+        closed = open_run(audit_log, Connection_Name, Directory, Run_Cid, schedule, _no_scheduler_context)
+        closed.note_progress(entries=3)
+        close_run(closed)
+
+        # .. the progress of another run reaches its row, so the writer has run since ..
+        other = open_run(audit_log, Connection_Name, Directory, _other_run_cid, schedule, _no_scheduler_context)
+        other.note_progress(entries=7)
+        _ = _wait_for_entries(other.event_id, 7)
+
+        # .. and the closed run's row is still the one it closed with.
+        row = _get_run_row(closed.event_id)
+        data = loads(row['data'])
+
+        assert row['status'] == Run_Status_Empty
+        assert data['phase'] == Phase_Done
+        assert data['entries'] == 3
 
 # ################################################################################################################################
 # ################################################################################################################################
