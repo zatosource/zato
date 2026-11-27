@@ -36,6 +36,12 @@ class ModuleCtx:
     # Where the server writes its log, relative to its directory
     Server_Log = os.path.join('logs', 'server.log')
 
+    # While the server restarts, the Dashboard retries each call to it, and a page that refreshes its last runs
+    # receives an error until the server answers again
+    Restart_Retry = "after connection broken by 'NewConnectionError"
+    Restart_Refresh_Error = 'Internal Server Error: /zato/scheduler/get-last-run-list/'
+    Restart_Records = Restart_Retry, Restart_Refresh_Error
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -145,6 +151,7 @@ class UISuite:
 # ################################################################################################################################
 
     def restart_server(self) -> 'None':
+        self.expect_records(*ModuleCtx.Restart_Records)
         restart_server(self.zato_dashboard)
 
 # ################################################################################################################################

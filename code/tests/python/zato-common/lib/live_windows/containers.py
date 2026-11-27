@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import json
+import logging
 import subprocess
 from dataclasses import dataclass
 from threading import Thread
@@ -57,6 +58,27 @@ class ModuleCtx:
 
     # The number of nanoseconds in a millisecond
     Nanoseconds_Per_Ms = 1_000_000
+
+    # The logger, the thread name prefix and the message of smbprotocol for a connection that the guest reset
+    Transport_Logger = 'smbprotocol.transport'
+    Receive_Thread_Prefix = 'msg_worker-'
+    Peer_Reset_Message = 'socket aborted by peer'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _BootResetFilter(logging.Filter):
+    """ Drops the record that smbprotocol writes when a guest that still boots resets the connection of a logon attempt,
+    which the wait for the logon expects and retries.
+    """
+    def __init__(self, port:'int') -> 'None':
+        super().__init__()
+        self.thread_name = f'{ModuleCtx.Receive_Thread_Prefix}{ModuleCtx.Host}:{port}'
+
+    def filter(self, record:'logging.LogRecord') -> 'bool':
+        is_boot_reset = record.threadName == self.thread_name and record.msg.startswith(ModuleCtx.Peer_Reset_Message)
+        out = not is_boot_reset
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -157,6 +179,21 @@ def _new_guest(version:'str', name:'str') -> 'GuestInfo':
 
 def _wait_for_logon(guest:'GuestInfo', poll_interval:'float') -> 'None':
     """ Waits until the SMB server of a guest accepts a logon of the harness account.
+    """
+    transport_logger = logging.getLogger(ModuleCtx.Transport_Logger)
+    reset_filter = _BootResetFilter(guest.port)
+
+    transport_logger.addFilter(reset_filter)
+
+    try:
+        _wait_for_logon_attempts(guest, poll_interval)
+    finally:
+        transport_logger.removeFilter(reset_filter)
+
+# ################################################################################################################################
+
+def _wait_for_logon_attempts(guest:'GuestInfo', poll_interval:'float') -> 'None':
+    """ Attempts a logon of the harness account until the SMB server of a guest accepts it.
     """
     client = guest.harness_client()
 

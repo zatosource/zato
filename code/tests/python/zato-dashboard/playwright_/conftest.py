@@ -61,13 +61,13 @@ from cleanup_refs import cleanup_refs as _cleanup_refs
 from client import ZatoClient
 from live_kerberos.containers import ModuleCtx as _KerberosCtx
 from login import login as login_to_dashboard
+from process_output import ModuleCtx as _ProcessOutputCtx, stream_output
 
 # Zato
 from zato.common.test.conftest_base_pubsub import Expected_Record_Marker
 from zato.common.test.process_util import kill_process_tree
 from zato.common.test.reservation import reserve_port
 from zato.common.test.zato_database import isolated_database_env
-from zato.common.typing_ import cast_
 
 logger = logging.getLogger('zato.test.playwright')
 
@@ -88,7 +88,7 @@ _Listener_Ready_Marker  = 'Watching for changes'
 _Listener_Ready_Timeout = 30
 
 # The other streamed processes have no readiness line to look for
-_No_Ready_Marker = ''
+_No_Ready_Marker = _ProcessOutputCtx.No_Ready_Marker
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -223,36 +223,6 @@ def _wait_for_http(host:'str', port:'int', path:'str', timeout:'int' = _Server_W
         time.sleep(_Ping_Poll_Interval)
 
     raise RuntimeError(f'{url} did not respond within {timeout}s')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _stream_output(
-    process:'subprocess.Popen',
-    label:'str',
-    time_reference:'float',
-    ready_marker:'str',
-    ready_event:'threading.Event',
-    expected_records:'list[str]',
-    ) -> 'None':
-    """ Streams subprocess stdout to the test console with timing information, signalling
-    the given event once the process prints the line that says it is ready. A line that contains
-    any of the expected records is marked as provoked deliberately by a test.
-    """
-
-    for line in iter(cast_('any_', process.stdout).readline, b''):
-        text = line.decode('utf-8', errors='replace').rstrip()
-        elapsed = time.monotonic() - time_reference
-
-        # The output is printed rather than logged, because the targets run with log_cli_level=WARNING
-        if any(record in text for record in expected_records):
-            print(f'[{label} {elapsed:6.1f}s] {Expected_Record_Marker} {text}', flush=True)
-        else:
-            print(f'[{label} {elapsed:6.1f}s] {text}', flush=True)
-
-        # An empty marker means this process has no readiness line to wait for
-        if ready_marker and ready_marker in text:
-            ready_event.set()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -409,8 +379,9 @@ def run_zato_dashboard() -> 'any_':
     time_after_server_start = time.monotonic()
 
     server_thread = threading.Thread(
-        target=_stream_output,
+        target=stream_output,
         args=(server_process, 'SERVER', time_after_server_start, _No_Ready_Marker, threading.Event(), expected_records),
+        name=_ProcessOutputCtx.Server_Thread_Name,
         daemon=True)
     server_thread.start()
 
@@ -437,7 +408,7 @@ def run_zato_dashboard() -> 'any_':
     _cleanup_refs['dashboard_process'] = dashboard_process
 
     dashboard_thread = threading.Thread(
-        target=_stream_output,
+        target=stream_output,
         args=(dashboard_process, 'DASHBOARD', time_after_server_start, _No_Ready_Marker, threading.Event(), expected_records),
         daemon=True)
     dashboard_thread.start()
@@ -483,7 +454,7 @@ def run_zato_dashboard() -> 'any_':
     listener_ready = threading.Event()
 
     listener_thread = threading.Thread(
-        target=_stream_output,
+        target=stream_output,
         args=(listener_process, 'LISTENER', time_after_server_start, _Listener_Ready_Marker, listener_ready, expected_records),
         daemon=True)
     listener_thread.start()
@@ -500,7 +471,7 @@ def run_zato_dashboard() -> 'any_':
 
     logger.info('[TIMING] file pickup listener watching after %.1fs', time.monotonic() - time_after_server_start)
 
-    yield {
+    details:'anydict' = {
         'host': host,
         'server_port': server_port,
         'mllp_port': mllp_port,
@@ -511,6 +482,7 @@ def run_zato_dashboard() -> 'any_':
         'dashboard_dir': dashboard_dir,
         'temporary_dir': temporary_dir,
         'server_process': server_process,
+        'server_output_thread': server_thread,
         'dashboard_process': dashboard_process,
         'listener_process': listener_process,
         'expected_records': expected_records,
@@ -519,12 +491,14 @@ def run_zato_dashboard() -> 'any_':
         'sftp_key_path': sftp_key_path,
     }
 
+    yield details
+
     # .. teardown: stop listener ..
     _kill_process(listener_process)
     _cleanup_refs['listener_process'] = None
 
-    # .. stop server ..
-    _kill_process(server_process)
+    # .. stop the server, which is a new process if a test restarted it ..
+    _kill_process(details['server_process'])
     _cleanup_refs['server_process'] = None
 
     # .. stop dashboard ..

@@ -72,7 +72,8 @@ class Ping(_BaseService):
             except Exception as e:
 
                 # The full traceback goes to the server log ..
-                self.logger.warning(format_exc())
+                self.logger.warning('Could not ping generic connection `%s` (%s) -> %s',
+                    instance.name, instance.type_, format_exc())
 
                 # .. while the caller gets the actual error message alone.
                 error_message = str(e)

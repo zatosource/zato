@@ -219,6 +219,8 @@ def scheduler_redis() -> 'iterator_':
     try:
         yield _scheduler_redis
     finally:
+        # The streams of the scheduler are removed only once the server that reads them has stopped
+        _scheduler.cleanup()
         _scheduler_redis.cleanup()
 
 # ################################################################################################################################
@@ -242,7 +244,7 @@ def smb_suite(zato_dashboard:'anydict', playwright_browser:'any_', request:'any_
 
         # .. the scheduler starts now that the server it belongs to runs ..
         _scheduler.start()
-        parts.add('scheduler', _scheduler.cleanup)
+        parts.add('scheduler', _scheduler.stop)
 
         # .. the services are deployed ..
         source = ModuleCtx.Services_File.read_text()

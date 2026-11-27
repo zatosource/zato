@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import os
 import subprocess
-import tempfile
 import time
 from http.client import OK
 from urllib.request import Request, urlopen
@@ -20,6 +19,7 @@ from zato.common.test.process_util import kill_process_tree
 
 # The conftest's atexit cleanup reads this dict, so handing the new process over here means it will be killed at exit
 from cleanup_refs import cleanup_refs
+from process_output import ModuleCtx as _ProcessOutputCtx, start_streaming
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,8 +32,16 @@ if 0:
 
 logger = logging.getLogger('zato.test.playwright')
 
+class ModuleCtx:
+
+    # The label of the output of the restarted server, the same as that of the server it replaces
+    Server_Label = 'SERVER'
+
 # How long to wait for the restarted server to answer pings
 _Restart_Timeout = 180
+
+# How long to wait for the output of the stopped server to reach its end
+_Output_End_Timeout = 10
 
 # How often the orphan watchdog checks whether the test process is still alive
 _Watchdog_Interval_Seconds = 5
@@ -44,8 +52,7 @@ _Watchdog_Interval_Seconds = 5
 def start_orphan_watchdog(watched_pid:'int', server_group_pid:'int') -> 'None':
     """ Starts a detached watchdog that kills the restarted server's process group once the
     test process is gone. The atexit cleanup never runs when pytest is killed hard, and the
-    restarted server is detached, so without the watchdog it would run forever,
-    filling its log file in /tmp without bounds.
+    restarted server is detached, so without the watchdog it would run forever.
     """
     watchdog_script = (
         f'while kill -0 {watched_pid} 2>/dev/null; do sleep {_Watchdog_Interval_Seconds}; done; '
@@ -90,23 +97,27 @@ def restart_server(zato_dashboard:'anydict') -> 'None':
     # the launcher would leave the actual server running and holding the port ..
     kill_process_tree(server_process)
 
+    # .. let the thread that streams its output reach the end of it, so that the new thread
+    # .. replaces it under the same name rather than running beside it ..
+    zato_dashboard['server_output_thread'].join(_Output_End_Timeout)
+
     # .. start a new one with the same environment ..
     zato_base = os.environ['ZATO_TEST_BASE_DIR']
     zato_bin = os.path.join(zato_base, 'code', 'bin', 'zato')
 
-    restarted_log_path = os.path.join(tempfile.gettempdir(), f'zato_restarted_server_{server_port}.log')
-    restarted_log_file = open(restarted_log_path, 'wb')
-
     new_process = subprocess.Popen(
         [zato_bin, 'start', server_dir, '--fg'],
         env=server_environment,
-        stdout=restarted_log_file,
+        stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         start_new_session=True,
     )
 
-    logger.info('[restart_server] started new server pid=%s port=%s stdout=%r',
-        new_process.pid, server_port, restarted_log_path)
+    # .. its output goes to the test output, as the output of the server it replaces did ..
+    zato_dashboard['server_output_thread'] = start_streaming(
+        new_process, ModuleCtx.Server_Label, zato_dashboard['expected_records'], _ProcessOutputCtx.Server_Thread_Name)
+
+    logger.info('[restart_server] started new server pid=%s port=%s', new_process.pid, server_port)
 
     # .. hand the new process over to the conftest so its cleanup kills it at exit ..
     zato_dashboard['server_process'] = new_process
