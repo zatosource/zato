@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 
 # pytest
 import pytest
@@ -223,6 +224,17 @@ class TestCopyRows:
 
         for copied_row, inserted_row in zip(copied, inserted):
             assert copied_row['amount'] == inserted_row['amount'], inserted_row['amount']
+
+    def test_numeric_nan(self, engine:'Engine', target_table:'Table') -> 'None':
+        rows:'dictlist' = [{'amount': float('nan')}, {'amount': Decimal('NaN')}]
+
+        with engine.begin() as connection:
+            copy_rows(connection, target_table, rows)
+
+        with engine.connect() as connection:
+            nan_count = connection.exec_driver_sql("select count(*) from copy_target where amount = 'NaN'::numeric").scalar()
+
+        assert nan_count == 2
 
     def test_rollback(self, engine:'Engine', target_table:'Table') -> 'None':
         rows = _new_rows()

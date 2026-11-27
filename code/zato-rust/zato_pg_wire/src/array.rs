@@ -6,7 +6,7 @@
 
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList};
+use pyo3::types::{PyBytes, PyDict, PyList};
 
 use crate::binary::ValueType;
 
@@ -47,19 +47,32 @@ pub struct ArrayParameter {
 
 impl ArrayParameter {
     /// Returns the binary array.
-    pub fn data(&self) -> &[u8] {
+    pub const fn data(&self) -> &[u8] {
         self.data.as_slice()
     }
 }
 
 #[pymethods]
 impl ArrayParameter {
-    /// Encodes a list of values of the column type given, e.g. the IDs of the delivery rows that a statement reads.
+    /// Encodes a collection of values of the column type given, e.g. the IDs of the delivery rows that a statement reads.
     #[new]
-    fn new(type_name: &str, values: &Bound<'_, PyList>) -> PyResult<Self> {
+    fn new(type_name: &str, values: &Bound<'_, PyAny>) -> PyResult<Self> {
         let value_type = ValueType::from_name(type_name)?;
-        let data = encode_array(value_type, values.iter(), values.len(), None)?;
+        let count = values.len()?;
+        let mut items = Vec::with_capacity(count);
+
+        for item in values.try_iter()? {
+            items.push(item?);
+        }
+
+        let data = encode_array(value_type, items.into_iter(), count, None)?;
         Ok(Self { data })
+    }
+
+    /// The binary array, as `PostgreSQL` receives it.
+    #[getter]
+    fn encoded<'py>(&self, py: Python<'py>) -> Bound<'py, PyBytes> {
+        PyBytes::new(py, &self.data)
     }
 }
 
@@ -115,10 +128,8 @@ fn encode_array<'py>(
     }
 
     // The flags in the header are set once the elements show whether any of them is NULL.
-    if has_nulls {
-        if let Some(flags) = out.get_mut(FLAGS_OFFSET..FLAGS_END) {
-            flags.copy_from_slice(&HAS_NULLS.to_be_bytes());
-        }
+    if has_nulls && let Some(flags) = out.get_mut(FLAGS_OFFSET..FLAGS_END) {
+        flags.copy_from_slice(&HAS_NULLS.to_be_bytes());
     }
 
     Ok(out)
@@ -160,7 +171,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[expect(clippy::unwrap_used, reason = "test assertions need direct access")]
     fn empty_array_has_no_dimension() {
         let values: std::iter::Empty<Bound<'static, PyAny>> = std::iter::empty();
         let data = encode_array(ValueType::Int8, values, 0, None).unwrap();

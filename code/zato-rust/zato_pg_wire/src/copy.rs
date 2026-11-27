@@ -37,13 +37,11 @@ fn too_large(what: &str, error: std::num::TryFromIntError) -> PyErr {
     PyValueError::new_err(format!("COPY stream has too large a {what}: {error}"))
 }
 
-/// Encodes rows that all have the keys of the columns given as a binary COPY stream, returned as a list of chunks.
-/// Each value of at least `max_inline_size` bytes is a chunk of its own, a `bytea` value as the very object it is.
+/// Encodes rows that all have the keys of the columns given as a binary COPY stream.
+///
+/// The stream is returned as a list of chunks, and each value of at least `max_inline_size` bytes
+/// is a chunk of its own, a `bytea` value as the very object it is.
 #[pyfunction]
-#[expect(
-    clippy::needless_pass_by_value,
-    reason = "PyO3 extracts the Python list of columns into an owned vector"
-)]
 pub fn encode_copy_rows<'py>(
     rows: &Bound<'py, PyList>,
     columns: Vec<InsertColumn>,

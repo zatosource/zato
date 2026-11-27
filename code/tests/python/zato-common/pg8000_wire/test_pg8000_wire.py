@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from datetime import datetime, timezone
+from decimal import Decimal
 
 # pg8000
 from pg8000 import core
@@ -20,7 +21,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 # zato_pg_wire
-from zato_pg_wire.zato_pg_wire import RowDecoder
+from zato_pg_wire.zato_pg_wire import ArrayParameter, encode_column_arrays, RowDecoder
 
 # Zato
 from zato.common.db_env import pg8000_wire
@@ -33,9 +34,10 @@ from zato.common.typing_ import cast_
 if 0:
     from pytest import MonkeyPatch
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import any_, anylist
+    from zato.common.typing_ import any_, anydict, anylist
 
     any_ = any_
+    anydict = anydict
     anylist = anylist
     Engine = Engine
     MonkeyPatch = MonkeyPatch
@@ -85,6 +87,36 @@ _bytea_sizes = (0, 1, 1000, Max_Inline_Size + 4464, 5_000_000)
 # The insert of one customer and the count of the customers with an id above the one given.
 _insert_customer = 'insert into customer values (%s)'
 _count_customers = 'select count(*) from customer where id > %s'
+
+# The elements of one array of each type that an array parameter is encoded as, NULLs included.
+_array_values:'anydict' = {
+    'SMALLINT': [-32768, 0, 32767, None],
+    'INTEGER': [-2147483648, 7, 2147483647, None],
+    'BIGINT': [-9223372036854775808, 4500012345, 9223372036854775807, None],
+    'DOUBLE PRECISION': [1.5e300, -0.0001, 0.0, None],
+    'BOOLEAN': [True, False, None],
+    'BYTEA': [b'', b'\x00\xff\x10', bytes(range(256)) * 300, None],
+    'TEXT': ['', 'Jane Doe - Zürich', 'x' * (Max_Inline_Size + 10), None],
+    'VARCHAR': ['PO-4500012345', 'John Smith', None],
+    'NUMERIC': [Decimal('12.345'), Decimal('-0.0001'), Decimal('100000000000000000000.5'), Decimal('0'), None],
+    'TIMESTAMP WITHOUT TIME ZONE': [datetime(2024, 2, 29, 12, 34, 56, 789012), datetime(1999, 12, 31, 23, 59, 59), None],
+    'TIMESTAMP WITH TIME ZONE': [datetime(2024, 2, 29, 12, 34, 56, 789012, tzinfo=timezone.utc), None],
+}
+
+# The type of a single value compared with the elements of an array, by the type of the array.
+_array_casts = {
+    'SMALLINT': 'int2',
+    'INTEGER': 'int4',
+    'BIGINT': 'int8',
+    'DOUBLE PRECISION': 'float8',
+    'BOOLEAN': 'bool',
+    'BYTEA': 'bytea',
+    'TEXT': 'text',
+    'VARCHAR': 'varchar',
+    'NUMERIC': 'numeric',
+    'TIMESTAMP WITHOUT TIME ZONE': 'timestamp',
+    'TIMESTAMP WITH TIME ZONE': 'timestamptz',
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -349,6 +381,82 @@ class TestParameters:
         for idx in range(3):
             rows = _execute(cursor, 'select %s::int4, %s::int4 %% 2', (idx, idx))
             assert rows == [[idx, idx % 2]]
+
+        connection.close()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestArrayParameters:
+    """ An array parameter reaches the server in the binary format with each of its elements unchanged,
+    whether a statement compares a column with it through = ANY or reads its rows through unnest.
+    """
+
+    def test_any(self, engine:'Engine') -> 'None':
+        connection = engine.raw_connection()
+        cursor = connection.cursor()
+
+        for type_name, values in _array_values.items():
+            array = ArrayParameter(type_name, values)
+
+            for value in values:
+                if value is None:
+                    continue
+
+                query = f'select %s::{_array_casts[type_name]} = any(cast(%s as {type_name}[]))'
+                rows = _execute(cursor, query, (value, array))
+                assert rows == [[True]], type_name
+
+        connection.close()
+
+    def test_unnest(self, engine:'Engine') -> 'None':
+        connection = engine.raw_connection()
+        cursor = connection.cursor()
+
+        for type_name, values in _array_values.items():
+            array = ArrayParameter(type_name, values)
+
+            rows = _execute(cursor, f'select * from unnest(cast(%s as {type_name}[]))', (array,))
+            assert rows == [[value] for value in values], type_name
+
+        connection.close()
+
+    def test_unnest_columns(self, engine:'Engine') -> 'None':
+        connection = engine.raw_connection()
+        cursor = connection.cursor()
+
+        rows_in = [
+            {'id': 1, 'name': 'Jane Doe', 'amount': Decimal('12.50')},
+            {'id': 2, 'name': None, 'amount': Decimal('-0.0001')},
+            {'id': 3, 'name': 'John Smith - Zürich', 'amount': None},
+        ]
+        columns = [
+            ('id', 'BIGINT', None),
+            ('name', 'VARCHAR', None),
+            ('amount', 'NUMERIC', None),
+        ]
+        arrays = encode_column_arrays(rows_in, columns)
+
+        query = 'select * from unnest(cast(%s as BIGINT[]), cast(%s as VARCHAR[]), cast(%s as NUMERIC[]))'
+        rows = _execute(cursor, query, tuple(arrays))
+
+        expected:'anylist' = []
+        for row in rows_in:
+            expected.append([row['id'], row['name'], row['amount']])
+
+        assert rows == expected
+
+        connection.close()
+
+    def test_empty(self, engine:'Engine') -> 'None':
+        connection = engine.raw_connection()
+        cursor = connection.cursor()
+
+        for type_name in _array_values:
+            array = ArrayParameter(type_name, [])
+
+            rows = _execute(cursor, f'select cardinality(cast(%s as {type_name}[]))', (array,))
+            assert rows == [[0]], type_name
 
         connection.close()
 

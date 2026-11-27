@@ -154,7 +154,8 @@ def _edit_during_a_delivery() -> 'None':
     state = {'is_armed': False}
 
     def on_execute(conn:'any_', cursor:'any_', statement:'str', parameters:'any_', context:'any_', executemany:'bool') -> 'None':
-        if context.invoked_statement is payload_query:
+        payload_sql = payload_query.compile(dialect=conn.dialect).string
+        if statement == payload_sql:
             state['is_armed'] = True
 
     # The edit commits and returns after the delivery read the payload and before it keeps it

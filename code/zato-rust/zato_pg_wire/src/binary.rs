@@ -76,9 +76,6 @@ const NUMERIC_POSITIVE_INFINITY: u16 = 0xD000;
 /// The sign of a binary `numeric` that is `-Infinity`.
 const NUMERIC_NEGATIVE_INFINITY: u16 = 0xF000;
 
-/// The base of the digits of a binary `numeric`.
-const NUMERIC_BASE: u16 = 10_000;
-
 /// How many decimal digits one digit of a binary `numeric` covers.
 const NUMERIC_BASE_DIGITS: usize = 4;
 
@@ -270,13 +267,14 @@ fn numeric_from_decimal(is_negative: bool, decimal_digits: &[u8], exponent: i64)
         .map_or(first_nonzero, |position| position.saturating_add(1));
     let significant = digits.get(first_nonzero..last_nonzero)?;
 
-    // .. and a zero has no digits at all.
-    let mut sign = if is_negative { NUMERIC_NEGATIVE } else { NUMERIC_POSITIVE };
-
-    if significant.is_empty() {
-        weight = 0;
-        sign = NUMERIC_POSITIVE;
-    }
+    // .. and a zero has no digits at all, no weight and no sign.
+    let (weight, sign) = if significant.is_empty() {
+        (0, NUMERIC_POSITIVE)
+    } else if is_negative {
+        (weight, NUMERIC_NEGATIVE)
+    } else {
+        (weight, NUMERIC_POSITIVE)
+    };
 
     let significant_count = i16::try_from(significant.len()).ok()?;
     let weight = i16::try_from(weight).ok()?;
@@ -385,10 +383,10 @@ fn timestamp_micros(value: &Bound<'_, PyAny>, has_time_zone: bool) -> PyResult<i
     // The calendar fields are counted as if they were in UTC ..
     let civil =
         DateTime::new(year, month, day, hour, minute, second, nanosecond).map_err(|error| PyValueError::new_err(error.to_string()))?;
-    let zoned = civil
-        .to_zoned(TimeZone::UTC)
+    let utc = TimeZone::UTC
+        .to_timestamp(civil)
         .map_err(|error| PyValueError::new_err(error.to_string()))?;
-    let unix_micros = zoned.timestamp().as_microsecond();
+    let unix_micros = utc.as_microsecond();
     let mut out = unix_micros.saturating_sub(POSTGRESQL_EPOCH_OFFSET_MICROS);
 
     // .. and a value with a time zone is moved by its offset from UTC.
@@ -404,7 +402,6 @@ fn timestamp_micros(value: &Bound<'_, PyAny>, has_time_zone: bool) -> PyResult<i
 mod tests {
     use super::*;
 
-    #[expect(clippy::unwrap_used, reason = "test assertions need direct access")]
     fn numeric(is_negative: bool, digits: &[u8], exponent: i64) -> Vec<u8> {
         numeric_from_decimal(is_negative, digits, exponent).unwrap()
     }

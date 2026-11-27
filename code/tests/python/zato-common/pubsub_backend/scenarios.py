@@ -15,6 +15,7 @@ from count_consistency import run_count_consistency_scenario
 from dlq_rule import run_dlq_rule_scenario
 from encryption import run_encryption_scenario
 from fenced_values import run_fenced_values_scenario
+from lease_budget import run_lease_budget_scenario
 from lifecycle import run_lifecycle_scenario
 from message_dedup import run_message_dedup_scenario
 from outgoing import run_outgoing_scenario
@@ -50,6 +51,7 @@ def run_common_scenarios() -> 'None':
     run_concurrency_scenario()
     run_count_consistency_scenario()
     run_pull_values_scenario()
+    run_lease_budget_scenario()
     run_pull_events_scenario()
     run_publish_values_scenario()
     run_message_dedup_scenario()
