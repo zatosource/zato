@@ -11,6 +11,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # to its body.
 
 # Zato
+from zato.common.db_env.pg8000_close import install as install_pg8000_close
 from zato.common.db_env.pg8000_copy import install as install_pg8000_copy
 from zato.common.db_env.pg8000_wire import install as install_pg8000_wire
 
@@ -18,9 +19,10 @@ from zato.common.db_env.pg8000_wire import install as install_pg8000_wire
 # ################################################################################################################################
 
 # The connections of PostgreSQL prepare their statements once and exchange bytea values and native types in the binary format,
-# and they insert rows in bulk with COPY.
+# and they insert rows in bulk with COPY, and a connection whose session ended already is closed without an error.
 install_pg8000_wire()
 install_pg8000_copy()
+install_pg8000_close()
 
 # ################################################################################################################################
 # ################################################################################################################################

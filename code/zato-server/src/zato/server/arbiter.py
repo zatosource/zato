@@ -192,7 +192,7 @@ class Arbiter:
         """ Drains the processes once one of them learned that another server took over the pub/sub database,
         because the generation that the arbiter raised is no longer current for this server.
         """
-        logger.warning('Process of slot %s reported that another server took over the pub/sub database, stopping', slot)
+        logger.info('Process of slot %s reported that another server took over the pub/sub database, stopping', slot)
         self.request_stop()
 
 # ################################################################################################################################

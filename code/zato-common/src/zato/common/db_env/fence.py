@@ -279,7 +279,7 @@ class GenerationGuard:
         """
         if not row_count:
             self.is_replaced = True
-            logger.warning('Pub/sub generation %s was replaced, this server stops its pub/sub work', self.generation)
+            logger.info('Pub/sub generation %s was replaced, this server stops its pub/sub work', self.generation)
             self._raise_replaced()
 
 # ################################################################################################################################

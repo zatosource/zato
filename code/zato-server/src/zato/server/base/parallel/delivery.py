@@ -211,7 +211,7 @@ class PushDelivery:
 
         # Another server took over the pub/sub database, so this one delivers nothing anymore.
         except PubSubReplaced as e:
-            logger.warning('PubSub delivery greenlet ended for sub_key `%s`: %s', sub_key, e)
+            logger.info('PubSub delivery greenlet ended for sub_key `%s`: %s', sub_key, e)
             return
 
         logger.info('PubSub delivery greenlet stopped for sub_key `%s`', sub_key)
