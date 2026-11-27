@@ -31,11 +31,6 @@ _data_preview_len = PubSub.Message.Data_Preview_Len
 
 _retry = HTTP_SOAP.Retry
 
-# The pages of the tables whose rows are updated after their insert, a delivery row by each lease and push attempt
-# and a message row by the drop of its payload, keep half of their space free, so that the new version of an updated
-# row fits in the page of the old one, as a heap-only tuple that requires no new index entries.
-_updated_table_storage = {'fillfactor': 50}
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -98,8 +93,6 @@ message_table = Table('pubsub_message', metadata,
 
     # .. and the expiry sweep finds everything that is past its time.
     Index('idx_pubsub_message_expiration', 'expiration_ms'),
-
-    postgresql_with=_updated_table_storage,
 )
 
 # The retry columns, for the queries that read a message back
@@ -138,8 +131,6 @@ delivery_table = Table('pubsub_delivery', metadata,
 
     # .. and topic-wide operations walk all deliveries of one topic.
     Index('idx_pubsub_delivery_topic', 'topic_name'),
-
-    postgresql_with=_updated_table_storage,
 )
 
 # The index behind the fetch query, declared outside the table
@@ -229,8 +220,9 @@ event.listen(active_table, 'after_create', DDL('INSERT INTO zato_active (id, gen
 
 # ################################################################################################################################
 
-# The storage parameters of the tables. A message row keeps free space in its page, so that dropping its payload
-# on acknowledgement and recording a delivery attempt are updates within the page that touch no index.
+# The storage parameters of the tables. The pages of the message and delivery tables keep half of their space free,
+# so that dropping the payload of a message on acknowledgement, and each lease and push attempt of a delivery,
+# are updates within the page that touch no index.
 # Rows of every table are inserted and deleted at the rate of the traffic, so autovacuum runs after a small fraction
 # of each table changed rather than the default fifth of it.
 _high_churn = 'autovacuum_vacuum_scale_factor = 0.01, autovacuum_vacuum_insert_scale_factor = 0.01, ' + \
@@ -238,13 +230,15 @@ _high_churn = 'autovacuum_vacuum_scale_factor = 0.01, autovacuum_vacuum_insert_s
 
 _toast_high_churn = 'toast.autovacuum_vacuum_scale_factor = 0.01, toast.autovacuum_vacuum_insert_scale_factor = 0.01'
 
+_updated_fillfactor = 'fillfactor = 50'
+
 _storage_statements = {
     message_table: [
         'ALTER TABLE pubsub_message ALTER COLUMN payload SET COMPRESSION lz4',
-        f'ALTER TABLE pubsub_message SET (fillfactor = 90, {_high_churn}, {_toast_high_churn})',
+        f'ALTER TABLE pubsub_message SET ({_updated_fillfactor}, {_high_churn}, {_toast_high_churn})',
     ],
     delivery_table: [
-        f'ALTER TABLE pubsub_delivery SET (fillfactor = 90, {_high_churn})',
+        f'ALTER TABLE pubsub_delivery SET ({_updated_fillfactor}, {_high_churn})',
     ],
     trace_table: [
         f'ALTER TABLE pubsub_trace SET ({_high_churn})',
