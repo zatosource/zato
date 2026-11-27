@@ -2347,7 +2347,7 @@ test-clear-test-all: ## Run test-all from a clear state instead of resuming a pr
 test-clear: ## Forget where every test target stopped, so that each next run starts from the beginning.
 	rm -f $(CURDIR)/code/tests/.test-*-resume
 	rm -rf $(CURDIR)/code/tests/.pytest_cache_*
-	rm -rf $(CURDIR)/code/tests/.resume-state
+	find $(CURDIR)/code/tests/.resume-state -type f -not -path '$(Zato_Resume_State_Path)*' -delete
 
 test-perf: ## Every performance suite - not part of test-all.
 	-$(MAKE) -k $(Zato_Test_Perf)
