@@ -13,12 +13,13 @@ from logging import getLogger
 from threading import Condition
 
 # SQLAlchemy
-from sqlalchemy import and_, bindparam, select
+from sqlalchemy import and_, select
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.exc import DBAPIError
 
 # Zato
 from zato.common.audit_log.bulk_insert import insert_pending_events
+from zato.common.db_env.any_of import any_of
 from zato.common.db_env.commit_queue import CommitQueue
 from zato.common.db_env.engine import call_database
 from zato.common.db_env.errors import is_conflict, is_lock_timeout, is_value_error
@@ -95,7 +96,7 @@ _copy_min_delivery_rows = 200
 # The statements of a group commit are built once here, the bind parameters take their values at execution time.
 _subscribers_query = select(topic_sub_table.c.topic_name, topic_sub_table.c.sub_key)
 _subscribers_query = _subscribers_query.where(
-    topic_sub_table.c.topic_name.in_(bindparam('write_topic_names', expanding=True)))
+    any_of(topic_sub_table.c.topic_name, 'write_topic_names'))
 
 # An unsubscription deletes the subscription row and only then the pending deliveries,
 # so its delete must wait until each publication that read the row has committed its deliveries.
@@ -114,7 +115,8 @@ _message_insert_plain = PlainStatement(_message_insert)
 # .. and what a message that exists already was published with tells a repeated publication from a different message.
 _existing_messages_query = select(message_table.c.msg_id, message_table.c.topic_name, message_table.c.payload_crc32)
 _existing_messages_query = _existing_messages_query.where(
-    message_table.c.msg_id.in_(bindparam('write_msg_ids', expanding=True)))
+    any_of(message_table.c.msg_id, 'write_msg_ids'))
+_existing_messages_query_plain = PlainStatement(_existing_messages_query)
 
 _delivery_insert = PlainStatement(delivery_table.insert())
 
@@ -124,18 +126,18 @@ _unindexed_sub_key = delivery_table.c.sub_key.concat('')
 
 _ack_deliveries_query = select(delivery_table.c.id, delivery_table.c.sub_key, delivery_table.c.message_id)
 _ack_deliveries_query_plain = PlainStatement(_ack_deliveries_query.where(and_(
-    delivery_table.c.message_id.in_(bindparam('ack_message_ids', expanding=True)),
-    _unindexed_sub_key.in_(bindparam('ack_sub_keys', expanding=True)),
+    any_of(delivery_table.c.message_id, 'ack_message_ids'),
+    any_of(_unindexed_sub_key, 'ack_sub_keys'),
 )))
 
 # A concurrent commit may have removed some of the rows first, so the statement returns those it removed.
-_delivery_delete = delivery_table.delete().where(delivery_table.c.id.in_(bindparam('ack_delivery_ids', expanding=True)))
+_delivery_delete = delivery_table.delete().where(any_of(delivery_table.c.id, 'ack_delivery_ids'))
 _delivery_delete_plain = PlainStatement(_delivery_delete.returning(delivery_table.c.id))
 
 # What records the next push attempt of each delivery row of a batch and returns the numbers of the rows that remain.
 _record_attempts_statement = delivery_table.update()
 _record_attempts_statement = _record_attempts_statement.where(
-    delivery_table.c.id.in_(bindparam('attempt_delivery_ids', expanding=True)))
+    any_of(delivery_table.c.id, 'attempt_delivery_ids'))
 _record_attempts_statement = _record_attempts_statement.values(attempt=delivery_table.c.attempt + 1)
 _record_attempts_statement = _record_attempts_statement.returning(delivery_table.c.id, delivery_table.c.attempt)
 _record_attempts_statement_plain = PlainStatement(_record_attempts_statement)
@@ -665,7 +667,7 @@ class PubSubWriter:
         existing:'anydict' = {}
 
         for chunk in get_chunks(msg_ids):
-            for row in connection.execute(_existing_messages_query, {'write_msg_ids': chunk}):
+            for row in _existing_messages_query_plain.execute(connection, {'write_msg_ids': chunk}):
                 existing[row.msg_id] = row
 
         for pending in duplicates:

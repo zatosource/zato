@@ -13,6 +13,8 @@ from typing import NamedTuple
 from sqlalchemy import and_, bindparam, select
 
 # Zato
+from zato.common.db_env.any_of import any_of
+from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.pubsub.sql.payloads import get_chunks
 from zato.common.pubsub.sql.schema import delivery_table, message_table
 
@@ -44,14 +46,16 @@ _fenced_join = delivery_table.join(message_table, message_table.c.id == delivery
 _fenced_rows_query = _fenced_rows_query.select_from(_fenced_join)
 _fenced_rows_query = _fenced_rows_query.where(and_(
     delivery_table.c.sub_key == bindparam('fenced_sub_key'),
-    message_table.c.msg_id.in_(bindparam('fenced_msg_ids', expanding=True)),
+    any_of(message_table.c.msg_id, 'fenced_msg_ids'),
 ))
 _fenced_rows_query = _fenced_rows_query.order_by(delivery_table.c.id)
 _fenced_rows_query = _fenced_rows_query.with_for_update(of=delivery_table)
+_fenced_rows_query_plain = PlainStatement(_fenced_rows_query)
 
 _fenced_delete = delivery_table.delete()
-_fenced_delete = _fenced_delete.where(delivery_table.c.id.in_(bindparam('fenced_delivery_ids', expanding=True)))
+_fenced_delete = _fenced_delete.where(any_of(delivery_table.c.id, 'fenced_delivery_ids'))
 _fenced_delete = _fenced_delete.returning(delivery_table.c.id)
+_fenced_delete_plain = PlainStatement(_fenced_delete)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -84,7 +88,7 @@ def _read_rows(connection:'Connection', ack:'PendingAck') -> 'anydict':
             'fenced_msg_ids': chunk,
         }
 
-        for row in connection.execute(_fenced_rows_query, parameters):
+        for row in _fenced_rows_query_plain.execute(connection, parameters):
             out[row.msg_id] = row
 
     return out
@@ -152,7 +156,7 @@ def delete_fenced(connection:'Connection', ack:'PendingAck', rows:'FencedRows') 
     for chunk in get_chunks(delivery_ids):
         parameters = {'fenced_delivery_ids': chunk}
 
-        for _ in connection.execute(_fenced_delete, parameters):
+        for _ in _fenced_delete_plain.execute(connection, parameters):
             ack.removed_count += 1
 
 # ################################################################################################################################

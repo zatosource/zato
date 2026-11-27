@@ -19,6 +19,7 @@ from sqlalchemy import and_, bindparam, cast, exists, literal_column, select, St
 # Zato
 from zato.common.common_db.message_dedup import dedup_records_query, dedup_upsert, Kind, new_dedup_record
 from zato.common.common_db.schema import message_dedup_table
+from zato.common.db_env.any_of import any_of
 from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID
 from zato.common.pubsub.sql.payloads import get_chunks
@@ -86,12 +87,12 @@ def new_fingerprint_rewrite(message_id_condition:'any_') -> 'any_':
 
 # The rewrite of the fingerprints of the dedup records of given message IDs.
 _fingerprint_rewrite = PlainStatement(new_fingerprint_rewrite(
-    message_dedup_table.c.message_id.in_(bindparam('dedup_message_ids', expanding=True))))
+    any_of(message_dedup_table.c.message_id, 'dedup_message_ids')))
 
 # The fingerprints of the stored messages of given message IDs.
 _message_fingerprints_select = select(message_table.c.msg_id, message_fingerprint.label('fingerprint'))
 _message_fingerprints_select = _message_fingerprints_select.where(
-    message_table.c.msg_id.in_(bindparam('write_msg_ids', expanding=True)))
+    any_of(message_table.c.msg_id, 'write_msg_ids'))
 _message_fingerprints_query = PlainStatement(_message_fingerprints_select)
 
 # ################################################################################################################################

@@ -7,9 +7,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import re
 from dataclasses import dataclass
 
+# zato_pg_wire
+from zato_pg_wire.zato_pg_wire import encode_column_arrays
+
 # Zato
+from zato.common.db_env.any_of import type_name_of
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -31,6 +36,16 @@ _max_insert_parameters = 30_000
 
 # What precedes the expression of the values of an insert in its compiled SQL
 _values_keyword = ' VALUES ('
+
+# The positional placeholder of the driver of PostgreSQL in compiled SQL, which the dialect may follow with a cast ..
+_placeholder = '%s'
+_values_item = r'%s(?:::[A-Z][A-Z ]*(?:\(\d+(?:, \d+)?\))?)?'
+
+# .. and the values of a single-row insert with one parameter per column.
+_values_expr_pattern = re.compile(rf'\({_values_item}(?:, {_values_item})*\)')
+
+# The name of the dialect whose inserts take their rows from unnest
+_postgresql = 'postgresql'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -67,6 +82,9 @@ class PlainPlan:
     # The expression of the values of one row of an insert, which a multi-row insert repeats once per row
     values_expr: 'str'
 
+    # The name, the type and the processor of each column of an insert through unnest, in the order of its arrays
+    columns: 'anylist'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -86,6 +104,7 @@ def _new_plan(sql:'str', sources:'plain_source_list', values_expr:'str') -> 'Pla
     out.sql = sql
     out.sources = sources
     out.values_expr = values_expr
+    out.columns = []
     return out
 
 # ################################################################################################################################
@@ -212,17 +231,22 @@ class PlainStatement:
                     index, position = flat_index, -1
                 expansion_of[expanded_name] = (name, index, position)
 
+        # The processors of the parameters that do not expand are those of the compiled statement ..
+        processors:'anydict' = dict(compiled._bind_processors)
+        processors.update(expanded.processors)
+
         sources:'plain_source_list' = []
 
         for name in cast_('strlist', expanded.positiontup):
 
-            processor = expanded.processors.get(name)
+            processor = processors.get(name)
 
-            # .. any other is given by the caller ..
+            # .. a parameter of an expansion is given by the caller as one of the values of a list ..
             if name in expansion_of:
                 original_name, index, position = expansion_of[name]
                 source = _new_source(original_name, index, None, processor, position)
 
+            # .. any other is given by the caller directly ..
             elif name in parameters:
                 source = _new_source(name, -1, None, processor)
 
@@ -286,11 +310,76 @@ class PlainStatement:
 
 # ################################################################################################################################
 
-    def insert_rows(self, connection:'Connection', rows:'anylist') -> 'anylist':
-        """ Inserts rows that all have the same keys, with as few multi-row statements as the parameter limit allows,
-        and returns the rows that the statements returned.
+    def _new_unnest_plan(self, dialect:'Dialect', column_keys:'strlist') -> 'PlainPlan':
+        """ Compiles an insert of the rows of one array per column through unnest, which has one statement text
+        whatever the number of the rows.
+        """
+        single_row = self._new_insert_plan(dialect, column_keys)
+        table = self.statement.table
+
+        # Each value of the single-row insert is the parameter of its column, so each becomes the array of the column ..
+        unnest_arrays:'strlist' = []
+        columns:'anylist' = []
+
+        for source in single_row.sources:
+            column = table.c[source.name]
+            type_name = type_name_of(column.type, dialect)
+
+            unnest_arrays.append(f'CAST({_placeholder} AS {type_name}[])')
+            columns.append((source.name, type_name, source.processor))
+
+        values_expr = single_row.values_expr
+        is_one_parameter_per_column = _values_expr_pattern.fullmatch(values_expr) is not None
+        parameter_count = values_expr.count(_placeholder)
+
+        if not is_one_parameter_per_column or parameter_count != len(columns):
+            raise Exception(f'Insert values other than one parameter per column -> `{single_row.sql}`')
+
+        # .. and the rows come from unnest in place of the values of the single row.
+        unnest_expr = 'SELECT * FROM unnest(' + ', '.join(unnest_arrays) + ')'
+        sql = single_row.sql.replace('VALUES ' + values_expr, unnest_expr, 1)
+
+        out = _new_plan(sql, single_row.sources, values_expr)
+        out.columns = columns
+
+        return out
+
+# ################################################################################################################################
+
+    def _insert_unnest(self, connection:'Connection', rows:'anylist') -> 'anylist':
+        """ Inserts rows that all have the same keys in one statement, with one binary array parameter per column.
         """
         dialect = connection.dialect
+        column_keys = sorted(rows[0])
+        key = (dialect.name, 'unnest', tuple(column_keys))
+
+        if not (plan := self._plans.get(key)):
+            plan = self._new_unnest_plan(dialect, column_keys)
+            self._plans[key] = plan
+
+        arrays = encode_column_arrays(rows, plan.columns)
+        result = connection.exec_driver_sql(plan.sql, tuple(arrays))
+
+        out:'anylist' = []
+
+        if result.returns_rows:
+            out.extend(result.all())
+
+        return out
+
+# ################################################################################################################################
+
+    def insert_rows(self, connection:'Connection', rows:'anylist') -> 'anylist':
+        """ Inserts rows that all have the same keys and returns the rows that the statements returned. On PostgreSQL,
+        the rows are inserted in one statement through unnest, and on any other database with as few multi-row
+        statements as the parameter limit allows.
+        """
+        dialect = connection.dialect
+
+        if dialect.name == _postgresql:
+            out = self._insert_unnest(connection, rows)
+            return out
+
         column_keys = sorted(rows[0])
         key = (dialect.name, 'insert', tuple(column_keys))
 

@@ -10,10 +10,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from base64 import b64decode, b64encode
 
 # SQLAlchemy
-from sqlalchemy import and_, bindparam, exists, select, true
+from sqlalchemy import and_, exists, select, true
 
 # Zato
 from zato.common.api import PubSub
+from zato.common.db_env.any_of import any_of
 from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.pubsub.sql.config import get_batch_size
 from zato.common.pubsub.sql.schema import delivery_table, message_table
@@ -85,7 +86,7 @@ def from_base64(payload:'str') -> 'str':
 # The primary keys of messages by their public identifiers
 _message_ids_query = select(message_table.c.id, message_table.c.msg_id)
 _message_ids_query_plain = PlainStatement(_message_ids_query.where(
-    message_table.c.msg_id.in_(bindparam('write_msg_ids', expanding=True))))
+    any_of(message_table.c.msg_id, 'write_msg_ids')))
 
 # A message is still in flight while any delivery row references it -
 # the update drops the payloads of the given messages that have none left.
@@ -94,7 +95,7 @@ _still_needed = _still_needed.where(delivery_table.c.message_id == message_table
 
 _drop_payloads_statement = message_table.update()
 _drop_payloads_statement = _drop_payloads_statement.where(and_(
-    message_table.c.id.in_(bindparam('drop_message_ids', expanding=True)),
+    any_of(message_table.c.id, 'drop_message_ids'),
     message_table.c.payload.isnot(None),
     ~_still_needed,
 ))
@@ -106,7 +107,7 @@ _drop_payloads_statement_plain = PlainStatement(_drop_payloads_statement.returni
 # sees every removal committed by the time the lock is granted.
 _lock_messages_query = select(message_table.c.id)
 _lock_messages_query = _lock_messages_query.where(
-    message_table.c.id.in_(bindparam('drop_message_ids', expanding=True)))
+    any_of(message_table.c.id, 'drop_message_ids'))
 _lock_messages_query = _lock_messages_query.order_by(message_table.c.id)
 _lock_messages_query_plain = PlainStatement(_lock_messages_query.with_for_update(key_share=True))
 
@@ -123,7 +124,7 @@ _live_delivery = _live_delivery.lateral()
 _needed_messages_query = select(message_table.c.id)
 _needed_messages_query = _needed_messages_query.select_from(message_table.join(_live_delivery, true()))
 _needed_messages_query_plain = PlainStatement(_needed_messages_query.where(
-    message_table.c.id.in_(bindparam('drop_message_ids', expanding=True))))
+    any_of(message_table.c.id, 'drop_message_ids')))
 
 # ################################################################################################################################
 # ################################################################################################################################

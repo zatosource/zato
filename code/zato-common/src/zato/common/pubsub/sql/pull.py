@@ -12,10 +12,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # until its lease runs out. The subscriber's acknowledgement removes the rows.
 
 # SQLAlchemy
-from sqlalchemy import and_, bindparam, Boolean, or_, select
+from sqlalchemy import and_, bindparam, Boolean, false, func, not_, or_, select
 
 # Zato
 from zato.common.api import HTTP_SOAP
+from zato.common.db_env.any_of import any_of
+from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.pubsub.sql.schema import delivery_table, message_retry_columns, message_table
 
 # ################################################################################################################################
@@ -24,7 +26,7 @@ from zato.common.pubsub.sql.schema import delivery_table, message_retry_columns,
 if 0:
     from sqlalchemy.engine import Connection, Engine
     from sqlalchemy.sql.elements import ColumnElement
-    from zato.common.typing_ import anydict, anylist, intdict, intlist
+    from zato.common.typing_ import anydict, anylist, intdict
     from zato_common_core.zato_common_core import SubscriptionList
 
     # Dummy assignments to satisfy type checkers
@@ -47,9 +49,9 @@ def _delivered_topics_filter(prefix:'str') -> 'ColumnElement[bool]':
     to a subscriber, which holds for every row when the list restricts none.
     """
     is_unrestricted = bindparam(f'{prefix}_is_unrestricted', type_=Boolean())
-    delivered_topics = bindparam(f'{prefix}_delivered_topics', expanding=True)
+    is_delivered = any_of(delivery_table.c.topic_name, f'{prefix}_delivered_topics')
 
-    out = or_(is_unrestricted, delivery_table.c.topic_name.in_(delivered_topics))
+    out = or_(is_unrestricted, is_delivered)
     return out
 
 # ################################################################################################################################
@@ -132,25 +134,83 @@ outgoing_fetch_query = outgoing_fetch_query.limit(bindparam('fetch_max_messages'
 # The payloads of the fetched messages that the server does not keep yet.
 payload_query = select(message_table.c.id, message_table.c.payload, message_table.c.payload_encrypted,
     message_table.c.payload_base64)
-payload_query = payload_query.where(message_table.c.id.in_(bindparam('payload_message_ids', expanding=True)))
+payload_query = payload_query.where(any_of(message_table.c.id, 'payload_message_ids'))
+
+# The statements above, executed as plain SQL
+fetch_statement          = PlainStatement(fetch_query)
+outgoing_fetch_statement = PlainStatement(outgoing_fetch_query)
+payload_statement        = PlainStatement(payload_query)
 
 # ################################################################################################################################
 
-# A pull first locks the deliverable rows it may hand out - those that no pull holds a lease on, or whose lease
-# has run out - skipping those that a concurrent pull holds, without reading their payloads. The lock is
-# FOR NO KEY UPDATE, which the key share locks that acknowledgements of other subscribers take on live delivery rows
-# do not conflict with, so a pull never skips its own rows only because another subscriber acknowledged the same message ..
-_lease_candidates_query = select(delivery_table.c.id, message_table.c.data_size)
-_lease_candidates_query = _lease_candidates_query.select_from(_fetch_join)
-_lease_candidates_query = _lease_candidates_query.where(and_(
+# A pull leases its messages in one statement. It first locks the deliverable rows it may hand out - those that no pull
+# holds a lease on, or whose lease has run out - skipping those that a concurrent pull holds, without reading their
+# payloads. The lock is FOR NO KEY UPDATE, which the key share locks that acknowledgements of other subscribers take
+# on live delivery rows do not conflict with, so a pull never skips its own rows only because another subscriber
+# acknowledged the same message ..
+_lease_candidates = select(delivery_table.c.id, message_table.c.data_size, delivery_table.c.priority,
+    delivery_table.c.message_id)
+_lease_candidates = _lease_candidates.select_from(_fetch_join)
+_lease_candidates = _lease_candidates.where(and_(
     delivery_table.c.sub_key == bindparam('lease_sub_key'),
     delivery_table.c.expiration_ms > bindparam('lease_now_ms'),
     delivery_table.c.leased_until_ms < bindparam('lease_now_ms'),
     _delivered_topics_filter('lease'),
 ))
-_lease_candidates_query = _lease_candidates_query.order_by(*_order_by)
-_lease_candidates_query = _lease_candidates_query.limit(bindparam('lease_max_messages'))
-_lease_candidates_query = _lease_candidates_query.with_for_update(skip_locked=True, key_share=True, of=delivery_table)
+_lease_candidates = _lease_candidates.order_by(*_order_by)
+_lease_candidates = _lease_candidates.limit(bindparam('lease_max_messages'))
+_lease_candidates = _lease_candidates.with_for_update(skip_locked=True, key_share=True, of=delivery_table)
+_lease_candidates = _lease_candidates.cte('lease_candidates')
+_lease_candidates = _lease_candidates.prefix_with('MATERIALIZED')
+
+# .. then keeps those within the size budget, in the order of the queue, except that a message larger than the budget
+# .. is handed out by the pull that reaches it, after the messages ahead of it, and ends that pull, so that it never
+# .. holds up the queue. A row is kept when no row ahead of it is larger than the budget, the rows ahead of it are within
+# .. the budget, and either the rows up to and including it are within the budget or it is larger than the budget alone.
+# .. The window functions have a query level of their own, since they cannot share one with a row lock ..
+_lease_queue_order = [_lease_candidates.c.priority.desc(), _lease_candidates.c.message_id.asc()]
+_lease_rows_before = (None, -1)
+_lease_rows_including = (None, 0)
+
+_lease_is_oversized = _lease_candidates.c.data_size > bindparam('lease_max_len')
+
+_lease_len_before = func.sum(_lease_candidates.c.data_size).over(order_by=_lease_queue_order, rows=_lease_rows_before)
+_lease_len_including = func.sum(_lease_candidates.c.data_size).over(order_by=_lease_queue_order, rows=_lease_rows_including)
+_lease_oversized_before = func.bool_or(_lease_is_oversized).over(order_by=_lease_queue_order, rows=_lease_rows_before)
+
+_lease_budget = select(
+    _lease_candidates.c.id,
+    func.coalesce(_lease_len_before, 0).label('len_before'),
+    _lease_len_including.label('len_including'),
+    func.coalesce(_lease_oversized_before, false()).label('oversized_before'),
+    _lease_is_oversized.label('is_oversized'),
+)
+_lease_budget = _lease_budget.cte('lease_budget')
+
+# .. then leases the rows it kept, learning which of them it leased itself - a row that another pull leased
+# .. in the meantime no longer matches ..
+_lease_update = delivery_table.update()
+_lease_update = _lease_update.where(and_(
+    delivery_table.c.id == _lease_budget.c.id,
+    not_(_lease_budget.c.oversized_before),
+    _lease_budget.c.len_before <= bindparam('lease_max_len'),
+    or_(_lease_budget.c.len_including <= bindparam('lease_max_len'), _lease_budget.c.is_oversized),
+    delivery_table.c.leased_until_ms < bindparam('lease_now_ms'),
+))
+_lease_update = _lease_update.values(
+    leased_until_ms=bindparam('lease_leased_until_ms'),
+    attempt=delivery_table.c.attempt + 1,
+)
+_lease_update = _lease_update.returning(delivery_table.c.message_id, delivery_table.c.attempt)
+_lease_leased = _lease_update.cte('lease_leased')
+
+# .. and reads the messages of the rows it leased, each with the attempt number of its delivery after the columns
+# .. of the message, which the builder of pulled messages reads by their positions.
+_lease_query = select(*message_columns, _lease_leased.c.attempt.label('lease_attempt'))
+_lease_query = _lease_query.select_from(_lease_leased.join(message_table, message_table.c.id == _lease_leased.c.message_id))
+_lease_query = _lease_query.order_by(message_table.c.priority.desc(), message_table.c.id.asc())
+
+_lease_statement = PlainStatement(_lease_query)
 
 # Whether a pull would find anything to hand out, read before the pull waits for a commit to lease it in.
 _lease_probe_query = select(delivery_table.c.id)
@@ -162,24 +222,7 @@ _lease_probe_query = _lease_probe_query.where(and_(
 ))
 _lease_probe_query = _lease_probe_query.limit(1)
 
-# .. then leases those within its size budget, learning which of them it leased itself - a row that another pull
-# .. leased in the meantime no longer matches ..
-_lease_update = delivery_table.update()
-_lease_update = _lease_update.where(and_(
-    delivery_table.c.id.in_(bindparam('lease_delivery_ids', expanding=True)),
-    delivery_table.c.leased_until_ms < bindparam('lease_now_ms'),
-))
-_lease_update = _lease_update.values(
-    leased_until_ms=bindparam('lease_leased_until_ms'),
-    attempt=delivery_table.c.attempt + 1,
-)
-_lease_update = _lease_update.returning(delivery_table.c.message_id, delivery_table.c.attempt)
-
-# .. and reads the messages of the rows it leased.
-_leased_messages_query = select(*message_columns)
-_leased_messages_query = _leased_messages_query.where(
-    message_table.c.id.in_(bindparam('lease_message_ids', expanding=True)))
-_leased_messages_query = _leased_messages_query.order_by(message_table.c.priority.desc(), message_table.c.id.asc())
+_lease_probe_statement = PlainStatement(_lease_probe_query)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -193,7 +236,7 @@ def has_lease_candidates(engine:'Engine', subscription_list:'SubscriptionList', 
     parameters['probe_now_ms'] = now_ms
 
     with engine.connect() as connection:
-        row = connection.execute(_lease_probe_query, parameters).first()
+        row = _lease_probe_statement.execute(connection, parameters).first()
 
     out = row is not None
     return out
@@ -221,50 +264,16 @@ def lease_messages(
     parameters['lease_sub_key'] = sub_key
     parameters['lease_now_ms'] = now_ms
     parameters['lease_max_messages'] = max_messages
+    parameters['lease_max_len'] = max_len
+    parameters['lease_leased_until_ms'] = leased_until_ms
 
-    # .. lock the candidates ..
-    candidates = connection.execute(_lease_candidates_query, parameters).fetchall()
+    # .. the statement locks, budgets and leases the rows and returns their messages ..
+    rows:'anylist' = []
+    rows.extend(_lease_statement.execute(connection, parameters))
 
-    if not candidates:
-        return [], attempts
-
-    # .. keep those within the size budget, in the order of the queue, except that a message larger than the budget
-    # .. is handed out by the pull that reaches it, after the messages ahead of it, and ends that pull,
-    # .. so that it never holds up the queue ..
-    delivery_ids:'intlist' = []
-    total_len = 0
-
-    for row in candidates:
-
-        is_oversized = row.data_size > max_len
-
-        if delivery_ids and total_len + row.data_size > max_len and not is_oversized:
-            break
-
-        total_len += row.data_size
-        delivery_ids.append(row.id)
-
-        if is_oversized:
-            break
-
-    # .. lease them, which only the first of two concurrent pulls succeeds in for any one row ..
-    lease_parameters:'anydict' = {
-        'lease_delivery_ids': delivery_ids,
-        'lease_now_ms': now_ms,
-        'lease_leased_until_ms': leased_until_ms,
-    }
-
-    message_ids:'intlist' = []
-
-    for row in connection.execute(_lease_update, lease_parameters):
-        message_ids.append(row.message_id)
-        attempts[row.message_id] = row.attempt
-
-    if not message_ids:
-        return [], attempts
-
-    # .. and read what is to be handed out.
-    rows = connection.execute(_leased_messages_query, {'lease_message_ids': message_ids}).fetchall()
+    # .. each with the attempt number of its delivery.
+    for row in rows:
+        attempts[row.id] = row.lease_attempt
 
     out = (rows, attempts)
     return out

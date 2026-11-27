@@ -31,6 +31,11 @@ _data_preview_len = PubSub.Message.Data_Preview_Len
 
 _retry = HTTP_SOAP.Retry
 
+# The pages of the tables whose rows are updated after their insert, a delivery row by each lease and push attempt
+# and a message row by the drop of its payload, keep half of their space free, so that the new version of an updated
+# row fits in the page of the old one, as a heap-only tuple that requires no new index entries.
+_updated_table_storage = {'fillfactor': 50}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -93,6 +98,8 @@ message_table = Table('pubsub_message', metadata,
 
     # .. and the expiry sweep finds everything that is past its time.
     Index('idx_pubsub_message_expiration', 'expiration_ms'),
+
+    postgresql_with=_updated_table_storage,
 )
 
 # The retry columns, for the queries that read a message back
@@ -131,6 +138,8 @@ delivery_table = Table('pubsub_delivery', metadata,
 
     # .. and topic-wide operations walk all deliveries of one topic.
     Index('idx_pubsub_delivery_topic', 'topic_name'),
+
+    postgresql_with=_updated_table_storage,
 )
 
 # The index behind the fetch query, declared outside the table

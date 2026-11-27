@@ -23,8 +23,8 @@ from zato.common.pubsub.sql.admin import SQLAdminAPI
 from zato.common.pubsub.sql.config import get_batch_size, get_pull_lease_seconds
 from zato.common.pubsub.sql.publication import add_published_event, build_publication, check_scope_publication, \
     complete_publication, complete_publications
-from zato.common.pubsub.sql.pull import delivered_topics_parameters, fetch_query, has_lease_candidates, outgoing_fetch_query, \
-    payload_query
+from zato.common.pubsub.sql.pull import delivered_topics_parameters, fetch_statement, has_lease_candidates, \
+    outgoing_fetch_statement, payload_statement
 from zato.common.pubsub.sql.schema import delivery_table, topic_sub_table
 from zato.common.pubsub.sql.pending import new_fenced_ack, new_pending_atomic, new_pending_lease
 from zato.common.pubsub.sql.subscription_sync import read_governed_pairs
@@ -461,7 +461,7 @@ class SQLPubSubBackend(SQLAdminAPI):
         parameters = {'payload_message_ids': [message['sequence_id']]}
 
         with self.engine.connect() as connection:
-            row = connection.execute(payload_query, parameters).one()
+            row = payload_statement.execute(connection, parameters).one()
 
         out = self._load_payload_from_row(row)
         return out
@@ -479,9 +479,9 @@ class SQLPubSubBackend(SQLAdminAPI):
         }
 
         if sub_key.startswith(_outgoing_sub_key_prefix):
-            query = outgoing_fetch_query
+            statement = outgoing_fetch_statement
         else:
-            query = fetch_query
+            statement = fetch_statement
             parameters['fetch_now_ms'] = self._database_now_ms()
 
             # A governed subscriber receives the messages of the topics that the subscription list hands out to it alone
@@ -497,7 +497,8 @@ class SQLPubSubBackend(SQLAdminAPI):
         missing:'anydict' = {}
 
         with self.engine.connect() as connection:
-            rows = connection.execute(query, parameters).fetchall()
+            rows:'anylist' = []
+            rows.extend(statement.execute(connection, parameters))
 
             # The payloads kept already are used as they are ..
             for row in rows:
@@ -510,7 +511,7 @@ class SQLPubSubBackend(SQLAdminAPI):
             # .. and the others are read in one more query.
             if missing:
                 payload_parameters = {'payload_message_ids': list(missing)}
-                payload_rows = connection.execute(payload_query, payload_parameters).fetchall()
+                payload_rows = payload_statement.execute(connection, payload_parameters).fetchall()
             else:
                 payload_rows = []
 

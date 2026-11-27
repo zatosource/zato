@@ -8,10 +8,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # The functions below change how the connections of pg8000 use the extended query protocol of PostgreSQL.
 # Each statement is prepared once per connection and executed by its name afterwards, its Bind message is encoded
-# by zato_pg_wire, bytea parameters are sent in the binary format, the rows of a result are decoded by zato_pg_wire,
-# which receives the columns of its native types in the binary format, the messages of each round trip leave in one send
-# and their replies are parsed out of the bytes that each read of the socket returns, and the begin of each transaction
-# travels to the server together with the first statement of the transaction. Within deferred_replies, a statement
+# by zato_pg_wire, bytea parameters and the array parameters of zato_pg_wire are sent in the binary format,
+# the rows of a result are decoded by zato_pg_wire, which receives the columns of its native types in the binary format,
+# the messages of each round trip leave in one send and their replies are parsed out of the bytes that each read
+# of the socket returns, and the begin of each transaction travels to the server together with the first statement
+# of the transaction. Within deferred_replies, a statement
 # travels to the server together with the next statement whose reply is read, as pg8000_deferred describes.
 
 # stdlib
@@ -29,7 +30,7 @@ from pg8000.dbapi import convert_paramstyle
 from pg8000.exceptions import DatabaseError, InterfaceError
 
 # zato_pg_wire
-from zato_pg_wire.zato_pg_wire import encode_bind, RowDecoder
+from zato_pg_wire.zato_pg_wire import ArrayParameter, encode_bind, RowDecoder
 
 # Zato
 from zato.common.db_env.pg8000_common import Max_Inline_Size
@@ -157,6 +158,13 @@ def _keep_bytes(value:'any_') -> 'bytes':
     """
     out = bytes(value)
     return out
+
+# ################################################################################################################################
+
+def _keep_array(value:'ArrayParameter') -> 'ArrayParameter':
+    """ Keeps an array parameter as it is, encoded already in the binary format.
+    """
+    return value
 
 # ################################################################################################################################
 
@@ -496,6 +504,8 @@ def install() -> 'None':
 
     for python_type in _binary_types:
         py_types[python_type] = _keep_bytes
+
+    py_types[ArrayParameter] = _keep_array
 
     # .. the connections use the functions of this module ..
     connection_class:'any_' = core.CoreConnection

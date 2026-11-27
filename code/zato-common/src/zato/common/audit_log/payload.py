@@ -20,11 +20,12 @@ from __future__ import annotations
 from hashlib import blake2b
 
 # SQLAlchemy
-from sqlalchemy import bindparam, select
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 
 # Zato
 from zato.common.audit_log.common import event_payload_table, event_table
+from zato.common.db_env.any_of import any_of
 from zato.common.db_env.plain_sql import PlainStatement
 
 # Zato - Rust
@@ -73,7 +74,7 @@ _payload_insert_statement = PlainStatement(_payload_insert)
 # so that no two of them wait for each other.
 _stored_payloads_query = select(event_payload_table.c.id, event_payload_table.c.digest)
 _stored_payloads_query = _stored_payloads_query.where(
-    event_payload_table.c.digest.in_(bindparam('payload_digests', expanding=True)))
+    any_of(event_payload_table.c.digest, 'payload_digests'))
 _stored_payloads_query = _stored_payloads_query.order_by(event_payload_table.c.digest)
 _stored_payloads_query = _stored_payloads_query.with_for_update(read=True, key_share=True)
 _stored_payloads_statement = PlainStatement(_stored_payloads_query)
@@ -81,7 +82,7 @@ _stored_payloads_statement = PlainStatement(_stored_payloads_query)
 # The payloads of the given ids, locked against a concurrent reference, in the order of their digests
 _deleted_payloads_query = select(event_payload_table.c.id)
 _deleted_payloads_query = _deleted_payloads_query.where(
-    event_payload_table.c.id.in_(bindparam('payload_ids', expanding=True)))
+    any_of(event_payload_table.c.id, 'payload_ids'))
 _deleted_payloads_query = _deleted_payloads_query.order_by(event_payload_table.c.digest)
 _deleted_payloads_query = _deleted_payloads_query.with_for_update()
 
@@ -92,7 +93,7 @@ _is_referenced = _is_referenced.exists()
 
 _unreferenced_payloads_delete = event_payload_table.delete()
 _unreferenced_payloads_delete = _unreferenced_payloads_delete.where(
-    event_payload_table.c.id.in_(bindparam('payload_ids', expanding=True)))
+    any_of(event_payload_table.c.id, 'payload_ids'))
 _unreferenced_payloads_delete = _unreferenced_payloads_delete.where(~_is_referenced)
 
 # ################################################################################################################################

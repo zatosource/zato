@@ -16,6 +16,7 @@ from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 
 # Zato
 from zato.common.common_db.schema import message_dedup_table
+from zato.common.db_env.any_of import any_of
 from zato.common.db_env.plain_sql import PlainStatement
 
 # ################################################################################################################################
@@ -75,7 +76,7 @@ _dedup_records_query = select(_columns.message_id, _columns.fingerprint, _column
 _dedup_records_query = _dedup_records_query.where(and_(
     _columns.kind == bindparam('dedup_kind'),
     _columns.scope == bindparam('dedup_scope'),
-    _columns.message_id.in_(bindparam('dedup_message_ids', expanding=True)),
+    any_of(_columns.message_id, 'dedup_message_ids'),
 ))
 dedup_records_query = PlainStatement(_dedup_records_query)
 
