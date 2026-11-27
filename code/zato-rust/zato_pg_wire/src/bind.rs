@@ -1,6 +1,6 @@
 //! Encoding of the `Bind` messages of the extended query protocol of `PostgreSQL`.
 //!
-//! The pg8000 driver of Zato converts the parameters of a statement into `str`, `bytes` or `None`
+//! The pg8000 driver of Zato converts the parameters of a statement into `str`, `bytes`, binary arrays or `None`
 //! before they are bound, and this module turns them, together with the name of the prepared statement
 //! and the formats of the result columns, into one complete `Bind` message.
 
@@ -9,6 +9,8 @@ use std::num::TryFromIntError;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyString, PyTuple};
+
+use crate::array::ArrayParameter;
 
 /// The code of a `Bind` message.
 const BIND_CODE: u8 = b'B';
@@ -42,7 +44,7 @@ enum Parameter<'value> {
     /// A NULL value.
     Null,
 
-    /// A `bytea` value, sent in the binary format.
+    /// A `bytea` value or a binary array, sent in the binary format.
     Binary(&'value [u8]),
 
     /// Any other value, sent in the text format, which the connection encodes in UTF-8.
@@ -73,7 +75,7 @@ fn too_large(what: &str, error: TryFromIntError) -> PyErr {
     PyValueError::new_err(format!("Bind message has too large a {what}: {error}"))
 }
 
-/// Reads one parameter converted by the driver, which is `None`, `bytes` or `str`.
+/// Reads one parameter converted by the driver, which is `None`, `bytes`, an array parameter or `str`.
 fn read_parameter<'value>(value: &'value Bound<'_, PyAny>) -> PyResult<Parameter<'value>> {
     if value.is_none() {
         return Ok(Parameter::Null);
@@ -82,6 +84,11 @@ fn read_parameter<'value>(value: &'value Bound<'_, PyAny>) -> PyResult<Parameter
     // A bytea value is sent as it is ..
     if let Ok(data) = value.cast::<PyBytes>() {
         return Ok(Parameter::Binary(data.as_bytes()));
+    }
+
+    // .. as is an array, which is encoded already ..
+    if let Ok(array) = value.cast::<ArrayParameter>() {
+        return Ok(Parameter::Binary(array.get().data()));
     }
 
     // .. and any other value is text that the driver converted already.
