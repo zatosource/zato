@@ -23,16 +23,18 @@ from zato.common.typing_ import cast_
 from zato.server.commands import CommandsFacade
 from zato.server.demo_mcp.common import Database_Directory, Gateway_Name, Group_Name, Security_Name, Service_Names, \
     Services_File_Name, SQL_Connections
-from zato.server.demo_mcp.warehouse import build_databases
+from zato.server.demo_mcp.warehouse import build_databases, get_database_paths
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy.engine import Engine
     from zato.common.typing_ import any_, stranydict, strdict, strlist
     from zato.server.base.parallel import ParallelServer
 
     any_ = any_
+    Engine = Engine
     ParallelServer = ParallelServer
 
 # ################################################################################################################################
@@ -138,7 +140,7 @@ def _ensure_sql_connections(server:'ParallelServer', database_paths:'strdict') -
 
         out.append(name)
 
-    # The gateway resolves its SQL tools through the pools, so they need to be up before it is imported
+    # The gateway resolves its SQL tools through the pools, so they need to be up before it is imported ..
     steps_left = _wait_steps
     pool_store = server.config_manager.sql_pool_store
 
@@ -156,8 +158,24 @@ def _ensure_sql_connections(server:'ParallelServer', database_paths:'strdict') -
         sleep(_wait_step_seconds)
         steps_left -= 1
 
+    # .. the databases are built through the pools, so a pool that did not come up ends the import.
     else:
-        logger.warning('The MCP healthcare SQL connections did not come up')
+        raise Exception('The MCP healthcare SQL connections did not come up')
+
+    return out
+
+# ################################################################################################################################
+
+def _get_engines(server:'ParallelServer') -> 'dict[str, Engine]':
+    """ The engine of the pool of each SQL connection of the demo, by the name of the connection.
+    """
+    pool_store = server.config_manager.sql_pool_store
+
+    out:'dict[str, Engine]' = {}
+
+    for name in SQL_Connections:
+        wrapper = pool_store.wrappers[name]
+        out[name] = wrapper.pool.engine
 
     return out
 
@@ -169,14 +187,16 @@ def import_demo_mcp(server:'ParallelServer') -> 'stranydict':
     bearer token, security group and MCP gateway.
     """
 
-    # The databases are built anew ..
-    database_paths = build_databases(_get_database_directory(server))
+    # The databases have a directory of their own ..
+    database_paths = get_database_paths(_get_database_directory(server))
 
     # .. the gateway names the services, so they are deployed before it ..
     services_deployed = _ensure_services(server)
 
-    # .. and so are the SQL connections ..
+    # .. and so are the SQL connections, through which the databases are built anew ..
     sql_created = _ensure_sql_connections(server, database_paths)
+    engines = _get_engines(server)
+    build_databases(engines)
 
     # .. while the bearer token, its group and the gateway are imported through enmasse.
     config_path = os.path.join(os.path.dirname(__file__), _config_file_name)

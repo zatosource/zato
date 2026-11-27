@@ -49,6 +49,9 @@ class ModuleCtx:
     # The suffix of the link files
     Link_Suffix = '.json'
 
+    # The key of a link with its name, which is the name of its file without the suffix
+    Name_Key = 'name'
+
     # What separates the module of an extension from the function in it
     Extension_Separator = ':'
 
@@ -180,7 +183,7 @@ def _read_links() -> 'anylist':
         file_names = os.listdir(ModuleCtx.Links_Dir)
         file_names.sort()
 
-        # .. and otherwise, each of its link files is one link.
+        # .. and otherwise, each of its link files is one link, named after the file.
         for file_name in file_names:
             if file_name.endswith(ModuleCtx.Link_Suffix):
                 link_path = os.path.join(ModuleCtx.Links_Dir, file_name)
@@ -188,6 +191,7 @@ def _read_links() -> 'anylist':
                 with open(link_path) as link_file:
                     link = load(link_file)
 
+                link[ModuleCtx.Name_Key] = file_name.removesuffix(ModuleCtx.Link_Suffix)
                 out.append(link)
 
     return out

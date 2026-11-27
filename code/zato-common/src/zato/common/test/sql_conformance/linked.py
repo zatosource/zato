@@ -14,7 +14,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from importlib import import_module
 
 # Zato
-from zato_links.finder import get_links
+from zato_links.finder import get_links, ModuleCtx as LinksModuleCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,6 +33,9 @@ class ModuleCtx:
     # The key of a link with the name of its registry module
     Registries_Key = 'registries'
 
+    # The links whose repositories the static scans do not cover yet, by the names of the links
+    Unscanned_Link_Names = frozenset({'b2b'})
+
     # The names that a registry module defines
     Environment_Variables      = 'Environment_Variables'
     Direct_SQL_Purposes        = 'Direct_SQL_Purposes'
@@ -44,12 +47,25 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def get_scanned_links() -> 'anylist':
+    """ Returns the links whose repositories the static scans cover.
+    """
+    out:'anylist' = []
+
+    for link in get_links():
+        if link[LinksModuleCtx.Name_Key] not in ModuleCtx.Unscanned_Link_Names:
+            out.append(link)
+
+    return out
+
+# ################################################################################################################################
+
 def get_linked_registries() -> 'list[ModuleType]':
-    """ Returns the registry module of each linked repository that declares one.
+    """ Returns the registry module of each scanned linked repository that declares one.
     """
     out:'list[ModuleType]' = []
 
-    for link in get_links():
+    for link in get_scanned_links():
         if module_name := link.get(ModuleCtx.Registries_Key):
             module = import_module(module_name)
             out.append(module)

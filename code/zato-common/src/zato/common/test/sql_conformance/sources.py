@@ -16,7 +16,8 @@ from functools import cache
 from subprocess import check_output
 
 # Zato
-from zato_links.finder import get_links, ModuleCtx as LinksModuleCtx
+from zato.common.test.sql_conformance.linked import get_scanned_links
+from zato_links.finder import ModuleCtx as LinksModuleCtx
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -143,7 +144,7 @@ def _is_linked_production(full_path:'str', source_roots:'strlist') -> 'bool':
 
 @cache
 def get_source_files() -> 'source_file_list':
-    """ Returns every file of the installation and of each linked repository that git does not ignore.
+    """ Returns every file of the installation and of each linked repository the scans cover that git does not ignore.
     """
     out:'source_file_list' = []
 
@@ -157,8 +158,8 @@ def get_source_files() -> 'source_file_list':
         item.is_linked = False
         out.append(item)
 
-    # .. and each repository linked to it.
-    for link in get_links():
+    # .. and each linked repository that the scans cover.
+    for link in get_scanned_links():
         repository_dir = link['repository_dir']
         source_roots = link['source_roots']
 

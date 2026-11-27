@@ -7,12 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The SQLite databases of the MCP healthcare demo - the reporting warehouse, finance system
-# and workforce system. Every import builds them anew, with the history ending on the day of the import.
+# and workforce system. Every import builds them anew, through the SQL connections of the demo,
+# with the history ending on the day of the import.
 
 # stdlib
 import os
-import sqlite3
-from contextlib import closing
 from datetime import date, timedelta
 from random import Random
 
@@ -23,7 +22,9 @@ from zato.server.demo_mcp.common import Database_Files, History_Days, SQL_Financ
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy.engine import Engine
     from zato.common.typing_ import anylist, anytuple, strdict
+    Engine = Engine
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,22 +50,29 @@ _weekend_activity_share = (0.55, 0.35)
 # ################################################################################################################################
 # ################################################################################################################################
 
+# The tables of each database, as pairs of a table name and the statement that creates the table
+
 _warehouse_schema = (
-    'create table facility (code text primary key, name text, city text, region text, service_capacity integer)',
-    'create table care_flow (report_date text, facility_code text, referrals integer, first_appointments integer, ' + \
-        'discharges integer, waiting_patients integer, median_wait_days real, capacity_used_percent real)',
-    'create table quality (report_date text, facility_code text, safety_events integer, complaints integer, ' + \
-        'outcome_assessments integer, positive_outcomes integer, overdue_actions integer)',
+    ('facility',
+        'create table facility (code text primary key, name text, city text, region text, service_capacity integer)'),
+    ('care_flow',
+        'create table care_flow (report_date text, facility_code text, referrals integer, first_appointments integer, ' + \
+        'discharges integer, waiting_patients integer, median_wait_days real, capacity_used_percent real)'),
+    ('quality',
+        'create table quality (report_date text, facility_code text, safety_events integer, complaints integer, ' + \
+        'outcome_assessments integer, positive_outcomes integer, overdue_actions integer)'),
 )
 
 _finance_schema = (
-    'create table financial_performance (report_date text, facility_code text, contract_value integer, ' + \
-        'delivered_value integer, registered_value integer, billed_value integer, operating_cost integer)',
+    ('financial_performance',
+        'create table financial_performance (report_date text, facility_code text, contract_value integer, ' + \
+        'delivered_value integer, registered_value integer, billed_value integer, operating_cost integer)'),
 )
 
 _workforce_schema = (
-    'create table workforce (report_date text, facility_code text, planned_hours integer, worked_hours integer, ' + \
-        'absence_hours integer, agency_hours integer, vacancies integer)',
+    ('workforce',
+        'create table workforce (report_date text, facility_code text, planned_hours integer, worked_hours integer, ' + \
+        'absence_hours integer, agency_hours integer, vacancies integer)'),
 )
 
 # ################################################################################################################################
@@ -247,61 +255,60 @@ def _build_workforce_rows(random:'Random') -> 'anylist':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _create_database(path:'str', schema:'anytuple', inserts:'anytuple') -> 'None':
-    """ Creates one database file anew, with its tables and rows.
+def _fill_database(engine:'Engine', schema:'anytuple', inserts:'anytuple') -> 'None':
+    """ Replaces the tables of one database with new ones and their rows, in one transaction.
     """
+    with engine.begin() as connection:
 
-    # An earlier import's file is replaced as a whole ..
-    if os.path.exists(path):
-        os.remove(path)
+        # The tables of an earlier import are replaced as a whole ..
+        for table_name, create_statement in schema:
+            _ = connection.exec_driver_sql(f'drop table if exists {table_name}')
+            _ = connection.exec_driver_sql(create_statement)
 
-    with closing(sqlite3.connect(path)) as connection:
-
-        # .. the tables are created ..
-        for statement in schema:
-            _ = connection.execute(statement)
-
-        # .. filled in ..
+        # .. and filled in.
         for statement, rows in inserts:
-            _ = connection.executemany(statement, rows)
-
-        # .. and everything is committed in one go.
-        connection.commit()
+            _ = connection.exec_driver_sql(statement, rows)
 
 # ################################################################################################################################
 
-def build_databases(directory:'str') -> 'strdict':
-    """ Builds the three executive reporting databases in the given directory
-    and returns the path of each, by the name of the SQL connection it is for.
+def get_database_paths(directory:'str') -> 'strdict':
+    """ Creates the directory of the three executive reporting databases and returns the path of each database in it,
+    by the name of the SQL connection it is for.
     """
     os.makedirs(directory, exist_ok=True)
-
-    random = Random(_seed)
-    facility_rows = list(_facilities)
 
     out:'strdict' = {}
 
     for connection_name, file_name in Database_Files.items():
         out[connection_name] = os.path.join(directory, file_name)
 
+    return out
+
+# ################################################################################################################################
+
+def build_databases(engines:'dict[str, Engine]') -> 'None':
+    """ Builds the three executive reporting databases anew through the engines of their SQL connections,
+    keyed by the names of the connections.
+    """
+    random = Random(_seed)
+    facility_rows = list(_facilities)
+
     # The reporting warehouse contains care flow, quality and facility reference data ..
-    _create_database(out[SQL_Warehouse], _warehouse_schema, (
+    _fill_database(engines[SQL_Warehouse], _warehouse_schema, (
         ('insert into facility values (?, ?, ?, ?, ?)', facility_rows),
         ('insert into care_flow values (?, ?, ?, ?, ?, ?, ?, ?)', _build_care_flow_rows(random)),
         ('insert into quality values (?, ?, ?, ?, ?, ?, ?)', _build_quality_rows(random)),
     ))
 
     # .. the finance system provides contract and revenue measures ..
-    _create_database(out[SQL_Finance], _finance_schema, (
+    _fill_database(engines[SQL_Finance], _finance_schema, (
         ('insert into financial_performance values (?, ?, ?, ?, ?, ?, ?)', _build_finance_rows(random)),
     ))
 
     # .. and the workforce system provides staffing measures.
-    _create_database(out[SQL_Workforce], _workforce_schema, (
+    _fill_database(engines[SQL_Workforce], _workforce_schema, (
         ('insert into workforce values (?, ?, ?, ?, ?, ?, ?)', _build_workforce_rows(random)),
     ))
-
-    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
