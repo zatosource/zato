@@ -500,18 +500,17 @@ class PubSubWriter:
                 lease.attempts = attempts
                 lease.on_leased(lease)
 
-            # .. the audit events of what was written commit with it, and they are inserted before the payloads
-            # are dropped, so that the locks of a drop are held only until the commit ..
+            # .. the payloads are dropped after all the writes of delivery rows. Dropping one holds the delivery rows
+            # of the other subscribers of its message until the commit, so a transaction that locked a delivery row
+            # after a drop could wait for one that waits for it in turn ..
+            if ack_by_message_id:
+                self._drop_payloads(connection, ack_by_message_id)
+
+            # .. and the audit events of what was written commit with it.
             out = collect_audit_events(publications, atomics, leases)
 
             if out:
                 _ = insert_pending_events(connection, out)
-
-            # .. and the payloads are dropped after all the writes of delivery rows. Dropping one holds the delivery rows
-            # of the other subscribers of its message until the commit, so a transaction that locked a delivery row
-            # after a drop could wait for one that waits for it in turn.
-            if ack_by_message_id:
-                self._drop_payloads(connection, ack_by_message_id)
 
         # The rows that the publications and the syncs wrote count as committed only now that the transaction committed.
         if added_pairs:
