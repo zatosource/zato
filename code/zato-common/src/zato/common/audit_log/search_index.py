@@ -13,6 +13,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 #
 # A GIN index covers the words of the searched event columns joined into a single text, a GIN index covers
 # the words of the payloads, and a pg_trgm GIN index over attribute values serves LIKE patterns directly.
+# The message and correlation identifiers are matched whole, through their own indexes.
 
 from __future__ import annotations
 
@@ -54,8 +55,12 @@ _postgresql_column_separator = "' '"
 # What marks a word of a query as a prefix
 _postgresql_prefix_marker = ':*'
 
-# The event columns the free-text search covers
-search_columns = ('event_type', 'msg_id', 'correl_id', 'endpoint', 'ext_client_id', 'status', 'classification', 'sub_key')
+# The event columns the word index covers
+search_columns = ('event_type', 'endpoint', 'ext_client_id', 'status', 'classification', 'sub_key')
+
+# The identifiers that the free-text search matches whole, through their own indexes. Each identifier would be
+# a key of its own in the word index, which would make each insert write it into the index.
+id_search_columns = ('msg_id', 'correl_id')
 
 # The payload column the free-text search covers
 payload_search_columns = ('search_text',)

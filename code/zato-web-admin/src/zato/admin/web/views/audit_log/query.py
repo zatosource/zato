@@ -17,7 +17,7 @@ from zato.admin.web.views.audit_log.columns import _data_preview_length, _row_nu
     _source_attr_columns, _source_body_preview
 from zato.admin.web.views.audit_log.sources import _source_resubmit, _source_row_enrich
 from zato.common.audit_log.api import event_attr_table, event_body_table, event_link_table, event_table
-from zato.common.audit_log.common import AuditEvent, AuditOutcome, AuditSource
+from zato.common.audit_log.common import AuditEvent, AuditOutcome, AuditSource, has_correl_id
 from zato.common.audit_log.request_context import Key_Payload, Key_Payload_Kind, Key_Redacted, Payload_Kind_Described
 from zato.common.audit_log.resubmit import Resend_Hop_Service
 from zato.common.audit_log.service import Attribute_Channel
@@ -223,6 +223,7 @@ def _mark_resubmitted(connection:'any_', source:'str', rows:'anylist') -> 'None'
 
     conditions = and_(
         event_table.c.source == source,
+        has_correl_id,
         is_resubmit_of_row,
         event_table.c.outcome == AuditOutcome.OK,
     )

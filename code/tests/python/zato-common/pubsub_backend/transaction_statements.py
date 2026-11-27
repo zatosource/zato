@@ -26,7 +26,7 @@ if 0:
     from collections.abc import Iterator
     from gevent import Greenlet
     from sqlalchemy.engine import Engine
-    from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, strlist
 
     any_ = any_
     anydict = anydict
@@ -34,6 +34,7 @@ if 0:
     anytuple = anytuple
     callable_ = callable_
     Engine = Engine
+    strlist = strlist
     Greenlet = Greenlet
 
     recordergen = Iterator['TransactionRecorder']
@@ -59,12 +60,14 @@ _verb_table_position:'anydict' = {
     'RELEASE': None,
 }
 
+# The words that precede UPDATE in a row lock clause, e.g. FOR UPDATE or FOR NO KEY UPDATE
+_lock_clause_words = {'FOR', 'KEY'}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 _statement_payload_select   = ('SELECT', 'event_payload')
 _statement_payload_insert   = ('INSERT', 'event_payload')
-_statement_event_ids_select = ('SELECT', 'generate_series')
 _statement_event_insert     = ('INSERT', 'event')
 
 # The statements of each part of a transaction, by verb and table. A publication writes its dedup record
@@ -92,8 +95,9 @@ statements_attempts = [
     ('UPDATE', 'pubsub_delivery'),
 ]
 
+# The lease is one statement, whose common table expressions lock, select and update the delivery rows
 statements_lease = [
-    ('SELECT', 'pubsub_delivery'), ('UPDATE', 'pubsub_delivery'), ('SELECT', 'pubsub_message'),
+    ('UPDATE', 'pubsub_delivery'),
 ]
 
 statements_drop = [
@@ -164,12 +168,38 @@ class TransactionRecorder:
 
 # ################################################################################################################################
 
+def _get_modifying_verb_table(words:'strlist') -> 'anytuple | None':
+    """ Returns the verb and the table of the first data-modifying statement of a statement with common
+    table expressions, or None if it modifies no table. A row lock clause, e.g. FOR NO KEY UPDATE OF,
+    is not a data-modifying statement.
+    """
+    for index, word in enumerate(words):
+        if word == 'INSERT' and words[index + 1] == 'INTO':
+            out = ('INSERT', words[index + 2].split('(')[0])
+            return out
+
+        if word == 'UPDATE' and words[index - 1] not in _lock_clause_words:
+            out = ('UPDATE', words[index + 1])
+            return out
+
+        if word == 'DELETE' and words[index + 1] == 'FROM':
+            out = ('DELETE', words[index + 2])
+            return out
+
+    return None
+
+# ################################################################################################################################
+
 def get_verb_table(statement:'str') -> 'anytuple | None':
     """ Returns the verb and the table of a statement, the verb alone for a statement of a transaction
     or a savepoint, and None for any other statement.
     """
     words = statement.split()
     verb = words[0]
+
+    if verb == 'WITH':
+        out = _get_modifying_verb_table(words)
+        return out
 
     if verb == 'SELECT':
         if 'FROM' in words:
@@ -241,14 +271,11 @@ def get_atomic_statements() -> 'anylist':
 
 # ################################################################################################################################
 
-def get_event_statements(event_count:'int', has_new_payloads:'bool') -> 'anylist':
-    """ Returns the statements of the audit events of a batch. The ids of more than one event are reserved
-    from their sequence, and a payload stored already by an earlier event is not inserted again.
+def get_event_statements(has_new_payloads:'bool') -> 'anylist':
+    """ Returns the statements of the audit events of a batch. The events take their ids from their sequence
+    in the statement that inserts them, and a payload stored already by an earlier event is not inserted again.
     """
     out:'anylist' = [_statement_payload_select]
-
-    if event_count > 1:
-        out.append(_statement_event_ids_select)
 
     if has_new_payloads:
         out.append(_statement_payload_insert)

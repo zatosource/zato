@@ -18,7 +18,7 @@ from zato.common.typing_ import list_
 
 if 0:
     from zato.common.pubsub.subscription_list import pairlist
-    from zato.common.typing_ import anydict, anylist, callable_, intdict, intlist, intlistnone, strlist
+    from zato.common.typing_ import anydict, anylist, callable_, intdict, intlist, intlistnone, strlist, strnone
 
     # Dummy assignments to satisfy type checkers
     anydict = anydict
@@ -29,6 +29,7 @@ if 0:
     intlistnone = intlistnone
     pairlist = pairlist
     strlist = strlist
+    strnone = strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -53,9 +54,9 @@ class PendingPublication:
     message_values: 'anydict'
 
     # The payload in the form in which it is stored, and its digest and search text in the payload table,
-    # both computed before the transaction that stores it
+    # both computed before the transaction that stores it. An empty payload has no digest and is not stored.
     payload: 'str'
-    payload_digest: 'str'
+    payload_digest: 'strnone'
     search_text: 'str'
 
     # The values of the dedup record of the message ID - what the ID stands for, when the publication was received

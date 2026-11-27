@@ -14,7 +14,7 @@ from requests.exceptions import ConnectionError as RequestsConnectionError, SSLE
     Timeout as RequestsTimeout
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Column, func, Index, Integer, literal, MetaData, Numeric, select, String, Table, text, Text
+from sqlalchemy import BigInteger, Column, func, Index, Integer, literal, literal_column, MetaData, Numeric, select, String, Table, text, Text
 
 # Zato
 from zato.common.audit_log.event_count import register_event_count
@@ -495,6 +495,9 @@ _payload_text_column = Text()
 # The condition of the index of numeric attribute values
 _has_number = text('value_number IS NOT NULL')
 
+# The condition of the index of correlation identifiers - an event without one has an empty correl_id
+_has_correl_id = text("correl_id <> ''")
+
 # A page of the listing is one window of the events ordered by the time they happened, newest first,
 # with ids breaking ties, and these indexes hold that order for all events, for one source and for one outcome.
 _ordered_indexes = [
@@ -541,17 +544,21 @@ _event_columns = [
     # this the whole of an object's history would be sorted to answer for a single page.
     Index('idx_event_source_object_time', 'source', 'object_name', 'event_time'),
 
-    Index('idx_event_cid', 'cid', 'id'),
-    Index('idx_event_msg_id', 'msg_id', 'id'),
+    # The identifiers are only ever compared for equality, so on PostgreSQL their indexes hold the hash codes
+    # of the identifiers rather than the identifiers themselves, which makes each insert write much less
+    # into the index. The events of one identifier are few, so they are sorted after they are read.
+    Index('idx_event_cid', 'cid', postgresql_using='hash'),
+    Index('idx_event_msg_id', 'msg_id', postgresql_using='hash'),
 
     # A resubmission names the event it was born from by that event's cid, so reading a message's
     # flow asks which events point back at the cids it already holds - the only correlation
-    # question of the four with no index of its own behind it.
-    Index('idx_event_correl_id', 'correl_id', 'id'),
+    # question of the four with no index of its own behind it. Most events have an empty correl_id,
+    # which the index leaves out, so a query uses the index only with the condition of has_correl_id.
+    Index('idx_event_correl_id', 'correl_id', postgresql_using='hash', postgresql_where=_has_correl_id),
 
-    # The outstanding queries ask for the open events of one source before a moment in time -
-    # every message whose receipt has not arrived - and the msg_id index above covers only the
-    # lookup of the closing event, leaving the outer half of that question a full scan.
+    # The collectors of alerts and statistics read the events of one type of one source within a time window -
+    # the responses of channels, outgoing connections, MLLP and MCP, the runs of all scheduler jobs
+    # and the file transfers - and the scheduler reads the newest runs across its jobs in time order.
     Index('idx_event_source_type_time', 'source', 'event_type', 'event_time'),
 
     # The events of one payload are found when the free-text search matches the payload
@@ -562,6 +569,10 @@ _event_columns = [
 _event_columns.extend(_ordered_indexes)
 
 event_table = Table('event', metadata, *_event_columns)
+
+# The condition that a query by correl_id includes, in the form of the condition of its index, so that PostgreSQL
+# uses the index also in the generic plan of a prepared statement
+has_correl_id = event_table.c.correl_id != literal_column("''")
 
 # ################################################################################################################################
 

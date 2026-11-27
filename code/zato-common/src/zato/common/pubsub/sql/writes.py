@@ -740,12 +740,14 @@ class PubSubWriter:
             message_values = pending.message_values
             topic_name = message_values['topic_name']
 
-            # .. a topic without subscribers has its messages stored without their payloads ..
+            # .. a topic without subscribers has its messages stored without their payloads,
+            # and an empty payload, which has no digest, is not stored at all ..
             if topic_name in subscribers:
                 pending.subscriber_keys = subscribers[topic_name]
-                payloads[pending.payload_digest] = pending.payload
-                search_texts[pending.payload_digest] = pending.search_text
-                with_payloads.append(pending)
+                if pending.payload_digest is not None:
+                    payloads[pending.payload_digest] = pending.payload
+                    search_texts[pending.payload_digest] = pending.search_text
+                    with_payloads.append(pending)
             else:
                 pending.subscriber_keys = []
                 message_values['payload_id'] = None

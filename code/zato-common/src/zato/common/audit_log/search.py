@@ -10,13 +10,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # functions that return pages of events, shared by the Dashboard and by services.
 
 # SQLAlchemy
-from sqlalchemy import func, or_, select, union
+from sqlalchemy import and_, func, or_, select, union
 
 # Zato
 from zato.common.audit_log.common import event_attr_table, event_payload_table, event_table, get_event_column, \
-    source_attr_names, Status_Outstanding
+    has_correl_id, source_attr_names, Status_Outstanding
 from zato.common.audit_log.query import outstanding_conditions, source_outstanding
-from zato.common.audit_log.search_index import match_event_search, payload_search_columns, search_columns
+from zato.common.audit_log.search_index import id_search_columns, match_event_search, payload_search_columns, search_columns
 
 # Zato - Rust
 from zato_common_core.zato_common_core import extract_search_text
@@ -155,7 +155,7 @@ def build_search_conditions(
         else:
             like_parts:'anylist' = []
 
-            for column_name in search_columns:
+            for column_name in search_columns + id_search_columns:
                 column = event_table.c[column_name]
                 is_like_pattern = column.ilike(pattern, escape='\\')
 
@@ -175,7 +175,13 @@ def build_search_conditions(
 
         matching_parts:'anylist' = [any_column_match]
 
-        # Sources with searchable attributes also search through them, with the attr-to-cid
+        # A query that is a whole message or correlation identifier matches it through the index of that identifier ..
+        identifier = query.strip()
+
+        matching_parts.append(event_table.c.msg_id == identifier)
+        matching_parts.append(and_(has_correl_id, event_table.c.correl_id == identifier))
+
+        # .. and sources with searchable attributes also search through them, with the attr-to-cid
         # shape - the cids of the events whose attr matches, then every event on those cids,
         # so a search by an MRN returns the whole trace the MRN appears in. With several
         # sources picked, their attrs are searched together.

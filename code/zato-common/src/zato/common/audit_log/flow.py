@@ -25,7 +25,7 @@ from sqlalchemy import and_, or_, select
 
 # Zato
 from zato.common.audit_log.api import event_link_table, event_table
-from zato.common.audit_log.common import AuditEvent, AuditSource, event_data
+from zato.common.audit_log.common import AuditEvent, AuditSource, event_data, has_correl_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -272,7 +272,7 @@ def _select_resubmits_of_held(frontier:'_Frontier') -> 'any_':
     resubmission can be traced back to the held event it was born from.
     """
     statement = select(event_table.c.id, event_table.c.correl_id, event_table.c.source)
-    statement = statement.where(event_table.c.correl_id.in_(frontier.cids))
+    statement = statement.where(and_(has_correl_id, event_table.c.correl_id.in_(frontier.cids)))
 
     return statement
 

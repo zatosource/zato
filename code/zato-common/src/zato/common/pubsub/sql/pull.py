@@ -12,7 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # until its lease runs out. The subscriber's acknowledgement removes the rows.
 
 # SQLAlchemy
-from sqlalchemy import and_, bindparam, Boolean, false, func, not_, or_, select
+from sqlalchemy import and_, bindparam, Boolean, case, false, func, not_, null, or_, select
 
 # Zato
 from zato.common.api import HTTP_SOAP
@@ -78,14 +78,20 @@ def delivered_topics_parameters(subscription_list:'SubscriptionList', sub_key:'s
 # ################################################################################################################################
 # ################################################################################################################################
 
+# An empty payload is not stored in the payload table, so a message published with one references no payload row.
+_empty_payload = ''
+
 # The payload of a message, read from the payload table of the audit log by the reference of the message row,
-# or NULL for a message that dropped its payload.
-message_payload = select(event_payload_table.c.data)
-message_payload = message_payload.where(and_(
-    event_payload_table.c.id == message_table.c.payload_id,
-    message_table.c.payload_dropped.is_(false()),
-))
-message_payload = message_payload.scalar_subquery().label('payload')
+# an empty one for a message that references no payload row, or NULL for a message that dropped its payload.
+_stored_payload = select(event_payload_table.c.data)
+_stored_payload = _stored_payload.where(event_payload_table.c.id == message_table.c.payload_id)
+_stored_payload = _stored_payload.scalar_subquery()
+
+message_payload = case(
+    (message_table.c.payload_dropped, null()),
+    else_=func.coalesce(_stored_payload, _empty_payload),
+)
+message_payload = message_payload.label('payload')
 
 # The message columns that the conversion of rows into message dicts consumes.
 message_columns = [

@@ -85,9 +85,6 @@ _lease_max_messages = 3
 _lease_ms = 30_000
 _lease_max_len = 10_000_000
 
-# The audit events of a batch with every kind of item - its publication, its receipt and the two messages of its lease
-_every_kind_event_count = 4
-
 # The attempt of a fenced acknowledgement that no pull handed out
 _stale_attempt = 5
 
@@ -208,7 +205,7 @@ def _run_compositions() -> 'None':
     """ Each kind of item alone in a batch runs its own statements, in one transaction.
     """
     # The audit event of a publication references the payload that the publication stored.
-    one_event = get_event_statements(1, False)
+    one_event = get_event_statements(False)
 
     # A publication with its audit event ..
     backend = _new_backend()
@@ -250,7 +247,7 @@ def _run_compositions() -> 'None':
 
     recorder = _write(backend, [_new_lease(backend)])
 
-    parts = [statements_lease, get_event_statements(_main_count, False)]
+    parts = [statements_lease, get_event_statements(False)]
     assert_one_transaction(recorder, get_expected(parts))
 
 # ################################################################################################################################
@@ -308,7 +305,7 @@ def _run_every_kind() -> 'None':
         statements_attempts,
         statements_lease,
         statements_drop,
-        get_event_statements(_every_kind_event_count, False),
+        get_event_statements(False),
     ]
 
     assert_one_transaction(recorder, get_expected(parts))
