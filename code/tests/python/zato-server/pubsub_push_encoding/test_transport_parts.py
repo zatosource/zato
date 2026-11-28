@@ -109,9 +109,9 @@ class _Engine:
         """ Sends the parts as the body of one push and returns the outcome of its request.
         """
         request = (url, _headers, parts, [_msg_id], False)
-        panic, outcomes = self.client.run([request], _timeout, self.tls)
+        internal_error, outcomes = self.client.run([request], _timeout, self.tls)
 
-        assert panic is None, panic
+        assert internal_error is None, internal_error
 
         out = outcomes[0]
         return out

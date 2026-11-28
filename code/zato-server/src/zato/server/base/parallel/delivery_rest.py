@@ -164,12 +164,13 @@ def _push(
     """ Sends one request through the push engine, following its redirects, and returns the IDs of the messages
     that it concluded. Raises for a request that was not fully concluded, with the exception of the error that ended it.
     """
-    panic, outcomes = engine.run([request], Push_Timeout, outconn.conn.get_push_tls())
+    internal_error, outcomes = engine.run([request], Push_Timeout, outconn.conn.get_push_tls())
 
-    # A panic of the engine is a defect, reported with the job it ended
-    if panic is not None:
-        logger.error('Push of `%s` for `%s` ended by a panic of the push engine: %s', label, sub_key, panic)
-        raise Exception(f'Push of `{label}` ended by a panic of the push engine: {panic}')
+    # An internal error of the engine is a defect, reported with the job it ended
+    if internal_error is not None:
+        logger.error('Push of `%s` for `%s` ended by an internal error of the push engine: %s',
+            label, sub_key, internal_error)
+        raise Exception(f'Push of `{label}` ended by an internal error of the push engine: {internal_error}')
 
     url, _status, _reason, concluded, _elapsed_us, _first_scope, error_kind, error_message, redirects = outcomes[0]
 

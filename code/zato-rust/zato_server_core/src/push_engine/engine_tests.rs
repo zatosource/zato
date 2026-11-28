@@ -1,6 +1,6 @@
 //! The threads of the push engine.
 //!
-//! The tests cover a panic of a job reported as its outcome, the engine serving jobs after a panic,
+//! The tests cover an internal error of a job reported as its outcome, the engine serving jobs after one,
 //! the eventfd written for each completed job, and a stop with a job in flight.
 
 use std::net::TcpListener;
@@ -47,17 +47,17 @@ fn new_shared(thread_count: usize) -> Arc<Shared> {
 }
 
 #[test]
-fn panic_of_a_job_is_its_outcome() {
-    let outcome = run_guarded(7, || panic!("Push job of sub_key zpsk.rest.a1 panicked"));
+fn internal_error_of_a_job_is_its_outcome() {
+    let outcome = run_guarded(7, || panic!("Push job of sub_key zpsk.rest.a1 ended by an internal error"));
 
     assert_eq!(outcome.id, 7);
     assert!(outcome.requests.is_empty());
-    assert_eq!(outcome.panic.as_deref(), Some("Push job of sub_key zpsk.rest.a1 panicked"));
+    assert_eq!(outcome.internal_error.as_deref(), Some("Push job of sub_key zpsk.rest.a1 ended by an internal error"));
 
-    // The thread that caught the panic runs the next job as usual
+    // The thread that caught the internal error runs the next job as usual
     let next = run_guarded(8, || vec![RequestOutcome::new("http://127.0.0.1/orders")]);
     assert_eq!(next.id, 8);
-    assert!(next.panic.is_none());
+    assert!(next.internal_error.is_none());
     assert_eq!(next.requests.len(), 1);
 }
 

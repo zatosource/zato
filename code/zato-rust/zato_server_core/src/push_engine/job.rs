@@ -182,7 +182,7 @@ impl RequestOutcome {
     }
 }
 
-/// What one job concluded, or the panic that ended it.
+/// What one job concluded, or the internal error that ended it.
 pub struct JobOutcome {
 
     /// The ID of the job.
@@ -191,6 +191,6 @@ pub struct JobOutcome {
     /// The outcome of each request that was sent, in order, which stops at the first request not fully concluded.
     pub requests: Vec<RequestOutcome>,
 
-    /// The message of a panic that ended the job, if one did.
-    pub panic: Option<String>,
+    /// The description of an internal error that ended the job, if one did.
+    pub internal_error: Option<String>,
 }

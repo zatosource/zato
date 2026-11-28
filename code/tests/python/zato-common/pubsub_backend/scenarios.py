@@ -25,7 +25,10 @@ from publish_events import run_publish_events_scenario
 from publish_values import run_publish_values_scenario
 from pull_events import run_pull_events_scenario
 from pull_values import run_pull_values_scenario
+from push_cycle import run_push_cycle_scenario
 from push_delivery import run_push_delivery_scenario
+from push_engine import run_push_engine_scenario
+from push_multi import run_push_multi_scenario
 from queue_order import run_queue_order_scenario
 from queues import run_queues_scenario
 from retry_settings import run_retry_settings_scenario
@@ -74,6 +77,9 @@ def run_delivery_scenarios() -> 'None':
     run_attempt_values_scenario()
     run_fast_path_pull_scenario()
     run_fast_path_push_scenario()
+    run_push_cycle_scenario()
+    run_push_multi_scenario()
+    run_push_engine_scenario()
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -781,7 +781,8 @@ Zato_Test_HA_Modules_postgresql-local := \
 	test_server_start.py test_warm_start.py test_takeover_wait.py test_server_liveness.py test_ping_under_load.py
 
 Zato_Test_HA_Modules_push-delivery := \
-	test_outgoing_audit.py test_publication_commit.py test_batch_commit.py
+	test_outgoing_audit.py test_publication_commit.py test_batch_commit.py \
+	test_push_cycle_kill.py test_push_cycle_session.py test_push_engine_kill.py test_push_multi_partial.py
 
 Zato_Test_HA_Modules_pubsub-subscription := \
 	test_restart_rows.py test_reload_write_failure.py test_worker_kill.py \

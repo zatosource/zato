@@ -121,7 +121,20 @@ def new_key_prefix() -> 'str':
 def import_enmasse(env:'PushEnvironment', is_delivery_active:'bool') -> 'None':
     """ Imports the definitions of the suite into the running server, with the push delivery active or paused.
     """
-    placeholders = dict(env.placeholders)
+    import_template(env.server, env.control_dir, env.template_path, env.placeholders, is_delivery_active)
+
+# ################################################################################################################################
+
+def import_template(
+    server:'PushDeliveryServer',
+    control_dir:'str',
+    template_path:'str',
+    placeholders:'strstrdict',
+    is_delivery_active:'bool',
+    ) -> 'None':
+    """ Imports the definitions of an enmasse template into the running server, with the push delivery active or paused.
+    """
+    placeholders = dict(placeholders)
 
     if is_delivery_active:
         placeholders[ModuleCtx.Delivery_Active_Key] = 'true'
@@ -129,8 +142,8 @@ def import_enmasse(env:'PushEnvironment', is_delivery_active:'bool') -> 'None':
         placeholders[ModuleCtx.Delivery_Active_Key] = 'false'
 
     # Render the template ..
-    rendered = render_template(env.template_path, placeholders)
-    rendered_path = os.path.join(env.control_dir, ModuleCtx.Enmasse_File_Name)
+    rendered = render_template(template_path, placeholders)
+    rendered_path = os.path.join(control_dir, ModuleCtx.Enmasse_File_Name)
 
     with open(rendered_path, 'w') as rendered_file:
         _ = rendered_file.write(rendered)
@@ -139,7 +152,7 @@ def import_enmasse(env:'PushEnvironment', is_delivery_active:'bool') -> 'None':
     environment = os.environ.copy()
     _ = environment.pop('COVERAGE_PROCESS_START', None)
 
-    command = [env.server.zato_bin, 'enmasse', env.server.server_directory, '--verbose',
+    command = [server.zato_bin, 'enmasse', server.server_directory, '--verbose',
         '--import', '--input', rendered_path, '--missing-wait-time', '15']
 
     result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=ModuleCtx.Enmasse_Timeout,
@@ -153,7 +166,16 @@ def _publish_to_topic(env:'PushEnvironment', topic_name:'str', data:'anydict', o
     """ Publishes one message to a topic through the publishing service of the suite, with the given options
     of the publication, and returns its message ID.
     """
-    client = AdminClient(env.server.base_url, env.server.invoke_password)
+    out = publish_through_server(env.server, topic_name, data, options)
+    return out
+
+# ################################################################################################################################
+
+def publish_through_server(server:'PushDeliveryServer', topic_name:'str', data:'anydict', options:'anydict') -> 'str':
+    """ Publishes one message to a topic through the publishing service of the server, with the given options
+    of the publication, and returns its message ID.
+    """
+    client = AdminClient(server.base_url, server.invoke_password)
 
     request = {
         'topic_name': topic_name,

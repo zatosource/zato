@@ -1,0 +1,34 @@
+security:
+
+  - name: test.ha-push-delivery.pusher
+    type: basic_auth
+    username: test.ha-push-delivery.pusher
+    password: "{{pusher_password}}"
+
+outgoing_rest:
+
+  - name: test.ha-push-delivery.rest
+    host: "http://127.0.0.1:{{port_rest}}"
+    url_path: /ha-push-delivery-rest
+    data_format: json
+    timeout: 30
+
+pubsub_topic:
+
+  - name: ha-push-delivery.rest
+
+pubsub_permission:
+
+  - security: test.ha-push-delivery.pusher
+    sub:
+      - ha-push-delivery.rest
+
+pubsub_subscription:
+
+  - security: test.ha-push-delivery.pusher
+    delivery_type: push
+    push_rest_endpoint: test.ha-push-delivery.rest
+    push_batch_size: {{push_batch_size}}
+    is_delivery_active: {{delivery_active}}
+    topic_list:
+      - ha-push-delivery.rest

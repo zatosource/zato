@@ -36,7 +36,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The outcome of one job - the message of the panic that ended it, or None, and the outcome of each request sent
+# The outcome of one job - the description of the internal error that ended it, or None, and the outcome of each request sent
 job_outcome = tuple['strnone', 'anylist']
 
 # ################################################################################################################################
@@ -106,11 +106,11 @@ class PushEngineClient:
     def _set_completed(self, engine:'PushEngine') -> 'None':
         """ Hands the outcome of each job completed since the previous call to the greenlet waiting for it.
         """
-        for job_id, panic, outcomes in engine.take_completed():
+        for job_id, internal_error, outcomes in engine.take_completed():
 
             # The greenlet of a job may have been killed while it waited, and nothing waits for its outcome then
             if job_id in self._results:
-                self._results[job_id].set((panic, outcomes))
+                self._results[job_id].set((internal_error, outcomes))
 
 # ################################################################################################################################
 

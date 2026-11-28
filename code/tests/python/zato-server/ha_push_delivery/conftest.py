@@ -16,6 +16,8 @@ import pytest
 
 # Zato
 from ha_push_delivery.harness import ModuleCtx as HarnessCtx, PushEnvironment
+from ha_push_delivery.rest_harness import ModuleCtx as RESTCtx, RESTPushEnvironment
+from ha_push_delivery.rest_receiver import start_list_receiver
 from ha_push_delivery.server import PushDeliveryServer, start_receiver
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.conftest_base_pubsub import render_template
@@ -25,6 +27,7 @@ from zato.common.test.exactly_once.control import create_control_dir, Env_Dir
 # ################################################################################################################################
 
 if 0:
+    from ha_push_delivery.rest_receiver import ListReceiver
     from zato.common.test.receiver import WebhookReceiver
     from zato.common.typing_ import any_, strstrdict
 
@@ -33,8 +36,9 @@ if 0:
 
 _current_dir = os.path.dirname(__file__)
 
-_template_path   = os.path.join(_current_dir, '_enmasse_template.yaml')
-_services_source = os.path.join(_current_dir, '_services.py')
+_template_path      = os.path.join(_current_dir, '_enmasse_template.yaml')
+_rest_template_path = os.path.join(_current_dir, '_enmasse_rest_template.yaml')
+_services_source    = os.path.join(_current_dir, '_services.py')
 
 # The prefix of the control directory and the name of the directory of what the endpoint received
 _control_dir_prefix = 'zato_ha_push_delivery_control_'
@@ -78,6 +82,53 @@ def push_environment() -> 'any_':
         out.receiver = receiver
         out.control_dir = control_dir
         out.template_path = _template_path
+        out.placeholders = placeholders
+
+        yield out
+
+    finally:
+        server.remove()
+        receiver.stop()
+        receiver_start.reservation.release()
+        shutil.rmtree(control_dir, ignore_errors=True)
+
+# ################################################################################################################################
+
+@pytest.fixture(scope='module')
+def rest_push_environment() -> 'any_':
+    """ A server with a REST push subscription that sends several messages per request, and the receiver
+    that the subscription calls.
+    """
+    # The rendered enmasse file is kept in the control directory ..
+    control_dir = tempfile.mkdtemp(prefix=_control_dir_prefix)
+    create_control_dir(control_dir)
+    os.environ[Env_Dir] = control_dir
+
+    # .. the receiver of the subscription runs in the test process on a reserved port ..
+    receiver_start = start_list_receiver()
+    receiver:'ListReceiver' = receiver_start.result
+
+    placeholders:'strstrdict' = {
+        'pusher_password': 'test.pusher.' + CryptoManager.generate_hex_string(),
+        'port_rest': f'{receiver_start.reservation.port}',
+        'push_batch_size': f'{RESTCtx.Push_Batch_Size}',
+        HarnessCtx.Delivery_Active_Key: 'false',
+    }
+
+    rendered = render_template(_rest_template_path, placeholders)
+
+    # .. and the server starts with the push delivery paused.
+    server = PushDeliveryServer({Env_Dir: control_dir})
+
+    try:
+        server.create(rendered, _services_source)
+        server.start()
+
+        out = RESTPushEnvironment()
+        out.server = server
+        out.receiver = receiver
+        out.control_dir = control_dir
+        out.template_path = _rest_template_path
         out.placeholders = placeholders
 
         yield out

@@ -37,8 +37,8 @@ const TRANSFER_ENCODING_HEADER: &str = "Transfer-Encoding";
 /// The prefix of the names of the threads of the engine.
 const THREAD_NAME_PREFIX: &str = "zato-push-";
 
-/// The message of a panic whose payload is neither a string nor a string slice.
-const UNKNOWN_PANIC: &str = "Push job panicked";
+/// The description of an internal error of a job whose payload is neither a string nor a string slice.
+const UNKNOWN_INTERNAL_ERROR: &str = "Push job ended by an internal error";
 
 /// The TLS settings of a job as Python passes them - the CA bundle, the client certificate, its key
 /// and the generation of the material in those files.
@@ -240,7 +240,7 @@ impl PushEngine {
     }
 
     /// Takes the outcomes of the jobs completed since the previous call, each a tuple of the job ID,
-    /// the message of the panic that ended the job or `None`, and the outcome of each request sent.
+    /// the description of the internal error that ended the job or `None`, and the outcome of each request sent.
     fn take_completed<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyList>> {
         self.shared
             .drain_wake()
@@ -258,7 +258,7 @@ impl PushEngine {
 
             let items: [Bound<'_, PyAny>; 3] = [
                 job.id.into_pyobject(py)?.into_any(),
-                job.panic.into_pyobject(py)?.into_any(),
+                job.internal_error.into_pyobject(py)?.into_any(),
                 requests.into_any(),
             ];
 
@@ -306,21 +306,22 @@ fn worker_loop(shared: &Shared) {
     shared.on_thread_exit();
 }
 
-/// Runs a job, turning a panic into the outcome of the job, so the thread keeps serving the jobs after it.
+/// Runs a job, turning an internal error that unwinds it into the outcome of the job,
+/// so the thread keeps serving the jobs after it.
 fn run_guarded(id: u64, runner: impl FnOnce() -> Vec<RequestOutcome>) -> JobOutcome {
     match catch_unwind(AssertUnwindSafe(runner)) {
-        Ok(requests) => JobOutcome { id, requests, panic: None },
+        Ok(requests) => JobOutcome { id, requests, internal_error: None },
         Err(payload) => {
             let message = payload
                 .downcast_ref::<&str>()
                 .map(|text| (*text).to_owned())
                 .or_else(|| payload.downcast_ref::<String>().cloned())
-                .unwrap_or_else(|| String::from(UNKNOWN_PANIC));
+                .unwrap_or_else(|| String::from(UNKNOWN_INTERNAL_ERROR));
 
             JobOutcome {
                 id,
                 requests: Vec::new(),
-                panic: Some(message),
+                internal_error: Some(message),
             }
         }
     }

@@ -315,15 +315,19 @@ def connect(
     port:'int'=0,
     is_admin:'bool'=False,
     timeout:'int'=_connection_timeout,
+    db_name:'str'='',
     ) -> 'pg8000.dbapi.Connection':
     """ Opens a pg8000 connection to the database of a session, outside of any engine, under the pub/sub role
-    or under the superuser of the container.
+    or under the superuser of the container, to the given database of the server or to the database of the session.
     """
     if not host:
         host = database.host
 
     if not port:
         port = database.port
+
+    if not db_name:
+        db_name = ModuleCtx.DB_Name
 
     if database.mode in _tls_modes:
         ssl_context = build_ssl_context(database)
@@ -337,7 +341,7 @@ def connect(
         username = ModuleCtx.Username
         password = database.password
 
-    out = pg8000.dbapi.connect(user=username, password=password, host=host, port=port, database=ModuleCtx.DB_Name,
+    out = pg8000.dbapi.connect(user=username, password=password, host=host, port=port, database=db_name,
         ssl_context=ssl_context, timeout=timeout)
 
     return out
