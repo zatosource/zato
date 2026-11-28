@@ -15,7 +15,7 @@
 	test-soak test-soak-pubsub \
 	test-arbiter \
 	test-rate-limiting test-enmasse test-cli \
-	test-pubsub test-pubsub-delivery test-pubsub-perf test-pubsub-perf-latency test-pubsub-exactly-once test-sql-conformance test-sql-conformance-fast test-sql-conformance-static test-pubsub-encoding test-pubsub-encoding-rust test-pubsub-services test-perf-rules test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
+	test-pubsub test-pubsub-delivery test-pubsub-perf test-pubsub-perf-latency test-pubsub-exactly-once test-sql-conformance test-sql-conformance-fast test-sql-conformance-static test-pubsub-encoding test-pubsub-encoding-rust test-pubsub-push-engine-rust test-pubsub-services test-perf-rules test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
 	test-mcp test-bearer test-graphql test-grpc \
 	test-edifact test-soap test-openapi test-api-portal-live \
@@ -1089,6 +1089,7 @@ test-pubsub: ## Every pub/sub functional test - core, SQL and outgoing delivery,
 	mkdir -p $(Zato_Test_Resolver_Dir)
 	gcc -shared -fPIC -o $(Zato_Test_Resolver_Library) $(Zato_Test_Resolver_Source) -ldl -lresolv
 	-$(MAKE) test-pubsub-encoding-rust
+	-$(MAKE) test-pubsub-push-engine-rust
 	-@resume=''; first_failed=''; \
 	if [ -f $(Zato_Test_PubSub_Resume_File) ]; then \
 		resume=$$(cat $(Zato_Test_PubSub_Resume_File)); \
@@ -1101,6 +1102,7 @@ test-pubsub: ## Every pub/sub functional test - core, SQL and outgoing delivery,
 	$(Zato_Target_Status)
 
 test-pubsub-delivery: ## Pub/sub delivery to pull and push subscribers - wake-ups, pushes, pulls, leases, attempts, fenced acknowledgements, publications handing their messages over to waiting subscribers, encoding, outgoing delivery and steady traffic, on PostgreSQL, resuming from the step that last failed or was interrupted. RESTART=1 to start from scratch.
+	-$(MAKE) test-pubsub-push-engine-rust
 	$(call Zato_Test_Step_Walk,$(Zato_Test_PubSub_Delivery_Steps),$(Zato_Test_PubSub_Delivery_Resume_File))
 
 # The soak tests of every suite outside HA, which test-soak runs after every other target of test-all,
@@ -1362,6 +1364,10 @@ test-pubsub-encoding-rust: ## The Rust unit tests of the split push envelope enc
 	-$(LOAD_CARGO_ENV) && cargo test --manifest-path $(ZATO_RUST)/zato_common_core/Cargo.toml --lib json $(Zato_Log)
 	-$(LOAD_CARGO_ENV) && cargo test --manifest-path $(ZATO_RUST)/zato_server_core/Cargo.toml --lib outgoing $(Zato_Log)
 	$(Zato_Target_Status)
+
+test-pubsub-push-engine-rust: ## The Rust unit tests of the push engine - its threads, its queue of jobs, redirects, timeouts, its wake-ups of the server and its stop.
+	$(Zato_Log_Reset)
+	$(LOAD_CARGO_ENV) && cargo test --manifest-path $(ZATO_RUST)/zato_server_core/Cargo.toml --lib push_engine $(Zato_Log)
 
 test-pubsub-encoding: ## Push payload encoding once per message - the Rust unit tests, the Python unit tests and the live tests of broadcast, edit, retry and the vectored transport, which test-pubsub runs as a step of its own.
 	$(Zato_Log_Reset)

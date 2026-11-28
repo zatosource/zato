@@ -9,14 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # pytest
 import pytest
 
-# SQLAlchemy
-from sqlalchemy import column, select, table
-from sqlalchemy.dialects.sqlite.pysqlite import SQLiteDialect_pysqlite
-
 # Zato
 from zato.common.common_db.message_dedup import dedup_records_query, dedup_upsert
 from zato.common.common_db.schema import message_dedup_table
-from zato.common.db_env.any_of import any_of
 from zato.common.pubsub.sql import ack_deletes, dedup, fenced_ack, payloads, publication_inserts, pull, writes
 from zato.common.pubsub.sql.schema import metadata as pubsub_metadata
 
@@ -197,22 +192,6 @@ class TestOnePlan:
             transaction.rollback()
 
         assert len(dedup_upsert._plans) == 1
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class TestOtherDatabases:
-    """ On any database other than PostgreSQL, the membership in a list is an expanding IN.
-    """
-
-    def test_sqlite(self) -> 'None':
-        orders = table('orders', column('id'))
-
-        query = select(orders.c.id)
-        query = query.where(any_of(orders.c.id, 'order_ids'))
-
-        compiled = query.compile(dialect=SQLiteDialect_pysqlite())
-        assert compiled.string.endswith('WHERE orders.id IN (__[POSTCOMPILE_order_ids])'), compiled.string
 
 # ################################################################################################################################
 # ################################################################################################################################

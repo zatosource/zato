@@ -16,7 +16,7 @@ from functools import partial
 
 # Zato
 from ha_push_delivery.harness import count_audit_events, count_outgoing_requests, count_outputs, count_pending, \
-    count_received, import_enmasse, is_concluded, ModuleCtx as HarnessCtx, stage_batch, wait_until
+    count_received, expected_server_records, import_enmasse, is_concluded, ModuleCtx as HarnessCtx, stage_batch, wait_until
 from zato.common.audit_log.api import AuditEvent
 from zato.common.test.exactly_once.control import count_invocations, release, wait_until_held
 
@@ -62,13 +62,18 @@ def _wait_for_commit_during_round(batch:'StagedBatch') -> 'None':
 
 # ################################################################################################################################
 
-def _wait_for_second_given_up(batch:'StagedBatch') -> 'None':
-    """ Waits until a new round of the second message ran out and the message left the queue.
+def _wait_for_second_given_up(env:'PushEnvironment', batch:'StagedBatch') -> 'None':
+    """ Waits until a new round of the second message ran out and the message left the queue,
+    which the server logs as an error.
     """
-    second_given_up = partial(is_concluded, batch.second_msg_id, AuditEvent.Delivery_Failed)
-    wait_until(second_given_up, f'new round of {batch.second_key}')
+    given_up_record = f'msg_id `{batch.second_msg_id}` after'
 
-    assert count_audit_events(batch.second_msg_id, AuditEvent.Delivery_Failed) == 1
+    with expected_server_records(env.server, (given_up_record,)):
+
+        second_given_up = partial(is_concluded, batch.second_msg_id, AuditEvent.Delivery_Failed)
+        wait_until(second_given_up, f'new round of {batch.second_key}')
+
+        assert count_audit_events(batch.second_msg_id, AuditEvent.Delivery_Failed) == 1
 
 # ################################################################################################################################
 
@@ -102,7 +107,7 @@ def test_server_killed_during_retry_round(push_environment:'PushEnvironment') ->
     env.server.start()
 
     # .. the second message runs a new round ..
-    _wait_for_second_given_up(batch)
+    _wait_for_second_given_up(env, batch)
 
     # .. and the first message is neither delivered again nor missing anything.
     _assert_first_recorded_once(env, batch)
@@ -125,7 +130,7 @@ def test_subscription_edited_during_retry_round(push_environment:'PushEnvironmen
     import_enmasse(env, True)
 
     # .. the second message runs a new round ..
-    _wait_for_second_given_up(batch)
+    _wait_for_second_given_up(env, batch)
 
     # .. and the first message is neither delivered again nor missing anything.
     _assert_first_recorded_once(env, batch)

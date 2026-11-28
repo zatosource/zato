@@ -11,7 +11,9 @@ import json
 import os
 import subprocess
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
+from typing import Generator
 
 # SQLAlchemy
 from sqlalchemy import select
@@ -33,7 +35,9 @@ from zato.common.test.exactly_once.verify import count_deliveries, read_correl_i
 if 0:
     from ha_push_delivery.server import PushDeliveryServer
     from zato.common.test.receiver import WebhookReceiver
-    from zato.common.typing_ import anydict, anylist, callable_, strlist, strnone, strstrdict
+    from zato.common.typing_ import anydict, anylist, callable_, strlist, strnone, strstrdict, strtuple
+
+nonegen = Generator[None, None, None]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -297,6 +301,21 @@ def stage_batch(env:'PushEnvironment', second_fails:'bool', is_second_held:'bool
     return out
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+@contextmanager
+def expected_server_records(server:'PushDeliveryServer', fragments:'strtuple') -> 'nonegen':
+    """ Marks each line of the output of the server that contains one of the fragments as expected while the block runs.
+    """
+    records = server.state.expected_server_records
+    records.extend(fragments)
+
+    try:
+        yield
+    finally:
+        for fragment in fragments:
+            records.remove(fragment)
+
 # ################################################################################################################################
 
 def wait_until(check:'callable_', description:'str', timeout:'float'=ModuleCtx.Wait_Timeout) -> 'None':

@@ -15,7 +15,7 @@ from functools import partial
 
 # Zato
 from ha_push_delivery.harness import count_audit_events, count_outgoing_requests, count_outputs, count_pending, \
-    count_received, count_rejected, import_enmasse, is_concluded, ModuleCtx as HarnessCtx, new_key_prefix, publish, \
+    count_received, count_rejected, expected_server_records, import_enmasse, is_concluded, ModuleCtx as HarnessCtx, new_key_prefix, publish, \
     stage_batch, wait_until
 from zato.common.audit_log.api import AuditEvent
 from zato.common.test.exactly_once.control import count_invocations, hold, release, wait_until_held
@@ -35,6 +35,9 @@ _hold_timeout = 120.0
 
 # The invocation of the failing message that the test holds - its second attempt, after the first one failed
 _second_invocation = 2
+
+# The record of the server about a failure that the subscriber was asked for
+_requested_failure_record = 'Failure requested for key `{}`'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -124,32 +127,37 @@ def test_failed_attempts_recorded_while_endpoint_rejects(push_environment:'PushE
     import_enmasse(env, True)
     env.receiver.behavior.set_reject_503()
 
+    # .. the failure that the subscriber was asked for is logged by the server ..
+    failure_record = _requested_failure_record.format(key)
+
     try:
 
-        # .. the message fails its first attempt and is held in its second one ..
-        hold(key)
-        msg_id = publish(env, key, True, HarnessCtx.Failing_Retry_Settings, _second_invocation)
+        with expected_server_records(env.server, (failure_record,)):
 
-        wait_until_held(key, _hold_timeout)
-        _assert_rejected_calls_recorded(env, key, 2)
+            # .. the message fails its first attempt and is held in its second one ..
+            hold(key)
+            msg_id = publish(env, key, True, HarnessCtx.Failing_Retry_Settings, _second_invocation)
 
-        # .. the server is killed during the second attempt and the events of both calls remain ..
-        env.server.kill()
-        _assert_rejected_calls_recorded(env, key, 2)
+            wait_until_held(key, _hold_timeout)
+            _assert_rejected_calls_recorded(env, key, 2)
 
-        # .. the server starts again and the message runs a new round until it is given up on ..
-        release(key)
-        env.server.start()
+            # .. the server is killed during the second attempt and the events of both calls remain ..
+            env.server.kill()
+            _assert_rejected_calls_recorded(env, key, 2)
 
-        given_up = partial(is_concluded, msg_id, AuditEvent.Delivery_Failed)
-        wait_until(given_up, f'new round of {key}')
+            # .. the server starts again and the message runs a new round until it is given up on ..
+            release(key)
+            env.server.start()
 
-        # .. and each call of each round has one event of its own.
-        invocation_count = count_invocations(key)
-        _assert_rejected_calls_recorded(env, key, invocation_count)
+            given_up = partial(is_concluded, msg_id, AuditEvent.Delivery_Failed)
+            wait_until(given_up, f'new round of {key}')
 
-        assert invocation_count == 4
-        assert count_audit_events(msg_id, AuditEvent.Delivery_Failed) == 1
+            # .. and each call of each round has one event of its own.
+            invocation_count = count_invocations(key)
+            _assert_rejected_calls_recorded(env, key, invocation_count)
+
+            assert invocation_count == 4
+            assert count_audit_events(msg_id, AuditEvent.Delivery_Failed) == 1
 
     finally:
         release(key)

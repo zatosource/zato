@@ -15,13 +15,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import re
 from contextlib import contextmanager
 from contextvars import ContextVar
+from functools import lru_cache
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from collections.abc import Iterator
-    from zato.common.typing_ import any_, anytuple, callable_, strlist
+    from zato.common.typing_ import any_, anytuple, callable_, strlist, strtuple
 
     # Dummy assignments to satisfy type checkers
     Iterator = Iterator
@@ -53,6 +54,10 @@ class Mechanism:
 # ################################################################################################################################
 
 class ModuleCtx:
+
+    # How many statement texts the parse of the write keywords and the table names is kept for. The statements
+    # of the platform are a fixed set, so the cache holds all of them, and a statement evicted is parsed again.
+    Max_Parsed_Statements = 4096
 
     # The first keyword of a statement that writes rows or changes the schema, possibly after the common table expressions
     # of a WITH clause
@@ -164,6 +169,34 @@ def run_in_write_path(mechanism:'str', func:'callable_', args:'anytuple') -> 'an
 
 # ################################################################################################################################
 
+@lru_cache(maxsize=ModuleCtx.Max_Parsed_Statements)
+def _parse_statement(statement:'str') -> 'tuple[strtuple, strtuple]':
+    """ Returns the keywords of the writes of a statement, of the statement itself and of its common table expressions,
+    and the tables that these writes name. Both depend on the text of the statement alone.
+    """
+    keywords:'strlist' = []
+    table_names:'strlist' = []
+
+    if write_match := ModuleCtx.Write_Statement.match(statement):
+        keywords.append(write_match.group(1).lower())
+
+    for keyword in ModuleCtx.CTE_Write_Statement.findall(statement):
+        keywords.append(keyword.lower())
+
+    # A statement that does not write names no table that the guard checks
+    if keywords:
+
+        if match := ModuleCtx.Statement_Table.match(statement):
+            table_names.append(match.group(1).lower())
+
+        for table_name in ModuleCtx.CTE_Statement_Table.findall(statement):
+            table_names.append(table_name.lower())
+
+    out = (tuple(keywords), tuple(table_names))
+    return out
+
+# ################################################################################################################################
+
 def check_write_path(
     conn:'any_',
     cursor:'any_',
@@ -174,15 +207,10 @@ def check_write_path(
     ) -> 'None':
     """ Refuses a statement that writes to the Zato database outside of every mechanism, or that writes
     to the tables of the audit log within a mechanism not allowed to, before it reaches the database.
+    The parse of the statement is kept per statement text, while the verdict is reached on every execution
+    against the mechanism of the current work.
     """
-    # The keywords of the writes of the statement, of the statement itself and of its common table expressions
-    keywords:'strlist' = []
-
-    if write_match := ModuleCtx.Write_Statement.match(statement):
-        keywords.append(write_match.group(1).lower())
-
-    for keyword in ModuleCtx.CTE_Write_Statement.findall(statement):
-        keywords.append(keyword.lower())
+    keywords, table_names = _parse_statement(statement)
 
     if not keywords:
         return
@@ -200,14 +228,6 @@ def check_write_path(
 
     if mechanism in ModuleCtx.Audit_Mechanisms:
         return
-
-    table_names:'strlist' = []
-
-    if match := ModuleCtx.Statement_Table.match(statement):
-        table_names.append(match.group(1).lower())
-
-    for table_name in ModuleCtx.CTE_Statement_Table.findall(statement):
-        table_names.append(table_name.lower())
 
     for table_name in table_names:
         if table_name in ModuleCtx.Audit_Tables:

@@ -31,9 +31,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# The most bind parameters that one multi-row insert carries, below the limit of the PostgreSQL protocol
-_max_insert_parameters = 30_000
-
 # What precedes the expression of the values of an insert in its compiled SQL
 _values_keyword = ' VALUES ('
 
@@ -43,9 +40,6 @@ _values_item = r'%s(?:::[A-Z][A-Z ]*(?:\(\d+(?:, \d+)?\))?)?'
 
 # .. and the values of a single-row insert with one parameter per column.
 _values_expr_pattern = re.compile(rf'\({_values_item}(?:, {_values_item})*\)')
-
-# The name of the dialect whose inserts take their rows from unnest
-_postgresql = 'postgresql'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -370,48 +364,10 @@ class PlainStatement:
 # ################################################################################################################################
 
     def insert_rows(self, connection:'Connection', rows:'anylist') -> 'anylist':
-        """ Inserts rows that all have the same keys and returns the rows that the statements returned. On PostgreSQL,
-        the rows are inserted in one statement through unnest, and on any other database with as few multi-row
-        statements as the parameter limit allows.
+        """ Inserts rows that all have the same keys in one statement through unnest and returns the rows
+        that the statement returned.
         """
-        dialect = connection.dialect
-
-        if dialect.name == _postgresql:
-            out = self._insert_unnest(connection, rows)
-            return out
-
-        column_keys = sorted(rows[0])
-        key = (dialect.name, 'insert', tuple(column_keys))
-
-        if not (plan := self._plans.get(key)):
-            plan = self._new_insert_plan(dialect, column_keys)
-            self._plans[key] = plan
-
-        rows_per_statement = _max_insert_parameters // len(plan.sources)
-        single_values = 'VALUES ' + plan.values_expr
-
-        out:'anylist' = []
-
-        for start in range(0, len(rows), rows_per_statement):
-            chunk = rows[start:start + rows_per_statement]
-
-            # Each row of the chunk contributes one expression of values ..
-            values_exprs:'strlist' = []
-            for _ in chunk:
-                values_exprs.append(plan.values_expr)
-
-            sql = plan.sql.replace(single_values, 'VALUES ' + ', '.join(values_exprs), 1)
-
-            # .. and its parameters, in the order of the columns of the statement.
-            values:'anylist' = []
-            for row in chunk:
-                _convert(plan.sources, row, values)
-
-            result = connection.exec_driver_sql(sql, tuple(values))
-
-            if result.returns_rows:
-                out.extend(result.all())
-
+        out = self._insert_unnest(connection, rows)
         return out
 
 # ################################################################################################################################

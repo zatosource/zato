@@ -16,7 +16,7 @@ from functools import partial
 
 # Zato
 from ha_push_delivery.harness import count_audit_events, count_outputs, count_published_log_entries, \
-    get_message_correl_ids, import_enmasse, is_concluded, ModuleCtx as HarnessCtx, new_key_prefix, publish, \
+    expected_server_records, get_message_correl_ids, import_enmasse, is_concluded, ModuleCtx as HarnessCtx, new_key_prefix, publish, \
     publish_output, wait_until
 from zato.common.audit_log.api import AuditEvent
 from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID
@@ -36,6 +36,11 @@ _hold_timeout = 120.0
 
 # What the subscriber records when a publication is refused its message ID
 _duplicate_outcome = PubSubDuplicateMsgID.__name__
+
+# The record of the server about a message ID that belongs to a different message,
+# and the record of a failure that the subscriber was asked for
+_refused_id_record = 'Message ID `{}` belongs to a different message'
+_requested_failure_record = 'Failure requested for key `{}`'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,11 +69,14 @@ def test_conflicting_id_refused_at_publish(push_environment:'PushEnvironment') -
     # The message ID stands for a message of another publisher ..
     publish_output(env, output_msg_id, original_key)
 
-    # .. the subscriber publishes under the same ID in each attempt of its round ..
-    msg_id = publish(env, key, False, HarnessCtx.Failing_Retry_Settings, output_msg_id=output_msg_id)
+    # .. the subscriber publishes under the same ID in each attempt of its round, which the server logs ..
+    refused_record = _refused_id_record.format(output_msg_id)
 
-    given_up = partial(is_concluded, msg_id, AuditEvent.Delivery_Failed)
-    wait_until(given_up, f'round of {key}')
+    with expected_server_records(env.server, (refused_record,)):
+        msg_id = publish(env, key, False, HarnessCtx.Failing_Retry_Settings, output_msg_id=output_msg_id)
+
+        given_up = partial(is_concluded, msg_id, AuditEvent.Delivery_Failed)
+        wait_until(given_up, f'round of {key}')
 
     # .. and is refused the ID each time, without a message ID returned to it ..
     assert count_invocations(key) == 2
@@ -94,25 +102,30 @@ def test_conflicting_id_taken_before_commit(push_environment:'PushEnvironment') 
     other_key = prefix + 'other'
     output_msg_id = prefix + 'output'
 
-    # The subscriber publishes under a message ID that nothing stands for yet and is held ..
-    hold(key)
-    msg_id = publish(env, key, False, HarnessCtx.Failing_Retry_Settings, output_msg_id=output_msg_id)
+    # The server logs each refusal of the message ID ..
+    refused_record = _refused_id_record.format(output_msg_id)
 
-    try:
-        wait_until_held(key, _hold_timeout)
-        assert read_publications(key) == [output_msg_id]
+    with expected_server_records(env.server, (refused_record,)):
 
-        # .. another publisher takes the ID for a message of its own before the batch commits ..
-        publish_output(env, output_msg_id, other_key)
+        # .. the subscriber publishes under a message ID that nothing stands for yet and is held ..
+        hold(key)
+        msg_id = publish(env, key, False, HarnessCtx.Failing_Retry_Settings, output_msg_id=output_msg_id)
 
-    # .. the attempt is never left held for the tests that follow ..
-    finally:
-        release(key)
+        try:
+            wait_until_held(key, _hold_timeout)
+            assert read_publications(key) == [output_msg_id]
 
-    # .. so the batch commits nothing, the message is delivered again in a new round,
-    # .. and the subscriber is refused the ID in each attempt of that round ..
-    given_up = partial(is_concluded, msg_id, AuditEvent.Delivery_Failed)
-    wait_until(given_up, f'new round of {key}')
+            # .. another publisher takes the ID for a message of its own before the batch commits ..
+            publish_output(env, output_msg_id, other_key)
+
+        # .. the attempt is never left held for the tests that follow ..
+        finally:
+            release(key)
+
+        # .. so the batch commits nothing, the message is delivered again in a new round,
+        # .. and the subscriber is refused the ID in each attempt of that round ..
+        given_up = partial(is_concluded, msg_id, AuditEvent.Delivery_Failed)
+        wait_until(given_up, f'new round of {key}')
 
     assert count_invocations(key) == 3
     assert read_publications(key) == [output_msg_id, _duplicate_outcome, _duplicate_outcome]
@@ -177,11 +190,15 @@ def test_failed_attempt_publication_not_announced(push_environment:'PushEnvironm
 
     key = new_key_prefix() + 'failed-attempts'
 
-    # Each attempt of the round publishes and then fails ..
-    msg_id = publish(env, key, True, HarnessCtx.Failing_Retry_Settings)
+    # The server logs the failure that the subscriber was asked for ..
+    failure_record = _requested_failure_record.format(key)
 
-    given_up = partial(is_concluded, msg_id, AuditEvent.Delivery_Failed)
-    wait_until(given_up, f'round of {key}')
+    with expected_server_records(env.server, (failure_record,)):
+        # .. each attempt of the round publishes and then fails ..
+        msg_id = publish(env, key, True, HarnessCtx.Failing_Retry_Settings)
+
+        given_up = partial(is_concluded, msg_id, AuditEvent.Delivery_Failed)
+        wait_until(given_up, f'round of {key}')
 
     outcomes = read_publications(key)
     outcome_count = len(outcomes)

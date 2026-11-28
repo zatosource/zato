@@ -11,6 +11,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # delivery attempt, in the order of publication, no message is lost and no message outside the batch is delivered twice.
 
 # Zato
+from ha_push_delivery.harness import expected_server_records
 from ha_push_delivery.rest_harness import CommitHold, publish_message, stage_batch, terminate_session, \
     wait_until_concluded
 
@@ -19,6 +20,14 @@ from ha_push_delivery.rest_harness import CommitHold, publish_message, stage_bat
 
 if 0:
     from ha_push_delivery.rest_harness import RESTPushEnvironment
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The warnings of the writers of the server whose session was terminated
+_session_records = (
+    'could not complete a database operation, retrying until it completes -> (pg8000.exceptions.InterfaceError)',
+)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,23 +47,26 @@ def test_session_terminated_during_cycle_commit(rest_push_environment:'RESTPushE
     # .. while the test locks the delivery rows, which the batch was claimed with already ..
     commit_hold = CommitHold(env)
 
-    try:
-        commit_hold.lock()
-        first_request.set()
+    # .. and the writers of the server that lose the session retry until they complete.
+    with expected_server_records(env.server, _session_records):
 
-        # .. the subscriber accepts every message, the commit of the cycle waits for the lock,
-        # and the session of the server that commits is terminated.
-        pid = commit_hold.wait_for_blocked_session()
-        terminate_session(pid)
+        try:
+            commit_hold.lock()
+            first_request.set()
 
-    finally:
-        commit_hold.release()
+            # The subscriber accepts every message, the commit of the cycle waits for the lock,
+            # and the session of the server that commits is terminated ..
+            pid = commit_hold.wait_for_blocked_session()
+            terminate_session(pid)
 
-    # A message is published after the batch ..
-    later_msg_id = publish_message(env, 'later', {})
-    wait_until_concluded(msg_ids + [later_msg_id])
+        finally:
+            commit_hold.release()
 
-    # .. each message of the batch is delivered twice, the second time with the next attempt ..
+        # .. and a message is published after the batch.
+        later_msg_id = publish_message(env, 'later', {})
+        wait_until_concluded(msg_ids + [later_msg_id])
+
+    # Each message of the batch is delivered twice, the second time with the next attempt ..
     for msg_id in msg_ids:
         assert receiver.get_attempts(msg_id) == [1, 2], msg_id
 

@@ -18,7 +18,6 @@ from functools import partial
 from ha_push_delivery.harness import count_pending, import_template, new_key_prefix, publish_through_server, wait_until
 from zato.common.test.pubsub_database import connect
 from zato.common.test.zato_database import get_test_server, ModuleCtx as ZatoDatabaseCtx
-from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -26,7 +25,7 @@ from zato.common.typing_ import cast_
 if 0:
     from ha_push_delivery.rest_receiver import ListReceiver
     from ha_push_delivery.server import PushDeliveryServer
-    from zato.common.typing_ import anydict, anylist, strlist, strstrdict
+    from zato.common.typing_ import anydict, strlist, strstrdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -153,8 +152,7 @@ class CommitHold:
         cursor = self.connection.cursor()
 
         _ = cursor.execute(_backend_pid_query)
-        row = cast_('anylist', cursor.fetchone())
-        self.pid = row[0]
+        self.pid = cursor.fetchall()[0][0]
 
         _ = cursor.execute(_lock_query, (ModuleCtx.Topic,))
 

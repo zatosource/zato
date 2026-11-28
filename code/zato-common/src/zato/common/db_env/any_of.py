@@ -6,11 +6,9 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The membership of a column in a list of values that the caller gives under one parameter name. On PostgreSQL,
-# the condition is `column = ANY(CAST(:name AS <type>[]))` and the list is bound as one binary array parameter,
-# so that the statement has one text whatever the number of the values. On any other database, the condition is
-# an expanding IN. The planner of PostgreSQL turns an IN list into the same scalar array operation that = ANY produces,
-# so both forms use the same index paths.
+# The membership of a column in a list of values that the caller gives under one parameter name. The condition is
+# `column = ANY(CAST(:name AS <type>[]))` and the list is bound as one binary array parameter, so that the statement
+# has one text whatever the number of the values.
 
 # stdlib
 from functools import partial
@@ -104,18 +102,6 @@ class AnyOf(ColumnElement[bool]):
         self.name = name
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-@compiles(AnyOf)
-def compile_in(element:'AnyOf', compiler:'SQLCompiler', **kwargs:'any_') -> 'str':
-    """ Compiles the condition as an expanding IN, for any database other than PostgreSQL.
-    """
-    values = bindparam(element.name, expanding=True)
-    condition = element.column.in_(values)
-
-    out = compiler.process(condition, **kwargs)
-    return out
-
 # ################################################################################################################################
 
 @compiles(AnyOf, _postgresql)
