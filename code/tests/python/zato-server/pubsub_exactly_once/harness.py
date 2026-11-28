@@ -9,8 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import subprocess
+from contextlib import contextmanager
 from http.client import OK
-from typing import NamedTuple
+from typing import Generator, NamedTuple
 
 # Zato
 from pubsub_exactly_once.rest import publish
@@ -28,9 +29,14 @@ from zato.common.typing_ import cast_
 if 0:
     from sqlalchemy.engine import Engine
     from zato.common.test.exactly_once.verify import OutputCheck
-    from zato.common.typing_ import strlist
+    from zato.common.typing_ import strlist, strtuple
 
     Engine = Engine
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+nonegen = Generator[None, None, None]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -160,6 +166,21 @@ def import_enmasse(is_relay_active:'bool') -> 'None':
     result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=Enmasse_Timeout, env=environment)
 
     assert result.returncode == 0, f'enmasse import failed:\nstdout: {result.stdout}\nstderr: {result.stderr}'
+
+# ################################################################################################################################
+
+@contextmanager
+def expected_server_records(fragments:'strtuple') -> 'nonegen':
+    """ Marks each line of the output of the server that contains one of the fragments as expected while the block runs.
+    """
+    records = TestConfig.session_state.expected_server_records
+    records.extend(fragments)
+
+    try:
+        yield
+    finally:
+        for fragment in fragments:
+            records.remove(fragment)
 
 # ################################################################################################################################
 # ################################################################################################################################

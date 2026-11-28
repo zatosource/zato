@@ -13,13 +13,14 @@ from threading import Thread
 # Zato
 from pubsub_exactly_once.database import add_insert_delay, remove_insert_delay, restart_database, \
     terminate_session, wait_for_delayed_session
-from pubsub_exactly_once.harness import get_engine, Hold_Timeout, import_enmasse, new_keys, publish_input, publish_inputs, \
-    Settle_Timeout, stage_batch, verify
+from pubsub_exactly_once.harness import expected_server_records, get_engine, Hold_Timeout, import_enmasse, new_keys, \
+    publish_input, publish_inputs, Settle_Timeout, stage_batch, verify
 from pubsub_exactly_once.rest import ack, drain, publish, pull_by_key
 from pubsub_exactly_once.server import kill_server, kill_worker, start_server
 from zato.common.test.exactly_once.config import TestConfig
 from zato.common.test.exactly_once.control import count_invocations, hold, release, wait_for_invocations, wait_until_held
 from zato.common.test.exactly_once.verify import count_deliveries
+from zato.common.test.expected_records import expected_records
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,6 +40,26 @@ _invoices_topic = 'invoices'
 
 # How long the request of an acknowledgement is waited for after the server was killed, in seconds
 _request_join_timeout = 60.0
+
+# The record of each component of the server whose database operation failed when its session was terminated
+# or when the database was unavailable
+_outage_record = 'could not complete a database operation, retrying until it completes'
+
+# The record of a pooled connection of the database that was closed by the database, which the pool fails
+# to end when it discards the connection
+_pool_termination_record = 'Exception terminating connection <pg8000.legacy.Connection object at'
+
+# The logger of the connection pool of the test process
+_pool_logger_name = 'sqlalchemy.pool.impl.QueuePool'
+
+# The records that a terminated session provokes in the server
+_session_terminated_records = (_outage_record,)
+
+# The records that a restarted database provokes in the server
+_database_restarted_records = (_outage_record, _pool_termination_record)
+
+# The records that a restarted database provokes in the connection pool of the test process
+_pool_restarted_records = (_pool_termination_record,)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -106,20 +127,22 @@ def test_session_terminated_during_commit(zato_server:'any_') -> 'None':
     prefix, keys = new_keys(_batch_count)
     delayed_key = keys[5]
 
-    # The insert of the output of one key waits in its transaction ..
-    add_insert_delay(delayed_key)
+    with expected_server_records(_session_terminated_records):
 
-    try:
-        publish_inputs(keys)
+        # The insert of the output of one key waits in its transaction ..
+        add_insert_delay(delayed_key)
 
-        # .. where its session is terminated.
-        pid = wait_for_delayed_session()
-        terminate_session(pid)
+        try:
+            publish_inputs(keys)
 
-    finally:
-        remove_insert_delay()
+            # .. where its session is terminated.
+            pid = wait_for_delayed_session()
+            terminate_session(pid)
 
-    _ = verify(prefix, keys)
+        finally:
+            remove_insert_delay()
+
+        _ = verify(prefix, keys)
 
 # ################################################################################################################################
 
@@ -130,11 +153,14 @@ def test_database_restarted_during_batch(zato_server:'any_') -> 'None':
     last_key = keys[-1]
 
     stage_batch(keys)
-    restart_database()
 
-    release(last_key)
+    with expected_server_records(_database_restarted_records):
+        with expected_records(_pool_logger_name, _pool_restarted_records):
+            restart_database()
 
-    _ = verify(prefix, keys)
+            release(last_key)
+
+            _ = verify(prefix, keys)
 
 # ################################################################################################################################
 
