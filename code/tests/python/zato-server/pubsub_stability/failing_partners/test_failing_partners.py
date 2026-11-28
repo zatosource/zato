@@ -75,6 +75,9 @@ _run_timeout_seconds = 300
 # How often the run checks whether every partner is done, in seconds.
 _poll_seconds = 1.0
 
+# The record of the server for each message of a subscriber that the server gives up on.
+_given_up_record = 'PubSub delivery given up for sub_key `{}`'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -241,6 +244,12 @@ def test_failing_partners(server:'PubSubServer') -> 'None':
 
     for name in partner_names:
         sub_keys[name] = all_sub_keys[f'{partner_prefix}.{name}']
+
+    # The messages of the failing and the unresponsive partners are given up on, which the server logs for each of them.
+    state = server.get_state()
+
+    for name in (_failing, _unresponsive):
+        state.expected_server_records.append(_given_up_record.format(sub_keys[name]))
 
     measurement = start_measurement(server.get_client(), server.get_database())
 

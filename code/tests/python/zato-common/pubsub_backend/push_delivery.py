@@ -17,7 +17,8 @@ from common import delete_all_rows, get_delivery_rows, get_message_rows
 from zato.common.api import DATA_FORMAT, PubSub
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.test.audit_log_ import new_test_audit_log
-from zato.server.base.parallel.delivery import PushDelivery
+from zato.common.test.expected_records import expected_records
+from zato.server.base.parallel.delivery import logger as delivery_logger, PushDelivery
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -220,9 +221,9 @@ def _run_push_delivery_flow(backend:'SQLPubSubBackend', server:'_StubServer', de
     server.fail_count = 1
     attempts_so_far = len(server.attempt_times)
 
-    _ = backend.publish(_topic, 'push-given-up', max_retries=0)
-
-    _wait_until(lambda: not get_delivery_rows(_sub_key), 'the given-up message leaves the push queue')
+    with expected_records(delivery_logger.name):
+        _ = backend.publish(_topic, 'push-given-up', max_retries=0)
+        _wait_until(lambda: not get_delivery_rows(_sub_key), 'the given-up message leaves the push queue')
 
     assert len(server.invoked) == delivered_so_far, server.invoked[-1]
     assert len(server.attempt_times) == attempts_so_far + 1, len(server.attempt_times)

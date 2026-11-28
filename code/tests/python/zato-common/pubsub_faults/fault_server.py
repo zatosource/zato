@@ -41,13 +41,25 @@ _delivered_max_messages = '10000'
 # and the DNS server that the resolver library of the managed modes reads.
 _inherited_env_names = ('LD_PRELOAD', Env_DNS_Server, Env_DNS_Domain)
 
+# The records of the server that a fault of its database provokes - an operation that a component retries
+# until the database is available again, a delivery and a merge of the search index that a database error
+# other than an outage interrupts, and a pooled connection that could not be closed after its session or link was lost.
+Database_Fault_Records:'strlist' = [
+    'could not complete a database operation, retrying until it completes',
+    'PubSub delivery error for sub_key',
+    'Search index merge failed',
+    'Exception terminating connection <pg8000',
+    'Exception closing connection <pg8000',
+]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 class FaultServerConfig:
     """ What a test sets before its server starts - the variables added to the environment of the server,
     the command that the server is started through, the transient scope that this command creates,
-    and the functions that add what the test needs to the definition of the server.
+    the functions that add what the test needs to the definition of the server and the records
+    of the server that the test provokes.
     """
 
     def __init__(self) -> 'None':
@@ -55,12 +67,14 @@ class FaultServerConfig:
         self.command_prefix:'strlist' = []
         self.scope:'Scope | None' = None
         self.definers:'callable_list' = []
+        self.expected_server_records:'strlist' = Database_Fault_Records
 
     def reset(self) -> 'None':
         self.server_env = {}
         self.command_prefix = []
         self.scope = None
         self.definers = []
+        self.expected_server_records = Database_Fault_Records
 
 # What the test that runs at the moment sets before its server starts.
 Server_Config = FaultServerConfig()
@@ -97,6 +111,10 @@ def get_fault_fixture_arguments(server:'PubSubServer', config:'FaultServerConfig
         server.server_env.update(config.server_env)
 
         server.command_prefix = config.command_prefix
+
+        # The records that this test provokes replace those of the test before it, whose server has stopped.
+        state = server.get_state()
+        state.expected_server_records[:] = config.expected_server_records
 
         for definer in config.definers:
             definer(server, definition)

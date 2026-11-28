@@ -65,6 +65,13 @@ _profile_parameters = ['storage_tier', 'failover_delay']
 # The server of each test.
 _server = PubSubServer('pubsub-managed')
 
+# The records of the server that a failover, a reboot, an upgrade, a parameter change or a network fault provoke -
+# the operations that wait for the database to return and the audit events of the test services not stored meanwhile.
+_outage_records = [
+    'could not complete a database operation, retrying until it completes',
+    'Audit event dropped for service `test.pubsub-rest.',
+]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -197,6 +204,7 @@ def failover_database() -> 'replicatedgen':
 
 # The server of one test, against the database that the fixtures requested before it, or the test itself, select.
 zato_server = create_zato_server_fixture(**get_fault_fixture_arguments(_server, Server_Config))
+zato_server._state.expected_server_records.extend(_outage_records)
 
 # ################################################################################################################################
 

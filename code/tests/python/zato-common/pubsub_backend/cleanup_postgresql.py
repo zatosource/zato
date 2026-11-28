@@ -22,10 +22,12 @@ from cleanup import publish_expired, wait_past_expiry
 from common import delete_all_rows, get_message_rows
 from zato.common.db_env.database import database_config, get_database_engine, new_unshared_database_engine
 from zato.common.db_env.errors import get_sqlstate, is_transient, SQLState
+from zato.common.db_env.outage import logger as outage_logger
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
 from zato.common.pubsub.sql.schema import delivery_table, message_table
 from zato.common.test.audit_log_ import new_test_audit_log
+from zato.common.test.expected_records import expected_records
 from zato.common.test.pubsub_database import pubsub_db_env
 
 # ################################################################################################################################
@@ -293,8 +295,12 @@ def run_cleanup_postgresql_scenario() -> 'None':
     backend = SQLPubSubBackend(audit_log=new_test_audit_log())
 
     _run_locked_rows_flow(backend)
-    _run_terminated_connection_flow(backend)
-    _run_deadlock_flow(backend)
+
+    # A terminated connection and a deadlock are each the first failure of a run of failures of the sweep.
+    with expected_records(outage_logger.name):
+        _run_terminated_connection_flow(backend)
+        _run_deadlock_flow(backend)
+
     _run_unreachable_database_flow()
 
 # ################################################################################################################################

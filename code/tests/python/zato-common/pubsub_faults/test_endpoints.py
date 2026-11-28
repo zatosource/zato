@@ -99,6 +99,9 @@ _given_up = [
     'link-cut',
 ]
 
+# The record of the server that gives up a message of a subscriber whose retries ran out
+_given_up_record = 'PubSub delivery given up for sub_key `{}`'
+
 # The path that every endpoint is pushed to on its host
 _url_path = '/'
 
@@ -204,10 +207,17 @@ class _Run:
 # ################################################################################################################################
 
     def _attach(self) -> 'None':
-        sub_keys = self.get_server().get_sub_keys()
+        server = self.get_server()
+        sub_keys = server.get_sub_keys()
 
         for name in self.message_counts:
             self.sub_keys[name] = sub_keys[_get_subscriber_name(name)]
+
+        # The server gives up each message of the endpoints that accept none of them.
+        state = server.get_state()
+
+        for name in _given_up:
+            state.expected_server_records.append(_given_up_record.format(self.sub_keys[name]))
 
 # ################################################################################################################################
 
@@ -367,6 +377,9 @@ def endpoint_run(endpoint_work_dir:'str') -> 'rungen':
     try:
         run.start_endpoints()
         Server_Config.definers.append(run.define)
+
+        # The database of this test is not faulted, so no record of a database fault is expected.
+        Server_Config.expected_server_records = []
 
         yield run
 

@@ -38,6 +38,10 @@ if 0:
 _template_path = os.path.join(os.path.dirname(__file__), '_enmasse_template.yaml')
 _services_source = os.path.join(os.path.dirname(__file__), '_services.py')
 
+# What the target service of _services.py raises with when the test makes it refuse a delivery, which the server
+# logs when it gives up on the message
+_refusal_record = 'The target refuses this invocation'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -50,6 +54,9 @@ def _build_config(
 ) -> 'anydict':
 
     from zato.common.test.receiver import WebhookReceiver
+
+    # Every refusal of the target service is provoked by a test of this suite
+    state.expected_server_records.append(_refusal_record)
 
     publisher_password = 'test.pub.' + CryptoManager.generate_hex_string()
     subscriber_password = 'test.sub.' + CryptoManager.generate_hex_string()

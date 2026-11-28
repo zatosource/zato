@@ -18,9 +18,10 @@ from zato.common.pubsub.delivery import DeliveryExhausted
 from zato.common.pubsub.dlq import get_dlq_topic_name, Header_Attempts, Header_Error, Header_Error_Class, Key_DLQ, move_to_dlq
 from zato.common.pubsub.outgoing import Attempts_Direct, Attempts_None, conn_directions, conn_locators, delivery_handlers, \
     dlq_settings_readers, get_outgoing_sub_key, get_outgoing_topic_name, Key_Attempts, Key_CID, Key_Conn_ID, Key_Conn_Name, \
-    Key_Conn_Type, Key_Data, Key_Method, Key_Request, OutgoingPublisher, register_outgoing_conn_type, retry_policy_builders, \
-    SendRejected, SendResult
+    Key_Conn_Type, Key_Data, Key_Method, Key_Request, logger as outgoing_logger, OutgoingPublisher, \
+    register_outgoing_conn_type, retry_policy_builders, SendRejected, SendResult
 from zato.common.pubsub.sql.backend import PublishResult
+from zato.common.test.expected_records import expected_records
 from zato.common.util.retry import RetryPolicy
 from zato.server.base.config_manager.outgoing_queues import OutgoingQueueDepth
 
@@ -334,6 +335,7 @@ class SendOrQueueTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(outgoing_logger.name)
     def test_a_queue_that_cannot_store_the_message_leaves_both_flags_off(self) -> 'None':
 
         self._make_the_queue_raise()
@@ -352,6 +354,7 @@ class SendOrQueueTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(outgoing_logger.name)
     def test_a_queue_that_cannot_store_a_message_behind_others_leaves_both_flags_off(self) -> 'None':
 
         self.depth.raise_(self.sub_key)
@@ -457,6 +460,7 @@ class SendOrQueueTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    @expected_records(outgoing_logger.name)
     def test_nothing_raises(self) -> 'None':
         """ Nothing raises.
         """

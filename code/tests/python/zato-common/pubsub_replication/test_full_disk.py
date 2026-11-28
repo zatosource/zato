@@ -22,7 +22,7 @@ from zato.common.test.pubsub_replication import ReplicatedDatabase
 
 # local
 from checks import check_counts_equal_rows, check_delivery
-from environment import get_replication_mode
+from environment import expected_fault_records, get_replication_mode
 from tools import get_fsfault_docker_args
 from workload import stop_running_workloads, Workload
 
@@ -143,7 +143,7 @@ def test_full_disk() -> 'None':
         env = dict(primary.env)
         env['Zato_Database_Generation_File'] = os.path.join(work_dir, 'generation')
 
-        with pubsub_db_env(env):
+        with pubsub_db_env(env), expected_fault_records():
             try:
                 _run_full_disk(database, control_path)
             finally:

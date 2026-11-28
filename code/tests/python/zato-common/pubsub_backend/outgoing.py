@@ -924,7 +924,7 @@ def _run_dlq_rename_crash_flow() -> 'None':
     """
     delete_all_rows()
 
-    _, first_server, _ = _new_server()
+    _, first_server, first_delivery = _new_server()
 
     connection = _new_connection(_conn_id_orders, _name_orders)
 
@@ -936,6 +936,8 @@ def _run_dlq_rename_crash_flow() -> 'None':
     dlq_sub_key = get_dlq_sub_key(_conn_type, _conn_id_orders)
 
     # .. the process ends after the queue's topic moved to the connection's new name and before the DLQ's did ..
+    first_delivery.stop()
+
     old_topic = get_outgoing_topic_name(_conn_type, _name_orders)
     new_topic = get_outgoing_topic_name(_conn_type, _name_orders_renamed)
 
@@ -946,7 +948,7 @@ def _run_dlq_rename_crash_flow() -> 'None':
     assert dlq_rows[0].topic_name == dlq_topic, dlq_rows[0].topic_name
 
     # .. a server starting up finds the queue and finishes what the rename did not ..
-    _, second_server, _ = _new_server()
+    _, second_server, second_delivery = _new_server()
     second_server.config_manager.restore_outgoing_subscriptions()
 
     # .. so the DLQ is under the topic of the name the connection goes by now, with its message in it.
@@ -959,6 +961,8 @@ def _run_dlq_rename_crash_flow() -> 'None':
     dlq_count = second_server.pubsub_backend.get_total_count(dlq_sub_key, new_dlq_topic, 'pending')
     assert dlq_count == 1, dlq_count
 
+    second_delivery.stop()
+
 # ################################################################################################################################
 
 def _run_dlq_of_another_process_rename_flow() -> 'None':
@@ -968,8 +972,8 @@ def _run_dlq_of_another_process_rename_flow() -> 'None':
     delete_all_rows()
 
     # The config process is running before the DLQ exists ..
-    _, config_server, _ = _new_server()
-    _, worker_server, _ = _new_server()
+    _, config_server, config_delivery = _new_server()
+    _, worker_server, worker_delivery = _new_server()
 
     _ = _new_connection(_conn_id_orders, _name_orders)
 
@@ -995,6 +999,9 @@ def _run_dlq_of_another_process_rename_flow() -> 'None':
 
     dlq_count = config_server.pubsub_backend.get_total_count(dlq_sub_key, new_dlq_topic, 'pending')
     assert dlq_count == 1, dlq_count
+
+    config_delivery.stop()
+    worker_delivery.stop()
 
 # ################################################################################################################################
 

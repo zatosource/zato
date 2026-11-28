@@ -54,10 +54,11 @@ _resumed_suffix = ' resumed -> '
 
 def _is_logged(entries:'strlist', component:'str') -> 'bool':
     """ Whether the component logged that it resumed, as opposed to the warning that it logs when an outage begins.
+    Each entry carries the marker of expected records in front of it.
     """
     prefix = component + _resumed_suffix
     for entry in entries:
-        if entry.startswith(prefix):
+        if prefix in entry:
             return True
     return False
 

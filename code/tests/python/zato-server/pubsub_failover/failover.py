@@ -25,7 +25,7 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 # Zato
-from zato.common.test.conftest_base_pubsub import find_free_port
+from zato.common.test.conftest_base_pubsub import Expected_Record_Marker, find_free_port
 from zato.common.test.container_output import follow_container_output, has_exited_since
 from zato.common.test.pubsub_database import connect, get_runtime_dir
 from zato.common.typing_ import cast_
@@ -101,6 +101,37 @@ join event_attr g on g.event_id = e.id and g.name = 'generation'
 where e.source = 'pubsub' and e.event_type = 'takeover'
 order by e.id
 """
+
+# The records of a server that the kills, takeovers and database outages of the suites provoke - an operation
+# that a component retries until the database is available again, a delivery that a terminated session interrupts,
+# and a pooled connection that could not be closed after its session or link was lost.
+_provoked_records = (
+    'could not complete a database operation, retrying until it completes',
+    'PubSub delivery error for sub_key',
+    'Exception terminating connection <pg8000',
+    'Exception closing connection <pg8000',
+)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _ProvokedRecordFilter(logging.Filter):
+    """ Puts the marker of expected records in front of each line of the output of a server
+    that holds a record which the suites provoke.
+    """
+    def filter(self, record:'logging.LogRecord') -> 'bool':
+        text = record.getMessage()
+
+        for fragment in _provoked_records:
+            if fragment in text:
+                record.msg = f'{Expected_Record_Marker} {record.msg}'
+                break
+
+        return True
+
+# The logger of the output of the containers of the servers.
+_container_logger = logging.getLogger('zato.test.pubsub_failover.container')
+_container_logger.addFilter(_ProvokedRecordFilter())
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -230,7 +261,7 @@ def run_container(server:'ContainerServer') -> 'None':
     command.insert(2, '-d')
 
     _ = subprocess.run(command, capture_output=True, text=True, check=True)
-    follow_container_output(server.container_name, server.name, logger)
+    follow_container_output(server.container_name, server.name, _container_logger)
 
 # ################################################################################################################################
 
@@ -240,7 +271,7 @@ def create_container(server:'ContainerServer') -> 'None':
     _ = docker('rm', '-f', '-v', server.container_name, check=False)
     command = _container_command(server, 'create')
     _ = subprocess.run(command, capture_output=True, text=True, check=True)
-    follow_container_output(server.container_name, server.name, logger)
+    follow_container_output(server.container_name, server.name, _container_logger)
 
 # ################################################################################################################################
 
