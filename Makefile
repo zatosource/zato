@@ -22,7 +22,7 @@
 	test-llm test-outconn-tls-local-docker \
 	test-sql test-oracle-db test-mssql-db test-aws test-sdk test-microsoft-cloud test-salesforce test-discord \
 	test-hl7 test-ccda test-documents hl7-scenario-hie hl7-scenario-registration hl7-scenario-lab hl7-scenarios test-ui \
-	test-common test-distlock test-truncate test-message-filters test-safeguards test-request-response \
+	test-common test-pg-wire-rust test-distlock test-truncate test-message-filters test-safeguards test-request-response \
 	test-audit-log test-audit-export test-alerting test-lets-encrypt test-destinations test-analytics test-demo-seed test-logging \
 	test-ibm-mq test-kafka test-kafka-live test-mongodb test-es test-ftp test-sftp test-file-transfer test-smb test-smb-ui test-smb-windows-build \
 	test-rule-engine test-hot-deployment \
@@ -2208,8 +2208,13 @@ test-logging: ## Logging live tests - log files, env-variable log levels, PII au
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_logging -W ignore::DeprecationWarning \
 		$(PYTEST_ARGS) $(Zato_Log)
 
+test-pg-wire-rust: ## The Rust unit tests of the PostgreSQL wire encoders and of the parser of the replies of the server.
+	$(Zato_Log_Reset)
+	$(LOAD_CARGO_ENV) && cargo test --manifest-path $(ZATO_RUST)/zato_pg_wire/Cargo.toml $(Zato_Log)
+
 test-common: ## Common library tests.
 	$(Zato_Log_Reset)
+	-$(MAKE) test-pg-wire-rust
 	-$(MAKE) -C $(CURDIR)/code/zato-common test $(Zato_Log)
 	-ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest $(CURDIR)/code/tests/python/zato-common/common_db/ \
 		-v -s -o cache_dir=$(CURDIR)/code/tests/.pytest_cache_common_db -W ignore::DeprecationWarning \

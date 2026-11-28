@@ -39,6 +39,10 @@ const INT16_SIZE: usize = 2;
 /// How many counts a `Bind` message has - of the parameter formats, of the values and of the result formats.
 const COUNT_FIELDS: usize = 3;
 
+/// The `Execute` message of the unnamed portal without a limit of rows, followed by the `Sync` message,
+/// as pg8000 encodes them.
+const EXECUTE_SYNC: &[u8] = &[b'E', 0, 0, 0, 9, 0, 0, 0, 0, 0, b'S', 0, 0, 0, 4];
+
 /// One parameter of a statement, as the driver converted it.
 enum Parameter<'value> {
     /// A NULL value.
@@ -148,20 +152,46 @@ fn build_body(statement_name: &[u8], parameters: &[Parameter<'_>], result_format
     Ok(body)
 }
 
-/// Builds a complete `Bind` message - its code, its length and its body.
-fn build_message(statement_name: &[u8], parameters: &[Parameter<'_>], result_formats: &[i16]) -> PyResult<Vec<u8>> {
+/// Builds a complete `Bind` message - its code, its length and its body - followed by the bytes given,
+/// which are the messages sent with it in the same write.
+fn build_message(statement_name: &[u8], parameters: &[Parameter<'_>], result_formats: &[i16], trailing: &[u8]) -> PyResult<Vec<u8>> {
     let body = build_body(statement_name, parameters, result_formats)?;
 
     // The length of a message counts its own bytes and the body, but not the code.
     let message_length = body.len().saturating_add(LENGTH_SIZE);
     let message_length = i32::try_from(message_length).map_err(|error| too_large("body", error))?;
 
-    let mut message = Vec::with_capacity(LENGTH_OFFSET.saturating_add(LENGTH_SIZE).saturating_add(body.len()));
+    // The messages that follow are counted too, so that the buffer is allocated once.
+    let bind_size = LENGTH_OFFSET.saturating_add(LENGTH_SIZE).saturating_add(body.len());
+    let size = bind_size.saturating_add(trailing.len());
+
+    let mut message = Vec::with_capacity(size);
     message.push(BIND_CODE);
     message.extend_from_slice(&message_length.to_be_bytes());
     message.extend_from_slice(&body);
+    message.extend_from_slice(trailing);
 
     Ok(message)
+}
+
+/// Encodes the `Bind` message of a prepared statement from the parameters that the driver converted,
+/// followed by the bytes given.
+fn encode_message<'py>(
+    py: Python<'py>,
+    statement_name: &[u8],
+    parameters: &Bound<'py, PyTuple>,
+    result_formats: &[i16],
+    trailing: &[u8],
+) -> PyResult<Bound<'py, PyBytes>> {
+    let values: Vec<Bound<'py, PyAny>> = parameters.iter().collect();
+    let mut read = Vec::with_capacity(values.len());
+
+    for value in &values {
+        read.push(read_parameter(value)?);
+    }
+
+    let message = build_message(statement_name, &read, result_formats, trailing)?;
+    Ok(PyBytes::new(py, &message))
 }
 
 /// Encodes the `Bind` message of a prepared statement from its name, terminated by a NUL byte,
@@ -177,15 +207,25 @@ pub fn encode_bind<'py>(
     parameters: &Bound<'py, PyTuple>,
     result_formats: Vec<i16>,
 ) -> PyResult<Bound<'py, PyBytes>> {
-    let values: Vec<Bound<'py, PyAny>> = parameters.iter().collect();
-    let mut read = Vec::with_capacity(values.len());
+    encode_message(py, statement_name, parameters, &result_formats, &[])
+}
 
-    for value in &values {
-        read.push(read_parameter(value)?);
-    }
-
-    let message = build_message(statement_name, &read, &result_formats)?;
-    Ok(PyBytes::new(py, &message))
+/// Encodes the `Bind`, `Execute` and `Sync` messages of a prepared statement in one buffer.
+///
+/// The `Execute` message names the unnamed portal and returns all of its rows,
+/// so that the driver writes the three messages at once.
+#[pyfunction]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "PyO3 extracts the Python list of format codes into an owned vector"
+)]
+pub fn encode_bind_execute<'py>(
+    py: Python<'py>,
+    statement_name: &[u8],
+    parameters: &Bound<'py, PyTuple>,
+    result_formats: Vec<i16>,
+) -> PyResult<Bound<'py, PyBytes>> {
+    encode_message(py, statement_name, parameters, &result_formats, EXECUTE_SYNC)
 }
 
 #[cfg(test)]
@@ -193,9 +233,26 @@ mod tests {
     use super::*;
 
     #[test]
+    fn message_with_execute_and_sync() {
+        let parameters = [Parameter::Text("abc")];
+        let message = build_message(b"zato_3\0", &parameters, &[BINARY_FORMAT], EXECUTE_SYNC);
+
+        // The Bind message is the same as the one encoded alone ..
+        let mut expected = build_message(b"zato_3\0", &parameters, &[BINARY_FORMAT], &[]).unwrap_or_default();
+
+        // .. the Execute message names the unnamed portal and no limit of rows ..
+        expected.extend_from_slice(&[b'E', 0, 0, 0, 9, 0, 0, 0, 0, 0]);
+
+        // .. and the Sync message has no body.
+        expected.extend_from_slice(&[b'S', 0, 0, 0, 4]);
+
+        assert_eq!(message.ok(), Some(expected));
+    }
+
+    #[test]
     fn message_of_each_kind_of_parameter() {
         let parameters = [Parameter::Null, Parameter::Binary(b"\x01\x02"), Parameter::Text("abc")];
-        let message = build_message(b"zato_1\0", &parameters, &[BINARY_FORMAT]);
+        let message = build_message(b"zato_1\0", &parameters, &[BINARY_FORMAT], &[]);
 
         let mut expected: Vec<u8> = vec![BIND_CODE, 0, 0, 0, 43];
         expected.extend_from_slice(b"\0zato_1\0");
@@ -211,7 +268,7 @@ mod tests {
 
     #[test]
     fn message_without_parameters_or_result() {
-        let message = build_message(b"zato_2\0", &[], &[]);
+        let message = build_message(b"zato_2\0", &[], &[], &[]);
 
         let mut expected: Vec<u8> = vec![BIND_CODE, 0, 0, 0, 18];
         expected.extend_from_slice(b"\0zato_2\0");

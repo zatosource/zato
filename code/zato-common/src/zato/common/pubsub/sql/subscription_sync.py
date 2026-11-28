@@ -12,7 +12,7 @@ from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 
 # Zato
 from zato.common.db_env.plain_sql import PlainStatement
-from zato.common.pubsub.subscription_list import Governed_Sub_Key_Length, Governed_Sub_Key_Pattern, Lock_Timeout_Ms
+from zato.common.pubsub.subscription_list import Governed_Sub_Key_Length, Governed_Sub_Key_Pattern
 from zato.common.pubsub.sql.schema import topic_sub_table
 
 # ################################################################################################################################
@@ -45,13 +45,6 @@ _governed_pairs_query = _governed_pairs_query.where(and_(
 ))
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-def set_lock_timeout(connection:'Connection') -> 'None':
-    """ Sets the lock timeout of every pub/sub transaction on the open transaction of the connection.
-    """
-    _ = connection.exec_driver_sql(f'SET LOCAL lock_timeout = {Lock_Timeout_Ms}')
-
 # ################################################################################################################################
 
 def read_governed_pairs(connection:'Connection') -> 'pairlist':

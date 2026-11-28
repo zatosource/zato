@@ -178,14 +178,13 @@ impl Stream {
 }
 
 /// Writes the head and the parts of a request to a plain TCP connection, with one vectored write per syscall.
-fn write_all_vectored_plain(ctx: &IoContext<'_, '_>, tcp: &mut TcpStream, head: &[u8], parts: &[&[u8]]) -> Result<(), IoError> {
+fn write_all_vectored_plain(ctx: &IoContext<'_, '_>, tcp: &TcpStream, head: &[u8], parts: &[&[u8]]) -> Result<(), IoError> {
     // The slices are built for each request, because a write advances them past what was sent
     let mut slices = Vec::with_capacity(parts.len().saturating_add(1));
     slices.push(IoSlice::new(head));
     slices.extend(parts.iter().map(|part| IoSlice::new(part)));
 
     // A shared reference writes as well as a mutable one, so the descriptor stays borrowed for the waits
-    let tcp: &TcpStream = tcp;
     let fd = tcp.as_fd();
 
     write_all_slices(

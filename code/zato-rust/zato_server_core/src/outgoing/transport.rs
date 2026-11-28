@@ -24,7 +24,7 @@ use super::tls::{TlsSettings, build_config};
 use super::wait::Gevent;
 
 /// The largest body written in the same buffer as the head of its request rather than in a write of its own.
-pub(crate) const MAX_INLINE_BODY_LEN: usize = 64 * 1024;
+pub const MAX_INLINE_BODY_LEN: usize = 64 * 1024;
 
 /// The lowercase name of the response header that sets a cookie.
 const SET_COOKIE_HEADER: &str = "set-cookie";

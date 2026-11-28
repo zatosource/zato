@@ -89,19 +89,14 @@ impl Shared {
     fn next_job(&self) -> Option<PushJob> {
         let mut queue = self.queue.lock();
 
-        loop {
-            // A stopping engine takes no job, including those still waiting
-            if queue.is_stopping {
-                return None;
-            }
+        // The lock is released while the thread waits for a job to be submitted or for the engine to stop
+        self.has_work.wait_while(&mut queue, |state| !state.is_stopping && state.jobs.is_empty());
 
-            if let Some(job) = queue.jobs.pop_front() {
-                return Some(job);
-            }
+        // A stopping engine takes no job, including those still waiting
+        let job = if queue.is_stopping { None } else { queue.jobs.pop_front() };
+        drop(queue);
 
-            // The lock is released while the thread waits for a job to be submitted
-            self.has_work.wait(&mut queue);
-        }
+        job
     }
 
     /// Adds the outcome of a job to the completed list and wakes the greenlet that takes it.
@@ -117,6 +112,9 @@ impl Shared {
     fn on_thread_exit(&self) {
         let mut running = self.running.lock();
         *running = running.saturating_sub(1);
+
+        // The caller of `stop` reads the count again under the lock once it wakes up
+        drop(running);
         self.thread_exited.notify_all();
     }
 
@@ -343,14 +341,13 @@ fn wait_for_threads(shared: &Shared, wait: Duration) -> bool {
     let deadline = Instant::now().checked_add(wait).unwrap_or_else(Instant::now);
     let mut running = shared.running.lock();
 
-    while *running > 0 {
-        // A wait that reached the deadline reports whether the last thread exited just before it
-        if shared.thread_exited.wait_until(&mut running, deadline).timed_out() {
-            return *running == 0;
-        }
-    }
+    // A wait that reached the deadline still reports whether the last thread exited just before it
+    shared.thread_exited.wait_while_until(&mut running, |count| *count > 0, deadline);
 
-    true
+    let has_all_exited = *running == 0;
+    drop(running);
+
+    has_all_exited
 }
 
 /// Stops the threads that started before a thread could not be started.
@@ -399,9 +396,10 @@ fn extract_request(item: &Bound<'_, PyAny>) -> PyResult<PushRequest> {
     })
 }
 
-/// Builds the tuple the outcome of one request is returned to Python as - the last address, the status, the reason,
-/// the concluded IDs, the elapsed microseconds, the scope of the first push, the error kind, the error message
-/// and the redirects followed.
+/// Builds the tuple the outcome of one request is returned to Python as.
+///
+/// The tuple holds the last address, the status, the reason, the concluded IDs, the elapsed microseconds,
+/// the scope of the first push, the error kind, the error message and the redirects followed.
 fn build_outcome_tuple(py: Python<'_>, outcome: RequestOutcome) -> PyResult<Bound<'_, PyTuple>> {
     let redirects = PyList::empty(py);
 
@@ -429,8 +427,10 @@ fn build_outcome_tuple(py: Python<'_>, outcome: RequestOutcome) -> PyResult<Boun
     PyTuple::new(py, items)
 }
 
-/// Returns the address that a response to a push redirects to under the rules of the engine, or `None`
-/// for a response that is not a redirect to be followed, raising `ValueError` for a redirect not followed.
+/// Returns the address that a response to a push redirects to under the rules of the engine.
+///
+/// It returns `None` for a response that is not a redirect to be followed, and it raises `ValueError`
+/// for a redirect not followed.
 #[pyfunction]
 #[pyo3(signature = (url, status, location, hop_count, first_scope))]
 pub fn get_push_redirect(url: &str, status: u16, location: Option<&str>, hop_count: usize, first_scope: Option<&str>) -> PyResult<Option<String>> {

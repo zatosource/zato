@@ -30,8 +30,9 @@ const SUPPLEMENTARY_BASE: u32 = 0x1_0000;
 /// The lowest byte that may appear unescaped in a JSON string.
 const JSON_UNESCAPED_MIN: u8 = 0x20;
 
-/// Returns the IDs that the response to a push of several messages accepted, in the order the response lists them,
-/// or the reason why the response accepts no message - it is not a JSON list of strings, or it names an ID
+/// Returns the IDs that the response to a push of several messages accepted, in the order the response lists them.
+///
+/// A response that accepts no message returns the reason - it is not a JSON list of strings, or it names an ID
 /// that is not one of the IDs of the request.
 pub fn parse_accepted_ids(body: &[u8], msg_ids: &[String]) -> Result<Vec<String>, String> {
     let accepted = parse_string_list(body).ok_or_else(|| String::from("Response is not a JSON list of strings"))?;

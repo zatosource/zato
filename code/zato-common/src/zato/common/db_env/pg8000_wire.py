@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Each statement is prepared once per connection and executed by its name afterwards, its Bind message is encoded
 # by zato_pg_wire, bytea parameters and the array parameters of zato_pg_wire are sent in the binary format,
 # the rows of a result are decoded by zato_pg_wire, which receives the columns of its native types in the binary format,
-# the messages of each round trip leave in one send and their replies are parsed out of the bytes that each read
+# the messages of each round trip leave in one send and zato_pg_wire parses their replies out of the bytes that each read
 # of the socket returns, and the begin of each transaction travels to the server together with the first statement
 # of the transaction. Within deferred_replies, a statement
 # travels to the server together with the next statement whose reply is read, as pg8000_deferred describes.
@@ -19,21 +19,20 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from collections import OrderedDict
 from functools import lru_cache
 from itertools import count
-from struct import Struct
 from typing import NamedTuple
 
 # pg8000
 from pg8000 import converters, core, dbapi, legacy
 from pg8000.converters import make_params
-from pg8000.core import CLOSE, EXECUTE_MSG, i_pack, NULL_BYTE, READY_FOR_QUERY, STATEMENT, SYNC_MSG
+from pg8000.core import CLOSE, COMMAND_COMPLETE, i_pack, NULL_BYTE, READY_FOR_QUERY, STATEMENT, SYNC_MSG
 from pg8000.dbapi import convert_paramstyle
 from pg8000.exceptions import DatabaseError, InterfaceError
 
 # zato_pg_wire
-from zato_pg_wire.zato_pg_wire import ArrayParameter, encode_bind, RowDecoder
+from zato_pg_wire.zato_pg_wire import ArrayParameter, encode_bind, encode_bind_execute, read_replies, RowDecoder
 
 # Zato
-from zato.common.db_env.pg8000_common import Max_Inline_Size
+from zato.common.db_env.pg8000_common import Max_Inline_Size, transaction_lock_timeout_ms
 from zato.common.db_env.pg8000_deferred import can_defer_reply, confirm_checks, defer_reply, forget_stale_statement, \
      in_transaction, raises_deferred_errors, read_deferred
 from zato.common.typing_ import cast_
@@ -78,18 +77,13 @@ _no_result_formats:'intlist' = []
 # How many bytes one read from the socket of a connection may return at most.
 _read_size = 65536
 
-# The size of the header of each message from the server, its code and its length.
-_header_size = 5
-
-# Reads the code and the length of a message from its header.
-ci_unpack_from = Struct('!ci').unpack_from
-
-# The statement with which pg8000 opens each transaction of a connection that does not commit automatically.
+# The statement with which pg8000 opens each transaction of a connection that does not commit automatically,
+# and the same statement followed by the lock timeout of the transaction, in one simple query.
 _begin_statement = 'begin transaction'
+_begin_lock_timeout_statement = 'begin transaction; set local lock_timeout = {}'
 
-# The handlers of pg8000 that the connections use for the statements they do not prepare themselves.
+# The initializer of pg8000 that the initializer of the connections calls first.
 _core_init = core.CoreConnection.__init__
-_core_handle_data_row = core.CoreConnection.handle_DATA_ROW
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -278,35 +272,38 @@ def _receive(self:'any_', needed:'int') -> 'None':
 # ################################################################################################################################
 
 def _handle_messages(self:'any_', context:'any_') -> 'None':
-    """ Handles the messages of the server up to and including the one that reports it is ready for the next query,
-    parsing them out of the bytes that each read of the socket returned.
+    """ Handles the messages of the server up to and including the one that reports it is ready for the next query.
+    zato_pg_wire parses them out of the bytes that each read of the socket returned, decodes the rows of a prepared
+    statement and collects the tags of completed statements, and it stops at any other message, which pg8000 handles.
     """
     message_types = self.message_types
+    command_complete = message_types[COMMAND_COMPLETE]
+
+    # Only a prepared statement that returns rows has a decoder, and the rows of any other statement are read by pg8000.
+    decoder = context.decoder if isinstance(context, DecodedContext) else None
     code = None
 
     while code != READY_FOR_QUERY:
 
-        # The header of the next message gives its code and length ..
-        if len(self._zato_received) - self._zato_received_pos < _header_size:
-            _receive(self, _header_size)
+        rows, tags, position, needed, code, data = read_replies(self._zato_received, self._zato_received_pos, decoder)
+        self._zato_received_pos = position
 
-        received = self._zato_received
-        pos = self._zato_received_pos
-        code, data_len = ci_unpack_from(received, pos)
+        # The rows and tags parsed are handed over in the order of their messages, and a statement with a decoder
+        # has a list of rows ..
+        if decoder is not None:
+            context_rows = cast_('anylist', context.rows)
+            context_rows.extend(rows)
 
-        # .. and its data follows the header.
-        message_end = pos + 1 + data_len
+        for tag in tags:
+            command_complete(tag, context)
 
-        if len(received) < message_end:
-            _receive(self, 1 + data_len)
-            received = self._zato_received
-            pos = 0
-            message_end = 1 + data_len
+        # .. a message that is not complete yet is read from the socket ..
+        if needed:
+            _receive(self, needed)
 
-        data = received[pos + _header_size:message_end]
-        self._zato_received_pos = message_end
-
-        message_types[code](data, context)
+        # .. and the message at which the parse stopped goes to its handler.
+        else:
+            message_types[code](data, context)
 
     if context.error is not None:
         raise context.error
@@ -316,11 +313,18 @@ def _handle_messages(self:'any_', context:'any_') -> 'None':
 def _execute_simple(self:'any_', statement:'str') -> 'any_':
     """ Executes one statement in the simple query protocol. The begin of a transaction is written to the socket
     without waiting for its reply, which is read together with the reply of the statement that follows it,
-    so that the two travel to the server in one round trip.
+    so that the two travel to the server in one round trip. A begin within lock_timeout_begin also sets
+    the lock timeout of the transaction in the same simple query, whose replies end with one ReadyForQuery.
     """
     context = core.Context(statement)
 
     if statement == _begin_statement:
+
+        # A begin within lock_timeout_begin carries the lock timeout ..
+        if (lock_timeout_ms := transaction_lock_timeout_ms.get()) is not None:
+            statement = _begin_lock_timeout_statement.format(lock_timeout_ms)
+
+        # .. and the reply is read with that of the statement that follows.
         self.send_QUERY(statement)
         self._zato_pending_begin = context
 
@@ -435,9 +439,8 @@ def _execute_unnamed(self:'any_', statement:'str', vals:'anytuple'=(), oids:'any
         confirm_checks(self, statement)
 
     # .. it is bound and executed ..
-    self.send_BIND(prepared.name_bin, params, prepared.result_formats)
-    core._write(self._sock, EXECUTE_MSG)
-    core._write(self._sock, SYNC_MSG)
+    message = encode_bind_execute(prepared.name_bin, params, prepared.result_formats)
+    _write_parts(self, [message])
 
     # .. a statement whose reply can wait leaves it to be read later ..
     if is_deferred:
@@ -454,22 +457,6 @@ def _execute_unnamed(self:'any_', statement:'str', vals:'anytuple'=(), oids:'any
             raise
 
     return context
-
-# ################################################################################################################################
-
-def _handle_data_row(self:'any_', data:'bytes', context:'any_') -> 'None':
-    """ Reads one row of a result, with the decoder of its prepared statement if it has one.
-    """
-    # Only a statement that returns rows receives them, so it has a decoder and a list of rows.
-    if isinstance(context, DecodedContext):
-        decoder = cast_('RowDecoder', context.decoder)
-        rows = cast_('anylist', context.rows)
-
-        row = decoder.decode(data)
-        rows.append(row)
-
-    else:
-        _core_handle_data_row(self, data, context)
 
 # ################################################################################################################################
 
@@ -516,7 +503,6 @@ def install() -> 'None':
     connection_class.execute_simple = _execute_simple
     connection_class.handle_messages = _handle_messages
     connection_class.execute_unnamed = _execute_unnamed
-    connection_class.handle_DATA_ROW = _handle_data_row
 
     # .. a connection whose begin is still unread is in its transaction already, so that no second begin follows it ..
     legacy_class:'any_' = legacy.Connection

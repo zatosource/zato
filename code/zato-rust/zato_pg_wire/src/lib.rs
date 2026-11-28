@@ -19,16 +19,21 @@ pub mod bind;
 /// The encoder of binary COPY streams.
 pub mod copy;
 
+/// The parser of the replies of the server.
+pub mod reply;
+
 /// The decoder of `DataRow` messages and the kinds of columns it reads.
 pub mod row;
 
 use pyo3::prelude::*;
 
-/// `PyO3` module initializer - registers the `Bind` message encoder, the array parameter class,
-/// the encoders of column arrays and of COPY streams, and the row decoder class.
+/// `PyO3` module initializer - registers the encoders of `Bind` messages, the array parameter class,
+/// the encoders of column arrays and of COPY streams, the parser of replies and the row decoder class.
 #[pymodule]
 fn zato_pg_wire(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(bind::encode_bind, module)?)?;
+    module.add_function(wrap_pyfunction!(bind::encode_bind_execute, module)?)?;
+    module.add_function(wrap_pyfunction!(reply::read_replies, module)?)?;
     module.add_function(wrap_pyfunction!(array::encode_column_arrays, module)?)?;
     module.add_function(wrap_pyfunction!(copy::encode_copy_rows, module)?)?;
     module.add_class::<array::ArrayParameter>()?;

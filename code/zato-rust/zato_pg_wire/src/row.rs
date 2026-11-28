@@ -313,7 +313,7 @@ impl RowDecoder {
     }
 
     /// Decodes the body of one `DataRow` message into the list of its values.
-    fn decode<'py>(&self, py: Python<'py>, data: &[u8]) -> PyResult<Bound<'py, PyList>> {
+    pub(crate) fn decode<'py>(&self, py: Python<'py>, data: &[u8]) -> PyResult<Bound<'py, PyList>> {
         let mut values = Vec::with_capacity(self.columns.len());
         let mut offset = FIRST_VALUE_OFFSET;
 

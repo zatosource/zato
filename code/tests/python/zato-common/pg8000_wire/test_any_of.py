@@ -9,7 +9,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # pytest
 import pytest
 
+# SQLAlchemy
+from sqlalchemy.dialects import postgresql
+
 # Zato
+from zato.common.audit_log.common import event_payload_table
 from zato.common.common_db.message_dedup import dedup_records_query, dedup_upsert
 from zato.common.common_db.schema import message_dedup_table
 from zato.common.pubsub.sql import ack_deletes, dedup, fenced_ack, payloads, publication_inserts, pull, writes
@@ -83,10 +87,11 @@ _statements:'anylist' = [
 
 @pytest.fixture
 def schema_engine(engine:'Engine') -> 'Engine':
-    """ An engine of a database with the pub/sub tables and the table of dedup records.
+    """ An engine of a database with the pub/sub tables, the table of dedup records and the table of stored payloads.
     """
     pubsub_metadata.create_all(engine)
     message_dedup_table.create(engine, checkfirst=True)
+    event_payload_table.create(engine, checkfirst=True)
 
     return engine
 
@@ -97,7 +102,7 @@ def _new_parameters(statement:'PlainStatement', list_names:'anydict', value_coun
     """
     out:'anydict' = {}
 
-    compiled = statement.statement.compile()
+    compiled = statement.statement.compile(dialect=postgresql.dialect())
 
     for name in compiled.params:
         if name in _scalar_values:
@@ -132,7 +137,11 @@ class TestOnePlan:
 
                 for value_count in _value_counts:
                     parameters = _new_parameters(statement, list_names, value_count)
-                    _ = statement.execute(connection, parameters).fetchall()
+                    result = statement.execute(connection, parameters)
+
+                    # The update of the dedup records returns no rows, unlike the selects
+                    if result.returns_rows:
+                        _ = result.fetchall()
 
                 transaction.rollback()
 

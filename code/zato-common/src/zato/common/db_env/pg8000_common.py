@@ -11,6 +11,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import contextmanager
+from contextvars import ContextVar
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,6 +33,10 @@ Driver_Name = 'pg8000'
 
 # A value at least this large is written to the socket as it is, rather than copied into the buffer of its message.
 Max_Inline_Size = 65536
+
+# The lock timeout, in milliseconds, that each begin of a transaction of the current thread or greenlet carries,
+# or None if a begin carries none.
+transaction_lock_timeout_ms:'ContextVar[int | None]' = ContextVar('zato_transaction_lock_timeout_ms', default=None)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -66,6 +71,22 @@ def deferred_replies(connection:'Connection') -> 'noneiter':
         yield
     finally:
         dbapi_connection._zato_defers_replies = defers_replies
+
+# ################################################################################################################################
+
+@contextmanager
+def lock_timeout_begin(lock_timeout_ms:'int') -> 'noneiter':
+    """ Within the block, each transaction begun by the current thread or greenlet sets its lock timeout in the same
+    simple query as its begin, so that the lock timeout costs no round trip of its own. A transaction is begun
+    with its first statement, which therefore runs within the block. The transactions that a new connection runs
+    in its connect handlers are begun within the block too, and carry the same lock timeout.
+    """
+    token = transaction_lock_timeout_ms.set(lock_timeout_ms)
+
+    try:
+        yield
+    finally:
+        transaction_lock_timeout_ms.reset(token)
 
 # ################################################################################################################################
 # ################################################################################################################################

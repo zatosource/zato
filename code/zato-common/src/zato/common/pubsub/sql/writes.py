@@ -22,6 +22,7 @@ from zato.common.db_env.commit_queue import CommitQueue
 from zato.common.db_env.engine import call_database
 from zato.common.db_env.errors import is_conflict, is_lock_timeout, is_value_error
 from zato.common.db_env.outage import OutageTracker
+from zato.common.db_env.pg8000_common import lock_timeout_begin
 from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.ack_deletes import AckDeletes
@@ -37,7 +38,8 @@ from zato.common.pubsub.sql.pending import PendingAck, PendingAtomic, PendingAtt
 from zato.common.pubsub.sql.publication_inserts import PublicationInserts
 from zato.common.pubsub.sql.pull import claim_messages, lease_messages
 from zato.common.pubsub.sql.schema import delivery_table
-from zato.common.pubsub.sql.subscription_sync import apply_syncs, set_lock_timeout
+from zato.common.pubsub.sql.subscription_sync import apply_syncs
+from zato.common.pubsub.subscription_list import Lock_Timeout_Ms
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -492,10 +494,8 @@ class PubSubWriter(PublicationInserts, AckDeletes):
         ) -> 'anylist':
         """ Writes the items of a batch, grouped by their kinds, in one transaction, and returns the audit events written.
         """
-        with engine.begin() as connection:
-
-            # Every pub/sub transaction waits for a lock only up to the lock timeout of pub/sub ..
-            set_lock_timeout(connection)
+        # Every pub/sub transaction waits for a lock only up to the lock timeout of pub/sub, set with its begin ..
+        with lock_timeout_begin(Lock_Timeout_Ms), engine.begin() as connection:
 
             # .. the pairs of the subscription list are written first so that the publications of the same commit see their rows ..
             if syncs:

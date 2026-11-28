@@ -177,7 +177,7 @@ impl RequestOutcome {
     }
 
     /// Whether every message of the request was concluded, which lets the job continue with its next request.
-    pub fn is_fully_concluded(&self, request: &PushRequest) -> bool {
+    pub const fn is_fully_concluded(&self, request: &PushRequest) -> bool {
         self.error.is_none() && self.concluded.len() == request.msg_ids.len()
     }
 }

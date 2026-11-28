@@ -18,6 +18,7 @@ use socket2::SockRef;
 
 use super::super::job::{ErrorKind, PushJob, PushRequest};
 use super::{EnginePools, run_job};
+use crate::outgoing::scope::NetworkScope;
 use crate::outgoing::tls::TlsSettings;
 
 /// The timeout of the jobs of the tests, in seconds.
@@ -76,11 +77,12 @@ fn read_request(connection: &mut impl Read) -> Option<Vec<u8>> {
         let head_end = received.windows(4).position(|window| window == b"\r\n\r\n");
 
         if let Some(end) = head_end {
-            let head = String::from_utf8_lossy(received.get(..end).unwrap()).to_ascii_lowercase();
-            let length: usize = head
-                .lines()
-                .find_map(|line| line.strip_prefix("content-length: "))
-                .map_or(0, |value| value.trim().parse().unwrap());
+            let head = String::from_utf8_lossy(received.get(..end)?).to_ascii_lowercase();
+
+            let length: usize = match head.lines().find_map(|line| line.strip_prefix("content-length: ")) {
+                Some(value) => value.trim().parse().ok()?,
+                None => 0,
+            };
 
             if received.len() >= end + 4 + length {
                 return Some(received);
@@ -192,7 +194,7 @@ fn single_message_is_concluded_by_a_2xx() {
     assert!(outcome.error.is_none());
     assert_eq!(outcome.status, Some(200));
     assert_eq!(outcome.concluded, vec![String::from("zpsm.a1")]);
-    assert_eq!(outcome.peer_scope.map(|scope| scope.name()), Some("loopback"));
+    assert_eq!(outcome.peer_scope.map(NetworkScope::name), Some("loopback"));
 
     let request = received.requests.first().unwrap();
     assert!(request.starts_with(b"POST /orders/push HTTP/1.1\r\n"));
@@ -434,13 +436,13 @@ const KEY_ARGS: [&str; 5] = ["-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:pri
 struct TestCertificates {
 
     /// The CA that issued the certificate of the endpoint.
-    ca_path: String,
+    ca: String,
 
     /// The certificate of the endpoint.
-    cert_path: String,
+    certificate: String,
 
     /// The key of the endpoint.
-    key_path: String,
+    key: String,
 }
 
 /// Runs openssl with the given arguments, returning whether it succeeded.
@@ -461,28 +463,28 @@ fn issue_certificates(directory: &std::path::Path) -> Option<TestCertificates> {
     std::fs::write(&extensions_path, LEAF_EXTENSIONS).ok()?;
 
     let key_args: Vec<&std::ffi::OsStr> = KEY_ARGS.iter().map(std::ffi::OsStr::new).collect();
-    let os = std::ffi::OsStr::new;
+    let os_str = std::ffi::OsStr::new;
 
-    let mut ca_args = vec![os("req"), os("-x509"), os("-days"), os("1"), os("-subj"), os("/CN=Zato Test CA")];
+    let mut ca_args = vec![os_str("req"), os_str("-x509"), os_str("-days"), os_str("1"), os_str("-subj"), os_str("/CN=Zato Test CA")];
     ca_args.extend_from_slice(&key_args);
-    ca_args.extend_from_slice(&[os("-keyout"), ca_key_path.as_os_str(), os("-out"), ca_path.as_os_str()]);
+    ca_args.extend_from_slice(&[os_str("-keyout"), ca_key_path.as_os_str(), os_str("-out"), ca_path.as_os_str()]);
 
-    let mut csr_args = vec![os("req"), os("-new"), os("-subj"), os("/CN=127.0.0.1")];
+    let mut csr_args = vec![os_str("req"), os_str("-new"), os_str("-subj"), os_str("/CN=127.0.0.1")];
     csr_args.extend_from_slice(&key_args);
-    csr_args.extend_from_slice(&[os("-keyout"), key_path.as_os_str(), os("-out"), csr_path.as_os_str()]);
+    csr_args.extend_from_slice(&[os_str("-keyout"), key_path.as_os_str(), os_str("-out"), csr_path.as_os_str()]);
 
     let sign_args = [
-        os("x509"), os("-req"), os("-days"), os("1"), os("-in"), csr_path.as_os_str(),
-        os("-CA"), ca_path.as_os_str(), os("-CAkey"), ca_key_path.as_os_str(), os("-CAcreateserial"),
-        os("-extfile"), extensions_path.as_os_str(), os("-out"), cert_path.as_os_str(),
+        os_str("x509"), os_str("-req"), os_str("-days"), os_str("1"), os_str("-in"), csr_path.as_os_str(),
+        os_str("-CA"), ca_path.as_os_str(), os_str("-CAkey"), ca_key_path.as_os_str(), os_str("-CAcreateserial"),
+        os_str("-extfile"), extensions_path.as_os_str(), os_str("-out"), cert_path.as_os_str(),
     ];
 
     let is_issued = openssl(&ca_args) && openssl(&csr_args) && openssl(&sign_args);
 
     is_issued.then(|| TestCertificates {
-        ca_path: ca_path.display().to_string(),
-        cert_path: cert_path.display().to_string(),
-        key_path: key_path.display().to_string(),
+        ca: ca_path.display().to_string(),
+        certificate: cert_path.display().to_string(),
+        key: key_path.display().to_string(),
     })
 }
 
@@ -494,8 +496,8 @@ fn tls_endpoint_verified_against_its_certificate() {
         return;
     };
 
-    let chain: Vec<CertificateDer<'static>> = CertificateDer::pem_file_iter(&certificates.cert_path).unwrap().map(Result::unwrap).collect();
-    let key = PrivateKeyDer::from_pem_file(&certificates.key_path).unwrap();
+    let chain: Vec<CertificateDer<'static>> = CertificateDer::pem_file_iter(&certificates.certificate).unwrap().map(Result::unwrap).collect();
+    let key = PrivateKeyDer::from_pem_file(&certificates.key).unwrap();
 
     let provider = Arc::new(rustls::crypto::ring::default_provider());
     let config = ServerConfig::builder_with_provider(provider)
@@ -527,7 +529,7 @@ fn tls_endpoint_verified_against_its_certificate() {
 
     let mut tls_job = job(vec![single(&url, "zpsm.tls")], JOB_TIMEOUT);
     tls_job.tls = TlsSettings {
-        ca_path: Some(certificates.ca_path),
+        ca_path: Some(certificates.ca),
         client_cert: None,
         client_key: None,
     };
@@ -550,7 +552,7 @@ fn newer_tls_generation_reads_the_files_anew() {
 
     let pools = EnginePools::new(POOL_SIZE);
     let settings = TlsSettings {
-        ca_path: Some(certificates.ca_path.clone()),
+        ca_path: Some(certificates.ca.clone()),
         client_cert: None,
         client_key: None,
     };
@@ -558,7 +560,7 @@ fn newer_tls_generation_reads_the_files_anew() {
     assert!(pools.select(true, &settings, 0).is_ok());
 
     // With the file removed, the configuration of the same generation is still the one built before ..
-    std::fs::remove_file(&certificates.ca_path).unwrap();
+    std::fs::remove_file(&certificates.ca).unwrap();
     assert!(pools.select(true, &settings, 0).is_ok());
 
     // .. while a newer generation reads the files again.
