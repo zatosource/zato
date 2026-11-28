@@ -13,12 +13,12 @@ from logging import getLogger
 from sqlalchemy import and_, BigInteger, cast, func, select
 
 # Zato
-from zato.common.audit_log.payload import delete_unreferenced_payloads, store_payload
 from zato.common.db_env.engine import call_database, execute_write
 from zato.common.pubsub.sql.browse import SQLBrowseAPI
 from zato.common.pubsub.sql.config import get_batch_size
 from zato.common.pubsub.sql.counts import Milliseconds_Per_Minute, No_Publisher
 from zato.common.pubsub.sql.payloads import get_data_preview
+from zato.common.pubsub.sql.pending import new_pending_update
 from zato.common.pubsub.sql.writes import Topic_Action_Delete, Topic_Action_Rename
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
     topic_count_table, topic_sub_table
@@ -507,55 +507,6 @@ class SQLAdminAPI(SQLBrowseAPI):
 
 # ################################################################################################################################
 
-    def _update_message(
-        self,
-        engine:'Engine',
-        topic_name:'str',
-        msg_id:'str',
-        payload:'str',
-        values:'anydict',
-        ) -> 'bool':
-        """ Stores the given payload in the payload table and makes one message reference it, with the given values
-        derived from it, in one transaction, and deletes the payload it replaced if nothing else references it.
-        Returns True if the message existed and was updated.
-        """
-        condition = and_(
-            message_table.c.msg_id == msg_id,
-            message_table.c.topic_name == topic_name,
-        )
-
-        with engine.begin() as connection:
-
-            # The payload that the message has not dropped yet, if any ..
-            previous_query = select(message_table.c.payload_id, message_table.c.payload_dropped)
-            previous_query = previous_query.where(condition)
-            previous_query = previous_query.with_for_update()
-
-            previous = connection.execute(previous_query).fetchone()
-
-            if previous is None:
-                return False
-
-            # .. the new one is stored unless it is stored already ..
-            payload_id = store_payload(connection, payload)
-
-            # .. the message references it ..
-            update_statement = message_table.update()
-            update_statement = update_statement.where(condition)
-            update_statement = update_statement.values(payload_id=payload_id, payload_dropped=False, **values)
-
-            _ = connection.execute(update_statement)
-
-            # .. and the previous one is deleted unless something else references it. A dropped one was released
-            # when the message dropped it.
-            if previous.payload_id is not None and not previous.payload_dropped:
-                if previous.payload_id != payload_id:
-                    delete_unreferenced_payloads(connection, [previous.payload_id])
-
-        return True
-
-# ################################################################################################################################
-
     def update_message(self, topic_name:'str', msg_id:'str', data:'str') -> 'bool':
         """ Replaces one message's payload - what the dashboard's message edit form saves.
         The size and preview follow the new payload, and encryption at rest is honored.
@@ -577,7 +528,12 @@ class SQLAdminAPI(SQLBrowseAPI):
             'data_preview': data_preview if data_preview else None,
         }
 
-        out = call_database(self.engine, self._update_message, self.engine, topic_name, msg_id, payload, values)
+        # .. in a commit of the writer, which stores the new payload in the payload table together with the other writes
+        # .. of pub/sub ..
+        pending = new_pending_update(topic_name, msg_id, payload, values)
+        self._writer.update(pending)
+
+        out = pending.is_updated
 
         # .. and the payloads kept from earlier deliveries are dropped, or the next delivery would send
         # the replaced one instead.

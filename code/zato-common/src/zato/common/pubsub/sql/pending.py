@@ -41,6 +41,7 @@ pending_atomic_list      = list['PendingAtomic']
 pending_lease_list       = list['PendingLease']
 pending_attempts_list    = list['PendingAttempts']
 pending_sync_list        = list_['PendingSync']
+pending_update_list      = list_['PendingUpdate']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -190,6 +191,27 @@ class PendingSync:
     exception: 'BaseException | None'
 
 # ################################################################################################################################
+
+@dataclass(init=False)
+class PendingUpdate:
+    """ The replacement of the payload of one message, with whether the message existed once it is written.
+    """
+
+    # The message whose payload is replaced
+    topic_name: 'str'
+    msg_id: 'str'
+
+    # The new payload in the form in which it is stored, and the values of the message row derived from it
+    payload: 'str'
+    values: 'anydict'
+
+    # Whether the message existed and now references the new payload
+    is_updated: 'bool'
+
+    # Why the payload could not be replaced, while the other items of its commit could
+    exception: 'BaseException | None'
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def new_pending_publication(
@@ -315,7 +337,24 @@ def new_pending_sync(added:'pairlist', removed:'pairlist') -> 'PendingSync':
 
 # ################################################################################################################################
 
-def reset_item(item:'PendingPublication | PendingAck | PendingAtomic | PendingLease | PendingAttempts | PendingSync') -> 'None':
+def new_pending_update(topic_name:'str', msg_id:'str', payload:'str', values:'anydict') -> 'PendingUpdate':
+    """ Returns the replacement of the payload of one message that is yet to be written.
+    """
+    out = PendingUpdate()
+    out.topic_name = topic_name
+    out.msg_id = msg_id
+    out.payload = payload
+    out.values = values
+    out.is_updated = False
+    out.exception = None
+
+    return out
+
+# ################################################################################################################################
+
+def reset_item(
+    item:'PendingPublication | PendingAck | PendingAtomic | PendingLease | PendingAttempts | PendingSync | PendingUpdate',
+    ) -> 'None':
     """ Clears what a commit that was rolled back stored in one of its items.
     """
     if isinstance(item, PendingPublication):
@@ -342,6 +381,10 @@ def reset_item(item:'PendingPublication | PendingAck | PendingAtomic | PendingLe
     elif isinstance(item, PendingSync):
         item.committed_added = []
         item.committed_removed = []
+        item.exception = None
+
+    elif isinstance(item, PendingUpdate):
+        item.is_updated = False
         item.exception = None
 
     else:

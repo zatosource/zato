@@ -20,6 +20,7 @@ from sqlalchemy import text
 # Zato
 from zato.common.db_env.database import get_database_engine
 from zato.common.test import pubsub_db
+from zato.common.test.conftest_base_pubsub import Expected_Record_Marker
 
 # local
 from zato.common.test.client import PublishClient, PullClient
@@ -167,7 +168,15 @@ class BaseCleanupLiveTestCase(unittest.TestCase):
         """ Waits for the cleanup process to complete and returns what it logged.
         """
         output, _ = process.communicate(timeout=30)
-        logger.info('Cleanup process exited -> returncode:%d, output:%s', process.returncode, output)
+
+        # The process outlasts an outage of the database that the test provokes, which it logs as warnings
+        marked_lines:'strlist' = []
+
+        for line in output.splitlines():
+            marked_lines.append(f'{Expected_Record_Marker} {line}')
+
+        marked_output = '\n'.join(marked_lines)
+        logger.info('Cleanup process exited -> returncode:%d, output:\n%s', process.returncode, marked_output)
 
         self.assertEqual(process.returncode, 0, output)
 

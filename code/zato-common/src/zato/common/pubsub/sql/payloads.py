@@ -14,6 +14,7 @@ from sqlalchemy import and_, exists, false, select, true
 
 # Zato
 from zato.common.api import PubSub
+from zato.common.audit_log.payload import delete_unreferenced_payloads, store_payload
 from zato.common.db_env.any_of import any_of
 from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.pubsub.sql.config import get_batch_size
@@ -24,9 +25,11 @@ from zato.common.pubsub.sql.schema import delivery_table, message_table
 
 if 0:
     from sqlalchemy.engine import Connection
+    from zato.common.pubsub.sql.pending import PendingUpdate
     from zato.common.typing_ import anydict, anylist, intlist, intset, strlist
 
     Connection = Connection
+    PendingUpdate = PendingUpdate
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -194,6 +197,46 @@ def drop_payloads(connection:'Connection', message_ids:'intlist') -> 'intlist':
             out.append(row.id)
 
     return out
+
+# ################################################################################################################################
+
+def update_message_payload(connection:'Connection', pending:'PendingUpdate') -> 'bool':
+    """ Stores the new payload of one message in the payload table and makes the message reference it, with the values
+    derived from it, in the caller's transaction, and deletes the payload it replaced if nothing else references it.
+    Returns True if the message existed and was updated.
+    """
+    condition = and_(
+        message_table.c.msg_id == pending.msg_id,
+        message_table.c.topic_name == pending.topic_name,
+    )
+
+    # The payload that the message has not dropped yet, if any ..
+    previous_query = select(message_table.c.payload_id, message_table.c.payload_dropped)
+    previous_query = previous_query.where(condition)
+    previous_query = previous_query.with_for_update()
+
+    previous = connection.execute(previous_query).fetchone()
+
+    if previous is None:
+        return False
+
+    # .. the new one is stored unless it is stored already ..
+    payload_id = store_payload(connection, pending.payload)
+
+    # .. the message references it ..
+    update_statement = message_table.update()
+    update_statement = update_statement.where(condition)
+    update_statement = update_statement.values(payload_id=payload_id, payload_dropped=False, **pending.values)
+
+    _ = connection.execute(update_statement)
+
+    # .. and the previous one is deleted unless something else references it. A dropped one was released
+    # when the message dropped it.
+    if previous.payload_id is not None and not previous.payload_dropped:
+        if previous.payload_id != payload_id:
+            delete_unreferenced_payloads(connection, [previous.payload_id])
+
+    return True
 
 # ################################################################################################################################
 # ################################################################################################################################

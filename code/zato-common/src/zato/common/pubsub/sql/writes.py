@@ -33,9 +33,9 @@ from zato.common.pubsub.sql.config import get_commit_max_messages, get_commits_i
 from zato.common.pubsub.sql.dedup import get_existing_fingerprints, rewrite_fingerprints, write_dedup_records
 from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID, PubSubTopicUnavailable
 from zato.common.pubsub.sql.fenced_ack import check_fenced, delete_fenced, PubSubAckConflict
-from zato.common.pubsub.sql.payloads import drop_payloads, get_chunks, get_message_ids
+from zato.common.pubsub.sql.payloads import drop_payloads, get_chunks, get_message_ids, update_message_payload
 from zato.common.pubsub.sql.pending import PendingAck, PendingAtomic, PendingAttempts, PendingPublication, PendingSync, \
-    new_pending_sync, reset_item
+    PendingUpdate, new_pending_sync, reset_item
 from zato.common.pubsub.sql.pull import lease_messages
 from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
 from zato.common.pubsub.sql.subscription_sync import apply_syncs, set_lock_timeout
@@ -48,7 +48,7 @@ if 0:
     from sqlalchemy.engine import Connection, Engine
     from zato.common.audit_log.api import AuditLog
     from zato.common.pubsub.sql.pending import PendingLease, pending_ack_list, pending_atomic_list, pending_attempts_list, \
-        pending_lease_list, pending_publication_list, pending_sync_list
+        pending_lease_list, pending_publication_list, pending_sync_list, pending_update_list
     from zato.common.pubsub.subscription_list import pairlist
     from zato.common.typing_ import any_, anydict, anylist, intlist, strlist, strstrdict
     from zato_common_core.zato_common_core import SubscriptionList
@@ -67,6 +67,7 @@ if 0:
     pending_publication_list = pending_publication_list
     strstrdict = strstrdict
     pending_sync_list = pending_sync_list
+    pending_update_list = pending_update_list
     pairlist = pairlist
     SubscriptionList = SubscriptionList
     noneiter = Iterator[None]
@@ -79,8 +80,9 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# A publication refers to one message.
+# A publication refers to one message, and so does the replacement of a payload.
 _publication_weight = 1
+_update_weight      = 1
 
 # The actions on the rows of a topic during which the topic refuses new publications.
 Topic_Action_Delete = 'deleted'
@@ -350,6 +352,16 @@ class PubSubWriter:
 
 # ################################################################################################################################
 
+    def update(self, pending:'PendingUpdate') -> 'None':
+        """ Replaces the payload of one message, storing the new payload in the payload table of the commit.
+        """
+        self._commit_queue.write(pending, weight=_update_weight, is_urgent=False)
+
+        if pending.exception:
+            raise pending.exception
+
+# ################################################################################################################################
+
     def _write_batch(self, batch:'anylist') -> 'None':
         """ Writes all the items of one batch.
         """
@@ -439,7 +451,8 @@ class PubSubWriter:
 
     def _write_transaction(self, engine:'Engine', batch:'anylist') -> 'anylist':
         """ Writes the publications of a batch first, its acknowledgements next, its fenced acknowledgements
-        with their publications after them, its push attempts, its pulls and the audit events of all of them last,
+        with their publications after them, its push attempts, its pulls, its replacements of payloads
+        and the audit events of all of them last,
         in one transaction. Returns the audit events written.
         """
         publications:'pending_publication_list' = []
@@ -448,6 +461,7 @@ class PubSubWriter:
         attempts_list:'pending_attempts_list' = []
         leases:'pending_lease_list' = []
         syncs:'pending_sync_list' = []
+        updates:'pending_update_list' = []
 
         for item in batch:
             if isinstance(item, PendingPublication):
@@ -460,6 +474,8 @@ class PubSubWriter:
                 attempts_list.append(item)
             elif isinstance(item, PendingSync):
                 syncs.append(item)
+            elif isinstance(item, PendingUpdate):
+                updates.append(item)
             else:
                 leases.append(item)
 
@@ -501,6 +517,11 @@ class PubSubWriter:
                 lease.rows = rows
                 lease.attempts = attempts
                 lease.on_leased(lease)
+
+            # .. a payload is replaced before the drops, so that a message which this transaction leaves without
+            # .. a delivery row drops its new payload rather than keeping it ..
+            for update in updates:
+                update.is_updated = update_message_payload(connection, update)
 
             # .. the payloads are dropped after all the writes of delivery rows. Dropping one holds the delivery rows
             # of the other subscribers of its message until the commit, so a transaction that locked a delivery row
