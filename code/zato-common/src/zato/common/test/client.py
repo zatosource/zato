@@ -266,7 +266,7 @@ class PullClient:
 
 # ################################################################################################################################
 
-    def _post(self, path:'str', payload:'anydict') -> 'anydict':
+    def _post(self, path:'str', payload:'anydict | strlist') -> 'anydict':
         """ Sends one authenticated request to a pub/sub endpoint and returns the response dict.
         """
         url = f'{self.base_url}{path}'
@@ -324,7 +324,7 @@ class PullClient:
     def ack(self, msg_ids:'strlist') -> 'anydict':
         """ Acknowledges pulled messages and returns the response dict.
         """
-        out = self._post('/pubsub/messages/ack', {'msg_ids': msg_ids})
+        out = self._post('/pubsub/messages/ack', msg_ids)
         logger.debug('Ack response: %s', out)
         return out
 

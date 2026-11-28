@@ -76,14 +76,14 @@ def _check_list(value:'any_', name:'str') -> 'None':
 
 # ################################################################################################################################
 
-def _check_msg_ids(msg_ids:'any_') -> 'None':
-    """ Checks the message IDs of a plain acknowledgement.
+def _check_msg_ids(msg_ids:'anylist') -> 'None':
+    """ Checks the message IDs of a plain acknowledgement, which is a list of them.
     """
-    _check_list(msg_ids, 'msg_ids')
+    _check_list(msg_ids, 'The list of message IDs')
 
     for msg_id in msg_ids:
         if not is_valid_msg_id(msg_id):
-            raise AckInputError(f'Each element of msg_ids must match {Msg_ID_Pattern.pattern}')
+            raise AckInputError(f'Each message ID must match {Msg_ID_Pattern.pattern}')
 
 # ################################################################################################################################
 
@@ -131,21 +131,20 @@ def _parse_consumed(consumed:'any_') -> 'consumed_list':
 # ################################################################################################################################
 
 class AckMessages(PubSubRESTService):
-    """ Acknowledges messages that the authenticated user pulled, removing them from its queue, either by their IDs alone
-    or with the delivery attempt of each, in which case the publications that the user produced from them
-    are committed in the same transaction.
+    """ Acknowledges messages that the authenticated user pulled, removing them from its queue, either by their IDs alone,
+    given as a list, or with the delivery attempt of each, given as an object, in which case the publications
+    that the user produced from them are committed in the same transaction.
     """
     name = 'pubsub.rest.ack-messages'
 
-    input = AsIs('-msg_ids'), AsIs('-consumed'), AsIs('-publish')
     output = Int('-ack_count'), AsIs('-published'), '-is_ok', '-cid', AsIs('-status'), '-details'
 
 # ################################################################################################################################
 
     def handle(self) -> 'None':
 
-        # Local aliases
-        input = self.request.input
+        # The request is either a list or an object, so it is read as it was parsed
+        payload = self.request.payload
 
         # Authenticate
         username, error = self.authenticate()
@@ -161,33 +160,36 @@ class AckMessages(PubSubRESTService):
             self.set_error(error)
             return
 
-        has_msg_ids = not _is_absent(input.msg_ids)
-        has_consumed = not _is_absent(input.consumed)
-        has_publish = not _is_absent(input.publish)
+        has_consumed = isinstance(payload, dict)
 
         # The input comes from the caller, so its shape is checked before anything reaches the database ..
         try:
 
-            if has_msg_ids == has_consumed:
-                raise AckInputError('Exactly one of msg_ids and consumed is required')
-
-            if has_publish:
-                if not has_consumed:
-                    raise AckInputError('publish requires consumed')
-
-            # .. a plain acknowledgement removes the messages that are still in the queue ..
-            if has_msg_ids:
-                _check_msg_ids(input.msg_ids)
-                ack_count = self.server.pubsub_backend.ack_pulled(sub_key, input.msg_ids)
+            # .. a plain acknowledgement is a list of message IDs and removes the messages that are still in the queue ..
+            if isinstance(payload, list):
+                _check_msg_ids(payload)
+                ack_count = self.server.pubsub_backend.ack_pulled(sub_key, payload)
                 published:'strlist' = []
 
-            # .. whereas one with the attempts commits with the publications or not at all.
-            else:
-                consumed = _parse_consumed(input.consumed)
-                publications = self._build_publications(username, input.publish, has_publish)
+            # .. one with the attempts is an object, and it commits with the publications or not at all ..
+            elif has_consumed:
+                consumed = payload.get('consumed')
+                publish = payload.get('publish')
+
+                if _is_absent(consumed):
+                    raise AckInputError('consumed is required')
+
+                has_publish = not _is_absent(publish)
+
+                consumed = _parse_consumed(consumed)
+                publications = self._build_publications(username, publish, has_publish)
                 result = self.server.pubsub_backend.ack_pulled_with_publications(sub_key, consumed, publications)
                 ack_count = result.removed_count
                 published = result.published
+
+            # .. and nothing else is an acknowledgement.
+            else:
+                raise AckInputError('The request must be a list of message IDs or an object with consumed')
 
         except AckInputError as e:
             error = (str(e), _status_bad_request, BAD_REQUEST)

@@ -1258,6 +1258,7 @@ class ConfigManager(_ConfigManagerBase):
             'push_type': row.push_type,
             'push_service_name': row.push_service_name,
             'rest_push_endpoint_id': row.rest_push_endpoint_id,
+            'push_batch_size': row.push_batch_size,
         }
 
         if row.push_type == PubSub.Push_Type.REST:
@@ -2667,6 +2668,7 @@ class ConfigManager(_ConfigManagerBase):
                 'push_service_name': push_service_name,
                 'rest_push_endpoint_id': rest_push_endpoint_id,
                 'rest_push_url': rest_push_url,
+                'push_batch_size': msg.push_batch_size,
             }
             self._push_subs[sub_key].append(sub_config)
 
@@ -2847,6 +2849,7 @@ class ConfigManager(_ConfigManagerBase):
                 PubSubSubscription.push_type,
                 PubSubSubscription.push_service_name,
                 PubSubSubscription.rest_push_endpoint_id,
+                PubSubSubscription.push_batch_size,
                 PubSubSubscription.is_delivery_active,
                 PubSubTopic.name,
             ).join(
@@ -2865,6 +2868,7 @@ class ConfigManager(_ConfigManagerBase):
                     'push_type': row.push_type,
                     'push_service_name': row.push_service_name,
                     'rest_push_endpoint_id': row.rest_push_endpoint_id,
+                    'push_batch_size': row.push_batch_size,
                 }))
 
                 # .. pull subscriptions need nothing more ..
@@ -2882,6 +2886,7 @@ class ConfigManager(_ConfigManagerBase):
                     'push_type': row.push_type,
                     'push_service_name': row.push_service_name,
                     'rest_push_endpoint_id': row.rest_push_endpoint_id,
+                    'push_batch_size': row.push_batch_size,
                 }
 
                 if row.sub_key not in self._push_subs:
@@ -2940,6 +2945,7 @@ class ConfigManager(_ConfigManagerBase):
         sub_config.push_type = getattr(msg, 'push_type', None)
         sub_config.push_service_name = getattr(msg, 'push_service_name', None)
         sub_config.rest_push_endpoint_id = getattr(msg, 'rest_push_endpoint_id', None)
+        sub_config.push_batch_size = msg.push_batch_size
 
         if topic_name not in self.config_store.pubsub_subs:
             self.config_store.pubsub_subs[topic_name] = []

@@ -66,8 +66,8 @@ class Index(_Index):
     paginate = True
 
     output_required = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', 'sec_base_id', 'security', 'delivery_type', \
-        'push_type', 'rest_push_endpoint_id', 'rest_push_endpoint_name', 'push_service_name', 'topic_name_list', \
-        'topic_link_list', 'pending_depth'
+        'push_type', 'rest_push_endpoint_id', 'rest_push_endpoint_name', 'push_service_name', 'push_batch_size', \
+        'topic_name_list', 'topic_link_list', 'pending_depth'
     output_repeated = True
 
     def on_before_append_item(self, item:'any_') -> 'any_':
@@ -172,7 +172,8 @@ class Create(_CreateEdit):
     service_name = 'zato.pubsub.subscription.create'
 
     input_required = 'topic_name', 'delivery_type'
-    input_optional = 'sec_base_id', 'is_delivery_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name'
+    input_optional = 'sec_base_id', 'is_delivery_active', 'push_type', 'rest_push_endpoint_id', 'push_service_name', \
+        'push_batch_size'
     output_required = 'id', 'sub_key', 'is_delivery_active', 'created', 'security', 'delivery_type', \
         'topic_name_list', 'topic_link_list',
 
@@ -185,7 +186,8 @@ class Create(_CreateEdit):
             'delivery_type': 'delivery_type',
             'is_delivery_active': 'is_delivery_active',
             'is_pub_active': 'is_pub_active',
-            'rest_push_endpoint_id': 'rest_push_endpoint_id'
+            'rest_push_endpoint_id': 'rest_push_endpoint_id',
+            'push_batch_size': 'push_batch_size',
         }
 
     def pre_process_input_dict(self, input_dict:'anydict') -> 'None':
@@ -206,7 +208,7 @@ class Edit(_CreateEdit):
 
     input_required = 'sub_key', 'topic_id_list', 'delivery_type'
     input_optional = 'sec_base_id', 'is_delivery_active', 'is_pub_active', 'push_type', 'rest_push_endpoint_id', \
-        'push_service_name'
+        'push_service_name', 'push_batch_size'
     output_required = 'id', 'sub_key', 'security', 'delivery_type', 'is_delivery_active', 'topic_name_list', 'topic_link_list'
 
     def _get_input_dict(self) -> 'anydict':
@@ -222,6 +224,7 @@ class Edit(_CreateEdit):
             f'{prefix}push_type': 'push_type',
             f'{prefix}rest_push_endpoint_id': 'rest_push_endpoint_id',
             f'{prefix}push_service_name': 'push_service_name',
+            f'{prefix}push_batch_size': 'push_batch_size',
         }
 
     def pre_process_input_dict(self, input_dict:'anydict') -> 'None':

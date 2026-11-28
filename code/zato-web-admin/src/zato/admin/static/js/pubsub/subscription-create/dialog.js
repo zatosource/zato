@@ -212,6 +212,7 @@ form.writeInputs = function() {
         form.addInput('push_type', config.pushTypeREST);
         form.addInput('rest_push_endpoint_id', state.endpoint);
         form.addInput('rest_push_endpoint_name', form.data.endpointNames[state.endpoint]);
+        form.addInput('push_batch_size', state.batchSize);
     }
 };
 

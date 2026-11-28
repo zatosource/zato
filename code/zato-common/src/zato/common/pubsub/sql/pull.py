@@ -241,6 +241,82 @@ _lease_probe_query = _lease_probe_query.limit(1)
 _lease_probe_statement = PlainStatement(_lease_probe_query)
 
 # ################################################################################################################################
+
+# A push greenlet claims its next batch in one statement, in the transaction that acknowledges the batch before it.
+# It locks the deliverable rows of its subscriber in the order of the queue, as a lease does, except that a push row
+# is never leased, so the lease of a row plays no part in it ..
+_claim_candidates = select(delivery_table.c.id, message_table.c.data_size, delivery_table.c.priority,
+    delivery_table.c.message_id)
+_claim_candidates = _claim_candidates.select_from(_fetch_join)
+_claim_candidates = _claim_candidates.where(and_(
+    delivery_table.c.sub_key == bindparam('claim_sub_key'),
+    delivery_table.c.expiration_ms > bindparam('claim_now_ms'),
+    _delivered_topics_filter('claim'),
+))
+_claim_candidates = _claim_candidates.order_by(*_order_by)
+_claim_candidates = _claim_candidates.limit(bindparam('claim_max_messages'))
+_claim_candidates = _claim_candidates.with_for_update(skip_locked=True, key_share=True, of=delivery_table)
+_claim_candidates = _claim_candidates.cte('claim_candidates')
+_claim_candidates = _claim_candidates.prefix_with('MATERIALIZED')
+
+# .. then keeps those within the size budget under the rules of a lease ..
+_claim_queue_order = [_claim_candidates.c.priority.desc(), _claim_candidates.c.message_id.asc()]
+_claim_is_oversized = _claim_candidates.c.data_size > bindparam('claim_max_len')
+
+_claim_len_before = func.sum(_claim_candidates.c.data_size).over(order_by=_claim_queue_order, rows=_lease_rows_before)
+_claim_len_including = func.sum(_claim_candidates.c.data_size).over(order_by=_claim_queue_order, rows=_lease_rows_including)
+_claim_oversized_before = func.bool_or(_claim_is_oversized).over(order_by=_claim_queue_order, rows=_lease_rows_before)
+
+_claim_budget = select(
+    _claim_candidates.c.id,
+    func.coalesce(_claim_len_before, 0).label('len_before'),
+    _claim_len_including.label('len_including'),
+    func.coalesce(_claim_oversized_before, false()).label('oversized_before'),
+    _claim_is_oversized.label('is_oversized'),
+)
+_claim_budget = _claim_budget.cte('claim_budget')
+
+# .. records the next attempt of each row it kept ..
+_claim_update = delivery_table.update()
+_claim_update = _claim_update.where(and_(
+    delivery_table.c.id == _claim_budget.c.id,
+    not_(_claim_budget.c.oversized_before),
+    _claim_budget.c.len_before <= bindparam('claim_max_len'),
+    or_(_claim_budget.c.len_including <= bindparam('claim_max_len'), _claim_budget.c.is_oversized),
+))
+_claim_update = _claim_update.values(attempt=delivery_table.c.attempt + 1)
+_claim_update = _claim_update.returning(delivery_table.c.id, delivery_table.c.message_id, delivery_table.c.attempt)
+_claim_claimed = _claim_update.cte('claim_claimed')
+
+# .. and reads the messages of the rows it claimed without their payloads, which the server keeps,
+# .. each with the ID and the attempt number of its delivery row, in the order of the queue.
+_claim_columns:'anylist' = []
+
+for _column in message_columns:
+    if _column.name not in _payload_columns:
+        _claim_columns.append(_column)
+
+_claim_columns.append(_claim_claimed.c.id.label('delivery_id'))
+_claim_columns.append(_claim_claimed.c.attempt.label('attempt'))
+
+_claim_query = select(*_claim_columns)
+_claim_query = _claim_query.select_from(_claim_claimed.join(message_table, message_table.c.id == _claim_claimed.c.message_id))
+_claim_query = _claim_query.order_by(message_table.c.priority.desc(), message_table.c.id.asc())
+
+_claim_statement = PlainStatement(_claim_query)
+
+# Whether a push greenlet would claim anything, read when its wait for a publication ends without one.
+_claim_probe_query = select(delivery_table.c.id)
+_claim_probe_query = _claim_probe_query.where(and_(
+    delivery_table.c.sub_key == bindparam('probe_sub_key'),
+    delivery_table.c.expiration_ms > bindparam('probe_now_ms'),
+    _delivered_topics_filter('probe'),
+))
+_claim_probe_query = _claim_probe_query.limit(1)
+
+_claim_probe_statement = PlainStatement(_claim_probe_query)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 def has_lease_candidates(engine:'Engine', subscription_list:'SubscriptionList', sub_key:'str', now_ms:'int') -> 'bool':
@@ -255,6 +331,49 @@ def has_lease_candidates(engine:'Engine', subscription_list:'SubscriptionList', 
         row = _lease_probe_statement.execute(connection, parameters).first()
 
     out = row is not None
+    return out
+
+# ################################################################################################################################
+
+def has_claim_candidates(engine:'Engine', subscription_list:'SubscriptionList', sub_key:'str', now_ms:'int') -> 'bool':
+    """ Whether one push subscriber has a deliverable row, read without a lock and without a write, so that
+    a push greenlet whose queue is empty does not wait for a commit.
+    """
+    parameters = delivered_topics_parameters(subscription_list, sub_key, 'probe')
+    parameters['probe_sub_key'] = sub_key
+    parameters['probe_now_ms'] = now_ms
+
+    with engine.connect() as connection:
+        row = _claim_probe_statement.execute(connection, parameters).first()
+
+    out = row is not None
+    return out
+
+# ################################################################################################################################
+
+def claim_messages(
+    connection:'Connection',
+    subscription_list:'SubscriptionList',
+    sub_key:'str',
+    max_messages:'int',
+    max_len:'int',
+    now_ms:'int',
+) -> 'anylist':
+    """ Claims up to max_messages deliverable rows of one push subscriber, whose payloads add up to at most max_len,
+    recording the next attempt of each, in the caller's transaction, and returns the rows of their messages
+    without their payloads, each with the ID and the attempt number of its delivery row, in the order of the queue.
+    """
+    # The topics handed out are those of the subscription list as of the moment the candidates are locked ..
+    parameters = delivered_topics_parameters(subscription_list, sub_key, 'claim')
+    parameters['claim_sub_key'] = sub_key
+    parameters['claim_now_ms'] = now_ms
+    parameters['claim_max_messages'] = max_messages
+    parameters['claim_max_len'] = max_len
+
+    # .. and the statement locks, budgets and claims the rows and returns their messages.
+    out:'anylist' = []
+    out.extend(_claim_statement.execute(connection, parameters))
+
     return out
 
 # ################################################################################################################################

@@ -284,6 +284,7 @@ def get_outgoing_sub_config(sub_key:'str', topic_name:'str') -> 'stranydict':
         'push_type': PubSub.Push_Type.Service,
         'push_service_name': PubSub.Outgoing.Delivery_Service,
         'rest_push_endpoint_id': None,
+        'push_batch_size': PubSub.Delivery.Push_Batch_Size_Default,
     }
 
     return out

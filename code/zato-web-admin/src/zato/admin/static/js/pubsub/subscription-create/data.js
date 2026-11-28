@@ -65,6 +65,11 @@ form.config = {
     pushTypeREST: 'rest',
     pushTypeService: 'service',
 
+    // How many messages one push request to a REST endpoint holds, by default and at most
+    batchSizeDefault: 1,
+    batchSizeMin: 1,
+    batchSizeMax: 1000,
+
     // The first segment of a topic name names the card the topic belongs to
     segmentSeparators: /[._]/,
 
@@ -82,6 +87,7 @@ form.config = {
         endpoint: 'REST endpoint',
         noEndpoints: 'No REST endpoints',
         addEndpoint: 'Add REST endpoint',
+        batchSize: 'Messages per request',
         searchPlaceholder: 'Search topics',
         results: 'Search results',
         selectAll: 'Select all',
@@ -141,6 +147,7 @@ form.newState = function() {
         client: '',
         delivery: form.config.deliveryPull,
         endpoint: '',
+        batchSize: form.config.batchSizeDefault,
         isActive: true,
         topics: []
     };

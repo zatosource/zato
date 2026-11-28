@@ -40,6 +40,28 @@ logger = logging.getLogger(__name__)
 # which keeps it apart from the key of a security definition that has the same name as the service.
 Service_Identity_Prefix = 'service\n'
 
+# The fewest and the most messages that one push request of a subscription holds
+_push_batch_size_min = 1
+_push_batch_size_max = PubSub.Delivery.Push_Batch_Size_Max
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_push_batch_size(yaml_def:'stranydict') -> 'int':
+    """ Returns the number of messages per push request that a YAML definition gives, or the default one if it gives none.
+    """
+    if 'push_batch_size' not in yaml_def:
+        out = PubSub.Delivery.Push_Batch_Size_Default
+        return out
+
+    out = yaml_def['push_batch_size']
+
+    if not isinstance(out, int) or out < _push_batch_size_min or out > _push_batch_size_max:
+        msg = f'push_batch_size must be an integer from {_push_batch_size_min} to {_push_batch_size_max}: {yaml_def}'
+        raise Exception(msg)
+
+    return out
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -70,6 +92,7 @@ class PubSubSubscriptionImporter:
                 'push_type': item.push_type,
                 'rest_push_endpoint_id': item.rest_push_endpoint_id,
                 'push_service_name': item.push_service_name,
+                'push_batch_size': item.push_batch_size,
                 'is_delivery_active': item.is_delivery_active,
             }
 
@@ -120,6 +143,7 @@ class PubSubSubscriptionImporter:
                 'push_type': subscription.push_type,
                 'rest_push_endpoint_id': subscription.rest_push_endpoint_id,
                 'push_service_name': subscription.push_service_name,
+                'push_batch_size': subscription.push_batch_size,
                 'is_delivery_active': subscription.is_delivery_active,
                 'topic_name_list': topic_names
             }
@@ -189,6 +213,7 @@ class PubSubSubscriptionImporter:
         instance.push_type = definition.get('push_type')
         instance.rest_push_endpoint_id = definition.get('rest_push_endpoint_id')
         instance.push_service_name = definition.get('push_service_name')
+        instance.push_batch_size = definition['push_batch_size']
         if 'is_delivery_active' in definition:
             instance.is_delivery_active = definition['is_delivery_active']
         else:
@@ -265,6 +290,7 @@ class PubSubSubscriptionImporter:
         instance.push_type = definition.get('push_type')
         instance.rest_push_endpoint_id = definition.get('rest_push_endpoint_id')
         instance.push_service_name = definition.get('push_service_name')
+        instance.push_batch_size = definition['push_batch_size']
 
         if 'is_delivery_active' in definition:
             instance.is_delivery_active = definition['is_delivery_active']
@@ -370,6 +396,14 @@ class PubSubSubscriptionImporter:
 
         if yaml_is_active is not db_is_active:
             logger.info('is_delivery_active differs: YAML=%s, DB=%s', yaml_is_active, db_is_active)
+            return True
+
+        # Compare push_batch_size
+        yaml_push_batch_size = get_push_batch_size(yaml_def)
+        db_push_batch_size = db_def['push_batch_size']
+
+        if yaml_push_batch_size != db_push_batch_size:
+            logger.info('push_batch_size differs: YAML=%s, DB=%s', yaml_push_batch_size, db_push_batch_size)
             return True
 
         # Compare topic lists
@@ -482,7 +516,8 @@ class PubSubSubscriptionImporter:
                 'is_delivery_active': is_delivery_active,
                 'is_pub_active': is_pub_active,
                 'username': subscriber_name,
-                'name': yaml_def.get('name', subscriber_name)
+                'name': yaml_def.get('name', subscriber_name),
+                'push_batch_size': get_push_batch_size(yaml_def),
             }
 
             # Handle push-specific fields
@@ -499,7 +534,7 @@ class PubSubSubscriptionImporter:
             for key, value in yaml_def.items():
                 if key not in [
                     'security', 'topic_list', 'delivery_type', 'push_rest_endpoint', 'push_service',
-                    'is_delivery_active', 'is_pub_active',
+                    'is_delivery_active', 'is_pub_active', 'push_batch_size',
                 ]:
                     subscription_def[key] = value
 
@@ -521,6 +556,7 @@ class PubSubSubscriptionImporter:
                     'push_type': instance.push_type,
                     'rest_push_endpoint_id': instance.rest_push_endpoint_id,
                     'push_service_name': instance.push_service_name,
+                    'push_batch_size': instance.push_batch_size,
                     'is_delivery_active': instance.is_delivery_active,
                 }
 
@@ -543,6 +579,7 @@ class PubSubSubscriptionImporter:
                         'push_type': instance.push_type,
                         'rest_push_endpoint_id': instance.rest_push_endpoint_id,
                         'push_service_name': instance.push_service_name,
+                        'push_batch_size': instance.push_batch_size,
                         'is_delivery_active': instance.is_delivery_active,
                     }
 

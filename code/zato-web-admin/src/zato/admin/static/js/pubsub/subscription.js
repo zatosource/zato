@@ -338,7 +338,7 @@ $(document).ready(function() {
 
             // Clean up any previous state
             $('.loading-spinner').remove();
-            $('#rest-endpoint-edit, #push-service-edit, #push-type-edit').hide();
+            $('#rest-endpoint-edit, #push-service-edit, #push-type-edit, #push-batch-size-edit').hide();
 
             if (instance.delivery_type !== 'push') {
                 $('#rest-endpoint-edit').hide();
@@ -349,9 +349,11 @@ $(document).ready(function() {
 
                 if (instance.push_type === 'rest') {
                     $('#rest-endpoint-edit').show();
+                    $('#push-batch-size-edit').show();
                     $('#push-service-edit').hide();
                 } else if (instance.push_type === 'service') {
                     $('#rest-endpoint-edit').hide();
+                    $('#push-batch-size-edit').hide();
                     $('#push-service-edit').show();
                 } else {
                     $('#rest-endpoint-edit').hide();
@@ -378,6 +380,7 @@ $(document).ready(function() {
         $('.loading-spinner').remove();
         $('.security-select').removeClass('hide');
         $('#rest-endpoint-edit').hide();
+        $('#push-batch-size-edit').hide();
         $('#push-service-edit').hide();
         $('#push-type-edit').hide();
 
@@ -704,6 +707,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += String.format("<td class='ignore'>{0}</td>", item.push_service_name);
     row += String.format("<td class='ignore'>{0}</td>", item.topic_name_list);
     row += String.format("<td class='ignore'>{0}</td>", pendingDepth);
+    row += String.format("<td class='ignore'>{0}</td>", item.push_batch_size);
 
     if(include_tr) {
         row += '</tr>';
@@ -747,6 +751,7 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
     form.find('#id_edit-push_type').val(instance.push_type);
     form.find('#id_edit-rest_push_endpoint_id').val(instance.rest_push_endpoint_id);
     form.find('#id_edit-push_service_name').val(instance.push_service_name);
+    form.find('#id_edit-push_batch_size').val(instance.push_batch_size);
 
 
     // Handle security definition display as link instead of select
@@ -850,16 +855,19 @@ $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type, 
     var pushTypeId = form_type === 'create' ? '#id_push_type' : '#id_edit-push_type';
     var restEndpointSpanId = form_type === 'create' ? '#rest-endpoint-create' : '#rest-endpoint-edit';
     var serviceSpanId = form_type === 'create' ? '#push-service-create' : '#push-service-edit';
+    var batchSizeRowId = form_type === 'create' ? '#push-batch-size-create' : '#push-batch-size-edit';
 
     var $deliveryType = $(deliveryTypeId);
     var $pushTypeSpan = $(pushTypeSpanId);
     var $pushType = $(pushTypeId);
     var $restEndpointSpan = $(restEndpointSpanId);
     var $serviceSpan = $(serviceSpanId);
+    var $batchSizeRow = $(batchSizeRowId);
 
     // Hide spans immediately to prevent any flash
     $pushTypeSpan.hide();
     $restEndpointSpan.hide();
+    $batchSizeRow.hide();
     $serviceSpan.hide();
 
     if ($deliveryType.length === 0) {
@@ -878,6 +886,7 @@ $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type, 
         } else {
             $pushTypeSpan.hide();
             $restEndpointSpan.hide();
+            $batchSizeRow.hide();
             $serviceSpan.hide();
         }
 
@@ -915,12 +924,15 @@ $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type, 
             // Hide service span first to prevent layout shift
             $serviceSpan.hide();
             $restEndpointSpan.show();
+            $batchSizeRow.show();
         } else if (pushTypeValue === 'service') {
             // Hide REST span first to prevent layout shift
             $restEndpointSpan.hide();
+            $batchSizeRow.hide();
             $serviceSpan.show();
         } else {
             $restEndpointSpan.hide();
+            $batchSizeRow.hide();
             $serviceSpan.hide();
         }
 

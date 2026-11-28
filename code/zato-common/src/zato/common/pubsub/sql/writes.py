@@ -26,6 +26,7 @@ from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.db_env.database import get_database_engine
 from zato.common.pubsub.sql.ack_deletes import AckDeletes
 from zato.common.pubsub.sql.audit_events import collect_audit_events, drop_audit_events, prepare_batch_payloads
+from zato.common.pubsub.sql.clock import get_engine_clock
 from zato.common.pubsub.sql.config import get_commit_max_messages, get_commits_in_flight, Urgent_Commits_In_Flight
 from zato.common.pubsub.sql.dedup import get_existing_fingerprints
 from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID, PubSubTopicUnavailable
@@ -34,7 +35,7 @@ from zato.common.pubsub.sql.payloads import update_message_payload
 from zato.common.pubsub.sql.pending import PendingAck, PendingAtomic, PendingAttempts, PendingPublication, PendingSync, \
     PendingUpdate, new_pending_sync, reset_item
 from zato.common.pubsub.sql.publication_inserts import PublicationInserts
-from zato.common.pubsub.sql.pull import lease_messages
+from zato.common.pubsub.sql.pull import claim_messages, lease_messages
 from zato.common.pubsub.sql.schema import delivery_table
 from zato.common.pubsub.sql.subscription_sync import apply_syncs, set_lock_timeout
 
@@ -259,6 +260,10 @@ class PubSubWriter(PublicationInserts, AckDeletes):
         with other callers, none of whom shares the outcome of this item.
         """
         weight = len(pending.ack.msg_ids) + len(pending.publications)
+
+        # A claim refers to as many messages as it may claim
+        if pending.claim:
+            weight += pending.claim.max_messages
 
         topic_names = self._get_topic_names(pending.publications)
         self._accept_publications(topic_names)
@@ -550,7 +555,8 @@ class PubSubWriter(PublicationInserts, AckDeletes):
         ack_by_message_id:'anydict',
         added_pairs:'pairlist',
         ) -> 'None':
-        """ Writes a fenced acknowledgement with its publications in the caller's transaction. Each reason for which
+        """ Writes a fenced acknowledgement with its publications, and the claim of the next batch of its push subscriber,
+        if it has one, in the caller's transaction. Each reason for which
         the item fails is checked before anything of it is written, so that an item that fails writes nothing,
         and the item is also enclosed in a savepoint, against a concurrent commit that changes
         what the checks read before the item is written.
@@ -578,6 +584,14 @@ class PubSubWriter(PublicationInserts, AckDeletes):
                         raise pending.exception
 
             delete_fenced(connection, atomic.ack, fenced_rows)
+
+            # .. the next batch of a push subscriber is claimed only once its acknowledgement is written,
+            # .. so that a batch whose acknowledgement failed is claimed again before any message behind it ..
+            if claim := atomic.claim:
+                clock = get_engine_clock(connection.engine)
+                now_ms = clock.now_ms()
+                claim.rows = claim_messages(connection, self.subscription_list, claim.sub_key, claim.max_messages,
+                    claim.max_len, now_ms)
 
         except (PubSubAckConflict, PubSubDuplicateMsgID) as e:
             savepoint.rollback()

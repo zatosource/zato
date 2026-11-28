@@ -49,6 +49,37 @@ form.buildSelectField = function(stateKey, labelText, options) {
 
 // ////////////////////////////////////////////////////////////////////////
 
+// A labeled number input bound to one key of the state.
+form.buildNumberField = function(stateKey, labelText, minValue, maxValue) {
+
+    var inputId = config.idPrefix + stateKey;
+
+    var field = document.createElement('div');
+    field.className = 'micro-form-field ' + config.idPrefix + 'field-' + stateKey;
+
+    var label = document.createElement('label');
+    label.className = 'micro-form-label';
+    label.setAttribute('for', inputId);
+    label.textContent = labelText;
+
+    var input = document.createElement('input');
+    input.type = 'number';
+    input.className = 'micro-form-number';
+    input.id = inputId;
+    input.min = minValue;
+    input.max = maxValue;
+    input.setAttribute('data-key', stateKey);
+    input.value = form.state[stateKey];
+
+    field.appendChild(label);
+    field.appendChild(input);
+
+    var out = field;
+    return out;
+};
+
+// ////////////////////////////////////////////////////////////////////////
+
 form.itemsToOptions = function(itemList) {
 
     var out = [{value: '', label: ''}];
@@ -114,6 +145,7 @@ form.buildSubscriberFields = function() {
             }
 
             fields.appendChild(endpointField);
+            fields.appendChild(form.buildNumberField('batchSize', labels.batchSize, config.batchSizeMin, config.batchSizeMax));
         }
     }
 

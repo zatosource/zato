@@ -44,14 +44,22 @@ _scopes:'anydict' = {}
 
 # ################################################################################################################################
 
-def open_delivery_scope() -> 'DeliveryScope':
-    """ Opens the scope of the batch that the current greenlet delivers.
+def new_delivery_scope() -> 'DeliveryScope':
+    """ Returns a scope that holds nothing, opened for no greenlet.
     """
     out = DeliveryScope()
     out.msg_ids = []
     out.publications = []
     out.audit_events = []
 
+    return out
+
+# ################################################################################################################################
+
+def open_delivery_scope() -> 'DeliveryScope':
+    """ Opens the scope of the batch that the current greenlet delivers.
+    """
+    out = new_delivery_scope()
     _scopes[getcurrent()] = out
 
     return out

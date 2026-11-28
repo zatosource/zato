@@ -79,6 +79,13 @@ class CreateForm(forms.Form):
         required=False,
         widget=forms.Select()
     )
+    push_batch_size = forms.IntegerField(
+        required=False,
+        initial=PubSub.Delivery.Push_Batch_Size_Default,
+        min_value=1,
+        max_value=PubSub.Delivery.Push_Batch_Size_Max,
+        widget=forms.NumberInput(attrs={'style':'width:6em'})
+    )
     push_service_name = forms.ChoiceField(
         required=False,
         widget=forms.Select()

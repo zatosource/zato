@@ -384,6 +384,8 @@
             'push_service_name',
             'topic_name_list',
             'pending_depth',
+
+            'push_batch_size',
         ]
     }
     </script>
@@ -532,6 +534,8 @@
                         <td class='ignore'>{{ item.push_service_name }}</td>
                         <td class='ignore'>{{ item.topic_name_list }}</td>
                         <td class='ignore'>{{ item.pending_depth }}</td>
+
+                        <td class='ignore'>{{ item.push_batch_size }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -617,6 +621,12 @@
                                 <span id="push-service-edit" style="width:50%; display:none;">
                                     {{ edit_form.push_service_name }}
                                 </span>
+                            </td>
+                        </tr>
+                        <tr id="push-batch-size-edit" style="display:none;">
+                            <td style="vertical-align:baseline; width:150px; height:40px;"><label for="id_edit-push_batch_size">Messages per request</label></td>
+                            <td style="vertical-align:baseline; width:400px; height:40px;">
+                                {{ edit_form.push_batch_size }}
                             </td>
                         </tr>
                         <tr>

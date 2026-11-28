@@ -2829,6 +2829,10 @@ class PubSub:
         # How long a delivery greenlet waits after a fetch that raised
         Fetch_Error_Sleep = 3
 
+        # How many messages one push request of a REST subscription holds, by default and at most
+        Push_Batch_Size_Default = 1
+        Push_Batch_Size_Max = 1000
+
     class Repeats:
         Max = 500
 

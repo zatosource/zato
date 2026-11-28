@@ -875,6 +875,7 @@ pubsub_subscription:
   - security: enmasse.basic_auth.2
     delivery_type: push
     push_rest_endpoint: enmasse.outgoing.rest.1
+    push_batch_size: 10
     max_retry_time: 48h
     topic_list:
       - enmasse.topic.1

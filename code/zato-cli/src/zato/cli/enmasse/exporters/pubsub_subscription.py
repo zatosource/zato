@@ -52,6 +52,7 @@ class PubSubSubscriptionExporter:
             PubSubSubscription.push_type,
             PubSubSubscription.rest_push_endpoint_id,
             PubSubSubscription.push_service_name,
+            PubSubSubscription.push_batch_size,
             PubSubSubscription.is_delivery_active,
             PubSubSubscription.is_pub_active,
             PubSubTopic.name.label('topic_name'),
@@ -112,6 +113,11 @@ class PubSubSubscriptionExporter:
                         if not rest_push_endpoint_name:
                             raise ValueError(f'Push subscription missing rest_push_endpoint_name: subscription_id={subscription_id} security={security_name}')
                         subscription_data['push_rest_endpoint'] = rest_push_endpoint_name
+
+                        # Only a value other than the default is exported, which keeps the default implicit
+                        if item.push_batch_size != PubSub.Delivery.Push_Batch_Size_Default:
+                            subscription_data['push_batch_size'] = item.push_batch_size
+
                     elif push_type == 'service':
                         if not push_service_name:
                             raise ValueError(f'Push subscription missing push_service_name: subscription_id={subscription_id} security={security_name}')

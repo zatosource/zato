@@ -53,6 +53,7 @@ def pubsub_subscription_topic_pairs(session:'SASession') -> 'anylist':
         PubSubSubscription.push_type,
         PubSubSubscription.push_service_name,
         PubSubSubscription.rest_push_endpoint_id,
+        PubSubSubscription.push_batch_size,
         PubSubSubscription.is_delivery_active,
         PubSubSubscription.is_pub_active,
         PubSubSubscriptionTopic.is_pub_enabled,

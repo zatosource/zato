@@ -228,7 +228,7 @@ _object_order['alerts'] = 'is_active', 'consecutive_failures', 'warning_failures
 
 _object_order['pubsub_topic']        = 'name', 'description', 'is_audit_log_active', 'is_audit_export_payload_active'
 _object_order['pubsub_permission']   = 'security', 'pub', 'sub'
-_object_order['pubsub_subscription'] = 'security', 'delivery_type', 'push_rest_endpoint', 'push_service', \
+_object_order['pubsub_subscription'] = 'security', 'delivery_type', 'push_rest_endpoint', 'push_batch_size', 'push_service', \
     'max_retry_time', 'topic_list'
 
 _object_order['channel_openapi'] = 'name', 'is_active', 'url_path', 'rest_channel_list:list'

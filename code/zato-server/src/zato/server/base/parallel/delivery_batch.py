@@ -34,7 +34,7 @@ if 0:
     from gevent.lock import BoundedSemaphore
     from zato.common.pubsub.delivery_scope import DeliveryScope
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
-    from zato.common.typing_ import any_, anydict, anylist, callable_, intset, strset
+    from zato.common.typing_ import any_, anydict, anylist, callable_, strset
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
@@ -56,56 +56,24 @@ class BatchCommitFailed(Exception):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _are_attempts_recorded(messages:'anylist') -> 'bool':
-    """ Whether the first attempt of every message of a batch was recorded before the batch reached its delivery loop.
-    """
-    for message in messages:
-        if Attempt_Recorded_Key not in message:
-            return False
-
-    return True
-
-# ################################################################################################################################
-
-def _get_delivery_ids(messages:'anylist') -> 'intset':
-    """ Returns the IDs of the delivery rows of the messages of a batch.
-    """
-    out:'intset' = set()
-
-    for message in messages:
-        out.add(message['delivery_id'])
-
-    return out
-
-# ################################################################################################################################
-
 def deliver_atomic_batch(
     backend:'SQLPubSubBackend',
-    database_slots:'BoundedSemaphore',
     paused:'strset',
     deliver_one:'callable_',
     messages:'anylist',
     config_by_topic:'anydict',
     sub_key:'str',
     read_epoch:'int',
-) -> 'None':
+) -> 'DeliveryScope':
     """ Delivers a batch of messages to a push subscriber as one consume-process-produce transaction. The first attempt
-    of each message is recorded in one transaction before the first message is sent, and the acknowledgement
-    of the concluded messages commits in one transaction with the publications that the subscriber services made
-    while processing them. The messages concluded so far also commit before each wait of a retry round
-    and when the delivery is stopped. A batch that does not reach its commit leaves no publication behind
-    and goes out again.
-    The first attempts of a batch that a publication handed over were recorded in the transaction of the publication.
+    of each message was recorded by the claim of the batch, or by the publication that handed the batch over,
+    and the acknowledgement of the concluded messages commits in one transaction with the publications
+    that the subscriber services made while processing them. The messages concluded so far also commit
+    before each wait of a retry round and when the delivery is stopped. Returns what the batch concluded
+    and has not committed yet, which the caller commits. A batch that does not reach its commit leaves
+    no publication behind and goes out again.
     """
-    # One transaction records the first attempt of every message of the batch, unless the publication
-    # that handed the batch over recorded them already ..
-    if _are_attempts_recorded(messages):
-        pending_delivery_ids = _get_delivery_ids(messages)
-    else:
-        with database_slots:
-            pending_delivery_ids = backend.record_attempts(messages)
-
-    # .. what the subscriber services produce from now on commits with the acknowledgement ..
+    # What the subscriber services produce from now on commits with the acknowledgement ..
     scope = open_delivery_scope()
 
     # .. which is also what each wait of a retry round commits first ..
@@ -118,19 +86,14 @@ def deliver_atomic_batch(
             if sub_key in paused:
                 break
 
-            # .. a message that left the queue in the meantime has no delivery row left to acknowledge ..
-            if message['delivery_id'] not in pending_delivery_ids:
-                logger.info('Message left the queue before delivery, sub_key `%s`, msg_id `%s`', sub_key, message['msg_id'])
-
             # .. and any other message is delivered, while a message that was not concluded stops the batch.
-            else:
-                message[Attempt_Recorded_Key] = True
-                sub_config = config_by_topic[message['topic_name']]
+            message[Attempt_Recorded_Key] = True
+            sub_config = config_by_topic[message['topic_name']]
 
-                if not deliver_one(message, sub_config, sub_key, read_epoch, before_wait):
-                    break
+            if not deliver_one(message, sub_config, sub_key, read_epoch, before_wait):
+                break
 
-                scope.msg_ids.append(message['msg_id'])
+            scope.msg_ids.append(message['msg_id'])
 
     # .. a commit that failed before a wait is handled as a failed commit of the batch ..
     except BatchCommitFailed as e:
@@ -144,8 +107,47 @@ def deliver_atomic_batch(
     finally:
         close_delivery_scope()
 
-    # .. and the rest of the batch commits once the batch is over.
-    commit_delivery_scope(backend, scope, sub_key)
+    # .. and the rest of the batch is committed by the caller.
+    return scope
+
+# ################################################################################################################################
+
+def commit_and_claim(
+    backend:'SQLPubSubBackend',
+    database_slots:'BoundedSemaphore',
+    scope:'DeliveryScope',
+    sub_key:'str',
+    max_messages:'int',
+    max_len:'int',
+) -> 'tuple[anylist, int]':
+    """ Commits what a delivery batch concluded together with the claim of the next batch of the subscriber,
+    holding a database slot, and returns the messages of the next batch with their payload epoch.
+    """
+    msg_ids = scope.msg_ids
+    publications = scope.publications
+    audit_events = scope.audit_events
+
+    # What is committed leaves the scope before the commit, so that nothing is committed twice ..
+    scope.msg_ids = []
+    scope.publications = []
+    scope.audit_events = []
+
+    # .. a publication committed after the claim sets the wake-up event, which ends the wait of the subscriber
+    # .. if the claim finds nothing ..
+    event = backend.get_sub_event(sub_key)
+    event.clear()
+
+    with database_slots:
+
+        # .. a batch that produced something commits it with the claim ..
+        if msg_ids or publications or audit_events:
+            out = backend.ack_and_claim(sub_key, msg_ids, publications, audit_events, max_messages, max_len)
+
+        # .. while a subscriber with nothing to commit only claims its next batch.
+        else:
+            out = backend.claim(sub_key, max_messages, max_len)
+
+    return out
 
 # ################################################################################################################################
 

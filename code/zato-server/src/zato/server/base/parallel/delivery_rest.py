@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from http.client import PERMANENT_REDIRECT, TEMPORARY_REDIRECT
+from json import loads
 from logging import getLogger
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
@@ -22,7 +23,7 @@ from zato_common_core.zato_common_core import encode_push_envelope_parts
 
 if 0:
     from zato.common.pubsub.sql.payload_cache import PayloadCache
-    from zato.common.typing_ import any_, anydict, strnone
+    from zato.common.typing_ import any_, anydict, anylist, bytestuple, strnone, strset
     from zato.server.config import ConfigStore
 
 # ################################################################################################################################
@@ -82,6 +83,11 @@ _header_delivery_attempt = 'X-Zato-Delivery-Attempt'
 
 # The key of a push envelope that holds the payload
 _payload_key = 'data'
+
+# The bytes around and between the envelopes of a push of several messages
+_list_start = b'['
+_list_separator = b','
+_list_end = b']'
 
 # The header of a push response that declares the length of its body, absent from a chunked response,
 # by the lowercase name the transport stores it under
@@ -252,35 +258,35 @@ def _raise_for_status(url:'str', status_code:'int', reason:'str') -> 'None':
 
 # ################################################################################################################################
 
-def deliver_to_rest(
-    config_store:'ConfigStore',
-    payload_cache:'PayloadCache',
-    message:'anydict',
-    sub_config:'anydict',
-    ) -> 'None':
-    """ Delivers a raw message by posting it to the REST endpoint of its subscription,
-    through the pub/sub transport of the outgoing REST connection of the endpoint.
+def _get_envelope_parts(payload_cache:'PayloadCache', message:'anydict') -> 'bytestuple':
+    """ Returns the parts of the envelope of one message, its payload escaped in the middle.
     """
-    outconn = _get_rest_push_outconn(config_store, sub_config)
-    url = _get_url(outconn)
-
-    # Each copy of a message carries its identifier and the number of its attempt, in the body and in the headers,
-    # by which a subscriber recognizes a copy it processed already. The delivery row is internal to the database.
+    # Each copy of a message carries its identifier and the number of its attempt, by which a subscriber recognizes
+    # a copy it processed already. The delivery row is internal to the database.
     envelope = dict(message)
     del envelope['delivery_id']
 
-    headers = {
-        'Content-Type': 'application/json',
-        _header_msg_id: message['msg_id'],
-        _header_delivery_attempt: str(message['delivery_attempt']),
-    }
-
-    # The body is the envelope around its payload. The envelope has the attempt of this push, so it is encoded
-    # for each push, whereas the payload is escaped once and shared by every push of the message.
+    # The envelope has the attempt of this push, so it is encoded for each push, whereas the payload
+    # is escaped once and shared by every push of the message.
     prefix, suffix = encode_push_envelope_parts(envelope, _payload_key)
     escaped = payload_cache.get_escaped(message['msg_id'], message[_payload_key])
-    parts = (prefix, escaped, suffix)
 
+    out = (prefix, escaped, suffix)
+    return out
+
+# ################################################################################################################################
+
+def _push_parts(
+    outconn:'any_',
+    url:'str',
+    headers:'anydict',
+    parts:'bytestuple',
+    label:'str',
+    sub_key:'str',
+    ) -> 'tuple[str, bytes]':
+    """ Posts the parts of a body to the address of a push, following its redirects, and returns the address
+    that answered with the body of its response. Raises for a response that is not a complete success.
+    """
     status_code, reason, header_store, response_body, _, _, first_scope = outconn.conn.invoke_pubsub_push(url, headers, parts)
 
     # Each redirect followed sends the same parts and headers to the next address, within the scope of the first push ..
@@ -289,7 +295,7 @@ def deliver_to_rest(
     while next_url := get_push_redirect(url, status_code, header_store, hop_count, first_scope):
 
         log_message = _redirect_messages[status_code]
-        logger.info(log_message, message['msg_id'], sub_config['sub_key'], status_code, url, next_url)
+        logger.info(log_message, label, sub_key, status_code, url, next_url)
 
         hop_count += 1
         url = next_url
@@ -309,6 +315,109 @@ def deliver_to_rest(
 
         if received < expected:
             raise Exception(f'Incomplete response from {url}, received {received} of {expected} bytes')
+
+    out = (url, response_body)
+    return out
+
+# ################################################################################################################################
+
+def deliver_to_rest(
+    config_store:'ConfigStore',
+    payload_cache:'PayloadCache',
+    message:'anydict',
+    sub_config:'anydict',
+    ) -> 'None':
+    """ Delivers a raw message by posting it to the REST endpoint of its subscription,
+    through the pub/sub transport of the outgoing REST connection of the endpoint.
+    """
+    outconn = _get_rest_push_outconn(config_store, sub_config)
+    url = _get_url(outconn)
+
+    # The identifier of the message and the number of its attempt are also in the headers
+    headers = {
+        'Content-Type': 'application/json',
+        _header_msg_id: message['msg_id'],
+        _header_delivery_attempt: str(message['delivery_attempt']),
+    }
+
+    parts = _get_envelope_parts(payload_cache, message)
+
+    _ = _push_parts(outconn, url, headers, parts, message['msg_id'], sub_config['sub_key'])
+
+# ################################################################################################################################
+
+def parse_accepted_ids(url:'str', response_body:'bytes', msg_ids:'strset') -> 'strset':
+    """ Returns the IDs that the response to a push of several messages accepted. A response that is not a JSON list
+    of the strings of the IDs of the request accepts no message and is logged.
+    """
+    out:'strset' = set()
+
+    try:
+        accepted = loads(response_body)
+    except ValueError:
+        logger.warning('Push response from `%s` is not JSON, no message accepted', url)
+        return out
+
+    if not isinstance(accepted, list):
+        logger.warning('Push response from `%s` is not a list, no message accepted', url)
+        return out
+
+    for msg_id in accepted:
+
+        if not isinstance(msg_id, str):
+            logger.warning('Push response from `%s` lists a value that is not a string, no message accepted', url)
+            out.clear()
+            return out
+
+        if msg_id not in msg_ids:
+            logger.warning('Push response from `%s` lists `%s`, not in the request, no message accepted', url, msg_id)
+            out.clear()
+            return out
+
+        out.add(msg_id)
+
+    return out
+
+# ################################################################################################################################
+
+def deliver_group_to_rest(
+    config_store:'ConfigStore',
+    payload_cache:'PayloadCache',
+    messages:'anylist',
+    sub_config:'anydict',
+    ) -> 'strset':
+    """ Delivers several messages in order by posting one JSON list of their envelopes to the REST endpoint
+    of their subscription, and returns the IDs of the messages that the response accepted. Raises for a response
+    that is not a complete success.
+    """
+    outconn = _get_rest_push_outconn(config_store, sub_config)
+    url = _get_url(outconn)
+
+    headers = {
+        'Content-Type': 'application/json',
+    }
+
+    # The body is a JSON list of the envelopes, each written as its prefix, its escaped payload and its suffix ..
+    parts:'list[bytes]' = [_list_start]
+    msg_ids:'strset' = set()
+
+    for idx, message in enumerate(messages):
+
+        if idx:
+            parts.append(_list_separator)
+
+        parts.extend(_get_envelope_parts(payload_cache, message))
+        msg_ids.add(message['msg_id'])
+
+    parts.append(_list_end)
+
+    # .. which goes out as one request ..
+    label = f'{len(messages)} messages'
+    url, response_body = _push_parts(outconn, url, headers, tuple(parts), label, sub_config['sub_key'])
+
+    # .. whose response names the messages it accepted.
+    out = parse_accepted_ids(url, response_body, msg_ids)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

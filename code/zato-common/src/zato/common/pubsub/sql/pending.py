@@ -127,6 +127,24 @@ class PendingAtomic:
     # The audit events of the deliveries that the item concludes, which commit with the item whatever its outcome
     audit_events: 'anylist'
 
+    # The next batch of the push subscriber, claimed in the same savepoint once the acknowledgement is written
+    claim: 'PendingPushClaim | None'
+
+# ################################################################################################################################
+
+@dataclass(init=False)
+class PendingPushClaim:
+    """ The claim of the next batch of one push subscriber, with the rows of the messages it claimed once it is written.
+    """
+
+    # Whose batch is claimed and how much it holds at most
+    sub_key: 'str'
+    max_messages: 'int'
+    max_len: 'int'
+
+    # The rows of the claimed messages, each with its delivery ID and its attempt number
+    rows: 'anylist'
+
 # ################################################################################################################################
 
 @dataclass(init=False)
@@ -279,6 +297,20 @@ def new_pending_atomic(publications:'pending_publication_list', ack:'PendingAck'
     out.is_strict = is_strict
     out.exception = None
     out.audit_events = []
+    out.claim = None
+
+    return out
+
+# ################################################################################################################################
+
+def new_pending_push_claim(sub_key:'str', max_messages:'int', max_len:'int') -> 'PendingPushClaim':
+    """ Returns the claim of the next batch of a push subscriber that is yet to be written.
+    """
+    out = PendingPushClaim()
+    out.sub_key = sub_key
+    out.max_messages = max_messages
+    out.max_len = max_len
+    out.rows = []
 
     return out
 
@@ -373,6 +405,9 @@ def reset_item(
             reset_item(pending)
         reset_item(item.ack)
         item.exception = None
+
+        if item.claim:
+            item.claim.rows = []
 
     elif isinstance(item, PendingAttempts):
         item.attempts = {}

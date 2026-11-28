@@ -15,7 +15,7 @@ from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Index, Integ
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common.api import AMQP, MISC, ODOO, SCHEDULER, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
+from zato.common.api import AMQP, MISC, ODOO, PubSub, SCHEDULER, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
 from zato.common.json_internal import json_dumps
 from zato.common.odb.model.base import Base, _JSON
 
@@ -1141,6 +1141,9 @@ class PubSubSubscription(Base):
 
     # This is equivalent to service.name but cannot be turned into a foreing key
     push_service_name = Column(String(400), nullable=True)
+
+    # How many messages one push request to a REST endpoint holds
+    push_batch_size = Column(Integer(), nullable=False, server_default=str(PubSub.Delivery.Push_Batch_Size_Default))
 
     # Not used by the DB
     topic_name_list = None

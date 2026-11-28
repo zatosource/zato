@@ -25,7 +25,7 @@ from zato.common.broker_message import PUBSUB
 logger = getLogger(__name__)
 
 from zato.common.api import PubSub, query_parameters
-from zato.common.exception import NotFound
+from zato.common.exception import BadRequest, NotFound
 from zato.common.odb.model import HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
 from zato.common.odb.query import pubsub_subscription_list
 from zato.common.pubsub.util import evaluate_pattern_match, get_security_definition
@@ -34,6 +34,36 @@ from zato.common.typing_ import cast_
 from zato.common.util.sql import elems_with_opaque
 from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# How many messages one push request of a REST subscription holds, by default and at most
+_push_batch_size_default = PubSub.Delivery.Push_Batch_Size_Default
+_push_batch_size_max     = PubSub.Delivery.Push_Batch_Size_Max
+
+# The fewest messages one push request holds
+_push_batch_size_min = 1
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_push_batch_size(cid:'str', push_batch_size:'int | None') -> 'int':
+    """ Returns the number of messages per push request that an input gives, or the default one if it gives none,
+    raising BadRequest for a number outside of the allowed range.
+    """
+    if not push_batch_size:
+        out = _push_batch_size_default
+        return out
+
+    if push_batch_size < _push_batch_size_min:
+        raise BadRequest(cid, f'push_batch_size must be at least {_push_batch_size_min}')
+
+    if push_batch_size > _push_batch_size_max:
+        raise BadRequest(cid, f'push_batch_size must be at most {_push_batch_size_max}')
+
+    out = push_batch_size
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -185,7 +215,8 @@ class GetList(AdminService):
     input = '-needs_password', *query_parameters
     output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', AsIs('topic_link_list'), 'sec_base_id', \
         'sec_name', 'security', 'username', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name', \
-        '-rest_push_endpoint_name', AsIs('-topic_name_list'), '-password', Int('-pending_depth'), '-has_unconfirmed'
+        Int('push_batch_size'), '-rest_push_endpoint_name', AsIs('-topic_name_list'), '-password', Int('-pending_depth'), \
+        '-has_unconfirmed'
 
     def get_data(self, session:'any_') -> 'anylist':
 
@@ -374,6 +405,7 @@ class GetList(AdminService):
                 'push_type': None,
                 'rest_push_endpoint_id': None,
                 'push_service_name': None,
+                'push_batch_size': _push_batch_size_default,
                 'pending_depth': 0,
             })
 
@@ -399,7 +431,8 @@ class Create(AdminService):
     """
     changes_config = True
     input = AsIs('topic_name_list'), '-sec_base_id', 'delivery_type', \
-        '-is_delivery_active', '-is_pub_active', '-push_type', '-rest_push_endpoint_id', '-push_service_name', '-sub_key'
+        '-is_delivery_active', '-is_pub_active', '-push_type', '-rest_push_endpoint_id', '-push_service_name', '-sub_key', \
+        Int('-push_batch_size')
     output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', '-sec_name', 'security', 'delivery_type', \
         AsIs('-topic_name_list'), AsIs('-topic_link_list')
 
@@ -407,6 +440,9 @@ class Create(AdminService):
 
         # Our input
         input = self.request.input
+
+        # A subscription created without the number of messages per push request has the default one
+        push_batch_size = get_push_batch_size(self.cid, input.push_batch_size)
 
         # A part of what we're returning
         topic_link_list = []
@@ -502,6 +538,7 @@ class Create(AdminService):
                 sub.delivery_type = input.delivery_type
                 sub.push_type = input.push_type
                 sub.push_service_name = input.push_service_name
+                sub.push_batch_size = push_batch_size # type: ignore
 
                 # For push subscriptions, set the endpoint
                 if input.delivery_type == 'push' and input.get('rest_push_endpoint_id'):
@@ -558,6 +595,7 @@ class Create(AdminService):
                 pubsub_msg.push_type = sub.push_type
                 pubsub_msg.rest_push_endpoint_id = sub.rest_push_endpoint_id
                 pubsub_msg.push_service_name = sub.push_service_name
+                pubsub_msg.push_batch_size = sub.push_batch_size
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_CREATE.value
 
                 # .. which every process applies, this one first.
@@ -587,7 +625,8 @@ class Edit(AdminService):
     """
     changes_config = True
     input = 'sub_key', AsIs('topic_name_list'), '-sec_base_id', 'delivery_type', \
-        '-is_delivery_active', '-is_pub_active', '-push_type', '-rest_push_endpoint_id', '-push_service_name'
+        '-is_delivery_active', '-is_pub_active', '-push_type', '-rest_push_endpoint_id', '-push_service_name', \
+        Int('-push_batch_size')
     output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', '-sec_name', 'security', 'delivery_type', \
         AsIs('-topic_name_list'), AsIs('-topic_link_list')
 
@@ -614,6 +653,10 @@ class Edit(AdminService):
                     if key in input:
                         value = input[key]
                         setattr(sub, key, value)
+
+                # An edit without the number of messages per push request keeps the current one
+                if input.push_batch_size:
+                    sub.push_batch_size = get_push_batch_size(self.cid, input.push_batch_size)
 
                 # An API client subscribes through its security definition ..
                 if input.sec_base_id:
@@ -746,6 +789,7 @@ class Edit(AdminService):
                 pubsub_msg.push_type = sub.push_type
                 pubsub_msg.rest_push_endpoint_id = sub.rest_push_endpoint_id
                 pubsub_msg.push_service_name = sub.push_service_name
+                pubsub_msg.push_batch_size = sub.push_batch_size
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_EDIT.value
 
                 # .. which every process applies, this one first.
@@ -842,7 +886,7 @@ class _BaseModifyTopicList(AdminService):
     action = '<Action-Not-Set>'
 
     input = AsIs('topic_name_list'), '-username', '-sec_name', '-is_delivery_active', '-delivery_type', '-push_type', \
-        '-rest_push_endpoint_id', '-push_service_name', '-sub_key'
+        '-rest_push_endpoint_id', '-push_service_name', '-sub_key', Int('-push_batch_size')
     output = AsIs('-topic_name_list'),
 
 # ################################################################################################################################
@@ -910,6 +954,7 @@ class _BaseModifyTopicList(AdminService):
                         create_request.push_type = input.push_type
                         create_request.rest_push_endpoint_id = input.rest_push_endpoint_id
                         create_request.push_service_name = input.push_service_name
+                        create_request.push_batch_size = input.push_batch_size
 
                         # .. invoke the Create service ..
                         _ = self.invoke('zato.pubsub.subscription.create', create_request)
@@ -987,6 +1032,7 @@ class _BaseModifyTopicList(AdminService):
                 request.push_service_name = current_sub.push_service_name
                 request.push_type = current_sub.push_type
                 request.rest_push_endpoint_id = current_sub.rest_push_endpoint_id
+                request.push_batch_size = current_sub.push_batch_size
 
                 # Update the subscription
                 _ = self.invoke('zato.pubsub.subscription.edit', request)

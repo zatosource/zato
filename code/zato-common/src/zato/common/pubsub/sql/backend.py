@@ -19,13 +19,12 @@ from zato.common.api import PubSub
 from zato.common.db_env.engine import call_database, execute_write
 from zato.common.pubsub.delivery_scope import get_delivery_scope
 from zato.common.pubsub.sql.config import get_batch_size
-from zato.common.pubsub.sql.pulls import SQLPullAPI
+from zato.common.pubsub.sql.fetches import SQLFetchAPI
 from zato.common.pubsub.sql.publication import add_published_event, build_publication, check_scope_publication, \
     complete_publication, complete_publications
-from zato.common.pubsub.sql.pull import delivered_topics_parameters, fetch_statement, outgoing_fetch_statement, \
-    payload_statement
+from zato.common.pubsub.sql.pull import has_claim_candidates
 from zato.common.pubsub.sql.schema import delivery_table, topic_sub_table
-from zato.common.pubsub.sql.pending import new_fenced_ack, new_pending_atomic
+from zato.common.pubsub.sql.pending import new_fenced_ack, new_pending_atomic, new_pending_push_claim
 from zato.common.pubsub.sql.subscription_sync import read_governed_pairs
 from zato.common.typing_ import list_, tuple_
 from zato.server.metrics import zato_pubsub_messages_delivered_total
@@ -38,7 +37,7 @@ if 0:
     from zato.common.pubsub.sql.pending import PendingAck, pending_publication_list
     from zato.common.pubsub.sql.publication import built_publication_list
     from zato.common.pubsub.subscription_list import pairlist
-    from zato.common.typing_ import any_, anydict, anylist, anylistnone, intlist, intnone, strdict, strlist, strnone
+    from zato.common.typing_ import any_, anylist, anylistnone, intlist, intnone, strlist, strnone
 
     pairlist = pairlist
 
@@ -50,18 +49,11 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-_default_priority     = PubSub.Message.Priority_Default
-_default_expiration   = PubSub.Message.Default_Expiration
-_default_max_messages = PubSub.Message.Default_Max_Messages
-_default_max_len      = PubSub.Message.Default_Max_Len
-
-# One second expressed in milliseconds.
-_milliseconds_per_second = 1000
+_default_priority   = PubSub.Message.Priority_Default
+_default_expiration = PubSub.Message.Default_Expiration
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-_outgoing_sub_key_prefix = PubSub.Outgoing.Sub_Key_Prefix
 
 # The message ID and the delivery attempt of each message that a pull client consumed
 consumed_list = list_[tuple_[str, int]]
@@ -84,7 +76,7 @@ class AckPulledResult(NamedTuple):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SQLPubSubBackend(SQLPullAPI):
+class SQLPubSubBackend(SQLFetchAPI):
     """ SQL-based pub/sub backend - messages, queues and delivery state are stored
     in the Zato database that the Zato_Database_* variables select.
     Payloads are stored in the database itself and dropped once every subscriber
@@ -206,6 +198,72 @@ class SQLPubSubBackend(SQLPullAPI):
 
         logger.info('ack_with_publications -> sub_key:%s, acked:%d, fully_delivered:%d, publications:%d',
             sub_key, len(msg_ids), ack.fully_delivered_count, len(publications))
+
+# ################################################################################################################################
+
+    def ack_and_claim(
+        self,
+        sub_key:'str',
+        msg_ids:'strlist',
+        publications:'anylist',
+        audit_events:'anylist',
+        max_messages:'int',
+        max_len:'int',
+        ) -> 'tuple[anylist, int]':
+        """ Acknowledges the messages of a push delivery batch with the publications of its subscriber services,
+        as ack_with_publications does, and claims the next batch of the subscriber in the same transaction,
+        recording the next attempt of each of its messages. An acknowledgement that fails its checks claims nothing.
+        Returns the messages of the next batch, each with its delivery ID and its attempt number,
+        with the payload epoch from before the transaction.
+        """
+        read_epoch = self.payload_cache.get_epoch()
+
+        ack = new_fenced_ack(sub_key, msg_ids, None)
+        atomic = new_pending_atomic(publications, ack, True)
+        atomic.audit_events = audit_events
+
+        claim = new_pending_push_claim(sub_key, max_messages, max_len)
+        atomic.claim = claim
+
+        self._writer.ack_atomic(atomic)
+        self._log_concluded(ack)
+
+        # A publication that only repeated an existing message was completed when that message was committed.
+        completed:'pending_publication_list' = []
+
+        for pending in publications:
+            if not pending.is_repeat:
+                completed.append(pending)
+
+        complete_publications(self, completed)
+
+        if msg_ids:
+            logger.info('ack_and_claim -> sub_key:%s, acked:%d, fully_delivered:%d, publications:%d, claimed:%d',
+                sub_key, len(msg_ids), ack.fully_delivered_count, len(publications), len(claim.rows))
+
+        # The payloads of the next batch are read after the commit, under the epoch from before it.
+        messages = self._build_claimed_messages(claim.rows, read_epoch)
+
+        out = (messages, read_epoch)
+        return out
+
+# ################################################################################################################################
+
+    def claim(self, sub_key:'str', max_messages:'int', max_len:'int') -> 'tuple[anylist, int]':
+        """ Claims the next batch of a push subscriber as ack_and_claim does, with no acknowledgement, returning
+        no messages without a commit if the subscriber has none.
+        """
+        read_epoch = self.payload_cache.get_epoch()
+        now_ms = self._database_now_ms()
+
+        # A claim that would find nothing does not wait for a commit ..
+        if not has_claim_candidates(self.engine, self.subscription_list, sub_key, now_ms):
+            out = ([], read_epoch)
+            return out
+
+        # .. while any other one claims its messages in a commit that it may share with other writes.
+        out = self.ack_and_claim(sub_key, [], [], [], max_messages, max_len)
+        return out
 
 # ################################################################################################################################
 
@@ -450,156 +508,6 @@ class SQLPubSubBackend(SQLPullAPI):
             _ = self._drop_fully_delivered_payloads(connection, message_ids)
 
         out = len(rows)
-        return out
-
-# ################################################################################################################################
-
-    def read_payload(self, message:'anydict') -> 'str':
-        """ Reads the payload of one fetched message from the database, which is the payload of its most recent edit.
-        """
-        parameters = {'payload_message_ids': [message['sequence_id']]}
-
-        with self.engine.connect() as connection:
-            row = payload_statement.execute(connection, parameters).one()
-
-        out = self._load_payload_from_row(row)
-        return out
-
-# ################################################################################################################################
-
-    def _fetch_rows(self, sub_key:'str', max_messages:'int') -> 'tuple[anylist, strdict]':
-        """ Reads the subscriber's deliverable messages in (priority highest-first,
-        publication order) sequence - one index-ordered query no matter the backlog depth -
-        and their payloads by msg_id, reading from the database only those that the payload cache does not have.
-        """
-        parameters = {
-            'fetch_sub_key': sub_key,
-            'fetch_max_messages': max_messages,
-        }
-
-        if sub_key.startswith(_outgoing_sub_key_prefix):
-            statement = outgoing_fetch_statement
-        else:
-            statement = fetch_statement
-            parameters['fetch_now_ms'] = self._database_now_ms()
-
-            # A governed subscriber receives the messages of the topics that the subscription list hands out to it alone
-            delivered_topics = delivered_topics_parameters(self.subscription_list, sub_key, 'fetch')
-            parameters.update(delivered_topics)
-
-        payload_cache = self.payload_cache
-
-        # A payload is kept only if no edit took place from this point to the moment it is kept
-        read_epoch = payload_cache.get_epoch()
-
-        payloads:'strdict' = {}
-        missing:'anydict' = {}
-
-        with self.engine.connect() as connection:
-            rows:'anylist' = []
-            rows.extend(statement.execute(connection, parameters))
-
-            # The payloads kept already are used as they are ..
-            for row in rows:
-                payload = payload_cache.get(row.msg_id)
-                if payload is None:
-                    missing[row.id] = row
-                else:
-                    payloads[row.msg_id] = payload
-
-            # .. and the others are read in one more query.
-            if missing:
-                payload_parameters = {'payload_message_ids': list(missing)}
-                payload_rows = payload_statement.execute(connection, payload_parameters).fetchall()
-            else:
-                payload_rows = []
-
-        for payload_row in payload_rows:
-            row = missing[payload_row.id]
-            payload = self._load_payload_from_row(payload_row)
-            payloads[row.msg_id] = payload
-
-            # A payload that was dropped already is not kept.
-            if payload_row.payload is not None:
-                payload_cache.put(row.msg_id, payload, row.data_size, read_epoch)
-
-        # A message that left the database between the two queries has no payload, the same as a dropped one.
-        for row in missing.values():
-            if row.msg_id not in payloads:
-                payloads[row.msg_id] = ''
-
-        return rows, payloads
-
-# ################################################################################################################################
-
-    def fetch_messages(
-        self,
-        sub_key:'str',
-        max_messages:'int'=_default_max_messages,
-        max_len:'int'=_default_max_len,
-        block_ms:'int'=0,
-    ) -> 'anylist':
-        """ Fetch messages for a subscriber from all subscribed topics.
-        Does not acknowledge messages - the caller is responsible for calling
-        ack_message after successful processing. A non-zero block_ms makes an empty
-        fetch wait for new messages up to that many milliseconds.
-        """
-
-        # The event is cleared before the query so a publish landing in between
-        # leaves the event set and the wait returns immediately ..
-        event = self.get_sub_event(sub_key)
-        event.clear()
-
-        # .. read whatever is deliverable right now ..
-        rows, payloads = self._fetch_rows(sub_key, max_messages)
-
-        # .. nothing yet - optionally wait for a publish to wake us up and look again.
-        # .. A wait that times out without a wakeup means nothing was published,
-        # .. so there is nothing to read and no query is issued - with thousands
-        # .. of mostly idle subscribers this is what keeps the idle cost at zero ..
-        if not rows:
-            if block_ms:
-                wait_seconds = block_ms / _milliseconds_per_second
-                if event.wait(wait_seconds):
-                    rows, payloads = self._fetch_rows(sub_key, max_messages)
-
-        # .. convert the rows into message dicts, keeping within the total size budget, in the order of the queue,
-        # .. except that a message larger than the budget goes out with the batch that reaches it, after the messages
-        # .. ahead of it, and ends that batch, so that it never holds up its queue.
-        out:'anylist' = []
-        total_len = 0
-
-        for row in rows:
-
-            data_len = row.data_size
-            is_oversized = data_len > max_len
-
-            if out and total_len + data_len > max_len and not is_oversized:
-                break
-
-            total_len += data_len
-
-            # The delivery row is what each push attempt is recorded in.
-            data = payloads[row.msg_id]
-            message = self._build_message_from_row(row, data)
-            message['delivery_id'] = row.delivery_id
-            message['delivery_attempt'] = row.attempt
-
-            out.append(message)
-
-            if is_oversized:
-                break
-
-        return out
-
-# ################################################################################################################################
-
-    def fetch_pending(self, sub_key:'str', max_messages:'int'=_default_max_messages) -> 'anylist':
-        """ Fetch not-yet-acknowledged messages for a subscriber.
-        Used on startup to pick up messages that were not delivered before the process
-        stopped - after a restart or an active-standby takeover.
-        """
-        out = self.fetch_messages(sub_key, max_messages=max_messages)
         return out
 
 # ################################################################################################################################

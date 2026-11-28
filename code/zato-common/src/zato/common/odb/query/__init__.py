@@ -862,6 +862,7 @@ def _pubsub_subscription(session):
         PubSubSubscription.push_type,
         PubSubSubscription.rest_push_endpoint_id,
         PubSubSubscription.push_service_name,
+        PubSubSubscription.push_batch_size,
         PubSubTopic.name.label('topic_name'),
         PubSubSubscriptionTopic.is_pub_enabled,
         PubSubSubscriptionTopic.is_delivery_enabled,

@@ -61,6 +61,7 @@ def add_service_topic(server:'ParallelServer', service_name:'str') -> 'None':
         'push_type': PubSub.Push_Type.Service,
         'push_service_name': service_name,
         'rest_push_endpoint_id': None,
+        'push_batch_size': PubSub.Delivery.Push_Batch_Size_Default,
     }
 
     server.config_manager._push_subs[sub_key] = [sub_config]
