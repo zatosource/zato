@@ -93,7 +93,7 @@ fn read_request(connection: &mut impl Read) -> Option<Vec<u8>> {
         if count == 0 {
             return None;
         }
-        received.extend_from_slice(chunk.get(..count).unwrap());
+        received.extend_from_slice(chunk.get(..count)?);
     }
 }
 
@@ -151,7 +151,9 @@ fn list(url: &str, msg_ids: &[&str]) -> PushRequest {
         if idx > 0 {
             body.push(',');
         }
-        body.push_str(&format!("{{\"msg_id\":\"{msg_id}\"}}"));
+        body.push_str("{\"msg_id\":\"");
+        body.push_str(msg_id);
+        body.push_str("\"}");
     }
     body.push(']');
 
@@ -436,7 +438,7 @@ const KEY_ARGS: [&str; 5] = ["-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:pri
 struct TestCertificates {
 
     /// The CA that issued the certificate of the endpoint.
-    ca: String,
+    authority: String,
 
     /// The certificate of the endpoint.
     certificate: String,
@@ -482,7 +484,7 @@ fn issue_certificates(directory: &std::path::Path) -> Option<TestCertificates> {
     let is_issued = openssl(&ca_args) && openssl(&csr_args) && openssl(&sign_args);
 
     is_issued.then(|| TestCertificates {
-        ca: ca_path.display().to_string(),
+        authority: ca_path.display().to_string(),
         certificate: cert_path.display().to_string(),
         key: key_path.display().to_string(),
     })
@@ -529,7 +531,7 @@ fn tls_endpoint_verified_against_its_certificate() {
 
     let mut tls_job = job(vec![single(&url, "zpsm.tls")], JOB_TIMEOUT);
     tls_job.tls = TlsSettings {
-        ca_path: Some(certificates.ca),
+        ca_path: Some(certificates.authority),
         client_cert: None,
         client_key: None,
     };
@@ -552,7 +554,7 @@ fn newer_tls_generation_reads_the_files_anew() {
 
     let pools = EnginePools::new(POOL_SIZE);
     let settings = TlsSettings {
-        ca_path: Some(certificates.ca.clone()),
+        ca_path: Some(certificates.authority.clone()),
         client_cert: None,
         client_key: None,
     };
@@ -560,7 +562,7 @@ fn newer_tls_generation_reads_the_files_anew() {
     assert!(pools.select(true, &settings, 0).is_ok());
 
     // With the file removed, the configuration of the same generation is still the one built before ..
-    std::fs::remove_file(&certificates.ca).unwrap();
+    std::fs::remove_file(&certificates.authority).unwrap();
     assert!(pools.select(true, &settings, 0).is_ok());
 
     // .. while a newer generation reads the files again.

@@ -169,27 +169,29 @@ impl ValueType {
             _ => {}
         }
 
-        // .. while any other value is encoded into the buffer, which holds one value at a time.
-        buffer.clear();
-
+        // .. while any other value is converted first and then replaces the value in the buffer,
+        // which holds one value at a time, so that a value that cannot be converted leaves the buffer as it was.
         match self {
-            Self::Int2 => buffer.extend_from_slice(&value.extract::<i16>()?.to_be_bytes()),
-            Self::Int4 => buffer.extend_from_slice(&value.extract::<i32>()?.to_be_bytes()),
-            Self::Int8 => buffer.extend_from_slice(&value.extract::<i64>()?.to_be_bytes()),
-            Self::Float8 => buffer.extend_from_slice(&value.extract::<f64>()?.to_be_bytes()),
+            Self::Int2 => replace_value(buffer, &value.extract::<i16>()?.to_be_bytes()),
+            Self::Int4 => replace_value(buffer, &value.extract::<i32>()?.to_be_bytes()),
+            Self::Int8 => replace_value(buffer, &value.extract::<i64>()?.to_be_bytes()),
+            Self::Float8 => replace_value(buffer, &value.extract::<f64>()?.to_be_bytes()),
             Self::Bool => {
                 let flag = value.extract::<bool>()?;
                 let byte = if flag { TRUE_BYTE } else { FALSE_BYTE };
-                buffer.push(byte);
+                replace_value(buffer, &[byte]);
             }
-            Self::Numeric => encode_numeric(value, buffer)?,
+            Self::Numeric => {
+                let encoded = encode_numeric(value)?;
+                replace_value(buffer, &encoded);
+            }
             Self::Timestamp => {
                 let micros = timestamp_micros(value, false)?;
-                buffer.extend_from_slice(&micros.to_be_bytes());
+                replace_value(buffer, &micros.to_be_bytes());
             }
             Self::TimestampTz => {
                 let micros = timestamp_micros(value, true)?;
-                buffer.extend_from_slice(&micros.to_be_bytes());
+                replace_value(buffer, &micros.to_be_bytes());
             }
             // The types sent as they are returned above.
             Self::Bytea | Self::Text | Self::Varchar => {}
@@ -303,8 +305,14 @@ fn special_numeric(sign: u16) -> Vec<u8> {
     out
 }
 
+/// Replaces the value that a buffer holds with the bytes given.
+fn replace_value(buffer: &mut Vec<u8>, bytes: &[u8]) {
+    buffer.clear();
+    buffer.extend_from_slice(bytes);
+}
+
 /// Encodes a Python number as a binary `numeric` through its `Decimal`, a float through its shortest representation.
-fn encode_numeric(value: &Bound<'_, PyAny>, buffer: &mut Vec<u8>) -> PyResult<()> {
+fn encode_numeric(value: &Bound<'_, PyAny>) -> PyResult<Vec<u8>> {
     let py = value.py();
     let decimal_class = DECIMAL_CLASS.import(py, "decimal", "Decimal")?;
 
@@ -330,18 +338,14 @@ fn encode_numeric(value: &Bound<'_, PyAny>, buffer: &mut Vec<u8>) -> PyResult<()
             NUMERIC_POSITIVE_INFINITY
         };
 
-        buffer.extend_from_slice(&special_numeric(sign));
-        return Ok(());
+        return Ok(special_numeric(sign));
     }
 
     // .. while any other number has the digits, the sign and the exponent of its decimal tuple.
     let (sign, decimal_digits, exponent): (u8, Vec<u8>, i64) = number.call_method0("as_tuple")?.extract()?;
     let is_negative = sign != 0;
 
-    let encoded = numeric_from_decimal(is_negative, &decimal_digits, exponent).ok_or_else(|| numeric_too_large(&number))?;
-    buffer.extend_from_slice(&encoded);
-
-    Ok(())
+    numeric_from_decimal(is_negative, &decimal_digits, exponent).ok_or_else(|| numeric_too_large(&number))
 }
 
 /// Returns the microseconds of a `timedelta`.
