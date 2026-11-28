@@ -290,7 +290,7 @@ class Workload:
 
             # .. whereas a plain one removes the messages alone.
             else:
-                ack_payload = {'msg_ids': msg_ids}
+                ack_payload = msg_ids
 
             try:
                 ack_result = post_json(ack_url, self.puller_auth, ack_payload)
@@ -394,7 +394,7 @@ class Workload:
 
             self.drained.extend(msg_ids)
 
-            ack_result = post_json(ack_url, self.puller_auth, {'msg_ids': msg_ids})
+            ack_result = post_json(ack_url, self.puller_auth, msg_ids)
             assert ack_result.status_code == OK, ack_result
 
 # ################################################################################################################################

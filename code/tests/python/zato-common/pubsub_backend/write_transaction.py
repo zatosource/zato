@@ -22,9 +22,9 @@ from sqlalchemy import select
 # Zato
 from common import delete_all_rows, delete_audit_rows, get_delivery_rows, get_event_rows, get_message_rows, \
     write_in_one_commit
-from transaction_statements import assert_one_transaction, get_atomic_statements, get_event_statements, get_expected, \
-    record_transactions, statements_ack, statements_attempts, statements_drop, statements_lease, statements_publication, \
-    TransactionRecorder
+from transaction_statements import assert_one_transaction, get_atomic_claim_statements, get_atomic_statements, \
+    get_event_statements, get_expected, record_transactions, statements_ack, statements_attempts, statements_drop, \
+    statements_lease, statements_publication, TransactionRecorder
 from zato.common.audit_log.api import event_table, AuditEvent
 from zato.common.audit_log.export.state import set_audit_export
 from zato.common.config_db import Env_Audit_Log_Enabled
@@ -33,7 +33,7 @@ from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.config import ModuleCtx
 from zato.common.pubsub.sql.fenced_ack import PubSubAckConflict
 from zato.common.pubsub.sql.pending import new_fenced_ack, new_pending_ack, new_pending_atomic, new_pending_attempts, \
-    new_pending_lease
+    new_pending_lease, new_pending_push_claim
 from zato.common.pubsub.sql.publication import add_published_event, build_publication
 from zato.common.test.audit_log_ import new_test_audit_log, RecordingAuditExport
 
@@ -84,6 +84,10 @@ _lease_max_messages = 3
 # How long the leases of the scenario last, and the largest total size of the messages that they take
 _lease_ms = 30_000
 _lease_max_len = 10_000_000
+
+# How many messages and how many bytes of payloads the claim of the next push batch takes at most
+_claim_max_messages = 3
+_claim_max_len = 10_000_000
 
 # The attempt of a fenced acknowledgement that no pull handed out
 _stale_attempt = 5
@@ -230,6 +234,18 @@ def _run_compositions() -> 'None':
     recorder = _write(backend, [atomic])
 
     parts = [get_atomic_statements(), statements_drop, one_event]
+    assert_one_transaction(recorder, get_expected(parts))
+
+    # .. a fenced acknowledgement with its receipt and the claim of the next push batch, which claims the messages
+    # .. of the subscriber behind the acknowledged one in the same transaction ..
+    backend = _new_backend()
+    prepared = _prepare(backend)
+
+    atomic = _new_atomic(backend, prepared, prepared.input_attempt)
+    atomic.claim = new_pending_push_claim(_sub_key_in, _claim_max_messages, _claim_max_len)
+    recorder = _write(backend, [atomic])
+
+    parts = [get_atomic_claim_statements(), statements_drop, one_event]
     assert_one_transaction(recorder, get_expected(parts))
 
     # .. the push attempts of two deliveries ..

@@ -22,6 +22,7 @@ from zato.common.api import IMAPAttachment, IMAPMessage, simple_types
 from zato.common.marshal_.api import Model
 from zato.common.model.file_transfer_ import FileTransferItem
 from zato.common.json_internal import loads
+from zato.common.soap.message import SOAPMessage, to_plain_dict
 from zato.common.typing_ import cast_
 from zato.common.util.api import make_repr
 from zato.common.util.http_ import get_form_data as util_get_form_data
@@ -262,16 +263,23 @@ class Request:
         if isinstance(self.payload, ServiceInput):
             self.payload = self.payload.to_dict()
 
+        # The operation element that a SOAP channel hands over is read as the dict of its children, so the input
+        # is built of the same shape as from any other channel. The payload keeps the message for dot access.
+        if isinstance(self.payload, SOAPMessage):
+            payload = to_plain_dict(self.payload)
+        else:
+            payload = self.payload
+
         # The bundle a C-CDA channel made of the document it received, the messages, attachments and files
         # that the IMAP and file transfer schedulers hand over, a model instance a publisher sent to a topic
         # and an HL7 v2 message an MLLP channel parsed on input are each the input as it is, whatever the service declares
-        if isinstance(self.payload, (FileTransferItem, HL7Message, IMAPAttachment, IMAPMessage, Model)) or \
-            _is_fhir_bundle(self.payload):
-            self.input = self.payload
+        if isinstance(payload, (FileTransferItem, HL7Message, IMAPAttachment, IMAPMessage, Model)) or \
+            _is_fhir_bundle(payload):
+            self.input = payload
 
         elif is_io:
 
-            parsed = io_processor.parse_input(self.payload or {}, data_format, extra=self.channel_params, service=self.service)
+            parsed = io_processor.parse_input(payload or {}, data_format, extra=self.channel_params, service=self.service)
 
             if isinstance(parsed, Model):
                 self.input = parsed
@@ -285,9 +293,9 @@ class Request:
         # There is no I/O declaration - the parsed payload itself becomes the input.
         else:
 
-            # A dict means parsed JSON - it is exposed through input directly ..
-            if isinstance(self.payload, dict):
-                self.input.update(self.payload)
+            # A dict means parsed JSON or a SOAP body - it is exposed through input directly ..
+            if isinstance(payload, dict):
+                self.input.update(payload)
 
                 # .. with channel params merged in without overriding the payload ..
                 if self.merge_channel_params:
@@ -296,12 +304,12 @@ class Request:
                             self.input[param] = value
 
             # .. a list is parsed JSON as well and it becomes the input as it is ..
-            elif isinstance(self.payload, list):
-                self.input = self.payload
+            elif isinstance(payload, list):
+                self.input = payload
 
             # .. raw text or bytes are the input exactly as received, e.g. EDIFACT or ER7 ..
-            elif isinstance(self.payload, (str, bytes)) and self.payload:
-                self.input = self.payload
+            elif isinstance(payload, (str, bytes)) and payload:
+                self.input = payload
 
             # .. and with no payload at all, the input carries channel params only.
             else:

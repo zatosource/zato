@@ -58,6 +58,10 @@ class ModuleCtx:
     # The attempt of a delivery row after its first lease or its first push attempt
     Attempt_Recorded = 1
 
+    # How many messages and how many bytes of payloads a claim of a push batch may take
+    Claim_Max_Messages = 10
+    Claim_Max_Len = 1024 * 1024
+
     # The type of the shared objects
     Shared_Object_Type = 'durability-writers'
 
@@ -234,6 +238,29 @@ class RecordAttemptsAPI(AckAPI):
 
 # ################################################################################################################################
 
+class ClaimAPI(AckAPI):
+    """ The claim of the next push batch of a subscriber, which records the first attempt of each of its messages.
+    """
+
+    def write(self) -> 'None':
+        _ = self.backend.claim(self.sub_key, ModuleCtx.Claim_Max_Messages, ModuleCtx.Claim_Max_Len)
+
+    def get_check(self) -> 'WriteCheck':
+        out = WriteCheck(delivery_table.c.attempt, ModuleCtx.Attempt_Recorded, True)
+        return out
+
+# ################################################################################################################################
+
+class AckAndClaimAPI(AckAPI):
+    """ The commit of a push batch, which acknowledges its messages together with the claim of the next batch.
+    """
+
+    def write(self) -> 'None':
+        _ = self.backend.ack_and_claim(self.sub_key, [self.msg_id], [], [], ModuleCtx.Claim_Max_Messages,
+            ModuleCtx.Claim_Max_Len)
+
+# ################################################################################################################################
+
 class AuditInsertAPI(WriteAPI):
 
     def write(self) -> 'None':
@@ -318,6 +345,8 @@ Write_APIs:'dict[str, type[WriteAPI]]' = {
     'ack-atomic': AckAtomicAPI,
     'lease': LeaseAPI,
     'record-attempts': RecordAttemptsAPI,
+    'claim': ClaimAPI,
+    'ack-and-claim': AckAndClaimAPI,
     'audit-insert': AuditInsertAPI,
     'shared-object': SharedObjectAPI,
     'alert': AlertAPI,

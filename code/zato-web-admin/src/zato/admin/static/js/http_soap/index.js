@@ -5,6 +5,8 @@ $.fn.zato.http_soap.gateway_trigger_service = 'helpers.service-gateway';
 $.fn.zato.http_soap.gateway_fade_duration = 100;
 $.fn.zato.http_soap.previous_url_path = {'': '', 'edit-': ''};
 $.fn.zato.http_soap.needs_random_prefix = false;
+$.fn.zato.http_soap.soap_transport = 'soap';
+$.fn.zato.http_soap.soap_request_mode = 'ace/mode/xml';
 
 // /////////////////////////////////////////////////////////////////////////////
 
@@ -466,15 +468,24 @@ $.fn.zato.http_soap.invoke = function(id) {
     }
 
     var connection = $(document).getUrlParam('connection');
+    var transport = $(document).getUrlParam('transport');
     var history_key = 'zato.invoke-history.' + (connection === 'channel' ? 'channel' : 'outconn') + '.' + id;
 
-    $.fn.zato.invoker.open_overlay({
+    var overlayConfig = {
         id: id,
         name: item.name,
         connection: connection,
         history_key: history_key,
         get_invoke_url_func: $.fn.zato.http_soap.get_invoke_url
-    });
+    };
+
+    // A SOAP channel takes a complete envelope, without the method and the parameters of a REST request
+    if(transport === $.fn.zato.http_soap.soap_transport) {
+        overlayConfig.show_more_options = false;
+        overlayConfig.request_mode = $.fn.zato.http_soap.soap_request_mode;
+    }
+
+    $.fn.zato.invoker.open_overlay(overlayConfig);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

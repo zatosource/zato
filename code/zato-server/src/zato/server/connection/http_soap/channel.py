@@ -36,7 +36,7 @@ from zato.common.rate_limiting.common import current_time_us
 from zato.common.rate_limiting.headers import build_rate_limit_headers, Header_Rate_Limit_Limit, Header_Rate_Limit_Remaining, \
     Header_Retry_After, Rate_Limit_Result_Key
 from zato.common.soap.common import SOAP_Action_Header, SOAPVersion
-from zato.common.soap.message import SOAPMessage
+from zato.common.soap.message import from_plain_dict, SOAPMessage
 from zato.common.typing_ import cast_
 from zato.common.util.api import utcnow
 from zato.common.util.auth import enrich_with_sec_data, extract_basic_auth
@@ -1758,6 +1758,11 @@ class RequestHandler:
         # A message assigned by a service behind a SOAP channel is wrapped in an envelope
         # matching the request - strings and bytes keep passing through as they are.
         if transport == _transport_soap:
+
+            # A dict becomes the children of the response element, the same as a message with these children.
+            if isinstance(response.payload, dict):
+                response.payload = from_plain_dict(response.payload)
+
             if isinstance(response.payload, SOAPMessage):
 
                 soap_context = service_instance.request.soap

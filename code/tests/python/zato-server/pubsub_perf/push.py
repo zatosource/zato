@@ -23,7 +23,7 @@ from zato.common.test.reservation import PortInUse, start_on_reserved_port
 
 if 0:
     from zato.common.test.reservation import PortReservation
-    from zato.common.typing_ import any_, strfloatdict, strintdict, strlist
+    from zato.common.typing_ import any_, anylist, strfloatdict, strintdict, strlist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,7 +36,16 @@ _port_purpose = 'pubsub-perf-push-receiver'
 _header_msg_id = 'X-Zato-Msg-ID'
 _header_delivery_attempt = 'X-Zato-Delivery-Attempt'
 _header_content_length = 'Content-Length'
+_header_content_type = 'Content-Type'
 _payload_key = 'data'
+
+# The keys of an envelope that identify the message and its attempt, which a push of several messages carries
+# in each envelope rather than in the headers
+_envelope_msg_id = 'msg_id'
+_envelope_attempt = 'delivery_attempt'
+
+# The content type of the response to a push of several messages
+_content_type_json = 'application/json'
 
 # The path under which the receiver accepts the pushes of each push subscriber
 _path_prefix = '/perf/push/'
@@ -228,21 +237,50 @@ class _PushHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers[_header_content_length])
         body = self.rfile.read(content_length)
 
+        document = json.loads(body)
+        records = self.server.records_by_path[self.path]
+
+        # .. a push of several messages is a list of envelopes, each recorded and accepted by its ID ..
+        if isinstance(document, list):
+            self._confirm_list(records, document, received_at)
+            return
+
         msg_id = self.headers[_header_msg_id]
         attempt = int(self.headers[_header_delivery_attempt])
 
         # .. the payload is a JSON document inside the envelope ..
-        envelope = json.loads(body)
-        data = json.loads(envelope[_payload_key])
+        data = json.loads(document[_payload_key])
 
         # .. the push is recorded under the subscriber of its path ..
-        records = self.server.records_by_path[self.path]
         records.add(msg_id, attempt, data['key'], received_at)
 
         # .. and confirmed.
         self.send_response(OK)
         self.send_header(_header_content_length, '0')
         self.end_headers()
+
+# ################################################################################################################################
+
+    def _confirm_list(self, records:'PushRecords', envelopes:'anylist', received_at:'float') -> 'None':
+        """ Records each message of a push of several messages and responds with the list of all their IDs.
+        """
+        accepted:'strlist' = []
+
+        for envelope in envelopes:
+            msg_id = envelope[_envelope_msg_id]
+            data = json.loads(envelope[_payload_key])
+
+            records.add(msg_id, envelope[_envelope_attempt], data['key'], received_at)
+            accepted.append(msg_id)
+
+        response_body = json.dumps(accepted).encode('utf8')
+
+        self.send_response(OK)
+        self.send_header(_header_content_type, _content_type_json)
+        self.send_header(_header_content_length, str(len(response_body)))
+        self.end_headers()
+
+        _ = self.wfile.write(response_body)
 
 # ################################################################################################################################
 # ################################################################################################################################

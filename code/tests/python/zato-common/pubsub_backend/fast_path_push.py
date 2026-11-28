@@ -211,9 +211,10 @@ def _run_retry() -> 'None':
         _ = backend.publish(_topic, _data_first)
         _wait_until_delivered(server, 1, _sub_key)
 
+        # The second attempt is the only one recorded on its own, in one transaction through record_attempts
         assert server.attempts == [1, 2], server.attempts
-        assert backend.record_attempts_count == 0, backend.record_attempts_count
         assert backend.record_attempt_count == 1, backend.record_attempt_count
+        assert backend.record_attempts_count == 1, backend.record_attempts_count
 
     finally:
         delivery.stop()
@@ -290,8 +291,8 @@ def _run_paused() -> 'None':
 # ################################################################################################################################
 
 def _run_busy() -> 'None':
-    """ A publication that finds the delivery greenlet busy inserts its row as before, and the greenlet reads it
-    and records its attempt itself once it is idle again.
+    """ A publication that finds the delivery greenlet busy inserts its row as before, and the greenlet claims it,
+    which records its attempt, in the commit that acknowledges the message in progress.
     """
     backend, _, server, delivery = _new_backend(_sub_key)
 
@@ -323,7 +324,9 @@ def _run_busy() -> 'None':
         block_event.set()
         _wait_until_delivered(server, 2, _sub_key)
 
-        assert backend.record_attempts_count == 1, backend.record_attempts_count
+        # The claim recorded the attempt of the second message, so no attempt was recorded on its own
+        assert backend.record_attempts_count == 0, backend.record_attempts_count
+        assert server.attempts == [1, 1], server.attempts
 
     finally:
         delivery.stop()
@@ -342,9 +345,10 @@ def _run_outgoing() -> 'None':
         _ = backend.publish(_topic, _data_first)
         _wait_until_delivered(server, 1, _sub_key_outgoing)
 
+        # The attempt is recorded on its own, in one transaction through record_attempts
         assert fast_path.registered_push_keys == [], fast_path.registered_push_keys
-        assert backend.record_attempts_count == 0, backend.record_attempts_count
         assert backend.record_attempt_count == 1, backend.record_attempt_count
+        assert backend.record_attempts_count == 1, backend.record_attempts_count
 
     finally:
         delivery.stop()

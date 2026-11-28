@@ -8,23 +8,23 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use parking_lot::Mutex;
-use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyString, PyTuple};
 use rustls::ClientConfig;
 
 use super::address::{self, Target};
 use super::error::{RequestsExceptions, TransportError};
-use super::exchange::{OutgoingRequest, Peer, RawResponse, connect, exchange};
+use super::exchange::{OutgoingRequest, Peer};
 use super::headers::{HeadInput, build_head, encode_text_value, is_valid_method, is_valid_name};
 use super::pool::{OriginKey, Pool};
-use super::scope::{NetworkScope, classify};
-use super::stream::{IoContext, Stream};
+use super::send::{PooledSend, ScopedResponse, send_pooled};
+use super::scope::NetworkScope;
+use super::stream::{IoContext, Waiter};
 use super::tls::{TlsSettings, build_config};
 use super::wait::Gevent;
 
 /// The largest body written in the same buffer as the head of its request rather than in a write of its own.
-const MAX_INLINE_BODY_LEN: usize = 64 * 1024;
+pub(crate) const MAX_INLINE_BODY_LEN: usize = 64 * 1024;
 
 /// The lowercase name of the response header that sets a cookie.
 const SET_COOKIE_HEADER: &str = "set-cookie";
@@ -96,18 +96,6 @@ struct Call<'call, 'py> {
 
     /// Whether the request carries the `Authorization` header the credentials of the connection produce.
     is_authorized: bool,
-
-    /// The network scope that the address connected to must have, if the call requires one.
-    required_scope: Option<NetworkScope>,
-}
-
-/// A response and the network scope of the address of the connection it arrived on.
-struct ScopedResponse {
-    /// The response.
-    response: RawResponse,
-
-    /// The scope of the address of the endpoint, or `None` if the address has no scope.
-    peer_scope: Option<NetworkScope>,
 }
 
 /// The transport of one outgoing REST connection.
@@ -252,41 +240,6 @@ impl HTTPTransport {
             headers,
             body: &parts,
             is_authorized: false,
-            required_scope: None,
-        };
-
-        self.complete(&call)
-    }
-
-    /// Sends a request whose body is the given parts in order, each borrowed from Python without a copy
-    /// and written without being joined to the others, and returns what `invoke` returns.
-    ///
-    /// With `required_scope` set to `public`, `private` or `loopback`, the request is sent only to an address
-    /// of exactly that network scope, on a pooled connection or a new one.
-    #[pyo3(signature = (method, url, headers, parts, required_scope=None))]
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "Python-visible signature of invoke_parts, called from the outgoing REST connection and its tests"
-    )]
-    fn invoke_parts<'py>(
-        &self,
-        method: &str,
-        url: &str,
-        headers: &Bound<'py, PyDict>,
-        parts: &Bound<'py, PyTuple>,
-        required_scope: Option<&str>,
-    ) -> PyResult<Option<Bound<'py, PyTuple>>> {
-        let required_scope = required_scope.map(parse_required_scope).transpose()?;
-
-        let parts: Vec<Bound<'py, PyBytes>> = parts.iter().map(Bound::cast_into::<PyBytes>).collect::<Result<_, _>>()?;
-        let parts: Vec<&[u8]> = parts.iter().map(PyBytesMethods::as_bytes).collect();
-        let call = Call {
-            method,
-            url,
-            headers,
-            body: &parts,
-            is_authorized: false,
-            required_scope,
         };
 
         self.complete(&call)
@@ -309,7 +262,6 @@ impl HTTPTransport {
             headers,
             body: &parts,
             is_authorized: true,
-            required_scope: None,
         };
 
         self.complete(&call)
@@ -326,9 +278,6 @@ struct Invocation<'call> {
 
     /// The settings the invocation uses.
     settings: CallSettings,
-
-    /// The network scope that the address connected to must have, if the call requires one.
-    required_scope: Option<NetworkScope>,
 }
 
 impl HTTPTransport {
@@ -396,7 +345,6 @@ impl HTTPTransport {
                 start,
             },
             settings,
-            required_scope: call.required_scope,
         };
 
         self.run(py, &invocation)
@@ -466,14 +414,12 @@ impl HTTPTransport {
         })
     }
 
-    /// Sends the request on a pooled connection or a new one and reads its response, repeating it once
-    /// on a new connection if a pooled connection turns out to have been closed by the endpoint.
+    /// Sends the request on a pooled connection or a new one and reads its response.
     fn run(&self, py: Python<'_>, invocation: &Invocation<'_>) -> Result<ScopedResponse, TransportError> {
         let target = &invocation.target;
 
         let ctx = IoContext {
-            py,
-            gevent: &self.gevent,
+            waiter: Waiter::Gevent { py, gevent: &self.gevent },
             timeout: invocation.settings.timeout,
         };
 
@@ -483,7 +429,7 @@ impl HTTPTransport {
             port: target.port,
             request_target: &target.path_and_query,
             timeout: invocation.settings.timeout,
-            required_scope: invocation.required_scope,
+            required_scope: None,
         };
 
         let key = OriginKey {
@@ -492,68 +438,15 @@ impl HTTPTransport {
             port: target.port,
         };
 
-        let tls_config = invocation.settings.tls_config.as_ref();
-
-        let (mut stream, mut is_reused) = match self.checkout_within(&key, invocation.required_scope) {
-            Some(stream) => (stream, true),
-            None => (connect(&ctx, &peer, tls_config)?, false),
+        let send = PooledSend {
+            peer: &peer,
+            key,
+            tls_config: invocation.settings.tls_config.as_ref(),
+            request: &invocation.request,
         };
 
-        loop {
-            // The scope is read before the exchange, while the connection certainly still has its peer
-            let peer_scope = stream_scope(&stream);
-
-            match exchange(&ctx, &peer, &mut stream, &invocation.request) {
-                Ok(response) => {
-                    // A connection is kept only if the endpoint keeps it open and nothing else is left on it
-                    if response.is_keep_alive {
-                        self.pool.checkin(key, stream);
-                    }
-                    return Ok(ScopedResponse { response, peer_scope });
-                }
-
-                // An idle connection the endpoint closed in the meantime fails before any byte of the response,
-                // and the request is sent again on a new connection, once
-                Err(failure) if is_reused && failure.is_before_response => {
-                    stream = connect(&ctx, &peer, tls_config)?;
-                    is_reused = false;
-                }
-
-                Err(failure) => return Err(failure.error),
-            }
-        }
+        send_pooled(&ctx, &self.pool, send)
     }
-
-    /// Takes an idle connection to the endpoint, provided that the address it is established to has
-    /// the required scope if the call requires one.
-    fn checkout_within(&self, key: &OriginKey, required_scope: Option<NetworkScope>) -> Option<Stream> {
-        let stream = self.pool.checkout(key)?;
-
-        let Some(required) = required_scope else {
-            return Some(stream);
-        };
-
-        if stream_scope(&stream) == Some(required) {
-            return Some(stream);
-        }
-
-        // A connection to an address of another scope stays in the pool for the calls that do not require this one
-        self.pool.checkin(key.clone(), stream);
-        None
-    }
-}
-
-/// Parses the name of the network scope a call requires, raising `ValueError` for a name of no scope
-/// and for the link-local scope, which a call may not require.
-fn parse_required_scope(name: &str) -> PyResult<NetworkScope> {
-    NetworkScope::parse_required(name).ok_or_else(|| PyValueError::new_err(format!("Unknown required network scope `{name}`")))
-}
-
-/// The network scope of the address a connection is established to, or `None` if the address has no scope
-/// or the connection no longer has a peer.
-fn stream_scope(stream: &Stream) -> Option<NetworkScope> {
-    let address = stream.peer_address().ok()?;
-    classify(address.ip())
 }
 
 /// Builds the tuple a response is returned to Python as.

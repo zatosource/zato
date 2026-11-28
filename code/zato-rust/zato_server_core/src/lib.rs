@@ -13,6 +13,9 @@ pub mod logging;
 /// Transport of outgoing REST connections, driven cooperatively through gevent.
 pub mod outgoing;
 
+/// Push engine of pub/sub, which sends REST pushes on OS threads without the GIL.
+pub mod push_engine;
+
 /// Utility functions shared across the crate.
 pub mod utils;
 
@@ -33,6 +36,9 @@ fn next_id() -> String {
 fn zato_server_core(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<http::HTTPServer>()?;
     module.add_class::<outgoing::HTTPTransport>()?;
+    module.add_class::<push_engine::PushEngine>()?;
+    module.add_function(wrap_pyfunction!(push_engine::get_push_redirect, module)?)?;
+    module.add("Max_Push_Redirects", push_engine::MAX_PUSH_REDIRECTS)?;
     module.add_function(wrap_pyfunction!(next_id, module)?)?;
     module.add_function(wrap_pyfunction!(logging::init_rest_log, module)?)?;
     module.add_function(wrap_pyfunction!(logging::log_rest_line, module)?)?;

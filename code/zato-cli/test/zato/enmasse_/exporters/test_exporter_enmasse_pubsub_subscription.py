@@ -230,7 +230,7 @@ class TestEnmassePubSubSubscriptionExporter(TestCase):
 
                 # Verify no unexpected fields
                 allowed_fields = {'security', 'delivery_type', 'topic_list', 'push_rest_endpoint', 'push_service', 'max_retry_time',
-                    'is_delivery_active', 'is_pub_active'}
+                    'is_delivery_active', 'is_pub_active', 'push_batch_size'}
                 subscription_fields = subscription
                 for field in subscription_fields:
                     unexpected_field_msg = f'Unexpected field {field} in subscription {security_name}'
@@ -258,6 +258,9 @@ class TestEnmassePubSubSubscriptionExporter(TestCase):
                 self.assertNotIn('push_rest_endpoint', auth1_sub)
                 self.assertNotIn('push_service', auth1_sub)
 
+                # A pull subscription has no number of messages per push request
+                self.assertNotIn('push_batch_size', auth1_sub)
+
             # Check enmasse.basic_auth.2 subscription
             auth2_security_name = 'enmasse.basic_auth.2'
             auth2_in_exported = auth2_security_name in exported_by_security
@@ -279,6 +282,10 @@ class TestEnmassePubSubSubscriptionExporter(TestCase):
 
                 self.assertNotIn('push_service', auth2_sub)
 
+                # The REST push subscription exports the number of messages per push request of its definition
+                auth2_push_batch_size = auth2_sub['push_batch_size'] # type: ignore
+                self.assertEqual(auth2_push_batch_size, 10)
+
             # Check enmasse.basic_auth.3 subscription
             auth3_security_name = 'enmasse.basic_auth.3'
             auth3_in_exported = auth3_security_name in exported_by_security
@@ -299,6 +306,9 @@ class TestEnmassePubSubSubscriptionExporter(TestCase):
                 self.assertEqual(auth3_push_service, expected_auth3_service)
 
                 self.assertNotIn('push_rest_endpoint', auth3_sub)
+
+                # A service push subscription has no number of messages per push request
+                self.assertNotIn('push_batch_size', auth3_sub)
 
         else:
             logger.warning('No pubsub subscription definitions found in test YAML template')

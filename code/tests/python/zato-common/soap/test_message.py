@@ -19,7 +19,7 @@ import lxml.etree as etree
 import pytest
 
 # Zato
-from zato.common.soap.message import parse, serialize, SOAPMessage
+from zato.common.soap.message import from_plain_dict, parse, serialize, SOAPMessage, to_plain_dict
 from zato.common.util.xml_.core import XMLException
 
 # ################################################################################################################################
@@ -430,6 +430,91 @@ class TestParsingEdges:
         assert 'nil' not in result.middleName
         assert result.middleName['partial'] == 'true'
         assert str(result.middleName) == 'Ann'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestPlainDict:
+    """ The plain dict form of a message, which is the input a SOAP channel hands to a service,
+    and the message built of a plain dict, which is the response of a service that returns a dict.
+    """
+
+    def test_nested_and_repeated_elements(self):
+        data = (
+            b'<order>'
+            b'<quantity>3</quantity>'
+            b'<address><street>100 Main Street</street><city>Springfield</city></address>'
+            b'<tags>express</tags><tags>fragile</tags>'
+            b'<items><sku>SKU-1</sku></items><items><sku>SKU-2</sku></items>'
+            b'</order>'
+        )
+
+        result = to_plain_dict(parse(data))
+
+        assert result == {
+            'quantity': '3',
+            'address': {'street': '100 Main Street', 'city': 'Springfield'},
+            'tags': ['express', 'fragile'],
+            'items': [{'sku': 'SKU-1'}, {'sku': 'SKU-2'}],
+        }
+
+    def test_text_with_attributes_is_its_text(self):
+        data = b'<order><amount currency="USD">19.99</amount><notes/></order>'
+
+        result = to_plain_dict(parse(data))
+
+        assert result == {'amount': '19.99', 'notes': ''}
+
+    def test_nil_is_none(self):
+        data = (
+            b'<order xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+            b'<notes xsi:nil="true"/>'
+            b'</order>'
+        )
+
+        result = to_plain_dict(parse(data))
+
+        assert result == {'notes': None}
+
+    def test_vivified_nodes_are_left_out(self):
+        message = SOAPMessage()
+        message.status = 'Accepted'
+        _ = message.never.assigned
+
+        result = to_plain_dict(message)
+
+        assert result == {'status': 'Accepted'}
+
+    def test_message_of_plain_dict_serializes_like_one_built_by_hand(self):
+        data = {
+            'status': 'Accepted',
+            'address': {'city': 'Springfield'},
+            'tags': ['express', 'fragile'],
+            'total': Decimal('59.97'),
+        }
+
+        built = from_plain_dict(data)
+
+        by_hand = SOAPMessage()
+        by_hand.status = 'Accepted'
+        by_hand.address.city = 'Springfield'
+        by_hand.tags = ['express', 'fragile']
+        by_hand.total = Decimal('59.97')
+
+        assert isinstance(built, SOAPMessage)
+        assert etree.tostring(serialize(built, 'response')) == etree.tostring(serialize(by_hand, 'response'))
+
+    def test_round_trip(self):
+        data = {
+            'status': 'Accepted',
+            'address': {'city': 'Springfield'},
+            'tags': ['express', 'fragile'],
+        }
+
+        element = serialize(from_plain_dict(data), 'response')
+        result = to_plain_dict(parse(element))
+
+        assert result == data
 
 # ################################################################################################################################
 # ################################################################################################################################

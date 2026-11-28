@@ -61,12 +61,16 @@ impl IOProcessor {
         if item.is_instance_of::<Secret>() {
             return Some(ElemType::Secret);
         }
+        if item.is_instance_of::<Float>() {
+            return Some(ElemType::Float);
+        }
+        if item.is_instance_of::<Decimal>() {
+            return Some(ElemType::Decimal);
+        }
         if item.is_instance_of::<AsIs>()
-            || item.is_instance_of::<Float>()
             || item.is_instance_of::<CSV>()
             || item.is_instance_of::<Date>()
             || item.is_instance_of::<DateTime>()
-            || item.is_instance_of::<Decimal>()
             || item.is_instance_of::<Dict>()
             || item.is_instance_of::<DictList>()
             || item.is_instance_of::<List>()
@@ -409,7 +413,7 @@ impl IOProcessor {
 }
 
 impl IOProcessor {
-    /// Coerces a Python value to the target element type (int, bool, or pass-through).
+    /// Coerces a Python value to the target element type (int, bool, float, decimal, or pass-through).
     fn coerce_value(py: Python<'_>, value: &Bound<'_, PyAny>, elem_type: ElemType) -> PyResult<PyObject> {
         if value.is_none() {
             return Ok(py.None());
@@ -432,6 +436,26 @@ impl IOProcessor {
                 let text = value.str()?.to_string().to_lowercase();
                 let bool_val = matches!(text.as_str(), "true" | "1" | "yes");
                 Ok(bool_val.into_pyobject(py)?.to_owned().into_any().unbind())
+            }
+            ElemType::Float => {
+                if value.is_instance_of::<pyo3::types::PyFloat>() {
+                    Ok(value.clone().unbind())
+                } else {
+                    let builtins = py.import("builtins")?;
+                    let result = builtins.call_method1("float", (value,))?;
+                    Ok(result.unbind())
+                }
+            }
+            ElemType::Decimal => {
+                let decimal_class = py.import("decimal")?.getattr("Decimal")?;
+                if value.is_instance(&decimal_class)? {
+                    Ok(value.clone().unbind())
+                } else {
+                    // The text of a number keeps the digits it was written with, which a float does not.
+                    let text = value.str()?;
+                    let result = decimal_class.call1((text,))?;
+                    Ok(result.unbind())
+                }
             }
             _ => Ok(value.clone().unbind()),
         }

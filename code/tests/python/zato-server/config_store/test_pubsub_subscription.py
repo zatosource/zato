@@ -7,12 +7,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 import pytest
+from zato.common.api import PubSub
 from zato.common.test.client import AdminClient as ZatoClient
 
 if 0:
-    from zato.common.typing_ import any_
+    from zato.common.typing_ import any_, anydict
 
 SERVICE = 'zato.pubsub.subscription'
+
+# How many messages one push request holds by default, at most, and after the edit of the tests
+_push_batch_size_default = PubSub.Delivery.Push_Batch_Size_Default
+_push_batch_size_max     = PubSub.Delivery.Push_Batch_Size_Max
+_push_batch_size_edited  = 25
 
 @pytest.fixture(scope='module')
 def client(zato_server:'any_') -> 'ZatoClient':
@@ -56,6 +62,14 @@ def _ensure_permission(client:'ZatoClient', sec_base_id:'int') -> 'None':
         pattern='sub=/test/sub/topic/**',
         access_type='publisher-subscriber',
     )
+
+def _get_item(client:'ZatoClient', sub_key:'str') -> 'anydict':
+    """Return the subscription of the sub_key from the list of all subscriptions."""
+    data, _ = client.get_list(f'{SERVICE}.get-list')
+    for item in data:
+        if item['sub_key'] == sub_key:
+            return item
+    raise Exception(f'Subscription `{sub_key}` not in the list')
 
 class TestPubSubSubscription:
     created_sub_keys = []
@@ -126,6 +140,48 @@ class TestPubSubSubscription:
     def test_07_get_list_after_edit(self, client:'ZatoClient') -> 'None':
         data, _meta = client.get_list(f'{SERVICE}.get-list')
         assert len(data) >= 5
+
+    def test_07_push_batch_size_default(self, client:'ZatoClient') -> 'None':
+        # A subscription created without push_batch_size sends one message per push request
+        sub_key = self.__class__.created_sub_keys[1]
+        item = _get_item(client, sub_key)
+        assert item['push_batch_size'] == _push_batch_size_default
+
+    def test_07_push_batch_size_edit(self, client:'ZatoClient') -> 'None':
+        sub_key = self.__class__.created_sub_keys[0]
+        _ = client.edit(f'{SERVICE}.edit',
+            sub_key=sub_key,
+            topic_name_list=[{
+                'topic_name': self.__class__.topic_name,
+                'is_pub_enabled': True,
+                'is_delivery_enabled': True,
+            }],
+            sec_base_id=self.__class__.sec_id,
+            delivery_type='pull',
+            is_delivery_active=True,
+            is_pub_active=True,
+            push_batch_size=_push_batch_size_edited,
+        )
+
+        item = _get_item(client, sub_key)
+        assert item['push_batch_size'] == _push_batch_size_edited
+
+    @pytest.mark.parametrize(('push_batch_size', 'error_text'), [
+        (-1, 'push_batch_size must be at least 1'),
+        (_push_batch_size_max + 1, f'push_batch_size must be at most {_push_batch_size_max}'),
+    ])
+    def test_07_push_batch_size_out_of_range(self, client:'ZatoClient', push_batch_size:'int', error_text:'str') -> 'None':
+        topic = _ensure_topic(client, '/test/sub/topic/range')
+
+        with pytest.raises(Exception, match=error_text):
+            _ = client.create(f'{SERVICE}.create',
+                topic_name_list=[topic],
+                sec_base_id=self.__class__.sec_id,
+                delivery_type='pull',
+                is_delivery_active=True,
+                is_pub_active=True,
+                push_batch_size=push_batch_size,
+            )
 
     def test_08_ping(self, client:'ZatoClient') -> 'None':
         # There is no ping service for pub/sub subscriptions so invoking it is an error

@@ -565,6 +565,37 @@ class SetPayloadSOAPTestCase(unittest.TestCase):
 
 # ################################################################################################################################
 
+    def test_dict_is_wrapped_in_envelope(self) -> 'None':
+
+        for soap_version in (SOAPVersion.V11, SOAPVersion.V12):
+            with self.subTest(soap_version=soap_version):
+
+                handler = self._make_handler()
+                context = _parse_context(soap_version)
+
+                service_instance = MagicMock()
+                service_instance.request.soap = context
+
+                response = MagicMock()
+                response.payload = {
+                    'status': 'Accepted',
+                    'address': {'city': 'Springfield'},
+                    'tags': ['express', 'fragile'],
+                }
+
+                handler.set_payload(response, 'xml', URL_TYPE.SOAP, service_instance)
+
+                envelope = parse_envelope(response.payload)
+                response_body = parse_body(envelope)
+                operation_response = response_body.submitSingleMessageResponse
+
+                self.assertEqual(operation_response.status, 'Accepted')
+                self.assertEqual(operation_response.address.city, 'Springfield')
+                self.assertEqual(operation_response.tags, ['express', 'fragile'])
+                self.assertEqual(response.content_type, Content_Type[soap_version])
+
+# ################################################################################################################################
+
     def test_string_payload_passes_through(self) -> 'None':
         handler = self._make_handler()
 

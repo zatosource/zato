@@ -30,6 +30,11 @@ _any_port = 0
 _header_msg_id = 'HTTP_X_ZATO_MSG_ID'
 _header_attempt = 'HTTP_X_ZATO_DELIVERY_ATTEMPT'
 
+# The keys of an envelope that identify the message and its attempt, which a push of several messages carries
+# in each envelope rather than in the headers.
+_envelope_msg_id = 'msg_id'
+_envelope_attempt = 'delivery_attempt'
+
 # The responses of an endpoint that accepted a push and of one that rejected it.
 _status_accepted = '200 OK'
 _status_rejected = '500 Internal Server Error'
@@ -55,7 +60,9 @@ class Push(NamedTuple):
 
 class PushReceiver:
     """ The local HTTP endpoints that a server pushes messages to. Each push is handed to a handler, which returns
-    whether the endpoint accepts it, and the endpoint responds with HTTP 200 or HTTP 500 accordingly.
+    whether the endpoint accepts it, and the endpoint responds with HTTP 200 or HTTP 500 accordingly. A push of several
+    messages, a JSON list of envelopes, hands each message to the handler and is answered with HTTP 200
+    and the JSON list of the IDs of the messages that the handler accepted.
     """
 
     def __init__(self, handler:'callable_') -> 'None':
@@ -69,12 +76,18 @@ class PushReceiver:
 
         # The body is read in full, as a real endpoint reads it ..
         body = environ['wsgi.input'].read()
+        document = json.loads(body)
+
+        # .. a list of envelopes is handled message by message ..
+        if isinstance(document, list):
+            out = self._handle_list(environ['PATH_INFO'], document, start_response)
+            return out
 
         push = Push(
             path=environ['PATH_INFO'],
             msg_id=environ[_header_msg_id],
             attempt=int(environ[_header_attempt]),
-            envelope=json.loads(body),
+            envelope=document,
         )
 
         # .. the handler decides whether the endpoint accepts the push ..
@@ -87,6 +100,29 @@ class PushReceiver:
             start_response(_status_rejected, _response_headers)
 
         return _response_body
+
+# ################################################################################################################################
+
+    def _handle_list(self, path:'str', envelopes:'anylist', start_response:'callable_') -> 'anylist':
+        """ Hands each message of a push of several messages to the handler and responds with the IDs it accepted.
+        """
+        accepted:'anylist' = []
+
+        for envelope in envelopes:
+            push = Push(
+                path=path,
+                msg_id=envelope[_envelope_msg_id],
+                attempt=envelope[_envelope_attempt],
+                envelope=envelope,
+            )
+
+            if self.handler(push):
+                accepted.append(push.msg_id)
+
+        start_response(_status_accepted, _response_headers)
+
+        out = [json.dumps(accepted).encode('utf8')]
+        return out
 
 # ################################################################################################################################
 

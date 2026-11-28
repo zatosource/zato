@@ -122,13 +122,13 @@ define_elem_type!(Int, ElemType::Int);
 define_elem_type!(Secret, ElemType::Secret);
 define_elem_type!(Text, ElemType::Text);
 define_elem_type!(AsIs, ElemType::AsIs);
+define_elem_type!(Float, ElemType::Float);
+define_elem_type!(Decimal, ElemType::Decimal);
 
 // Backward-compat types - all behave like AsIs (no conversion)
-define_elem_type!(Float, ElemType::AsIs);
 define_elem_type!(CSV, ElemType::AsIs);
 define_elem_type!(Date, ElemType::AsIs);
 define_elem_type!(DateTime, ElemType::AsIs);
-define_elem_type!(Decimal, ElemType::AsIs);
 define_elem_type!(Dict, ElemType::AsIs);
 define_elem_type!(DictList, ElemType::AsIs);
 define_elem_type!(List, ElemType::AsIs);

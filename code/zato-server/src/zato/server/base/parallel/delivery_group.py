@@ -176,8 +176,8 @@ class GroupDelivery(MessageDelivery):
             error = ''
 
             try:
-                accepted = deliver_group_to_rest(self.server.config_manager.config_store, self.backend.payload_cache,
-                    pending, sub_config)
+                accepted = deliver_group_to_rest(self.push_engine, self.server.config_manager.config_store,
+                    self.backend.payload_cache, pending, sub_config)
 
             except Exception as e:
                 error = str(e)

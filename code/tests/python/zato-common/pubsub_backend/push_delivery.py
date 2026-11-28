@@ -148,7 +148,7 @@ def run_push_delivery_scenario() -> 'None':
     delivery = PushDelivery(server, backend) # type: ignore[arg-type]
 
     # The delivery is stopped however the scenario ends - a failure before its own stop would otherwise leave
-    # a greenlet behind that keeps fetching from a database the process has since moved away from.
+    # a greenlet behind that keeps claiming from a database the process has since moved away from.
     try:
         _run_push_delivery_flow(backend, server, delivery)
     finally:
@@ -183,7 +183,7 @@ def _run_push_delivery_flow(backend:'SQLPubSubBackend', server:'_StubServer', de
     # .. every delivery invoked the configured service with the published payload ..
     assert server.invoked[0] == (_service_name, 'push-drain-0', DATA_FORMAT.JSON), server.invoked[0]
 
-    # .. new publications wake the blocking fetch up and are delivered live ..
+    # .. new publications wake the waiting greenlet up and are delivered live ..
     for index in range(_live_message_count):
         _ = backend.publish(_topic, f'push-live-{index}')
 

@@ -29,7 +29,7 @@ from zato.common.util.http_retry import send_with_retry
 from zato.common.util.retry import RetryPolicy
 from zato.common.util.tls_verify import resolve_tls_verify
 from zato.server.connection.http_soap.outgoing.audit import insert_audit_event
-from zato.server.connection.http_soap.outgoing.auth import AuthMixin, get_static_token_header
+from zato.server.connection.http_soap.outgoing.auth import AuthMixin, get_static_token_header, next_tls_generation
 from zato.server.connection.http_soap.outgoing.common import logger, Allow_Redirects, Default_Content_Type, HTTPSAdapter, \
     Masked_Config_Fields, Masked_Value, Minimum_Pool_Size, Response, _connection_statuses, _get_body_length, _OAuth, \
     _rest_retry_label, _retry
@@ -47,16 +47,9 @@ from zato_server_core.zato_server_core import HTTPTransport
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anytuple, bytestuple, dictnone, stranydict, strlist, strnone, strstrdict
+    from zato.common.typing_ import any_, anytuple, dictnone, stranydict, strlist, strstrdict
     from zato.server.base.parallel import ParallelServer
     ParallelServer = ParallelServer
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# How long one pub/sub push may take, in seconds, so that an endpoint that never responds fails the attempt
-# rather than holding up the queue of its subscriber.
-_pubsub_push_timeout = MISC.DEFAULT_HTTP_TIMEOUT
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -95,10 +88,9 @@ class BaseHTTPSOAPWrapper(AuthMixin, TransportMixin):
         # because configuring them passes their Authorization header to it.
         self.transport = HTTPTransport(pool_size)
 
-        # Pub/sub pushes to this connection have a transport of their own, with the timeout of a push
-        self.pubsub_transport = HTTPTransport(pool_size)
-        self.pubsub_transport.set_timeout(_pubsub_push_timeout)
-        self._pubsub_tls:'anytuple' = ()
+        # The TLS settings of the pub/sub pushes to this connection, which the push engine sends,
+        # computed on first use and again after each change of the TLS material
+        self._push_tls:'anytuple' = ()
 
         self._component_name = get_component_name()
         self.default_content_type = self.get_default_content_type()
@@ -424,38 +416,19 @@ class BaseHTTPSOAPWrapper(AuthMixin, TransportMixin):
 
 # ################################################################################################################################
 
-    def invoke_pubsub_push(
-        self,
-        url:'str',
-        headers:'stranydict',
-        parts:'bytestuple',
-        required_scope:'strnone' = None,
-        ) -> 'anytuple':
-        """ Sends one push of a pub/sub message, whose body is the given parts in order, through the pub/sub transport
-        of the connection, verifying TLS as the connection is configured to, and returns what the transport returned.
-        With a required scope, the push is sent only to an address of exactly that network scope.
+    def get_push_tls(self) -> 'anytuple':
+        """ Returns the TLS settings of the pub/sub pushes to this connection, as the push engine takes them -
+        the CA bundle, the client certificate, its key and the generation of the TLS material. A redirect of a push
+        may lead from HTTP to HTTPS, so the settings are given for every push, whatever the scheme of its address.
         """
-        transport = self.pubsub_transport
-
-        # The TLS settings are passed on only when they change ..
-        if url.startswith('https:'):
+        if not self._push_tls:
             tls_verify = resolve_tls_verify(self.config)
             ca_path = get_ca_path(tls_verify, self.session.trust_env)
             client_cert, client_key = get_client_cert(self._get_tls_client_cert())
 
-            tls = (ca_path, client_cert, client_key)
+            self._push_tls = (ca_path, client_cert, client_key, next_tls_generation())
 
-            if tls != self._pubsub_tls:
-                transport.set_tls(ca_path, client_cert, client_key)
-                self._pubsub_tls = tls
-
-        # .. and a push the transport does not send is a failed attempt.
-        out = transport.invoke_parts('POST', url, headers, parts, required_scope)
-
-        if out is None:
-            raise Exception(f'Push to `{url}` of connection `{self.config["name"]}` not sent by the transport')
-
-        return out
+        return self._push_tls
 
 # ################################################################################################################################
 # ################################################################################################################################

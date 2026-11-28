@@ -232,8 +232,8 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.data_table.ping('{0}', this)\" class=\"ping-link\">Ping</a>", item.id));
     }
 
-    /* Invoke (REST only) */
-    if(!is_soap) {
+    /* Invoke - REST connections and channels of every transport */
+    if(!is_soap || is_channel) {
         row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.http_soap.invoke('{0}')\">Invoke</a>", item.id));
     }
 

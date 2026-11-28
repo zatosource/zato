@@ -69,6 +69,9 @@ def get_scenario_name(test_name:'str', scenario:'Scenario') -> 'str':
 # Each pull subscriber publishes one receipt per batch in the transaction of its acknowledgement
 Receipts_Topic = 'perf.receipts'
 
+# How many messages one push request to each push subscriber holds
+Push_Batch_Size = 1
+
 # Many publishers to many subscribers, half of them pulling and half of them receiving pushes
 Capacity_Scenario = Scenario('perf.capacity', 16, 8, 8)
 

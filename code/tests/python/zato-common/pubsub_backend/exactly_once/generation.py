@@ -36,6 +36,10 @@ if 0:
 _replaced_pool_size  = 8
 _replacing_pool_size = 9
 
+# How many messages and how many bytes of payloads the claims of a push subscriber may take
+_claim_max_messages = 10
+_claim_max_len      = 1024 * 1024
+
 # The rows that a write of the replaced server would change
 _message_rows_query  = 'select id, msg_id, payload_id, payload_dropped from pubsub_message order by id'
 _delivery_rows_query = 'select id, sub_key, attempt, leased_until_ms from pubsub_delivery order by id'
@@ -76,6 +80,17 @@ def _record_attempts(backend:'SQLPubSubBackend', context:'WriteContext') -> 'Non
 
 # ################################################################################################################################
 
+def _claim(backend:'SQLPubSubBackend', context:'WriteContext') -> 'None':
+    _ = backend.claim(Input_Sub_Key, _claim_max_messages, _claim_max_len)
+
+# ################################################################################################################################
+
+def _ack_and_claim(backend:'SQLPubSubBackend', context:'WriteContext') -> 'None':
+    msg_ids = [context.pushed_message['msg_id']]
+    _ = backend.ack_and_claim(Input_Sub_Key, msg_ids, [], [], _claim_max_messages, _claim_max_len)
+
+# ################################################################################################################################
+
 def _ack(backend:'SQLPubSubBackend', context:'WriteContext') -> 'None':
     msg_ids = [context.pushed_message['msg_id']]
     _ = backend.ack_messages(Input_Sub_Key, msg_ids)
@@ -108,6 +123,8 @@ def _lease_messages(backend:'SQLPubSubBackend', context:'WriteContext') -> 'None
 _operations:'strcalldict' = {
     'publish': _publish,
     'record_attempts': _record_attempts,
+    'claim': _claim,
+    'ack_and_claim': _ack_and_claim,
     'ack': _ack,
     'ack_with_publications': _ack_with_publications,
     'ack_pulled_with_publications': _ack_pulled_with_publications,
@@ -143,7 +160,7 @@ def _prepare(backend:'SQLPubSubBackend') -> 'WriteContext':
     now_ms = backend.clock.now_ms()
     attempts = lease(backend, now_ms, 1)
 
-    # .. and the second one is read the way push delivery reads it.
+    # .. and the second one is read as a message of the subscriber, without a claim, which would record its attempt.
     messages = backend.fetch_pending(Input_Sub_Key)
 
     for message in messages:

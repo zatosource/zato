@@ -1,27 +1,83 @@
 //! A connection to an endpoint, plain TCP or TLS over TCP, read and written without blocking the process.
 //!
-//! Every socket is non-blocking. An operation that would block waits through gevent for the socket
-//! to become ready, with the timeout of the connection, and is then repeated.
+//! Every socket is non-blocking. An operation that would block waits for the socket to become ready,
+//! with the timeout of the connection, and is then repeated. A greenlet waits through gevent,
+//! and a thread of the push engine, which holds no GIL, waits by blocking itself.
 
 use std::io::{ErrorKind, IoSlice, Read, Write};
 use std::net::{SocketAddr, TcpStream};
-use std::os::fd::AsRawFd;
+use std::os::fd::{AsFd, BorrowedFd};
 
+use pyo3::marker::Ungil;
 use pyo3::prelude::*;
 use rustls::ClientConnection;
 
-use super::wait::{Gevent, WaitError};
+use super::wait::{Gevent, ResolveError, WaitError, resolve_blocking, wait_readable_blocking, wait_writable_blocking};
 
-/// What every operation on a stream needs to wait cooperatively.
+/// How an operation that would block waits for its socket.
+pub enum Waiter<'ctx, 'py> {
+
+    /// Through the gevent hub, so other greenlets run meanwhile, with syscalls made without the GIL.
+    Gevent {
+
+        /// The interpreter the gevent functions are invoked in.
+        py: Python<'py>,
+
+        /// The gevent functions the waits go through.
+        gevent: &'ctx Gevent,
+    },
+
+    /// By blocking the calling OS thread, which holds no GIL.
+    Blocking,
+}
+
+/// What every operation on a stream needs to wait for its socket.
 pub struct IoContext<'ctx, 'py> {
-    /// The interpreter the gevent functions are invoked in.
-    pub py: Python<'py>,
 
-    /// The gevent functions the waits go through.
-    pub gevent: &'ctx Gevent,
+    /// How an operation waits.
+    pub waiter: Waiter<'ctx, 'py>,
 
     /// How long one wait may take, in seconds, or `None` to wait as long as it takes.
     pub timeout: Option<f64>,
+}
+
+impl IoContext<'_, '_> {
+
+    /// Runs a syscall, without the GIL if the caller holds it, so that other interpreter threads proceed meanwhile.
+    pub fn detach<T, F>(&self, func: F) -> T
+    where
+        F: Ungil + FnOnce() -> T,
+        T: Ungil,
+    {
+        match &self.waiter {
+            Waiter::Gevent { py, .. } => py.detach(func),
+            Waiter::Blocking => func(),
+        }
+    }
+
+    /// Waits until the descriptor is readable.
+    pub fn wait_readable(&self, fd: BorrowedFd<'_>) -> Result<(), WaitError> {
+        match &self.waiter {
+            Waiter::Gevent { py, gevent } => gevent.wait_readable(*py, fd, self.timeout),
+            Waiter::Blocking => wait_readable_blocking(fd, self.timeout),
+        }
+    }
+
+    /// Waits until the descriptor is writable.
+    pub fn wait_writable(&self, fd: BorrowedFd<'_>) -> Result<(), WaitError> {
+        match &self.waiter {
+            Waiter::Gevent { py, gevent } => gevent.wait_writable(*py, fd, self.timeout),
+            Waiter::Blocking => wait_writable_blocking(fd, self.timeout),
+        }
+    }
+
+    /// Resolves a host name into the socket addresses to connect to.
+    pub fn resolve(&self, host: &str, port: u16) -> Result<Vec<SocketAddr>, ResolveError> {
+        match &self.waiter {
+            Waiter::Gevent { py, gevent } => gevent.resolve(*py, host, port),
+            Waiter::Blocking => resolve_blocking(host, port),
+        }
+    }
 }
 
 /// Why an operation on a stream failed.
@@ -47,6 +103,7 @@ impl From<WaitError> for IoError {
         match error {
             WaitError::TimedOut => Self::TimedOut,
             WaitError::Python(err) => Self::Python(err),
+            WaitError::System(err) => Self::System(err),
         }
     }
 }
@@ -127,14 +184,16 @@ fn write_all_vectored_plain(ctx: &IoContext<'_, '_>, tcp: &mut TcpStream, head: 
     slices.push(IoSlice::new(head));
     slices.extend(parts.iter().map(|part| IoSlice::new(part)));
 
-    let fd = tcp.as_raw_fd();
+    // A shared reference writes as well as a mutable one, so the descriptor stays borrowed for the waits
+    let tcp: &TcpStream = tcp;
+    let fd = tcp.as_fd();
 
     write_all_slices(
         &mut slices,
         // The syscall runs without the GIL, so that other interpreter threads proceed meanwhile
-        |current| ctx.py.detach(|| tcp.write_vectored(current)),
+        |current| ctx.detach(|| { let mut writer = tcp; writer.write_vectored(current) }),
         // The send buffer is full, so this greenlet waits while the others run
-        || Ok(ctx.gevent.wait_writable(ctx.py, fd, ctx.timeout)?),
+        || Ok(ctx.wait_writable(fd)?),
     )
 }
 
@@ -167,11 +226,11 @@ fn write_all_slices(
 fn read_plain(ctx: &IoContext<'_, '_>, tcp: &mut TcpStream, buffer: &mut [u8]) -> Result<usize, IoError> {
     loop {
         // The syscall runs without the GIL, so that other interpreter threads proceed meanwhile
-        match ctx.py.detach(|| tcp.read(buffer)) {
+        match ctx.detach(|| tcp.read(buffer)) {
             Ok(count) => return Ok(count),
 
             // Nothing arrived yet, so this greenlet waits while the others run
-            Err(err) if err.kind() == ErrorKind::WouldBlock => ctx.gevent.wait_readable(ctx.py, tcp.as_raw_fd(), ctx.timeout)?,
+            Err(err) if err.kind() == ErrorKind::WouldBlock => ctx.wait_readable(tcp.as_fd())?,
             Err(err) if err.kind() == ErrorKind::Interrupted => {}
             Err(err) => return Err(IoError::System(err)),
         }
@@ -211,10 +270,10 @@ impl TlsStream {
     fn flush(&mut self, ctx: &IoContext<'_, '_>) -> Result<(), IoError> {
         while self.session.wants_write() {
             // The syscall runs without the GIL, so that other interpreter threads proceed meanwhile
-            match ctx.py.detach(|| self.session.write_tls(&mut self.tcp)) {
+            match ctx.detach(|| self.session.write_tls(&mut self.tcp)) {
                 Ok(_) => {}
                 Err(err) if err.kind() == ErrorKind::WouldBlock => {
-                    ctx.gevent.wait_writable(ctx.py, self.tcp.as_raw_fd(), ctx.timeout)?;
+                    ctx.wait_writable(self.tcp.as_fd())?;
                 }
                 Err(err) if err.kind() == ErrorKind::Interrupted => {}
                 Err(err) => return Err(IoError::System(err)),
@@ -229,10 +288,10 @@ impl TlsStream {
     fn fill(&mut self, ctx: &IoContext<'_, '_>) -> Result<bool, IoError> {
         let is_eof = loop {
             // The syscall runs without the GIL, so that other interpreter threads proceed meanwhile
-            match ctx.py.detach(|| self.session.read_tls(&mut self.tcp)) {
+            match ctx.detach(|| self.session.read_tls(&mut self.tcp)) {
                 Ok(count) => break count == 0,
                 Err(err) if err.kind() == ErrorKind::WouldBlock => {
-                    ctx.gevent.wait_readable(ctx.py, self.tcp.as_raw_fd(), ctx.timeout)?;
+                    ctx.wait_readable(self.tcp.as_fd())?;
                 }
                 Err(err) if err.kind() == ErrorKind::Interrupted => {}
                 Err(err) => return Err(IoError::System(err)),
@@ -240,9 +299,9 @@ impl TlsStream {
         };
 
         // Decryption runs without the GIL, so that other interpreter threads proceed meanwhile
-        if let Err(err) = ctx.py.detach(|| self.session.process_new_packets()) {
+        if let Err(err) = ctx.detach(|| self.session.process_new_packets()) {
             // The session queued an alert describing the failure, which the endpoint is told of if it still listens
-            ctx.py.detach(|| self.session.write_tls(&mut self.tcp)).ok();
+            ctx.detach(|| self.session.write_tls(&mut self.tcp)).ok();
             return Err(IoError::Tls(err));
         }
 
@@ -265,7 +324,7 @@ impl TlsStream {
 
             // The session accepts as much plaintext as its buffer holds, and sending makes room for more,
             // with encryption running without the GIL, so that other interpreter threads proceed meanwhile
-            let accepted = ctx.py.detach(|| self.session.writer().write(remaining)).map_err(IoError::System)?;
+            let accepted = ctx.detach(|| self.session.writer().write(remaining)).map_err(IoError::System)?;
             offset += accepted;
 
             self.flush(ctx)?;

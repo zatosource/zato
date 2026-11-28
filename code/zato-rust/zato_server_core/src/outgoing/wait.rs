@@ -1,10 +1,16 @@
-//! Cooperative waits for socket readiness and host name resolution through gevent.
+//! Waits for socket readiness and host name resolution, cooperative through gevent or blocking an OS thread.
 //!
 //! The transport never blocks the process. A socket operation that would block is followed by a wait
 //! through `gevent.socket.wait_read` or `wait_write`, so the hub schedules other greenlets until the socket
-//! is ready, and host names are resolved through gevent's resolver.
+//! is ready, and host names are resolved through gevent's resolver. A thread of the push engine holds no GIL
+//! and runs no greenlets, so it waits with `poll` and resolves host names with the resolver of the thread.
 
-use std::net::{IpAddr, SocketAddr, SocketAddrV4, SocketAddrV6};
+use std::net::{IpAddr, SocketAddr, SocketAddrV4, SocketAddrV6, ToSocketAddrs};
+use std::os::fd::{AsRawFd, BorrowedFd};
+use std::time::Duration;
+
+use rustix::event::{PollFd, PollFlags, Timespec, poll};
+use rustix::io::Errno;
 
 use pyo3::exceptions::{PyOSError, PyTimeoutError};
 use pyo3::prelude::*;
@@ -45,6 +51,9 @@ pub enum WaitError {
     /// The wait raised a Python exception other than a timeout, e.g. a `gevent.Timeout` of the caller,
     /// which is propagated unchanged.
     Python(PyErr),
+
+    /// A blocking wait failed with an error of the operating system.
+    System(std::io::Error),
 }
 
 /// Why a host name could not be resolved into addresses.
@@ -69,13 +78,13 @@ impl Gevent {
     }
 
     /// Waits until the descriptor is readable, yielding to other greenlets in the meantime.
-    pub fn wait_readable(&self, py: Python<'_>, fd: i32, timeout: Option<f64>) -> Result<(), WaitError> {
-        wait_on(py, &self.wait_read, fd, timeout)
+    pub fn wait_readable(&self, py: Python<'_>, fd: BorrowedFd<'_>, timeout: Option<f64>) -> Result<(), WaitError> {
+        wait_on(py, &self.wait_read, fd.as_raw_fd(), timeout)
     }
 
     /// Waits until the descriptor is writable, yielding to other greenlets in the meantime.
-    pub fn wait_writable(&self, py: Python<'_>, fd: i32, timeout: Option<f64>) -> Result<(), WaitError> {
-        wait_on(py, &self.wait_write, fd, timeout)
+    pub fn wait_writable(&self, py: Python<'_>, fd: BorrowedFd<'_>, timeout: Option<f64>) -> Result<(), WaitError> {
+        wait_on(py, &self.wait_write, fd.as_raw_fd(), timeout)
     }
 
     /// Resolves a host name into the socket addresses to connect to, in the order the resolver returned them.
@@ -135,4 +144,52 @@ fn parse_entries(entries: &Bound<'_, PyAny>, port: u16) -> PyResult<Vec<SocketAd
     }
 
     Ok(out)
+}
+
+/// Blocks the calling thread until the descriptor is readable or the timeout expires.
+pub fn wait_readable_blocking(fd: BorrowedFd<'_>, timeout: Option<f64>) -> Result<(), WaitError> {
+    wait_blocking(fd, PollFlags::IN, timeout)
+}
+
+/// Blocks the calling thread until the descriptor is writable or the timeout expires.
+pub fn wait_writable_blocking(fd: BorrowedFd<'_>, timeout: Option<f64>) -> Result<(), WaitError> {
+    wait_blocking(fd, PollFlags::OUT, timeout)
+}
+
+/// Polls one descriptor for the given readiness. An error or a hang-up on the descriptor also ends the wait,
+/// and the next operation on the socket reports it.
+fn wait_blocking(fd: BorrowedFd<'_>, flags: PollFlags, timeout: Option<f64>) -> Result<(), WaitError> {
+    let timespec = timeout.map(timespec_from_seconds);
+
+    loop {
+        let mut fds = [PollFd::from_borrowed_fd(fd, flags)];
+
+        match poll(&mut fds, timespec.as_ref()) {
+            Ok(0) => return Err(WaitError::TimedOut),
+            Ok(_) => return Ok(()),
+
+            // A signal delivered to the thread interrupts the wait, which is then made again
+            Err(Errno::INTR) => {}
+
+            Err(errno) => return Err(WaitError::System(errno.into())),
+        }
+    }
+}
+
+/// Converts a timeout in seconds into the time that `poll` waits, a negative or invalid timeout waiting no time at all.
+fn timespec_from_seconds(seconds: f64) -> Timespec {
+    let duration = Duration::try_from_secs_f64(seconds).unwrap_or(Duration::ZERO);
+
+    Timespec {
+        tv_sec: i64::try_from(duration.as_secs()).unwrap_or(i64::MAX),
+        tv_nsec: i64::from(duration.subsec_nanos()),
+    }
+}
+
+/// Resolves a host name with the resolver of the calling thread, which blocks the thread until it answers.
+pub fn resolve_blocking(host: &str, port: u16) -> Result<Vec<SocketAddr>, ResolveError> {
+    match (host, port).to_socket_addrs() {
+        Ok(addresses) => Ok(addresses.collect()),
+        Err(err) => Err(ResolveError::Failed(err.to_string())),
+    }
 }

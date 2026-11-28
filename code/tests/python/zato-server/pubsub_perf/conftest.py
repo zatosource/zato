@@ -27,7 +27,7 @@ sys.path.insert(0, _server_tests_dir)
 sys.path.insert(0, _common_lib_dir)
 
 # Zato
-from pubsub_perf.config import All_Scenarios, Credentials, credentialslist, PerfConfig, Receipts_Topic
+from pubsub_perf.config import All_Scenarios, Credentials, credentialslist, PerfConfig, Push_Batch_Size, Receipts_Topic
 from pubsub_perf.push import get_push_path, Push_Host, PushReceiver
 from zato.common.test.client import AdminClient
 from zato.common.test.conftest_base_pubsub import create_zato_server_fixture
@@ -204,6 +204,7 @@ def _build_definition(
             'security': credentials.username,
             'delivery_type': _delivery_push,
             'push_rest_endpoint': credentials.username,
+            'push_batch_size': Push_Batch_Size,
             'topic_list': subscribed_topics,
         })
 

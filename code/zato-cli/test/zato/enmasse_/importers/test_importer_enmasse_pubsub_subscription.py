@@ -22,8 +22,9 @@ from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.security import SecurityImporter
 from zato.cli.enmasse.importers.pubsub_topic import PubSubTopicImporter
-from zato.cli.enmasse.importers.pubsub_subscription import PubSubSubscriptionImporter
+from zato.cli.enmasse.importers.pubsub_subscription import get_push_batch_size, PubSubSubscriptionImporter
 from zato.cli.enmasse.importers.outgoing_rest import OutgoingRESTImporter
+from zato.common.api import PubSub
 from zato.common.odb.model import PubSubSubscriptionTopic
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.typing_ import cast_
@@ -34,6 +35,12 @@ from zato.common.typing_ import cast_
 if 0:
     from zato.common.typing_ import any_, stranydict
     any_, stranydict = any_, stranydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# The number of messages per push request of the REST push subscription of the template
+_push_batch_size_template = 10
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -139,11 +146,33 @@ class TestEnmassePubSubSubscriptionFromYAML(TestCase):
         self.assertEqual(push_rest_sub.push_type, 'rest')
         self.assertIsNotNone(push_rest_sub.rest_push_endpoint_id)
 
+        # The REST push subscription sends the number of messages per request that its definition gives
+        self.assertEqual(push_rest_sub.push_batch_size, _push_batch_size_template)
+
         # Verify push service subscription
         self.assertIsNotNone(push_service_sub)
         self.assertEqual(push_service_sub.delivery_type, 'push')
         self.assertEqual(push_service_sub.push_type, 'service')
         self.assertEqual(push_service_sub.push_service_name, 'demo.echo')
+
+        # A definition without push_batch_size has the default one
+        self.assertEqual(push_service_sub.push_batch_size, PubSub.Delivery.Push_Batch_Size_Default)
+
+# ################################################################################################################################
+
+    def test_pubsub_subscription_push_batch_size_validation(self):
+        """ Test that a push_batch_size outside of the allowed range is rejected.
+        """
+        for value in (0, -1, PubSub.Delivery.Push_Batch_Size_Max + 1, '10', 2.5):
+            with self.assertRaises(Exception) as context:
+                _ = get_push_batch_size({'security': 'enmasse.basic_auth.2', 'push_batch_size': value})
+
+            self.assertIn('push_batch_size must be an integer from 1 to', str(context.exception))
+
+        # The limits themselves are accepted
+        self.assertEqual(get_push_batch_size({'push_batch_size': 1}), 1)
+        self.assertEqual(get_push_batch_size({'push_batch_size': PubSub.Delivery.Push_Batch_Size_Max}),
+            PubSub.Delivery.Push_Batch_Size_Max)
 
 # ################################################################################################################################
 

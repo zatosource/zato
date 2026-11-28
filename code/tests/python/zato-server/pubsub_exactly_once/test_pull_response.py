@@ -259,7 +259,7 @@ def test_pull_response(zato_server:'any_') -> 'None':
 
     # Both messages are acknowledged ..
     msg_ids = [every_field_meta['msg_id'], no_field_meta['msg_id']]
-    ack_result = ack(TestConfig.orders_username, TestConfig.orders_password, {'msg_ids': msg_ids})
+    ack_result = ack(TestConfig.orders_username, TestConfig.orders_password, msg_ids)
 
     assert ack_result.status_code == OK, ack_result
 

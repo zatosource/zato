@@ -6,7 +6,7 @@ Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# The decision whether a response to a push is a redirect to follow, and to which address,
+# The decision of the push engine whether a response to a push is a redirect to follow, and to which address,
 # without any network access.
 
 # stdlib
@@ -16,14 +16,14 @@ from http.client import BAD_REQUEST, FOUND, INTERNAL_SERVER_ERROR, MOVED_PERMANE
 # pytest
 import pytest
 
-# Zato
-from zato.server.base.parallel.delivery_rest import get_push_redirect, Max_Push_Redirects, PushRedirectError
+# Zato - Rust
+from zato_server_core.zato_server_core import get_push_redirect, Max_Push_Redirects
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anydict, strnone
+    from zato.common.typing_ import strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,24 +41,10 @@ _followed_scopes = ['public', 'private', 'loopback']
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _new_header_store(location:'strnone') -> 'anydict':
-    """ Returns the headers of a response as the transport stores them, under their lowercase names.
-    """
-    out:'anydict' = {'content-length': ('Content-Length', '0')}
-
-    if location is not None:
-        out['location'] = ('Location', location)
-
-    return out
-
-# ################################################################################################################################
-
 def _redirect(url:'str', location:'strnone', status_code:'int'=TEMPORARY_REDIRECT, hop_count:'int'=0) -> 'strnone':
     """ Returns the decision for one response of a push whose first address is public.
     """
-    header_store = _new_header_store(location)
-
-    out = get_push_redirect(url, status_code, header_store, hop_count, 'public')
+    out = get_push_redirect(url, status_code, location, hop_count, 'public')
     return out
 
 # ################################################################################################################################
@@ -158,7 +144,7 @@ def test_location_forms(url:'str', location:'str', expected:'str') -> 'None':
     (_http_url, 'http://archive.example.com/webhook\x7f'),
 ])
 def test_redirects_not_followed(url:'str', location:'strnone') -> 'None':
-    with pytest.raises(PushRedirectError):
+    with pytest.raises(ValueError):
         _ = _redirect(url, location)
 
 # ################################################################################################################################
@@ -173,34 +159,28 @@ def test_hop_limit(status_code:'int') -> 'None':
     assert next_url == 'http://orders.example.com:8080/other'
 
     # .. and the one after it is not.
-    with pytest.raises(PushRedirectError):
+    with pytest.raises(ValueError):
         _ = _redirect(_http_url, '/other', status_code, Max_Push_Redirects)
 
 # ################################################################################################################################
 
 @pytest.mark.parametrize('first_scope', _followed_scopes)
 def test_scopes_of_followed_redirects(first_scope:'str') -> 'None':
-    header_store = _new_header_store('/other')
-
-    next_url = get_push_redirect(_http_url, TEMPORARY_REDIRECT, header_store, 0, first_scope)
+    next_url = get_push_redirect(_http_url, TEMPORARY_REDIRECT, '/other', 0, first_scope)
     assert next_url == 'http://orders.example.com:8080/other'
 
 # ################################################################################################################################
 
 @pytest.mark.parametrize('first_scope', ['link-local', None])
 def test_scopes_of_redirects_not_followed(first_scope:'strnone') -> 'None':
-    header_store = _new_header_store('/other')
-
-    with pytest.raises(PushRedirectError):
-        _ = get_push_redirect(_http_url, TEMPORARY_REDIRECT, header_store, 0, first_scope)
+    with pytest.raises(ValueError):
+        _ = get_push_redirect(_http_url, TEMPORARY_REDIRECT, '/other', 0, first_scope)
 
 # ################################################################################################################################
 
 @pytest.mark.parametrize('first_scope', ['link-local', None])
 def test_scope_does_not_apply_to_other_statuses(first_scope:'strnone') -> 'None':
-    header_store = _new_header_store('/other')
-
-    next_url = get_push_redirect(_http_url, OK, header_store, 0, first_scope)
+    next_url = get_push_redirect(_http_url, OK, '/other', 0, first_scope)
     assert next_url is None
 
 # ################################################################################################################################

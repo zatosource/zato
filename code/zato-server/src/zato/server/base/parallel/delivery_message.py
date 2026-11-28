@@ -34,9 +34,11 @@ if 0:
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
     from zato.common.typing_ import anydict, callable_, callnone, strset
     from zato.server.base.parallel import ParallelServer
+    from zato.server.base.parallel.push_engine_client import PushEngineClient
 
     BoundedSemaphore = BoundedSemaphore
     ParallelServer = ParallelServer
+    PushEngineClient = PushEngineClient
     SQLPubSubBackend = SQLPubSubBackend
     strset = strset
 
@@ -59,6 +61,7 @@ class MessageDelivery:
     """
     server: 'ParallelServer'
     backend: 'SQLPubSubBackend'
+    push_engine: 'PushEngineClient'
     _paused: 'strset'
     _database_slots: 'BoundedSemaphore'
 
@@ -387,7 +390,8 @@ class MessageDelivery:
 # ################################################################################################################################
 
     def _deliver_to_rest(self, message:'anydict', sub_config:'anydict') -> 'None':
-        deliver_to_rest(self.server.config_manager.config_store, self.backend.payload_cache, message, sub_config)
+        deliver_to_rest(self.push_engine, self.server.config_manager.config_store, self.backend.payload_cache, message,
+            sub_config)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from importlib import import_module
+from itertools import count
 
 # Zato
 from zato.common.api import EnvVariable
@@ -35,6 +36,19 @@ if 0:
 
 # The client library of NTLM, imported by the first connection whose security definition is of that type
 _requests_ntlm_module = 'requests_ntlm'
+
+# The generations of the TLS material of the connections of this process, which the push engine builds
+# a new TLS configuration for, so that a configuration built from the previous contents of the same files is not reused
+_tls_generations = count()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def next_tls_generation() -> 'int':
+    """ Returns a generation of the TLS material that no connection of this process used before.
+    """
+    out = next(_tls_generations)
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -130,8 +144,8 @@ class AuthMixin:
     sec_type: 'str'
     https_adapter: 'HTTPSAdapter'
     transport: 'HTTPTransport'
-    pubsub_transport: 'HTTPTransport'
     server: 'ParallelServer'
+    _push_tls: 'anytuple'
 
     def _check_password(self) -> 'None':
         """ Notes whether this connection's password is still the placeholder that an import leaves
@@ -224,7 +238,9 @@ class AuthMixin:
             # a pooled connection lasted.
             self.https_adapter.clear_pool()
             self.transport.clear_pool()
-            self.pubsub_transport.clear_pool()
+
+            # The pushes take a new generation of the TLS material, so the push engine reads it anew
+            self._push_tls = ()
 
         # #######################################
         #
@@ -293,7 +309,9 @@ class AuthMixin:
         # Pooled connections keep presenting the material they were opened with ..
         self.https_adapter.clear_pool()
         self.transport.clear_pool()
-        self.pubsub_transport.clear_pool()
+
+        # .. the push engine reads the material anew for the next push ..
+        self._push_tls = ()
 
         # .. and the SOAP client keeps a session of its own, with a pool of its own.
         if self._soap_client:

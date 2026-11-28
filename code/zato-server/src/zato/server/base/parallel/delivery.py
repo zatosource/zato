@@ -24,6 +24,7 @@ from zato.common.db_env.database import get_database_values
 from zato.common.db_env.errors import is_transient
 from zato.common.db_env.outage import SharedOutageTracker
 from zato.common.pubsub.delivery_scope import new_delivery_scope
+from zato.common.pubsub.sql.config import Push_Engine_Threads
 from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID
 from zato.common.pubsub.sql.fenced_ack import PubSubAckConflict
 from zato.common.pubsub.sql.replaced import PubSubReplaced
@@ -31,6 +32,8 @@ from zato.common.worker_slot import is_config_process
 from zato.server.base.parallel.delivery_batch import commit_and_claim, commit_delivery_scope, deliver_atomic_batch
 from zato.server.base.parallel.delivery_fetch import Delivery_Batch_Max_Len, Delivery_Batch_Size, fetch_new, wait_push
 from zato.server.base.parallel.delivery_group import GroupDelivery
+from zato.server.base.parallel.delivery_rest import Push_Timeout
+from zato.server.base.parallel.push_engine_client import PushEngineClient
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -94,6 +97,10 @@ class PushDelivery(GroupDelivery):
         # An outage of the database interrupts the delivery loops of all the subscribers at once,
         # so it is logged once for all of them.
         self._outage = SharedOutageTracker('PubSub delivery')
+
+        # The REST pushes of all the subscribers are sent by the threads of one engine, each keeping
+        # as many idle connections per endpoint as there are threads that may use them at once.
+        self.push_engine = PushEngineClient(Push_Engine_Threads, Push_Engine_Threads, Push_Timeout)
 
 # ################################################################################################################################
 
@@ -191,6 +198,10 @@ class PushDelivery(GroupDelivery):
             for greenlet in self._greenlets.values():
                 greenlet.kill()
             self._greenlets.clear()
+
+        # The killed greenlets discarded the outcomes of their pushes, and the engine finishes the requests
+        # in flight within the push timeout. Everything not acknowledged is delivered again after a restart.
+        _ = self.push_engine.stop()
 
 # ################################################################################################################################
 

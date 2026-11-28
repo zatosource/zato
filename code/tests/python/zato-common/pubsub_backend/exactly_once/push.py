@@ -20,7 +20,7 @@ from prometheus_client import REGISTRY
 from sqlalchemy.exc import DBAPIError
 
 # Zato
-from common import env_value
+from common import env_value, get_delivery_rows
 from exactly_once.harness import build, count_deliveries, count_messages, First_Output_Sub_Key, First_Output_Topic, \
     get_built_msg_id, get_msg_ids, Input_Sub_Key, new_backend, publish_input, Second_Output_Sub_Key, Second_Output_Topic
 from zato.common.pubsub.delivery_scope import close_delivery_scope, open_delivery_scope
@@ -28,6 +28,7 @@ from zato.common.pubsub.sql.cleanup import PubSubCleanup
 from zato.common.pubsub.sql.config import ModuleCtx
 from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID
 from zato.common.pubsub.sql.fenced_ack import PubSubAckConflict
+from zato.common.test.expected_records import expected_records
 from zato.common.typing_ import cast_
 
 # ################################################################################################################################
@@ -50,6 +51,15 @@ _published_prefix        = 'Published message -> '
 
 # The metric that counts the committed publications of each topic
 _published_metric = 'zato_pubsub_messages_published_total'
+
+# The logger that reports a failed commit of the commit writer, and the fragment of the failure that the rollback
+# scenarios cause on purpose with a publication whose size is NULL
+_outage_logger_name = 'zato.common.db_env.outage'
+_not_null_fragments = ('null value in column "data_size"',)
+
+# How many messages and how many bytes of payloads the claims of the input subscriber may take
+_claim_max_messages = 10
+_claim_max_len      = 1024 * 1024
 
 # The message IDs and the payloads of the publications of the batches of the scope scenarios
 _repeated_msg_id = 'exactly-once.backend.scope.repeated'
@@ -126,13 +136,13 @@ def _get_published_count(topic_name:'str') -> 'float':
 
 def _fetch_batch(backend:'SQLPubSubBackend', count:'int') -> 'strlist':
     """ Publishes the given number of input messages and returns the message IDs of the batch
-    that a push delivery of the input subscriber reads.
+    that a push delivery of the input subscriber claims.
     """
     for index in range(count):
         data = f'input-{index}'
         _ = publish_input(backend, data)
 
-    messages = backend.fetch_pending(Input_Sub_Key)
+    messages, _ = backend.claim(Input_Sub_Key, _claim_max_messages, _claim_max_len)
     message_count = len(messages)
 
     assert message_count == count
@@ -165,7 +175,7 @@ def run_atomic_rollback_scenario() -> 'None':
 
     publications:'anylist' = [first.pending, second.pending]
 
-    with pytest.raises(DBAPIError):
+    with pytest.raises(DBAPIError), expected_records(_outage_logger_name, _not_null_fragments):
         backend.ack_with_publications(Input_Sub_Key, msg_ids, publications, [])
 
     # .. so neither publication is stored ..
@@ -190,6 +200,71 @@ def run_atomic_rollback_scenario() -> 'None':
     assert count_deliveries(Second_Output_Sub_Key) == 1
 
     # .. and both messages are acknowledged.
+    assert count_deliveries(Input_Sub_Key) == 0
+
+# ################################################################################################################################
+
+def _get_input_attempts() -> 'anylist':
+    """ Returns the attempt of each delivery of the input subscriber, in the order of the deliveries.
+    """
+    out:'anylist' = []
+
+    for row in get_delivery_rows(Input_Sub_Key):
+        out.append(row.attempt)
+
+    return out
+
+# ################################################################################################################################
+
+def run_cycle_rollback_scenario() -> 'None':
+    """ A cycle commit whose transaction fails on a publication acknowledges nothing, stores no publication and claims
+    nothing, so the attempts of the batch remain as its own claim recorded them, and the next claim takes the same batch
+    with the next attempt before any message published since.
+    """
+    backend = new_backend()
+    msg_ids = _fetch_batch(backend, 2)
+
+    # The claim of the batch recorded the first attempt of each message ..
+    assert _get_input_attempts() == [1, 1]
+
+    # .. and a message published after the claim waits for the next one.
+    _ = publish_input(backend, 'input-later')
+
+    first = build(backend, First_Output_Topic, 'output-first')
+    first_values = first.pending.message_values
+
+    # A column that may not be NULL fails the insert of the publication ..
+    data_size = first_values['data_size']
+    first_values['data_size'] = None
+
+    publications:'anylist' = [first.pending]
+
+    with pytest.raises(DBAPIError), expected_records(_outage_logger_name, _not_null_fragments):
+        _ = backend.ack_and_claim(Input_Sub_Key, msg_ids, publications, [], _claim_max_messages, _claim_max_len)
+
+    # .. so the publication is not stored, the batch is not acknowledged ..
+    assert count_messages(First_Output_Topic) == 0
+    assert count_deliveries(Input_Sub_Key) == 3
+
+    # .. and the failed commit claimed nothing, the later message having no attempt yet.
+    assert _get_input_attempts() == [1, 1, 0]
+
+    # The next claim takes the batch again, with the next attempt, and the later message after it ..
+    messages, _ = backend.claim(Input_Sub_Key, _claim_max_messages, _claim_max_len)
+    claimed_ids:'strlist' = []
+
+    for message in messages:
+        claimed_ids.append(message['msg_id'])
+
+    assert claimed_ids[:2] == msg_ids, claimed_ids
+    assert _get_input_attempts() == [2, 2, 1]
+
+    # .. and a commit that succeeds acknowledges the batch and stores the publication once.
+    first_values['data_size'] = data_size
+
+    _ = backend.ack_and_claim(Input_Sub_Key, claimed_ids, publications, [], _claim_max_messages, _claim_max_len)
+
+    assert count_messages(First_Output_Topic) == 1
     assert count_deliveries(Input_Sub_Key) == 0
 
 # ################################################################################################################################

@@ -1000,7 +1000,8 @@ Zato_Test_Step_Tests_pubsub-encoding  := \
 Zato_Test_Step_Runner_pubsub-services := $(Zato_Test_PubSub_Plain)
 Zato_Test_Step_Tests_pubsub-services  := \
 	$(CURDIR)/code/tests/python/zato-server/pubsub_services/ \
-	$(CURDIR)/code/tests/python/zato-server/pubsub_services_live/
+	$(CURDIR)/code/tests/python/zato-server/pubsub_services_live/ \
+	$(CURDIR)/code/tests/python/zato-server/pubsub_services_entry_points/
 
 Zato_Test_Step_Runner_pubsub-failover := $(Zato_Test_PubSub_Plain)
 Zato_Test_Step_Tests_pubsub-failover  := $(CURDIR)/code/tests/python/zato-server/pubsub_failover/
@@ -1367,7 +1368,7 @@ test-pubsub-encoding: ## Push payload encoding once per message - the Rust unit 
 	-@status=0; $(call Zato_Test_Step_Run_Once,pubsub-encoding) exit $$status
 	$(Zato_Target_Status)
 
-test-pubsub-services: ## The order-to-cash chain of five services that pass orders on with self.publish - the unit tests of its rules and routing and the live tests of errors, retries, the queued channel and deployments through the pickup directory, which test-pubsub runs as a step of its own.
+test-pubsub-services: ## The order-to-cash chain of five services that pass orders on with self.publish - the unit tests of its rules and routing and the live tests of errors, retries, the queued channel and deployments through the pickup directory - and the service entry points, where services with typed, model, free-form and HL7 v2 input invoked through self.invoke, self.pubsub to a topic and to a service, REST, SOAP 1.1 and 1.2 and MLLP channels must receive the same input and return the same result, which test-pubsub runs as a step of its own.
 	$(Zato_Log_Reset)
 	@status=0; $(call Zato_Test_Step_Run_Once,pubsub-services) exit $$status
 
@@ -1871,7 +1872,7 @@ test-hl7: ## Every HL7 test - parsing, FHIR, MLLP channels, outgoing connections
 		$(PYTEST_ARGS) $(Zato_Log)
 	$(Zato_Target_Status)
 
-test-ui: ## Every dashboard test - the UI kit, the sign-in of Dashboard users, the audit log, the URL configuration, the alerts tab, the headers of the middleware client, the whole Playwright suite and the web-admin access checks.
+test-ui: ## Every dashboard test - the UI kit, the sign-in of Dashboard users, the audit log, the URL configuration, the alerts tab, the headers of the middleware client, the whole Playwright suite, including the service entry points invoked from the IDE, the Invoke overlays of REST, SOAP and MLLP channels and the Publish overlay of topics, and the web-admin access checks.
 	$(Zato_Log_Reset)
 	-ZATO_TEST_BASE_DIR=$(CURDIR) $(ZATO_PY) -m pytest \
 		$(CURDIR)/code/tests/python/zato-common/webapp_ui/ \

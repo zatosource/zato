@@ -89,8 +89,9 @@ statements_ack = [
     ('SELECT', 'pubsub_message'), ('SELECT', 'pubsub_delivery'), ('DELETE', 'pubsub_delivery'),
 ]
 
+# The check of the publications reads the messages and the dedup records in one statement, a union led by the messages
 _statements_atomic_checks = [
-    ('SELECT', 'pubsub_message'), ('SELECT', 'zato_message_dedup'), ('SELECT', 'pubsub_delivery'),
+    ('SELECT', 'pubsub_message'), ('SELECT', 'pubsub_delivery'),
 ]
 
 _statements_atomic_writes = [
@@ -99,6 +100,11 @@ _statements_atomic_writes = [
 ]
 
 statements_attempts = [
+    ('UPDATE', 'pubsub_delivery'),
+]
+
+# The claim of the next push batch is one statement, whose common table expressions lock, budget and update the delivery rows
+statements_claim = [
     ('UPDATE', 'pubsub_delivery'),
 ]
 
@@ -180,6 +186,9 @@ def _get_modifying_verb_table(words:'strlist') -> 'anytuple | None':
     table expressions, or None if it modifies no table. A row lock clause, e.g. FOR NO KEY UPDATE OF,
     is not a data-modifying statement.
     """
+    # The body of each common table expression opens with a parenthesis, e.g. (UPDATE pubsub_message SET
+    words = [word.lstrip('(') for word in words]
+
     for index, word in enumerate(words):
         if word == 'INSERT' and words[index + 1] == 'INTO':
             out = ('INSERT', words[index + 2].split('(')[0])
@@ -288,6 +297,21 @@ def get_event_statements(has_new_payloads:'bool') -> 'anylist':
         out.append(_statement_payload_insert)
 
     out.append(_statement_event_insert)
+    return out
+
+# ################################################################################################################################
+
+def get_atomic_claim_statements() -> 'anylist':
+    """ Returns the statements of a fenced acknowledgement with one receipt and the claim of the next push batch
+    of its subscriber, which runs in the savepoint of the acknowledgement once the acknowledgement is written.
+    """
+    out:'anylist' = [_savepoint]
+
+    out.extend(_statements_atomic_checks)
+    out.extend(_statements_atomic_writes)
+    out.extend(statements_claim)
+    out.append(_release)
+
     return out
 
 # ################################################################################################################################

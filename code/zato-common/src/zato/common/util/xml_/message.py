@@ -311,6 +311,80 @@ def _value_has_content(value:'any_') -> 'bool':
 # ################################################################################################################################
 # ################################################################################################################################
 
+def to_plain_dict(message:'XMLMessage') -> 'anydict':
+    """ Returns the children of a node as a plain dict, in document order - nested elements become dicts,
+    repeated elements become lists and an element that carries attributes next to its text becomes its text.
+    Attributes are not part of the dict and nodes without content are left out.
+    """
+    out = {}
+
+    for name, value in message._children.items():
+
+        if _value_has_content(value):
+            out[name] = _to_plain_value(value)
+
+    return out
+
+# ################################################################################################################################
+
+def _to_plain_value(value:'any_') -> 'any_':
+    """ Returns the plain form of one child value.
+    """
+    if isinstance(value, XMLMessage):
+
+        if value._children:
+            out = to_plain_dict(value)
+        else:
+            out = value._text
+
+    elif isinstance(value, list):
+        out = []
+
+        for item in value:
+            item_value = _to_plain_value(item)
+            out.append(item_value)
+
+    else:
+        out = value
+
+    return out
+
+# ################################################################################################################################
+
+def from_plain_dict(data:'anydict', message_class:'type[XMLMessage]'=XMLMessage) -> 'XMLMessage':
+    """ Returns a node built of a plain dict, in the order of its keys - nested dicts become nodes, lists become
+    repeated elements and every other value becomes the text of an element in its XML lexical form.
+    """
+    out = message_class()
+
+    for name, value in data.items():
+        out._children[name] = _from_plain_value(value, message_class)
+
+    return out
+
+# ################################################################################################################################
+
+def _from_plain_value(value:'any_', message_class:'type[XMLMessage]') -> 'any_':
+    """ Returns the node form of one plain value.
+    """
+    if isinstance(value, dict):
+        out = from_plain_dict(value, message_class)
+
+    elif isinstance(value, list):
+        out = []
+
+        for item in value:
+            item_value = _from_plain_value(item, message_class)
+            out.append(item_value)
+
+    else:
+        out = value
+
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def serialize(
     message:'XMLMessage',
     tag:'str',

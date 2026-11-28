@@ -95,7 +95,65 @@ pub fn build_head(input: &HeadInput<'_, '_>) -> PyResult<Option<Vec<u8>>> {
         set_header(&mut merged, String::from(AUTHORIZATION_HEADER), value.to_vec());
     }
 
-    Ok(Some(serialize(input, &merged)))
+    let line = RequestLine {
+        method: input.method,
+        request_target: input.request_target,
+        host_header: input.host_header,
+    };
+
+    Ok(Some(serialize(&line, &merged)))
+}
+
+/// What the head of a push request of the push engine is built from, its headers validated when the job was submitted.
+pub struct ListHeadInput<'call> {
+
+    /// The method, already in uppercase.
+    pub method: &'call str,
+
+    /// The path and the query string of the request line.
+    pub request_target: &'call str,
+
+    /// The value of the `Host` header, sent unless the headers give one.
+    pub host_header: &'call str,
+
+    /// The headers of the request, their names valid and their values encoded as sent.
+    pub headers: &'call [(String, Vec<u8>)],
+
+    /// The length of the body, if the request has a body that is not empty.
+    pub body_len: Option<usize>,
+}
+
+/// Builds the head of a request from headers that need no Python objects, so a thread without the GIL builds it.
+pub fn build_list_head(input: &ListHeadInput<'_>) -> Vec<u8> {
+    let mut merged: Vec<Header> = Vec::with_capacity(input.headers.len() + 2);
+
+    // A header given twice under names that differ in case only is sent once, with the last value
+    for (name, value) in input.headers {
+        set_header(&mut merged, name.clone(), value.clone());
+    }
+
+    set_content_length(&mut merged, input.method, input.body_len);
+
+    let line = RequestLine {
+        method: input.method,
+        request_target: input.request_target,
+        host_header: input.host_header,
+    };
+
+    serialize(&line, &merged)
+}
+
+/// The parts of a head that precede its headers.
+struct RequestLine<'call> {
+
+    /// The method, already in uppercase.
+    method: &'call str,
+
+    /// The path and the query string.
+    request_target: &'call str,
+
+    /// The value of the `Host` header, sent unless the headers give one.
+    host_header: &'call str,
 }
 
 /// Extracts the name of a header, returning `None` for a name requests would reject or `http.client` could not encode.
@@ -235,7 +293,7 @@ fn set_content_length(headers: &mut Vec<Header>, method: &str, body_len: Option<
 }
 
 /// Writes the request line, the `Host` header unless the caller gave one, and the merged headers.
-fn serialize(input: &HeadInput<'_, '_>, headers: &[Header]) -> Vec<u8> {
+fn serialize(input: &RequestLine<'_>, headers: &[Header]) -> Vec<u8> {
     let mut out = Vec::with_capacity(512);
 
     out.extend_from_slice(input.method.as_bytes());

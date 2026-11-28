@@ -141,7 +141,7 @@ def pull_raw(username:'str', password:'str') -> 'RawResult':
 
 # ################################################################################################################################
 
-def ack(username:'str', password:'str', payload:'anydict') -> 'HTTPResult':
+def ack(username:'str', password:'str', payload:'any_') -> 'HTTPResult':
     """ Sends one acknowledgement and returns the response.
     """
     out = post_json('/pubsub/messages/ack', username, password, payload)
@@ -166,7 +166,7 @@ def drain(username:'str', password:'str') -> 'anylist':
             meta = message['meta']
             msg_ids.append(meta['msg_id'])
 
-        payload = {'msg_ids': msg_ids}
+        payload = msg_ids
         result = ack(username, password, payload)
 
         assert result.status_code == OK, result

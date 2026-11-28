@@ -92,11 +92,14 @@ class InvokeChannel(AdminService):
         with closing(self.odb.session()) as session:
             item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).first()
             if not item:
-                raise Exception('REST channel `{}` not found'.format(self.request.input.id))
+                raise Exception('Channel `{}` not found'.format(self.request.input.id))
 
             channel_config = {
                 'url_path': item.url_path,
                 'security_id': item.security_id,
+                'transport': item.transport,
+                'soap_action': item.soap_action,
+                'soap_version': item.soap_version,
             }
             sec_config = self._get_security_config(session, item.security_id)
 
@@ -172,6 +175,21 @@ class InvokeChannel(AdminService):
         port = self.server.port
         method = self.request.input.get('request_method', '') or _Invoke_Default_Method
 
+        # A SOAP channel receives the envelope as it was entered, with the content type and the SOAPAction header
+        # of its SOAP version, which the SOAP transport of the wrapper adds ..
+        if channel_config['transport'] == URL_TYPE.SOAP:
+            transport = URL_TYPE.SOAP
+            data_format = None
+            soap_action = channel_config['soap_action']
+            soap_version = channel_config['soap_version']
+
+        # .. and a REST channel receives the payload as JSON.
+        else:
+            transport = URL_TYPE.PLAIN_HTTP
+            data_format = 'json'
+            soap_action = ''
+            soap_version = None
+
         wrapper_config = {
             'id': 'temp-invoke-{}'.format(self.cid),
             'is_active': True,
@@ -182,13 +200,13 @@ class InvokeChannel(AdminService):
 
             # A hop to a channel of this very server is never queued
             HTTP_SOAP.Queue.Field_Use_Queue: False,
-            'data_format': 'json',
+            'data_format': data_format,
             'name': 'temp-invoke-channel-{}'.format(self.cid),
-            'transport': 'plain_http',
+            'transport': transport,
             'address_host': '{}{}:{}'.format(_Invoke_Scheme, _Invoke_Host, port),
             'address_url_path': url_path,
-            'soap_action': '',
-            'soap_version': None,
+            'soap_action': soap_action,
+            'soap_version': soap_version,
             'ping_method': MISC.DEFAULT_HTTP_PING_METHOD,
             'pool_size': _Invoke_Pool_Size,
             'timeout': _Invoke_Timeout,

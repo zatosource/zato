@@ -1,0 +1,121 @@
+security:
+
+  - name: test.service-entry-points.caller
+    type: basic_auth
+    username: test.service-entry-points.caller
+    password: "{{caller_password}}"
+
+pubsub_topic:
+
+  - name: test.service-entry-points.typed
+  - name: test.service-entry-points.model
+  - name: test.service-entry-points.free-form
+  - name: test.service-entry-points.hl7
+
+pubsub_subscription:
+
+  - delivery_type: push
+    push_service: test.service-entry-points.typed
+    topic_list:
+      - test.service-entry-points.typed
+
+  - delivery_type: push
+    push_service: test.service-entry-points.model
+    topic_list:
+      - test.service-entry-points.model
+
+  - delivery_type: push
+    push_service: test.service-entry-points.free-form
+    topic_list:
+      - test.service-entry-points.free-form
+
+  - delivery_type: push
+    push_service: test.service-entry-points.hl7
+    topic_list:
+      - test.service-entry-points.hl7
+
+channel_rest:
+
+  - name: test.service-entry-points.rest.typed
+    service: test.service-entry-points.typed
+    url_path: /service-entry-points/rest/typed
+    security: test.service-entry-points.caller
+    data_format: json
+
+  - name: test.service-entry-points.rest.model
+    service: test.service-entry-points.model
+    url_path: /service-entry-points/rest/model
+    security: test.service-entry-points.caller
+    data_format: json
+
+  - name: test.service-entry-points.rest.free-form
+    service: test.service-entry-points.free-form
+    url_path: /service-entry-points/rest/free-form
+    security: test.service-entry-points.caller
+    data_format: json
+
+  - name: test.service-entry-points.rest.hl7
+    service: test.service-entry-points.hl7
+    url_path: /service-entry-points/rest/hl7
+    security: test.service-entry-points.caller
+    data_format: hl7-v2
+
+channel_soap:
+
+  - name: test.service-entry-points.soap11.typed
+    service: test.service-entry-points.typed
+    url_path: /service-entry-points/soap11/typed
+    security: test.service-entry-points.caller
+    data_format: xml
+    soap_action: urn:service-entry-points:submit
+    soap_version: "1.1"
+
+  - name: test.service-entry-points.soap12.typed
+    service: test.service-entry-points.typed
+    url_path: /service-entry-points/soap12/typed
+    security: test.service-entry-points.caller
+    data_format: xml
+    soap_action: urn:service-entry-points:submit
+    soap_version: "1.2"
+
+  - name: test.service-entry-points.soap11.model
+    service: test.service-entry-points.model
+    url_path: /service-entry-points/soap11/model
+    security: test.service-entry-points.caller
+    data_format: xml
+    soap_action: urn:service-entry-points:submit
+    soap_version: "1.1"
+
+  - name: test.service-entry-points.soap12.model
+    service: test.service-entry-points.model
+    url_path: /service-entry-points/soap12/model
+    security: test.service-entry-points.caller
+    data_format: xml
+    soap_action: urn:service-entry-points:submit
+    soap_version: "1.2"
+
+  - name: test.service-entry-points.soap11.free-form
+    service: test.service-entry-points.free-form
+    url_path: /service-entry-points/soap11/free-form
+    security: test.service-entry-points.caller
+    data_format: xml
+    soap_action: urn:service-entry-points:submit
+    soap_version: "1.1"
+
+  - name: test.service-entry-points.soap12.free-form
+    service: test.service-entry-points.free-form
+    url_path: /service-entry-points/soap12/free-form
+    security: test.service-entry-points.caller
+    data_format: xml
+    soap_action: urn:service-entry-points:submit
+    soap_version: "1.2"
+
+channel_mllp:
+
+  - name: test.service-entry-points.mllp.hl7
+    service: test.service-entry-points.hl7
+    msh3_sending_app: SERVICE_ENTRY_POINTS
+    msh9_message_type: ADT
+    should_parse_on_input: false
+    should_return_errors: true
+    dedup_ttl_value: 0

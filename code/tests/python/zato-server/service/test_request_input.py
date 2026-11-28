@@ -9,15 +9,17 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import unittest
 from dataclasses import dataclass
+from decimal import Decimal as stdlib_Decimal
 from unittest.mock import MagicMock
 
 # Zato
 from zato.common.api import CHANNEL, DATA_FORMAT
 from zato.common.marshal_.api import Model
+from zato.common.soap.message import parse as parse_soap
 from zato.common.util.api import payload_from_request
 from zato.common.util.json_ import BasicParser
 from zato.hl7v2 import parse_hl7
-from zato.input_output import ServiceInput
+from zato.input_output import Decimal, Dict, Float, Int, IOProcessor, List, ServiceInput
 from zato.server.service import Service
 from zato.server.service.reqresp import Request
 
@@ -31,6 +33,18 @@ _adt_a01_message = (
     'MSH|^~\\&|ADMIT_SYS|NORTH_WING|LAB_SYS|CENTRAL_LAB|20260315083000||ADT^A01^ADT_A01|CTL00001|P|2.6\r'
     'EVN|A01|20260315083000\r'
     'PID|||PT7890^^^NORTH_WING||Castellano^Marisol||19830214|F\r'
+)
+
+# The operation element of a SOAP body, as a SOAP channel hands it to a service
+_soap_order = (
+    b'<SubmitOrder xmlns="urn:orders">'
+    b'<customer>C-1001</customer>'
+    b'<quantity>3</quantity>'
+    b'<weight>2.5</weight>'
+    b'<unit_price>19.99</unit_price>'
+    b'<tags>express</tags><tags>fragile</tags>'
+    b'<address><city>Springfield</city><postal_code>62701</postal_code></address>'
+    b'</SubmitOrder>'
 )
 
 # ################################################################################################################################
@@ -184,6 +198,103 @@ class TestRequestInputNoDeclaration(unittest.TestCase):
 
         self.assertEqual(request.input['customer'], 'C-1001')
         self.assertEqual(request.input['region'], 'north')
+
+# ################################################################################################################################
+
+    def test_soap_body_becomes_input(self) -> 'None':
+        message = parse_soap(_soap_order)
+
+        request = self._make_request(message)
+
+        self.assertEqual(request.input['customer'], 'C-1001')
+        self.assertEqual(request.input['address'], {'city': 'Springfield', 'postal_code': '62701'})
+        self.assertEqual(request.input['tags'], ['express', 'fragile'])
+
+        # The payload keeps the message, which a service reads with dot access
+        self.assertIs(request.payload, message)
+        self.assertEqual(request.payload.address.city, 'Springfield')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestRequestInputDeclared(unittest.TestCase):
+    """ With an I/O declaration, self.request.input carries each declared element converted to its type,
+    whether the channel delivered a number or its text.
+    """
+
+    def _make_request(self, payload:'object', transport:'str'='plain_http') -> 'Request':
+
+        class OrderInput:
+            input = 'customer', Int('quantity'), Float('weight'), Decimal('unit_price'), List('tags'), Dict('address'), \
+                '-notes'
+
+        _ = IOProcessor.attach_io(MagicMock(), OrderInput)
+        io_processor = OrderInput._io # type: ignore
+
+        service = MagicMock()
+
+        out = Request(service)
+        out.payload = payload
+
+        out.init(True, _test_cid, io_processor, 'json', transport, {}, MagicMock())
+        return out
+
+# ################################################################################################################################
+
+    def _assert_order_input(self, request:'Request') -> 'None':
+
+        self.assertEqual(request.input.customer, 'C-1001')
+        self.assertEqual(request.input.quantity, 3)
+        self.assertEqual(request.input.weight, 2.5)
+        self.assertEqual(request.input.unit_price, stdlib_Decimal('19.99'))
+        self.assertEqual(request.input.tags, ['express', 'fragile'])
+        self.assertEqual(request.input.address, {'city': 'Springfield', 'postal_code': '62701'})
+        self.assertIsNone(request.input.notes)
+
+        self.assertIs(type(request.input.quantity), int)
+        self.assertIs(type(request.input.weight), float)
+        self.assertIs(type(request.input.unit_price), stdlib_Decimal)
+
+# ################################################################################################################################
+
+    def test_numbers_are_converted(self) -> 'None':
+        payload = {
+            'customer': 'C-1001',
+            'quantity': 3,
+            'weight': 2.5,
+            'unit_price': 19.99,
+            'tags': ['express', 'fragile'],
+            'address': {'city': 'Springfield', 'postal_code': '62701'},
+        }
+
+        request = self._make_request(payload)
+
+        self._assert_order_input(request)
+
+# ################################################################################################################################
+
+    def test_text_is_converted(self) -> 'None':
+        payload = {
+            'customer': 'C-1001',
+            'quantity': '3',
+            'weight': '2.5',
+            'unit_price': '19.99',
+            'tags': ['express', 'fragile'],
+            'address': {'city': 'Springfield', 'postal_code': '62701'},
+        }
+
+        request = self._make_request(payload)
+
+        self._assert_order_input(request)
+
+# ################################################################################################################################
+
+    def test_soap_body_is_converted(self) -> 'None':
+        message = parse_soap(_soap_order)
+
+        request = self._make_request(message, 'soap')
+
+        self._assert_order_input(request)
 
 # ################################################################################################################################
 # ################################################################################################################################

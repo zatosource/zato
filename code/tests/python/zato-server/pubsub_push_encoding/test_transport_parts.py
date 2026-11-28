@@ -12,11 +12,8 @@ from http.client import OK
 # pytest
 import pytest
 
-# requests
-from requests.exceptions import ConnectionError as RequestsConnectionError
-
-# Zato - Rust
-from zato_server_core.zato_server_core import HTTPTransport
+# Zato
+from zato.server.base.parallel.push_engine_client import PushEngineClient
 
 # Test support
 from http_endpoint.endpoint import CloseMode, EndpointResponse
@@ -26,26 +23,35 @@ from http_endpoint.endpoint import CloseMode, EndpointResponse
 
 if 0:
     from http_endpoint.endpoint import TestEndpoint
-    from zato.common.typing_ import any_, anytuple, byteslist, bytestuple
+    from zato.common.typing_ import anytuple, byteslist, bytestuple
 
     intset = set[int]
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How many idle connections the transport keeps per endpoint
+# The threads of the push engine of each test, one, so that consecutive pushes use one keep-alive connection in order
+_thread_count = 1
+
+# How many idle connections the push engine keeps per endpoint
 _pool_size = 4
 
-# How long one wait of the transport may take, in seconds
+# How long one connect or one read of the push engine may take, in seconds
 _timeout = 30.0
+
+# How long a stop of the push engine waits for its threads, in seconds
+_stop_timeout = 5.0
 
 # The sizes of the parts that each test sends
 _part_sizes = (0, 1, 64 * 1024, 16 * 1024 * 1024)
 
+# The ID of the message of each push
+_msg_id = 'zpsm.0192d3a1b2c3d4e5f60718293a4b5c6d'
+
 # The headers of a push
 _headers = {
     'Content-Type': 'application/json',
-    'X-Zato-Msg-ID': 'zpsm.0192d3a1b2c3d4e5f60718293a4b5c6d',
+    'X-Zato-Msg-ID': _msg_id,
     'X-Zato-Delivery-Attempt': '1',
 }
 
@@ -55,8 +61,11 @@ _filler = b'Order "12345" for John Smith\n'
 # The network scope of the address of the local endpoint
 _loopback_scope = 'loopback'
 
-# What the error of a call names when no address of the host has the scope the call requires
-_scope_refused_text = 'required network scope'
+# The positions of the fields of the outcome of a request of the push engine
+_outcome_status = 1
+_outcome_concluded = 3
+_outcome_scope = 5
+_outcome_error_kind = 6
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -88,24 +97,39 @@ def _new_parts() -> 'bytestuple':
 
 # ################################################################################################################################
 
-def _new_transport(ca_path:'str | None') -> 'any_':
-    out = HTTPTransport(_pool_size)
-    out.set_timeout(_timeout)
-    out.set_tls(ca_path, None, None)
-    return out
-
-# ################################################################################################################################
-
-def _invoke(transport:'any_', url:'str', parts:'bytestuple') -> 'anytuple':
-    """ Sends the parts as the body of one push and returns what the transport returned.
+class _Engine:
+    """ A push engine with the TLS settings of one test, stopped by the test once it completes.
     """
-    out = transport.invoke_parts('POST', url, _headers, parts)
-    assert out is not None
 
-    status_code = out[0]
-    assert status_code == OK
+    def __init__(self, ca_path:'str | None') -> 'None':
+        self.client = PushEngineClient(_thread_count, _pool_size, _stop_timeout)
+        self.tls = (ca_path, None, None, 0)
 
-    return out
+    def push(self, url:'str', parts:'bytestuple') -> 'anytuple':
+        """ Sends the parts as the body of one push and returns the outcome of its request.
+        """
+        request = (url, _headers, parts, [_msg_id], False)
+        panic, outcomes = self.client.run([request], _timeout, self.tls)
+
+        assert panic is None, panic
+
+        out = outcomes[0]
+        return out
+
+    def push_ok(self, url:'str', parts:'bytestuple') -> 'anytuple':
+        """ Sends one push and confirms that it concluded its message with a 200.
+        """
+        out = self.push(url, parts)
+
+        assert out[_outcome_error_kind] is None, out
+        assert out[_outcome_status] == OK, out
+        assert out[_outcome_concluded] == [_msg_id], out
+
+        return out
+
+    def stop(self) -> 'None':
+        is_stopped = self.client.stop()
+        assert is_stopped
 
 # ################################################################################################################################
 
@@ -134,13 +158,15 @@ def _get_ca_path(endpoint:'TestEndpoint', is_tls:'bool') -> 'str | None':
 def test_parts_arrive_as_one_body(endpoint:'TestEndpoint', path:'str', is_tls:'bool') -> 'None':
 
     base = _get_base(endpoint, is_tls)
-    ca_path = _get_ca_path(endpoint, is_tls)
+    engine = _Engine(_get_ca_path(endpoint, is_tls))
 
-    transport = _new_transport(ca_path)
     parts = _new_parts()
     expected = b''.join(parts)
 
-    _ = _invoke(transport, base + path, parts)
+    try:
+        _ = engine.push_ok(base + path, parts)
+    finally:
+        engine.stop()
 
     # The body is the parts joined, and its length is the sum of their lengths
     request = endpoint.get_request(path)
@@ -155,14 +181,16 @@ def test_parts_arrive_as_one_body(endpoint:'TestEndpoint', path:'str', is_tls:'b
 def test_consecutive_pushes_reuse_the_connection(endpoint:'TestEndpoint', path:'str', is_tls:'bool') -> 'None':
 
     base = _get_base(endpoint, is_tls)
-    ca_path = _get_ca_path(endpoint, is_tls)
+    engine = _Engine(_get_ca_path(endpoint, is_tls))
 
-    transport = _new_transport(ca_path)
     parts = _new_parts()
     expected = b''.join(parts)
 
-    for _ in range(3):
-        _ = _invoke(transport, base + path, parts)
+    try:
+        for _ in range(3):
+            _ = engine.push_ok(base + path, parts)
+    finally:
+        engine.stop()
 
     requests = endpoint.get_requests(path)
     connection_ids:'intset' = set()
@@ -183,7 +211,6 @@ def test_consecutive_pushes_reuse_the_connection(endpoint:'TestEndpoint', path:'
 def test_push_on_a_closed_connection_is_sent_again(endpoint:'TestEndpoint', path:'str', is_tls:'bool') -> 'None':
 
     base = _get_base(endpoint, is_tls)
-    ca_path = _get_ca_path(endpoint, is_tls)
 
     # The endpoint closes the pooled connection after reading the second push, without a response ..
     endpoint.set_responses(path, [
@@ -192,17 +219,18 @@ def test_push_on_a_closed_connection_is_sent_again(endpoint:'TestEndpoint', path
         EndpointResponse(body='Third response'),
     ])
 
-    transport = _new_transport(ca_path)
+    engine = _Engine(_get_ca_path(endpoint, is_tls))
+
     parts = _new_parts()
     expected = b''.join(parts)
 
-    first = _invoke(transport, base + path, parts)
-    second = _invoke(transport, base + path, parts)
+    try:
+        _ = engine.push_ok(base + path, parts)
+        _ = engine.push_ok(base + path, parts)
+    finally:
+        engine.stop()
 
-    assert first[3] == b'First response'
-    assert second[3] == b'Third response'
-
-    # .. so the transport sends it once more, on a new connection, with the whole body.
+    # .. so the engine sends it once more, on a new connection, with the whole body.
     first_request, closed_request, repeated_request = endpoint.get_requests(path)
 
     assert first_request.body == expected
@@ -215,93 +243,19 @@ def test_push_on_a_closed_connection_is_sent_again(endpoint:'TestEndpoint', path
 # ################################################################################################################################
 
 @pytest.mark.parametrize('host', ['127.0.0.1', 'localhost'])
-def test_response_names_the_scope_of_the_peer(endpoint:'TestEndpoint', path:'str', host:'str') -> 'None':
+def test_outcome_names_the_scope_of_the_peer(endpoint:'TestEndpoint', path:'str', host:'str') -> 'None':
 
-    transport = _new_transport(None)
+    engine = _Engine(None)
     parts = _new_parts()
-
     url = f'http://{host}:{endpoint.http_port}{path}'
-    out = _invoke(transport, url, parts)
 
-    tuple_length = len(out)
-    peer_scope = out[6]
+    try:
+        out = engine.push_ok(url, parts)
+    finally:
+        engine.stop()
 
-    assert tuple_length == 7
+    peer_scope = out[_outcome_scope]
     assert peer_scope == _loopback_scope
-
-# ################################################################################################################################
-
-def test_required_loopback_scope_is_sent(endpoint:'TestEndpoint', path:'str') -> 'None':
-
-    transport = _new_transport(None)
-    parts = _new_parts()
-    url = endpoint.http_base + path
-    expected = b''.join(parts)
-
-    out = transport.invoke_parts('POST', url, _headers, parts, _loopback_scope)
-
-    status_code = out[0]
-    peer_scope = out[6]
-
-    assert status_code == OK
-    assert peer_scope == _loopback_scope
-
-    request = endpoint.get_request(path)
-    assert request.body == expected
-
-# ################################################################################################################################
-
-@pytest.mark.parametrize('required_scope', ['public', 'private'])
-def test_required_scope_of_another_network_is_refused(endpoint:'TestEndpoint', path:'str', required_scope:'str') -> 'None':
-
-    transport = _new_transport(None)
-    parts = _new_parts()
-    url = endpoint.http_base + path
-
-    with pytest.raises(RequestsConnectionError, match=_scope_refused_text):
-        _ = transport.invoke_parts('POST', url, _headers, parts, required_scope)
-
-    requests = endpoint.get_requests(path)
-    assert requests == []
-
-# ################################################################################################################################
-
-@pytest.mark.parametrize('required_scope', ['link-local', 'internal', ''])
-def test_scope_that_cannot_be_required_is_rejected(endpoint:'TestEndpoint', path:'str', required_scope:'str') -> 'None':
-
-    transport = _new_transport(None)
-    parts = _new_parts()
-    url = endpoint.http_base + path
-
-    with pytest.raises(ValueError, match='Unknown required network scope'):
-        _ = transport.invoke_parts('POST', url, _headers, parts, required_scope)
-
-    requests = endpoint.get_requests(path)
-    assert requests == []
-
-# ################################################################################################################################
-
-def test_pooled_connection_of_another_scope_is_not_reused(endpoint:'TestEndpoint', path:'str') -> 'None':
-
-    transport = _new_transport(None)
-    parts = _new_parts()
-    url = endpoint.http_base + path
-
-    # A call without a required scope leaves its connection in the pool ..
-    _ = _invoke(transport, url, parts)
-
-    # .. which a call that requires another scope does not send on, so the call fails before anything is sent ..
-    with pytest.raises(RequestsConnectionError, match=_scope_refused_text):
-        _ = transport.invoke_parts('POST', url, _headers, parts, 'private')
-
-    # .. and the connection remains in the pool for a call that requires its own scope.
-    out = transport.invoke_parts('POST', url, _headers, parts, _loopback_scope)
-
-    status_code = out[0]
-    assert status_code == OK
-
-    first_request, second_request = endpoint.get_requests(path)
-    assert second_request.connection_id == first_request.connection_id
 
 # ################################################################################################################################
 # ################################################################################################################################

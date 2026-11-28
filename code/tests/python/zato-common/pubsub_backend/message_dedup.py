@@ -28,6 +28,7 @@ from common import delete_all_rows, env_value, get_delivery_rows, get_message_ro
 from zato.common.common_db.message_dedup import Kind
 from zato.common.common_db.schema import message_dedup_table
 from zato.common.db_env.database import get_database_engine
+from zato.common.db_env.outage import logger as outage_logger
 from zato.common.pubsub.sql.backend import SQLPubSubBackend
 from zato.common.pubsub.sql.cleanup import PubSubCleanup
 from zato.common.pubsub.sql.config import ModuleCtx
@@ -35,6 +36,7 @@ from zato.common.pubsub.sql.dedup import Dedup_Scope, get_fingerprint
 from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID
 from zato.common.pubsub.sql.publication import build_publication
 from zato.common.test.audit_log_ import new_test_audit_log
+from zato.common.test.expected_records import expected_records
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -120,7 +122,7 @@ def _run_failure_after_dedup_record() -> 'None':
     failed = build_publication(backend, _topic, _data_original, msg_id=_msg_id_failed)
     failed.pending.message_values['recv_time_iso'] = None
 
-    with pytest.raises(DBAPIError):
+    with expected_records(outage_logger.name), pytest.raises(DBAPIError):
         backend._writer.publish(failed.pending)
 
     # .. which rolls back its dedup record with it ..

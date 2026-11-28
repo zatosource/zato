@@ -175,7 +175,7 @@ class _OutputReader:
             meta = message['meta']
             msg_ids.append(meta['msg_id'])
 
-        payload = {'msg_ids': msg_ids}
+        payload = msg_ids
         is_acknowledged = False
 
         while not is_acknowledged:

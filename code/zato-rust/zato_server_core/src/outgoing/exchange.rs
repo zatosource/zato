@@ -3,7 +3,7 @@
 //! The messages of the errors follow the messages urllib3 and requests produce for the same failures.
 
 use std::net::{IpAddr, SocketAddr, TcpStream};
-use std::os::fd::AsRawFd;
+use std::os::fd::AsFd;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -165,7 +165,7 @@ fn resolve(ctx: &IoContext<'_, '_>, peer: &Peer<'_>) -> Result<Vec<SocketAddr>, 
         return Ok(vec![SocketAddr::new(ip_address, peer.port)]);
     }
 
-    match ctx.gevent.resolve(ctx.py, peer.host, peer.port) {
+    match ctx.resolve(peer.host, peer.port) {
         Ok(addresses) if !addresses.is_empty() => Ok(addresses),
         Ok(_) => Err(name_resolution_error(peer, "No address associated with hostname")),
         Err(ResolveError::Failed(message)) => Err(name_resolution_error(peer, &message)),
@@ -194,7 +194,7 @@ fn connect_address(ctx: &IoContext<'_, '_>, address: SocketAddr) -> Result<TcpSt
 
         // A non-blocking connect is in progress until the socket becomes writable
         Err(err) if err.raw_os_error() == Some(libc::EINPROGRESS) => {
-            ctx.gevent.wait_writable(ctx.py, socket.as_raw_fd(), ctx.timeout)?;
+            ctx.wait_writable(socket.as_fd())?;
 
             // A writable socket has either connected or failed, and the pending error tells which
             if let Some(err) = socket.take_error().map_err(IoError::System)? {

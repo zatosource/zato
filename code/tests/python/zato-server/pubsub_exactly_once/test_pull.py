@@ -317,7 +317,7 @@ def test_ack_input_checks(zato_server:'any_') -> 'None':
 
     # Each request with the status that it is rejected with
     requests:'anylist' = [
-        ({'msg_ids': [order_msg_id], 'consumed': [consumed]}, BAD_REQUEST),
+        ({'msg_ids': [order_msg_id]}, BAD_REQUEST),
         ({}, BAD_REQUEST),
         ({'consumed': too_many}, BAD_REQUEST),
         ({'consumed': [non_integer_attempt]}, BAD_REQUEST),
@@ -340,7 +340,7 @@ def test_ack_input_checks(zato_server:'any_') -> 'None':
     assert received == [], received
 
     # .. and the order is acknowledged now, so that it does not remain for the other tests.
-    final_payload = {'msg_ids': [order_msg_id]}
+    final_payload = [order_msg_id]
     final_response = ack(TestConfig.orders_username, TestConfig.orders_password, final_payload)
 
     assert final_response.status_code == OK, final_response

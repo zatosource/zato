@@ -24,6 +24,10 @@ pub enum ElemType {
     Bool,
     /// Integer value (Python `int`).
     Int,
+    /// Floating-point value (Python `float`), converted from a number or from its text.
+    Float,
+    /// Exact decimal value (Python `decimal.Decimal`), converted from a number or from its text.
+    Decimal,
     /// Secret value - masked in logs and responses.
     Secret,
     /// Free-form text (Python `str`), the default.

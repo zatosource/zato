@@ -11,12 +11,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from http.client import TEMPORARY_REDIRECT
+from weakref import finalize
 
 # Zato
 from zato.common.crypto.api import CryptoManager
 from zato.common.pubsub.sql.payload_cache import PayloadCache, PayloadEpoch
 from zato.common.typing_ import cast_
-from zato.server.base.parallel.delivery_rest import deliver_to_rest
+from zato.server.base.parallel.delivery_rest import deliver_to_rest, Push_Timeout
+from zato.server.base.parallel.push_engine_client import PushEngineClient
 
 # Test support
 from http_endpoint.endpoint import EndpointResponse
@@ -61,6 +63,12 @@ _payload_cache_size = 64 * 1024 * 1024
 
 # How many hex characters the random part of a message ID has
 _msg_id_bits = 32
+
+# The threads of the push engine of each delivery, one, so that its pushes reuse one keep-alive connection in order
+_engine_threads = 1
+
+# How many idle connections the push engine of each delivery keeps per endpoint
+_engine_pool_size = 2
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -145,8 +153,8 @@ class _ConfigStoreStub:
 # ################################################################################################################################
 
 class Delivery:
-    """ The deliveries of a subscription whose endpoint is at the base and the path, through one outgoing connection,
-    so that consecutive pushes share the pool of connections of the transport.
+    """ The deliveries of a subscription whose endpoint is at the base and the path, through one outgoing connection
+    and one push engine, so that consecutive pushes share the pool of connections of the engine.
     """
 
     def __init__(self, server:'ServerStub', base:'str', path:'str', **kwargs:'any_') -> 'None':
@@ -157,6 +165,10 @@ class Delivery:
 
         epoch = PayloadEpoch()
         self.payload_cache = PayloadCache(_payload_cache_size, epoch)
+
+        # The engine stops, and its threads exit, once the delivery is no longer referenced
+        self.engine = PushEngineClient(_engine_threads, _engine_pool_size, Push_Timeout)
+        _ = finalize(self, self.engine.stop)
 
         self.sub_config:'anydict' = {
             'sub_key': Sub_Key,
@@ -169,7 +181,7 @@ class Delivery:
         """ Delivers one attempt of the message, raising if the attempt fails.
         """
         config_store = cast_('ConfigStore', self.config_store)
-        deliver_to_rest(config_store, self.payload_cache, message, self.sub_config)
+        deliver_to_rest(self.engine, config_store, self.payload_cache, message, self.sub_config)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -483,7 +483,7 @@ class ReceiptReader:
     def _ack(self, msg_ids:'strlist') -> 'None':
         """ Acknowledges the receipts of one pull, repeating the request until the server confirms it.
         """
-        payload = {'msg_ids': msg_ids}
+        payload = msg_ids
 
         while True:
 

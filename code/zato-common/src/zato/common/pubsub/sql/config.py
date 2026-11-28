@@ -71,6 +71,9 @@ Default_Commits_In_Flight = 4
 # so that a publication does not wait for a commit of acknowledgements.
 Urgent_Commits_In_Flight = 1
 
+# How many OS threads the push engine of one process sends REST pushes on - the number of CPUs available to the process.
+Push_Engine_Threads = len(os.sched_getaffinity(0))
+
 # ################################################################################################################################
 # ################################################################################################################################
 

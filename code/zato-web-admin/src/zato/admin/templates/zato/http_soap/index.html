@@ -424,7 +424,7 @@
                         {% endif %}
 
                         <!-- Invoke -->
-                        {% if transport == 'plain_http' %}
+                        {% if transport == 'plain_http' or connection == 'channel' %}
                             <th>&nbsp;</th> {% comment %} _invoke {% endcomment %}
                         {% endif %}
 
@@ -587,7 +587,7 @@
                         {% endif %}
 
                         <!-- Invoke -->
-                        {% if transport == 'plain_http' %}
+                        {% if transport == 'plain_http' or connection == 'channel' %}
                             <td style="white-space:nowrap">{% if connection == 'channel' and item.is_internal %}<span class="form_hint">Invoke</span>{% else %}<a href="javascript:$.fn.zato.http_soap.invoke('{{ item.id }}')">Invoke</a>{% endif %}</td>
                         {% endif %}
 

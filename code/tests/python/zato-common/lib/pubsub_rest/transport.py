@@ -122,7 +122,7 @@ class RESTClient:
     def ack(self, msg_ids:'any_') -> 'anydict':
         """ Acknowledges pulled messages, which removes them from the queues of this client.
         """
-        out = self.post_ok(Ack_Path, {'msg_ids': msg_ids})
+        out = self.post_ok(Ack_Path, msg_ids)
         return out
 
 # ################################################################################################################################

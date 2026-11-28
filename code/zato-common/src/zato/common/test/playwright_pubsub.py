@@ -549,9 +549,8 @@ def publish_via_overlay(page:'Page', payload:'str') -> 'None':
     """ Types a payload into the request pane and clicks Publish, then waits for the response.
     """
 
-    # Set the request pane content ..
-    escaped = payload.replace('\\', '\\\\').replace("'", "\\'").replace('\n', '\\n')
-    page.evaluate(f"$.fn.zato.invoker._request_pane.setValue('{escaped}')")
+    # Set the request pane content, the payload being an argument of the script so that it reaches the pane unchanged ..
+    page.evaluate('payload => $.fn.zato.invoker._request_pane.setValue(payload)', payload)
 
     # .. click the Publish button ..
     page.click('#invoker-modal-invoke-button')

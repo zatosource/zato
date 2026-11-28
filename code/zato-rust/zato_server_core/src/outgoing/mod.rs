@@ -3,34 +3,37 @@
 //! HTTP/1.1 over plain TCP and TLS, with a pool of connections per endpoint, driven cooperatively through gevent.
 
 /// Parsing of the address of a request.
-mod address;
+pub(crate) mod address;
 
 /// Errors of an invocation and the requests exceptions they are raised as.
-mod error;
+pub(crate) mod error;
 
 /// New connections, and one request and its response on a connection.
-mod exchange;
+pub(crate) mod exchange;
 
 /// The head of a request.
-mod headers;
+pub(crate) mod headers;
 
 /// The pool of idle connections.
-mod pool;
+pub(crate) mod pool;
 
 /// Parsing of a response and decoding of a chunked body.
 mod response;
 
+/// One request sent on a pooled connection or a new one.
+pub(crate) mod send;
+
 /// The network scopes of the addresses connections are established to.
-mod scope;
+pub(crate) mod scope;
 
 /// Connections read and written without blocking the process.
-mod stream;
+pub(crate) mod stream;
 
 /// The TLS configuration of connections.
-mod tls;
+pub(crate) mod tls;
 
 /// The transport class exported to Python.
-mod transport;
+pub(crate) mod transport;
 
 /// Cooperative waits and name resolution through gevent.
 mod wait;
