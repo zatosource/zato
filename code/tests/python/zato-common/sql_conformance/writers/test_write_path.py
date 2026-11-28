@@ -16,7 +16,7 @@ import gevent
 import pytest
 
 # SQLAlchemy
-from sqlalchemy import func, select
+from sqlalchemy import func, literal_column, select
 
 # Zato
 from zato.common.audit_log.common import event_dedup_table
@@ -32,9 +32,12 @@ from zato.common.util.api import utcnow
 if 0:
     from sqlalchemy.engine import Engine
     from sqlalchemy.sql.dml import Insert
+    from sqlalchemy.sql.selectable import Select
+    from zato.common.typing_ import any_
 
     Engine = Engine
     Insert = Insert
+    Select = Select
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -92,9 +95,20 @@ def _count_shared_objects(engine:'Engine', name:'str') -> 'int':
 
 # ################################################################################################################################
 
-def _insert_in_transaction(engine:'Engine', statement:'Insert') -> 'None':
+def _insert_in_transaction(engine:'Engine', statement:'Insert | Select[any_]') -> 'None':
     with engine.begin() as connection:
         _ = connection.execute(statement)
+
+# ################################################################################################################################
+
+def _new_cte_write(insert:'Insert', name:'str') -> 'Select[any_]':
+    """ Returns a select of the rows that an insert in a common table expression of the select writes,
+    which writes rows although the statement that follows its WITH clause only reads them.
+    """
+    written = insert.returning(literal_column('1').label('is_written')).cte(name)
+    out = select(written.c.is_written)
+
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -132,6 +146,30 @@ def test_audit_table_refused_to_serialized_write() -> 'None':
     with zato_database_engine() as engine:
         with pytest.raises(WritePathViolation):
             _ = execute_write(engine, _new_dedup_insert(uuid4().hex))
+
+# ################################################################################################################################
+
+def test_write_in_common_table_expression_outside_mechanism_refused() -> 'None':
+    """ An insert in a common table expression of a select, outside of every mechanism, is refused
+    before it reaches the database.
+    """
+    name = uuid4().hex
+
+    with zato_database_engine() as engine:
+
+        with pytest.raises(WritePathViolation):
+            _insert_in_transaction(engine, _new_cte_write(_new_shared_object_insert(name), 'shared_object_written'))
+
+        assert _count_shared_objects(engine, name) == 0
+
+# ################################################################################################################################
+
+def test_audit_table_in_common_table_expression_refused_to_serialized_write() -> 'None':
+    """ A serialized write cannot insert into a table of the audit log in a common table expression of a select either.
+    """
+    with zato_database_engine() as engine:
+        with pytest.raises(WritePathViolation):
+            _ = execute_write(engine, _new_cte_write(_new_dedup_insert(uuid4().hex), 'dedup_written'))
 
 # ################################################################################################################################
 

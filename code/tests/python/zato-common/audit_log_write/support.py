@@ -63,7 +63,11 @@ Object_Name = 'audit.test.write-channel'
 Event_Time = datetime(2026, 10, 29, 12, 0, 0, 123456, tzinfo=timezone.utc)
 
 # The verbs of the statements that write or read rows
-_row_verbs = ('INSERT', 'SELECT', 'COPY')
+_insert_verb = 'INSERT'
+_row_verbs = (_insert_verb, 'SELECT', 'COPY')
+
+# The verb of a statement that begins with common table expressions
+_with_verb = 'WITH'
 
 # The outgoing MLLP connection that a part of the value events belong to, whose sent messages open exchanges
 MLLP_Object_Name = 'audit.test.write-mllp-outgoing'
@@ -181,14 +185,23 @@ class StatementRecorder:
 
 def get_statement_verb_table(statement:'str') -> 'anytuple | None':
     """ Returns the verb and the table of a statement that writes or reads rows, or None for any other statement.
+    A statement with a common table expression that inserts rows is recorded as the insert.
     """
     words = statement.split()
     verb = words[0]
 
+    if verb == _with_verb:
+        if _insert_verb not in words:
+            return None
+
+        insert_index = words.index(_insert_verb)
+        out = (_insert_verb, words[insert_index + 2])
+        return out
+
     if verb not in _row_verbs:
         return None
 
-    if verb == 'INSERT':
+    if verb == _insert_verb:
         table_name = words[2]
     elif verb == 'COPY':
         table_name = words[1]

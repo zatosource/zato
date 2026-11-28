@@ -25,10 +25,12 @@ from zato.common.db_env.database import get_database_engine
 from zato.common.audit_log.attachment import Env_Max_Attachment_Size
 from zato.common.audit_log.resubmit import load_event, ResubmitException
 from zato.common.email.resubmit import resend as smtp_resend
+from zato.common.test.expected_records import expected_records
+from zato.server.connection.email.smtp import logger as smtp_logger
 
 # Test support
-from smtp_stub import new_smtp_connection, smtp_audit_env, Connection_Name, RaisingTransport, Server_Name, \
-    TransportRecorder
+from smtp_stub import new_smtp_connection, smtp_audit_env, Connection_Name, RaisingTransport, Raised_Error, \
+    Server_Name, TransportRecorder
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,6 +59,9 @@ _pdf_content = b'%PDF-1.4 summary'
 # The cid the original send ran under, and the one the resend runs under
 _original_cid = 'cid-smtp-resend-original'
 _resend_cid = 'cid-smtp-resend-new'
+
+# The warning that the connection logs for a send that the raising transport refuses
+_refused_send_records = (Raised_Error,)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -193,7 +198,7 @@ class TestSMTPResend:
 
             audit_log = AuditLog(Server_Name)
 
-            with pytest.raises(ResubmitException):
+            with pytest.raises(ResubmitException), expected_records(smtp_logger.name, _refused_send_records):
                 _ = smtp_resend(load_event(original['id']), send, audit_log, _resend_cid)
 
             rows = _get_rows()

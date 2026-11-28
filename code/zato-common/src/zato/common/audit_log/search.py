@@ -175,11 +175,11 @@ def build_search_conditions(
 
         matching_parts:'anylist' = [any_column_match]
 
-        # A query that is a whole message or correlation identifier matches it through the index of that identifier ..
-        identifier = query.strip()
-
-        matching_parts.append(event_table.c.msg_id == identifier)
-        matching_parts.append(and_(has_correl_id, event_table.c.correl_id == identifier))
+        # A query that is a whole message or correlation identifier matches it through the index of that identifier,
+        # and a query of whitespace only is not an identifier, because events without a message identifier store an empty one ..
+        if identifier := query.strip():
+            matching_parts.append(event_table.c.msg_id == identifier)
+            matching_parts.append(and_(has_correl_id, event_table.c.correl_id == identifier))
 
         # .. and sources with searchable attributes also search through them, with the attr-to-cid
         # shape - the cids of the events whose attr matches, then every event on those cids,

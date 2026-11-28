@@ -26,6 +26,8 @@ from zato.common.audit_log.attachment import get_attachment, list_attachments
 from zato.common.destination.constants import DestinationOption, DestinationType
 from zato.common.destination.coordinator import deliver_hop, new_context, PlannedHop
 from zato.common.destination.model import DestinationEntry
+from zato.common.test.expected_records import expected_records
+from zato.server.connection.email.smtp import logger as smtp_logger
 from zato.server.destination.hook import build_transports
 
 # Test support
@@ -55,6 +57,9 @@ _txt_content = b'plain notes'
 
 # The cid a caller hands the send
 _cid = 'cid-smtp-audit-1'
+
+# The warning that the connection logs for a send that the raising transport refuses
+_refused_send_records = (Raised_Error,)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -153,7 +158,9 @@ def test_a_raising_transport_writes_the_error_and_the_send_still_returns_false()
     with smtp_audit_env():
 
         conn = new_smtp_connection(transport_class=RaisingTransport)
-        result = conn.send(_new_message(), cid=_cid)
+
+        with expected_records(smtp_logger.name, _refused_send_records):
+            result = conn.send(_new_message(), cid=_cid)
 
         assert result is False
 

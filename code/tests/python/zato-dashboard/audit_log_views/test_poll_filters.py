@@ -108,3 +108,27 @@ class TestExcludedPicks:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class TestQueryIdentifier:
+
+    def test_query_matches_identifiers(self):
+        conditions = build_search_conditions([], [], [], 'msg-0001', '')
+        text = _compile(conditions[0])
+
+        assert "event.msg_id = 'msg-0001'" in text
+        assert "event.correl_id = 'msg-0001'" in text
+
+# ################################################################################################################################
+
+    def test_whitespace_query_matches_no_identifier(self):
+        """ Events without a message identifier store an empty one, so a query of whitespace only
+        does not match an identifier, which would return nearly every event.
+        """
+        conditions = build_search_conditions([], [], [], '   ', '')
+        text = _compile(conditions[0])
+
+        assert 'event.msg_id =' not in text
+        assert 'event.correl_id =' not in text
+
+# ################################################################################################################################
+# ################################################################################################################################

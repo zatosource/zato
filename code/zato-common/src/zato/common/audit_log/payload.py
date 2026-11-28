@@ -310,7 +310,8 @@ def store_payload(connection:'Connection', data:'str') -> 'intnone':
 # ################################################################################################################################
 
 def delete_unreferenced_payloads(connection:'Connection', payload_ids:'intlist') -> 'None':
-    """ Deletes the payloads of the given ids that no event references, in the transaction of the connection.
+    """ Deletes the payloads of the given ids that neither an event nor a pub/sub message references,
+    in the transaction of the connection.
     """
     if not payload_ids:
         return

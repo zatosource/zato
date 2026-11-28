@@ -581,9 +581,11 @@ def count_filter_sets() -> 'anylist':
 # ################################################################################################################################
 
 def event_filter_sets() -> 'anylist':
-    """ The filters the searches that only the events answer are run with - a free-text query and the outstanding filter.
+    """ The filters the searches that only the events answer are run with - a free-text query that the words
+    of the event types match, one that a whole message id matches, and the outstanding filter.
     """
     out:'anylist' = [
+        {'query': 'ack'},
         {'query': 'msg.1'},
         {'sources': [AuditSource.MLLP_Outgoing], 'status': Status_Outstanding},
     ]

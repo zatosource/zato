@@ -41,9 +41,8 @@ _child_skipped_columns = ('id',)
 # The statements that write one batch, as their verbs and tables
 _batch_statements = [
     ('SELECT', 'event_payload'),
-    ('SELECT', 'generate_series'),
     ('INSERT', 'event_payload'),
-    ('COPY', 'event'),
+    ('INSERT', 'event'),
     ('COPY', 'event_attr'),
     ('COPY', 'event_body'),
     ('COPY', 'event_link'),
@@ -99,7 +98,7 @@ def _child_rows(table:'Table', event_column:'str', positions:'intdict') -> 'anyl
 
 def test_one_statement_per_table(audit_backend:'str') -> 'None':
     """ A batch of events is written with one statement per table, plus the select of the payloads stored already.
-    The ids of the events are reserved from the sequence of the event table with a select of their own.
+    The events receive their ids from the sequence of the event table within the statement that inserts them.
     """
     audit_log = AuditLog(Server_Name)
     seed_event_id = insert_seed_event(audit_log)

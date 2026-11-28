@@ -21,7 +21,7 @@ from contextvars import ContextVar
 
 if 0:
     from collections.abc import Iterator
-    from zato.common.typing_ import any_, anytuple, callable_
+    from zato.common.typing_ import any_, anytuple, callable_, strlist
 
     # Dummy assignments to satisfy type checkers
     Iterator = Iterator
@@ -74,6 +74,17 @@ class ModuleCtx:
     Statement_Table = re.compile(
         r'^\s*(?:with\b.*?\)\s*)?(?:' + '|'.join(Table_Keywords) + r')\s+["`]?(\w+)',
         re.IGNORECASE | re.DOTALL)
+
+    # The keyword of a data-modifying common table expression, which writes rows even when the statement
+    # that follows the WITH clause only reads them ..
+    CTE_Write_Statement = re.compile(
+        r'\bas\s+(?:not\s+)?(?:materialized\s+)?\(\s*(insert|update|delete)\b',
+        re.IGNORECASE)
+
+    # .. and the table that it writes to.
+    CTE_Statement_Table = re.compile(
+        r'\bas\s+(?:not\s+)?(?:materialized\s+)?\(\s*(?:insert\s+into|update|delete\s+from)\s+["`]?(\w+)',
+        re.IGNORECASE)
 
     # The tables of the audit log, which only a group commit, maintenance, schema creation and a takeover write
     Audit_Tables = frozenset({
@@ -164,7 +175,16 @@ def check_write_path(
     """ Refuses a statement that writes to the Zato database outside of every mechanism, or that writes
     to the tables of the audit log within a mechanism not allowed to, before it reaches the database.
     """
-    if not (write_match := ModuleCtx.Write_Statement.match(statement)):
+    # The keywords of the writes of the statement, of the statement itself and of its common table expressions
+    keywords:'strlist' = []
+
+    if write_match := ModuleCtx.Write_Statement.match(statement):
+        keywords.append(write_match.group(1).lower())
+
+    for keyword in ModuleCtx.CTE_Write_Statement.findall(statement):
+        keywords.append(keyword.lower())
+
+    if not keywords:
         return
 
     mechanism = _current_mechanism.get()
@@ -173,16 +193,23 @@ def check_write_path(
         raise WritePathViolation(f'Statement writes outside of every mechanism -> `{statement}`')
 
     if mechanism == Mechanism.Seed:
-        keyword = write_match.group(1).lower()
-        if keyword not in ModuleCtx.Seed_Statements:
-            raise WritePathViolation(f'Seed changes rows with `{keyword}` -> `{statement}`')
+        for keyword in keywords:
+            if keyword not in ModuleCtx.Seed_Statements:
+                raise WritePathViolation(f'Seed changes rows with `{keyword}` -> `{statement}`')
         return
 
     if mechanism in ModuleCtx.Audit_Mechanisms:
         return
 
+    table_names:'strlist' = []
+
     if match := ModuleCtx.Statement_Table.match(statement):
-        table_name = match.group(1).lower()
+        table_names.append(match.group(1).lower())
+
+    for table_name in ModuleCtx.CTE_Statement_Table.findall(statement):
+        table_names.append(table_name.lower())
+
+    for table_name in table_names:
         if table_name in ModuleCtx.Audit_Tables:
             raise WritePathViolation(f'Mechanism `{mechanism}` writes to audit table `{table_name}` -> `{statement}`')
 
