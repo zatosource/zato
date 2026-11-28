@@ -13,31 +13,29 @@ from logging import getLogger
 from threading import Condition
 
 # SQLAlchemy
-from sqlalchemy import and_, select
-from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.exc import DBAPIError
 
 # Zato
 from zato.common.audit_log.bulk_insert import insert_pending_events
-from zato.common.audit_log.payload import store_payloads
 from zato.common.db_env.any_of import any_of
 from zato.common.db_env.commit_queue import CommitQueue
 from zato.common.db_env.engine import call_database
 from zato.common.db_env.errors import is_conflict, is_lock_timeout, is_value_error
 from zato.common.db_env.outage import OutageTracker
-from zato.common.db_env.pg8000_copy import copy_rows
 from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.db_env.database import get_database_engine
+from zato.common.pubsub.sql.ack_deletes import AckDeletes
 from zato.common.pubsub.sql.audit_events import collect_audit_events, drop_audit_events, prepare_batch_payloads
 from zato.common.pubsub.sql.config import get_commit_max_messages, get_commits_in_flight, Urgent_Commits_In_Flight
-from zato.common.pubsub.sql.dedup import get_existing_fingerprints, rewrite_fingerprints, write_dedup_records
+from zato.common.pubsub.sql.dedup import get_existing_fingerprints
 from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID, PubSubTopicUnavailable
 from zato.common.pubsub.sql.fenced_ack import check_fenced, delete_fenced, PubSubAckConflict
-from zato.common.pubsub.sql.payloads import drop_payloads, get_chunks, get_message_ids, update_message_payload
+from zato.common.pubsub.sql.payloads import update_message_payload
 from zato.common.pubsub.sql.pending import PendingAck, PendingAtomic, PendingAttempts, PendingPublication, PendingSync, \
     PendingUpdate, new_pending_sync, reset_item
+from zato.common.pubsub.sql.publication_inserts import PublicationInserts
 from zato.common.pubsub.sql.pull import lease_messages
-from zato.common.pubsub.sql.schema import delivery_table, message_table, topic_sub_table
+from zato.common.pubsub.sql.schema import delivery_table
 from zato.common.pubsub.sql.subscription_sync import apply_syncs, set_lock_timeout
 
 # ################################################################################################################################
@@ -47,10 +45,11 @@ if 0:
     from collections.abc import Iterator
     from sqlalchemy.engine import Connection, Engine
     from zato.common.audit_log.api import AuditLog
+    from zato.common.pubsub.sql.fast_path import FastPath, FastPathClaims
     from zato.common.pubsub.sql.pending import PendingLease, pending_ack_list, pending_atomic_list, pending_attempts_list, \
         pending_lease_list, pending_publication_list, pending_sync_list, pending_update_list
     from zato.common.pubsub.subscription_list import pairlist
-    from zato.common.typing_ import any_, anydict, anylist, intlist, strlist, strstrdict
+    from zato.common.typing_ import any_, anydict, anylist, strlist, strstrdict
     from zato_common_core.zato_common_core import SubscriptionList
 
     # Dummy assignments to satisfy type checkers
@@ -91,52 +90,8 @@ Topic_Action_Rename = 'renamed'
 # How many times a group commit is run again after PostgreSQL rolled it back on a conflict with concurrent transactions.
 _max_conflict_retries = 5
 
-# From how many delivery rows on, a commit writes them with COPY rather than with multi-row inserts.
-_copy_min_delivery_rows = 200
-
 # ################################################################################################################################
 # ################################################################################################################################
-
-# The statements of a group commit are built once here, the bind parameters take their values at execution time.
-_subscribers_query = select(topic_sub_table.c.topic_name, topic_sub_table.c.sub_key)
-_subscribers_query = _subscribers_query.where(
-    any_of(topic_sub_table.c.topic_name, 'write_topic_names'))
-
-# An unsubscription deletes the subscription row and only then the pending deliveries,
-# so its delete must wait until each publication that read the row has committed its deliveries.
-_subscribers_query_plain = PlainStatement(_subscribers_query.with_for_update(read=True, key_share=True))
-
-# The row of a pair pending in the subscription list, which a publication inserts in its own commit,
-# leaving a row that a concurrent transaction committed first as it is.
-_topic_sub_insert = postgresql_insert(topic_sub_table).on_conflict_do_nothing()
-_topic_sub_insert_plain = PlainStatement(_topic_sub_insert)
-
-# A message whose identifier exists already is not inserted, and the statement returns the messages it inserted ..
-_message_insert = postgresql_insert(message_table).on_conflict_do_nothing(index_elements=[message_table.c.msg_id])
-_message_insert = _message_insert.returning(message_table.c.id, message_table.c.msg_id)
-_message_insert_plain = PlainStatement(_message_insert)
-
-# .. and what a message that exists already was published with tells a repeated publication from a different message.
-_existing_messages_query = select(message_table.c.msg_id, message_table.c.topic_name, message_table.c.payload_crc32)
-_existing_messages_query = _existing_messages_query.where(
-    any_of(message_table.c.msg_id, 'write_msg_ids'))
-_existing_messages_query_plain = PlainStatement(_existing_messages_query)
-
-_delivery_insert = PlainStatement(delivery_table.insert())
-
-# The subscriber column is concatenated with an empty string, which keeps the query planner from looking the rows up
-# through an index of subscribers, whose queues may be deep, rather than through the index of messages.
-_unindexed_sub_key = delivery_table.c.sub_key.concat('')
-
-_ack_deliveries_query = select(delivery_table.c.id, delivery_table.c.sub_key, delivery_table.c.message_id)
-_ack_deliveries_query_plain = PlainStatement(_ack_deliveries_query.where(and_(
-    any_of(delivery_table.c.message_id, 'ack_message_ids'),
-    any_of(_unindexed_sub_key, 'ack_sub_keys'),
-)))
-
-# A concurrent commit may have removed some of the rows first, so the statement returns those it removed.
-_delivery_delete = delivery_table.delete().where(any_of(delivery_table.c.id, 'ack_delivery_ids'))
-_delivery_delete_plain = PlainStatement(_delivery_delete.returning(delivery_table.c.id))
 
 # What records the next push attempt of each delivery row of a batch and returns the numbers of the rows that remain.
 _record_attempts_statement = delivery_table.update()
@@ -149,7 +104,7 @@ _record_attempts_statement_plain = PlainStatement(_record_attempts_statement)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class PubSubWriter:
+class PubSubWriter(PublicationInserts, AckDeletes):
     """ Writes the publications, acknowledgements and pulls of concurrent callers in shared transactions.
     Each caller waits until the transaction with its item is committed.
     A transaction writes publications first, acknowledgements next and pulls last, and its size is limited
@@ -158,10 +113,13 @@ class PubSubWriter:
     The audit events of the items commit in the transaction of the items.
     """
 
-    def __init__(self, audit_log:'AuditLog', subscription_list:'SubscriptionList') -> 'None':
+    def __init__(self, audit_log:'AuditLog', subscription_list:'SubscriptionList', fast_path:'FastPath') -> 'None':
 
         # The audit log whose events commit in the transactions of the items
         self.audit_log = audit_log
+
+        # The waiting pulls and the idle push greenlets that the publications of a commit claim
+        self.fast_path = fast_path
 
         # The subscriber and topic pairs of the configuration database, which publications read once they hold the lock on the rows of their topics
         self.subscription_list = subscription_list
@@ -485,6 +443,50 @@ class PubSubWriter:
         # The pairs of the subscription list whose rows the publications insert
         added_pairs:'pairlist' = []
 
+        # The waiting pulls and the idle push greenlets that the publications claim, which a transaction
+        # that does not commit releases
+        claims = self.fast_path.new_claims()
+
+        try:
+            out = self._write_transaction_items(
+                engine, claims, publications, acks, atomics, attempts_list, leases, syncs, updates,
+                ack_by_message_id, added_pairs)
+
+        except BaseException:
+            self.fast_path.release(claims)
+            raise
+
+        # The pulls and the push greenlets that the publications claimed are handed their messages now that they committed ..
+        self.fast_path.mark_committed(claims)
+
+        # .. and the rows that the publications and the syncs wrote count as committed too.
+        if added_pairs:
+            self.subscription_list.mark_committed(added_pairs)
+
+        for sync in syncs:
+            if sync.committed_added or sync.committed_removed:
+                self.subscription_list.mark_committed(sync.committed_added, sync.committed_removed)
+
+        return out
+
+# ################################################################################################################################
+
+    def _write_transaction_items(
+        self,
+        engine:'Engine',
+        claims:'FastPathClaims',
+        publications:'pending_publication_list',
+        acks:'pending_ack_list',
+        atomics:'pending_atomic_list',
+        attempts_list:'pending_attempts_list',
+        leases:'pending_lease_list',
+        syncs:'pending_sync_list',
+        updates:'pending_update_list',
+        ack_by_message_id:'anydict',
+        added_pairs:'pairlist',
+        ) -> 'anylist':
+        """ Writes the items of a batch, grouped by their kinds, in one transaction, and returns the audit events written.
+        """
         with engine.begin() as connection:
 
             # Every pub/sub transaction waits for a lock only up to the lock timeout of pub/sub ..
@@ -495,7 +497,7 @@ class PubSubWriter:
                 apply_syncs(connection, syncs)
 
             if publications:
-                self._insert_publications(connection, publications, added_pairs)
+                self._insert_publications(connection, publications, added_pairs, claims)
 
             if acks:
                 self._delete_acks(connection, acks, ack_by_message_id)
@@ -529,19 +531,13 @@ class PubSubWriter:
             if ack_by_message_id:
                 self._drop_payloads(connection, ack_by_message_id)
 
-            # .. and the audit events of what was written commit with it.
-            out = collect_audit_events(publications, atomics, leases)
+            # .. and the audit events of what was written commit with it, including the receptions of the pulls
+            # .. that the publications claimed.
+            all_leases = leases + claims.leases
+            out = collect_audit_events(publications, atomics, all_leases)
 
             if out:
                 _ = insert_pending_events(connection, out)
-
-        # The rows that the publications and the syncs wrote count as committed only now that the transaction committed.
-        if added_pairs:
-            self.subscription_list.mark_committed(added_pairs)
-
-        for sync in syncs:
-            if sync.committed_added or sync.committed_removed:
-                self.subscription_list.mark_committed(sync.committed_added, sync.committed_removed)
 
         return out
 
@@ -574,7 +570,7 @@ class PubSubWriter:
         # .. whereas after the first write of an item, only a savepoint can undo it on its own.
         try:
             if atomic.publications:
-                self._insert_publications(connection, atomic.publications, added_pairs)
+                self._insert_publications(connection, atomic.publications, added_pairs, None)
 
             if atomic.is_strict:
                 for pending in atomic.publications:
@@ -627,319 +623,6 @@ class PubSubWriter:
         return out
 
 # ################################################################################################################################
-
-    def _get_subscribers(
-        self,
-        connection:'Connection',
-        publications:'pending_publication_list',
-        added_pairs:'pairlist',
-        ) -> 'anydict':
-        """ Returns the subscriber keys of each topic the publications go to, decided by the subscription list
-        from the rows read and locked within the caller's transaction, and inserts the rows of the pending pairs.
-        """
-        topic_names:'anylist' = []
-
-        for pending in publications:
-            topic_name = pending.message_values['topic_name']
-
-            if topic_name not in topic_names:
-                topic_names.append(topic_name)
-
-        row_sub_keys:'anydict' = {}
-
-        for topic_name in topic_names:
-            row_sub_keys[topic_name] = []
-
-        # The rows of the topics are locked first ..
-        for row in _subscribers_query_plain.execute(connection, {'write_topic_names': topic_names}):
-            row_sub_keys[row.topic_name].append(row.sub_key)
-
-        # .. the subscription list decides the subscribers of each topic only under that lock ..
-        out:'anydict' = {}
-        topic_sub_rows:'anylist' = []
-
-        for topic_name in topic_names:
-            sub_keys, added = self.subscription_list.decide_subscribers(topic_name, row_sub_keys[topic_name])
-
-            if sub_keys:
-                out[topic_name] = sub_keys
-
-            for sub_key, added_topic_name in added:
-                topic_sub_rows.append({'sub_key': sub_key, 'topic_name': added_topic_name})
-
-            added_pairs.extend(added)
-
-        # .. and the pending pairs receive their rows in the same commit as the messages.
-        if topic_sub_rows:
-            _ = _topic_sub_insert_plain.insert_rows(connection, topic_sub_rows)
-
-        return out
-
-# ################################################################################################################################
-
-    def _resolve_duplicates(self, connection:'Connection', duplicates:'pending_publication_list') -> 'None':
-        """ Decides about each publication whose message identifier exists already. A message with the same topic
-        and payload is a publication repeated after its outcome was unknown to its publisher, which receives
-        the original result again, and any other message fails its own publisher alone.
-        """
-        msg_ids:'strlist' = []
-
-        for pending in duplicates:
-            msg_ids.append(pending.message_values['msg_id'])
-
-        existing:'anydict' = {}
-
-        for chunk in get_chunks(msg_ids):
-            for row in _existing_messages_query_plain.execute(connection, {'write_msg_ids': chunk}):
-                existing[row.msg_id] = row
-
-        for pending in duplicates:
-
-            message_values = pending.message_values
-            msg_id = message_values['msg_id']
-            row = existing.get(msg_id)
-
-            # The cleanup removed the existing message after the insert met it, which happens only to a message
-            # that was published and fully processed, so this one is its repetition.
-            if row is None:
-                logger.info('Repeated publication of a removed message -> msg_id:%s', msg_id)
-                pending.is_repeat = True
-                continue
-
-            is_same_topic = row.topic_name == message_values['topic_name']
-            is_same_payload = row.payload_crc32 == message_values['payload_crc32']
-
-            if is_same_topic and is_same_payload:
-                logger.info('Repeated publication of an existing message -> msg_id:%s', msg_id)
-                pending.is_repeat = True
-            else:
-                message = f'Message ID `{msg_id}` belongs to a different message that exists already'
-                pending.exception = PubSubDuplicateMsgID(message)
-
-# ################################################################################################################################
-
-    def _insert_deliveries(self, connection:'Connection', delivery_rows:'anylist') -> 'None':
-        """ Inserts delivery rows with multi-row inserts or, when there are many of them, with COPY.
-        """
-        delivery_row_count = len(delivery_rows)
-
-        if delivery_row_count >= _copy_min_delivery_rows:
-            copy_rows(connection, delivery_table, delivery_rows)
-        else:
-            _ = _delivery_insert.insert_rows(connection, delivery_rows)
-
-# ################################################################################################################################
-
-    def _insert_publications(
-        self,
-        connection:'Connection',
-        publications:'pending_publication_list',
-        added_pairs:'pairlist',
-        ) -> 'None':
-        """ Writes the dedup records of the publications, then inserts the messages of those whose dedup records
-        were written and one delivery row per message and subscriber.
-        """
-
-        # A publication whose dedup record remains from an earlier one inserts nothing ..
-        publications = write_dedup_records(connection, publications)
-
-        if not publications:
-            return
-
-        # .. the subscribers as of this very commit ..
-        subscribers = self._get_subscribers(connection, publications, added_pairs)
-
-        message_rows:'anylist' = []
-
-        # The payloads of the messages that have subscribers, by their digests, with their search texts ..
-        payloads:'strstrdict' = {}
-        search_texts:'strstrdict' = {}
-        with_payloads:'pending_publication_list' = []
-
-        for pending in publications:
-
-            message_values = pending.message_values
-            topic_name = message_values['topic_name']
-
-            # .. a topic without subscribers has its messages stored without their payloads,
-            # and an empty payload, which has no digest, is not stored at all ..
-            if topic_name in subscribers:
-                pending.subscriber_keys = subscribers[topic_name]
-                if pending.payload_digest is not None:
-                    payloads[pending.payload_digest] = pending.payload
-                    search_texts[pending.payload_digest] = pending.search_text
-                    with_payloads.append(pending)
-            else:
-                pending.subscriber_keys = []
-                message_values['payload_id'] = None
-                message_values['payload_dropped'] = True
-                message_values['payload_encrypted'] = False
-                message_values['payload_base64'] = False
-
-            message_rows.append(message_values)
-
-        # .. the payloads are stored once each, in the payload table that the audit events reference as well,
-        # and each message references the row of its payload ..
-        if payloads:
-            payload_ids = store_payloads(connection, payloads, search_texts)
-
-            for pending in with_payloads:
-                pending.message_values['payload_id'] = payload_ids[pending.payload_digest]
-
-        # .. all the messages go in one statement, which returns the primary keys of those it inserted ..
-        inserted:'anydict' = {}
-
-        for row in _message_insert_plain.insert_rows(connection, message_rows):
-            inserted[row.msg_id] = row.id
-
-        # .. a message that was not inserted has an identifier that exists already ..
-        delivery_rows:'anylist' = []
-        duplicates:'pending_publication_list' = []
-
-        for pending in publications:
-
-            message_values = pending.message_values
-            msg_id = message_values['msg_id']
-
-            # .. only the first publication of an identifier within a commit can have inserted it ..
-            if msg_id not in inserted:
-                pending.subscriber_keys = []
-                duplicates.append(pending)
-                continue
-
-            message_id = inserted.pop(msg_id)
-
-            for sub_key in pending.subscriber_keys:
-                delivery_rows.append({
-                    'message_id': message_id,
-                    'sub_key': sub_key,
-                    'topic_name': message_values['topic_name'],
-                    'priority': message_values['priority'],
-                    'expiration_ms': message_values['expiration_ms'],
-                })
-
-        # .. a message that met a stored one under the same ID gives its dedup record the fingerprint of the stored one ..
-        if duplicates:
-            self._resolve_duplicates(connection, duplicates)
-            rewrite_fingerprints(connection, duplicates)
-
-        # .. and all the delivery rows go in one statement too.
-        if delivery_rows:
-            self._insert_deliveries(connection, delivery_rows)
-
-# ################################################################################################################################
-
-    def _resolve_ack_message_ids(self, connection:'Connection', acks:'pending_ack_list') -> 'anylist':
-        """ Returns the primary keys of the messages of each acknowledgement, in the order of the acknowledgements,
-        looking up the keys of those that were given public identifiers alone.
-        """
-        lookup_msg_ids:'strlist' = []
-
-        for pending in acks:
-            if pending.sequence_ids is None:
-                lookup_msg_ids.extend(pending.msg_ids)
-
-        if lookup_msg_ids:
-            found = get_message_ids(connection, lookup_msg_ids)
-        else:
-            found = {}
-
-        out:'anylist' = []
-
-        for pending in acks:
-
-            if pending.sequence_ids is None:
-                message_ids:'intlist' = []
-
-                for msg_id in pending.msg_ids:
-                    if message_id := found.get(msg_id):
-                        message_ids.append(message_id)
-
-            else:
-                message_ids = pending.sequence_ids
-
-            out.append(message_ids)
-
-        return out
-
-# ################################################################################################################################
-
-    def _delete_acks(self, connection:'Connection', acks:'pending_ack_list', ack_by_message_id:'anydict') -> 'None':
-        """ Removes the delivery rows the acknowledgements are about and records each of their messages with the
-        acknowledgement that its full delivery counts towards. A row that two acknowledgements of one commit are about
-        counts towards the first of them, and a message counts towards the last acknowledgement that removed one
-        of its rows, or, with no such acknowledgement, the first one that was about it.
-        """
-        message_ids_by_ack = self._resolve_ack_message_ids(connection, acks)
-
-        all_message_ids:'anylist' = []
-        sub_keys:'strlist' = []
-        acked_pairs:'set[tuple[str, int]]' = set()
-
-        for pending, message_ids in zip(acks, message_ids_by_ack):
-            all_message_ids.extend(message_ids)
-
-            if pending.sub_key not in sub_keys:
-                sub_keys.append(pending.sub_key)
-
-            for message_id in message_ids:
-                acked_pairs.add((pending.sub_key, message_id))
-
-        if not all_message_ids:
-            return
-
-        # Read the delivery rows of the acknowledged messages that belong to the acknowledging subscribers.
-        # The query matches every subscriber of the commit with every message of the commit, so a row
-        # of a subscriber that did not acknowledge that particular message is still pending and stays in place ..
-        delivery_ids_by_pair:'anydict' = {}
-
-        for chunk in get_chunks(all_message_ids):
-
-            parameters = {
-                'ack_message_ids': chunk,
-                'ack_sub_keys': sub_keys,
-            }
-
-            for row in _ack_deliveries_query_plain.execute(connection, parameters):
-                pair = (row.sub_key, row.message_id)
-
-                if pair in acked_pairs:
-                    delivery_ids_by_pair[pair] = row.id
-
-        # .. remove them, in the order of their keys, so that concurrent commits lock them in the same order,
-        # learning which of them this commit removed ..
-        delivery_ids = sorted(delivery_ids_by_pair.values())
-        removed_ids:'set[int]' = set()
-
-        for chunk in get_chunks(delivery_ids):
-            for row in _delivery_delete_plain.execute(connection, {'ack_delivery_ids': chunk}):
-                removed_ids.add(row.id)
-
-        # .. and assign each removed row to the acknowledgement that removed it.
-        for pending, message_ids in zip(acks, message_ids_by_ack):
-            for message_id in message_ids:
-
-                pair = (pending.sub_key, message_id)
-                delivery_id = delivery_ids_by_pair.pop(pair, None)
-
-                if delivery_id in removed_ids:
-                    pending.removed_count += 1
-                    ack_by_message_id[message_id] = pending
-
-                elif message_id not in ack_by_message_id:
-                    ack_by_message_id[message_id] = pending
-
-# ################################################################################################################################
-
-    def _drop_payloads(self, connection:'Connection', ack_by_message_id:'anydict') -> 'None':
-        """ Drops the payloads of the acknowledged messages that no subscriber needs anymore, each counting
-        as fully delivered towards its acknowledgement.
-        """
-        message_ids = list(ack_by_message_id)
-
-        for message_id in drop_payloads(connection, message_ids):
-            pending = ack_by_message_id[message_id]
-            pending.fully_delivered_count += 1
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -24,6 +24,7 @@ from zato.common.api import DATA_FORMAT
 from zato.common.audit_log.service import Push_Delivery_Key
 from zato.common.db_env.errors import is_transient
 from zato.common.pubsub.delivery_scope import close_delivery_scope, get_delivery_scope, open_delivery_scope
+from zato.common.pubsub.sql.fast_path import Attempt_Recorded_Key
 from zato.common.pubsub.sql.replaced import PubSubReplaced
 
 # ################################################################################################################################
@@ -33,19 +34,13 @@ if 0:
     from gevent.lock import BoundedSemaphore
     from zato.common.pubsub.delivery_scope import DeliveryScope
     from zato.common.pubsub.sql.backend import SQLPubSubBackend
-    from zato.common.typing_ import any_, anydict, anylist, callable_, strset
+    from zato.common.typing_ import any_, anydict, anylist, callable_, intset, strset
     from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# The key of a message whose first attempt was recorded with the other messages of its batch
-Attempt_Recorded_Key = 'zato.pubsub.attempt_recorded'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -59,6 +54,29 @@ class BatchCommitFailed(Exception):
         self.error = error
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def _are_attempts_recorded(messages:'anylist') -> 'bool':
+    """ Whether the first attempt of every message of a batch was recorded before the batch reached its delivery loop.
+    """
+    for message in messages:
+        if Attempt_Recorded_Key not in message:
+            return False
+
+    return True
+
+# ################################################################################################################################
+
+def _get_delivery_ids(messages:'anylist') -> 'intset':
+    """ Returns the IDs of the delivery rows of the messages of a batch.
+    """
+    out:'intset' = set()
+
+    for message in messages:
+        out.add(message['delivery_id'])
+
+    return out
+
 # ################################################################################################################################
 
 def deliver_atomic_batch(
@@ -77,10 +95,15 @@ def deliver_atomic_batch(
     while processing them. The messages concluded so far also commit before each wait of a retry round
     and when the delivery is stopped. A batch that does not reach its commit leaves no publication behind
     and goes out again.
+    The first attempts of a batch that a publication handed over were recorded in the transaction of the publication.
     """
-    # One transaction records the first attempt of every message of the batch ..
-    with database_slots:
-        pending_delivery_ids = backend.record_attempts(messages)
+    # One transaction records the first attempt of every message of the batch, unless the publication
+    # that handed the batch over recorded them already ..
+    if _are_attempts_recorded(messages):
+        pending_delivery_ids = _get_delivery_ids(messages)
+    else:
+        with database_slots:
+            pending_delivery_ids = backend.record_attempts(messages)
 
     # .. what the subscriber services produce from now on commits with the acknowledgement ..
     scope = open_delivery_scope()

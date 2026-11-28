@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import time
 from hashlib import sha256
 from http.client import CONFLICT, INTERNAL_SERVER_ERROR, OK
+from typing import NamedTuple
 
 # Zato
 from pubsub_perf.config import PerfConfig, Receipts_Topic
@@ -24,12 +25,15 @@ if 0:
     from concurrent.futures import Future, ThreadPoolExecutor
     from threading import Event
     from pubsub_perf.config import Credentials, credentialslist
-    from zato.common.typing_ import anydict, anylist, dictlist, strfloatdict, strlist
+    from pubsub_perf.push import PushReceiver, PushRecords
+    from zato.common.typing_ import anydict, anylist, dictlist, strfloatdict, strlist, strset
 
     Credentials = Credentials
     Future = Future
     ThreadPoolExecutor = ThreadPoolExecutor
     credentialslist = credentialslist
+    PushReceiver = PushReceiver
+    PushRecords = PushRecords
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,6 +42,8 @@ floatlist      = list[float]
 futurelist     = list['Future[None]']
 publisherlist  = list['Publisher']
 subscriberlist = list['Subscriber']
+pushrecordslist = list['PushRecords']
+strfloatdictlist = list['strfloatdict']
 strstrlistdict = dict[str, 'strlist']
 
 # ################################################################################################################################
@@ -46,8 +52,8 @@ strstrlistdict = dict[str, 'strlist']
 # How long a request that did not reach the server waits before it is sent again, in seconds
 _retry_seconds = 0.2
 
-# How long a subscriber waits after a pull that returned nothing, in seconds
-_idle_seconds = 0.05
+# How long one pull waits on the server for a publication when the queue is empty, in milliseconds
+_pull_wait_ms = 1000
 
 # How long beyond the lease a subscriber waits for messages that a lost response handed out, in seconds
 _lease_margin = 0.5
@@ -64,7 +70,7 @@ def _pull(credentials:'Credentials', max_messages:'int') -> 'anylist':
     """ Returns the messages of one pull, or none if the response did not arrive, in which case the messages
     that it handed out are handed out again once their lease runs out.
     """
-    payload = {'max_messages': max_messages}
+    payload = {'max_messages': max_messages, 'wait_ms': _pull_wait_ms}
 
     try:
         result = post_json('/pubsub/messages/get', credentials.username, credentials.password, payload)
@@ -295,7 +301,6 @@ class Subscriber:
             messages = _pull(self.credentials, _batch_size)
 
             if not messages:
-                time.sleep(_idle_seconds)
                 continue
 
             received_at = time.monotonic()
@@ -447,16 +452,14 @@ class SubscriberGroup:
 
 # ################################################################################################################################
 
-    def get_latencies(self, sent_times:'strfloatdict') -> 'Latencies':
-        """ Returns the time from the publication of each message to its first receipt by each subscriber.
+    def get_first_receipts(self) -> 'strfloatdictlist':
+        """ Returns the time that each key was first received at, by each subscriber.
         """
-        out = Latencies()
+        out:'strfloatdictlist' = []
 
         for subscriber in self.subscribers:
             receipts = subscriber.get_first_receipts()
-
-            for key, received_at in receipts.items():
-                out.add(received_at - sent_times[key])
+            out.append(receipts)
 
         return out
 
@@ -508,7 +511,6 @@ class ReceiptReader:
             messages = _pull(self.credentials, _receipt_batch_size)
 
             if not messages:
-                time.sleep(_idle_seconds)
                 continue
 
             msg_ids:'strlist' = []
@@ -537,6 +539,115 @@ class ReceiptReader:
 
         for receipt_keys in self.receipts.values():
             out.extend(receipt_keys)
+
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class PushCheck(NamedTuple):
+    """ How many deliveries to push subscribers did not arrive, how many keys arrived that were never published,
+    how many pushes repeated an earlier push of their key, and how many pushes had a message ID other than their key.
+    """
+    expected_count: 'int'
+    lost_count: 'int'
+    unexpected_count: 'int'
+    repeated_count: 'int'
+    mismatch_count: 'int'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class PushSubscriberGroup:
+    """ Subscribers to one topic whose messages the server pushes to the receiver, each with a subscription
+    and a path of its own, and the pushes of the run that the receiver recorded for each.
+    """
+
+    def __init__(self, credentials_list:'credentialslist', receiver:'PushReceiver', prefix:'str') -> 'None':
+        self.prefix = prefix
+
+        self.names:'strlist' = []
+        self.records:'pushrecordslist' = []
+
+        for index, credentials in enumerate(credentials_list):
+            self.names.append(credentials.username)
+            self.records.append(receiver.get_records(index))
+
+# ################################################################################################################################
+
+    def count_delivered(self) -> 'int':
+        """ Returns how many distinct keys of the run each subscriber received, added over the subscribers.
+        """
+        out = 0
+
+        for records in self.records:
+            run_counts = records.get_run_counts(self.prefix)
+            out += run_counts.distinct_count
+
+        return out
+
+# ################################################################################################################################
+
+    def count_repeated(self) -> 'int':
+        """ Returns how many pushes of the run repeated an earlier push of their key to the same subscriber.
+        """
+        out = 0
+
+        for records in self.records:
+            out += records.count_repeated(self.prefix)
+
+        return out
+
+# ################################################################################################################################
+
+    def count_retried(self) -> 'int':
+        """ Returns how many pushes of the run had an attempt above the first one.
+        """
+        out = 0
+
+        for records in self.records:
+            run_counts = records.get_run_counts(self.prefix)
+            out += run_counts.retried_count
+
+        return out
+
+# ################################################################################################################################
+
+    def check(self, keys:'strlist') -> 'PushCheck':
+        """ Compares the keys that each subscriber received with the keys that the publishers published.
+        """
+        published:'strset' = set(keys)
+
+        expected_count = 0
+        lost_count = 0
+        unexpected_count = 0
+        mismatch_count = 0
+
+        for records in self.records:
+
+            received:'strset' = set(records.get_run_keys(self.prefix))
+
+            expected_count += len(published)
+            lost_count += len(published - received)
+            unexpected_count += len(received - published)
+            run_counts = records.get_run_counts(self.prefix)
+            mismatch_count += run_counts.mismatch_count
+
+        repeated_count = self.count_repeated()
+
+        out = PushCheck(expected_count, lost_count, unexpected_count, repeated_count, mismatch_count)
+        return out
+
+# ################################################################################################################################
+
+    def get_first_receipts(self) -> 'strfloatdictlist':
+        """ Returns the time that each key of the run was first pushed at, by each subscriber.
+        """
+        out:'strfloatdictlist' = []
+
+        for records in self.records:
+            first_times = records.get_first_times(self.prefix)
+            out.append(first_times)
 
         return out
 

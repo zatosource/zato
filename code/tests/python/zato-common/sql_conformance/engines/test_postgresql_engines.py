@@ -53,7 +53,7 @@ if 0:
 class ModuleCtx:
 
     # The image of a PostgreSQL server older than the version that Zato requires
-    Older_Server_Image = 'postgres:18'
+    Older_Server_Image = 'postgres:17'
 
     # The setting of the commit level of a session
     Commit_Setting = 'synchronous_commit'

@@ -34,7 +34,7 @@ if 0:
 # ################################################################################################################################
 
 # The installation prefix of the local build of PostgreSQL, with debug symbols and frame pointers
-Local_PostgreSQL_Prefix = os.path.join(os.path.expanduser('~'), 'files', 'postgresql', '19')
+Local_PostgreSQL_Prefix = os.path.join(os.path.expanduser('~'), 'files', 'postgresql', '18')
 
 # The purpose of the port reservations of the instances, by which the performance tools find them
 Purpose_Local = 'postgresql-local'

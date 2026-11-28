@@ -16,17 +16,16 @@ from sqlalchemy import and_, select
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.audit_log.api import is_audit_log_enabled
 from zato.common.db_env.engine import call_database, execute_write
 from zato.common.pubsub.delivery_scope import get_delivery_scope
-from zato.common.pubsub.sql.admin import SQLAdminAPI
-from zato.common.pubsub.sql.config import get_batch_size, get_pull_lease_seconds
+from zato.common.pubsub.sql.config import get_batch_size
+from zato.common.pubsub.sql.pulls import SQLPullAPI
 from zato.common.pubsub.sql.publication import add_published_event, build_publication, check_scope_publication, \
     complete_publication, complete_publications
-from zato.common.pubsub.sql.pull import delivered_topics_parameters, fetch_statement, has_lease_candidates, \
-    outgoing_fetch_statement, payload_statement
+from zato.common.pubsub.sql.pull import delivered_topics_parameters, fetch_statement, outgoing_fetch_statement, \
+    payload_statement
 from zato.common.pubsub.sql.schema import delivery_table, topic_sub_table
-from zato.common.pubsub.sql.pending import new_fenced_ack, new_pending_atomic, new_pending_lease
+from zato.common.pubsub.sql.pending import new_fenced_ack, new_pending_atomic
 from zato.common.pubsub.sql.subscription_sync import read_governed_pairs
 from zato.common.typing_ import list_, tuple_
 from zato.server.metrics import zato_pubsub_messages_delivered_total
@@ -36,7 +35,7 @@ from zato.server.metrics import zato_pubsub_messages_delivered_total
 
 if 0:
     from sqlalchemy.engine import Engine
-    from zato.common.pubsub.sql.pending import PendingAck, PendingLease, pending_publication_list
+    from zato.common.pubsub.sql.pending import PendingAck, pending_publication_list
     from zato.common.pubsub.sql.publication import built_publication_list
     from zato.common.pubsub.subscription_list import pairlist
     from zato.common.typing_ import any_, anydict, anylist, anylistnone, intlist, intnone, strdict, strlist, strnone
@@ -85,7 +84,7 @@ class AckPulledResult(NamedTuple):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class SQLPubSubBackend(SQLAdminAPI):
+class SQLPubSubBackend(SQLPullAPI):
     """ SQL-based pub/sub backend - messages, queues and delivery state are stored
     in the Zato database that the Zato_Database_* variables select.
     Payloads are stored in the database itself and dropped once every subscriber
@@ -592,49 +591,6 @@ class SQLPubSubBackend(SQLAdminAPI):
                 break
 
         return out
-
-# ################################################################################################################################
-
-    def pull_messages(
-        self,
-        sub_key:'str',
-        max_messages:'int'=_default_max_messages,
-        max_len:'int'=_default_max_len,
-    ) -> 'anylist':
-        """ Hands a subscriber's deliverable messages over to one pulling client, leasing them in the same transaction,
-        so that concurrent pulls never receive the same message. The messages stay in the queue until the subscriber
-        acknowledges them, and a pull after their lease runs out hands them out again.
-        """
-        now_ms = self._database_now_ms()
-        out:'anylist' = []
-
-        # A pull that would hand out nothing does not wait for a commit ..
-        if not has_lease_candidates(self.engine, self.subscription_list, sub_key, now_ms):
-            return out
-
-        # .. while any other one leases its messages in a commit that it may share with other writes.
-        leased_until_ms = now_ms + get_pull_lease_seconds() * 1000
-
-        lease = new_pending_lease(sub_key, max_messages, max_len, now_ms, leased_until_ms, self._on_leased)
-        self._writer.lease(lease)
-
-        out = lease.messages
-        return out
-
-# ################################################################################################################################
-
-    def _on_leased(self, lease:'PendingLease') -> 'None':
-        """ Builds the messages of the rows that a pull leased and the audit events of their reception,
-        in the transaction that leases them, so that a reception is recorded if and only if its lease is committed.
-        """
-        # The receptions are recorded only while the audit log is on ..
-        if is_audit_log_enabled():
-            audit_log = self.audit_log
-        else:
-            audit_log = None
-
-        # .. and each leased row becomes its message and the audit event of its reception.
-        self._pulled_messages.build(lease, audit_log, self.crypto_manager)
 
 # ################################################################################################################################
 

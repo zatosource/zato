@@ -15,7 +15,7 @@
 	test-soak test-soak-pubsub \
 	test-arbiter \
 	test-rate-limiting test-enmasse test-cli \
-	test-pubsub test-pubsub-perf test-pubsub-perf-latency test-pubsub-exactly-once test-sql-conformance test-sql-conformance-fast test-sql-conformance-static test-pubsub-encoding test-pubsub-encoding-rust test-pubsub-services test-perf-rules test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
+	test-pubsub test-pubsub-delivery test-pubsub-perf test-pubsub-perf-latency test-pubsub-exactly-once test-sql-conformance test-sql-conformance-fast test-sql-conformance-static test-pubsub-encoding test-pubsub-encoding-rust test-pubsub-services test-perf-rules test-queue-delivery test-queue-delivery-rest test-queue-delivery-soap test-queue-delivery-fhir test-queue-delivery-mllp \
 	test-queue-delivery-channel-rest test-queue-delivery-channel-soap \
 	test-mcp test-bearer test-graphql test-grpc \
 	test-edifact test-soap test-openapi test-api-portal-live \
@@ -841,7 +841,7 @@ test-ha-core: rust-target-prune ## The Rust tests of the active-standby node - t
 	$(Zato_Log_Reset)
 	$(LOAD_CARGO_ENV) && cargo test --manifest-path $(ZATO_RUST)/zato_ha_core/Cargo.toml $(PYTEST_ARGS) $(Zato_Log)
 
-test-ha-postgresql-local: ## The takeover of the Zato database and the start of a server under a node's generation, on a local PostgreSQL 19 with a synchronous standby, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
+test-ha-postgresql-local: ## The takeover of the Zato database and the start of a server under a node's generation, on a local PostgreSQL 18 with a synchronous standby, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	$(call Zato_Test_HA_Suite,postgresql-local)
 
 test-ha-power-loss: ## Loss of power to a single server on PostgreSQL, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
@@ -1048,6 +1048,15 @@ Zato_Test_Step_Tests_pubsub-backend  := \
 	$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_generation_postgresql.py \
 	$(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_clock.py
 
+Zato_Test_Step_Runner_pubsub-delivery := $(Zato_Test_PubSub_Gevent_Process)
+Zato_Test_Step_Tests_pubsub-delivery  := $(CURDIR)/code/tests/python/zato-common/pubsub_backend/test_pubsub_delivery_postgresql.py
+
+# The steady traffic of exactly-once delivery, which test-pubsub runs through test-pubsub-exactly-once
+# and test-pubsub-delivery runs as a step of its own.
+Zato_Test_Step_Runner_pubsub-delivery-traffic = $(Zato_Test_Exactly_Once_Live)
+Zato_Test_Step_Tests_pubsub-delivery-traffic  = $(Zato_Test_Exactly_Once_Tests_traffic)
+Zato_Test_Step_Env_pubsub-delivery-traffic   := Zato_Test_PubSub_DB_Mode=postgresql
+
 Zato_Test_Step_Runner_pubsub-outgoing := $(Zato_Test_PubSub_Gevent_Process)
 Zato_Test_Step_Tests_pubsub-outgoing  := \
 	$(CURDIR)/code/tests/python/zato-common/pubsub/test_outgoing.py \
@@ -1064,9 +1073,13 @@ Zato_Test_PubSub_Steps := sql-conformance-static sql-conformance-engines \
 	$(foreach mode,$(Zato_Test_PubSub_Managed_Modes),pubsub-managed-$(mode)) \
 	$(foreach mode,$(Zato_Test_PubSub_Stability_Modes),pubsub-stability-$(mode)) \
 	$(foreach mode,$(Zato_Test_PubSub_Stability_Modes),pubsub-subscription-flags-$(mode)) \
-	pubsub-config-store pubsub-backend pubsub-outgoing pubsub-outgoing-live
+	pubsub-config-store pubsub-backend pubsub-delivery pubsub-outgoing pubsub-outgoing-live
 Zato_Test_PubSub_Exactly_Once_Step := pubsub-exactly-once
 Zato_Test_PubSub_Resume_File       := $(CURDIR)/code/tests/.test-pubsub-resume
+
+# The steps of test-pubsub-delivery in the order they run and the step that the target is currently on.
+Zato_Test_PubSub_Delivery_Steps       := pubsub-delivery pubsub-encoding pubsub-outgoing pubsub-outgoing-live pubsub-delivery-traffic
+Zato_Test_PubSub_Delivery_Resume_File := $(CURDIR)/code/tests/.test-pubsub-delivery-resume
 
 test-pubsub: ## Every pub/sub functional test - core, SQL and outgoing delivery, resuming from the test that last failed or was interrupted. RESTART=1 to start from scratch.
 	@if [ -n "$(RESTART)" ]; then rm -f $(Zato_Test_PubSub_Resume_File); fi
@@ -1084,6 +1097,9 @@ test-pubsub: ## Every pub/sub functional test - core, SQL and outgoing delivery,
 	$(MAKE) test-pubsub-exactly-once $(Zato_Log) || first_failed=$${first_failed:-$(Zato_Test_PubSub_Exactly_Once_Step)}; \
 	$(call Zato_Test_Walk_End,$(Zato_Test_PubSub_Resume_File))
 	$(Zato_Target_Status)
+
+test-pubsub-delivery: ## Pub/sub delivery to pull and push subscribers - wake-ups, pushes, pulls, leases, attempts, fenced acknowledgements, publications handing their messages over to waiting subscribers, encoding, outgoing delivery and steady traffic, on PostgreSQL, resuming from the step that last failed or was interrupted. RESTART=1 to start from scratch.
+	$(call Zato_Test_Step_Walk,$(Zato_Test_PubSub_Delivery_Steps),$(Zato_Test_PubSub_Delivery_Resume_File))
 
 # The soak tests of every suite outside HA, which test-soak runs after every other target of test-all,
 # while test-ha runs the soak tests of HA after every other HA target.

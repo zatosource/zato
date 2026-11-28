@@ -14,6 +14,7 @@ from typing import NamedTuple
 
 if 0:
     from logging import Logger
+    from pubsub_perf.push import PushReceiver
     from zato.common.test.client import AdminClient
     from zato.common.test.conftest_base_pubsub import SessionState
     from zato.common.test.pubsub_database import PubSubDatabase
@@ -21,6 +22,7 @@ if 0:
     AdminClient = AdminClient
     Logger = Logger
     PubSubDatabase = PubSubDatabase
+    PushReceiver = PushReceiver
     SessionState = SessionState
 
 # ################################################################################################################################
@@ -31,7 +33,8 @@ class Scenario(NamedTuple):
     """
     topic_name: 'str'
     publisher_count: 'int'
-    subscriber_count: 'int'
+    pull_count: 'int'
+    push_count: 'int'
 
 scenariolist = list[Scenario]
 
@@ -51,32 +54,34 @@ def _get_count_text(count:'int', noun:'str') -> 'str':
 
 def get_scenario_name(test_name:'str', scenario:'Scenario') -> 'str':
     """ Returns the name under which a test logs the progress and records the results of a scenario,
-    with its publishers and subscribers.
+    with its publishers, its pull subscribers and its push subscribers.
     """
     publishers = _get_count_text(scenario.publisher_count, 'publisher')
-    subscribers = _get_count_text(scenario.subscriber_count, 'subscriber')
+    pull_subscribers = _get_count_text(scenario.pull_count, 'pull subscriber')
+    push_subscribers = _get_count_text(scenario.push_count, 'push subscriber')
 
-    out = f'{test_name} with {publishers} and {subscribers}'
+    out = f'{test_name} with {publishers}, {pull_subscribers} and {push_subscribers}'
     return out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Each subscriber publishes one receipt per message in the transaction of its acknowledgement
+# Each pull subscriber publishes one receipt per batch in the transaction of its acknowledgement
 Receipts_Topic = 'perf.receipts'
 
-# Many publishers to many subscribers
-Capacity_Scenario = Scenario('perf.capacity', 16, 16)
+# Many publishers to many subscribers, half of them pulling and half of them receiving pushes
+Capacity_Scenario = Scenario('perf.capacity', 16, 8, 8)
 
 # The same, while the worker of the server is killed
-Faults_Scenario = Scenario('perf.faults', 8, 8)
+Faults_Scenario = Scenario('perf.faults', 8, 4, 4)
 
-# As many publishers as subscribers, at rising levels
+# As many publishers as subscribers, at rising levels, half of the subscribers pulling and half receiving pushes,
+# except at the first level, which has one subscriber of each kind
 Level_Scenarios:'scenariolist' = [
-    Scenario('perf.level.1', 1, 1),
-    Scenario('perf.level.4', 4, 4),
-    Scenario('perf.level.16', 16, 16),
-    Scenario('perf.level.32', 32, 32),
+    Scenario('perf.level.1', 1, 1, 1),
+    Scenario('perf.level.4', 4, 2, 2),
+    Scenario('perf.level.16', 16, 8, 8),
+    Scenario('perf.level.32', 32, 16, 16),
 ]
 
 All_Scenarios:'scenariolist' = [Capacity_Scenario, Faults_Scenario, *Level_Scenarios]
@@ -113,9 +118,13 @@ class PerfConfig:
     client: 'AdminClient'
     database: 'PubSubDatabase | None'
 
-    # The publishers and the subscribers that the scenarios take theirs from, in order
-    publishers:  'credentialslist'
-    subscribers: 'credentialslist'
+    # The publishers, the pull subscribers and the push subscribers that the scenarios take theirs from, in order
+    publishers:       'credentialslist'
+    subscribers:      'credentialslist'
+    push_subscribers: 'credentialslist'
+
+    # The endpoint that the server pushes the messages of the push subscribers to
+    push_receiver: 'PushReceiver'
 
     # The client that reads the receipts of the subscribers
     receipt_reader: 'Credentials'

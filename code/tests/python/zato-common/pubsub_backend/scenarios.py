@@ -14,6 +14,8 @@ from concurrency import run_concurrency_scenario
 from count_consistency import run_count_consistency_scenario
 from dlq_rule import run_dlq_rule_scenario
 from encryption import run_encryption_scenario
+from fast_path_pull import run_fast_path_pull_scenario
+from fast_path_push import run_fast_path_push_scenario
 from fenced_values import run_fenced_values_scenario
 from lease_budget import run_lease_budget_scenario
 from lifecycle import run_lifecycle_scenario
@@ -36,32 +38,42 @@ from write_transaction import run_write_transaction_scenario
 # ################################################################################################################################
 
 def run_common_scenarios() -> 'None':
-    """ Runs the scenarios that every database type passes in the same way.
+    """ Runs the scenarios that every database type passes in the same way, other than those of the delivery
+    of messages to subscribers.
     """
     run_lifecycle_scenario()
     run_queues_scenario()
     run_stats_scenario()
-    run_wakeup_scenario()
     run_encryption_scenario()
     run_cleanup_scenario()
-    run_push_delivery_scenario()
-    run_retry_settings_scenario()
     run_outgoing_scenario()
-    run_queue_order_scenario()
     run_dlq_rule_scenario()
     run_concurrency_scenario()
     run_count_consistency_scenario()
-    run_pull_values_scenario()
-    run_lease_budget_scenario()
-    run_pull_events_scenario()
     run_publish_values_scenario()
     run_message_dedup_scenario()
     run_ack_values_scenario()
     run_trace_values_scenario()
-    run_fenced_values_scenario()
-    run_attempt_values_scenario()
     run_publish_events_scenario()
     run_write_transaction_scenario()
+
+# ################################################################################################################################
+
+def run_delivery_scenarios() -> 'None':
+    """ Runs the scenarios of the delivery of messages to subscribers - wake-ups, pushes, pulls, leases, attempts,
+    fenced acknowledgements and the publications that hand their messages over to waiting subscribers.
+    """
+    run_wakeup_scenario()
+    run_push_delivery_scenario()
+    run_retry_settings_scenario()
+    run_queue_order_scenario()
+    run_pull_values_scenario()
+    run_lease_budget_scenario()
+    run_pull_events_scenario()
+    run_fenced_values_scenario()
+    run_attempt_values_scenario()
+    run_fast_path_pull_scenario()
+    run_fast_path_push_scenario()
 
 # ################################################################################################################################
 # ################################################################################################################################

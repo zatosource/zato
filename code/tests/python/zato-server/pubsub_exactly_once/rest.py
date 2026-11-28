@@ -27,8 +27,10 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# How many messages one pull asks for
+# How many messages one pull asks for, and how long it waits on the server for a publication when the queue is empty,
+# in milliseconds, which hands the messages of the publication over to the pull directly
 _pull_max_messages = 100
+_pull_wait_ms = 1000
 
 # How long a pull for one message is repeated and how often, in seconds
 _pull_timeout = 30.0
@@ -118,7 +120,7 @@ def publish(username:'str', password:'str', topic_name:'str', payload:'anydict')
 def pull(username:'str', password:'str') -> 'anylist':
     """ Pulls the messages that the queue of the user has, without acknowledging them.
     """
-    payload = {'max_messages': _pull_max_messages}
+    payload = {'max_messages': _pull_max_messages, 'wait_ms': _pull_wait_ms}
     result = post_json('/pubsub/messages/get', username, password, payload)
 
     assert result.status_code == OK, result
@@ -132,7 +134,7 @@ def pull_raw(username:'str', password:'str') -> 'RawResult':
     """ Pulls the messages that the queue of the user has, without acknowledging them,
     and returns the response as the server sent it.
     """
-    payload = {'max_messages': _pull_max_messages}
+    payload = {'max_messages': _pull_max_messages, 'wait_ms': _pull_wait_ms}
 
     out = post_json_raw('/pubsub/messages/get', username, password, payload)
     return out

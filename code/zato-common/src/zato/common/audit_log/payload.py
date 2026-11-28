@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # however many events have it. An event references its payload by the id of the payload's row, and a payload
 # is deleted when the last event referencing it is deleted or pruned.
 #
-# A writer inserts the payloads it references and locks the ones stored already in a single statement,
+# A writer locks the payload rows it references before it inserts the missing ones,
 # and a deletion locks them for update before it checks for references in a statement of its own,
 # so that a payload is never deleted while a transaction that has not committed yet references it.
 
@@ -18,17 +18,15 @@ from __future__ import annotations
 
 # stdlib
 from hashlib import blake2b
-from typing import NamedTuple
 
 # SQLAlchemy
 from sqlalchemy import and_, false, select
-
-# zato_pg_wire
-from zato_pg_wire.zato_pg_wire import encode_column_arrays
+from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 
 # Zato
 from zato.common.audit_log.common import event_payload_table, event_table
-from zato.common.db_env.any_of import any_of, type_name_of
+from zato.common.db_env.any_of import any_of
+from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.pubsub.sql.schema import message_table
 
 # Zato - Rust
@@ -38,15 +36,15 @@ from zato_common_core.zato_common_core import extract_search_text
 # ################################################################################################################################
 
 if 0:
-    from sqlalchemy.engine import Connection, Dialect
+    from sqlalchemy.engine import Connection, CursorResult
     from zato.common.audit_log.pending import pending_event_list
-    from zato.common.typing_ import anydict, anylist, dictlist, intlist, intnone, strintdict, strlist, strnone, strstrdict
+    from zato.common.typing_ import any_, anydict, dictlist, intlist, intnone, strintdict, strlist, strnone, strstrdict
 
     # Dummy assignments to satisfy type checkers
+    any_ = any_
     anydict = anydict
-    anylist = anylist
     Connection = Connection
-    Dialect = Dialect
+    CursorResult = CursorResult
     pending_event_list = pending_event_list
     dictlist = dictlist
     intlist = intlist
@@ -66,11 +64,21 @@ _digest_size = 16
 # replaces with the id of the payload's row.
 Payload_Digest_Key = 'payload_digest'
 
-# The columns of a payload row that a writer gives, in the order of the arrays of the insert of payloads
-_payload_column_names = ('digest', 'data', 'search_text')
+# The insert that skips a payload that is stored already and returns the id and the digest of each row it inserted
+_payload_insert = postgresql_insert(event_payload_table)
+_payload_insert = _payload_insert.on_conflict_do_nothing(index_elements=[event_payload_table.c.digest])
+_payload_insert = _payload_insert.returning(event_payload_table.c.id, event_payload_table.c.digest)
+_payload_insert_statement = PlainStatement(_payload_insert)
 
-# The insert of payloads, built once per dialect, by the name of the dialect
-_payload_inserts:'anydict' = {}
+# The ids and the digests of the payloads of the given digests that are stored already, locked
+# against a concurrent deletion. Every transaction locks payloads in the order of their digests,
+# so that no two of them wait for each other.
+_stored_payloads_query = select(event_payload_table.c.id, event_payload_table.c.digest)
+_stored_payloads_query = _stored_payloads_query.where(
+    any_of(event_payload_table.c.digest, 'payload_digests'))
+_stored_payloads_query = _stored_payloads_query.order_by(event_payload_table.c.digest)
+_stored_payloads_query = _stored_payloads_query.with_for_update(read=True, key_share=True)
+_stored_payloads_statement = PlainStatement(_stored_payloads_query)
 
 # The payloads of the given ids, locked against a concurrent reference, in the order of their digests
 _deleted_payloads_query = select(event_payload_table.c.id)
@@ -99,53 +107,6 @@ _unreferenced_payloads_delete = _unreferenced_payloads_delete.where(~_is_referen
 _unreferenced_payloads_delete = _unreferenced_payloads_delete.where(~_is_message_payload)
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-class _PayloadInsert(NamedTuple):
-    """ The statement that inserts payloads from one array per column and the name, the type and the bind processor
-    of each of its columns, in the order of its arrays.
-    """
-    sql: 'str'
-    columns: 'anylist'
-
-# ################################################################################################################################
-
-def _new_payload_insert(dialect:'Dialect') -> '_PayloadInsert':
-    """ Builds the statement that inserts the payloads of one batch, in the order of their digests, and returns
-    the id and the digest of each of them. A payload stored already is not inserted again, its row is returned
-    and locked against a concurrent deletion instead. Every transaction locks payloads in the order of their digests,
-    so that no two of them wait for each other, and a payload that a concurrent transaction is inserting
-    is returned once that transaction commits.
-    """
-    preparer = dialect.identifier_preparer
-    table_name = preparer.format_table(event_payload_table)
-
-    columns:'anylist' = []
-    arrays:'strlist' = []
-    names:'strlist' = []
-
-    for name in _payload_column_names:
-        column = event_payload_table.c[name]
-        type_name = type_name_of(column.type, dialect)
-        processor = column.type.bind_processor(dialect)
-
-        columns.append((name, type_name, processor))
-        arrays.append(f'CAST(%s AS {type_name}[])')
-        names.append(preparer.quote(name))
-
-    array_list = ', '.join(arrays)
-    name_list = ', '.join(names)
-    id_name = preparer.quote(event_payload_table.c.id.name)
-    digest_name = preparer.quote(event_payload_table.c.digest.name)
-
-    sql = f"""INSERT INTO {table_name} ({name_list})
-SELECT * FROM unnest({array_list})
-ON CONFLICT ({digest_name}) DO SELECT FOR KEY SHARE
-RETURNING {id_name}, {digest_name}"""
-
-    out = _PayloadInsert(sql, columns)
-    return out
-
 # ################################################################################################################################
 
 def get_payload_digest(data:'str') -> 'strnone':
@@ -252,40 +213,83 @@ def assign_payload_ids(rows:'dictlist', payload_ids:'strintdict') -> 'None':
 def store_payloads(connection:'Connection', payloads:'strstrdict', search_texts:'strstrdict') -> 'strintdict':
     """ Stores the given payloads, keyed by their digests, that are not stored yet, in the transaction of the connection,
     with the search texts of the given dict, keyed by the same digests, and with search texts extracted here
-    for the payloads that dict has none for, and locks the ones stored already, so that no deletion removes them
-    before this transaction commits the events that reference them. Returns the id of the row of each payload by its digest.
+    for the payloads that dict has none for. Returns the id of the row of each payload by its digest.
     """
-    dialect = connection.dialect
+    stored = find_stored_payloads(connection, payloads)
 
-    if not (payload_insert := _payload_inserts.get(dialect.name)):
-        payload_insert = _new_payload_insert(dialect)
-        _payload_inserts[dialect.name] = payload_insert
+    out = insert_new_payloads(connection, stored, payloads, search_texts)
+    return out
 
-    # The rows go in the order of their digests, which is the order in which the statement locks them ..
-    rows:'dictlist' = []
+# ################################################################################################################################
 
-    for digest in sorted(payloads):
-        data = payloads[digest]
+def find_stored_payloads(connection:'Connection', payloads:'strstrdict') -> 'CursorResult[any_]':
+    """ Finds which of the given payloads, keyed by their digests, are stored already, and locks them,
+    so that no deletion removes them before this transaction commits the events that reference them.
+    The rows of the result are read by insert_new_payloads.
+    """
+    digests = sorted(payloads)
 
-        # .. each with its words, unless they were extracted before the write.
-        if digest in search_texts:
-            search_text = search_texts[digest]
-        else:
-            search_text = extract_search_text(data)
+    out = _stored_payloads_statement.execute(connection, {'payload_digests': digests})
+    return out
 
-        rows.append({
-            'digest': digest,
-            'data': data,
-            'search_text': search_text,
-        })
+# ################################################################################################################################
 
-    arrays = encode_column_arrays(rows, payload_insert.columns)
-    result = connection.exec_driver_sql(payload_insert.sql, tuple(arrays))
+def insert_new_payloads(
+    connection:'Connection',
+    stored:'CursorResult[any_]',
+    payloads:'strstrdict',
+    search_texts:'strstrdict',
+    ) -> 'strintdict':
+    """ Inserts the given payloads, keyed by their digests, that the result of find_stored_payloads does not list,
+    with the search texts of the given dict, keyed by the same digests, and with search texts extracted here
+    for the payloads that dict has none for. Returns the id of the row of each payload by its digest.
+    """
+    digests = sorted(payloads)
 
+    # The ids of the payloads stored already ..
     out:'strintdict' = {}
 
-    for row in result:
+    for row in stored:
         out[row.digest] = row.id
+
+    # .. the words of each payload not stored yet are extracted, unless they were extracted before the write ..
+    rows:'dictlist' = []
+
+    for digest in digests:
+        if digest not in out:
+            data = payloads[digest]
+
+            if digest in search_texts:
+                search_text = search_texts[digest]
+            else:
+                search_text = extract_search_text(data)
+
+            rows.append({
+                'digest': digest,
+                'data': data,
+                'search_text': search_text,
+            })
+
+    # .. they are inserted with multi-row statements, which return their ids, unless a concurrent transaction
+    # inserted one of them first ..
+    if rows:
+        inserted = _payload_insert_statement.insert_rows(connection, rows)
+
+        for row in inserted:
+            out[row.digest] = row.id
+
+        # .. in which case the payloads it inserted are read and locked like the ones stored already.
+        concurrent_digests:'strlist' = []
+
+        for digest in digests:
+            if digest not in out:
+                concurrent_digests.append(digest)
+
+        if concurrent_digests:
+            concurrent = _stored_payloads_statement.execute(connection, {'payload_digests': concurrent_digests})
+
+            for row in concurrent:
+                out[row.digest] = row.id
 
     return out
 

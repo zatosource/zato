@@ -35,9 +35,9 @@ _level_ids = [scenario.topic_name for scenario in Level_Scenarios]
 
 @pytest.mark.parametrize('scenario', Level_Scenarios, ids=_level_ids)
 def test_concurrency_levels(zato_server:'any_', scenario:'Scenario') -> 'None':
-    """ Rising numbers of publishers publish to a topic of their own, with as many subscribers, each with
-    a subscription of its own, receiving every message. At each level each subscriber processes each message
-    exactly once.
+    """ Rising numbers of publishers publish to a topic of their own, with as many subscribers, half of them pulling
+    and half of them receiving pushes, each with a subscription of its own, receiving every message. At each level
+    each subscriber processes each message exactly once.
     """
     test_name = 'test_concurrency_levels'
     level_name = get_scenario_name(test_name, scenario)

@@ -16,6 +16,7 @@ from gevent import get_hub
 
 # Zato
 from zato.common.api import PubSub
+from zato.common.pubsub.sql.config import Max_Pull_Wait_Ms
 from zato.common.pubsub.sql.writes import PubSubDuplicateMsgID
 from zato.common.pubsub.util import validate_topic_name
 from zato.common.util.auth import check_basic_auth
@@ -43,6 +44,9 @@ _max_messages_default = 50
 _max_messages_limit = 1000
 _max_len_default = PubSub.Message.Default_Max_Len
 _max_len_limit = PubSub.Message.Default_Max_Len
+
+# A pull does not wait for publications unless it asks to
+_wait_ms_default = 0
 
 _status_ok = PubSub.Status.OK
 _status_bad_request = PubSub.Status.Bad_Request
@@ -237,7 +241,7 @@ class GetMessages(PubSubRESTService):
     """
     name = 'pubsub.rest.get-messages'
 
-    input = Int('-max_messages'), Int('-max_len')
+    input = Int('-max_messages'), Int('-max_len'), Int('-wait_ms')
     output = AsIs('-messages'), Int('-message_count'), '-is_ok', '-cid', AsIs('-status'), '-details'
 
 # ################################################################################################################################
@@ -270,12 +274,15 @@ class GetMessages(PubSubRESTService):
         # Get optional parameters, capping at documented maximums
         max_messages = min(input.max_messages if input.max_messages else _max_messages_default, _max_messages_limit)
         max_len = min(input.max_len if input.max_len else _max_len_default, _max_len_limit)
+        wait_ms = min(input.wait_ms if input.wait_ms else _wait_ms_default, Max_Pull_Wait_Ms)
 
-        # Lease the messages, which hands each of them to this client alone until it acknowledges them ..
+        # Lease the messages, which hands each of them to this client alone until it acknowledges them,
+        # waiting for up to wait_ms for a publication if the queue is empty ..
         raw_messages = self.server.pubsub_backend.pull_messages(
             sub_key,
             max_messages=max_messages,
-            max_len=max_len
+            max_len=max_len,
+            wait_ms=wait_ms,
         )
 
         # .. format them for the REST pull path ..

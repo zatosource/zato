@@ -47,8 +47,10 @@ _worker_kills = 3
 # How many clients compete for the messages of one queue
 _consumer_count = 4
 
-# How many messages one pull of a competing client asks for
+# How many messages one pull of a competing client asks for, and how long it waits on the server for a publication
+# when the queue is empty, in milliseconds
 _consumer_batch_size = 50
+_consumer_wait_ms = 1000
 
 # Every how many batches a competing client acknowledges one only after its lease ran out, beginning with the first one
 _late_batch_interval = 10
@@ -144,7 +146,7 @@ class _OutputReader:
         """ Returns the messages of one pull, or none if the response did not arrive, in which case the messages
         that it handed out are handed out again once their lease runs out, ahead of any later message.
         """
-        payload = {'max_messages': _consumer_batch_size}
+        payload = {'max_messages': _consumer_batch_size, 'wait_ms': _consumer_wait_ms}
 
         try:
             result = post_json('/pubsub/messages/get', TestConfig.reader_username, TestConfig.reader_password, payload)
@@ -200,7 +202,6 @@ class _OutputReader:
             messages = self._pull()
 
             if not messages:
-                time.sleep(_retry_seconds)
                 continue
 
             correl_ids = get_correl_ids(messages, self.prefix)
@@ -338,7 +339,7 @@ class _CompetingConsumer:
     def run(self, stop:'Event') -> 'None':
         """ Consumes orders until the test stops it.
         """
-        payload = {'max_messages': _consumer_batch_size}
+        payload = {'max_messages': _consumer_batch_size, 'wait_ms': _consumer_wait_ms}
 
         while not stop.is_set():
 
@@ -348,7 +349,6 @@ class _CompetingConsumer:
             messages = result.body['messages']
 
             if not messages:
-                time.sleep(_retry_seconds)
                 continue
 
             msg_ids:'strlist' = []

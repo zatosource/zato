@@ -46,6 +46,9 @@ class ModuleCtx:
 # How long the messages of a pull wait for their acknowledgement, in seconds.
 Default_Pull_Lease_Seconds = 30
 
+# How long a pull may wait for messages when the queue of its subscriber is empty, in milliseconds.
+Max_Pull_Wait_Ms = 30_000
+
 # How many fully delivered messages one topic may retain for browsing and statistics.
 Default_Delivered_Max_Messages = 1_000_000
 

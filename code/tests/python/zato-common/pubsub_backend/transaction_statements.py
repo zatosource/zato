@@ -78,6 +78,13 @@ statements_publication = [
     ('INSERT', 'pubsub_message'), ('INSERT', 'pubsub_delivery'),
 ]
 
+# A publication that hands the row of one subscriber over to a waiting pull or an idle push greenlet inserts that row
+# first, leased or attempted once, and the rows of the other subscribers after it.
+statements_publication_claimed = [
+    ('INSERT', 'zato_message_dedup'), ('SELECT', 'pubsub_topic_sub'), _statement_payload_select, _statement_payload_insert,
+    ('INSERT', 'pubsub_message'), ('INSERT', 'pubsub_delivery'), ('INSERT', 'pubsub_delivery'),
+]
+
 statements_ack = [
     ('SELECT', 'pubsub_message'), ('SELECT', 'pubsub_delivery'), ('DELETE', 'pubsub_delivery'),
 ]

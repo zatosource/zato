@@ -68,7 +68,6 @@ def test_reboot(start_managed:'callable_', request:'pytest.FixtureRequest') -> '
 
 # ################################################################################################################################
 
-@pytest.mark.skip(reason='PostgreSQL 19 has one minor release, 19.0, so no minor version upgrade can be run until 19.1 exists')
 def test_minor_upgrade(start_managed:'callable_', request:'pytest.FixtureRequest') -> 'None':
     """ The database restarts on the next minor version of PostgreSQL.
     """

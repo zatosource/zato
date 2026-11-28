@@ -17,7 +17,7 @@ from sqlalchemy.dialects.sqlite.pysqlite import SQLiteDialect_pysqlite
 from zato.common.common_db.message_dedup import dedup_records_query, dedup_upsert
 from zato.common.common_db.schema import message_dedup_table
 from zato.common.db_env.any_of import any_of
-from zato.common.pubsub.sql import dedup, fenced_ack, payloads, pull, writes
+from zato.common.pubsub.sql import ack_deletes, dedup, fenced_ack, payloads, publication_inserts, pull, writes
 from zato.common.pubsub.sql.schema import metadata as pubsub_metadata
 
 # ################################################################################################################################
@@ -63,10 +63,10 @@ _scalar_values:'anydict' = {
 # Each statement whose list parameters are bound as arrays on PostgreSQL, with the names of its list parameters
 # and whether the elements of each are integers.
 _statements:'anylist' = [
-    (writes._subscribers_query_plain, {'write_topic_names': False}),
-    (writes._existing_messages_query_plain, {'write_msg_ids': False}),
-    (writes._ack_deliveries_query_plain, {'ack_message_ids': True, 'ack_sub_keys': False}),
-    (writes._delivery_delete_plain, {'ack_delivery_ids': True}),
+    (publication_inserts._subscribers_query_plain, {'write_topic_names': False}),
+    (publication_inserts._existing_messages_query_plain, {'write_msg_ids': False}),
+    (ack_deletes._ack_deliveries_query_plain, {'ack_message_ids': True, 'ack_sub_keys': False}),
+    (ack_deletes._delivery_delete_plain, {'ack_delivery_ids': True}),
     (writes._record_attempts_statement_plain, {'attempt_delivery_ids': True}),
     (payloads._message_ids_query_plain, {'write_msg_ids': False}),
     (payloads._drop_payloads_statement_plain, {'drop_message_ids': True}),
@@ -155,12 +155,12 @@ class TestOnePlan:
                 for idx in range(value_count):
                     rows.append({'sub_key': f'zpsk.orders.{value_count}.{idx}', 'topic_name': 'orders'})
 
-                inserted = writes._topic_sub_insert_plain.insert_rows(connection, rows)
+                inserted = publication_inserts._topic_sub_insert_plain.insert_rows(connection, rows)
                 assert inserted == []
 
             transaction.rollback()
 
-        assert len(writes._topic_sub_insert_plain._plans) == 1
+        assert len(publication_inserts._topic_sub_insert_plain._plans) == 1
 
     def test_insert_returning(self, schema_engine:'Engine') -> 'None':
 

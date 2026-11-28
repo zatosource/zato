@@ -32,8 +32,9 @@ _worker_kills = 3
 # ################################################################################################################################
 
 def test_publishers_to_subscribers(zato_server:'any_') -> 'None':
-    """ Sixteen publishers publish to one topic as fast as the server accepts, and sixteen subscribers, each with
-    a subscription of its own, receive every message. Each subscriber processes each message exactly once.
+    """ Sixteen publishers publish to one topic as fast as the server accepts, and eight pull subscribers and eight
+    push subscribers, each with a subscription of its own, receive every message. Each subscriber processes
+    each message exactly once.
     """
     test_name = get_scenario_name('test_publishers_to_subscribers', Capacity_Scenario)
 
@@ -49,9 +50,9 @@ def test_publishers_to_subscribers(zato_server:'any_') -> 'None':
 # ################################################################################################################################
 
 def test_publishers_to_subscribers_under_worker_kills(zato_server:'any_') -> 'None':
-    """ Eight publishers publish to one topic and eight subscribers, each with a subscription of its own, receive
-    every message, while the worker of the server is killed three times. Each subscriber processes each message
-    exactly once.
+    """ Eight publishers publish to one topic and four pull subscribers and four push subscribers, each with
+    a subscription of its own, receive every message, while the worker of the server is killed three times.
+    Each pull subscriber processes each message exactly once and each push subscriber receives each message.
     """
     test_name = get_scenario_name('test_publishers_to_subscribers_under_worker_kills', Faults_Scenario)
 

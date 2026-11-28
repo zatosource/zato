@@ -17,9 +17,11 @@ from gevent.event import Event
 
 # Zato
 from zato.common.api import HTTP_SOAP
+from zato.common.audit_log.api import is_audit_log_enabled
 from zato.common.audit_log.export.state import get_audit_export
 from zato.common.pubsub.sql.clock import get_engine_clock
 from zato.common.db_env.database import get_database_engine
+from zato.common.pubsub.sql.fast_path import FastPath
 from zato.common.pubsub.sql.generation import follow_takeover, get_fork_takeover, take_over
 from zato.common.pubsub.sql.payload_cache import Max_Payload_Cache_Size, PayloadCache, PayloadEpoch
 from zato.common.pubsub.sql.payloads import drop_payloads, from_base64, needs_base64, to_base64
@@ -43,7 +45,7 @@ if 0:
     from zato.common.crypto.api import CryptoManager
     from zato.common.pubsub.sql.clock import DatabaseClock
     from zato.common.db_env.fence import GenerationGuard
-    from zato.common.pubsub.sql.pending import PendingAck
+    from zato.common.pubsub.sql.pending import PendingAck, PendingLease
     from zato.common.typing_ import any_, anydict, anylist, anytuple, intlist, intlistnone, intset, strlist, strset
 
     # Dummy assignments to satisfy type checkers
@@ -125,9 +127,6 @@ class SQLBackendCore:
         # When _yield_after_write last let the event loop run.
         self._last_yield = monotonic()
 
-        # Publications and acknowledgements of concurrent callers share their commits, with their audit events.
-        self._writer = PubSubWriter(audit_log, subscription_list)
-
         # The generation that this server raised when it took over the database.
         self.generation_guard:'GenerationGuard | None' = None
 
@@ -136,6 +135,19 @@ class SQLBackendCore:
 
         # The payloads of the messages that push delivery read most recently.
         self.payload_cache = PayloadCache(Max_Payload_Cache_Size, PayloadEpoch())
+
+        # The waiting pulls and the idle push greenlets that publications hand their messages over to.
+        self.fast_path = FastPath(
+            subscription_list=subscription_list,
+            payload_cache=self.payload_cache,
+            get_sub_event=self.get_sub_event,
+            on_leased=self._on_leased,
+            build_message=self._build_message_from_row,
+            load_payload=self._load_payload_from_row,
+        )
+
+        # Publications and acknowledgements of concurrent callers share their commits, with their audit events.
+        self._writer = PubSubWriter(audit_log, subscription_list, self.fast_path)
 
         # The memory that a burst of publications and deliveries freed returns to the operating system.
         start_memory_trimmer()
@@ -263,11 +275,28 @@ class SQLBackendCore:
 # ################################################################################################################################
 
     def notify_sub_keys(self, sub_keys:'strlist') -> 'None':
-        """ Wakes up the blocking fetches of all the given subscribers.
+        """ Wakes up the blocking fetches and the waiting pulls of all the given subscribers.
         """
         for sub_key in sub_keys:
             event = self.get_sub_event(sub_key)
             event.set()
+
+        self.fast_path.notify(sub_keys)
+
+# ################################################################################################################################
+
+    def _on_leased(self, lease:'PendingLease') -> 'None':
+        """ Builds the messages of the rows that a pull leased and the audit events of their reception,
+        in the transaction that leases them, so that a reception is recorded if and only if its lease is committed.
+        """
+        # The receptions are recorded only while the audit log is on ..
+        if is_audit_log_enabled():
+            audit_log = self.audit_log
+        else:
+            audit_log = None
+
+        # .. and each leased row becomes its message and the audit event of its reception.
+        self._pulled_messages.build(lease, audit_log, self.crypto_manager)
 
 # ################################################################################################################################
 

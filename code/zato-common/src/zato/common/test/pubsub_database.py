@@ -80,10 +80,10 @@ class ModuleCtx:
     Runtime_Dir_Name = 'pubsub-test'
 
     # The image of the PostgreSQL containers
-    PostgreSQL_Image = 'postgres:19'
+    PostgreSQL_Image = 'postgres:18'
 
     # The image of the previous minor version, which a minor version upgrade starts from
-    Previous_Minor_Image = 'postgres:19.0'
+    Previous_Minor_Image = 'postgres:18.6'
 
     # Where each container keeps its data. The images of PostgreSQL 18 and later refuse a mount at this path
     # unless PGDATA names it.

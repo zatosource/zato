@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # The takeover of the Zato database and the start of a server under the generation of an active-standby node,
-# on one local cluster of PostgreSQL 19 per session, a primary with a synchronous standby on reserved ports.
+# on one local cluster of PostgreSQL 18 per session, a primary with a synchronous standby on reserved ports.
 
 # stdlib
 import os
@@ -51,7 +51,7 @@ class ModuleCtx:
 
 @pytest.fixture(scope='session')
 def pubsub_database() -> 'any_':
-    """ The Zato database of the session on the local PostgreSQL 19, removed with its cluster at the end of the session.
+    """ The Zato database of the session on the local PostgreSQL 18, removed with its cluster at the end of the session.
     """
     database = start_pubsub_database(ModuleCtx.Database_Name, PubSubDBMode.PostgreSQL_Local)
 

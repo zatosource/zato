@@ -36,6 +36,7 @@ if 0:
     from sqlalchemy.engine import Engine
     from zato.common.audit_log.api import AuditLog
     from zato.common.pubsub.sql.backend import PublishResult
+    from zato.common.pubsub.sql.fast_path import FastPath
     from zato.common.typing_ import any_, anydict, anylist, callable_, intlist, strlist, strnone
     from zato_common_core.zato_common_core import SubscriptionList
 
@@ -99,8 +100,8 @@ class _RecordingWriter(PubSubWriter):
     """ A writer that records how many items each of its transactions held.
     """
 
-    def __init__(self, audit_log:'AuditLog', subscription_list:'SubscriptionList') -> 'None':
-        super().__init__(audit_log, subscription_list)
+    def __init__(self, audit_log:'AuditLog', subscription_list:'SubscriptionList', fast_path:'FastPath') -> 'None':
+        super().__init__(audit_log, subscription_list, fast_path)
         self.transaction_sizes:'intlist' = []
 
         # When set, the next commit waits for this event before it writes anything
@@ -133,7 +134,7 @@ def _new_backend() -> 'tuple[SQLPubSubBackend, _RecordingWriter]':
     audit_log = new_test_audit_log()
     backend = SQLPubSubBackend(audit_log=audit_log)
 
-    writer = _RecordingWriter(audit_log, backend.subscription_list)
+    writer = _RecordingWriter(audit_log, backend.subscription_list, backend.fast_path)
     backend._writer = writer
 
     backend.subscribe(_sub_key_1, _topic)

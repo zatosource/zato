@@ -103,8 +103,8 @@ select exists (select 1 from pg_roles where rolname in ({}))
 """.strip().format(', '.join(f"'{role}'" for role in Provider_Failover_Roles))
 
 # The lowest version of PostgreSQL that Zato runs on, as server_version_num shows it, and its name.
-Minimum_Server_Version_Num = 190000
-Minimum_Server_Version_Name = '19'
+Minimum_Server_Version_Num = 180000
+Minimum_Server_Version_Name = '18'
 
 _server_version_num_query = 'show server_version_num'
 
@@ -215,7 +215,7 @@ def verify_postgresql_server(dbapi_connection:'any_', connection_record:'any_') 
     cursor.close()
     dbapi_connection.commit()
 
-    # The statements of Zato use the syntax of PostgreSQL 19, so an older server is refused whatever its durability ..
+    # The statements of Zato use the syntax of PostgreSQL 18, so an older server is refused whatever its durability ..
     if server_version_num < Minimum_Server_Version_Num:
         raise DatabaseVersionError(
             f'PostgreSQL server has version number `{server_version_num}`, Zato requires PostgreSQL {Minimum_Server_Version_Name}')

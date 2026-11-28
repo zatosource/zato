@@ -49,13 +49,13 @@ _raw_publish_query = text(f"""
 """)
 _stored_publish_query = text('select topic_name, minute_ms, publisher, sum(total) from pubsub_publish_count group by 1, 2, 3')
 
-# The statistics of the tables, the WAL and the background writer of PostgreSQL.
+# The statistics of the tables, the WAL and the checkpointer of PostgreSQL.
 _pg_tables_query = text("""
     select relname, n_live_tup, n_dead_tup, autovacuum_count from pg_stat_user_tables
     where relname in ('pubsub_message', 'pubsub_delivery')
 """)
 _pg_wal_query = text('select coalesce(sum(size), 0) from pg_ls_waldir()')
-_pg_checkpoints_query = text('select checkpoints_timed + checkpoints_req from pg_stat_bgwriter')
+_pg_checkpoints_query = text('select num_timed + num_requested from pg_stat_checkpointer')
 
 # The rows of all the deliveries.
 _delivery_rows_query = text('select count(*) from pubsub_delivery')

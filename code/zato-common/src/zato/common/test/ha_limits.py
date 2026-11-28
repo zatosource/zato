@@ -23,7 +23,7 @@ class HALimits:
 
     # How often the node sends /zato/ping to a server that has answered, and how long each ping may take, in seconds,
     # the same as SERVER_PING_INTERVAL and SERVER_PING_TIMEOUT of zato_ha_core/src/config.rs. The slowest ping measures
-    # 55 ms in test_ping_under_load.py under 16 publishers and 16 subscribers on the local PostgreSQL 19.
+    # 55 ms in test_ping_under_load.py under 16 publishers and 16 subscribers on the local build of PostgreSQL.
     Server_Ping_Interval = 1.0
     Server_Ping_Timeout  = 2.0
 
@@ -36,7 +36,7 @@ class HALimits:
     Server_Exit_Limit = HACtx.Default_Server_Exit_Limit
 
     # How long a server whose configuration cannot be read may take to exit, from the spawn of its command, in seconds.
-    # The exit measures 0.15 s in test_server_liveness.py on the local PostgreSQL 19, and the limit leaves room
+    # The exit measures 0.15 s in test_server_liveness.py on the local build of PostgreSQL, and the limit leaves room
     # for the start of the interpreter in a pod, which takes up to 2.1 s in the Kubernetes suite.
     Server_Bad_Start = 3.0
 

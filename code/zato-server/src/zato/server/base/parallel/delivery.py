@@ -28,13 +28,14 @@ from zato.common.db_env.outage import SharedOutageTracker
 from zato.common.pubsub.delivery import deliver_with_policy, DeliveryExhausted, DeliveryInterrupted, Interrupt_Database, \
     Interrupt_Expired, Interrupt_Paused, Interrupt_Replaced, Interrupt_Withdrawn, wait_between_rounds
 from zato.common.pubsub.sql.errors import PubSubDuplicateMsgID
+from zato.common.pubsub.sql.fast_path import Attempt_Recorded_Key
 from zato.common.pubsub.sql.fenced_ack import PubSubAckConflict
 from zato.common.pubsub.sql.replaced import PubSubReplaced
 from zato.common.util.retry import RetryPolicy
 from zato.common.util.time_ import parse_utc
 from zato.common.worker_slot import is_config_process
-from zato.server.base.parallel.delivery_batch import Attempt_Recorded_Key, BatchCommitFailed, deliver_atomic_batch, \
-    deliver_to_service
+from zato.server.base.parallel.delivery_batch import BatchCommitFailed, deliver_atomic_batch, deliver_to_service
+from zato.server.base.parallel.delivery_fetch import Delivery_Batch_Size, fetch_new
 from zato.server.base.parallel.delivery_rest import deliver_to_rest, get_rest_push_url
 
 # ################################################################################################################################
@@ -50,11 +51,6 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
-
-_delivery_batch_size = 50
-
-# How long a delivery greenlet waits for a publication when its queue is empty, in seconds.
-_delivery_wait_seconds = 5.0
 
 # The push deliveries of one server use at most this fraction of the connections of the pub/sub pool at a time,
 # so that when a broadcast wakes up all of its push subscribers together, the remaining connections stay available
@@ -238,7 +234,7 @@ class PushDelivery:
             try:
                 read_epoch = self.backend.payload_cache.get_epoch()
                 with self._database_slots:
-                    pending = self.backend.fetch_pending(sub_key, max_messages=_delivery_batch_size)
+                    pending = self.backend.fetch_pending(sub_key, max_messages=Delivery_Batch_Size)
                 self._outage.on_success(sub_key)
                 if not pending:
                     break
@@ -306,25 +302,9 @@ class PushDelivery:
 # ################################################################################################################################
 
     def _fetch_new(self, sub_key:'str') -> 'tuple[anylist, int]':
-        """ Reads the deliverable messages of a subscriber and, if there are none, waits for a publication
-        and reads them again, holding a database slot during each read and never during the wait. Returns the messages
-        and the payload epoch from before the read that returned them.
+        """ Reads or waits for the new messages of a subscriber, returning them with their payload epoch.
         """
-        # Each read clears the wake-up event of the subscriber before its query ..
-        read_epoch = self.backend.payload_cache.get_epoch()
-        with self._database_slots:
-            messages = self.backend.fetch_messages(sub_key, max_messages=_delivery_batch_size)
-
-        # .. so a publication committed after the query leaves the event set and the wait returns at once,
-        # .. whereas a wait that ends without a publication means there is nothing new to read.
-        if not messages:
-            event = self.backend.get_sub_event(sub_key)
-            if event.wait(_delivery_wait_seconds):
-                read_epoch = self.backend.payload_cache.get_epoch()
-                with self._database_slots:
-                    messages = self.backend.fetch_messages(sub_key, max_messages=_delivery_batch_size)
-
-        out = (messages, read_epoch)
+        out = fetch_new(self.backend, self._database_slots, self.server.config_manager, self._paused, sub_key)
         return out
 
 # ################################################################################################################################
