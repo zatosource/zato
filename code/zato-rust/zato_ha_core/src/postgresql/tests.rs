@@ -12,7 +12,7 @@ use std::thread;
 use std::time::Instant;
 
 /// The image of the test container, which the live SQL tests of the Zato server use too.
-const POSTGRESQL_IMAGE: &str = "postgres:16";
+const POSTGRESQL_IMAGE: &str = "postgres:19";
 
 /// The port of `PostgreSQL` inside the container.
 const POSTGRESQL_PORT: &str = "5432/tcp";

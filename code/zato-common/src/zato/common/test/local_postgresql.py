@@ -47,6 +47,12 @@ class ModuleCtx:
     # The installation prefix in place of the default one
     Env_Prefix = 'Zato_Test_PostgreSQL_Prefix'
 
+    # The variable that, set to the value below, initializes the clusters without data checksums,
+    # which initdb otherwise enables, so that a performance run can measure what the checksums cost
+    Env_Data_Checksums = 'Zato_Test_PostgreSQL_Data_Checksums'
+    Data_Checksums_Off = 'off'
+    No_Data_Checksums_Option = '--no-data-checksums'
+
     # The directory on a disk with the clusters, and the prefix of the reserved name of each cluster
     Disk_Dir_Name = 'postgresql-local'
     Name_Prefix   = 'zato-postgresql-local'
@@ -453,8 +459,13 @@ def start_local_cluster(
 
     initdb = get_binary('initdb')
 
-    _ = _run([initdb, '-D', primary_dir, '-U', username, f'--pwfile={initial_password_file}',
-        '--auth-local=scram-sha-256', '--auth-host=scram-sha-256', '--encoding=UTF8', '--locale=C'])
+    initdb_command = [initdb, '-D', primary_dir, '-U', username, f'--pwfile={initial_password_file}',
+        '--auth-local=scram-sha-256', '--auth-host=scram-sha-256', '--encoding=UTF8', '--locale=C']
+
+    if os.environ.get(ModuleCtx.Env_Data_Checksums) == ModuleCtx.Data_Checksums_Off:
+        initdb_command.append(ModuleCtx.No_Data_Checksums_Option)
+
+    _ = _run(initdb_command)
 
     os.remove(initial_password_file)
     _include_settings(primary_dir)

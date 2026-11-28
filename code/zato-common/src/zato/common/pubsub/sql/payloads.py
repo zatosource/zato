@@ -10,7 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from base64 import b64decode, b64encode
 
 # SQLAlchemy
-from sqlalchemy import and_, exists, false, select, true
+from sqlalchemy import and_, exists, false, insert, select, true
+from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 
 # Zato
 from zato.common.api import PubSub
@@ -18,7 +19,7 @@ from zato.common.audit_log.payload import delete_unreferenced_payloads, store_pa
 from zato.common.db_env.any_of import any_of
 from zato.common.db_env.plain_sql import PlainStatement
 from zato.common.pubsub.sql.config import get_batch_size
-from zato.common.pubsub.sql.schema import delivery_table, message_table
+from zato.common.pubsub.sql.schema import delivery_table, message_table, released_payload_table, trace_table
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,7 +104,32 @@ _drop_payloads_statement = _drop_payloads_statement.where(and_(
     ~_still_needed,
 ))
 _drop_payloads_statement = _drop_payloads_statement.values(payload_dropped=True, payload_encrypted=False, payload_base64=False)
-_drop_payloads_statement_plain = PlainStatement(_drop_payloads_statement.returning(message_table.c.id))
+_drop_payloads_statement = _drop_payloads_statement.returning(
+    message_table.c.id, message_table.c.topic_name, message_table.c.pub_time_ms, message_table.c.payload_id)
+_dropped_messages = _drop_payloads_statement.cte('dropped_messages')
+
+# The same statement adds each message that dropped its payload to the traces ..
+_traced_query = select(_dropped_messages.c.id, _dropped_messages.c.topic_name, _dropped_messages.c.pub_time_ms)
+
+_add_traces = postgresql_insert(trace_table)
+_add_traces = _add_traces.from_select([trace_table.c.message_id, trace_table.c.topic_name, trace_table.c.pub_time_ms],
+    _traced_query)
+_add_traces = _add_traces.on_conflict_do_update(index_elements=[trace_table.c.message_id], set_={
+    'topic_name': _add_traces.excluded.topic_name,
+    'pub_time_ms': _add_traces.excluded.pub_time_ms,
+})
+
+# .. and releases the payload for the cleanup sweep.
+_released_query = select(_dropped_messages.c.payload_id)
+_released_query = _released_query.where(_dropped_messages.c.payload_id.is_not(None))
+
+_release_payloads = insert(released_payload_table)
+_release_payloads = _release_payloads.from_select([released_payload_table.c.payload_id], _released_query)
+
+_drop_payloads_query = select(_dropped_messages.c.id)
+_drop_payloads_query = _drop_payloads_query.add_cte(_add_traces.cte('traced_messages'))
+_drop_payloads_query = _drop_payloads_query.add_cte(_release_payloads.cte('released_payloads'))
+_drop_payloads_statement_plain = PlainStatement(_drop_payloads_query)
 
 # Two transactions that remove the last two delivery rows of a message would each see the row
 # of the other one and both keep the payload, so the message rows are locked first, and the update that follows
@@ -211,7 +237,7 @@ def update_message_payload(connection:'Connection', pending:'PendingUpdate') -> 
     )
 
     # The payload that the message has not dropped yet, if any ..
-    previous_query = select(message_table.c.payload_id, message_table.c.payload_dropped)
+    previous_query = select(message_table.c.id, message_table.c.payload_id, message_table.c.payload_dropped)
     previous_query = previous_query.where(condition)
     previous_query = previous_query.with_for_update()
 
@@ -229,6 +255,13 @@ def update_message_payload(connection:'Connection', pending:'PendingUpdate') -> 
     update_statement = update_statement.values(payload_id=payload_id, payload_dropped=False, **pending.values)
 
     _ = connection.execute(update_statement)
+
+    # .. a message with a payload is no longer a trace ..
+    if previous.payload_dropped:
+        delete_statement = trace_table.delete()
+        delete_statement = delete_statement.where(trace_table.c.message_id == previous.id)
+
+        _ = connection.execute(delete_statement)
 
     # .. and the previous one is deleted unless something else references it. A dropped one was released
     # when the message dropped it.

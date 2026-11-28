@@ -172,11 +172,11 @@ class RetentionRunner:
 
                 # The count rows that the writes and the retention above added are compacted next, unless the runner is stopping.
                 if not self._is_stopping:
-                    self._compact(engine)
+                    self._compact(engine, outage)
 
 # ################################################################################################################################
 
-    def _compact(self, engine:'Engine') -> 'None':
+    def _compact(self, engine:'Engine', outage:'OutageTracker') -> 'None':
         """ Compacts the count table of one engine's database, starting above the highest id its previous compaction saw.
         """
         if engine in self._compacted_up_to:
@@ -186,8 +186,18 @@ class RetentionRunner:
 
         try:
             compacted_up_to = call_database(engine, compact_event_counts, engine, event_count_table, compacted_up_to)
+
+        # An unavailable database interrupts the compaction, which the next request runs again ..
+        except DBAPIError as e:
+            if is_transient(e):
+                outage.on_failure(e)
+            else:
+                logger.exception('Audit log event counts could not be compacted')
+
+        # .. while any other error is logged with its traceback.
         except Exception:
             logger.exception('Audit log event counts could not be compacted')
+
         else:
             self._compacted_up_to[engine] = compacted_up_to
 

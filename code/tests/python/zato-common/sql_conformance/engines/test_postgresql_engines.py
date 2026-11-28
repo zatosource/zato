@@ -21,9 +21,9 @@ from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
 # Zato
-from zato.common.db_env.connection import DatabaseDurabilityError, Durability_Level_Relaxed, Durability_Level_Setting, \
-    PostgreSQL_Connect_Timeout_Seconds, PostgreSQL_Read_Timeout_Seconds, PostgreSQL_Statement_Timeout_Ms, \
-    Provider_Failover_Roles
+from zato.common.db_env.connection import DatabaseDurabilityError, DatabaseVersionError, Durability_Level_Relaxed, \
+    Durability_Level_Setting, Minimum_Server_Version_Name, PostgreSQL_Connect_Timeout_Seconds, \
+    PostgreSQL_Read_Timeout_Seconds, PostgreSQL_Statement_Timeout_Ms, Provider_Failover_Roles
 from zato.common.db_env.database import dispose_database_engine, get_database_engine, new_odb_engine
 from zato.common.test.pubsub_database import connect, get_database_address, pubsub_db_env, PubSubDBMode, \
     start_pubsub_database, stop_pubsub_database
@@ -51,6 +51,9 @@ if 0:
 # ################################################################################################################################
 
 class ModuleCtx:
+
+    # The image of a PostgreSQL server older than the version that Zato requires
+    Older_Server_Image = 'postgres:18'
 
     # The setting of the commit level of a session
     Commit_Setting = 'synchronous_commit'
@@ -328,6 +331,22 @@ def test_relaxed_durability_level_accepted() -> 'None':
     try:
         with pubsub_db_env(database.env):
             assert _get_levels() == (relaxed_level, relaxed_level)
+    finally:
+        dispose_database_engine()
+        stop_pubsub_database(database)
+
+# ################################################################################################################################
+
+def test_older_server_refused() -> 'None':
+    """ A server older than the version of PostgreSQL that Zato requires is refused at the first connection
+    of an engine of Zato, with an error that names the required version.
+    """
+    database = start_pubsub_database('version-refused', PubSubDBMode.PostgreSQL, image=ModuleCtx.Older_Server_Image)
+
+    try:
+        with pubsub_db_env(database.env):
+            with pytest.raises(DatabaseVersionError, match=f'requires PostgreSQL {Minimum_Server_Version_Name}'):
+                _ = get_database_engine()
     finally:
         dispose_database_engine()
         stop_pubsub_database(database)

@@ -43,11 +43,13 @@ _inherited_env_names = ('LD_PRELOAD', Env_DNS_Server, Env_DNS_Domain)
 
 # The records of the server that a fault of its database provokes - an operation that a component retries
 # until the database is available again, a delivery and a merge of the search index that a database error
-# other than an outage interrupts, and a pooled connection that could not be closed after its session or link was lost.
+# other than an outage interrupts, an audit event of a service that the database could not take,
+# and a pooled connection that could not be closed after its session or link was lost.
 Database_Fault_Records:'strlist' = [
     'could not complete a database operation, retrying until it completes',
     'PubSub delivery error for sub_key',
     'Search index merge failed',
+    'Audit event dropped for service',
     'Exception terminating connection <pg8000',
     'Exception closing connection <pg8000',
 ]

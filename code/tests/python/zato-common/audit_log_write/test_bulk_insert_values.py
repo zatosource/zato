@@ -10,7 +10,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # that the insert paths of PostgreSQL tell apart.
 
 # stdlib
+from collections import Counter
 from typing import NamedTuple
+
+# gevent
+import gevent
 
 # pytest
 import pytest
@@ -55,6 +59,10 @@ _batch_sizes = (1, 15, 16, 50)
 
 # The batch size of the tests that do not depend on the insert path
 _event_count = 16
+
+# How many writers commit batches with the same payloads at the same time, and how many batches each commits
+_concurrent_writers = 4
+_concurrent_rounds = 10
 
 # The text of the body row of the attachment of an event
 _attachment_data = '{"filename": "invoice.pdf", "content_type": "application/pdf", "size": 34, "is_content_kept": true}'
@@ -272,6 +280,47 @@ def test_payloads_shared_across_batches(audit_backend:'str') -> 'None':
 
     for first_row, second_row in zip(first_rows, second_rows):
         assert second_row['payload_id'] == first_row['payload_id']
+
+# ################################################################################################################################
+
+def test_payloads_of_concurrent_writers(audit_backend:'str') -> 'None':
+    """ Writers that commit batches with the same payloads at the same time store each payload once,
+    and every event of every writer refers to the one row of its payload.
+    """
+    first = _write_value_batch(_event_count)
+    first_payload_rows = read_rows(event_payload_table)
+
+    def _write_rounds() -> 'None':
+        audit_log = AuditLog(Server_Name)
+
+        for _ in range(_concurrent_rounds):
+            batch = new_value_batch(audit_log, first.specs, first.seed_event_id)
+            audit_log.write_pending(batch)
+
+    writers = [gevent.spawn(_write_rounds) for _ in range(_concurrent_writers)]
+    _ = gevent.joinall(writers, raise_error=True)
+
+    assert read_rows(event_payload_table) == first_payload_rows
+
+    # The batches of the writers interleave in the event table, so the payloads that the events refer to
+    # are compared as a whole, each batch contributing the payloads of the first one.
+    payload_id_by_digest = _payload_ids_by_digest()
+    batch_count = 1 + _concurrent_writers * _concurrent_rounds
+
+    expected_payload_ids:'Counter[any_]' = Counter()
+
+    for spec in first.specs:
+        if spec.payload.digest:
+            expected_payload_ids[payload_id_by_digest[spec.payload.digest]] += batch_count
+        else:
+            expected_payload_ids[None] += batch_count
+
+    stored_payload_ids:'Counter[any_]' = Counter()
+
+    for row in read_value_events():
+        stored_payload_ids[row['payload_id']] += 1
+
+    assert stored_payload_ids == expected_payload_ids
 
 # ################################################################################################################################
 

@@ -26,7 +26,7 @@ from urllib.request import urlopen
 # Zato
 from zato.common.test.pubsub_database import _find_free_port, _directory_mode, _shm_size, connect, get_container_address, \
      get_container_settings, get_runtime_dir, get_standby_container_name, get_standby_host, ModuleCtx, PubSubDBMode, \
-     PubSubDatabase, start_pubsub_database, stop_pubsub_database
+     PubSubDatabase, start_pubsub_database, stop_database_threads, stop_pubsub_database
 from zato.common.test.pubsub_profile import session_dns
 
 # ################################################################################################################################
@@ -491,6 +491,8 @@ def connect_active(database:'ReplicatedDatabase') -> 'any_':
 def stop_replicated_database(database:'ReplicatedDatabase') -> 'None':
     """ Stops the proxy and removes the standby, the primary and their data directories.
     """
+    stop_database_threads()
+
     database.proxy_process.kill()
     _ = database.proxy_process.wait()
 

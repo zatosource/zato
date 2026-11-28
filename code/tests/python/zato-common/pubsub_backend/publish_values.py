@@ -203,11 +203,11 @@ def assert_message_row(values:'anydict', expected:'anydict', publish_start_ms:'i
 
     assert values['id'] > 0, values['id']
 
-    # A message published to a topic without subscribers references no payload, and any other one references
-    # the row of its payload.
+    # A message published to a topic without subscribers or with an empty payload references no payload,
+    # and any other one references the row of its payload.
     payload_id = values[_payload_id_column]
 
-    if expected['payload_dropped']:
+    if expected['payload_dropped'] or expected['data_size'] == 0:
         assert payload_id is None, payload_id
     else:
         assert payload_id > 0, payload_id

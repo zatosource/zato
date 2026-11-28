@@ -44,7 +44,11 @@ class ModuleCtx:
     MSSQL_Image      = 'mcr.microsoft.com/mssql/server:2022-latest'
     MySQL_Image      = 'mysql:8.4'
     Oracle_Image     = 'gvenzl/oracle-free:23-slim'
-    PostgreSQL_Image = 'postgres:16'
+    PostgreSQL_Image = 'postgres:19'
+
+    # Where a PostgreSQL container with a data directory of the host keeps its data. The images of PostgreSQL 18 and later
+    # refuse a mount at this path unless PGDATA names it.
+    Container_Data_Dir = '/var/lib/postgresql/data'
 
     # Database types the servers report in their connection details
     Type_MSSQL      = 'mssql'
@@ -363,7 +367,8 @@ def start_postgresql(
         command.extend(['-v', f'{setup_script}:/docker-entrypoint-initdb.d/postgresql-ssl-setup.sh:ro'])
 
     if data_dir:
-        command.extend(['--user', f'{os.getuid()}:{os.getgid()}', '-v', f'{data_dir}:/var/lib/postgresql/data'])
+        command.extend(['--user', f'{os.getuid()}:{os.getgid()}', '-v', f'{data_dir}:{ModuleCtx.Container_Data_Dir}'])
+        command.extend(['-e', f'PGDATA={ModuleCtx.Container_Data_Dir}'])
 
     if cpus:
         command.extend(['--cpus', cpus])

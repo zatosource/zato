@@ -155,8 +155,8 @@ _ = Index(
 
 # ################################################################################################################################
 
-# One row per delivered-message trace, which triggers of the database insert and delete along with
-# the message rows - see traces.py.
+# One row per delivered-message trace, which triggers of the database and the statements that update the message rows
+# insert and delete along with the message rows - see traces.py.
 trace_table = Table('pubsub_trace', metadata,
     Column('message_id', BigInteger, primary_key=True, autoincrement=False),
     Column('topic_name', String(_short_column_len), nullable=False),
@@ -171,8 +171,8 @@ trace_table = Table('pubsub_trace', metadata,
 
 # ################################################################################################################################
 
-# One row per payload that a message released, by dropping it or by being deleted before it dropped it, which triggers
-# of the database insert along with the message rows - see traces.py. The cleanup sweep deletes each released payload
+# One row per payload that a message released, by dropping it or by being deleted before it dropped it, which the drop
+# of the payloads and a trigger of the database insert along with the message rows - see traces.py. The cleanup sweep deletes each released payload
 # that no message and no audit event references anymore, and then the row. A payload released by many messages
 # has as many rows, so that concurrent releases never wait for one another.
 released_payload_table = Table('pubsub_released_payload', metadata,

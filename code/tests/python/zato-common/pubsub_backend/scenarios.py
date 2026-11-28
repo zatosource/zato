@@ -28,6 +28,7 @@ from queue_order import run_queue_order_scenario
 from queues import run_queues_scenario
 from retry_settings import run_retry_settings_scenario
 from stats import run_stats_scenario
+from trace_values import run_trace_values_scenario
 from wakeup import run_wakeup_scenario
 from write_transaction import run_write_transaction_scenario
 
@@ -56,6 +57,7 @@ def run_common_scenarios() -> 'None':
     run_publish_values_scenario()
     run_message_dedup_scenario()
     run_ack_values_scenario()
+    run_trace_values_scenario()
     run_fenced_values_scenario()
     run_attempt_values_scenario()
     run_publish_events_scenario()

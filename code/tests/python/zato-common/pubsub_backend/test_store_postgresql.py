@@ -10,10 +10,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import pytest
 
 # SQLAlchemy
-from sqlalchemy import inspect, text
+from sqlalchemy import inspect, MetaData, text
 
 # Zato
 from zato.common.db_env.database import database_config, get_database_engine
+from zato.common.db_env.engine import create_schema
+from zato.common.pubsub.sql.counts import postgresql_function, register_triggers
 from zato.common.pubsub.sql.schema import metadata
 from zato.common.test.pubsub_database import get_suite_modes, pubsub_db_env, PubSubDBMode, start_pubsub_database, \
     stop_pubsub_database
@@ -44,9 +46,22 @@ _expected_triggers = {
     ('pubsub_message', 'pubsub_topic_count_delete'),
     ('pubsub_message', 'pubsub_topic_count_update'),
     ('pubsub_message', 'pubsub_trace_insert'),
-    ('pubsub_message', 'pubsub_trace_update'),
     ('pubsub_message', 'pubsub_trace_delete'),
 }
+
+# The trigger that kept the traces in step with every update of the messages, which the schema setup removes
+# from a database created before the statements that update the messages took this over.
+_dropped_trigger = ('pubsub_message', 'pubsub_trace_update')
+
+_dropped_trigger_statement = 'CREATE TRIGGER pubsub_trace_update AFTER UPDATE ON pubsub_message ' + \
+    'REFERENCING NEW TABLE AS new_rows FOR EACH STATEMENT EXECUTE FUNCTION pubsub_trace_update()'
+
+_dropped_function_query = "select 1 from pg_proc where proname = 'pubsub_trace_update'"
+
+_dropped_trigger_query = """
+    select 1 from pg_trigger
+    where tgname = 'pubsub_trace_update' and tgrelid = cast('pubsub_message' as regclass)
+"""
 
 # The pages of the tables whose rows are updated after their insert keep half of their space free.
 _updated_fillfactor = 'fillfactor=50'
@@ -141,6 +156,7 @@ def test_postgresql_schema(pubsub_database:'PubSubDatabase') -> 'None':
                 triggers.add((row.event_object_table, row.trigger_name))
 
             assert _expected_triggers <= triggers, triggers
+            assert _dropped_trigger not in triggers, triggers
 
             # .. the generation row ..
             generation = connection.execute(text('select generation from zato_active where id = 1')).scalar()
@@ -167,10 +183,39 @@ def test_postgresql_schema_created_once(pubsub_database:'PubSubDatabase') -> 'No
     with pubsub_db_env(pubsub_database.env):
 
         engine = get_database_engine()
-        metadata.create_all(engine)
+        create_schema(engine, metadata)
 
         inspector = inspect(engine)
         assert set(inspector.get_table_names()) == _get_expected_tables()
+
+# ################################################################################################################################
+
+def test_postgresql_schema_drops_trace_update_trigger(pubsub_database:'PubSubDatabase') -> 'None':
+    """ Creating the schema over a database that still has the trigger of the trace updates removes the trigger
+    and its function.
+    """
+    with pubsub_db_env(pubsub_database.env):
+
+        engine = get_database_engine()
+
+        # A database created before the change holds the trigger and its function, which a schema of its own
+        # creates over the tables that exist ..
+        legacy_metadata = MetaData()
+        legacy_function = postgresql_function('pubsub_trace_update', '')
+        legacy_trigger = ('pubsub_trace_update', 'pubsub_message', _dropped_trigger_statement)
+        register_triggers(legacy_metadata, [([legacy_function], [legacy_trigger])])
+
+        create_schema(engine, legacy_metadata)
+
+        with engine.connect() as connection:
+            assert connection.execute(text(_dropped_trigger_query)).scalar() == 1
+
+        # .. and the schema setup of the next process removes them.
+        create_schema(engine, metadata)
+
+        with engine.connect() as connection:
+            assert connection.execute(text(_dropped_trigger_query)).scalar() is None
+            assert connection.execute(text(_dropped_function_query)).scalar() is None
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -18,7 +18,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import annotations
 
 # SQLAlchemy
-from sqlalchemy import and_, DDL, event, func, literal_column, or_, select
+from sqlalchemy import and_, DDL, event, func, literal_column, select, union
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -190,7 +190,16 @@ def _postgresql_word_match(event_table:'Table', event_payload_table:'Table', wor
     matching_payload_ids = matching_payload_ids.where(is_matching_payload)
     is_payload_match = event_table.c.payload_id.in_(matching_payload_ids)
 
-    out = or_(is_event_match, is_payload_match)
+    # PostgreSQL reads an OR of the two conditions with a scan of the whole table, so each one selects its ids
+    # through its own index, the GIN index of the event words and the index of payload ids, and the event matches
+    # when its id is in their union.
+    event_match_ids = select(event_table.c.id)
+    event_match_ids = event_match_ids.where(is_event_match)
+
+    payload_match_ids = select(event_table.c.id)
+    payload_match_ids = payload_match_ids.where(is_payload_match)
+
+    out = event_table.c.id.in_(union(event_match_ids, payload_match_ids))
     return out
 
 # ################################################################################################################################

@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import time
+from hashlib import sha256
 from http.client import CONFLICT, INTERNAL_SERVER_ERROR, OK
 
 # Zato
@@ -23,7 +24,7 @@ if 0:
     from concurrent.futures import Future, ThreadPoolExecutor
     from threading import Event
     from pubsub_perf.config import Credentials, credentialslist
-    from zato.common.typing_ import anydict, anylist, dictlist, strfloatdict, strlist, strstrdict
+    from zato.common.typing_ import anydict, anylist, dictlist, strfloatdict, strlist
 
     Credentials = Credentials
     Future = Future
@@ -37,6 +38,7 @@ floatlist      = list[float]
 futurelist     = list['Future[None]']
 publisherlist  = list['Publisher']
 subscriberlist = list['Subscriber']
+strstrlistdict = dict[str, 'strlist']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -198,7 +200,7 @@ class Publisher:
 
 class Subscriber:
     """ An API client with a pull subscription of its own. It acknowledges each batch with the delivery attempt
-    of each of its messages and publishes one receipt per message in the same transaction. The server rejects
+    of each of its messages and publishes one receipt of the whole batch in the same transaction. The server rejects
     the batch with a conflict if any of its messages was handed out again in the meantime.
     """
 
@@ -212,10 +214,12 @@ class Subscriber:
 # ################################################################################################################################
 
     def _build_ack(self, messages:'anylist') -> 'anydict':
-        """ Returns the acknowledgement of a batch with the delivery attempt of each message and the receipt of each.
+        """ Returns the acknowledgement of a batch with the delivery attempt of each message and one receipt
+        with the receipt key of each message.
         """
         consumed:'anylist' = []
-        receipts:'anylist' = []
+        attempts:'strlist' = []
+        receipt_keys:'strlist' = []
 
         for message in messages:
             meta = message['meta']
@@ -230,20 +234,26 @@ class Subscriber:
             }
             consumed.append(consumed_message)
 
-            # A receipt committed by an earlier attempt would be stored again under another ID, which verification finds.
-            receipt_key = get_receipt_key(data['key'], self.name)
+            attempts.append(f'{msg_id}:{delivery_attempt}')
+            receipt_keys.append(get_receipt_key(data['key'], self.name))
 
-            receipt = {
-                'topic_name': Receipts_Topic,
-                'data': {'key': receipt_key},
-                'msg_id': f'{msg_id}.{self.name}.{delivery_attempt}',
-                'correl_id': receipt_key,
-            }
-            receipts.append(receipt)
+        # The same acknowledgement sent again has the same receipt ID, which the server stores once,
+        # while a batch handed out again has other delivery attempts, so its receipt is stored under another ID,
+        # which verification finds.
+        attempts.sort()
+        batch_id = sha256(','.join(attempts).encode('utf8')).hexdigest()
+        receipt_id = f'{batch_id}.{self.name}'
+
+        receipt = {
+            'topic_name': Receipts_Topic,
+            'data': {'keys': receipt_keys},
+            'msg_id': receipt_id,
+            'correl_id': receipt_id,
+        }
 
         out:'anydict' = {
             'consumed': consumed,
-            'publish': receipts,
+            'publish': [receipt],
         }
 
         return out
@@ -462,8 +472,8 @@ class ReceiptReader:
         self.credentials = credentials
         self.prefix = prefix
 
-        # The key of each receipt of the run, by the message ID of the receipt
-        self.receipts:'strstrdict' = {}
+        # The receipt keys of each receipt of the run, by the message ID of the receipt
+        self.receipts:'strstrlistdict' = {}
 
 # ################################################################################################################################
 
@@ -508,22 +518,26 @@ class ReceiptReader:
                 data = message['data']
 
                 msg_id = meta['msg_id']
-                receipt_key = data['key']
+                receipt_keys = data['keys']
 
                 msg_ids.append(msg_id)
 
-                # Receipts of earlier runs are acknowledged and not kept.
-                if receipt_key.startswith(self.prefix):
-                    self.receipts[msg_id] = receipt_key
+                # Receipts of earlier runs are acknowledged and not kept. All the keys of one receipt belong to one run.
+                if receipt_keys[0].startswith(self.prefix):
+                    self.receipts[msg_id] = receipt_keys
 
             self._ack(msg_ids)
 
 # ################################################################################################################################
 
     def get_receipt_keys(self) -> 'strlist':
-        """ Returns the key of each receipt of the run, once per receipt that the subscribers committed.
+        """ Returns the receipt keys of the run, once per receipt that the subscribers committed.
         """
-        out = list(self.receipts.values())
+        out:'strlist' = []
+
+        for receipt_keys in self.receipts.values():
+            out.extend(receipt_keys)
+
         return out
 
 # ################################################################################################################################

@@ -21,7 +21,7 @@ from zato.common.pubsub.sql.payloads import get_data_preview
 from zato.common.pubsub.sql.pending import new_pending_update
 from zato.common.pubsub.sql.writes import Topic_Action_Delete, Topic_Action_Rename
 from zato.common.pubsub.sql.schema import delivery_table, message_table, publish_count_table, queue_count_table, \
-    topic_count_table, topic_sub_table
+    topic_count_table, topic_sub_table, trace_table
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -574,6 +574,14 @@ class SQLAdminAPI(SQLBrowseAPI):
             update_statement = update_statement.values(topic_name=new_topic_name)
 
             _ = connection.execute(update_statement)
+
+            # The traces of the messages move with them, in the same transaction.
+            if table is message_table:
+                trace_statement = trace_table.update()
+                trace_statement = trace_statement.where(trace_table.c.message_id.in_(row_ids))
+                trace_statement = trace_statement.values(topic_name=new_topic_name)
+
+                _ = connection.execute(trace_statement)
 
         return True
 

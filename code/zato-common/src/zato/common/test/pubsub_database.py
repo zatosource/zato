@@ -25,6 +25,8 @@ from dataclasses import dataclass, field
 import pg8000.dbapi
 
 # Zato
+from zato.common.audit_log.retention_runner import stop_retention_runner
+from zato.common.audit_log.search_index_merge import stop_search_index_merger
 from zato.common.crypto.api import CryptoManager
 from zato.common.test.pubsub_bouncer import Bouncer_Port, start_bouncer
 from zato.common.test.local_postgresql import get_cluster_env, LocalCluster, start_local_cluster, stop_local_cluster
@@ -78,10 +80,14 @@ class ModuleCtx:
     Runtime_Dir_Name = 'pubsub-test'
 
     # The image of the PostgreSQL containers
-    PostgreSQL_Image = 'postgres:16'
+    PostgreSQL_Image = 'postgres:19'
 
     # The image of the previous minor version, which a minor version upgrade starts from
-    Previous_Minor_Image = 'postgres:16.14'
+    Previous_Minor_Image = 'postgres:19.0'
+
+    # Where each container keeps its data. The images of PostgreSQL 18 and later refuse a mount at this path
+    # unless PGDATA names it.
+    Container_Data_Dir = '/var/lib/postgresql/data'
 
     # The credentials and the database of the containers
     Username = 'zato_pubsub'
@@ -489,7 +495,8 @@ def start_pubsub_database(label:'str', mode:'str', extra_settings:'strlist | Non
         '--name', out.container_name,
         '--user', f'{os.getuid()}:{os.getgid()}',
         '--shm-size', _shm_size,
-        '-v', f'{data_dir}:/var/lib/postgresql/data',
+        '-v', f'{data_dir}:{ModuleCtx.Container_Data_Dir}',
+        '-e', f'PGDATA={ModuleCtx.Container_Data_Dir}',
     ]
 
     # .. a managed mode creates the pub/sub role and its database under the superuser of the container ..
@@ -726,9 +733,21 @@ def pubsub_db_env(env:'strstrdict') -> 'Iterator[None]':
 
 # ################################################################################################################################
 
+def stop_database_threads() -> 'None':
+    """ Stops the threads of this process that use a database in the background, the merger of the search indexes
+    and the retention runner of the audit log, so that neither reports a database that a test stops as unavailable.
+    Each of them starts again with the next write that needs it.
+    """
+    stop_search_index_merger()
+    stop_retention_runner()
+
+# ################################################################################################################################
+
 def stop_pubsub_database(database:'PubSubDatabase') -> 'None':
     """ Removes the container or the local cluster of a session together with its data directory.
     """
+    stop_database_threads()
+
     if database.local_cluster:
         stop_local_cluster(database.local_cluster)
         return

@@ -205,9 +205,19 @@ class _TriggerIsMissing:
 
 # ################################################################################################################################
 
-def _listen(metadata:'MetaData', statement:'str', trigger_is_missing:'_TriggerIsMissing | None') -> 'None':
-    """ Runs the given statement after all the tables are created,
-    and only when the trigger it creates is missing, if it creates one.
+class _TriggerExists(_TriggerIsMissing):
+    """ Tells whether a trigger of PostgreSQL exists on its table. Dropping a trigger locks its table against all writes,
+    so the schema setup that each starting process runs drops only the triggers that still exist.
+    """
+    def __call__(self, ddl:'any_', target:'any_', bind:'any_', tables:'any_'=None, state:'any_'=None,
+        **kwargs:'any_') -> 'bool':
+        out = not super().__call__(ddl, target, bind, tables, state, **kwargs)
+        return out
+
+# ################################################################################################################################
+
+def _listen(metadata:'MetaData', statement:'str', condition:'_TriggerIsMissing | None') -> 'None':
+    """ Runs the given statement after all the tables are created, and only when the condition holds, if there is one.
     """
 
     # DDL formats its statement with the % operator, so the modulo operator is written twice.
@@ -215,8 +225,8 @@ def _listen(metadata:'MetaData', statement:'str', trigger_is_missing:'_TriggerIs
 
     ddl = DDL(statement)
 
-    if trigger_is_missing:
-        ddl = ddl.execute_if(callable_=trigger_is_missing)
+    if condition:
+        ddl = ddl.execute_if(callable_=condition)
 
     event.listen(metadata, 'after_create', ddl)
 
@@ -237,6 +247,20 @@ def register_triggers(metadata:'MetaData', statements:'anylist') -> 'None':
         for trigger_name, table_name, statement in triggers:
             trigger_is_missing = _TriggerIsMissing(trigger_name, table_name)
             _listen(metadata, statement, trigger_is_missing)
+
+# ################################################################################################################################
+
+def register_dropped_triggers(metadata:'MetaData', triggers:'anylist') -> 'None':
+    """ Attaches the removal of the given triggers, and of the functions of the same names that they run,
+    to the creation of the schema. Each element of triggers is a pair of the name of a trigger and of its table.
+    """
+    for trigger_name, table_name in triggers:
+
+        trigger_exists = _TriggerExists(trigger_name, table_name)
+        _listen(metadata, f'DROP TRIGGER {trigger_name} ON {table_name}', trigger_exists)
+
+        # Dropping a function locks no table.
+        _listen(metadata, f'DROP FUNCTION IF EXISTS {trigger_name}()', None)
 
 # ################################################################################################################################
 

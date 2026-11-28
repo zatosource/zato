@@ -102,11 +102,23 @@ _provider_failover_query = """
 select exists (select 1 from pg_roles where rolname in ({}))
 """.strip().format(', '.join(f"'{role}'" for role in Provider_Failover_Roles))
 
+# The lowest version of PostgreSQL that Zato runs on, as server_version_num shows it, and its name.
+Minimum_Server_Version_Num = 190000
+Minimum_Server_Version_Name = '19'
+
+_server_version_num_query = 'show server_version_num'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 class DatabaseDurabilityError(Exception):
     """ Raised when a database is configured in a way under which a commit could be acknowledged before it is durable.
+    """
+
+# ################################################################################################################################
+
+class DatabaseVersionError(Exception):
+    """ Raised when a database runs a version of PostgreSQL older than the one that Zato requires.
     """
 
 # ################################################################################################################################
@@ -183,7 +195,8 @@ def _show(cursor:'any_', query:'str') -> 'any_':
 # ################################################################################################################################
 
 def verify_postgresql_server(dbapi_connection:'any_', connection_record:'any_') -> 'None':
-    """ Refuses a PostgreSQL server on which a commit could be acknowledged before it is durable - one that does not
+    """ Refuses a PostgreSQL server older than the version that Zato requires, and a PostgreSQL server
+    on which a commit could be acknowledged before it is durable - one that does not
     flush its write-ahead log, one that does not write full pages after a checkpoint, and a primary with streaming
     standbys none of which is synchronous, unless the provider of the server performs the failover. The check runs
     on each new connection, so the primary that a failover of the database promotes is checked as well. A server
@@ -191,6 +204,7 @@ def verify_postgresql_server(dbapi_connection:'any_', connection_record:'any_') 
     """
     cursor = dbapi_connection.cursor()
 
+    server_version_num = int(_show(cursor, _server_version_num_query))
     durability_level = _show(cursor, _durability_level_query)
     fsync = _show(cursor, 'show fsync')
     full_page_writes = _show(cursor, 'show full_page_writes')
@@ -201,7 +215,12 @@ def verify_postgresql_server(dbapi_connection:'any_', connection_record:'any_') 
     cursor.close()
     dbapi_connection.commit()
 
-    # A server with the relaxed level of durability is accepted as it is ..
+    # The statements of Zato use the syntax of PostgreSQL 19, so an older server is refused whatever its durability ..
+    if server_version_num < Minimum_Server_Version_Num:
+        raise DatabaseVersionError(
+            f'PostgreSQL server has version number `{server_version_num}`, Zato requires PostgreSQL {Minimum_Server_Version_Name}')
+
+    # .. a server with the relaxed level of durability is accepted as it is ..
     if durability_level == Durability_Level_Relaxed:
         return
 

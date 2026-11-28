@@ -18,7 +18,7 @@ from zato_pg_wire.zato_pg_wire import encode_column_arrays
 from zato.common.audit_log.attachment import build_attachment_rows
 from zato.common.audit_log.attr_rows import build_attr_rows
 from zato.common.audit_log.common import event_attr_table, event_body_table, event_link_table, event_table
-from zato.common.audit_log.payload import assign_payload_ids, find_stored_payloads, get_event_rows, insert_new_payloads
+from zato.common.audit_log.payload import assign_payload_ids, get_event_rows, store_payloads
 from zato.common.db_env.any_of import type_name_of
 from zato.common.db_env.pg8000_copy import copy_rows
 from zato.common.db_env.plain_sql import PlainStatement
@@ -133,14 +133,9 @@ def insert_events(connection:'Connection', rows:'dictlist', payloads:'strstrdict
     """ Stores the payloads of a batch, keyed by their digests, that are not stored yet, then inserts the event rows
     of get_event_rows with the ids of their payloads' rows, and returns the ids of the events in the order of the rows.
     """
-    if payloads:
-        stored = find_stored_payloads(connection, payloads)
-    else:
-        stored = None
-
     # The events reference the rows of their payloads, which exist once the payloads are stored.
-    if stored is not None:
-        payload_ids = insert_new_payloads(connection, stored, payloads, search_texts)
+    if payloads:
+        payload_ids = store_payloads(connection, payloads, search_texts)
     else:
         payload_ids = {}
 

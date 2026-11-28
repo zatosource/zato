@@ -71,7 +71,8 @@ class ModuleCtx:
     # The prefix of the containers of the instances
     Container_Prefix = 'zato-ha-test-postgresql-'
 
-    # Where each container keeps its data
+    # Where each container keeps its data. The images of PostgreSQL 18 and later refuse a mount at this path
+    # unless PGDATA names it.
     Container_Data_Dir = '/var/lib/postgresql/data'
 
     # The name of the directory on a disk of the host in which the instances keep their data
@@ -212,6 +213,7 @@ class PostgreSQLCluster(Backend):
             '--user', f'{os.getuid()}:{os.getgid()}',
             '--shm-size', _shm_size,
             '-v', f'{instance.data_dir}:{ModuleCtx.Container_Data_Dir}',
+            '-e', f'PGDATA={ModuleCtx.Container_Data_Dir}',
         ]
 
         return out

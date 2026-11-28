@@ -14,7 +14,7 @@ from sqlalchemy import text
 
 # Zato
 from zato.common.db_env.engine import call_database
-from zato.common.pubsub.sql.schema import message_table, topic_sub_table
+from zato.common.pubsub.sql.schema import message_table, topic_sub_table, trace_table
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,21 +29,26 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _execute(engine:'Engine', statement:'any_') -> 'None':
+def _execute(engine:'Engine', *statements:'any_') -> 'None':
     with engine.begin() as connection:
-        _ = connection.execute(statement)
+        for statement in statements:
+            _ = connection.execute(statement)
 
 # ################################################################################################################################
 
 def interrupt_topic_rename(engine:'Engine', old_topic_name:'str', new_topic_name:'str') -> 'None':
-    """ Moves the message rows of one topic and nothing else, which is what a rename that ended halfway through
-    leaves behind - the deliveries and the subscription remain under the old name.
+    """ Moves the message rows of one topic, with their traces, and nothing else, which is what a rename that ended
+    halfway through leaves behind - the deliveries and the subscription remain under the old name.
     """
-    statement = message_table.update()
-    statement = statement.where(message_table.c.topic_name == old_topic_name)
-    statement = statement.values(topic_name=new_topic_name)
+    message_statement = message_table.update()
+    message_statement = message_statement.where(message_table.c.topic_name == old_topic_name)
+    message_statement = message_statement.values(topic_name=new_topic_name)
 
-    _ = call_database(engine, _execute, engine, statement)
+    trace_statement = trace_table.update()
+    trace_statement = trace_statement.where(trace_table.c.topic_name == old_topic_name)
+    trace_statement = trace_statement.values(topic_name=new_topic_name)
+
+    _ = call_database(engine, _execute, engine, message_statement, trace_statement)
 
 # ################################################################################################################################
 
